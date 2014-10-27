@@ -41,11 +41,11 @@ import sqlite3
 import string
 
 bayesdb_type_table = [
-    # column type, continuous?, default sqlite, default model type
-    ("continuous",      True,   "real",         "normal_inverse_gamma"),
+    # column type, numerical?, default sqlite, default model type
+    ("categorical",     False,  "text",         "symmetric_dirichlet_discrete"),
     ("cyclic",          True,   "real",         "vonmises"),
-    ("multinomial",     False,  "text",         "symmetric_dirichlet_discrete"),
     ("key",             False,  "text",         None),
+    ("numerical",       True,   "real",         "normal_inverse_gamma"),
 ]
 
 # XXX What about other model types from the paper?
@@ -53,6 +53,10 @@ bayesdb_type_table = [
 # asymmetric_beta_bernoulli
 # pitmanyor_atom
 # poisson_gamma
+#
+# XXX Upgrade column types:
+#       continuous -> numerical
+#       multinomial -> categorical.
 
 ### BayesDB class
 
@@ -290,14 +294,14 @@ def bayesdb_guess_column(bdb, table, column_desc,
     ndistinct_sql = "SELECT COUNT(DISTINCT %s) FROM %s" % (qcn, qt)
     ndistinct = sqlite3_exec_1(bdb.sqlite, ndistinct_sql)
     if ndistinct <= count_cutoff:
-        return (column_name, "multinomial")
+        return (column_name, "categorical")
     ndata_sql = "SELECT COUNT(%s) FROM %s" % (qcn, qt)
     ndata = sqlite3_exec_1(bdb.sqlite, ndata_sql)
     if (float(ndistinct) / float(ndata)) <= ratio_cutoff:
-        return (column_name, "multinomial")
+        return (column_name, "categorical")
     if not bayesdb_column_floatable_p(bdb, table, column_desc):
-        return (column_name, "multinomial")
-    return (column_name, "continuous")
+        return (column_name, "categorical")
+    return (column_name, "numerical")
 
 # XXX This is a kludge!
 def bayesdb_column_floatable_p(bdb, table, column_desc):
@@ -324,7 +328,7 @@ def bayesdb_create_metadata(bdb, table, column_names, column_types):
                 for name in column_names],
     }
 
-def bayesdb_metadata_continuous(bdb, table, column_name):
+def bayesdb_metadata_numerical(bdb, table, column_name):
     return {
         "modeltype": "normal_inverse_gamma",
         "value_to_code": {},
@@ -339,16 +343,16 @@ def bayesdb_metadata_cyclic(bdb, table, column_name):
     }
 
 def bayesdb_metadata_ignore(bdb, table, column_name):
-    metadata = bayesdb_metadata_multinomial(bdb, table, column_name)
+    metadata = bayesdb_metadata_categorical(bdb, table, column_name)
     metadata["modeltype"] = "ignore"
     return metadata
 
 def bayesdb_metadata_key(bdb, table, column_name):
-    metadata = bayesdb_metadata_multinomial(bdb, table, column_name)
+    metadata = bayesdb_metadata_categorical(bdb, table, column_name)
     metadata["modeltype"] = "key"
     return metadata
 
-def bayesdb_metadata_multinomial(bdb, table, column_name):
+def bayesdb_metadata_categorical(bdb, table, column_name):
     qcn = sqlite3_quote_name(column_name)
     qt = sqlite3_quote_name(table)
     sql = """
@@ -364,11 +368,11 @@ def bayesdb_metadata_multinomial(bdb, table, column_name):
     }
 
 metadata_generators = {
-    "continuous": bayesdb_metadata_continuous,
+    "numerical": bayesdb_metadata_numerical,
     "cyclic": bayesdb_metadata_cyclic,
     "ignore": bayesdb_metadata_ignore,   # XXX Why any metadata here?
-    "key": bayesdb_metadata_multinomial, # XXX Why any metadata here?
-    "multinomial": bayesdb_metadata_multinomial,
+    "key": bayesdb_metadata_categorical, # XXX Why any metadata here?
+    "categorical": bayesdb_metadata_categorical,
 }
 
 ### Importing CSV tables
@@ -398,7 +402,7 @@ def bayesdb_import_csv_file(bdb, table, pathname, column_types=None):
                 (len(column_names), len(column_types)))
         for name in column_names:
             if name not in column_types:
-                # XXX Ignore this column?  Treat as continuous?  Infer?
+                # XXX Ignore this column?  Treat as numerical?  Infer?
                 raise IOError("CSV file has unknown column: %s" % (name,))
         column_name_set = set(column_names)
         for name in column_types:
@@ -454,10 +458,10 @@ def bayesdb_csv_guess_column_type(rows, i, may_be_key,
         count_cutoff=20, ratio_cutoff=0.02):
     if may_be_key and bayesdb_csv_column_keyable_p(rows, i):
         return "key"
-    elif bayesdb_csv_column_continuous_p(rows, i, count_cutoff, ratio_cutoff):
-        return "continuous"
+    elif bayesdb_csv_column_numerical_p(rows, i, count_cutoff, ratio_cutoff):
+        return "numerical"
     else:
-        return "multinomial"
+        return "categorical"
 
 def bayesdb_csv_column_keyable_p(rows, i):
     if bayesdb_csv_column_integerable_p(rows, i):
@@ -486,7 +490,7 @@ def bayesdb_csv_column_floatable_p(rows, i):
         return False
     return True
 
-def bayesdb_csv_column_continuous_p(rows, i, count_cutoff, ratio_cutoff):
+def bayesdb_csv_column_numerical_p(rows, i, count_cutoff, ratio_cutoff):
     if not bayesdb_csv_column_floatable_p(rows, i):
         return False
     ndistinct = len(unique([float(row[i]) for row in rows
@@ -669,14 +673,14 @@ def bayesdb_column_correlation(bdb, table_id, colno0, colno1):
     modeltype0 = M_c["column_metadata"][colno0]["modeltype"]
     modeltype1 = M_c["column_metadata"][colno1]["modeltype"]
     correlation = float("nan")  # Default result.
-    if bayesdb_modeltype_continuous_p(modeltype0) and \
-       bayesdb_modeltype_continuous_p(modeltype1):
-        # Both continuous: Pearson R^2
+    if bayesdb_modeltype_numerical_p(modeltype0) and \
+       bayesdb_modeltype_numerical_p(modeltype1):
+        # Both numerical: Pearson R^2
         sqrt_correlation, p_value = scipy.stats.pearsonr(data0, data1)
         correlation = sqrt_correlation ** 2
     elif bayesdb_modeltype_discrete_p(modeltype0) and \
          bayesdb_modeltype_discrete_p(modeltype1):
-        # Both multinomial: Cramer's phi
+        # Both categorical: Cramer's phi
         unique0 = unique(data0)
         unique1 = unique(data1)
         min_levels = min(len(unique0), len(unique1))
@@ -694,13 +698,13 @@ def bayesdb_column_correlation(bdb, table_id, colno0, colno1):
                 correction=False)
             correlation = math.sqrt(chisq / (n * (min_levels - 1)))
     else:
-        # Continuous/multinomial: ANOVA R^2
+        # Numerical/categorical: ANOVA R^2
         if bayesdb_modeltype_discrete_p(modeltype0):
-            assert bayesdb_modeltype_continuous_p(modeltype1)
+            assert bayesdb_modeltype_numerical_p(modeltype1)
             data_group = data0
             data_y = data1
         else:
-            assert bayesdb_modeltype_continuous_p(modeltype0)
+            assert bayesdb_modeltype_numerical_p(modeltype0)
             assert bayesdb_modeltype_discrete_p(modeltype1)
             data_group = data1
             data_y = data0
@@ -827,7 +831,7 @@ def bayesdb_value_to_code(M_c, colno, value):
         #
         # XXX Fix this.
         return metadata["code_to_value"][str(value)]
-    elif bayesdb_modeltype_continuous_p(modeltype):
+    elif bayesdb_modeltype_numerical_p(modeltype):
         return float(value)
     else:
         raise KeyError
@@ -837,10 +841,10 @@ bayesdb_modeltypes_discrete = \
 def bayesdb_modeltype_discrete_p(modeltype):
     return modeltype in bayesdb_modeltypes_discrete
 
-bayesdb_modeltypes_continuous = \
+bayesdb_modeltypes_numerical = \
     set([mt for _ct, cont_p, _sql, mt in bayesdb_type_table if cont_p])
-def bayesdb_modeltype_continuous_p(modeltype):
-    return modeltype in bayesdb_modeltypes_continuous
+def bayesdb_modeltype_numerical_p(modeltype):
+    return modeltype in bayesdb_modeltypes_numerical
 
 ### SQLite3 utilities
 
