@@ -1,0 +1,3 @@
+Bayeslite is a prototype reimplementation of BayesDB on SQLite3, to
+enable the use of relational SQL queries on databases in addition to
+probabilistic BQL queries.
