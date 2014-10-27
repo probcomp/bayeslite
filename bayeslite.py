@@ -593,14 +593,14 @@ def bayesdb_models_initialize(bdb, table_id, nmodels, model_config=None):
         "initialization": "from_the_prior",
         "row_initialization": "from_the_prior",
     }
-    X_L_list, X_D_list = bdb.engine.call_backend("initialize", {
-        "M_c": bayesdb_metadata(bdb, table_id),
-        "M_r": None,            # XXX
-        "T": list(bayesdb_data(bdb, table_id)),
-        "n_chains": nmodels,
-        "initialization": model_config["initialization"],
-        "row_initialization": model_config["row_initialization"],
-    })
+    X_L_list, X_D_list = bdb.engine.initialize(
+        M_c=bayesdb_metadata(bdb, table_id),
+        M_r=None,            # XXX
+        T=list(bayesdb_data(bdb, table_id)),
+        n_chains=nmodels,
+        initialization=model_config["initialization"],
+        row_initialization=model_config["row_initialization"]
+    )
     if nmodels == 1:            # XXX Ugh.  Fix crosscat so it doesn't do this.
         X_L_list = [X_L_list]
         X_D_list = [X_D_list]
@@ -620,15 +620,15 @@ def bayesdb_models_initialize(bdb, table_id, nmodels, model_config=None):
 # XXX Background, deadline, &c.
 def bayesdb_models_analyze1(bdb, table_id, modelno, iterations=1):
     theta = bayesdb_model(bdb, table_id, modelno)
-    X_L, X_D, diagnostics = bdb.engine.call_backend("analyze", {
-        "M_c": bayesdb_metadata(bdb, table_id),
-        "T": list(bayesdb_data(bdb, table_id)),
-        "do_diagnostics": True,
-        "kernel_list": (),
-        "X_L": theta["X_L"],
-        "X_D": theta["X_D"],
-        "n_steps": iterations,
-    })
+    X_L, X_D, diagnostics = bdb.engine.analyze(
+        M_c=bayesdb_metadata(bdb, table_id),
+        T=list(bayesdb_data(bdb, table_id)),
+        do_diagnostics=True,
+        kernel_list=(),
+        X_L=theta["X_L"],
+        X_D=theta["X_D"],
+        n_steps=iterations
+    )
     theta["X_L"] = X_L
     theta["X_D"] = X_D
     # XXX Cargo-culted from old persistence layer's update_model.
@@ -744,13 +744,13 @@ def bayesdb_column_mutual_information(bdb, table_id, colno0, colno1,
         numsamples=100):
     X_L_list = list(bayesdb_latent_state(bdb, table_id))
     X_D_list = list(bayesdb_latent_data(bdb, table_id))
-    r = bdb.engine.call_backend("mutual_information", {
-        "M_c": bayesdb_metadata(bdb, table_id),
-        "X_L_list": X_L_list,
-        "X_D_list": X_D_list,
-        "Q": [(colno0, colno1)],
-        "n_samples": int(math.ceil(float(numsamples) / len(X_L_list))),
-    })
+    r = bdb.engine.mutual_information(
+        M_c=bayesdb_metadata(bdb, table_id),
+        X_L_list=X_L_list,
+        X_D_list=X_D_list,
+        Q=[(colno0, colno1)],
+        n_samples=int(math.ceil(float(numsamples) / len(X_L_list)))
+    )
     # r has one answer per element of Q, so take the first one.
     r0 = r[0]
     # r0 is (mi, linfoot), and we want mi.
@@ -761,10 +761,10 @@ def bayesdb_column_mutual_information(bdb, table_id, colno0, colno1,
 
 # One-column function:  TYPICALITY OF <col>
 def bayesdb_column_typicality(bdb, table_id, colno):
-    return bdb.engine.call_backend("column_structural_typicality", {
-        "X_L_list": list(bayesdb_latent_state(bdb, table_id)),
-        "col_id": colno,
-    })
+    return bdb.engine.column_structural_typicality(
+        X_L_list=list(bayesdb_latent_state(bdb, table_id)),
+        col_id=colno
+    )
 
 # One-column function:  PROBABILITY OF <col>=<value>
 def bayesdb_column_value_probability(bdb, table_id, colno, value):
@@ -777,47 +777,47 @@ def bayesdb_column_value_probability(bdb, table_id, colno, value):
     X_D_list = list(bayesdb_latent_data(bdb, table_id))
     # Fabricate a nonexistent (`unobserved') row id.
     row_id = len(X_D_list[0][0])
-    r = bdb.engine.call_backend("simple_predictive_probability_multistate", {
-        "M_c": M_c,
-        "X_L_list": X_L_list,
-        "X_D_list": X_D_list,
-        "Y": [],
-        "Q": [(row_id, colno, code)],
-    })
+    r = bdb.engine.simple_predictive_probability_multistate(
+        M_c=M_c,
+        X_L_list=X_L_list,
+        X_D_list=X_D_list,
+        Y=[],
+        Q=[(row_id, colno, code)]
+    )
     return math.exp(r)
 
 ### BayesDB row functions
 
 # Row function:  SIMILARITY TO <target_row> [WITH RESPECT TO <columns>]
 def bayesdb_row_similarity(bdb, table_id, row_id, target_row_id, columns):
-    return bdb.engine.call_backend("similarity", {
-        "M_c": bayesdb_metadata(bdb, table_id),
-        "X_L_list": list(bayesdb_latent_state(bdb, table_id)),
-        "X_D_list": list(bayesdb_latent_data(bdb, table_id)),
-        "given_row_id": row_id,
-        "target_row_id": target_row_id,
-        "target_columns": columns,
-    })
+    return bdb.engine.similarity(
+        M_c=bayesdb_metadata(bdb, table_id),
+        X_L_list=list(bayesdb_latent_state(bdb, table_id)),
+        X_D_list=list(bayesdb_latent_data(bdb, table_id)),
+        given_row_id=row_id,
+        target_row_id=target_row_id,
+        target_columns=columns
+    )
 
 # Row function:  TYPICALITY
 def bayesdb_row_typicality(bdb, table_id, row_id):
-    return bdb.engine.call_backend("row_structural_typicality", {
-        "X_L_list": list(bayesdb_latent_state(bdb, table_id)),
-        "X_D_list": list(bayesdb_latent_data(bdb, table_id)),
-        "row_id": row_id,
-    })
+    return bdb.engine.row_structural_typicality(
+        X_L_list=list(bayesdb_latent_state(bdb, table_id)),
+        X_D_list=list(bayesdb_latent_data(bdb, table_id)),
+        row_id=row_id
+    )
 
 # Row function:  PREDICTIVE PROBABILITY OF <column>
 def bayesdb_row_column_predictive_probability(bdb, table_id, row_id, colno):
     M_c = bayesdb_metadata(bdb, table_id)
     code = bayesdb_cell_code(bdb, table_id, row_id, colno)
-    r = bdb.engine.call_backend("simple_predictive_probability_multistate", {
-        "M_c": M_c,
-        "X_L_list": list(bayesdb_latent_state(bdb, table_id)),
-        "X_D_list": list(bayesdb_latent_data(bdb, table_id)),
-        "Y": [],
-        "Q": [(row_id, colno, code)],
-    })
+    r = bdb.engine.simple_predictive_probability_multistate(
+        M_c=M_c,
+        X_L_list=list(bayesdb_latent_state(bdb, table_id)),
+        X_D_list=list(bayesdb_latent_data(bdb, table_id)),
+        Y=[],
+        Q=[(row_id, colno, code)]
+    )
     return math.exp(r)
 
 ### BayesDB utilities
