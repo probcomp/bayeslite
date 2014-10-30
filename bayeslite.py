@@ -571,10 +571,10 @@ def bayesdb_column_names(bdb, table_id):
         yield row[0]
 
 def bayesdb_column_name(bdb, table_id, colno):
-    M_c = bayesdb_metadata(bdb, table_id)
-    # XXX Ugh -- str here is silly.  Do we have to use string-keyed
-    # dicts instead of arrays?
-    return M_c["idx_to_name"][str(colno)]
+    sql = """
+        SELECT name FROM bayesdb_table_column WHERE table_id = ? AND colno = ?
+    """
+    return sqlite3_exec_1(bdb.sqlite, sql, (table_id, colno))
 
 def bayesdb_column_values(bdb, table_id, colno):
     qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
