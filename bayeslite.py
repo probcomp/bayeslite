@@ -859,13 +859,13 @@ def bayesdb_simulate(bdb, table_id, constraints, colnos, numpredictions=1):
     Y = None
     if constraints is not None:
         Y = [(fakerowid, colno, bayesdb_value_to_code(M_c, colno, value))
-             for i, (colno, value) in enumerate(constraints)]
+             for colno, value in constraints]
     raw_outputs = bdb.engine.simple_predictive_sample(
         M_c=M_c,
         X_L=list(bayesdb_latent_state(bdb, table_id)),
         X_D=list(bayesdb_latent_data(bdb, table_id)),
         Y=Y,
-        Q=[(fakerowid, colno) for i, colno in enumerate(colnos)],
+        Q=[(fakerowid, colno) for colno in colnos],
         n=numpredictions
     )
     return [[bayesdb_code_to_value(M_c, colno, code)
