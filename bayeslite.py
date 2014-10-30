@@ -840,6 +840,21 @@ def bayesdb_value_to_code(M_c, colno, value):
     else:
         raise KeyError
 
+def bayesdb_code_to_value(M_c, colno, code):
+    metadata = M_c["column_metadata"][colno]
+    modeltype = metadata["modeltype"]
+    if bayesdb_modeltype_discrete_p(modeltype):
+        if math.isnan(code):
+            return None
+        # XXX Whattakludge.
+        return metadata["value_to_code"][str(int(code))]
+    elif bayesdb_modeltype_numerical_p(modeltype):
+        if math.isnan(code):
+            return None
+        return code
+    else:
+        raise KeyError
+
 bayesdb_modeltypes_discrete = \
     set([mt for _ct, cont_p, _sql, mt in bayesdb_type_table if not cont_p])
 def bayesdb_modeltype_discrete_p(modeltype):
