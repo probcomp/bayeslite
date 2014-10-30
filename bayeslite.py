@@ -830,8 +830,12 @@ def bayesdb_value_to_code(M_c, colno, value):
         # backwards.
         #
         # XXX Fix this.
+        if value is None:
+            return float("NaN")         # XXX !?!??!
         return metadata["code_to_value"][str(value)]
     elif bayesdb_modeltype_numerical_p(modeltype):
+        if value is None:
+            return float("NaN")
         return float(value)
     else:
         raise KeyError
