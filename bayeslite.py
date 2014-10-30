@@ -820,6 +820,58 @@ def bayesdb_row_column_predictive_probability(bdb, table_id, row_id, colno):
     )
     return math.exp(r)
 
+### Infer and simulate
+
+def bayesdb_infer(bdb, table_id, colno, row_id, value, confidence_threshold,
+        numsamples=1):
+    if value is not None:
+        return value
+    M_c = bayesdb_metadata(bdb, table_id)
+    column_names = bayesdb_column_names(bdb, table_id)
+    qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
+    qcns = ",".join(map(sqlite3_quote_name, column_names))
+    select_sql = "SELECT %s FROM %s WHERE rowid = ?" % (qcns, qt)
+    c = bdb.sqlite.execute(select_sql, (row_id,))
+    row = c.fetchone()
+    assert row is not None
+    assert c.fetchone() is None
+    code, confidence = bdb.engine.impute_and_confidence(
+        M_c=M_c,
+        X_L=list(bayesdb_latent_state(bdb, table_id)),
+        X_D=list(bayesdb_latent_data(bdb, table_id)),
+        Y=[(row_id, colno_, bayesdb_value_to_code(M_c, colno_, value))
+            for colno_, value in enumerate(row) if value is not None],
+        Q=[(row_id, colno)],
+        n=numsamples
+    )
+    if confidence >= confidence_threshold:
+        return bayesdb_code_to_value(M_c, colno, code)
+    else:
+        return None
+
+# XXX Create a virtual table that simulates results?
+def bayesdb_simulate(bdb, table_id, constraints, colnos, numpredictions=1):
+    M_c = bayesdb_metadata(bdb, table_id)
+    qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
+    maxrowid = sqlite3_exec_1(bdb.sqlite, "SELECT max(rowid) FROM %s" % (qt,))
+    fakerowid = maxrowid + 1
+    # XXX Why special-case empty constraints?
+    Y = None
+    if constraints is not None:
+        Y = [(fakerowid, colno, bayesdb_value_to_code(M_c, colno, value))
+             for i, (colno, value) in enumerate(constraints)]
+    raw_outputs = bdb.engine.simple_predictive_sample(
+        M_c=M_c,
+        X_L=list(bayesdb_latent_state(bdb, table_id)),
+        X_D=list(bayesdb_latent_data(bdb, table_id)),
+        Y=Y,
+        Q=[(fakerowid, colno) for i, colno in enumerate(colnos)],
+        n=numpredictions
+    )
+    return [[bayesdb_code_to_value(M_c, colno, code)
+            for (colno, code) in zip(colnos, raw_output)]
+        for raw_output in raw_outputs]
+
 ### BayesDB utilities
 
 def bayesdb_value_to_code(M_c, colno, value):
