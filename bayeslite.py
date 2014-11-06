@@ -60,7 +60,7 @@ bayesdb_type_table = [
 
 ### BayesDB class
 
-class BayesDB:
+class BayesDB(object):
     """Class of Bayesian databases.
 
     Interface is loosely based on PEP-249 DB-API.
