@@ -502,7 +502,7 @@ def bayesdb_csv_column_numerical_p(rows, i, count_cutoff, ratio_cutoff):
         return False
     return True
 
-### BayesDB data/metadata/model access
+### BayesDB data/metadata access
 
 def bayesdb_data(bdb, table_id):
     M_c = bayesdb_metadata(bdb, table_id)
@@ -520,6 +520,31 @@ def bayesdb_metadata(bdb, table_id):
     sql = "SELECT metadata FROM bayesdb_table WHERE id = ?"
     data = sqlite3_exec_1(bdb.sqlite, sql, (table_id,))
     return json.loads(data)
+
+def bayesdb_table_name(bdb, table_id):
+    sql = "SELECT name FROM bayesdb_table WHERE id = ?"
+    return sqlite3_exec_1(bdb.sqlite, sql, (table_id,))
+
+def bayesdb_column_names(bdb, table_id):
+    sql = """
+        SELECT name FROM bayesdb_table_column WHERE table_id = ? ORDER BY colno
+    """
+    for row in bdb.sqlite.execute(sql, (table_id,)):
+        yield row[0]
+
+def bayesdb_column_name(bdb, table_id, colno):
+    sql = """
+        SELECT name FROM bayesdb_table_column WHERE table_id = ? AND colno = ?
+    """
+    return sqlite3_exec_1(bdb.sqlite, sql, (table_id, colno))
+
+def bayesdb_column_values(bdb, table_id, colno):
+    qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
+    qc = sqlite3_quote_name(bayesdb_column_name(bdb, table_id, colno))
+    for row in bdb.sqlite.execute("SELECT %s FROM %s" % (qc, qt)):
+        yield row[0]
+
+### BayesDB model access
 
 def bayesdb_init_model(bdb, table_id, modelno, engine_id, theta):
     insert_sql = """
@@ -558,29 +583,6 @@ def bayesdb_latent_state(bdb, table_id):
 def bayesdb_latent_data(bdb, table_id):
     for model in bayesdb_models(bdb, table_id):
         yield model["X_D"]
-
-def bayesdb_table_name(bdb, table_id):
-    sql = "SELECT name FROM bayesdb_table WHERE id = ?"
-    return sqlite3_exec_1(bdb.sqlite, sql, (table_id,))
-
-def bayesdb_column_names(bdb, table_id):
-    sql = """
-        SELECT name FROM bayesdb_table_column WHERE table_id = ? ORDER BY colno
-    """
-    for row in bdb.sqlite.execute(sql, (table_id,)):
-        yield row[0]
-
-def bayesdb_column_name(bdb, table_id, colno):
-    sql = """
-        SELECT name FROM bayesdb_table_column WHERE table_id = ? AND colno = ?
-    """
-    return sqlite3_exec_1(bdb.sqlite, sql, (table_id, colno))
-
-def bayesdb_column_values(bdb, table_id, colno):
-    qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
-    qc = sqlite3_quote_name(bayesdb_column_name(bdb, table_id, colno))
-    for row in bdb.sqlite.execute("SELECT %s FROM %s" % (qc, qt)):
-        yield row[0]
 
 ### BayesDB model commands
 
