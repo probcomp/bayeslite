@@ -993,7 +993,7 @@ def sqlite3_savepoint(db):
     finally:
         if not ok:
             db.execute("ROLLBACK TO x%s" % (savepoint,))
-    db.execute("RELEASE x%s" % (savepoint,))
+        db.execute("RELEASE x%s" % (savepoint,))
 
 ### Trivial SQLite3 utility tests
 
