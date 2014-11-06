@@ -543,6 +543,12 @@ def bayesdb_column_values(bdb, table_id, colno):
     qc = sqlite3_quote_name(bayesdb_column_name(bdb, table_id, colno))
     for row in bdb.sqlite.execute("SELECT %s FROM %s" % (qc, qt)):
         yield row[0]
+
+def bayesdb_cell_value(bdb, table_id, row_id, colno):
+    qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
+    qc = sqlite3_quote_name(bayesdb_column_name(bdb, table_id, colno))
+    sql = "SELECT %s FROM %s WHERE rowid = ?" % (qt, qc)
+    return sqlite3_exec_1(bdb.sqlite, sql, (row_id,))
 
 ### BayesDB model access
 
@@ -812,7 +818,8 @@ def bayesdb_row_typicality(bdb, table_id, row_id):
 # Row function:  PREDICTIVE PROBABILITY OF <column>
 def bayesdb_row_column_predictive_probability(bdb, table_id, row_id, colno):
     M_c = bayesdb_metadata(bdb, table_id)
-    code = bayesdb_cell_code(bdb, table_id, row_id, colno)
+    value = bayesdb_cell_value(bdb, table_id, row_id, colno)
+    code = bayesdb_value_to_code(M_c, colno, value)
     r = bdb.engine.simple_predictive_probability_multistate(
         M_c=M_c,
         X_L_list=list(bayesdb_latent_state(bdb, table_id)),
