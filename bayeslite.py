@@ -65,12 +65,12 @@ class BayesDB(object):
     Interface is loosely based on PEP-249 DB-API.
     """
 
-    def __init__(self, engine, file=":memory:"):
+    def __init__(self, engine, pathname=":memory:"):
         self.engine = engine
         # isolation_level=None actually means that the sqlite3 module
         # will not randomly begin and commit transactions where we
         # didn't ask it to.
-        self.sqlite = sqlite3.connect(file, isolation_level=None)
+        self.sqlite = sqlite3.connect(pathname, isolation_level=None)
         bayesdb_install_schema(self.sqlite)
         bayesdb_install_bql(self.sqlite, self)
 
@@ -380,8 +380,8 @@ metadata_generators = {
 ### Importing CSV tables
 
 def bayesdb_read_csv_with_header(pathname):
-    with open(pathname, "rU") as file:
-        reader = csv.reader(file)
+    with open(pathname, "rU") as f:
+        reader = csv.reader(f)
         column_names = reader.next()
         ncols = len(column_names)
         # XXX Can we get the CSV reader to strip for us?
