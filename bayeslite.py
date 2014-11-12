@@ -247,14 +247,13 @@ def bayesdb_determine_columns(bdb, table, column_names, column_types):
     if column_names is None:
         column_names = [name for _i, name, _t, _n, _d, _p in column_descs]
     else:
-        column_name_set = set([name for _i, name, _t, _n, _d, _p
-            in column_descs])
+        column_name_set = set(name for _i, name, _t, _n, _d, _p in column_descs)
         for name in column_names:
             if name not in column_name_set:
                 raise ValueError("Unknown column: %s" % (name,))
     if column_types is None:
-        column_types = dict([bayesdb_guess_column(bdb, table, desc)
-            for desc in column_descs])
+        column_types = dict(bayesdb_guess_column(bdb, table, desc)
+            for desc in column_descs)
     else:
         column_name_set = set(column_names)
         for name in column_types:
@@ -429,7 +428,7 @@ def bayesdb_table_definition(table, column_names, column_types):
     return ("CREATE TABLE %s (%s)" % (qt, ",".join(column_defs)))
 
 bayesdb_column_type_to_sqlite_type = \
-    dict([(ct, sql) for ct, cont_p, sql, mt in bayesdb_type_table])
+    dict((ct, sql) for ct, _cont_p, sql, _mt in bayesdb_type_table)
 def bayesdb_column_definition(column_name, column_type):
     qcn = sqlite3_quote_name(column_name)
     sqlite_type = bayesdb_column_type_to_sqlite_type[column_type]
@@ -514,8 +513,8 @@ def bayesdb_data(bdb, table_id):
     qcns = ",".join(map(sqlite3_quote_name, column_names))
     sql = "SELECT %s FROM %s" % (qcns, qt)
     for row in bdb.sqlite.execute(sql):
-        yield tuple([bayesdb_value_to_code(M_c, i, v)
-            for i, v in enumerate(row)])
+        yield tuple(bayesdb_value_to_code(M_c, i, v)
+            for i, v in enumerate(row))
 
 # XXX Cache this?
 def bayesdb_metadata(bdb, table_id):
@@ -919,12 +918,12 @@ def bayesdb_code_to_value(M_c, colno, code):
         raise KeyError
 
 bayesdb_modeltypes_discrete = \
-    set([mt for _ct, cont_p, _sql, mt in bayesdb_type_table if not cont_p])
+    set(mt for _ct, cont_p, _sql, mt in bayesdb_type_table if not cont_p)
 def bayesdb_modeltype_discrete_p(modeltype):
     return modeltype in bayesdb_modeltypes_discrete
 
 bayesdb_modeltypes_numerical = \
-    set([mt for _ct, cont_p, _sql, mt in bayesdb_type_table if cont_p])
+    set(mt for _ct, cont_p, _sql, mt in bayesdb_type_table if cont_p)
 def bayesdb_modeltype_numerical_p(modeltype):
     return modeltype in bayesdb_modeltypes_numerical
 
