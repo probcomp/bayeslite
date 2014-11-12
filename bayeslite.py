@@ -38,7 +38,6 @@ import math
 import scipy.stats              # pearsonr, chi2_contingency, f_oneway
                                 # (For CORRELATION OF <col0> WITH <col1> only.)
 import sqlite3
-import string
 
 bayesdb_type_table = [
     # column type, numerical?, default sqlite, default model type
@@ -246,9 +245,10 @@ def bayesdb_determine_columns(bdb, table, column_names, column_types):
     cursor = bdb.sqlite.execute("PRAGMA table_info(%s)" % (qt,))
     column_descs = cursor.fetchall()
     if column_names is None:
-        column_names = [name for i, name, t, n, d, p in column_descs]
+        column_names = [name for _i, name, _t, _n, _d, _p in column_descs]
     else:
-        column_name_set = set([name for i, name, t, n, d, p in column_descs])
+        column_name_set = set([name for _i, name, _t, _n, _d, _p
+            in column_descs])
         for name in column_names:
             if name not in column_name_set:
                 raise ValueError("Unknown column: %s" % (name,))
@@ -285,7 +285,8 @@ def bayesdb_determine_columns(bdb, table, column_names, column_types):
 # XXX Pass count_cutoff/ratio_cutoff through from above.
 def bayesdb_guess_column(bdb, table, column_desc,
         count_cutoff=20, ratio_cutoff=0.02):
-    (cid, column_name, sql_type, nonnull, default, primary_key) = column_desc
+    (_cid, column_name, _sql_type, _nonnull, _default, primary_key) = \
+        column_desc
     if primary_key:
         return (column_name, "key")
     # XXX Use sqlite column type as a heuristic?  Won't help for CSV.
@@ -305,7 +306,8 @@ def bayesdb_guess_column(bdb, table, column_desc,
 
 # XXX This is a kludge!
 def bayesdb_column_floatable_p(bdb, table, column_desc):
-    (cid, column_name, sql_type, nonnull, default, primary_key) = column_desc
+    (_cid, column_name, _sql_type, _nonnull, _default, _primary_key) = \
+        column_desc
     qt = sqlite3_quote_name(table)
     qcn = sqlite3_quote_name(column_name)
     sql = "SELECT %s FROM %s WHERE %s IS NOT NULL" % (qcn, qt, qcn)
@@ -328,14 +330,14 @@ def bayesdb_create_metadata(bdb, table, column_names, column_types):
                 for name in column_names],
     }
 
-def bayesdb_metadata_numerical(bdb, table, column_name):
+def bayesdb_metadata_numerical(_bdb, _table, _column_name):
     return {
         "modeltype": "normal_inverse_gamma",
         "value_to_code": {},
         "code_to_value": {},
     }
 
-def bayesdb_metadata_cyclic(bdb, table, column_name):
+def bayesdb_metadata_cyclic(_bdb, _table, _column_name):
     return {
         "modeltype": "vonmises",
         "value_to_code": {},
@@ -684,7 +686,7 @@ def bayesdb_column_correlation(bdb, table_id, colno0, colno1):
     if bayesdb_modeltype_numerical_p(modeltype0) and \
        bayesdb_modeltype_numerical_p(modeltype1):
         # Both numerical: Pearson R^2
-        sqrt_correlation, p_value = scipy.stats.pearsonr(data0, data1)
+        sqrt_correlation, _p_value = scipy.stats.pearsonr(data0, data1)
         correlation = sqrt_correlation ** 2
     elif bayesdb_modeltype_discrete_p(modeltype0) and \
          bayesdb_modeltype_discrete_p(modeltype1):
@@ -702,7 +704,7 @@ def bayesdb_column_correlation(bdb, table_id, colno0, colno1):
                         if data0[i] == v0 and data1[i] == v1:
                             c += 1
                     ct[v0][v1] = c
-            chisq, p, dof, expected = scipy.stats.chi2_contingency(ct,
+            chisq, _p, _dof, _expected = scipy.stats.chi2_contingency(ct,
                 correction=False)
             correlation = math.sqrt(chisq / (n * (min_levels - 1)))
     else:
@@ -726,7 +728,7 @@ def bayesdb_column_correlation(bdb, table_id, colno0, colno1):
                     if data_group[i] == v:
                         sample.append(data_y[i])
                 samples.append(sample)
-            F, p = scipy.stats.f_oneway(*samples)
+            F, _p = scipy.stats.f_oneway(*samples)
             correlation = 1 - 1/(1 + F*((n_groups - 1) / (n - n_groups)))
     return correlation
 
