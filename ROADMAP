@@ -1,0 +1,50 @@
+* Bayeslite roadmap
+
+2014-11-13
+
+** Major to do
+
+- Write parser for BQL and compile it into SQL.
+  => Could use the existing BQL parser, but I'm rather disinclined to
+     touch that pile of spaghetti.  Would rather throw out pyparsing
+     in favour of an NFA scanner and LALR parser.
+  => Need to determine how to embed SQL in our grammar.  Would be nice
+     to be able to merely extend sqlite's grammar, but that's not a
+     trivial task.
+
+- Implement importing existing bayesdb tables and models into bayeslite.
+  => Should be a SMOP.
+
+- Decide how to expose INFER and SIMULATE to BQL.
+  => Best would probably be via sqlite virtual tables, which the
+     Python sqlite3 module does not support.  May want to replace it
+     by a better sqlite3 wrapper, e.g. apsw.
+
+- Structural constraints.
+- Foreign predictors.
+
+** Things bayesdb has that bayeslite doesn't
+
+- Parallel analysis.
+  => Not difficult in principle: spawn a thread that runs
+     bayesdb_model_analyze1.
+
+- Remote server.
+  => Not difficult in principle once there is a parser: the core API
+     of bayeslite is noninteractive and composable.
+
+- Runnable examples.
+- Automatic tests.
+- Interactive UI.
+
+** Things bayeslite has that bayesdb doesn't
+
+- Noninteractive API.
+- Relational SQL queries.
+
+** Random long-term notes
+
+The approach taken with sqlite, to extend SQL with functions that
+compute BayesDB functionality by calling into the backend, would work
+with PGSQL too, in case we want to take that path -- provided it is OK
+to run the computations in the PGSQL process.
