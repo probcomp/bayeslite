@@ -4,7 +4,7 @@
 
 ** Major to do
 
-- Write parser for BQL and compile it into SQL.
+- [1 week] Write parser for BQL and compile it into SQL.
   => Could use the existing BQL parser, but I'm rather disinclined to
      touch that pile of spaghetti.  Would rather throw out pyparsing
      in favour of an NFA scanner and LALR parser.
@@ -12,30 +12,30 @@
      to be able to merely extend sqlite's grammar, but that's not a
      trivial task.
 
-- Implement importing existing bayesdb tables and models into bayeslite.
+- [1-2 days] Implement importing bayesdb tables and models into bayeslite.
   => Should be a SMOP.
 
-- Decide how to expose INFER and SIMULATE to BQL.
+- [] Decide how to expose INFER and SIMULATE to BQL.
   => Best would probably be via sqlite virtual tables, which the
      Python sqlite3 module does not support.  May want to replace it
      by a better sqlite3 wrapper, e.g. apsw.
 
-- Structural constraints.
-- Foreign predictors.
+- [] Structural constraints.
+- [] Foreign predictors.
 
 ** Things bayesdb has that bayeslite doesn't
 
-- Parallel analysis.
+- [1 day] Parallel analysis.
   => Not difficult in principle: spawn a thread that runs
      bayesdb_model_analyze1.
 
-- Remote server.
+- [2-4 days] Remote server.
   => Not difficult in principle once there is a parser: the core API
      of bayeslite is noninteractive and composable.
 
-- Runnable examples.
-- Automatic tests.
-- Interactive UI.
+- [1-2 days] Runnable examples.
+- [] Automatic tests (requires me to know what to meaningfully test).
+- [] Interactive UI.
 
 ** Things bayeslite has that bayesdb doesn't
 
