@@ -305,7 +305,7 @@ def parseonetoken(psp, x):
                 psp.declassoc = NONE
                 psp.state = WAITING_FOR_PRECEDENCE_SYMBOL
             elif strcmp(x, "fallback") == 0:
-                psp.fallback = 0
+                psp.fallback = None
                 psp.state = WAITING_FOR_FALLBACK_ID
             elif strcmp(x, "wildcard") == 0:
                 psp.state = WAITING_FOR_WILDCARD_ID
