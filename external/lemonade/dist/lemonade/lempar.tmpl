@@ -320,7 +320,8 @@ class Parser(object):
 
         yygoto = self.yyRuleInfo[yyruleno].lhs   # The next state
         yysize = self.yyRuleInfo[yyruleno].nrhs  # Amount to pop the stack
-        del self.yystack[-yysize:]
+        if yysize > 0:
+            del self.yystack[-yysize:]
 
         # The next action
         yyact = self.yy_find_reduce_action(self.yystack[-1].stateno, yygoto)
