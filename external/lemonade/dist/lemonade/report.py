@@ -322,7 +322,8 @@ def generate_action(out, indent, lemp, rp):
     writeRuleText(out, rp)
     fprintf(out, "\n")
     if rp.lhsalias:
-        fprintf(out, "%s    return self.delegate.%s(\n", indent, rp.lhsalias)
+        name = "p_%s_%s" % (rp.lhs.name, rp.lhsalias)
+        fprintf(out, "%s    return self.delegate.%s(\n", indent, name)
         for i in range(rp.nrhs):
             if rp.rhsalias[i]:
                 fprintf(out,
