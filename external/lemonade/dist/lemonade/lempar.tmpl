@@ -313,10 +313,10 @@ class Parser(object):
                 self.yyTracePrompt, self.yyRuleName[yyruleno]))
 
         # get the action
-        action = getattr(self, 'action_%03d' % yyruleno)
+        action = self.yy_action_method[yyruleno]
 
         # 'yygotominor' is the LHS of the rule reduced
-        yygotominor = action()
+        yygotominor = action(self)
 
         yygoto = self.yyRuleInfo[yyruleno].lhs   # The next state
         yysize = self.yyRuleInfo[yyruleno].nrhs  # Amount to pop the stack

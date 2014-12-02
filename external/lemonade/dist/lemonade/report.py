@@ -719,6 +719,12 @@ def ReportTable(lemp, outputStream=None):
     for rp in iterlinks(lemp.rule):
         generate_action(out, indent, lemp, rp)
 
+    fprintf(out, "%syy_action_method = [\n", indent)
+    for i, rp in enumerate(iterlinks(lemp.rule)):
+        assert i == rp.index
+        fprintf(out, "%s    action_%03d,\n", indent, i)
+    fprintf(out, "%s]\n", indent)
+
 
     tplt_xfer(lemp.name, _in, out)
 
