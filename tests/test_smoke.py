@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import contextlib
+import itertools
 import pytest
 import sqlite3
 import tempfile
@@ -8,6 +9,11 @@ import tempfile
 import crosscat.CrossCatClient
 
 import bayeslite
+
+def powerset(s):
+    s = list(s)
+    combinations = (itertools.combinations(s, r) for r in range(len(s) + 1))
+    return itertools.chain.from_iterable(combinations)
 
 def local_crosscat():
     return crosscat.CrossCatClient.get_CrossCatClient('local', seed=0)
@@ -167,3 +173,14 @@ def test_t1_infer(row_id, colno, confidence):
     with analyzed_bayesdb_table(t1(), 1, 1) as (bdb, table_id):
         bayeslite.bayesdb_infer(bdb, table_id, colno, row_id, None, confidence,
             numsamples=1)
+
+@pytest.mark.parametrize('colnos,numpredictions',
+    [(colnos, numpred)
+        for colnos in powerset(range(3))
+        for numpred in range(3)])
+def test_t1_simulate_unconstrained(colnos, numpredictions):
+    if len(colnos) == 0:
+        pytest.xfail("Crosscat can't simulate zero columns.")
+    with analyzed_bayesdb_table(t1(), 1, 1) as (bdb, table_id):
+        bayeslite.bayesdb_simulate(bdb, table_id, None, colnos,
+            numpredictions=numpredictions)
