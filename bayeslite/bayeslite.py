@@ -749,7 +749,7 @@ def bayesdb_column_dependence_probability(bdb, table_id, colno0, colno1):
         if len(unique(X_D[assignments[colno0]])) <= 1:
             continue
         count += 1
-    return (float(count) / float(nmodels))
+    return float("nan") if nmodels == 0 else (float(count) / float(nmodels))
 
 # Two-column function:  MUTUAL INFORMATION [OF <col0> WITH <col1>]
 def bayesdb_column_mutual_information(bdb, table_id, colno0, colno1,
