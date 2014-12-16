@@ -597,6 +597,7 @@ def bayesdb_latent_data(bdb, table_id):
 
 def bayesdb_models_initialize(bdb, table_id, nmodels, model_config=None):
     assert model_config is None         # XXX For now.
+    assert 0 < nmodels
     engine_sql = "SELECT id FROM bayesdb_engine WHERE name = ?"
     engine_id = sqlite3_exec_1(bdb.sqlite, engine_sql, ("crosscat",)) # XXX
     model_config = {
