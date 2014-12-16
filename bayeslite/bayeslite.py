@@ -897,7 +897,8 @@ def bayesdb_value_to_code(M_c, colno, value):
         # XXX Fix this.
         if value is None:
             return float("NaN")         # XXX !?!??!
-        return metadata["code_to_value"][str(value)]
+        # XXX Crosscat expects floating-point codes.
+        return float(metadata["code_to_value"][str(value)])
     elif bayesdb_modeltype_numerical_p(modeltype):
         if value is None:
             return float("NaN")
