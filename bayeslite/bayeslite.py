@@ -248,16 +248,17 @@ def bayesdb_determine_columns(bdb, table, column_names, column_types):
     column_descs = cursor.fetchall()
     if column_names is None:
         column_names = [name for _i, name, _t, _n, _d, _p in column_descs]
+        column_name_set = set(column_names)
     else:
-        column_name_set = set(name for _i, name, _t, _n, _d, _p in column_descs)
+        all_names = set(name for _i, name, _t, _n, _d, _p in column_descs)
         for name in column_names:
-            if name not in column_name_set:
+            if name not in all_names:
                 raise ValueError("Unknown column: %s" % (name,))
+    column_name_set = set(column_names)
     if column_types is None:
         column_types = dict(bayesdb_guess_column(bdb, table, desc)
-            for desc in column_descs)
+            for desc in column_descs if desc[1] in column_name_set)
     else:
-        column_name_set = set(column_names)
         for name in column_types:
             if name not in column_name_set:
                 raise ValueError("Unknown column: %s" % (name,))
