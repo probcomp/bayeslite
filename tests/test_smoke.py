@@ -210,15 +210,31 @@ def test_t1_simulate(colnos, constraints, numpredictions):
         bayeslite.bayesdb_simulate(bdb, table_id, constraints, colnos,
             numpredictions=numpredictions)
 
+@pytest.mark.parametrize('btable_name,colno',
+    [(btable_name, colno)
+        for btable_name in btable_generators.keys()
+        for colno in range(3)])
+def test_onecolumn(btable_name, colno):
+    if btable_name == 't0':
+        # XXX Also too few columns for this test.
+        pytest.xfail("Crosscat can't handle a table with only one column.")
+    with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
+            as (bdb, table_id):
+        bayeslite.bayesdb_column_typicality(bdb, table_id, colno)
+
 @pytest.mark.parametrize('btable_name,colno0,colno1',
     [(btable_name, colno0, colno1)
         for btable_name in btable_generators.keys()
         for colno0 in range(3)
         for colno1 in range(3)])
-def test_column_correlation(btable_name, colno0, colno1):
+def test_twocolumn(btable_name, colno0, colno1):
     if btable_name == 't0':
         # XXX Also too few columns for this test.
         pytest.xfail("Crosscat can't handle a table with only one column.")
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
         bayeslite.bayesdb_column_correlation(bdb, table_id, colno0, colno1)
+        bayeslite.bayesdb_column_dependence_probability(bdb, table_id, colno0,
+            colno1)
+        bayeslite.bayesdb_column_mutual_information(bdb, table_id, colno0,
+            colno1)
