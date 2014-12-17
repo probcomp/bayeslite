@@ -199,6 +199,11 @@ def test_t1_simulate(colnos, constraints, numpredictions):
     with analyzed_bayesdb_table(t1(), 1, 1) as (bdb, table_id):
         if constraints is not None:
             row_id = 1          # XXX Avoid hard-coding this.
+            # Can't use t1_rows[0][i] because not all t1-based tables
+            # use the same column indexing -- some use a subset of the
+            # columns.
+            #
+            # XXX Automatically test the correct exception.
             constraints = \
                 [(i, bayeslite.bayesdb_cell_value(bdb, table_id, row_id, i))
                     for i in constraints]
