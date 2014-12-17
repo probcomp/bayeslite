@@ -174,13 +174,19 @@ def test_t1_infer(row_id, colno, confidence):
         bayeslite.bayesdb_infer(bdb, table_id, colno, row_id, None, confidence,
             numsamples=1)
 
-@pytest.mark.parametrize('colnos,numpredictions',
-    [(colnos, numpred)
+@pytest.mark.parametrize('colnos,constraints,numpredictions',
+    [(colnos, constraints, numpred)
         for colnos in powerset(range(3))
+        for constraints in [None] + list(powerset(range(3)))
         for numpred in range(3)])
-def test_t1_simulate_unconstrained(colnos, numpredictions):
+def test_t1_simulate(colnos, constraints, numpredictions):
     if len(colnos) == 0:
         pytest.xfail("Crosscat can't simulate zero columns.")
     with analyzed_bayesdb_table(t1(), 1, 1) as (bdb, table_id):
-        bayeslite.bayesdb_simulate(bdb, table_id, None, colnos,
+        if constraints is not None:
+            row_id = 1          # XXX Avoid hard-coding this.
+            constraints = \
+                [(i, bayeslite.bayesdb_cell_value(bdb, table_id, row_id, i))
+                    for i in constraints]
+        bayeslite.bayesdb_simulate(bdb, table_id, constraints, colnos,
             numpredictions=numpredictions)
