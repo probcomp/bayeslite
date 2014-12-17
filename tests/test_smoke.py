@@ -249,3 +249,45 @@ def test_t1_column_value_probability(colno, row_id):
         value = bayeslite.bayesdb_cell_value(bdb, table_id, row_id, colno)
         bayeslite.bayesdb_column_value_probability(bdb, table_id, colno, value)
 
+@pytest.mark.parametrize('btable_name,source,target,colnos',
+    [(btable_name, source, target, list(colnos))
+        for btable_name in btable_generators.keys()
+        for source in range(1,3)
+        for target in range(2,4)
+        for colnos in powerset(range(3))])
+def test_row_similarity(btable_name, source, target, colnos):
+    if btable_name == 't0':
+        pytest.xfail("Crosscat can't handle a table with only one column.")
+    if btable_name == 't0' and colnos != [] and colnos != [0]:
+        pytest.skip('Not enough columns in t0.')
+    with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
+            as (bdb, table_id):
+        bayeslite.bayesdb_row_similarity(bdb, table_id, source, target, colnos)
+
+@pytest.mark.parametrize('btable_name,row_id',
+    [(btable_name, row_id)
+        for btable_name in btable_generators.keys()
+        for row_id in range(1,4)])
+def test_row_typicality(btable_name, row_id):
+    if btable_name == 't0':
+        pytest.xfail("Crosscat can't handle a table with only one column.")
+    if btable_name == 't0' and colnos != [] and colnos != [0]:
+        pytest.skip('Not enough columns in t0.')
+    with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
+            as (bdb, table_id):
+        bayeslite.bayesdb_row_typicality(bdb, table_id, row_id)
+
+@pytest.mark.parametrize('btable_name,row_id,colno',
+    [(btable_name, row_id, colno)
+        for btable_name in btable_generators.keys()
+        for row_id in range(1,4)
+        for colno in range(3)])
+def test_row_column_predictive_probability(btable_name, row_id, colno):
+    if btable_name == 't0':
+        pytest.xfail("Crosscat can't handle a table with only one column.")
+    if btable_name == 't0' and colnos != [] and colnos != [0]:
+        pytest.skip('Not enough columns in t0.')
+    with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
+            as (bdb, table_id):
+        bayeslite.bayesdb_row_column_predictive_probability(bdb, table_id,
+            row_id, colno)
