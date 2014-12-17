@@ -182,7 +182,12 @@ def test_t1_missingtype():
 def test_t1_multikey():
     with pytest.raises(ValueError):
         with sqlite_bayesdb_table(bayesdb(), 't1', t1_schema, t1_data,
-                column_types={'id': 'key', 'label': 'key'}):
+                column_names=['id', 'label', 'age'],
+                column_types={
+                    'id': 'key',
+                    'label': 'key',
+                    'age': 'categorical',
+                }):
             pass
 
 btable_generators = {
