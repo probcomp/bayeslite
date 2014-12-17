@@ -384,7 +384,7 @@ metadata_generators = {
 def bayesdb_read_csv_with_header(pathname):
     with open(pathname, "rU") as f:
         reader = csv.reader(f)
-        column_names = reader.next()
+        column_names = [n.strip() for n in reader.next()]
         ncols = len(column_names)
         # XXX Can we get the CSV reader to strip for us?
         rows = [[v.strip() for v in row] for row in reader]

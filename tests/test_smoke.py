@@ -380,16 +380,15 @@ def test_csv_import_schema():
         with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
             with open(f.name, 'w') as out:
                 out.write(csv_data)
-            with pytest.raises(IOError):
-                bayeslite.bayesdb_import_csv_file(bdb, 'employees', f.name,
-                    column_types={
-                        'age': 'numerical',
-                        'gender': 'categorical',
-                        'salary': 'cyclic',
-                        'height': 'key',
-                        'division': 'categorical',
-                        'rank': 'categorical',
-                    })
+            bayeslite.bayesdb_import_csv_file(bdb, 'employees', f.name,
+                column_types={
+                    'age': 'numerical',
+                    'gender': 'categorical',
+                    'salary': 'cyclic',
+                    'height': 'key',
+                    'division': 'categorical',
+                    'rank': 'categorical',
+                })
 
 def test_csv_import_badschema():
     with bayesdb() as bdb:
