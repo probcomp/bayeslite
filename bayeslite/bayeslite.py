@@ -189,7 +189,7 @@ def bayesdb_install_bql(db, cookie):
     function("column_value_probability", 3, bayesdb_column_value_probability)
     function("row_similarity", 4, bayesdb_row_similarity)
     function("row_typicality", 2, bayesdb_row_typicality)
-    function("row_column_predictive_probability", 2,
+    function("row_column_predictive_probability", 3,
         bayesdb_row_column_predictive_probability)
 
 # XXX XXX XXX Temporary debugging kludge!
