@@ -238,3 +238,13 @@ def test_twocolumn(btable_name, colno0, colno1):
             colno1)
         bayeslite.bayesdb_column_mutual_information(bdb, table_id, colno0,
             colno1)
+
+@pytest.mark.parametrize('colno,row_id',
+    [(colno, row_id)
+        for colno in range(3)
+        for row_id in range(1,6)])
+def test_t1_column_value_probability(colno, row_id):
+    with analyzed_bayesdb_table(t1(), 1, 1) as (bdb, table_id):
+        value = bayeslite.bayesdb_cell_value(bdb, table_id, row_id, colno)
+        bayeslite.bayesdb_column_value_probability(bdb, table_id, colno, value)
+
