@@ -262,6 +262,7 @@ def test_onecolumn(btable_name, colno):
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
         bayeslite.bayesdb_column_typicality(bdb, table_id, colno)
+        bdb.sqlite.execute('select column_typicality(?, ?)', (table_id, colno))
 
 @pytest.mark.parametrize('btable_name,colno0,colno1',
     [(btable_name, colno0, colno1)
@@ -276,10 +277,19 @@ def test_twocolumn(btable_name, colno0, colno1):
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
         bayeslite.bayesdb_column_correlation(bdb, table_id, colno0, colno1)
+        bayeslite.sqlite3_exec_1(bdb.sqlite,
+            'select column_correlation(?, ?, ?)',
+            (table_id, colno0, colno1))
         bayeslite.bayesdb_column_dependence_probability(bdb, table_id, colno0,
             colno1)
+        bayeslite.sqlite3_exec_1(bdb.sqlite,
+            'select column_dependence_probability(?, ?, ?)',
+            (table_id, colno0, colno1))
         bayeslite.bayesdb_column_mutual_information(bdb, table_id, colno0,
             colno1)
+        bayeslite.sqlite3_exec_1(bdb.sqlite,
+            'select column_mutual_information(?, ?, ?)',
+            (table_id, colno0, colno1))
 
 @pytest.mark.parametrize('colno,row_id',
     [(colno, row_id)
@@ -289,6 +299,15 @@ def test_t1_column_value_probability(colno, row_id):
     with analyzed_bayesdb_table(t1(), 1, 1) as (bdb, table_id):
         value = bayeslite.bayesdb_cell_value(bdb, table_id, row_id, colno)
         bayeslite.bayesdb_column_value_probability(bdb, table_id, colno, value)
+        tn = bayeslite.bayesdb_table_name(bdb, table_id)
+        cn = bayeslite.bayesdb_column_name(bdb, table_id, colno)
+        qt = bayeslite.sqlite3_quote_name(tn)
+        qc = bayeslite.sqlite3_quote_name(cn)
+        sql = '''
+            select column_value_probability(?, ?,
+                (select %s from %s where rowid = ?))
+        ''' % (qc, qt)
+        bayeslite.sqlite3_exec_1(bdb.sqlite, sql, (table_id, colno, row_id))
 
 @pytest.mark.parametrize('btable_name,source,target,colnos',
     [(btable_name, source, target, list(colnos))
@@ -304,6 +323,8 @@ def test_row_similarity(btable_name, source, target, colnos):
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
         bayeslite.bayesdb_row_similarity(bdb, table_id, source, target, colnos)
+        # XXX OOPS!  Can't write this in SQL, because no arrays.
+        # Variadic sqlite functions?
 
 @pytest.mark.parametrize('btable_name,row_id',
     [(btable_name, row_id)
@@ -317,6 +338,8 @@ def test_row_typicality(btable_name, row_id):
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
         bayeslite.bayesdb_row_typicality(bdb, table_id, row_id)
+        bayeslite.sqlite3_exec_1(bdb.sqlite, 'select row_typicality(?, ?)',
+            (table_id, row_id))
 
 @pytest.mark.parametrize('btable_name,row_id,colno',
     [(btable_name, row_id, colno)
@@ -332,6 +355,9 @@ def test_row_column_predictive_probability(btable_name, row_id, colno):
             as (bdb, table_id):
         bayeslite.bayesdb_row_column_predictive_probability(bdb, table_id,
             row_id, colno)
+        bayeslite.sqlite3_exec_1(bdb.sqlite,
+            'select row_column_predictive_probability(?, ?, ?)',
+            (table_id, row_id, colno))
 
 csv_data = '''age, gender, salary, height, division, rank
 34, M, 74000, 65, sales, 3
