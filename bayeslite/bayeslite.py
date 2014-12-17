@@ -551,7 +551,7 @@ def bayesdb_column_values(bdb, table_id, colno):
 def bayesdb_cell_value(bdb, table_id, row_id, colno):
     qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
     qc = sqlite3_quote_name(bayesdb_column_name(bdb, table_id, colno))
-    sql = "SELECT %s FROM %s WHERE rowid = ?" % (qt, qc)
+    sql = "SELECT %s FROM %s WHERE rowid = ?" % (qc, qt)
     return sqlite3_exec_1(bdb.sqlite, sql, (row_id,))
 
 ### BayesDB model access
