@@ -688,7 +688,7 @@ def bayesdb_column_correlation(bdb, table_id, colno0, colno1):
     # XXX Push this into the engine.
     modeltype0 = M_c["column_metadata"][colno0]["modeltype"]
     modeltype1 = M_c["column_metadata"][colno1]["modeltype"]
-    correlation = float("nan")  # Default result.
+    correlation = float("NaN")  # Default result.
     if bayesdb_modeltype_numerical_p(modeltype0) and \
        bayesdb_modeltype_numerical_p(modeltype1):
         # Both numerical: Pearson R^2
@@ -753,7 +753,7 @@ def bayesdb_column_dependence_probability(bdb, table_id, colno0, colno1):
         if len(unique(X_D[assignments[colno0]])) <= 1:
             continue
         count += 1
-    return float("nan") if nmodels == 0 else (float(count) / float(nmodels))
+    return float("NaN") if nmodels == 0 else (float(count) / float(nmodels))
 
 # Two-column function:  MUTUAL INFORMATION [OF <col0> WITH <col1>]
 def bayesdb_column_mutual_information(bdb, table_id, colno0, colno1,
