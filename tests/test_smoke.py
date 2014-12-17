@@ -332,3 +332,48 @@ def test_row_column_predictive_probability(btable_name, row_id, colno):
             as (bdb, table_id):
         bayeslite.bayesdb_row_column_predictive_probability(bdb, table_id,
             row_id, colno)
+
+csv_data = '''age, gender, salary, height, division, rank
+34, M, 74000, 65, sales, 3
+41, M, 65600, 72, marketing, 4
+25, M, 52000, 69, accounting, 5
+23, F, 81000, 67, data science, 3
+36, F, 96000, 70, management, 2
+30, M, 70000, 73, sales, 4
+'''
+
+def test_csv_import():
+    with bayesdb() as bdb:
+        with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
+            with open(f.name, 'w') as out:
+                out.write(csv_data)
+            bayeslite.bayesdb_import_csv_file(bdb, 'employees', f.name)
+
+def test_csv_import_schema():
+    with bayesdb() as bdb:
+        with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
+            with open(f.name, 'w') as out:
+                out.write(csv_data)
+            with pytest.raises(IOError):
+                bayeslite.bayesdb_import_csv_file(bdb, 'employees', f.name,
+                    column_types={
+                        'age': 'numerical',
+                        'gender': 'categorical',
+                        'salary': 'cyclic',
+                        'height': 'key',
+                        'division': 'categorical',
+                        'rank': 'categorical',
+                    })
+
+def test_csv_import_badschema():
+    with bayesdb() as bdb:
+        with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
+            with open(f.name, 'w') as out:
+                out.write(csv_data)
+            with pytest.raises(IOError):
+                bayeslite.bayesdb_import_csv_file(bdb, 'employees', f.name,
+                    column_types={
+                        'age': 'numerical',
+                        'division': 'categorical',
+                        'rank': 'categorical',
+                    })
