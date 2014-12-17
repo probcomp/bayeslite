@@ -94,6 +94,24 @@ def t0_data(bdb):
 def t0():
     return sqlite_bayesdb_table(bayesdb(), 't0', t0_schema, t0_data)
 
+def test_t0_badname():
+    with pytest.raises(ValueError):
+        with sqlite_bayesdb_table(bayesdb(), 't0', t0_schema, t0_data,
+                column_names=['id', 'nid']):
+            pass
+
+def test_t0_badtype():
+    with pytest.raises(ValueError):
+        with sqlite_bayesdb_table(bayesdb(), 't0', t0_schema, t0_data,
+                column_types={'nid': 'categorical'}):
+            pass
+
+def test_t0_missingtype():
+    with pytest.raises(ValueError):
+        with sqlite_bayesdb_table(bayesdb(), 't0', t0_schema, t0_data,
+                column_types={}):
+            pass
+
 def t1_schema(bdb):
     bdb.sqlite.execute('''
         create table t1 (
@@ -153,6 +171,19 @@ def t1_subcat():
             'label': 'key',
             'age': 'categorical',
         })
+
+def test_t1_missingtype():
+    with pytest.raises(ValueError):
+        with sqlite_bayesdb_table(bayesdb(), 't1', t1_schema, t1_data,
+                column_names=['id', 'label', 'age'],
+                column_types={'id': 'key', 'label': 'key'}):
+            pass
+
+def test_t1_multikey():
+    with pytest.raises(ValueError):
+        with sqlite_bayesdb_table(bayesdb(), 't1', t1_schema, t1_data,
+                column_types={'id': 'key', 'label': 'key'}):
+            pass
 
 btable_generators = {
     't0': t0,
