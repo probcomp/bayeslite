@@ -229,8 +229,9 @@ def test_onecolumn(btable_name, colno):
         for colno1 in range(3)])
 def test_twocolumn(btable_name, colno0, colno1):
     if btable_name == 't0':
-        # XXX Also too few columns for this test.
         pytest.xfail("Crosscat can't handle a table with only one column.")
+    if btable_name == 't0':
+        pytest.skip('Not enough columns in t0.')
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
         bayeslite.bayesdb_column_correlation(bdb, table_id, colno0, colno1)
