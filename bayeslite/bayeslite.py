@@ -697,19 +697,19 @@ def bayesdb_column_correlation(bdb, table_id, colno0, colno1):
     elif bayesdb_modeltype_discrete_p(modeltype0) and \
          bayesdb_modeltype_discrete_p(modeltype1):
         # Both categorical: Cramer's phi
-        unique0 = unique(data0)
-        unique1 = unique(data1)
+        unique0 = unique_indices(data0)
+        unique1 = unique_indices(data1)
         min_levels = min(len(unique0), len(unique1))
-        if 0 < min_levels:
-            ct = []
-            for v0 in unique0:
-                ct[v0] = []
-                for v1 in unique1:
+        if 1 < min_levels:
+            ct = [0] * len(unique0)
+            for i0, j0 in enumerate(unique0):
+                ct[i0] = [0] * len(unique1)
+                for i1, j1 in enumerate(unique1):
                     c = 0
                     for i in range(n):
-                        if data0[i] == v0 and data1[i] == v1:
+                        if data0[i] == data0[j0] and data1[i] == data1[j1]:
                             c += 1
-                    ct[v0][v1] = c
+                    ct[i0][i1] = c
             chisq, _p, _dof, _expected = scipy.stats.chi2_contingency(ct,
                 correction=False)
             correlation = math.sqrt(chisq / (n * (min_levels - 1)))
@@ -1083,6 +1083,24 @@ def unique(array):
         if array_unique[-1] != x:
             array_unique.append(x)
     return array_unique
+
+def unique_indices(array):
+    """Return an array of the indices of the unique elements in ARRAY.
+
+    No element may be a floating-point NaN.  If your data set includes
+    NaNs, omit them before passing them here.
+    """
+    for x in array:
+        assert not (type(x) == float and math.isnan(x))
+    if len(array) < 2:
+        return array
+    array_sorted = sorted((x, i) for i, x in enumerate(array))
+    array_unique = [array_sorted[0][1]]
+    for x, i in array_sorted[1:]:
+        assert array[array_unique[-1]] <= x
+        if array[array_unique[-1]] != x:
+            array_unique.append(i)
+    return sorted(array_unique)
 
 def arithmetic_mean(array):
     """Return the arithmetic mean of elements of ARRAY in floating-point."""
