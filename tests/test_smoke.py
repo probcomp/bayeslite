@@ -190,6 +190,11 @@ def test_t1_multikey():
                 }):
             pass
 
+def test_t1_nokey():
+    with sqlite_bayesdb_table(bayesdb(), 't1', t1_schema, t1_data,
+            column_names=['age', 'weight']):
+        pass
+
 btable_generators = {
     't0': t0,
     't1': t1,
