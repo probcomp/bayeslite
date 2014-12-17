@@ -1092,8 +1092,10 @@ def unique_indices(array):
     """
     for x in array:
         assert not (type(x) == float and math.isnan(x))
-    if len(array) < 2:
-        return array
+    if len(array) == 0:
+        return []
+    if len(array) == 1:
+        return [0]
     array_sorted = sorted((x, i) for i, x in enumerate(array))
     array_unique = [array_sorted[0][1]]
     for x, i in array_sorted[1:]:
