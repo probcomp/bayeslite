@@ -359,6 +359,37 @@ def test_row_column_predictive_probability(btable_name, row_id, colno):
             'select row_column_predictive_probability(?, ?, ?)',
             (table_id, row_id, colno))
 
+def test_csv_import_nocols():
+    with bayesdb() as bdb:
+        with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
+            with open(f.name, 'w') as out:
+                out.write('\n')
+            with pytest.raises(IOError):
+                bayeslite.bayesdb_import_csv_file(bdb, 'nocols', f.name)
+
+def test_csv_import_onecol():
+    with bayesdb() as bdb:
+        with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
+            with open(f.name, 'w') as out:
+                out.write('foo\n0\none\n2\n')
+            bayeslite.bayesdb_import_csv_file(bdb, 'onecol', f.name)
+
+def test_csv_import_toofewcols():
+    with bayesdb() as bdb:
+        with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
+            with open(f.name, 'w') as out:
+                out.write('foo,bar\n0,1\n0\n')
+            with pytest.raises(IOError):
+                bayeslite.bayesdb_import_csv_file(bdb, 'bad', f.name)
+
+def test_csv_import_toomanycols():
+    with bayesdb() as bdb:
+        with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
+            with open(f.name, 'w') as out:
+                out.write('foo,bar\n0,1\n0,1,2\n')
+            with pytest.raises(IOError):
+                bayeslite.bayesdb_import_csv_file(bdb, 'bad', f.name)
+
 csv_data = '''age, gender, salary, height, division, rank
 34, M, 74000, 65, sales, 3
 41, M, 65600, 72, marketing, 4
