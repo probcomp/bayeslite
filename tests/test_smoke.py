@@ -359,44 +359,37 @@ def test_row_column_predictive_probability(btable_name, row_id, colno):
             'select row_column_predictive_probability(?, ?, ?)',
             (table_id, row_id, colno))
 
-def test_csv_import_empty():
+@contextlib.contextmanager
+def bayesdb_csv(csv):
     with bayesdb() as bdb:
         with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
             with open(f.name, 'w') as out:
-                pass
-            with pytest.raises(IOError):
-                bayeslite.bayesdb_import_csv_file(bdb, 'nocols', f.name)
+                out.write(csv)
+            yield (bdb, f.name)
+
+def test_csv_import_empty():
+    with bayesdb_csv('') as (bdb, fname):
+        with pytest.raises(IOError):
+            bayeslite.bayesdb_import_csv_file(bdb, 'nocols', fname)
 
 def test_csv_import_nocols():
-    with bayesdb() as bdb:
-        with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
-            with open(f.name, 'w') as out:
-                out.write('\n')
-            with pytest.raises(IOError):
-                bayeslite.bayesdb_import_csv_file(bdb, 'nocols', f.name)
+    with bayesdb_csv('\n') as (bdb, fname):
+        with pytest.raises(IOError):
+            bayeslite.bayesdb_import_csv_file(bdb, 'nocols', fname)
 
 def test_csv_import_onecol():
-    with bayesdb() as bdb:
-        with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
-            with open(f.name, 'w') as out:
-                out.write('foo\n0\none\n2\n')
-            bayeslite.bayesdb_import_csv_file(bdb, 'onecol', f.name)
+    with bayesdb_csv('foo\n0\none\n2\n') as (bdb, fname):
+        bayeslite.bayesdb_import_csv_file(bdb, 'onecol', fname)
 
 def test_csv_import_toofewcols():
-    with bayesdb() as bdb:
-        with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
-            with open(f.name, 'w') as out:
-                out.write('foo,bar\n0,1\n0\n')
-            with pytest.raises(IOError):
-                bayeslite.bayesdb_import_csv_file(bdb, 'bad', f.name)
+    with bayesdb_csv('foo,bar\n0,1\n0\n') as (bdb, fname):
+        with pytest.raises(IOError):
+            bayeslite.bayesdb_import_csv_file(bdb, 'bad', fname)
 
 def test_csv_import_toomanycols():
-    with bayesdb() as bdb:
-        with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
-            with open(f.name, 'w') as out:
-                out.write('foo,bar\n0,1\n0,1,2\n')
-            with pytest.raises(IOError):
-                bayeslite.bayesdb_import_csv_file(bdb, 'bad', f.name)
+    with bayesdb_csv('foo,bar\n0,1\n0,1,2\n') as (bdb, fname):
+        with pytest.raises(IOError):
+            bayeslite.bayesdb_import_csv_file(bdb, 'bad', fname)
 
 csv_data = '''age, gender, salary, height, division, rank
 34, M, 74000, 65, sales, 3
@@ -408,36 +401,27 @@ csv_data = '''age, gender, salary, height, division, rank
 '''
 
 def test_csv_import():
-    with bayesdb() as bdb:
-        with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
-            with open(f.name, 'w') as out:
-                out.write(csv_data)
-            bayeslite.bayesdb_import_csv_file(bdb, 'employees', f.name)
+    with bayesdb_csv(csv_data) as (bdb, fname):
+        bayeslite.bayesdb_import_csv_file(bdb, 'employees', fname)
 
 def test_csv_import_schema():
-    with bayesdb() as bdb:
-        with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
-            with open(f.name, 'w') as out:
-                out.write(csv_data)
-            bayeslite.bayesdb_import_csv_file(bdb, 'employees', f.name,
+    with bayesdb_csv(csv_data) as (bdb, fname):
+        bayeslite.bayesdb_import_csv_file(bdb, 'employees', fname,
+            column_types={
+                'age': 'numerical',
+                'gender': 'categorical',
+                'salary': 'cyclic',
+                'height': 'key',
+                'division': 'categorical',
+                'rank': 'categorical',
+            })
+
+def test_csv_import_badschema():
+    with bayesdb_csv(csv_data) as (bdb, fname):
+        with pytest.raises(IOError):
+            bayeslite.bayesdb_import_csv_file(bdb, 'employees', fname,
                 column_types={
                     'age': 'numerical',
-                    'gender': 'categorical',
-                    'salary': 'cyclic',
-                    'height': 'key',
                     'division': 'categorical',
                     'rank': 'categorical',
                 })
-
-def test_csv_import_badschema():
-    with bayesdb() as bdb:
-        with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
-            with open(f.name, 'w') as out:
-                out.write(csv_data)
-            with pytest.raises(IOError):
-                bayeslite.bayesdb_import_csv_file(bdb, 'employees', f.name,
-                    column_types={
-                        'age': 'numerical',
-                        'division': 'categorical',
-                        'rank': 'categorical',
-                    })
