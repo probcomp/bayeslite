@@ -632,7 +632,10 @@ def bayesdb_models_initialize(bdb, table_id, nmodels, model_config=None):
 
 # XXX Background, deadline, &c.
 def bayesdb_models_analyze1(bdb, table_id, modelno, iterations=1):
+    assert 0 <= iterations
     theta = bayesdb_model(bdb, table_id, modelno)
+    if iterations < 1:
+        return
     X_L, X_D, diagnostics = bdb.engine.analyze(
         M_c=bayesdb_metadata(bdb, table_id),
         T=list(bayesdb_data(bdb, table_id)),
