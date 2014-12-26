@@ -359,6 +359,14 @@ def test_row_column_predictive_probability(btable_name, row_id, colno):
             'select row_column_predictive_probability(?, ?, ?)',
             (table_id, row_id, colno))
 
+def test_csv_import_empty():
+    with bayesdb() as bdb:
+        with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
+            with open(f.name, 'w') as out:
+                pass
+            with pytest.raises(IOError):
+                bayeslite.bayesdb_import_csv_file(bdb, 'nocols', f.name)
+
 def test_csv_import_nocols():
     with bayesdb() as bdb:
         with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
