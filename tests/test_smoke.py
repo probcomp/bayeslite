@@ -416,12 +416,25 @@ def test_csv_import_schema():
                 'rank': 'categorical',
             })
 
-def test_csv_import_badschema():
+def test_csv_import_badschema0():
     with bayesdb_csv(csv_data) as (bdb, fname):
         with pytest.raises(IOError):
             bayeslite.bayesdb_import_csv_file(bdb, 'employees', fname,
                 column_types={
                     'age': 'numerical',
+                    'division': 'categorical',
+                    'rank': 'categorical',
+                })
+
+def test_csv_import_badschema1():
+    with bayesdb_csv(csv_data) as (bdb, fname):
+        with pytest.raises(IOError):
+            bayeslite.bayesdb_import_csv_file(bdb, 'employees', fname,
+                column_types={
+                    'age': 'numerical',
+                    'zorblaxianism': 'categorical',
+                    'salary': 'cyclic',
+                    'height': 'key',
                     'division': 'categorical',
                     'rank': 'categorical',
                 })
