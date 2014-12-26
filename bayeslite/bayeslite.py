@@ -384,7 +384,11 @@ metadata_generators = {
 def bayesdb_read_csv_with_header(pathname):
     with open(pathname, "rU") as f:
         reader = csv.reader(f)
-        column_names = [n.strip() for n in reader.next()]
+        try:
+            header = reader.next()
+        except StopIteration:
+            raise IOError("Empty CSV file")
+        column_names = [n.strip() for n in header]
         ncols = len(column_names)
         if ncols == 0:
             raise IOError("No columns in CSV file!")
