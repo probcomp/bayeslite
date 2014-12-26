@@ -107,3 +107,19 @@ estimate_columns = """
                     WHERE table_id = c.table_id AND name = 'N_DEATH_ILL'))
 """
 for x in cdb.sqlite.execute(estimate_columns): print x
+
+q = '''
+select c.name as name,
+       column_dependence_probability(:table, c.colno,
+           (select colno from bayesdb_table_column
+             where table_id = :table and name = 'NAME')) as depprob,
+       column_typicality(:table, c.colno) as typ
+  from bayesdb_table_column as c
+ where c.table_id = :table
+   and depprob > 0.05
+ order by typ desc limit 10
+'''
+for x in bdb.sqlite.execute(q, {'table': dha_id}): print x
+
+cdb.close()
+bdb.close()
