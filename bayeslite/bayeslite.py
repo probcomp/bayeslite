@@ -29,7 +29,7 @@
 #
 #      DO:      qt = sqlite3_quote_name(table)
 #               qc = sqlite3_quote_name(column)
-#               db.execute("SELECT %s FROM %s WHERE x = ?" % (qt, qc), (x,))
+#               db.execute("SELECT %s FROM %s WHERE x = ?" % (qc, qt), (x,))
 #      DON'T:   db.execute("SELECT %s FROM %s WHERE x = ?" % (column, table),
 #                   (x,))
 
