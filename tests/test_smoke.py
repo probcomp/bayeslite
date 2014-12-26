@@ -370,7 +370,7 @@ def bayesdb_csv(csv):
 def test_csv_import_empty():
     with bayesdb_csv('') as (bdb, fname):
         with pytest.raises(IOError):
-            bayeslite.bayesdb_import_csv_file(bdb, 'nocols', fname)
+            bayeslite.bayesdb_import_csv_file(bdb, 'empty', fname)
 
 def test_csv_import_nocols():
     with bayesdb_csv('\n') as (bdb, fname):
