@@ -414,10 +414,6 @@ def bayesdb_import_csv_file(bdb, table, pathname, column_types=None):
             if name not in column_types:
                 # XXX Ignore this column?  Treat as numerical?  Infer?
                 raise IOError("CSV file has unknown column: %s" % (name,))
-        column_name_set = set(column_names)
-        for name in column_types:
-            if name not in column_name_set:
-                raise IOError("Column not in CSV file: %s" % (name,))
     ncols = len(column_names)
     assert ncols == len(column_types)
     qt = sqlite3_quote_name(table)
