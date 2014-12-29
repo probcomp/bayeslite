@@ -146,3 +146,8 @@ expression(literal)	::= literal(v).
 expression(paren)	::= T_LROUND expression(e) T_RROUND.
 expression(column)	::= L_NAME(col).
 expression(tabcol)	::= table_name(tab) T_DOT L_NAME(col).
+
+literal(null)		::= K_NULL.
+literal(integer)	::= L_INTEGER(i).
+literal(float)		::= L_FLOAT(f).
+literal(string)		::= L_STRING(s).
