@@ -87,10 +87,19 @@ select_bqlfn(predprob)	::= K_PREDICTIVE K_PROBABILITY K_OF name(col).
 select_bqlfn(prob)	::= K_PROBABILITY K_OF name(col) T_EQ expression(e).
 select_bqlfn(typ_row)	::= K_TYPICALITY.
 select_bqlfn(typ_col)	::= K_TYPICALITY K_OF name(col).
-select_bqlfn(sim)	::= K_SIMILARITY to(to) wrt(wrt).
+select_bqlfn(sim)	::= K_SIMILARITY K_TO expression(row) wrt(wrt).
 select_bqlfn(depprob)	::= K_DEPENDENCE K_PROBABILITY ofwith(ofwith).
 select_bqlfn(mutinf)	::= K_MUTUAL K_INFORMATION ofwith(ofwith).
 select_bqlfn(correl)	::= K_CORRELATION ofwith(ofwith).
+
+wrt(none)		::= .
+wrt(some)		::= K_WITH K_RESPECT K_TO column_lists(columns).
+
+column_lists(one)	::= column_list(collist).
+column_lists(many)	::= column_lists(collists)
+				T_COMMA|K_AND column_list(collist).
+column_list(all)	::= T_STAR.
+column_list(column)	::= name(column).
 
 as(none)		::= .
 as(some)		::= AS L_NAME(name).
