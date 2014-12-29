@@ -80,7 +80,7 @@ select_column(exp)	::= expression(e) as(as).
 
 /*
  * XXX Why are these allowed only in select, rather than generally
- * anywhere that an expression is allowed?  I'm Parroting the old
+ * anywhere that an expression is allowed?  I'm parroting the old
  * grammar here, but it seems to me this should be changed.
  */
 select_bqlfn(predprob)	::= K_PREDICTIVE K_PROBABILITY K_OF L_NAME(col).
