@@ -72,7 +72,7 @@ select_columns(sql)	::= select_columns1(cs).
 select_columns(bqlfn)	::= select_bqlfn(bqlfn).
 
 select_columns1(one)	::= select_column(c).
-select_columns1(many)	::= select_column_list(cs) T_COMMA select_column(c).
+select_columns1(many)	::= select_columns1(cs) T_COMMA select_column(c).
 
 select_column(star)	::= T_STAR.
 select_column(qstar)	::= name(table) T_DOT T_STAR.
