@@ -21,7 +21,9 @@ phrases(many)		::= phrases(phrases) T_SEMI phrasesemi(phrase).
 phrasesemi(empty)	::= T_SEMI.
 phrasesemi(nonempty)	::= phrase(phrase) T_SEMI.
 phrase(query)		::= query(q).
+/*
 phrase(command)		::= command(c).
+*/
 
 query(q)		::= query_action(action) query_body(body).
 
