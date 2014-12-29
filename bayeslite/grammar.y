@@ -95,6 +95,9 @@ select_bqlfn(correl)	::= K_CORRELATION ofwith(ofwith).
 wrt(none)		::= .
 wrt(some)		::= K_WITH K_RESPECT K_TO column_lists(columns).
 
+ofwith(with)		::= K_WITH name(column).
+ofwith(ofwith)		::= K_OF name(col1) K_WITH name(col2).
+
 column_lists(one)	::= column_list(collist).
 column_lists(many)	::= column_lists(collists)
 				T_COMMA|K_AND column_list(collist).
