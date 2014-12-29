@@ -33,12 +33,14 @@ query_action(plot)	::= K_PLOT.
 /* XXX EXPLAIN (QUERY PLAN)?  */
 
 query_body(select)	::= select(q).
+/*
 query_body(infer)	::= infer(q).
 query_body(simulate)	::= simulate(q).
 query_body(estimate_pairwise_row)
 			::= estimate_pairwise_row(q).
 query_body(create_column_list)
 			::= create_column_list(q).
+*/
 
 /* XXX Support WITH ... SELECT ... (i.e., common table expressions).  */
 select(one)		::= select1(select).
