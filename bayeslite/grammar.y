@@ -141,3 +141,8 @@ limit(offset)		::= K_LIMIT expression(limit)
 				K_OFFSET expression(offset).
 limit(comma)		::= K_LIMIT expression(offset)
 				T_COMMA expression(limit).
+
+expression(literal)	::= literal(v).
+expression(paren)	::= T_LROUND expression(e) T_RROUND.
+expression(column)	::= L_NAME(col).
+expression(tabcol)	::= table_name(tab) T_DOT L_NAME(col).
