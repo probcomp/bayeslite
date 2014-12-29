@@ -75,7 +75,7 @@ select_columns1(one)	::= select_column(c).
 select_columns1(many)	::= select_columns1(cs) T_COMMA select_column(c).
 
 select_column(star)	::= T_STAR.
-select_column(qstar)	::= name(table) T_DOT T_STAR.
+select_column(qstar)	::= table_name(table) T_DOT T_STAR.
 select_column(exp)	::= expression(e) as(as).
 
 /*
@@ -83,10 +83,10 @@ select_column(exp)	::= expression(e) as(as).
  * anywhere that an expression is allowed?  I'm Parroting the old
  * grammar here, but it seems to me this should be changed.
  */
-select_bqlfn(predprob)	::= K_PREDICTIVE K_PROBABILITY K_OF name(col).
-select_bqlfn(prob)	::= K_PROBABILITY K_OF name(col) T_EQ expression(e).
+select_bqlfn(predprob)	::= K_PREDICTIVE K_PROBABILITY K_OF L_NAME(col).
+select_bqlfn(prob)	::= K_PROBABILITY K_OF L_NAME(col) T_EQ expression(e).
 select_bqlfn(typ_row)	::= K_TYPICALITY.
-select_bqlfn(typ_col)	::= K_TYPICALITY K_OF name(col).
+select_bqlfn(typ_col)	::= K_TYPICALITY K_OF L_NAME(col).
 select_bqlfn(sim)	::= K_SIMILARITY K_TO expression(row) wrt(wrt).
 select_bqlfn(depprob)	::= K_DEPENDENCE K_PROBABILITY ofwith(ofwith).
 select_bqlfn(mutinf)	::= K_MUTUAL K_INFORMATION ofwith(ofwith).
@@ -95,14 +95,14 @@ select_bqlfn(correl)	::= K_CORRELATION ofwith(ofwith).
 wrt(none)		::= .
 wrt(some)		::= K_WITH K_RESPECT K_TO column_lists(columns).
 
-ofwith(with)		::= K_WITH name(column).
-ofwith(ofwith)		::= K_OF name(col1) K_WITH name(col2).
+ofwith(with)		::= K_WITH L_NAME(col).
+ofwith(ofwith)		::= K_OF L_NAME(col1) K_WITH L_NAME(col2).
 
 column_lists(one)	::= column_list(collist).
 column_lists(many)	::= column_lists(collists)
 				T_COMMA|K_AND column_list(collist).
 column_list(all)	::= T_STAR.
-column_list(column)	::= name(column).
+column_list(column)	::= L_NAME(column).
 
 as(none)		::= .
 as(some)		::= AS L_NAME(name).
@@ -113,14 +113,14 @@ from(nonempty)		::= K_FROM select_tables(tables).
 select_tables(one)	::= select_table(t).
 select_tables(many)	::= select_tables(ts) T_COMMA select_table(t).
 
-select_table(named)	::= name(n).
+select_table(named)	::= table_name(table).
 select_table(subquery)	::= T_LROUND query_body(q) T_RROUND.
 
 where(unconditional)	::= .
 where(conditional)	::= K_WHERE expression(condition).
 
 /* XXX Allow database-qualified name.  */
-name(unqualified)	::= L_NAME.
+table_name(unqualified)	::= L_NAME(name).
 
 group_by(none)		::= .
 group_by(some)		::= K_GROUP K_BY group_keys(k).
