@@ -104,6 +104,9 @@ select_tables(many)	::= select_tables(ts) T_COMMA select_table(t).
 select_table(named)	::= name(n).
 select_table(subquery)	::= T_LROUND query_body(q) T_RROUND.
 
+where(unconditional)	::= .
+where(conditional)	::= K_WHERE expression(condition).
+
 /* XXX Allow database-qualified name.  */
 name(unqualified)	::= L_NAME.
 
