@@ -122,3 +122,10 @@ order_keys(many)	::= order_keys(k) T_COMMA expression(e) order_sense(s).
 order_sense(none)	::= .
 order_sense(asc)	::= K_ASC.
 order_sense(desc)	::= K_DESC.
+
+limit(none)		::= .
+limit(some)		::= K_LIMIT expression(limit).
+limit(offset)		::= K_LIMIT expression(limit)
+				K_OFFSET expression(offset).
+limit(comma)		::= K_LIMIT expression(offset)
+				T_COMMA expression(limit).
