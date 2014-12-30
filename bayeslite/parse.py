@@ -128,8 +128,8 @@ class BQLSemantics(object):
 
     def p_select_tables_one(self, t):           return [t]
     def p_select_tables_many(self, ts, t):      ts.append(t); return ts
-    def p_select_table_named(self, table):      return table
-    def p_select_table_subquery(self, q):       return q
+    def p_select_table_named(self, table, name): return ast.SelTab(table, name)
+    def p_select_table_subquery(self, q, name):  return ast.SelTab(q, name)
 
     def p_where_unconditional(self):            return None
     def p_where_conditional(self, condition):   return condition

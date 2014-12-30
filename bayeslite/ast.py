@@ -28,7 +28,7 @@ QACT_PLOT = 'plot'
 Select = namedtuple('Select', [
     'quantifier',               # SELQUANT_*
     'output',                   # SelCols or SelBQL*
-    'tables',                   # [XXX name or Query*] or None (scalar)
+    'tables',                   # [SelTab] or None (scalar)
     'condition',                # Exp* or None (unconditional)
     'group',                    # [Exp*] or None (unaggregated)
     'order',                    # [Ord] or None (unordered)
@@ -66,6 +66,11 @@ ColListAll = namedtuple('ColListAll', [])
 ColListLit = namedtuple('ColListLit', ['columns'])
 ColListSub = namedtuple('ColListSub', ['query']) # subquery
 ColListSav = namedtuple('ColListSav', ['name']) # saved
+
+SelTab = namedtuple('SelTab', [
+    'table',                    # XXX subquery or XXX name
+    'name',                     # XXX name
+])
 
 Ord = namedtuple('Ord', ['expression', 'sense'])
 ORD_ASC = True

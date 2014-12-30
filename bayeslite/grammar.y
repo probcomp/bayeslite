@@ -102,8 +102,8 @@ from(nonempty)		::= K_FROM select_tables(tables).
 select_tables(one)	::= select_table(t).
 select_tables(many)	::= select_tables(ts) T_COMMA select_table(t).
 
-select_table(named)	::= table_name(table).
-select_table(subquery)	::= T_LROUND query_body(q) T_RROUND.
+select_table(named)	::= table_name(table) as(name).
+select_table(subquery)	::= T_LROUND query_body(q) T_RROUND as(name).
 
 where(unconditional)	::= .
 where(conditional)	::= K_WHERE expression(condition).
