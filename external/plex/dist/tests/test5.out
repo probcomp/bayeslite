@@ -1,0 +1,5 @@
+test5.in   1   0 ident      'a'
+test5.in   1   2 ident      'b'
+test5.in   1  24 ident      'c'
+test5.in   1  26 ident      'abc'
+test5.in   4   0 None       ''

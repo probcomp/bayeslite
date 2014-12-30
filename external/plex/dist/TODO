@@ -1,0 +1,14 @@
+* Multiple state names in State constructor
+
+* Implement scanning in C
+
+* Case-insensitivity flag
+
+* Trailing contexts?
+
+* Make Action a callable object
+
+* Action sequences
+
+* Hook up to existing parser module
+

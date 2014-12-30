@@ -1,0 +1,7 @@
+test8.in   1   0 one_ftang  'ftang'
+test8.in   1   6 one_ftang  'ftang'
+test8.in   1  12 two_ftangs 'ftangftang'
+test8.in   1  23 one_ftang  'ftang'
+test8.in   1  28 one_fta    'fta'
+test8.in   1  32 one_ftang  'ftang'
+test8.in   4   0 None       ''

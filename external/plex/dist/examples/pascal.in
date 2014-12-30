@@ -1,0 +1,16 @@
+{ Test input for the
+  Plex Pascal scanner }
+
+program spam(input, output);
+var
+  order: integer;
+begin
+  write('How many spoons of spam would you like with your eggs, sir? ');
+  readln(order);
+  if order >= 1 then
+    writeln('Certainly, sir.')
+  else
+    writeln('Sorry, sir, invalid order.')
+  end
+end.
+

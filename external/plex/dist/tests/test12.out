@@ -1,0 +1,4 @@
+test12.in   1   0 'Single-line text literal' "'Single-line text literal'"
+test12.in   1  26 'Multi-
+line text literal' "'Multi-\nline text literal'"
+test12.in   2  18 None       ''

@@ -1,0 +1,707 @@
+<!doctype html public "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+   <meta name="GENERATOR" content="Mozilla/4.7 [en] (X11; U; SunOS 5.7 sun4u) [Netscape]">
+   <meta name="Author" content="Greg Ewing">
+   <meta name="Description" content="A tutorial for Plex - a lexical analysis module for Python.">
+   <meta name="KeyWords" content="lexical analysis, lexical analyser, scanner, lex, flex, Python">
+   <title>Plex Tutorial</title>
+<!-- Changed by: Greg Ewing, 11-Apr-2002 -->
+</head>
+<body text="#000000" bgcolor="#FFFFFF" link="#0000FF" vlink="#551A8B" alink="#0000FF">
+
+<h1>
+
+<hr WIDTH="100%">Plex Tutorial
+<hr WIDTH="100%"></h1>
+
+<h2>
+Contents</h2>
+
+<ul>
+<li>
+<a href="#Using Plex">Using Plex</a></li>
+</ul>
+
+<ul>
+<li>
+<a href="#Specifying a Lexicon">Specifying a Lexicon</a></li>
+
+<ul>
+<li>
+<a href="#Specifying a Lexicon">A simple example</a></li>
+</ul>
+</ul>
+
+<ul>
+<li>
+<a href="#Creating a Scanner">Creating and using a Scanner</a></li>
+
+<ul>
+<li>
+<a href="#Ex: Reading tokens">Example: Reading tokens</a></li>
+</ul>
+</ul>
+
+<ul>
+<li>
+<a href="#position()">Getting the scanner position</a></li>
+</ul>
+
+<ul>
+<li>
+<a href="#More elaborate">More patterns and actions</a></li>
+
+<ul>
+<li>
+<a href="#Simple language">Example: A simple programming language</a></li>
+</ul>
+</ul>
+
+<ul>
+<li>
+<a href="#NoCase">Case-insensitive matching</a></li>
+</ul>
+
+<ul>
+<li>
+<a href="#Action procedures">Using action procedures</a></li>
+
+<ul>
+<li>
+<a href="#Ex: Nested comments 1">Example: Nested comments</a></li>
+</ul>
+</ul>
+
+<ul>
+<li>
+<a href="#Scanner states">Scanner states</a></li>
+
+<ul>
+<li>
+<a href="#Ex: Skipping comments">Example: Using states to skip comments</a></li>
+
+<li>
+<a href="#Ex: Two kinds of comments">Example: Two kinds of comment</a></li>
+
+<li>
+<a href="#Ex: Nested comments 2">Example: Nested comments again</a></li>
+
+<li>
+<a href="#Subclassing Scanner">Packaging action procedures in a Scanner
+subclass</a></li>
+</ul>
+</ul>
+
+<ul>
+<li>
+<a href="#Bol, Eol, Eof">Matching line beginnings and endings</a></li>
+</ul>
+
+<ul>
+<li>
+<a href="#Indentation">Scanning indented languages</a></li>
+</ul>
+
+<ul>
+<li>
+<a href="#Ex: Python scanner">Example: Python scanner</a></li>
+</ul>
+
+<blockquote>
+<li>
+<a href="#Traditional">Traditional regular expression syntax</a></li>
+</blockquote>
+
+<hr WIDTH="100%">
+<h2>
+<a NAME="Using Plex"></a>Using Plex</h2>
+There are two basic steps to creating and using a Plex scanner:
+<ol>
+<li>
+Create a Lexicon object which defines the tokens you want to recognise,
+and what you want to do when they are recognised.</li>
+
+<br>&nbsp;
+<li>
+Create a Scanner object, which associates a Lexicon with a stream of characters
+and enables you to read tokens.</li>
+</ol>
+In the following sections, we'll look at these steps in more detail.
+<h2>
+<a NAME="Specifying a Lexicon"></a>Specifying a Lexicon</h2>
+A Plex scanner is specified by creating a Lexicon object. The Lexicon constructor
+takes a list of 2-element tuples, each of which contains a <i>pattern</i>
+and an <i>action</i>.&nbsp; Here is a simple example:
+<ol>
+<pre><tt>#
+#&nbsp;&nbsp; Example 1
+#
+
+from Plex import *</tt></pre>
+
+<pre><tt>lexicon = Lexicon([
+&nbsp;&nbsp;&nbsp; (Str("Python"),&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; "my_favourite_language"),
+&nbsp;&nbsp;&nbsp; (Str("Perl"),&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; "the_other_language"),
+&nbsp;&nbsp;&nbsp; (Str("rocks"),&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; "is_excellent"),
+&nbsp;&nbsp;&nbsp; (Str("sucks"),&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; "is_differently_good"),
+&nbsp;&nbsp;&nbsp; (Rep1(Any(" \t\n")), IGNORE)
+])</tt></pre>
+</ol>
+The expression Str(<i>s</i>) creates a pattern which matches the literal
+string <i>s</i>. Any(<i>s</i>) matches any single character from the string
+<i>s,</i>
+and Rep1(<i>p</i>) matches one or more repetitions of the pattern
+<i>p.</i>
+<p>Associated with each pattern is an action to be performed when that
+pattern is recognised. The simplest form of action is just a value to be
+returned. There are also some special actions, such as IGNORE, which causes
+the text which matched the pattern to be ignored. So the last item above
+means that any sequence of one or more blanks, tabs or newlines is to be
+ignored.
+<h2>
+<a NAME="Creating a Scanner"></a>Creating and using a Scanner</h2>
+Scanning is performed by a Scanner object. When you create a Scanner, you
+specify the Lexicon that is to be used, and an input stream, which should
+be a file-like object.
+<p>To read tokens from the input stream, you call the read() method of
+the Scanner. Each time read() is called, it returns a tuple
+<blockquote>(<i>value</i>, <i>text</i>)</blockquote>
+where <i>value</i> is the value returned by the token's action, and <i>text</i>
+is the text from the input stream that matched the token.
+<p><a NAME="Ex: Reading tokens"></a>We can test out the Lexicon we defined
+earlier like this:
+<blockquote>
+<pre><tt>#
+#&nbsp;&nbsp; Example 2
+#
+
+filename = "my_file.txt"
+f = open(filename, "r")
+scanner = Scanner(lexicon, f, filename)
+while 1:
+&nbsp;&nbsp;&nbsp; token = scanner.read()
+&nbsp;&nbsp;&nbsp; print token
+&nbsp;&nbsp;&nbsp; if token[0] is None:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; break</tt></pre>
+</blockquote>
+If we feed it the following input:
+<blockquote>
+<pre><tt>Python rocks</tt></pre>
+</blockquote>
+we get the following sequence of tuples returned by successive read() calls:
+<blockquote>
+<pre><tt>('my_favourite_language', 'Python')
+('is_excellent', 'rocks')
+(None, '')</tt></pre>
+</blockquote>
+Note that a token with a value of None is returned when the scanner hits
+the end of the input.
+<h2>
+<a NAME="position()"></a>Getting the scanner position</h2>
+Scanners have a <tt>position()</tt> method which returns the position of
+the last token read using read(). It returns a tuple:
+<blockquote>(<i>filename</i>, <i>line_number</i>, <i>char_number</i>)</blockquote>
+The <i>line_number</i> is 1-based and <i>char_number</i> is the 0-based
+position within the line. The <i>filename</i> is whatever string you supplied
+as the filename parameter, if any, when you created the Scanner. The filename
+parameter to the Scanner is optional, and is purely for your convenience
+-- its only use is to be returned by position().
+<h2>
+<a NAME="More elaborate"></a>More patterns and actions</h2>
+In this section, we'll look at some more pattern constructors, and some
+more things that can be specified as the action associated with a token.
+<br><a NAME="Simple language"></a>Here is a Lexicon definition for a simple
+programming language.
+<blockquote>
+<pre><tt>#
+#&nbsp;&nbsp; Example 3
+#
+
+letter = Range("AZaz")
+digit = Range("09")
+name = letter + Rep(letter | digit)
+number = Rep1(digit)
+space = Any(" \t\n")
+comment = Str("{") + Rep(AnyBut("}")) + Str("}")
+
+resword = Str("if", "then", "else", "end")
+
+lex = Lexicon([
+&nbsp;&nbsp;&nbsp; (name,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 'ident'),
+&nbsp;&nbsp;&nbsp; (number,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 'int'),
+&nbsp;&nbsp;&nbsp; (resword,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; TEXT),
+&nbsp;&nbsp;&nbsp; (Any("+-*/=&lt;>"),&nbsp; TEXT),
+&nbsp;&nbsp;&nbsp; (space | comment, IGNORE)
+])</tt></pre>
+</blockquote>
+This example introduces some more features:
+<ul>
+<li>
+Range() takes a string containing pairs of characters. It matches any single
+character which lies within one of the ranges defined by a pair.</li>
+
+<li>
+Rep() matches zero or more repetitions of a pattern (as opposed to Rep1(),
+which matches one or more).</li>
+
+<br>&nbsp;
+<li>
+AnyBut(s) matches any single character (including a newline) which is <i>not</i>
+in the string s.</li>
+
+<br>&nbsp;
+<li>
+Patterns can be combined using the operators '+' and '|'. The pattern <i>p1</i>
++ <i>p2</i>&nbsp; matches <i>p1</i> followed by <i>p2</i>, and <i>p1</i>
+| <i>p2</i> matches either <i>p1</i>or <i>p2.</i></li>
+
+<br>&nbsp;
+<li>
+Str() can take multiple strings as arguments, in which case it matches
+any one of them. Str(<i>s1</i>, <i>s2</i>, <i>s3</i>...) is equivalent
+to Str(<i>s1</i>) | Str(<i>s2</i>) | Str(<i>s3</i>) | ...</li>
+
+<br>&nbsp;
+<li>
+The TEXT special action causes the matched text to be returned as the value
+of the token. Here it is used to arrange for the reserved words and operators
+to all have unique token values, without having to explicitly list them
+all as separate tokens.</li>
+</ul>
+Incidentally, this example also illustrates some of the advantages of using
+a constructor-function approach to building regular expressions as opposed
+to the traditional character-string syntax. Patterns can be broken down
+into readable chunks and the parts commented, and general Python coding
+techniques can be brought to bear much more easily.
+<h2>
+<a NAME="NoCase"></a>Case-insensitive matching</h2>
+The pattern constructor <tt>NoCase()</tt> takes a pattern and turns it
+into another pattern which matches the same strings except that upper and
+lower case letters are treated as equivalent. For example, if you wanted
+the language of Example 3 to be case-insensitive,&nbsp; you could write
+<blockquote>
+<pre><tt>resword = NoCase(Str("if", "then", "else", "end"))</tt></pre>
+</blockquote>
+If you wanted, you could also write
+<blockquote>
+<pre>letter = NoCase(Range("AZ"))</pre>
+</blockquote>
+However, note that the scanned text returned when an identifier is matched
+will still be as it was in the input file, so you'll have to do case-conversion
+on it yourself.
+<p>There is also an inverse operation <tt>Case().</tt> Whether a pattern
+is matched case-sensitively or case-insensitively is determined by the
+closest enclosing <tt>NoCase()</tt> or <tt>Case()</tt>.&nbsp; So,&nbsp;
+the pattern
+<blockquote>
+<pre>NoCase(Str("Mary") + Case(Str("had a") + NoCase(Str("little")) + Str("lambda")))</pre>
+</blockquote>
+will match the words "Mary" and "little" case-insensitively,&nbsp; and
+"had", "a" and "lambda" case-sensitively.
+<h2>
+<a NAME="Action procedures"></a>Using action procedures</h2>
+The action associated with a token can be an arbitrary Python function,
+which allows effects to be achieved that would otherwise be outside the
+scope of a simple finite-state machine.
+<p><a NAME="Ex: Nested comments 1"></a>Here is an example which uses action
+procedures to recognise Modula-style nested comments by keeping track of
+the nesting depth.&nbsp; It uses some of the pattern definitions from the
+last example.
+<blockquote>
+<pre>#
+#&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Example 4
+#
+
+def begin_comment(scanner, text):
+&nbsp;&nbsp;&nbsp; scanner.nesting_level = scanner.nesting_level + 1
+
+def end_comment(scanner, text):
+&nbsp;&nbsp;&nbsp; scanner.nesting_level = scanner.nesting_level - 1
+
+def maybe_a_name(scanner, text):
+&nbsp;&nbsp;&nbsp; if scanner.nesting_level == 0:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return 'ident'
+
+lex = Lexicon([
+&nbsp;&nbsp;&nbsp; (Str("(*"), begin_comment),
+&nbsp;&nbsp;&nbsp; (Str("*)"), end_comment),
+&nbsp;&nbsp;&nbsp; (name,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; maybe_a_name),
+&nbsp;&nbsp;&nbsp; (space,&nbsp;&nbsp;&nbsp;&nbsp; IGNORE)
+])
+
+scn = Scanner(lex,...)
+scn.nesting_level = 0</pre>
+</blockquote>
+When an action procedure is called, it is passed the <i>scanner</i> which
+has just recognised the token, and the <i>text</i> which was matched. If
+the procedure returns anything other than None, it is returned as the value
+of the token. If it returns None, scanning continues as if the IGNORE action
+hadbeen specified.
+<p>Here, the procedures <tt>begin_comment()</tt> and <tt>end_comment()</tt>
+maintain a count of the comment nesting level in an extra instance attribute
+attached to the Scanner. When something that might be an identifier is
+recognised, the <tt>maybe_a_name()</tt> procedure checks whether it's inside
+a comment. If so, <tt>'ident'</tt> is returned as the value of the token;
+otherwise the default value of None is returned, and scanning continues.
+<p>At this point you're probably thinking that the last bit is rather clumsy,
+and you're right. If we wanted to recognise more tokens than just identifiers,
+we'd have to have maybe_an_operator(), maybe_a_number(), maybe_a_keyword(),
+etc. -- rather unwieldy! In the next example, we'll see a much better way<i>.</i>
+<h2>
+<a NAME="Scanner states"></a>Scanner States</h2>
+At any given time, a Scanner can be in one of a number of <i>states.</i>Each
+state has a set of tokens associated with it, and only tokens belonging
+to the current state are recognised. There is always at least one state,
+the default state, whose name is the empty string. In the scanners we've
+seen so far, all the tokens have been associated with the default state.
+This section shows how to create additional states and associated tokens
+with them.
+<p><a NAME="Ex: Skipping comments"></a>Here is an example which uses scanner
+states to skip over comments. For simplicity, this one only handles non-nested
+comments; we'll extend it to nested comments in a later example.
+<blockquote>
+<pre><tt>#
+#&nbsp;&nbsp; Example 5
+#
+
+lex = Lexicon([
+&nbsp;&nbsp;&nbsp; (name,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 'ident'),
+&nbsp;&nbsp;&nbsp; (number,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 'int'),
+&nbsp;&nbsp;&nbsp; (space,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; IGNORE),
+&nbsp;&nbsp;&nbsp; (Str("(*"),&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Begin('comment')),
+&nbsp;&nbsp;&nbsp; State('comment', [
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (Str("*)"), Begin('')),
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (AnyChar,&nbsp;&nbsp; IGNORE)
+&nbsp;&nbsp;&nbsp; ])
+])</tt></pre>
+</blockquote>
+The <tt>State()</tt> constructor introduces a new scanner state. It is
+used in place of a token in the token list, and takes two arguments: the
+<i>name</i>of
+the state, and another list of tokens. (In case you're wondering, that
+second token list can only contain tokens, not States. States can't be
+nested.)
+<p>The way it works is this. Initially, a newly-created Scanner is in the
+default state, called ''. In this state, only the first four tokens will
+match. When the beginning of a comment is recognised, the action <tt>Begin('comment')</tt>
+is invoked. This is another <i>special action,</i> whose effect is to change
+the current state of the scanner. Now the scanner is in the state called
+'comment', and will only recognise the two tokens belonging to that state.
+Their effect is to ignore everything up to the next end-comment marker,
+whereupon the default state is re-entered and normal scanning continues.
+(AnyChar, as its name suggests, matches any single character.)
+<p>Note that the patterns which recognise the insides of the comment rely
+on the <i>longest match</i> feature of Plex: if more than one token matches
+at a given input position, and they match strings of different lengths,
+the longest one takes precedence.
+<p>The scanner-state technique makes recognising comments rather easy.
+Since we're not trying to handle nesting, we could have recognised the
+whole comment using a single pattern, but it would be a rather tricky and
+complicated one -- something like <tt>Str("(*") + Rep(AnyBut("*") | (Str("*")
++ AnyBut(")"))) + Str("*)")</tt>. By using a separate state for comments,
+we avoid any such nightmare.
+<p>There is another advantage as well. When Plex is scanning a token, it
+has to buffer up all the characters read until the whole token is recognised,
+in case you're interested in the matched text. In the case of a comment,
+you're not, but Plex has no way of knowing that, so if you try to recognise
+the whole comment as a single pattern, Plex happily buffers it all up before
+throwing it away. In contrast, the above example skips over the comment
+while never having to keep more than 2 characters. If someone feeds you
+a comment a few megabytes long one day, you might be thankful for that.
+<p><a NAME="Ex: Two kinds of comments"></a>Here's an extended version which
+handles the full range of Pascal-style comments:
+<blockquote>
+<pre><tt>#
+#&nbsp;&nbsp; Example 6
+#
+
+lex = Lexicon([
+&nbsp;&nbsp;&nbsp; (name,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 'ident'),
+&nbsp;&nbsp;&nbsp; (number,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 'int'),
+&nbsp;&nbsp;&nbsp; (space,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; IGNORE),
+&nbsp;&nbsp;&nbsp; (Str("(*"),&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Begin('comment1')),
+&nbsp;&nbsp;&nbsp; (Str("{"),&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Begin('comment2')),
+&nbsp;&nbsp;&nbsp; State('comment1', [
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (Str("*)"), Begin('')),
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (AnyChar,&nbsp;&nbsp; IGNORE)
+&nbsp;&nbsp;&nbsp; ]),
+&nbsp;&nbsp;&nbsp; State('comment2', [
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (Str("}"),&nbsp; Begin('')),
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (AnyChar,&nbsp;&nbsp; IGNORE)
+&nbsp;&nbsp;&nbsp; ])
+])</tt></pre>
+</blockquote>
+The comment2 state in this example relies on the <i>priority rule:</i>
+if two tokens match strings of the <i>same</i>length, the one that occurs
+<i>first
+</i>in
+the token list takes precedence.
+<p><a NAME="Ex: Nested comments 2"></a>Now let's extend Example 5 to handle
+nested comments. While we're at it, we'll illustrate a technique for packaging
+up action procedures with a scanner in a neater way than we did in Example
+4.
+<blockquote>
+<pre><tt>#
+#&nbsp;&nbsp; Example 7
+#
+
+class MyScanner(Scanner):
+
+&nbsp;&nbsp;&nbsp; def begin_comment(self, text):
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if self.nesting_level == 0:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; self.begin('comment')
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; self.nesting_level = self.nesting_level + 1
+
+&nbsp;&nbsp;&nbsp; def end_comment(self, text):
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; self.nesting_level = self.nesting_level - 1
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if self.nesting_level == 0:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; self.begin('')
+
+&nbsp;&nbsp;&nbsp; lexicon = Lexicon([
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (name,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 'ident'),
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (number,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 'int'),
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (space,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; IGNORE),
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (Str("(*"),&nbsp;&nbsp;&nbsp;&nbsp; begin_comment),
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; State('comment', [
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (Str("(*"), begin_comment),
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (Str("*)"), end_comment),
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (AnyChar,&nbsp;&nbsp; IGNORE)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ])
+&nbsp;&nbsp;&nbsp; ])
+
+&nbsp;&nbsp;&nbsp; def __init__(self, file, name):
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Scanner.__init__(self, self.lexicon, file, name)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; self.nesting_level = 0</tt></pre>
+</blockquote>
+<a NAME="Subclassing Scanner"></a>The trick here is that we construct the
+Lexicon inside the class scope of MyScanner, and plug in methods of MyScanner
+as action procedures. The Lexicon becomes a class attribute which is passed
+on to the Scanner constructor by the MyScanner constructor. The result
+is a completely self-contained subclass of Scanner that comes with its
+own Lexicon and knows how to initialise itself. To use it, all we need
+to do is
+<blockquote>
+<pre><tt>scanner = MyScanner(file, filename)</tt></pre>
+</blockquote>
+and away we go.
+<p>Note the use of the <tt>begin()</tt> method of the Scanner in the action
+procedures. This has the same effect as the <tt>Begin() </tt>special action.
+<h2>
+<a NAME="Bol, Eol, Eof"></a>Matching line beginnings and endings</h2>
+Plex has three special pattern primitives, <tt>Bol</tt>, <tt>Eol</tt> and
+<tt>Eof</tt>,
+which match the beginning of a line, the end of a line and the end of the
+file, respectively. For example, if you were processing mail headers, you
+might use patterns such as
+<blockquote>
+<pre><tt>from&nbsp;&nbsp;&nbsp; = Bol + "From:"
+to&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = Bol + "To:"
+subject = Bol + "Subject:"</tt></pre>
+</blockquote>
+These patterns work by matching imaginary characters that Plex inserts
+into the input stream. For example, given an input file consisting of
+<blockquote>
+<pre><tt>H e l l o \n w o r l d</tt></pre>
+</blockquote>
+Plex sees it as
+<blockquote>
+<pre><tt>&lt;bol> H e l l o &lt;eol> \n &lt;bol> w o r l d &lt;eol> &lt;eof></tt></pre>
+</blockquote>
+These imaginary characters are never matched by any of the ordinary patterns,
+but they are skipped over if necessary in order to get to something which
+does match. So if you're not interested in them, you can write your patterns
+as though they didn't exist and everything will work as you expect.
+<p>Something to keep in mind is that the Bol, Eol and Eof patterns will
+only match <i>once</i> at any given input position, so, for instance, a
+pattern such as <tt>Bol + Bol + Str("Hello")</tt> will never match. It
+would obviously be silly to write such a pattern directly, but it could
+arise accidentally when combining separately defined patterns if you're
+not careful.
+<p>A more subtle problem can occur if you have two tokens in your Lexicon
+such as
+<blockquote>
+<pre><tt>(Str("Hello") + Eol,&nbsp;&nbsp; 'hello'),
+(Eol + Opt(Str("\n")), 'eol')</tt></pre>
+</blockquote>
+where the intention of the second token is to match the end of any line,
+even if the file does not end with a newline. The problem is that when
+the first token matches it absorbs the &lt;eol> marker, so the second token
+fails to match. One way to avoid the problem in this case is to write the
+second pattern as <tt>Str("\n") | Eof</tt>.
+<h2>
+<a NAME="Indentation"></a>Scanning indented languages</h2>
+<a NAME="Ex: Python scanner"></a>The next example shows how you can build
+a scanner for an indentation-sensitive language such as Python. We'll begin
+by declaring a new Scanner class and some action methods for keeping track
+of brackets and indentation.
+<blockquote>
+<pre><tt>#
+#&nbsp;&nbsp; Example - Python scanner
+#
+
+class PythonScanner(Scanner):</tt></pre>
+</blockquote>
+We need to keep track of brackets, because indentation and newlines should
+be ignored inside brackets. We'll just treat all brackets the same and
+leave the parser to check that they match up properly.
+<blockquote>
+<pre><tt>&nbsp; def open_bracket_action(self, text):
+&nbsp;&nbsp;&nbsp; self.bracket_nesting_level = self.bracket_nesting_level + 1
+&nbsp;&nbsp;&nbsp; return text
+
+&nbsp; def close_bracket_action(self, text):
+&nbsp;&nbsp;&nbsp; self.bracket_nesting_level = self.bracket_nesting_level - 1
+&nbsp;&nbsp;&nbsp; return text</tt></pre>
+</blockquote>
+We'll keep a stack of indentation levels as a list of integers. The top
+item on this stack will be at the end of the list.
+<blockquote>
+<pre><tt>&nbsp; def current_level(self):
+&nbsp;&nbsp;&nbsp; return self.indentation_stack[-1]</tt></pre>
+</blockquote>
+We'll be using a separate scanner state to deal with indentation, because
+this will make it easier to keep track of the various conditions under
+which leading whitespace should be regarded as indentation. The trigger
+for entering this state will be encountering a newline, so we'll define
+an action for that.
+<blockquote>
+<pre><tt>&nbsp; def newline_action(self, text):
+&nbsp;&nbsp;&nbsp; if self.bracket_nesting_level == 0:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; self.begin('indent')
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return 'newline'</tt></pre>
+</blockquote>
+Note that we only recognise a newline as terminating a statement if we're
+not inside brackets, otherwise we ignore it.
+<p>Here comes the action we'll call when we recognise some leading space
+that should be treated as indentation. For simplicity, we'll assume that
+the file is indented using all tabs or all spaces, so that the indentation
+level is just the length of the string. The version in the examples directory
+contains some code to check these assumptions; we omit it here for clarity.
+Note that we don't bother checking whether we're inside brackets, because
+the 'indent' state will never be entered in that case.
+<p>When we've finished, we change the scanner back to the default state.
+<blockquote>
+<pre><tt>&nbsp; def indentation_action(self, text):
+&nbsp;&nbsp;&nbsp; current_level = self.current_level()
+&nbsp;&nbsp;&nbsp; new_level = len(text)
+&nbsp;&nbsp;&nbsp; if new_level > current_level:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; self.indent_to(new_level)
+&nbsp;&nbsp;&nbsp; elif new_level &lt; current_level:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; self.dedent_to(new_level)
+&nbsp;&nbsp;&nbsp; self.begin('')
+
+&nbsp; def indent_to(self, new_level):
+&nbsp;&nbsp;&nbsp; self.indentation_stack.append(new_level)
+&nbsp;&nbsp;&nbsp; self.produce('INDENT', '')
+
+&nbsp; def dedent_to(self, new_level):
+&nbsp;&nbsp;&nbsp; while new_level &lt; self.current_level():
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; self.indentation_stack.pop()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; self.produce('DEDENT', '')</tt></pre>
+</blockquote>
+Calling the <tt>produce()</tt> method of the Scanner object has the same
+effect as returning a value from the action procedure. You can also pass
+an optional second argument, which is substituted for the matched text
+in the returned tuple. We're not interested in the matched text here (it's
+just the indentation string) so we pass an empty string as the second argument.
+<p>The reason we're using produce() instead of simply returning a value is
+that it can be called more than once before returning from the action procedure,
+and the values get queued up and returned one at a time by subsequent calls
+to read(). This behaviour is crucial for when we dedent more than one level
+at a time, because we have to generate multiple "dedent" tokens from a
+single pattern match.
+<p>The version in the examples directory also contains another test here
+to make sure that the dedent matches some previous indent level.
+<p>One more thing. When we get to the end of the file, we need to put out
+enough "dedent" tokens to get back to ground zero. To do this, we'll override
+the <tt>eof()</tt> method of the Scanner. This method is called when the
+scanner reaches the end of the file, just before returning the end-of-file
+token.
+<blockquote>
+<pre><tt>&nbsp; def eof(self):
+&nbsp;&nbsp;&nbsp; self.dedent_to(0)</tt></pre>
+</blockquote>
+Okay, that's the end of the action procedures. Now we need a bunch of patterns,
+most of which are straightforward but tedious -- see the examples directory
+if you're interested. We'll just look at the ones related to whitespace
+handling.
+<blockquote>
+<pre><tt>&nbsp; indentation = Rep(Str(" ")) | Rep(Str("\t"))</tt></pre>
+</blockquote>
+This pattern matches an indentation string. The fact that it has to occur
+at the beginning of a line will be taken care of by the scanner states.
+<blockquote>
+<pre><tt>&nbsp; lineterm = Str("\n") | Eof</tt></pre>
+</blockquote>
+This pattern matches the end of a line. It's written this way instead of
+just <tt>Str("\n")</tt> because we want it to match even at the end of
+the last line of a file that doesn't end with a newline.
+<blockquote>
+<pre><tt>&nbsp; escaped_newline = Str("\\\n")</tt></pre>
+</blockquote>
+We'll use this one to soak up a newline preceded by a backslash before
+<tt>lineterm</tt>
+gets hold of it.
+<blockquote>
+<pre><tt>&nbsp; comment = Str("#") + Rep(AnyBut("\n"))</tt></pre>
+</blockquote>
+This pattern matches everything from a comment character up to, but not
+including, the end of the line.
+<blockquote>
+<pre><tt>&nbsp; blank_line = indentation + Opt(comment) + lineterm</tt></pre>
+</blockquote>
+We'll use this pattern to skip over lines which are completely blank or
+contain only a comment, so that they won't generate spurious indentation
+or newline tokens.
+<p>Now we're ready for the lexicon definition. Having defined all our patterns
+and action procedures, it's fairly straightforward.
+<blockquote>
+<pre><tt>&nbsp; lexicon = Lexicon([
+&nbsp;&nbsp;&nbsp; (name,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 'name'),
+&nbsp;&nbsp;&nbsp; (number,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 'number'),
+&nbsp;&nbsp;&nbsp; (stringlit,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 'string'),
+&nbsp;&nbsp;&nbsp; (punctuation,&nbsp;&nbsp;&nbsp;&nbsp; TEXT),
+&nbsp;&nbsp;&nbsp; (opening_bracket, open_bracket_action),
+&nbsp;&nbsp;&nbsp; (closing_bracket, close_bracket_action),
+&nbsp;&nbsp;&nbsp; (lineterm,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; newline_action),
+&nbsp;&nbsp;&nbsp; (comment,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; IGNORE),
+&nbsp;&nbsp;&nbsp; (spaces,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; IGNORE),
+&nbsp;&nbsp;&nbsp; (escaped_newline, IGNORE),
+&nbsp;&nbsp;&nbsp; State('indent', [
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (blank_line,&nbsp;&nbsp;&nbsp; IGNORE),
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (indentation,&nbsp;&nbsp; indentation_action),
+&nbsp;&nbsp;&nbsp; ]),
+&nbsp; ])</tt></pre>
+</blockquote>
+Finally, we need to initialise the indentation stack and bracket counter,
+and set the initial state to 'indent' before starting.
+<blockquote>
+<pre><tt>&nbsp; def __init__(self, file):
+&nbsp;&nbsp;&nbsp; Scanner.__init__(self, self.lexicon, file)
+&nbsp;&nbsp;&nbsp; self.indentation_stack = [0]
+&nbsp;&nbsp;&nbsp; self.bracket_nesting_level = 0
+&nbsp;&nbsp;&nbsp; self.begin('indent')</tt></pre>
+</blockquote>
+And we're done. That wasn't too hard now, was it?
+<h2>
+<a NAME="Traditional"></a>Traditional regular expression syntax</h2>
+If you're one of those diehards that prefers to write regular expressions
+using the traditional cryptic character-string syntax, the <tt>Plex.Traditional</tt>
+submodule provides what you want. For example,
+<blockquote>
+<pre><tt>from Plex.Traditional import re
+
+ident = re("[A-Za-z_][A-Za-z0-9_]*")</tt></pre>
+</blockquote>
+See the <a href="Reference.html">Reference section</a> for the precise
+details of the syntax.
+<h2>
+That's All, Folks</h2>
+We have now touched on all the main features of Plex; for the fine details,
+see the <a href="Reference.html">Reference section</a>. Good luck and happy
+Plexing!
+<br>&nbsp;
+</body>
+</html>

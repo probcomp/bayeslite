@@ -1,0 +1,22 @@
+import sys
+
+# This, in case you didn't notice, is a comment.
+
+def gcd(x, y):
+  while x <> y:
+    if x > y:     # This is another comment.
+      print "x is bigger"
+      x = x - y
+                  # This comment doesn't imply any indentation.
+    else:
+
+      print "y is bigger"
+      y = y - x
+  return x
+
+def go():
+  for x, y in [(12,20), (37,18), (2, 54)]:
+    print gcd\
+      (x, y)
+
+

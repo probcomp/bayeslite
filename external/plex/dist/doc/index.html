@@ -1,0 +1,74 @@
+<!doctype html public "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+   <meta name="GENERATOR" content="Mozilla/4.7 [en] (X11; U; SunOS 5.8 sun4u) [Netscape]">
+   <meta name="Author" content="Greg Ewing">
+   <meta name="Description" content="Documentation for Plex - a Lexical Analysis Module for Python">
+   <title>Plex</title>
+</head>
+<body text="#000000" bgcolor="#FFFFFF" link="#0000FF" vlink="#551A8B" alink="#0000FF">
+
+<h1>
+
+<hr WIDTH="100%">Plex - a Lexical Analysis Module for Python</h1>
+
+<h1>
+<i>Version 1.1.2</i>
+<hr WIDTH="100%"></h1>
+Plex is a Python module for constructing lexical analysers, or scanners.
+Plex scanners have almost all the capabilities of the scanners generated
+by GNU Flex, and are specified in a very similar way. Tokens are defined
+by regular expressions, and each token has an associated action, which
+may be to return a literal value, or to call an arbitrary function.
+<p>Plex is designed to fill a need that is left wanting by the existing
+Python regular expression modules. If you've ever tried to use one of them
+for implementing a scanner, you will have found that they're not really
+suited to the task. You can define a bunch of regular expressions which
+match your tokens all right, but you can only match one of them at a time
+against your input. To match all of them at once, you have to join them
+all together into one big r.e., but then you've got no easy way to tell
+which one matched. This is the problem that Plex is designed to solve.
+<p>Another advantage of Plex is that it compiles all of the regular expressions
+into a single DFA. Once that's done, the input can be processed in a time
+proportional to the number of characters to be scanned, and independent
+of the number or complexity of the regular expressions. Python's existing
+regular expression matchers do not have this property.
+<p>
+<hr WIDTH="100%">
+<h2>
+Contents</h2>
+
+<blockquote>
+<li>
+<font size=+2><a href="Tutorial.html">Tutorial</a></font></li>
+
+<br>&nbsp;
+<li>
+<font size=+2><a href="Reference.html">Reference</a></font></li>
+</blockquote>
+
+<h2>
+
+<hr WIDTH="100%"></h2>
+
+<h2>
+License</h2>
+Plex is free of any restrictions. You can use it, redistribute it, sell
+it, whatever you want.&nbsp; All I ask is that you give me credit if you
+distribute any code derived from it.
+<p>
+<hr WIDTH="100%">
+<br>Greg Ewing,
+<br>Computer Science Department,
+<br>University of Canterbury,
+<br>Christchurch,
+<br>New Zealand
+<address>
+<a href="mailto:greg@cosc.canterbury.ac.nz">greg@cosc.canterbury.ac.nz</a></address>
+
+<address>
+<a href="http://www.cosc.canterbury.ac.nz/~greg">http://www.cosc.canterbury.ac.nz/~greg</a></address>
+
+</body>
+</html>

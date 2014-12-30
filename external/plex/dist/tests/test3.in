@@ -1,0 +1,9 @@
+program furbie(input, output, throughput);
+begin
+   repeat
+     make(cute_noises);
+     have_flat_battery;
+   until owner_is(fed_up);
+end.
+
+
