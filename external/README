@@ -64,6 +64,10 @@ fixes, should be made in separate commits.
 
       % git merge vendor/proj-1.2
 
+8. Push the vendor branch upstream so others can use it:
+
+      % git push origin vendor/proj-1.2:vendor/proj-1.2
+
 * To see what version we have most recently merged:
 
 % git log --merges external/proj
