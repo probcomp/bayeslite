@@ -18,3 +18,9 @@ from bayeslite.parse import parse_bql_string
 
 def test_empty():
     assert [] == parse_bql_string('')
+    assert [] == parse_bql_string(';')
+    assert [] == parse_bql_string(';;')
+    assert [] == parse_bql_string(' ;')
+    assert [] == parse_bql_string('; ')
+    assert [] == parse_bql_string(' ; ')
+    assert [] == parse_bql_string(' ; ; ')
