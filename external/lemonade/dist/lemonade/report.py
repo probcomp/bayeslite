@@ -14,12 +14,9 @@ from sys import stderr
 def file_makename(lemp, suffix):
     '''Generate a filename with the given suffix.'''
 
-    from os.path import basename, splitext
+    from os.path import splitext
 
-    # 2009-07-16 lcs: Put output files in working directory.
-    name = basename(lemp.filename)
-
-    name = splitext(name)[0]
+    name = splitext(lemp.filename)[0]
     name += suffix
     return name
 
