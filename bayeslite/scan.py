@@ -190,3 +190,13 @@ class BQLScanner(Plex.Scanner):
             (Plex.Rep1(Plex.AnyBut('"')),       scan_quoted_text),
         ]),
     ])
+
+    def __init__(self, f, context):
+        Plex.Scanner.__init__(self, self.lexicon, f, context)
+        self.stringio = None
+        self.stringquote = None
+
+    def produce(self, token, value=None):
+        if token is None:       # EOF
+            token = 0
+        Plex.Scanner.produce(self, token, value)

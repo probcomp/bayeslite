@@ -14,10 +14,10 @@
  *  limitations under the License.
  */
 
-bql(start)		::= phrases.
+bql(start)		::= phrases(phrases).
 
-phrases(one)		::= phrasesemi(phrase).
-phrases(many)		::= phrases(phrases) phrasesemi(phrase).
+phrases(none)		::= .
+phrases(some)		::= phrases(phrases) phrasesemi(phrase).
 phrasesemi(empty)	::= T_SEMI.
 phrasesemi(nonempty)	::= phrase(phrase) T_SEMI.
 phrase(query)		::= query(q).

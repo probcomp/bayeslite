@@ -14,11 +14,14 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import StringIO
+
 import bayeslite.ast as ast
+import bayeslite.grammar as grammar
 import bayeslite.scan as scan
 
 def parse_bql(f, context):
-    scan = scan.Scanner(f, context)
+    scanner = scan.BQLScanner(f, context)
     semantics = BQLSemantics()
     parser = grammar.Parser(semantics)
     while True:
@@ -29,7 +32,10 @@ def parse_bql(f, context):
             parser.feed(token)
         if token[0] == 0:       # EOF
             break
-    return phrases
+    return semantics.phrases
+
+def parse_bql_string(string):
+    return parse_bql(StringIO.StringIO(string), '(string)')
 
 class BQLSemantics(object):
     def __init__(self):
@@ -41,24 +47,23 @@ class BQLSemantics(object):
         assert self.phrases is None
         # XXX Raise a principled exception here.
         raise Exception('Parse failed')
-    def syntax_error(self, (_number, (text, line, col))):
+    def syntax_error(self, (_number, token)):
         # XXX Accumulate errors and report principled error at end.
-        raise Exception('Syntax error near %s at %s:%s' %
-            (repr(text), line, col))
+        raise Exception('Syntax error near %s' % (token,))
 
     def p_bql_start(self, phrases):
         self.phrases = phrases
-    def p_bql_phrases_one(self, phrase):
-        return [] if phrase is None else [phrase]
-    def p_bql_phrases_many(self, phrases, phrase):
+    def p_phrases_none(self):
+        return []
+    def p_phrases_some(self, phrases, phrase):
         if phrase is not None:
             phrases.append(phrase)
         return phrases
 
-    def p_bql_phrasesemi_empty(self):           return None
-    def p_bql_phrasesemi_nonempty(self, phrase): return phrase
-    def p_bql_phrase_query(self, q):            return q
-    def p_bql_phrase_command(self, c):          return c
+    def p_phrasesemi_empty(self):               return None
+    def p_phrasesemi_nonempty(self, phrase):    return phrase
+    def p_phrase_query(self, q):                return q
+    def p_phrase_command(self, c):              return c
 
     def p_query_q(self, action, body):
         return QueryAction(action, body) if action else body
