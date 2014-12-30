@@ -94,7 +94,7 @@ column_list(all)	::= T_STAR.
 column_list(column)	::= L_NAME(col).
 
 as(none)		::= .
-as(some)		::= AS L_NAME(name).
+as(some)		::= K_AS L_NAME(name).
 
 from(empty)		::= .
 from(nonempty)		::= K_FROM select_tables(tables).

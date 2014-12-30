@@ -29,6 +29,7 @@ grep -o 'K_[A-Z0-9_]*' < grammar.y | sort -u | awk '
 keywords = {
     "all": grammar.K_ALL,
     "and": grammar.K_AND,
+    "as": grammar.K_AS,
     "asc": grammar.K_ASC,
     "by": grammar.K_BY,
     "correlation": grammar.K_CORRELATION,

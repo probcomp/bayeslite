@@ -31,3 +31,7 @@ def test_select_trivial():
         [ast.Select(ast.SELQUANT_ALL,
             ast.SelCols([ast.SelColExp(ast.ExpLit(ast.LitInt(0)), None)]),
             None, None, None, None, None)]
+    assert parse_bql_string('select 0 as z;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            ast.SelCols([ast.SelColExp(ast.ExpLit(ast.LitInt(0)), 'z')]),
+            None, None, None, None, None)]
