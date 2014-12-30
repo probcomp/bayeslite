@@ -76,8 +76,58 @@ def test_select_trivial():
         [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
             [ast.SelTab('t', None)],
             ast.ExpCol(None, 'x'), None, None, None)]
+    assert parse_bql_string('select * group by x;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
+            None, None, [ast.ExpCol(None, 'x')], None, None)]
     assert parse_bql_string('select * from t where x group by y;') == \
         [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
             [ast.SelTab('t', None)],
             ast.ExpCol(None, 'x'),
             [ast.ExpCol(None, 'y')], None, None)]
+    assert parse_bql_string('select * from t where x group by y, z;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
+            [ast.SelTab('t', None)],
+            ast.ExpCol(None, 'x'),
+            [ast.ExpCol(None, 'y'), ast.ExpCol(None, 'z')], None, None)]
+    assert parse_bql_string('select * order by x;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
+            None, None, None, [ast.Ord(ast.ExpCol(None, 'x'), ast.ORD_ASC)],
+            None)]
+    assert parse_bql_string('select * order by x asc;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
+            None, None, None, [ast.Ord(ast.ExpCol(None, 'x'), ast.ORD_ASC)],
+            None)]
+    assert parse_bql_string('select * order by x desc;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
+            None, None, None, [ast.Ord(ast.ExpCol(None, 'x'), ast.ORD_DESC)],
+            None)]
+    assert parse_bql_string('select * order by x, y;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
+            None, None, None,
+            [ast.Ord(ast.ExpCol(None, 'x'), ast.ORD_ASC),
+             ast.Ord(ast.ExpCol(None, 'y'), ast.ORD_ASC)],
+            None)]
+    assert parse_bql_string('select * order by x desc, y;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
+            None, None, None,
+            [ast.Ord(ast.ExpCol(None, 'x'), ast.ORD_DESC),
+             ast.Ord(ast.ExpCol(None, 'y'), ast.ORD_ASC)],
+            None)]
+    assert parse_bql_string('select * order by x, y asc;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
+            None, None, None,
+            [ast.Ord(ast.ExpCol(None, 'x'), ast.ORD_ASC),
+             ast.Ord(ast.ExpCol(None, 'y'), ast.ORD_ASC)],
+            None)]
+    assert parse_bql_string('select * limit 32;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
+            None, None, None, None,
+            ast.Lim(ast.ExpLit(ast.LitInt(32)), 0))]
+    assert parse_bql_string('select * limit 32 offset 16;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
+            None, None, None, None,
+            ast.Lim(ast.ExpLit(ast.LitInt(32)), ast.ExpLit(ast.LitInt(16))))]
+    assert parse_bql_string('select * limit 16, 32;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
+            None, None, None, None,
+            ast.Lim(ast.ExpLit(ast.LitInt(32)), ast.ExpLit(ast.LitInt(16))))]
