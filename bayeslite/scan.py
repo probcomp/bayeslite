@@ -150,7 +150,7 @@ class BQLScanner(Plex.Scanner):
         (Plex.Str("*"),         grammar.T_STAR),
         # (Plex.Str("/"),         grammar.T_SLASH),
         # (Plex.Str("%"),         grammar.T_PERCENT),
-        # (Plex.Str("="),         grammar.T_EQUAL),
+        (Plex.Str("="),         grammar.T_EQ),
         # (Plex.Str("<"),         grammar.T_LT),
         # (Plex.Str("<>"),        grammar.T_NEQ),
         # (Plex.Str("<="),        grammar.T_LEQ),
