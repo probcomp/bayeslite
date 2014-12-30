@@ -14,6 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import bayeslite.ast as ast
 from bayeslite.parse import parse_bql_string
 
 def test_empty():
@@ -24,3 +25,9 @@ def test_empty():
     assert [] == parse_bql_string('; ')
     assert [] == parse_bql_string(' ; ')
     assert [] == parse_bql_string(' ; ; ')
+
+def test_select_trivial():
+    assert parse_bql_string('select 0;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            ast.SelCols([ast.SelColExp(ast.ExpLit(ast.LitInt(0)), None)]),
+            None, None, None, None, None)]

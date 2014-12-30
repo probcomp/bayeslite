@@ -28,10 +28,10 @@ QACT_PLOT = 'plot'
 Select = namedtuple('Select', [
     'quantifier',               # SELQUANT_*
     'output',                   # SelCols or SelBQL*
-    'tables',                   # [XXX name or Query*]
-    'condition',                # Exp*
-    'group',                    # [Exp*]
-    'order',                    # [Ord]
+    'tables',                   # [XXX name or Query*] or None (scalar)
+    'condition',                # Exp* or None (unconditional)
+    'group',                    # [Exp*] or None (unaggregated)
+    'order',                    # [Ord] or None (unordered)
     'limit',                    # Lim or None (unlimited)
 ])
 
@@ -50,6 +50,7 @@ SelColAll = namedtuple('SelColAll', [
 ])
 SelColExp = namedtuple('SelColExp', [
     'expression',               # Exp*
+    'name',                     # XXX name
 ])
 
 SelBQLPredProb = namedtuple('SelBQLPredProb', ['column'])
@@ -79,4 +80,3 @@ LitNull = namedtuple('LitNull', ['value'])
 LitInt = namedtuple('LitInt', ['value'])
 LitFloat = namedtuple('LitFloat', ['value'])
 LitString = namedtuple('LitString', ['value'])
-

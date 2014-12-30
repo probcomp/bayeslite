@@ -84,13 +84,13 @@ class BQLSemantics(object):
 
     def p_select_quant_distinct(self):          return ast.SELQUANT_DISTINCT
     def p_select_quant_all(self):               return ast.SELQUANT_ALL
-    def p_select_quant_default(self):           return ast.SELQUANT_DEFAULT
+    def p_select_quant_default(self):           return ast.SELQUANT_ALL
 
     def p_select_columns_sql(self, columns):    return ast.SelCols(columns)
     def p_select_columns_bql(self, bql):        return bql
 
     def p_select_columns1_one(self, c):         return [c]
-    def p_select_columns1_one(self, cs, c):     cs.append(c); return cs
+    def p_select_columns1_many(self, cs, c):    cs.append(c); return cs
 
     def p_select_column_star(self):             return ast.SelColAll(None)
     def p_select_column_qstar(self, table):     return ast.SelColAll(table)
@@ -123,7 +123,7 @@ class BQLSemantics(object):
     def p_as_none(self):                        return None
     def p_as_some(self, name):                  return name
 
-    def p_from_empty(self):                     return []
+    def p_from_empty(self):                     return None
     def p_from_nonempty(self, tables):          return tables
 
     def p_select_tables_one(self, t):           return [t]
@@ -141,7 +141,7 @@ class BQLSemantics(object):
     def p_group_keys_one(self, key):            return [key]
     def p_group_keys_many(self, keys, key):     keys.append(key); return keys
 
-    def p_order_by_none(self):                  return []
+    def p_order_by_none(self):                  return None
     def p_order_by_some(self, keys):            return keys
     def p_order_keys_one(self, key):            return [key]
     def p_order_keys_many(self, keys, key):     keys.append(key); return keys
