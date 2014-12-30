@@ -14,6 +14,7 @@ export PYTHONPATH="${root}/build/lib.${platform}-${version}"
 (
     set -Ceu
     cd -- "${root}"
+    rm -rf build
     "$PYTHON" setup.py build
     cd tests
     "$PY_TEST"
