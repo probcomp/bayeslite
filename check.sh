@@ -13,7 +13,6 @@ export PYTHONPATH="${root}/build/lib.${platform}-${version}"
 
 (
     set -Ceu
-    echo "$PYTHONPATH"
     cd -- "${root}"
     "$PYTHON" setup.py build
     cd tests
