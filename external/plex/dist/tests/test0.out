@@ -1,0 +1,4 @@
+test0.in   2   0 thing      'a'
+test0.in   2   1 thing      'a'
+test0.in   2   2 thing      'a'
+test0.in   5   0 None       ''

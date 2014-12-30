@@ -1,0 +1,408 @@
+<!doctype html public "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+   <meta name="GENERATOR" content="Mozilla/4.7 [en] (X11; U; SunOS 5.8 sun4u) [Netscape]">
+   <title>Plex Reference</title>
+<!-- Changed by: Greg Ewing, 11-Apr-2002 -->
+</head>
+<body text="#000000" bgcolor="#FFFFFF" link="#0000FF" vlink="#551A8B" alink="#0000FF">
+
+<h1>
+
+<hr WIDTH="100%">Plex Reference
+<hr WIDTH="100%"></h1>
+
+<h2>
+Contents</h2>
+
+<ul>
+<li>
+<a href="#Lexicon">Class <tt>Lexicon</tt></a></li>
+
+<ul>
+<li>
+<a href="#Lexicon.Constructor">Constructor</a></li>
+
+<li>
+<a href="#token_definition">Token definitions</a></li>
+
+<li>
+<a href="#state_definition">State definitions</a></li>
+</ul>
+</ul>
+
+<ul>
+<li>
+<a href="#Patterns">Patterns</a></li>
+
+<ul>
+<li>
+<tt><a href="#Str">Str</a></tt></li>
+
+<li>
+<tt><a href="#Any">Any</a></tt>, <tt><a href="#AnyBut">AnyBut</a></tt>,
+<tt><a href="#AnyChar">AnyChar</a></tt></li>
+
+<li>
+<tt><a href="#Empty">Empty</a></tt></li>
+
+<li>
+<a href="#+"><tt>+</tt> operator</a></li>
+
+<li>
+<a href="#|"><tt>|</tt> operator</a></li>
+
+<li>
+<tt><a href="#Seq">Seq</a></tt>, <tt><a href="#Alt">Alt</a></tt>, <tt><a href="#Opt">Opt</a></tt></li>
+
+<li>
+<tt><a href="#Rep">Rep</a></tt>, <tt><a href="#Rep1">Rep1</a></tt></li>
+
+<li>
+<tt><a href="#NoCase">NoCase</a></tt>, <tt><a href="#Case">Case</a></tt></li>
+
+<li>
+<tt><a href="#Bol">Bol</a></tt>, <tt><a href="#Eol">Eol</a></tt>, <tt><a href="#Eof">Eof</a></tt></li>
+</ul>
+</ul>
+
+<ul>
+<li>
+<a href="#Actions">Actions</a></li>
+
+<ul>
+<li>
+<a href="#Actions.function">function</a></li>
+
+<li>
+<tt><a href="#IGNORE">IGNORE</a></tt></li>
+
+<li>
+<tt><a href="#TEXT">TEXT</a></tt></li>
+
+<li>
+<tt><a href="#BEGIN">Begin</a></tt></li>
+
+<li>
+<a href="#Actions.value">returning a value</a></li>
+</ul>
+</ul>
+
+<ul>
+<li>
+<a href="#States">Scanner States</a></li>
+</ul>
+
+<ul>
+<li>
+<a href="#Scanner">Class <tt>Scanner</tt></a></li>
+
+<ul>
+<li>
+<a href="#Scanner.Constructor">Constructor</a></li>
+
+<li>
+<a href="#Scanner.Methods">Methods</a></li>
+
+<ul>
+<li>
+<tt><a href="#read">read</a></tt></li>
+
+<li>
+<tt><a href="#position">position</a></tt></li>
+
+<li>
+<tt><a href="#begin">begin</a></tt></li>
+
+<li>
+<tt><a href="#produce">produce</a></tt></li>
+
+<li>
+<tt><a href="#eof">eof</a></tt></li>
+</ul>
+</ul>
+</ul>
+
+<ul>
+<li>
+<a href="#Traditional">Module <tt>Plex.Traditional</tt></a></li>
+
+<ul>
+<li>
+<tt><a href="#re">re</a></tt></li>
+</ul>
+</ul>
+
+<h2>
+
+<hr WIDTH="100%"><a NAME="Lexicon"></a>Class <tt>Lexicon</tt></h2>
+A Lexicon instance embodies a collection of lexical token definitions for
+use by a Scanner. Once constructed, a single Lexicon can be used by many
+Scanners.
+<h3>
+<a NAME="Lexicon.Constructor"></a>Constructor</h3>
+<tt>Lexicon(</tt><i>specification</i><tt>)</tt> builds a lexical analyser
+from the given <i>specification</i>. The specification consists of a list
+of <i>specification items</i>. Each specification item may be one of:
+<ol>
+<li>
+<a NAME="token_definition"></a>A <b>token definition</b>, which is a tuple:</li>
+
+<blockquote>(<i>pattern</i>, <i>action</i>)</blockquote>
+where <i>pattern</i> is a regular axpression built using the Plex pattern
+constructors, and <i>action</i> is the action to be performed when this
+pattern is recognised. <a href="#Patterns">Pattern constructors</a> and
+<a href="#Actions">actions</a>
+are defined below.
+<br>&nbsp;
+<li>
+<a NAME="state_definition"></a>A <b>state definition</b>:</li>
+
+<blockquote><tt>State(</tt><i>name</i>, <i>tokens</i><tt>)</tt></blockquote>
+where <i>name</i>is a character string naming the state, and <i>tokens</i>
+is a list of token definitions as above. The <a href="#States">meaning
+and usage of states</a> is described below.</ol>
+
+<h3>
+<a NAME="Patterns"></a>Patterns</h3>
+
+<blockquote>Plex patterns are built using the following constructors.</blockquote>
+
+<blockquote><a NAME="Str"></a><tt>Str(</tt><i>s</i><tt>)</tt>
+<blockquote>Matches the literal string <i>s</i>.</blockquote>
+<tt>Str(</tt><i>s1,s2, ...</i><tt>)</tt>
+<blockquote>Matches either the string <i>s1</i> or <i>s2</i> or ...
+<p>Equivalent to <tt>Alt(Str(</tt><i>s1</i><tt>),Str(</tt><i>s2</i><tt>),</tt>...<tt>)</tt>.</blockquote>
+<a NAME="Any"></a><tt>Any(</tt><i>s</i><tt>)</tt>
+<blockquote>Matches any single character in the string <i>s</i>.</blockquote>
+<a NAME="AnyBut"></a><tt>AnyBut(</tt><i>s</i><tt>)</tt>
+<blockquote>Matches any single character (including newline) which is <i>not</i>
+in the string<i> s</i>.</blockquote>
+<a NAME="AnyChar"></a><tt>AnyChar</tt>
+<blockquote>Matches any single character (including newline). Equivalent
+to <tt>AnyBut('')</tt>.</blockquote>
+<a NAME="Empty"></a><tt>Empty</tt>
+<blockquote>Matches the empty string.</blockquote>
+<a NAME="+"></a><i>p1</i><tt> + </tt><i>p2</i>
+<blockquote>Matches the pattern p1 followed by p2. Equivalent to <tt>Seq(</tt><i>p1,
+p2</i><tt>)</tt>.</blockquote>
+<a NAME="|"></a><i>p1</i><tt> | </tt><i>p2</i>
+<blockquote>Matches either the pattern p1 or p2. Equivalent to <tt>Alt(</tt><i>p1,
+p2</i><tt>)</tt>.</blockquote>
+<a NAME="Seq"></a><tt>Seq(</tt><i>p1, p2, ...</i><tt>)</tt>
+<blockquote>Matches the pattern <i>p1</i> followed by <i>p2</i> followed
+by ...</blockquote>
+<a NAME="Alt"></a><tt>Alt(</tt><i>p1, p2, ...</i><tt>)</tt>
+<blockquote>Matches either the pattern <i>p1</i> or <i>p2</i> or ...</blockquote>
+<a NAME="Opt"></a><tt>Opt(</tt><i>p</i><tt>)</tt>
+<blockquote>Matches either the pattern <i>p</i> or the empty string. Equivalent
+to
+<i>p </i><tt>| Empty</tt>.</blockquote>
+<a NAME="Rep"></a><tt>Rep(</tt><i>p</i><tt>)</tt>
+<blockquote>Matches zero or more repetitions of the pattern <i>p</i>.</blockquote>
+<a NAME="Rep1"></a><tt>Rep1(</tt><i>p</i><tt>)</tt>
+<blockquote>Matches one or more repetitions of the pattern <i>p</i>.</blockquote>
+<a NAME="NoCase"></a><tt>NoCase(</tt><i>p</i><tt>)</tt>
+<blockquote>Matches the same strings as the pattern <i>p</i>, except that,
+in any part of <i>p</i> not enclosed by a <tt>Case()</tt>, upper and lower
+case letters are treated as equivalent.</blockquote>
+<a NAME="Case"></a><tt>Case(</tt><i>p</i><tt>)</tt>
+<blockquote>Matches the same strings as the pattern <i>p</i>, except that,
+in any part of <i>p</i> not enclosed by a <tt>NoCase()</tt>, upper and
+lower case letters are treated as distinct.</blockquote>
+<a NAME="Bol"></a><tt>Bol</tt>
+<blockquote>Matches an imaginary character at the beginning of a line (i.e.
+at the start of the file or just after a newline).</blockquote>
+<a NAME="Eol"></a><tt>Eol</tt>
+<blockquote>Matches an imaginary character at the end of a line (i.e. just
+before a newline or at the end of the file).</blockquote>
+<a NAME="Eof"></a><tt>Eof</tt>
+<blockquote>Matches an imaginary character at the end of the file.</blockquote>
+<b>Note:</b> The patterns <tt>Bol</tt>, <tt>Eol</tt> and <tt>Eof</tt> will
+only match <i>once</i> at any given position.</blockquote>
+
+<h3>
+<a NAME="Actions"></a>Actions</h3>
+
+<blockquote>The <i>action</i> in a token specifation may be one of three
+things:</blockquote>
+
+<ol>
+<blockquote>
+<li>
+<a NAME="Actions.function"></a>A function, which is called as follows:</li>
+
+<blockquote><i>function</i>(<i>scanner</i>, <i>text</i>)</blockquote>
+where <i>scanner</i> is the relevant <a href="#Scanner">Scanner</a> instance,
+and <i>text</i> is the matched text. If the function returns anything other
+than <tt>None</tt>, that value is returned as the value of the token. If
+it returns <tt>None</tt>, scanning continues as if the <tt><a href="#IGNORE">IGNORE</a></tt>
+action were specified (see below).
+<br>&nbsp;
+<li>
+One of the following special actions:</li>
+
+<br>&nbsp;
+<ol><a NAME="IGNORE"></a><tt>IGNORE</tt>
+<br>&nbsp;
+<ol>The recognised characters will be treated as white space and ignored.
+Scanning will continue until the next non-ignoredtoken is recognised before
+returning.</ol>
+<a NAME="TEXT"></a><tt>TEXT</tt>
+<br>&nbsp;
+<ol>Causes the scanned text itself to be returned as the value of the token.</ol>
+<a NAME="BEGIN"></a><tt>Begin</tt>(<i>state</i>)
+<br>&nbsp;
+<ol>Causes the <a href="#Scanner">Scanner</a> to enter the state named
+<i>state</i>(see
+below).</ol>
+</ol>
+
+<li>
+<a NAME="Actions.value"></a>Any other value, which is returned as the value
+of the token.</li>
+</blockquote>
+</ol>
+
+<h3>
+<a NAME="States"></a>States</h3>
+
+<blockquote>At any given time, the scanner is in one of a number of states.
+Associated with each state is a set of possible tokens. When scanning,
+only tokens associated with the current state are recognised.</blockquote>
+
+<blockquote>There is a default state, whose name is the empty string. Token
+definitions which are not inside any <a href="#state_definition">State
+definition</a> belong to the default state.</blockquote>
+
+<blockquote>The initial state of the scanner is the default state. The
+state can be changed by:</blockquote>
+
+<ol>
+<ol>
+<li>
+Using <a href="#BEGIN"><tt>Begin(</tt><i>state_name</i><tt>)</tt></a> as
+the action of a token.</li>
+
+<br>&nbsp;
+<li>
+Calling the <a href="#begin"><tt>begin(</tt><i>state_name</i><tt>)</tt></a>
+method of the <a href="#Scanner">Scanner</a>.</li>
+</ol>
+
+<p><br>To change back to the default state, use <tt>''</tt> as the state
+name.</ol>
+
+<h2>
+
+<hr WIDTH="100%"><a NAME="Scanner"></a>Class <tt>Scanner</tt></h2>
+
+<blockquote>A Scanner instance associates a <a href="#Lexicon">Lexicon</a>
+with a stream of characters and provides a means of reading tokens from
+the stream.</blockquote>
+
+<h3>
+<a NAME="Scanner.Constructor"></a>Constructor</h3>
+
+<blockquote><tt>Scanner(</tt><i>lexicon,</i> <i>stream</i><tt>[</tt><i>,
+name </i><tt>= ''])</tt></blockquote>
+
+<ol>
+<ol><i>lexicon</i>
+<ol>A <a href="#Lexicon">Lexicon</a> instance.</ol>
+<i>stream</i>
+<ol>A file object or any object with a compatible <tt>read()</tt> method.</ol>
+<i>name</i>
+<ol>A name identifying the stream being scanned. This argument is optional;
+its only use is to be returned by the <tt><a href="#position">position()</a></tt>
+method.</ol>
+</ol>
+</ol>
+
+<h3>
+<a NAME="Scanner.Methods"></a>Methods</h3>
+
+<blockquote><a NAME="read"></a><tt>read()</tt> --> (<i>value, text</i>)
+<blockquote>Reads the next lexical token from the stream and returns a
+tuple (<i>value</i>, <i>text</i>), where <i>value</i> is the value associated
+with the token as specified by the <a href="#Lexicon">Lexicon</a>, and
+<i>text</i>
+is the actual string read from the stream. Returns <tt>(None, '')</tt>
+on end of file.</blockquote>
+<a NAME="position"></a><tt>position()</tt> --> (<i>name, line, col</i>)
+<blockquote>Returns a tuple (<i>name,line,col</i>) representing the location
+of the last token read using the read() method. <i>name</i> is the name
+that was provided to the <a href="#Scanner.Constructor">Scanner constructor</a>;
+<i>line</i>
+is the line number in the stream (1-based); <i>col</i> is the position
+within the line of the first character of the token (0-based).</blockquote>
+<a NAME="begin"></a><tt>begin(</tt><i>state_name</i><tt>)</tt>
+<blockquote>Sets the current <a href="#States">state</a> of the Scanner
+to the state named
+<i>state_name</i>.</blockquote>
+<a NAME="produce"></a><tt>produce(</tt><i>value</i> [, <i>text</i>]<tt>)</tt>
+<blockquote>Called from an action procedure, causes <i>value</i> to be
+returned as the token value from the current call to <tt><a href="#read">read()</a></tt>.
+If
+<i>text</i> is supplied, it is returned in place of the scanned text.
+<p><tt>produce()</tt> can be called more than once during a single call
+to an action procedure. In this case, scanning is suspended and tokens
+are queued and returned one at a time by subsequent calls to <tt><a href="#read">read()</a></tt>.
+When the queue is empty, scanning resumes.</blockquote>
+<a NAME="eof"></a><tt>eof()</tt>
+<blockquote>This method can be overridden to perform an action when the
+end of the input stream is encountered. The default implementation does
+nothing.</blockquote>
+</blockquote>
+
+<h2>
+
+<hr WIDTH="100%"><a NAME="Traditional"></a>Module <tt>Plex.Traditional</tt></h2>
+The <tt>Traditional</tt> submodule provides support for writing regular
+expressions using a more traditional character-string syntax.
+<ol><a NAME="re"></a><tt>re(</tt><i>s</i><tt>)</tt></ol>
+
+<ol>
+<ol>Returns a pattern&nbsp; constructed from the traditional regular expression
+string <i>s.</i> The syntax of <i>s</i> is made up of the following elements,
+where <i>c</i> is a character and <i>a</i> and <i>b</i> are regular expressions:
+<br>&nbsp;
+<ol><i>c</i>
+<ol>where <i>c</i> is not one of the special characters below, matches
+the character <i>c</i>.</ol>
+<tt>.</tt>
+<ol>matches any single character, except a newline.</ol>
+<tt>^</tt>
+<ol>matches the beginning of a line.</ol>
+<tt>$</tt>
+<ol>matches the end of a line.</ol>
+<tt>\</tt><i>c</i>
+<ol>matches the character <i>c</i>, even if <i>c</i> is a special character.</ol>
+<i>a</i><tt>*</tt>
+<ol>matches 0 or more repetitions of <i>a.</i></ol>
+<i>a</i><tt>+</tt>
+<ol>matches 1 or more repetitions of <i>a.</i></ol>
+<i>a</i><tt>?</tt>
+<ol>matches an optional <i>a.</i></ol>
+<i>ab</i>
+<ol>matches <i>a</i> followed by <i>b.</i></ol>
+<i>a</i><tt>|</tt><i>b</i>
+<ol>matches either <i>a</i> or <i>b.</i></ol>
+<tt>(</tt><i>a</i><tt>)</tt>
+<ol>matches <i>a.</i></ol>
+[<i>set</i>]
+<ol>matches any one of the characters in <i>set.</i> The elements of <i>set</i>
+are either a single character, or a range (a pair of characters separated
+by a hyphen). A hyphen at the beginning or end of the set, or a right square
+bracket at the beginning of the set, are not treated specially. The first
+character of <i>set</i> may not be a caret.</ol>
+<tt>[^</tt><i>set</i><tt>]</tt>
+<ol>matches any single character (including newline) which is <i>not</i>
+in <i>set.</i></ol>
+</ol>
+</ol>
+</ol>
+
+</body>
+</html>

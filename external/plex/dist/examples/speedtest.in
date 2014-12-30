@@ -1,0 +1,1871 @@
+unit UEngine;
+
+interface
+
+  uses
+    SANE, ObjIntf, UGoof, UGoofCalc;
+
+implementation
+
+  const
+
+  {Instruction opcodes}
+
+    opLbl0 = 0;
+    opLble = 19;
+    opGto0 = 20;
+    opGtoe = 39;
+    opGsb0 = 40;
+    opGsbe = 59;
+    opSto0 = 60;
+    opSto9 = 69;
+    opStoA = 70;
+    opStoE = 74;
+    opRcl0 = 75;
+    opRcl9 = 84;
+    opRclA = 85;
+    opRclE = 89;
+    opStoPlus0 = 90;
+    opStoPlus9 = 99;
+    opStoMinus0 = 100;
+    opStoMinus9 = 109;
+    opStoTimes0 = 110;
+    opStoTimes9 = 119;
+    opStoDivide0 = 120;
+    opStoDivide9 = 129;
+    opDsp0 = 130;
+    opDsp9 = 139;
+
+    opGtoInd = 140;
+    opGsbInd = 141;
+    opStoInd = 142;
+    opRclInd = 143;
+    opStoMinusInd = 144;
+    opStoPlusInd = 145;
+    opStoTimesInd = 146;
+    opStoDivideInd = 147;
+    opDspInd = 148;
+    opRtn = 149;
+
+    op0 = 150;
+    op9 = 159;
+
+    opPercent = 160;
+    opToRectangular = 161;
+    opToDegrees = 162;
+    opToHours = 163;
+    opSin = 164;
+    opCos = 165;
+    opTan = 166;
+    opLn = 167;
+    opLog = 168;
+    opRootX = 169;
+
+    opPercentChange = 170;
+    opToPolar = 171;
+    opToRadians = 172;
+    opToHMS = 173;
+    opArcSin = 174;
+    opArcCos = 175;
+    opArcTan = 176;
+    opEToTheX = 177;
+    op10ToTheX = 178;
+    opXSquared = 179;
+
+    opLastX = 180;
+    opPause = 181;
+    opPi = 182;
+    opPrintReg = 183;
+    op1OverX = 184;
+    opYToTheX = 185;
+    opAbs = 186;
+    opXExchY = 187;
+    opRollDown = 188;
+    opRollUp = 189;
+
+    opDecPoint = 190;
+    opRunStop = 191;
+    opEnter = 192;
+    opSigmaPlus = 193;
+    opMinus = 194;
+    opPlus = 195;
+    opTimes = 196;
+    opDivide = 197;
+    opDsz = 198;
+    opIsz = 199;
+
+    opInt = 200;
+    opPrintX = 201;
+    opWriteDATA = 202;
+    opXBar = 203;
+    opXeq0 = 204;
+    opXne0 = 205;
+    opXlt0 = 206;
+    opXgt0 = 207;
+    opDszInd = 208;
+    opIszInd = 209;
+
+    opFrac = 210;
+    opPrintStk = 211;
+    opMerge = 212;
+    opStdDev = 213;
+    opXeqY = 214;
+    opXneY = 215;
+    opXleY = 216;
+    opXgtY = 217;
+    opStI = 218;
+    opRcI = 219;
+
+    opHMSPlus = 220;
+    opPrintSpace = 221;
+    opDeg = 222;
+    opSigmaMinus = 223;
+    opSetFlag0 = 224;
+    opSetFlag3 = 227;
+    opSst = 228;
+
+    opChs = 230;
+    opEex = 231;
+    opClx = 232;
+    opFix = 233;
+    opClearFlag0 = 234;
+    opClearFlag3 = 237;
+    opBst = 238;
+
+    opPExchS = 240;
+    opClReg = 241;
+    opClPrgm = 242;
+    opSci = 243;
+    opTestFlag0 = 244;
+    opTestFlag3 = 247;
+    opNFactorial = 248;
+
+    opRad = 250;
+    opGrd = 251;
+    opDel = 252;
+    opEng = 253;
+    opRnd = 254;
+    opXExchI = 255;
+
+{------------ Procs and Funcs -----------}
+
+  function int (a: Double): Double;
+  begin
+    int := trunc(a);
+  end;
+
+  function frac (a: Double): Double;
+  begin
+    frac := a - int(a);
+  end;
+
+  function asin (a: Double): Double;
+  begin
+    if a <> 1.0 then
+      asin := arctan(a / sqrt(1 - sqr(a)))
+    else
+      asin := pi / 2.0;
+  end;
+
+  function acos (a: Double): Double;
+  begin
+    if a <> 0.0 then
+      acos := arctan(sqrt(1 - sqr(a)) / a)
+    else
+      acos := pi / 2.0;
+  end;
+
+  function NumToDigits (number, numDigits: integer): DisplayString;
+    var
+      digits: packed array[1..15] of char;
+      i: integer;
+  begin
+    i := numDigits;
+    while i > 0 do begin
+        digits[i] := chr(number mod 10 + ord('0'));
+        number := number div 10;
+        i := i - 1;
+      end;
+    NumToDigits := copy(digits, 1, numDigits);
+  end;
+
+  function SignChar (number: integer): char;
+  begin
+    if number < 0 then
+      SignChar := '-'
+    else
+      SignChar := ' ';
+  end;
+
+  procedure DisplayNumber (x: real);
+    var
+      dec: Decimal;
+      f: DecForm;
+      displayBuffer: string[15];
+
+    procedure PutDisplay (where: integer; what: string);
+      var
+        i: integer;
+    begin
+      for i := 1 to length(what) do
+        displayBuffer[where + i - 1] := what[i];
+    end;
+
+    function AllZero (s: string): boolean;
+      var
+        i: integer;
+    begin
+      for i := 1 to length(s) do
+        if s[i] <> '0' then begin
+            AllZero := false;
+            exit(AllZero);
+          end;
+      AllZero := true;
+    end;
+
+    function Format (style: DecStyle; digits: integer): boolean;
+    begin
+      f.style := style;
+      f.digits := digits;
+      Num2Dec(f, x, dec);
+{if not (dec.sig[1] in ['0'..'9', '?']) then}
+{Fail; -- NaN}
+      if AllZero(dec.sig) then
+        dec.sgn := 0;
+      case style of
+        fixedDecimal:  begin
+            if dec.sig = '0' then
+              dec.exp := -f.digits; {Make sure exponent valid}
+            if (dec.sig[1] = '?') | (dec.exp <> -f.digits) | (length(dec.sig) + dec.exp > 10) then begin
+                Format := false; {Overflow}
+                exit(Format);
+              end;
+            while length(dec.sig) < digits + 1 do
+              insert('0', dec.sig, 1); {Pad with zeroes on left if necessary}
+          end;
+        floatDecimal:  begin
+            if dec.sig = '0' then
+              dec.exp := 0; {Make sure exponent valid}
+            while length(dec.sig) < digits do begin
+                insert('0', dec.sig, length(dec.sig) + 1); {Pad with zeroes on right if necessary}
+                dec.exp := dec.exp - 1;
+              end;
+          end;
+      end;
+      Format := true;
+    end;
+
+    function Modulo (i, j: integer): integer;
+      var
+        m: integer;
+    begin
+      m := i mod j;
+      if m < 0 then
+        m := j + m;
+      Modulo := m;
+    end;
+
+    procedure FormatFloat (sigFigs: integer);
+      label
+        1;
+      var
+        expAdjustment: integer;
+        junk: boolean;
+    begin
+1:
+      junk := Format(floatDecimal, sigFigs);
+      dec.exp := dec.exp + length(dec.sig) - 1;
+      if dec.exp < -99 then begin
+          x := 0;
+          goto 1;
+        end;
+      if gEngine.fDispMode = engMode then begin
+          expAdjustment := Modulo(dec.exp, 3);
+          dec.exp := dec.exp - expAdjustment;
+        end
+      else
+        expAdjustment := 0;
+      Insert('.', dec.sig, 2 + expAdjustment);
+      displayBuffer[13] := SignChar(dec.exp);
+      PutDisplay(14, NumToDigits(abs(dec.exp), 2));
+    end;
+
+    procedure FormatFix;
+    begin
+      if Format(fixedDecimal, gEngine.fDispDigits) then begin
+          insert('.', dec.sig, length(dec.sig) + dec.exp + 1);
+          dec.sig := copy(dec.sig, 1, 11);
+        end
+      else
+        FormatFloat(10);
+    end;
+
+  begin {DisplayNumber}
+    displayBuffer := space15;
+    case gEngine.fDispMode of
+      fixMode: 
+        FormatFix;
+      sciMode, engMode: 
+        FormatFloat(gEngine.fDispDigits + 1);
+    end;
+    displayBuffer[1] := SignChar(-dec.sgn);
+    PutDisplay(2, dec.sig);
+    gDlog.Display(displayBuffer);
+  end; {DisplayNumber}
+
+  procedure FlashNumber (x: real; duration: longint);
+    var
+      stop: longint;
+  begin
+    DisplayNumber(x);
+    stop := TickCount + duration;
+    while TickCount < stop do
+      ;
+  end;
+
+{------------ Methods ---------------}
+
+  procedure TEngine.IEngine;
+    var
+      i: integer;
+  begin
+    fMode := haltMode;
+    fEntryMode := executeMode;
+    fDispMode := fixMode;
+    fDispDigits := 2;
+    fAngleMode := degMode;
+    for i := 0 to 3 do
+      fStack.r[i] := 0;
+    fLastXReg := 0;
+    for i := 0 to maxRegNum do
+      fReg[i] := 0;
+    fPC := 0;
+    fLastStep := 0;
+    fRtnStackPtr := 0;
+    for i := 0 to maxFlagNum do
+      fFlags[i] := false;
+    fEnterFlag := false;
+    fCardOperation := cardIdle;
+    fCardSidesRemaining := [];
+    for i := 0 to 25 do
+      fDecodeTable[i] := CheckGetResource('STR#', gIDBase + i);
+  end;
+
+  procedure TEngine.Free;
+    var
+      i: integer;
+  begin
+    for i := 0 to 25 do
+      ReleaseResource(fDecodeTable[i]);
+    inherited Free;
+  end;
+
+  procedure TEngine.Run;
+  begin
+    case fMode of
+      runMode: 
+        FetchAndExecute;
+      pauseMode: 
+        if TickCount >= fPauseEndTime then begin
+            fMode := fLastMode;
+            UpdateDisplay;
+          end;
+      otherwise
+        ;
+    end;
+  end;
+
+  procedure TEngine.FetchAndExecute;
+    var
+      opcode: integer;
+  begin
+    if fPC = 0 then
+      fPC := 1;
+    if fPC <= fLastStep then begin
+        opcode := fProgMem[fPC];
+        fPC := fPC + 1;
+        DoOpcode(opcode);
+      end;
+    if fPC > fLastStep then
+      DoOpcode(opRtn);
+  end;
+
+  procedure TEngine.Execute (opcode: integer);
+  begin
+    case fMode of
+      haltMode: 
+        DoOpcode(opcode);
+      runMode: 
+        if opcode = opRunStop then
+          fMode := haltMode;
+      pauseMode:  begin
+          DoOpcode(opcode);
+          fPauseEndTime := TickCount + 60;
+        end;
+      wPrgmMode: 
+        EditProgram(opcode);
+      cardIOMode: 
+        if opcode = opRunStop then begin
+            CardIOError;
+            fCardOperation := cardIdle;
+            fMode := haltMode;
+          end;
+      otherwise
+    end;
+    UpdateDisplay;
+  end;
+
+  procedure TEngine.EditProgram (opcode: integer);
+
+    procedure EditSst;
+    begin
+      fPC := fPC + 1;
+      if fPC > fLastStep then
+        fPC := 0;
+    end;
+
+    procedure EditBst;
+    begin
+      fPC := fPC - 1;
+      if fPC < 0 then
+        fPC := fLastStep;
+    end;
+
+    procedure EditDel;
+      var
+        i: integer;
+    begin
+      if fPC > 0 then begin
+          for i := fPC to fLastStep - 1 do
+            fProgMem[i] := fProgMem[i + 1];
+          fLastStep := fLastStep - 1;
+          fPC := fPC - 1;
+        end;
+    end;
+
+    procedure EditClPrgm;
+    begin
+      fLastStep := 0;
+      fPC := 0;
+    end;
+
+    procedure EditInsert (opcode: integer);
+      var
+        i: integer;
+    begin
+      if fLastStep < maxProgStep then begin
+          fPC := fPC + 1;
+          fLastStep := fLastStep + 1;
+          for i := fLastStep downto fPC + 1 do
+            fProgMem[i] := fProgMem[i - 1];
+          fProgMem[fPC] := opcode;
+        end;
+    end;
+
+  begin {TEngine.EditProgram}
+    case opcode of
+      opSst: 
+        EditSst;
+      opBst: 
+        EditBst;
+      opDel: 
+        EditDel;
+      opClPrgm: 
+        EditClPrgm;
+      otherwise
+        EditInsert(opcode);
+    end;
+  end; {TEngine.EditProgram}
+
+  procedure TEngine.RunProgram;
+  begin
+    fMode := runMode;
+  end;
+
+  procedure TEngine.HaltProgram;
+  begin
+    if fMode <> haltMode then begin
+        fMode := haltMode;
+        UpdateDisplay;
+      end;
+  end;
+
+  procedure TEngine.DoOpcode (opcode: integer);
+  begin
+    case opcode of
+      opSst: 
+        SingleStep;
+      opBst: 
+        BackStep;
+      opChs: 
+        DoChs;
+      op0..op9, opDecPoint, opEex: 
+        DoDigitEntry(opcode);
+      otherwise begin
+          EndDigitEntry;
+          DoFunction(opcode);
+        end;
+    end;
+  end;
+
+  procedure TEngine.SingleStep;
+  begin
+    if fPC = 0 then
+      fPC := 1;
+    DisplayCurrentStep;
+    while StillDown do
+      ;
+    gDlog.ReleaseKey;
+    FetchAndExecute;
+  end;
+
+  procedure TEngine.BackStep;
+  begin
+    if fPC = 0 then
+      fPC := fLastStep
+    else
+      fPC := fPC - 1;
+    DisplayCurrentStep;
+    while StillDown do
+      ;
+    gDlog.ReleaseKey;
+  end;
+
+  procedure TEngine.DoDigitEntry (opcode: integer);
+  begin
+    if fMode = pauseMode then
+      fFlags[3] := true;
+    if fEntryMode = executeMode then
+      BeginMantissaEntry;
+    case fEntryMode of
+      mantissaEntryMode: 
+        case opcode of
+          op0..op9: 
+            EnterMantissaDigit(opcode - op0);
+          opDecPoint: 
+            if not fDecPtEntered then
+              EnterDecPt;
+          opEex: 
+            BeginExponentEntry;
+        end;
+      exponentEntryMode: 
+        case opcode of
+          op0..op9: 
+            EnterExponentDigit(opcode - op0);
+          otherwise
+            ;
+        end;
+    end;
+    fEnterFlag := false;
+  end;
+
+  procedure TEngine.BeginMantissaEntry;
+  begin
+    if not fEnterFlag then
+      PushUpStack;
+    fLastXReg := fStack.x;
+    fEntryMode := mantissaEntryMode;
+    fDisplayBuffer := space15;
+    fDigitCount := 0;
+    fDisplayBuffer[2] := '.';
+    fDecPtEntered := false;
+    with fEntryBuffer do begin
+        sgn := 0;
+        exp := 0;
+        sig := '';
+      end;
+  end;
+
+  procedure TEngine.EnterMantissaDigit (digit: integer);
+    var
+      c: char;
+      i: integer;
+  begin
+    if fDigitCount < 10 then begin
+        c := chr(digit + ord('0'));
+        fDigitCount := fDigitCount + 1;
+        insert(c, fEntryBuffer.sig, fDigitCount);
+        i := fDigitCount + 1;
+        if fDecPtEntered then
+          i := i + 1;
+        fDisplayBuffer[i] := c;
+        if fDecPtEntered then
+          fEntryBuffer.exp := fEntryBuffer.exp - 1
+        else
+          fDisplayBuffer[i + 1] := '.';
+      end;
+  end;
+
+  procedure TEngine.EnterDecPt;
+  begin
+    fDecPtEntered := true;
+  end;
+
+  procedure TEngine.BeginExponentEntry;
+  begin
+    if fDigitCount = 0 then
+      EnterMantissaDigit(1);
+    fEntryMode := exponentEntryMode;
+    fDisplayBuffer[14] := '0';
+    fDisplayBuffer[15] := '0';
+  end;
+
+  procedure TEngine.EnterExponentDigit (digit: integer);
+  begin
+    fDisplayBuffer[14] := fDisplayBuffer[15];
+    fDisplayBuffer[15] := chr(digit + ord('0'));
+  end;
+
+  procedure TEngine.DoChs;
+    var
+      i: integer;
+
+    procedure ToggleDisplaySign (i: integer);
+      var
+        c: char;
+    begin
+      c := fDisplayBuffer[i];
+      if c = '-' then
+        c := ' '
+      else
+        c := '-';
+      fDisplayBuffer[i] := c;
+    end;
+
+  begin {TEngine.DoChs}
+    case fEntryMode of
+      executeMode: 
+        DoFunction(opCHS);
+      mantissaEntryMode: 
+        ToggleDisplaySign(1);
+      exponentEntryMode: 
+        ToggleDisplaySign(13);
+    end;
+  end; {TEngine.DoChs}
+
+  procedure TEngine.EndDigitEntry;
+    var
+      enteredExponent: longint;
+  begin
+    if fEntryMode <> executeMode then begin
+        if fEntryMode = exponentEntryMode then begin
+            StringToNum(copy(fDisplayBuffer, 13, 3), enteredExponent);
+            fEntryBuffer.exp := fEntryBuffer.exp + enteredExponent;
+          end;
+        if fDisplayBuffer[1] = '-' then
+          fEntryBuffer.sgn := 1;
+        while (length(fEntryBuffer.sig) > 0) & (fEntryBuffer.sig[1] = '0') do
+          Delete(fEntryBuffer.sig, 1, 1);
+        fStack.x := Dec2Num(fEntryBuffer);
+        fEntryMode := executeMode;
+      end;
+  end;
+
+  procedure TEngine.PushUpStack;
+  begin
+    with fStack do begin
+        t := z;
+        z := y;
+        y := x;
+      end;
+  end;
+
+  procedure TEngine.DoFunction (opcode: integer);
+
+    procedure Fail;
+    begin
+      Error;
+      exit(DoFunction);
+      ;
+    end;
+
+    procedure DoPause;
+    begin
+      fLastMode := fMode;
+      fMode := pauseMode;
+      fPauseEndTime := TickCount + 60;
+      UpdateDisplay;
+    end;
+
+    procedure Push (a: Double);
+    begin
+      if not fEnterFlag then
+        PushUpStack;
+      fStack.x := a;
+    end;
+
+    procedure Pop;
+    begin
+      with fStack do begin
+          x := y;
+          y := z;
+          z := t;
+        end;
+    end;
+
+    procedure ReplaceX (newX: Double);
+    begin
+      fLastXReg := fStack.x;
+      fStack.x := newX;
+    end;
+
+    procedure ReplaceXY (newX: Double);
+    begin
+      fLastXReg := fStack.x;
+      Pop;
+      fStack.x := newX;
+    end;
+
+    function IndirectLabel: integer;
+      var
+        address: integer;
+    begin
+      address := trunc(fReg[IReg]);
+      if (address > 19) or (address < -999) then
+        Fail;
+      IndirectLabel := address;
+    end;
+
+    function IndirectReg: integer;
+      var
+        address: integer;
+    begin
+      address := trunc(fReg[IReg]);
+      if (address < 0) or (address > maxRegNum) then
+        Fail;
+      IndirectReg := address;
+    end;
+
+    function Indirect0to9: integer;
+      var
+        value: integer;
+    begin
+      value := trunc(fReg[IReg]);
+      if (value < 0) or (value > 9) then
+        Fail;
+      Indirect0to9 := value;
+    end;
+
+    function FindStep (address: integer): integer;
+      var
+        i0, i: integer;
+    begin
+      if address >= 0 then begin
+          i0 := fPC;
+          if i0 = 0 then
+            i0 := 1;
+          for i := i0 to fLastStep do
+            if fProgMem[i] = address then begin
+                FindStep := i;
+                exit(FindStep);
+              end;
+          for i := 1 to fPC - 1 do
+            if fProgMem[i] = address then begin
+                FindStep := i;
+                exit(FindStep);
+              end;
+          FindStep := -1;
+        end
+      else begin
+          i := fPC + address;
+          while i < 0 do
+            i := i + (maxProgStep + 1);
+          FindStep := i;
+        end;
+    end;
+
+    procedure DoGto (address: integer);
+      var
+        step: integer;
+    begin
+      step := FindStep(address);
+      if step < 0 then
+        Fail;
+      fPC := step;
+    end;
+
+    procedure Do1OverX;
+    forward;
+    procedure DoRootX;
+    forward;
+    procedure DoYToTheX;
+    forward;
+    procedure DoRollDown;
+    forward;
+    procedure DoXExchY;
+    forward;
+
+    procedure DefaultUserKey (address: integer);
+    begin
+      case address of
+        10: 
+          Do1OverX;
+        11: 
+          DoRootX;
+        12: 
+          DoYToTheX;
+        13: 
+          DoRollDown;
+        14: 
+          DoXExchY;
+        otherwise
+          Fail;
+      end;
+    end;
+
+    procedure PushRtnAddr (rtnAddr: integer);
+    begin
+      if fRtnStackPtr > rtnStackSize then
+        Fail;
+      fRtnStackPtr := fRtnStackPtr + 1;
+      fRtnStack[fRtnStackPtr] := rtnAddr;
+    end;
+
+    procedure DoGsb (address: integer);
+      var
+        step: integer;
+    begin
+      step := FindStep(address);
+      if step >= 0 then begin
+          if fMode = runMode then
+            PushRtnAddr(fPC);
+          fPC := step;
+          RunProgram;
+        end
+      else
+        DefaultUserKey(address);
+    end;
+
+    procedure DoSto (address: integer);
+    begin
+      fReg[address] := fStack.x;
+    end;
+
+    procedure DoRcl (address: integer);
+    begin
+      Push(fReg[address]);
+    end;
+
+    procedure DoStoPlus (address: integer);
+    begin
+      fReg[address] := fReg[address] + fStack.x;
+    end;
+
+    procedure DoStoMinus (address: integer);
+    begin
+      fReg[address] := fReg[address] - fStack.x;
+    end;
+
+    procedure DoStoTimes (address: integer);
+    begin
+      fReg[address] := fReg[address] * fStack.x;
+    end;
+
+    procedure DoStoDivide (address: integer);
+    begin
+      if fStack.x = 0 then
+        Fail;
+      fReg[address] := fReg[address] / fStack.x;
+    end;
+
+    procedure DoDsp (digits: integer);
+    begin
+      fDispDigits := digits;
+    end;
+
+    function Radians (a: Double): Double;
+    begin
+      case fAngleMode of
+        degMode: 
+          Radians := a * (pi / 180);
+        radMode: 
+          Radians := a;
+        grdMode: 
+          Radians := a * (pi / 200);
+      end;
+    end;
+
+    function Angle (a: Double): Double;
+    begin
+      case fAngleMode of
+        degMode: 
+          Angle := a * (180 / pi);
+        radMode: 
+          Angle := a;
+        grdMode: 
+          Angle := a * (200 / pi);
+      end;
+    end;
+
+    procedure Skip;
+    begin
+      if fPC <= fLastStep then begin
+          fPC := fPC + 1;
+          if fPC > fLastStep then
+            fPC := 0;
+        end;
+    end;
+
+    function StdDev (n, sum, sumsq: Double): Double;
+    begin
+      if (n <> 0.0) and (n <> 1.0) then
+        StdDev := sqrt((sumsq - sqr(sum) / n) / (n - 1.0))
+      else
+        Fail;
+    end;
+
+    function FromHMS (a: Double): Double;
+    begin
+      FromHMS := int(a) + int(frac(a) * 100.0) / 60.0 + frac(a * 100.0) / 36.0;
+    end;
+
+    function ToHMS (a: Double): Double;
+    begin
+      ToHMS := int(a) + int(frac(a) * 60.0) / 100.0 + frac(a * 60.0) * 0.006;
+    end;
+
+    procedure DoDsz (address: integer);
+    begin
+      fReg[address] := fReg[address] - 1;
+      if fReg[address] = 0 then
+        Skip;
+    end;
+
+    procedure DoIsz (address: integer);
+    begin
+      fReg[address] := fReg[address] + 1;
+      if fReg[address] = 0 then
+        Skip;
+    end;
+
+    procedure DoRnd;
+      var
+        f: DecForm;
+        dec: Decimal;
+    begin
+      f.digits := fDispDigits;
+      case fDispMode of
+        fixMode: 
+          f.style := FixedDecimal;
+        sciMode, engMode: 
+          f.style := FloatDecimal;
+      end;
+      Num2Dec(f, fStack.x, dec);
+      ReplaceX(Dec2Num(dec));
+    end;
+
+    procedure DoRtn;
+    begin
+      if (fMode <> haltMode) and (fRtnStackPtr > 0) then begin
+          fPC := fRtnStack[fRtnStackPtr];
+          fRtnStackPtr := fRtnStackPtr - 1;
+        end
+      else begin
+          HaltProgram;
+          fPC := 0;
+          fRtnStackPtr := 0;
+        end;
+    end;
+
+    procedure DoToRectangular;
+      var
+        h, a: Double;
+    begin
+      with fStack do begin
+          fLastXReg := x;
+          h := x;
+          a := Radians(y);
+          x := h * cos(a);
+          y := h * sin(a);
+        end;
+    end;
+
+    procedure DoTan;
+      var
+        a, sinX, cosX: double;
+    begin
+      a := Radians(fStack.x);
+      sinX := sin(a);
+      cosX := cos(a);
+      if cosX = 0 then
+        Fail;
+      ReplaceX(sinX / cosX);
+    end;
+
+    procedure DoLn;
+    begin
+      if fStack.x = 0 then
+        Fail;
+      ReplaceX(ln(fStack.x));
+    end;
+
+    procedure DoLog;
+    begin
+      if fStack.x <= 0 then
+        Fail;
+      ReplaceX(ln(fStack.x) / ln10);
+    end;
+
+    procedure DoRootX;
+    begin
+      if fStack.x < 0 then
+        Fail;
+      ReplaceX(sqrt(fStack.x));
+    end;
+
+    procedure DoToPolar;
+      var
+        h, a: Double;
+    begin
+      with fStack do begin
+          fLastXReg := x;
+          h := sqrt(sqr(x) + sqr(y));
+          if x <> 0 then
+            a := arctan(y / x)
+          else
+            a := pi / 2;
+          if x < 0 then
+            a := a + pi;
+          y := Angle(a);
+          x := h;
+        end;
+    end;
+
+    procedure DoPrintReg;
+      var
+        i: integer;
+    begin
+      for i := 0 to 9 do
+        FlashNumber(fReg[i], 12);
+      for i := 20 to 25 do
+        FlashNumber(fReg[i], 12);
+      UpdateDisplay;
+    end;
+
+    procedure Do1OverX;
+    begin
+      if fStack.x = 0 then
+        Fail;
+      ReplaceX(1 / fStack.x);
+    end;
+
+    procedure DoYToTheX;
+    begin
+      if fStack.y <= 0 then
+        Fail;
+      ReplaceX(exp(ln(fStack.y) * fStack.x));
+    end;
+
+    procedure DoXExchY;
+      var
+        temp: Double;
+    begin
+      with fStack do begin
+          temp := x;
+          x := y;
+          y := temp;
+        end;
+    end;
+
+    procedure DoRollDown;
+      var
+        temp: Double;
+    begin
+      with fStack do begin
+          temp := x;
+          x := y;
+          y := z;
+          z := t;
+          t := temp;
+        end;
+    end;
+
+    procedure DoRollUp;
+      var
+        temp: Double;
+    begin
+      with fStack do begin
+          temp := t;
+          t := z;
+          z := y;
+          y := x;
+          x := temp;
+        end;
+    end;
+
+    procedure DoRunStop;
+    begin
+      if fMode = haltMode then
+        RunProgram
+      else
+        HaltProgram;
+    end;
+
+    procedure DoEnter;
+    begin
+      PushUpStack;
+    end;
+
+    procedure AccumulateStats (sign: integer);
+    begin
+      with fStack do begin
+          fReg[10] := fReg[10] + sign;
+          fReg[11] := fReg[11] + sign * x;
+          fReg[12] := fReg[12] + sign * y;
+          fReg[13] := fReg[13] + sign * sqr(x);
+          fReg[14] := fReg[14] + sign * sqr(y);
+        end;
+    end;
+
+    procedure DoSigmaPlus;
+    begin
+      AccumulateStats(1);
+    end;
+
+    procedure DoSigmaMinus;
+    begin
+      AccumulateStats(-1);
+    end;
+
+    procedure DoDivide;
+    begin
+      if fStack.x = 0 then
+        Fail;
+      ReplaceX(fStack.y / fStack.x);
+    end;
+
+    procedure DoPrintX;
+    begin
+      FlashNumber(fStack.x, 60);
+      UpdateDisplay;
+    end;
+
+    procedure DoWData;
+      var
+        i: integer;
+        twoSided: boolean;
+    begin
+      twoSided := false;
+      for i := 10 to 19 do
+        if fReg[i] <> 0 then begin
+            twoSided := true;
+            Leave;
+          end;
+      if twoSided then
+        fCardSidesRemaining := [1, 2]
+      else
+        fCardSidesRemaining := [1];
+      RequestCardOperation(cardWriteData);
+    end;
+
+    procedure DoXBar;
+      var
+        temp: Double;
+    begin
+      temp := fReg[10];
+      if temp = 0 then
+        Fail;
+      Push(fReg[12] / temp);
+      Push(fReg[11] / temp);
+    end;
+
+    procedure DoPrintStk;
+      var
+        i: integer;
+    begin
+      for i := 3 downto 0 do
+        FlashNumber(fStack.r[i], 15);
+      UpdateDisplay;
+    end;
+
+    procedure DoMerge;
+    begin
+      if (fStack.x < 0) or (fStack.x > 225) then
+        Error
+      else begin
+          fReadStart := trunc(fStack.x) + 1;
+          RequestCardOperation(cardReadProg);
+        end;
+    end;
+
+    procedure DoStdDev;
+    begin
+      Push(StdDev(fReg[10], fReg[12], fReg[14]));
+      Push(StdDev(fReg[10], fReg[11], fReg[13]));
+    end;
+
+    procedure DoPrintSpace;
+    begin
+    end;
+
+    procedure DoPExchS;
+      var
+        i: integer;
+        temp: Double;
+    begin
+      for i := 0 to 9 do begin
+          temp := fReg[i];
+          fReg[i] := fReg[i + 10];
+          fReg[i + 10] := temp;
+        end;
+    end;
+
+    procedure DoClReg;
+      var
+        i: integer;
+    begin
+      for i := 0 to 9 do
+        fReg[i] := 0;
+      for i := 20 to 25 do
+        fReg[i] := 0;
+    end;
+
+    procedure DoNFactorial;
+      var
+        i: integer;
+        a: Double;
+    begin
+      with fStack do begin
+          if (x < 0) or (frac(x) <> 0) then
+            Fail;
+          a := 1.0;
+          for i := 2 to trunc(x) do
+            a := a * i;
+          x := a;
+        end;
+    end;
+
+    procedure DoXExchI;
+      var
+        temp: Double;
+    begin
+      temp := fStack.x;
+      fStack.x := fReg[25];
+      fReg[25] := temp;
+    end;
+
+    procedure DoClx;
+    begin
+      ReplaceX(0);
+    end;
+
+    procedure DoTestFlag;
+      var
+        flagNum: integer;
+    begin
+      flagNum := opcode - opTestFlag0;
+      if not fFlags[flagNum] then
+        Skip;
+      if (flagNum >= 2) & (flagNum <= 3) then
+        fFlags[flagNum] := false;
+    end;
+
+  begin {DoFunction}
+    with fStack do
+      case opcode of
+        opLbl0..opLble: 
+          ;
+        opGto0..opGtoe: 
+          DoGto(opcode - opGto0);
+        opGsb0..opGsbe: 
+          DoGsb(opcode - opGsb0);
+        opSto0..opSto9: 
+          DoSto(opcode - opSto0);
+        opStoA..opStoE: 
+          DoSto(opcode - opStoA + 20);
+        opRcl0..opRcl9: 
+          DoRcl(opcode - opRcl0);
+        opRclA..opRclE: 
+          DoRcl(opcode - opRclA + 20);
+        opStoPlus0..opStoPlus9: 
+          DoStoPlus(opcode - opStoPlus0);
+        opStoMinus0..opStoMinus9: 
+          DoStoMinus(opcode - opStoMinus0);
+        opStoTimes0..opStoTimes9: 
+          DoStoTimes(opcode - opStoMinus0);
+        opStoDivide0..opStoDivide9: 
+          DoStoDivide(opcode - opStoDivide0);
+        opDsp0..opDsp9: 
+          DoDsp(opcode - opDsp0);
+        opGtoInd: 
+          DoGto(IndirectLabel);
+        opGsbInd: 
+          DoGsb(IndirectLabel);
+        opStoInd: 
+          DoSto(IndirectReg);
+        opRclInd: 
+          DoRcl(IndirectReg);
+        opStoPlusInd: 
+          DoStoPlus(IndirectReg);
+        opStoMinusInd: 
+          DoStoMinus(IndirectReg);
+        opStoTimesInd: 
+          DoStoTimes(IndirectReg);
+        opStoDivideInd: 
+          DoStoDivide(IndirectReg);
+        opDspInd: 
+          DoDsp(Indirect0to9);
+        opRtn: 
+          DoRtn;
+        opPercent: 
+          ReplaceXY(y * x / 100);
+        opToRectangular: 
+          DoToRectangular;
+        opToDegrees: 
+          ReplaceX(x * (180 / pi));
+        opToHours: 
+          ReplaceX(FromHMS(x));
+        opSin: 
+          ReplaceX(sin(Radians(x)));
+        opCos: 
+          ReplaceX(cos(Radians(x)));
+        opTan: 
+          DoTan;
+        opLn: 
+          DoLn;
+        opLog: 
+          DoLog;
+        opRootX: 
+          DoRootX;
+        opPercentChange: 
+          ReplaceXY((x - y) * 100 / y);
+        opToPolar: 
+          DoToPolar;
+        opToRadians: 
+          ReplaceX(x * (pi / 180));
+        opToHMS: 
+          ReplaceX(ToHMS(x));
+        opArcSin: 
+          ReplaceX(Angle(asin(x)));
+        opArcCos: 
+          ReplaceX(Angle(acos(x)));
+        opArcTan: 
+          ReplaceX(Angle(arctan(x)));
+        opEToTheX: 
+          ReplaceX(exp(x));
+        op10ToTheX: 
+          ReplaceX(exp(ln10 * x));
+        opXSquared: 
+          ReplaceX(sqr(x));
+        opLastX: 
+          Push(fLastXReg);
+        opPause: 
+          DoPause;
+        opPi: 
+          Push(pi);
+        opPrintReg: 
+          DoPrintReg;
+        op1OverX: 
+          Do1OverX;
+        opYToTheX: 
+          DoYToTheX;
+        opAbs: 
+          ReplaceX(abs(x));
+        opXExchY: 
+          DoXExchY;
+        opRollDown: 
+          DoRollDown;
+        opRollUp: 
+          DoRollUp;
+        opRunStop: 
+          DoRunStop;
+        opEnter: 
+          DoEnter;
+        opSigmaPlus: 
+          DoSigmaPlus;
+        opMinus: 
+          ReplaceXY(y - x);
+        opPlus: 
+          ReplaceXY(y + x);
+        opTimes: 
+          ReplaceXY(y * x);
+        opDivide: 
+          DoDivide;
+        opDsz: 
+          DoDsz(25);
+        opIsz: 
+          DoIsz(25);
+        opInt: 
+          ReplaceX(int(x));
+        opPrintX: 
+          DoPrintX;
+        opWriteData: 
+          DoWData;
+        opXBar: 
+          DoXBar;
+        opXeq0: 
+          if x <> 0 then
+            Skip;
+        opXne0: 
+          if x = 0 then
+            Skip;
+        opXlt0: 
+          if x >= 0 then
+            Skip;
+        opXgt0: 
+          if x <= 0 then
+            Skip;
+        opDszInd: 
+          DoDsz(IndirectReg);
+        opIszInd: 
+          DoIsz(IndirectReg);
+        opFrac: 
+          ReplaceX(frac(x));
+        opPrintStk: 
+          DoPrintStk;
+        opMerge: 
+          DoMerge;
+        opStdDev: 
+          DoStdDev;
+        opXeqY: 
+          if x <> y then
+            Skip;
+        opXneY: 
+          if x = y then
+            Skip;
+        opXleY: 
+          if x > y then
+            Skip;
+        opXgtY: 
+          if x <= y then
+            Skip;
+        opStI: 
+          fReg[IReg] := x;
+        opRcI: 
+          Push(fReg[IReg]);
+        opHMSPlus: 
+          ReplaceXY(FromHMS(y) + FromHMS(x));
+        opPrintSpace: 
+          DoPrintSpace;
+        opDeg: 
+          fAngleMode := degMode;
+        opSigmaMinus: 
+          DoSigmaMinus;
+        opSetFlag0..opSetFlag3: 
+          fFlags[opcode - opSetFlag0] := true;
+        opChs: 
+          ReplaceX(-x);
+        opClx: 
+          DoClx;
+        opFix: 
+          fDispMode := fixMode;
+        opClearFlag0..opClearFlag3: 
+          fFlags[opcode - opClearFlag0] := false;
+        opBst: 
+          ;
+        opPExchS: 
+          DoPExchS;
+        opClReg: 
+          DoClReg;
+        opClPrgm: 
+          ;
+        opSci: 
+          fDispMode := sciMode;
+        opTestFlag0..opTestFlag3: 
+          DoTestFlag;
+        opNFactorial: 
+          DoNFactorial;
+        opRad: 
+          fAngleMode := radMode;
+        opGrd: 
+          fAngleMode := grdMode;
+        opEng: 
+          fDispMode := engMode;
+        opRnd: 
+          DoRnd;
+        opXExchI: 
+          DoXExchI;
+      end;
+    if (fStack.x > 9.999999999e99) | (fStack.x < -9.999999999e99) then
+      Error;
+    fEnterFlag := opcode in [opEnter, opClx];
+  end; {DoFunction}
+
+  procedure TEngine.UpdateDisplay;
+  begin
+    case fMode of
+      haltMode, pauseMode: 
+        if fEntryMode = executeMode then
+          DisplayXRegister
+        else
+          gDlog.Display(fDisplayBuffer);
+      runMode: 
+        gDlog.Display(space15);
+      wPrgmMode: 
+        DisplayCurrentStep;
+      otherwise
+        ;
+    end;
+  end;
+
+  procedure TEngine.DisplayXRegister;
+  begin
+    DisplayNumber(fStack.x);
+  end;
+
+  procedure TEngine.DisplayCurrentStep;
+    var
+      keyCode: Str255;
+  begin {TEngine.DisplayCurrentStep}
+    if fPC > 0 then
+      OpcodeToKeyCode(fProgMem[fPC], keyCode)
+    else
+      keyCode := '';
+    insert(copy('            ', 1, 12 - length(keyCode)), keyCode, 1);
+    fDisplayBuffer := concat(NumToDigits(fPC, 3), keyCode);
+    gDlog.Display(fDisplayBuffer);
+  end; {TEngine.DisplayCurrentStep}
+
+  procedure TEngine.OpcodeToKeyCode (opcode: integer; var keyCode: Str255);
+  begin
+    GetIndString(keyCode, gIDBase + opcode div 10, opcode mod 10 + 1);
+  end;
+
+  procedure TEngine.Error;
+  begin
+    fMode := haltMode;
+    gDlog.Error;
+  end;
+
+  procedure TEngine.ImmediateGTO (newPC: integer);
+  begin
+    if (newPC >= 0) and (newPC <= maxProgStep) then begin
+        fPC := newPC;
+        if fMode = wPrgmMode then
+          UpdateDisplay;
+      end
+    else
+      Error;
+  end;
+
+  procedure TEngine.EnterWPrgmMode;
+  begin
+    fMode := wPrgmMode;
+    UpdateDisplay;
+  end;
+
+  procedure TEngine.EnterRunMode;
+  begin
+    fMode := haltMode;
+    UpdateDisplay;
+  end;
+
+  procedure TEngine.RequestCardOperation (whichOperation: CardOperation);
+  begin
+    fLastMode := fMode;
+    fMode := cardIOMode;
+    fCardOperation := whichOperation;
+    RequestCard(false);
+    DispatchCardOperation;
+  end;
+
+  procedure TEngine.CardInserted;
+  begin
+    EndDigitEntry;
+    DispatchCardOperation;
+  end;
+
+  procedure TEngine.DispatchCardOperation;
+  begin
+    if gDlog.CardPresent then begin
+        if fCardOperation in [cardIdle, cardReadProg, cardReadData] then
+          gDlog.ReadCard(fCardBuffer);
+        case fMode of
+          haltMode: 
+            ReadCard;
+          runMode: 
+            ;
+          pauseMode:  begin
+              fMode := runMode;
+              ReadCard;
+            end;
+          cardIOMode: 
+            DoCardIO;
+          wPrgmMode: 
+            WriteProgram;
+        end;
+      end;
+  end;
+
+  procedure TEngine.ReadCard;
+    var
+      typ: CardType;
+  begin
+    typ := fCardBuffer.theType;
+    fLastMode := fMode;
+    fMode := cardIOMode;
+    case typ of
+      blankCard: 
+        CardIOError;
+      progCard, progCard1, progCard2:  begin
+          fCardOperation := cardReadProg;
+          if typ = progCard then
+            fCardSidesRemaining := [1]
+          else
+            fCardSidesRemaining := [1, 2];
+          fReadStart := 1;
+        end;
+      dataCard, dataCard1, dataCard2:  begin
+          fCardOperation := cardReadData;
+          if typ = dataCard then
+            fCardSidesRemaining := [1]
+          else
+            fCardSidesRemaining := [1, 2];
+          SetDataReadRange;
+        end;
+    end;
+    DoCardIO;
+  end;
+
+  procedure TEngine.SetDataReadRange;
+  begin
+    if fStack.x = 0 then begin
+        fReadStart := 0;
+        fReadLength := 26;
+      end
+    else begin
+        if (fStack.y < 0) or (fStack.y >= 26) or (fStack.x < 0) or (fStack.x >= 27) then begin
+            CardIOError;
+            exit(SetDataReadRange);
+          end;
+        fReadStart := trunc(fStack.y);
+        fReadLength := trunc(fStack.x);
+      end;
+  end;
+
+  procedure TEngine.WriteProgram;
+  begin
+    fLastMode := fMode;
+    fMode := cardIOMode;
+    fCardOperation := cardWriteProg;
+    if fLastStep <= 112 then
+      fCardSidesRemaining := [1]
+    else
+      fCardSidesRemaining := [1, 2];
+    DoCardIO;
+  end;
+
+  procedure TEngine.DoCardIO;
+  begin
+    case fCardOperation of
+      cardReadProg: 
+        DoReadProgram;
+      cardWriteProg: 
+        DoWriteProgram;
+      cardReadData: 
+        DoReadData;
+      cardWriteData: 
+        DoWriteData;
+      otherwise
+        ;
+    end;
+  end;
+
+  procedure TEngine.CardPassed;
+  begin
+    if fCardOperation = cardError then begin
+        fCardOperation := cardIdle;
+        fCardSidesRemaining := [];
+        Error;
+      end
+    else if fCardSidesRemaining <> [] then
+      RequestCard(true)
+    else begin
+        fCardOperation := cardIdle;
+        fMode := fLastMode;
+        UpdateDisplay;
+      end;
+  end;
+
+  procedure TEngine.CardIOError;
+  begin
+    if fCardOperation = cardReadProg then begin
+        fLastStep := 0;
+        fPC := 0;
+      end;
+    fCardOperation := cardError;
+  end;
+
+  procedure TEngine.RequestCard (inverted: boolean);
+  begin
+    gDlog.RequestCard(inverted);
+  end;
+
+  procedure TEngine.DoReadProgram;
+    var
+      side: integer;
+  begin
+    case fCardBuffer.theType of
+      progCard, progCard1: 
+        side := 1;
+      progCard2: 
+        side := 2;
+      otherwise
+        CardIOError;
+    end;
+    if side in fCardSidesRemaining then begin
+        ReadProgSide(side);
+        fCardSidesRemaining := fCardSidesRemaining - [side];
+        if fMode = pauseMode then
+          fFlags[3] := true;
+      end;
+  end;
+
+  procedure TEngine.ReadProgSide (side: integer);
+    var
+      firstStep, numSteps, i: integer;
+  begin
+    with fCardBuffer do begin
+        if side = 1 then begin
+            fDispMode := theDispMode;
+            fAngleMode := theAngleMode;
+            fFlags := theFlags;
+            fLastStep := theProgSize;
+            firstStep := fReadStart;
+          end
+        else
+          firstStep := fReadStart + 112;
+        numSteps := theSideSize;
+        if firstStep + numSteps > maxProgStep then
+          numSteps := maxProgStep - firstStep + 1;
+        for i := 0 to numSteps - 1 do
+          fProgMem[firstStep + i] := theSteps[i];
+      end;
+  end;
+
+  procedure TEngine.DoWriteProgram;
+    var
+      i: integer;
+  begin
+    for i := 1 to 2 do
+      if i in fCardSidesRemaining then begin
+          WriteProgSide(i);
+          fCardSidesRemaining := fCardSidesRemaining - [i];
+          Leave;
+        end;
+  end;
+
+  procedure TEngine.WriteProgSide (side: integer);
+    var
+      firstStep, numSteps, i: integer;
+  begin
+    with fCardBuffer do begin
+        case side of
+          1:  begin
+              if 2 in fCardSidesRemaining then
+                theType := progCard1
+              else
+                theType := progCard;
+              theDispMode := fDispMode;
+              theAngleMode := fAngleMode;
+              fFlags := theFlags;
+              theProgSize := fLastStep;
+              firstStep := 1;
+            end;
+          2:  begin
+              theType := progCard2;
+              firstStep := 113;
+            end;
+        end;
+        numSteps := fLastStep - firstStep + 1;
+        if numSteps > 112 then
+          numSteps := 112;
+        theSideSize := numSteps;
+        for i := 0 to numSteps - 1 do
+          theSteps[i] := fProgMem[firstStep + i];
+      end;
+    if not gDlog.WriteCard(fCardBuffer) then
+      CardIOError;
+  end;
+
+  procedure TEngine.DoReadData;
+    var
+      side: integer;
+  begin
+    case fCardBuffer.theType of
+      dataCard, dataCard1: 
+        side := 1;
+      dataCard2: 
+        side := 2;
+      otherwise
+        CardIOError;
+    end;
+    if side in fCardSidesRemaining then begin
+        ReadDataSide(side);
+        fCardSidesRemaining := fCardSidesRemaining - [side];
+        if fMode = pauseMode then
+          fFlags[3] := true;
+      end;
+  end;
+
+  procedure TEngine.ReadDataSide (side: integer);
+
+    procedure ReadDataReg (reg, slot: integer);
+    begin
+      if (reg >= fReadStart) and (reg < fReadStart + fReadLength) then
+        fReg[reg] := fCardBuffer.theData[slot];
+    end;
+
+    var
+      i: integer;
+  begin
+    case side of
+      1:  begin
+          for i := 0 to 9 do
+            ReadDataReg(i, i);
+          for i := 0 to 5 do
+            ReadDataReg(20 + i, 10 + i);
+        end;
+      2: 
+        for i := 0 to 9 do
+          ReadDataReg(10 + i, i);
+    end;
+  end;
+
+  procedure TEngine.DoWriteData;
+    var
+      i: integer;
+  begin
+    for i := 1 to 2 do
+      if i in fCardSidesRemaining then begin
+          WriteDataSide(i);
+          fCardSidesRemaining := fCardSidesRemaining - [i];
+          Leave;
+        end;
+  end;
+
+  procedure TEngine.WriteDataSide (side: integer);
+
+    procedure WriteDataReg (reg, slot: integer);
+    begin
+      fCardBuffer.theData[slot] := fReg[reg];
+    end;
+
+    var
+      i: integer;
+  begin
+    with fCardBuffer do
+      case side of
+        1:  begin
+            if 2 in fCardSidesRemaining then
+              theType := dataCard1
+            else
+              theType := dataCard;
+            for i := 0 to 9 do
+              WriteDataReg(i, i);
+            for i := 0 to 5 do
+              WriteDataReg(20 + i, 10 + i);
+          end;
+        2:  begin
+            theType := dataCard2;
+            for i := 0 to 9 do
+              WriteDataReg(10 + i, i);
+          end;
+      end;
+    if not gDlog.WriteCard(fCardBuffer) then
+      CardIOError;
+  end;
+
+end.
+
+

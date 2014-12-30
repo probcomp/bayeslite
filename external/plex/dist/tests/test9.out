@@ -1,0 +1,101 @@
+name('import')
+name('sys')
+'newline'
+name('def')
+name('gcd')
+'('
+name('x')
+','
+name('y')
+')'
+':'
+'newline'
+    'INDENT'
+    name('while')
+    name('x')
+    '<>'
+    name('y')
+    ':'
+    'newline'
+        'INDENT'
+        name('if')
+        name('x')
+        '>'
+        name('y')
+        ':'
+        'newline'
+            'INDENT'
+            name('print')
+            string('"x is bigger"')
+            'newline'
+            name('x')
+            '='
+            name('x')
+            '-'
+            name('y')
+            'newline'
+        'DEDENT'
+        name('else')
+        ':'
+        'newline'
+            'INDENT'
+            name('print')
+            string('"y is bigger"')
+            'newline'
+            name('y')
+            '='
+            name('y')
+            '-'
+            name('x')
+            'newline'
+    'DEDENT'
+    'DEDENT'
+    name('return')
+    name('x')
+    'newline'
+'DEDENT'
+name('def')
+name('go')
+'('
+')'
+':'
+'newline'
+    'INDENT'
+    name('for')
+    name('x')
+    ','
+    name('y')
+    name('in')
+    '['
+    '('
+    number('12')
+    ','
+    number('20')
+    ')'
+    ','
+    '('
+    number('37')
+    ','
+    number('18')
+    ')'
+    ','
+    '('
+    number('2')
+    ','
+    number('54')
+    ')'
+    ']'
+    ':'
+    'newline'
+        'INDENT'
+        name('print')
+        name('gcd')
+        '('
+        name('x')
+        ','
+        name('y')
+        ')'
+        'newline'
+'DEDENT'
+'DEDENT'
+None
