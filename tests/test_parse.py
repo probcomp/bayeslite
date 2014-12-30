@@ -69,3 +69,10 @@ def test_select_trivial():
         [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
             [ast.SelTab('t', 'u')],
             None, None, None, None)]
+    assert parse_bql_string('select * where x;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
+            None, ast.ExpCol(None, 'x'), None, None, None)]
+    assert parse_bql_string('select * from t where x;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
+            [ast.SelTab('t', None)],
+            ast.ExpCol(None, 'x'), None, None, None)]
