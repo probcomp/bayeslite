@@ -147,7 +147,7 @@ class BQLScanner(Plex.Scanner):
         # XXX Wait until grammar has these tokens.
         # (Plex.Str("+"),         grammar.T_PLUS),
         # (Plex.Str("-"),         grammar.T_MINUS),
-        # (Plex.Str("*"),         grammar.T_STAR),
+        (Plex.Str("*"),         grammar.T_STAR),
         # (Plex.Str("/"),         grammar.T_SLASH),
         # (Plex.Str("%"),         grammar.T_PERCENT),
         # (Plex.Str("="),         grammar.T_EQUAL),
