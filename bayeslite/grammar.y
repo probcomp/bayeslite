@@ -45,55 +45,44 @@ query_body(create_column_list)
 */
 
 /* XXX Support WITH ... SELECT ... (i.e., common table expressions).  */
-select(one)		::= select1(select).
+select(s)		::= K_SELECT select_quant(quant) select_columns(cols)
+				from(tabs)
+				where(cond)
+				group_by(group)
+				order_by(ord)
+				limit(lim).
 
-/* XXX Support compound selects.
-select(compound)	::= select(left) select_op(op) select1(right).
-
-select_op(union)	::= K_UNION.
-select_op(union_all)	::= K_UNION K_ALL.
-select_op(except)	::= K_EXCEPT.
-select_op(intersect)	::= K_INTERSECT.
-*/
-
-select1(s)		::= K_SELECT distinct(distinct) select_columns(columns)
-				from(tables) where(conditions)
-				group_by(grouping) order_by(ordering)
-				limit(limit).
-
-/* XXX Support SELECT DISTINCT/ALL.
-distinct(distinct)	::= K_DISTINCT.
-distinct(all)		::= K_ALL.
-*/
-distinct(default)	::= .
+select_quant(distinct)	::= K_DISTINCT.
+select_quant(all)	::= K_ALL.
+select_quant(default)	::= .
 
 /* XXX Allow mixing BQL functions and SQL columns?  */
-select_columns(sql)	::= select_columns1(cs).
-select_columns(bqlfn)	::= select_bqlfn(bqlfn).
+select_columns(sql)	::= select_columns1(columns).
+select_columns(bql)	::= select_bql(bql).
 
 select_columns1(one)	::= select_column(c).
 select_columns1(many)	::= select_columns1(cs) T_COMMA select_column(c).
 
 select_column(star)	::= T_STAR.
 select_column(qstar)	::= table_name(table) T_DOT T_STAR.
-select_column(exp)	::= expression(e) as(as).
+select_column(exp)	::= expression(e) as(name).
 
 /*
  * XXX Why are these allowed only in select, rather than generally
  * anywhere that an expression is allowed?  I'm parroting the old
  * grammar here, but it seems to me this should be changed.
  */
-select_bqlfn(predprob)	::= K_PREDICTIVE K_PROBABILITY K_OF L_NAME(col).
-select_bqlfn(prob)	::= K_PROBABILITY K_OF L_NAME(col) T_EQ expression(e).
-select_bqlfn(typ_row)	::= K_TYPICALITY.
-select_bqlfn(typ_col)	::= K_TYPICALITY K_OF L_NAME(col).
-select_bqlfn(sim)	::= K_SIMILARITY K_TO expression(row) wrt(wrt).
-select_bqlfn(depprob)	::= K_DEPENDENCE K_PROBABILITY ofwith(ofwith).
-select_bqlfn(mutinf)	::= K_MUTUAL K_INFORMATION ofwith(ofwith).
-select_bqlfn(correl)	::= K_CORRELATION ofwith(ofwith).
+select_bql(predprob)	::= K_PREDICTIVE K_PROBABILITY K_OF L_NAME(col).
+select_bql(prob)	::= K_PROBABILITY K_OF L_NAME(col) T_EQ expression(e).
+select_bql(typ_row)	::= K_TYPICALITY.
+select_bql(typ_col)	::= K_TYPICALITY K_OF L_NAME(col).
+select_bql(sim)		::= K_SIMILARITY K_TO expression(row) wrt(cols).
+select_bql(depprob)	::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
+select_bql(mutinf)	::= K_MUTUAL K_INFORMATION ofwith(cols).
+select_bql(correl)	::= K_CORRELATION ofwith(cols).
 
 wrt(none)		::= .
-wrt(some)		::= K_WITH K_RESPECT K_TO column_lists(columns).
+wrt(some)		::= K_WITH K_RESPECT K_TO column_lists(cols).
 
 ofwith(with)		::= K_WITH L_NAME(col).
 ofwith(ofwith)		::= K_OF L_NAME(col1) K_WITH L_NAME(col2).
@@ -102,7 +91,7 @@ column_lists(one)	::= column_list(collist).
 column_lists(many)	::= column_lists(collists)
 				T_COMMA|K_AND column_list(collist).
 column_list(all)	::= T_STAR.
-column_list(column)	::= L_NAME(column).
+column_list(column)	::= L_NAME(col).
 
 as(none)		::= .
 as(some)		::= AS L_NAME(name).
@@ -123,14 +112,15 @@ where(conditional)	::= K_WHERE expression(condition).
 table_name(unqualified)	::= L_NAME(name).
 
 group_by(none)		::= .
-group_by(some)		::= K_GROUP K_BY group_keys(k).
-group_keys(one)		::= expression(e).
-group_keys(many)	::= group_keys(k) T_COMMA expression(e).
+group_by(some)		::= K_GROUP K_BY group_keys(keys).
+group_keys(one)		::= expression(key).
+group_keys(many)	::= group_keys(keys) T_COMMA expression(key).
 
 order_by(none)		::= .
-order_by(some)		::= K_ORDER K_BY order_keys(k).
-order_keys(one)		::= expression(e) order_sense(s).
-order_keys(many)	::= order_keys(k) T_COMMA expression(e) order_sense(s).
+order_by(some)		::= K_ORDER K_BY order_keys(keys).
+order_keys(one)		::= order_key(key).
+order_keys(many)	::= order_keys(keys) T_COMMA order_key(key).
+order_key(k)		::= expression(e) order_sense(s).
 order_sense(none)	::= .
 order_sense(asc)	::= K_ASC.
 order_sense(desc)	::= K_DESC.
@@ -143,6 +133,7 @@ limit(comma)		::= K_LIMIT expression(offset)
 				T_COMMA expression(limit).
 
 expression(literal)	::= literal(v).
+/* XXX Subqueries?  */
 expression(paren)	::= T_LROUND expression(e) T_RROUND.
 expression(column)	::= L_NAME(col).
 expression(tabcol)	::= table_name(tab) T_DOT L_NAME(col).

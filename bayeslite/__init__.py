@@ -15,3 +15,4 @@
 #   limitations under the License.
 
 from bayeslite.core import *
+import bayeslite.parse as parse

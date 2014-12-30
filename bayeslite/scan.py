@@ -14,10 +14,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import Plex
 import StringIO
 
 import bayeslite.grammar as grammar
+import bayeslite.plex as Plex
 
 '''
 grep -o 'K_[A-Z0-9_]*' < grammar.y | sort -u | awk '
@@ -28,18 +28,35 @@ grep -o 'K_[A-Z0-9_]*' < grammar.y | sort -u | awk '
 '''
 keywords = {
     "all": grammar.K_ALL,
+    "and": grammar.K_AND,
     "asc": grammar.K_ASC,
+    "by": grammar.K_BY,
+    "correlation": grammar.K_CORRELATION,
+    "dependence": grammar.K_DEPENDENCE,
     "desc": grammar.K_DESC,
     "distinct": grammar.K_DISTINCT,
-    "except": grammar.K_EXCEPT,
     "freq": grammar.K_FREQ,
     "from": grammar.K_FROM,
+    "group": grammar.K_GROUP,
     "hist": grammar.K_HIST,
-    "intersect": grammar.K_INTERSECT,
+    "information": grammar.K_INFORMATION,
+    "limit": grammar.K_LIMIT,
+    "mutual": grammar.K_MUTUAL,
+    "null": grammar.K_NULL,
+    "of": grammar.K_OF,
+    "offset": grammar.K_OFFSET,
+    "order": grammar.K_ORDER,
     "plot": grammar.K_PLOT,
+    "predictive": grammar.K_PREDICTIVE,
+    "probability": grammar.K_PROBABILITY,
+    "respect": grammar.K_RESPECT,
     "select": grammar.K_SELECT,
+    "similarity": grammar.K_SIMILARITY,
     "summarize": grammar.K_SUMMARIZE,
-    "union": grammar.K_UNION,
+    "to": grammar.K_TO,
+    "typicality": grammar.K_TYPICALITY,
+    "where": grammar.K_WHERE,
+    "with": grammar.K_WITH,
 }
 def scan_name(_scanner, text):
     return keywords.get(text) or keywords.get(text.lower()) or grammar.L_NAME;
@@ -47,8 +64,8 @@ def scan_name(_scanner, text):
 def scan_integer(scanner, text):
     scanner.produce(grammar.L_INTEGER, int(text, 10))
 
-def scan_real(scanner, text):
-    scanner.produce(grammar.L_REAL, float(text))
+def scan_float(scanner, text):
+    scanner.produce(grammar.L_FLOAT, float(text))
 
 def scan_bad(scanner, text):
     # XXX Syntax error!
@@ -74,7 +91,7 @@ def scan_quoted_start(scanner, text, state):
     scanner.stringio = StringIO.StringIO()
     scanner.begin(state)
 
-def scan_quoted_char(scanner, text):
+def scan_quoted_text(scanner, text):
     assert scanner.stringio is not None
     scanner.stringio.write(text)
 
@@ -111,7 +128,7 @@ class BQLScanner(Plex.Scanner):
     # XXX Support non-US-ASCII Unicode text.
     letter = Plex.Range("azAZ")
     digit = Plex.Range("09")
-    dec = Plex.Any1(digit)
+    dec = Plex.Rep1(digit)
     hexit = digit + Plex.Range("afAF")
     integer_dec = dec
     integer_hex = Plex.Str("0x", "0X") + Plex.Rep1(hexit)
@@ -126,31 +143,32 @@ class BQLScanner(Plex.Scanner):
         (Plex.Str(";"),         grammar.T_SEMI),
         (Plex.Str("("),         grammar.T_LROUND),
         (Plex.Str(")"),         grammar.T_RROUND),
-        (Plex.Str("+"),         grammar.T_PLUS),
-        (Plex.Str("-"),         grammar.T_MINUS),
-        (Plex.Str("*"),         grammar.T_STAR),
-        (Plex.Str("/"),         grammar.T_SLASH),
-        (Plex.Str("%"),         grammar.T_PERCENT),
-        (Plex.Str("="),         grammar.T_EQUAL),
-        (Plex.Str("<"),         grammar.T_LT),
-        (Plex.Str("<>"),        grammar.T_NEQ),
-        (Plex.Str("<="),        grammar.T_LEQ),
-        (Plex.Str(">"),         grammar.T_GT),
-        (Plex.Str(">="),        grammar.T_GEQ),
-        (Plex.Str("<<"),        grammar.T_LSHIFT),
-        (Plex.Str(">>"),        grammar.T_RSHIFT),
-        (Plex.Str("!="),        grammar.T_NEQUAL),
-        (Plex.Str("|"),         grammar.T_CONCAT),
-        (Plex.Str("||"),        grammar.T_BITIOR),
-        (Plex.Str(","),         grammar.T_COMMA),
-        (Plex.Str("&"),         grammar.T_BITAND),
-        (Plex.Str("~"),         grammar.T_BITNOT),
-        (Plex.Str("."),         grammar.T_DOT),
-        (Plex.Str("?"),         grammar.L_NUMVAR),
-        (Plex.Str("?") + dec,   grammar.L_NUMVAR),
-        (Plex.Str(":") + name,  grammar.L_NAMVAR),
-        (Plex.Str("@") + name,  grammar.L_NAMVAR),
-        (Plex.Str("$") + name,  grammar.L_NAMVAR),
+        # XXX Wait until grammar has these tokens.
+        # (Plex.Str("+"),         grammar.T_PLUS),
+        # (Plex.Str("-"),         grammar.T_MINUS),
+        # (Plex.Str("*"),         grammar.T_STAR),
+        # (Plex.Str("/"),         grammar.T_SLASH),
+        # (Plex.Str("%"),         grammar.T_PERCENT),
+        # (Plex.Str("="),         grammar.T_EQUAL),
+        # (Plex.Str("<"),         grammar.T_LT),
+        # (Plex.Str("<>"),        grammar.T_NEQ),
+        # (Plex.Str("<="),        grammar.T_LEQ),
+        # (Plex.Str(">"),         grammar.T_GT),
+        # (Plex.Str(">="),        grammar.T_GEQ),
+        # (Plex.Str("<<"),        grammar.T_LSHIFT),
+        # (Plex.Str(">>"),        grammar.T_RSHIFT),
+        # (Plex.Str("!="),        grammar.T_NEQUAL),
+        # (Plex.Str("|"),         grammar.T_CONCAT),
+        # (Plex.Str("||"),        grammar.T_BITIOR),
+        # (Plex.Str(","),         grammar.T_COMMA),
+        # (Plex.Str("&"),         grammar.T_BITAND),
+        # (Plex.Str("~"),         grammar.T_BITNOT),
+        # (Plex.Str("."),         grammar.T_DOT),
+        # (Plex.Str("?"),         grammar.L_NUMVAR),
+        # (Plex.Str("?") + dec,   grammar.L_NUMVAR),
+        # (Plex.Str(":") + name,  grammar.L_NAMVAR),
+        # (Plex.Str("@") + name,  grammar.L_NAMVAR),
+        # (Plex.Str("$") + name,  grammar.L_NAMVAR),
         (Plex.Str("'"),         scan_string_start),
         (Plex.Str('"'),         scan_qname_start),
         (blob,                  scan_blob),
@@ -158,7 +176,8 @@ class BQLScanner(Plex.Scanner):
         (name,                  scan_name),
         (integer_dec,           scan_integer),
         (integer_hex,           scan_integer),
-        (real,                  scan_real),
+        # XXX Write down lexical syntax for floats.
+        # (floatlit,              scan_float),
         (Plex.AnyChar,          scan_bad),
         Plex.State("STRING", [
             (Plex.Str("'"),                     scan_string_end),
