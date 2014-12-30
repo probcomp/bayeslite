@@ -1,0 +1,117 @@
+This directory contains software that is used in bayeslite but written
+and maintained externally by someone else.  We will use the following
+organization in order to:
+
+- Use external software that is not in Ubuntu and does not use Git.
+- Keep history of our updates to external software.
+- Make local changes as we need and send patches upstream.
+- Merge our local changes into external updates.
+- Avoid imposing the mess of submodules on users.
+
+* Directory layout:
+
+Each subdirectory corresponds to one external package and has the
+following contents:
+
+COPYING         summary of copying terms
+dist/           subdirectory containing the external distribution
+prepare.sh      script to prepare a distribution for import
+...             other supporting files
+
+prepare.sh should run in the top-level directory of the external
+distribution, which will then be imported under dist/.  It should only
+do clean-ups necessary to make the distribution fit for inclusion in
+our tree, such as deleting binary files.  Local changes, such as bug
+fixes, should be made in separate commits.
+
+* To import a new external package:
+
+1. Write the COPYING file and prepare.sh script and commit them.
+
+2. Create a temporary Git repository for the package:
+
+      % cd /tmp
+      % mkdir repo
+      % cd repo
+      % git init
+
+3. Extract proj-1.2 in external/proj/dist in the temporary repository:
+
+      % mkdir -p external/proj
+      % cd external/proj
+      % gunzip -c < /tmp/proj-1.2.tar.gz | tar xf -
+      % mv proj-1.2 dist
+
+4. Run the prepare.sh script:
+
+      % (cd dist && sh /path/to/bayeslite/external/proj/prepare.sh)
+
+5. Commit the result in the temporary repository:
+
+      % git add dist
+      % git commit
+
+   The commit message should summarize what proj is, specify where
+   proj-1.2.tar.gz came from, and give its SHA-256 hash.
+
+6. In the main repository, create a vendor branch and release tag:
+
+      % cd /path/to/bayeslite
+      % git fetch /tmp/repo master:vendor/proj
+      % git tag vendor/proj-1.2 vendor/proj
+
+7. Merge proj-1.2 into the branch you're working on:
+
+      % git merge vendor/proj-1.2
+
+* To see what version we have most recently merged:
+
+% git log --merges external/proj
+
+Note: This requires that every `git merge' involved use the release
+tag (vendor/proj-1.2), not the vendor branch (vendor/proj).
+Everything else will work if you use the vendor branch, so be careful.
+
+Note: You can't use `git log --merges external/proj/dist', apparently:
+it skips the very first merge.  Go figure.
+
+* To see what local changes there are in a external package:
+
+% git diff vendor/proj-1.2 HEAD -- ./external/proj
+% git show vendor/proj-1.2..HEAD -- ./external/proj/dist
+
+* To update an existing external package:
+
+1. Update prepare.sh and check for changes to copying terms.
+
+2. Check out the vendor branch in an empty clone of the repository:
+
+      % git clone --no-checkout -b vendor/proj /path/to/bayeslite /tmp/repo
+
+3. Extract proj-1.3 in external/proj/dist in the clone:
+
+      % cd /tmp/repo
+      % mkdir -p external/proj
+      % cd external/proj
+      % gunzip -c < /tmp/proj-1.3.tar.gz | tar xf -
+      % mv proj-1.3 dist
+
+4. Run the prepare script:
+
+      % (cd dist && /path/to/bayeslite/external/proj/prepare.sh)
+
+4. Commit and tag the update:
+
+      % git add --all dist
+      % git commit
+      % git tag vendor/proj-1.3
+
+5. In the main repository, update the vendor branch and tag it:
+
+      % cd /path/to/bayeslite
+      % git fetch /tmp/repo vendor/proj
+      % git tag vendor/proj-1.3 vendor/proj
+
+6. Finally, merge the new release tag:
+
+      % git merge vendor/proj-1.3
