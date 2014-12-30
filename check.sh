@@ -9,7 +9,8 @@ root=`cd -- "$(dirname -- "$0")" && pwd`
 platform=`"${PYTHON}" -c 'import distutils.util as u; print u.get_platform()'`
 version=`"${PYTHON}" -c 'import sys; print sys.version[0:3]'`
 
-export PYTHONPATH="${root}/build/lib.${platform}-${version}"
+bayeslite="${root}/build/lib.${platform}-${version}"
+export PYTHONPATH="${PYTHONPATH:+${PYTHONPATH}:}${bayeslite}"
 
 (
     set -Ceu
