@@ -18,5 +18,5 @@ export PYTHONPATH="${PYTHONPATH:+${PYTHONPATH}:}${bayeslite}"
     rm -rf build
     "$PYTHON" setup.py build
     cd tests
-    "$PY_TEST"
+    "$PY_TEST" ${1+"$@"}
 )
