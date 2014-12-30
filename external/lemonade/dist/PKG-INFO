@@ -1,0 +1,16 @@
+Metadata-Version: 1.0
+Name: lemonade
+Version: 1.0b1
+Summary: Port of the LEMON Parser Generator
+Home-page: UNKNOWN
+Author: Leif Strand
+Author-email: leif@cacr.caltech.edu
+License: UNKNOWN
+Description: UNKNOWN
+Platform: UNKNOWN
+Classifier: License :: Public Domain
+Classifier: Development Status :: 4 - Beta
+Classifier: Programming Language :: Python :: 2
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Code Generators
+Classifier: Topic :: Software Development :: Compilers
