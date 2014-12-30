@@ -131,3 +131,53 @@ def test_select_trivial():
         [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
             None, None, None, None,
             ast.Lim(ast.ExpLit(ast.LitInt(32)), ast.ExpLit(ast.LitInt(16))))]
+
+def test_select_bql():
+    assert parse_bql_string('select predictive probability of c from t;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelBQLPredProb('c'),
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select probability of c = 42 from t;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            ast.SelBQLProb('c', ast.ExpLit(ast.LitInt(42))),
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select typicality from t;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelBQLTypRow(),
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select typicality of c from t;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelBQLTypCol('c'),
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select similarity to 8 from t;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            ast.SelBQLSim(ast.ExpLit(ast.LitInt(8)), []),
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string(
+            'select similarity to 8 with respect to c from t;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            ast.SelBQLSim(ast.ExpLit(ast.LitInt(8)), [ast.ColListLit(['c'])]),
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string(
+            'select similarity to 8 with respect to c, d from t;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            ast.SelBQLSim(ast.ExpLit(ast.LitInt(8)),
+                [ast.ColListLit(['c']), ast.ColListLit(['d'])]),
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select dependence probability with c from t;') ==\
+        [ast.Select(ast.SELQUANT_ALL, ast.SelBQLDepProb('c', None),
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string(
+            'select dependence probability of c with d from t;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelBQLDepProb('c', 'd'),
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select mutual information with c from t;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelBQLMutInf('c', None),
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string(
+            'select mutual information of c with d from t;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelBQLMutInf('c', 'd'),
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select correlation with c from t;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelBQLCorrel('c', None),
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select correlation of c with d from t;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelBQLCorrel('c', 'd'),
+            [ast.SelTab('t', None)], None, None, None, None)]
