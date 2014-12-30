@@ -61,21 +61,11 @@ def test_select_trivial():
                 ast.SelColExp(ast.ExpCol(None, 'x'), None),
             ]),
             [ast.SelTab('t', None)], None, None, None, None)]
-    assert parse_bql_string('select t.c as d, p as q, x from t, u;') == \
-        [ast.Select(ast.SELQUANT_ALL,
-            ast.SelCols([
-                ast.SelColExp(ast.ExpCol('t', 'c'), 'd'),
-                ast.SelColExp(ast.ExpCol(None, 'p'), 'q'),
-                ast.SelColExp(ast.ExpCol(None, 'x'), None),
-            ]),
+    assert parse_bql_string('select * from t, u;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
             [ast.SelTab('t', None), ast.SelTab('u', None)],
             None, None, None, None)]
-    assert parse_bql_string('select t.c as d, p as q, x from t as u;') == \
-        [ast.Select(ast.SELQUANT_ALL,
-            ast.SelCols([
-                ast.SelColExp(ast.ExpCol('t', 'c'), 'd'),
-                ast.SelColExp(ast.ExpCol(None, 'p'), 'q'),
-                ast.SelColExp(ast.ExpCol(None, 'x'), None),
-            ]),
+    assert parse_bql_string('select * from t as u;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
             [ast.SelTab('t', 'u')],
             None, None, None, None)]
