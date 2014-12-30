@@ -164,7 +164,7 @@ class BQLScanner(Plex.Scanner):
         # (Plex.Str(","),         grammar.T_COMMA),
         # (Plex.Str("&"),         grammar.T_BITAND),
         # (Plex.Str("~"),         grammar.T_BITNOT),
-        # (Plex.Str("."),         grammar.T_DOT),
+        (Plex.Str("."),         grammar.T_DOT),
         # (Plex.Str("?"),         grammar.L_NUMVAR),
         # (Plex.Str("?") + dec,   grammar.L_NUMVAR),
         # (Plex.Str(":") + name,  grammar.L_NAMVAR),
