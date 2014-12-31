@@ -36,7 +36,7 @@ Select = namedtuple('Select', [
 ])
 
 SELQUANT_DISTINCT = 'distinct'
-SELQUANT_ALL = 'ALL'
+SELQUANT_ALL = 'all'
 
 SelCols = namedtuple('SelCols', [
     'columns',                  # SelCol
