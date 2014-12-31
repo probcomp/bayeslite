@@ -156,6 +156,27 @@ def test_select_bql():
     assert parse_bql_string('select predictive probability of c from t;') == \
         [ast.Select(ast.SELQUANT_ALL, [ast.SelBQLPredProb('c')],
             [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select predictive probability of c, * from t;') \
+        == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelBQLPredProb('c'), ast.SelColAll(None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select c, predictive probability of d from t;') \
+        == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [
+                ast.SelColExp(ast.ExpCol(None, 'c'), None),
+                ast.SelBQLPredProb('d'),
+            ],
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select predictive probability of c, d from t;') \
+        == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [
+                ast.SelBQLPredProb('c'),
+                ast.SelColExp(ast.ExpCol(None, 'd'), None),
+            ],
+            [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select probability of c = 42 from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelBQLProb('c', ast.ExpLit(ast.LitInt(42)))],
@@ -174,6 +195,15 @@ def test_select_bql():
             'select similarity to 8 with respect to c from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelBQLSim(ast.ExpLit(ast.LitInt(8)), [ast.ColListLit(['c'])])],
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string(
+            'select similarity to 8 with respect to c, d from t;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [
+                ast.SelBQLSim(ast.ExpLit(ast.LitInt(8)),
+                    [ast.ColListLit(['c'])]),
+                ast.SelColExp(ast.ExpCol(None, 'd'), None),
+            ],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string(
             'select similarity to 8 with respect to (c, d) from t;') == \
