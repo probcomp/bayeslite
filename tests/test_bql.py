@@ -22,7 +22,7 @@ import bayeslite.parse as parse
 import test_smoke
 
 def bql2sql(string):
-    with test_smoke.t1() as bdb:
+    with test_smoke.t1() as (bdb, _table_id):
         phrases = parse.parse_bql_string(string)
         out = StringIO.StringIO()
         bql.compile_bql(bdb, phrases, out)
