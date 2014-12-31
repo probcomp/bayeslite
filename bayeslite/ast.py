@@ -39,11 +39,7 @@ SELQUANT_DISTINCT = 'distinct'
 SELQUANT_ALL = 'all'
 
 SelCols = namedtuple('SelCols', [
-    'columns',                  # SelCol
-])
-SelCol = namedtuple('SelCol', [
-    'value',                    # SelColTab | SelColExp
-    'name',                     # XXX name
+    'columns',                  # [SelColAll or SelColExp]
 ])
 SelColAll = namedtuple('SelColAll', [
     'table',                    # XXX name
