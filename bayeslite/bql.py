@@ -74,7 +74,7 @@ def compile_select(bdb, select, out):
             compile_table_name(bdb, seltab.table, out) # XXX subquery
             if seltab.name is not None:
                 out.write(' as ')
-                compile_name(bdb, seltabl.name, out)
+                compile_name(bdb, seltab.name, out)
     if select.condition is not None:
         out.write(' where ')
         compile_expression(bdb, select.condition, out)
