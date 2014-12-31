@@ -62,3 +62,7 @@ def test_select_trivial():
     assert bql2sql('select * limit 32 offset 16;') == \
         'select * limit 32 offset 16;'
     assert bql2sql('select * limit 16, 32;') == 'select * limit 32 offset 16;'
+
+def test_select_bql():
+    assert bql2sql('select predictive probability of weight from t1;') == \
+        'select row_column_predictive_probability(1, rowid, 3) from "t1";'
