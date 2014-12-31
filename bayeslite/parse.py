@@ -151,7 +151,7 @@ class BQLSemantics(object):
     def p_order_sense_desc(self):               return ast.ORD_DESC
 
     def p_limit_none(self):                     return None
-    def p_limit_some(self, limit):              return ast.Lim(limit, 0)
+    def p_limit_some(self, limit):              return ast.Lim(limit, None)
     def p_limit_offset(self, limit, offset):    return ast.Lim(limit, offset)
     def p_limit_comma(self, offset, limit):     return ast.Lim(limit, offset)
 

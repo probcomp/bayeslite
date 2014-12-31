@@ -122,7 +122,7 @@ def test_select_trivial():
     assert parse_bql_string('select * limit 32;') == \
         [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
             None, None, None, None,
-            ast.Lim(ast.ExpLit(ast.LitInt(32)), 0))]
+            ast.Lim(ast.ExpLit(ast.LitInt(32)), None))]
     assert parse_bql_string('select * limit 32 offset 16;') == \
         [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
             None, None, None, None,
