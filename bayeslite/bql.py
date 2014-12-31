@@ -31,8 +31,8 @@ def compile_select(bdb, select, out):
     out.write('select')
     if select.quantifier == ast.SELQUANT_DISTINCT:
         out.write(' distinct')
-    elif select.quantifier != ast.SELQUANT_ALL:
-        raise ValueError('Invalid select: %s' % (select,))
+    else:
+        assert select.quantifier == ast.SELQUANT_ALL
     if isinstance(select.output, ast.SelCols):
         assert 0 < len(select.output.columns)
         first = True
@@ -61,7 +61,7 @@ def compile_select(bdb, select, out):
             out.write('row_column_predictive_probability(%s, %s, %s)' %
                 (table_id, rowid_col, colno))
         else:
-            raise ValueError('Unknown BQL function in select: %s' % (select,))
+            assert False
     if select.tables is not None:
         assert 0 < len(select.tables)
         first = True
