@@ -30,3 +30,8 @@ def bql2sql(string):
 
 def test_select_trivial():
     assert bql2sql('select 0;') == 'select 0;'
+    assert bql2sql('select 0 as z;') == 'select 0 as "z";'
+    assert bql2sql('select * from t;') == 'select * from "t";'
+    assert bql2sql('select t.* from t;') == 'select "t".* from "t";'
+    assert bql2sql('select c from t;') == 'select "c" from "t";'
+    assert bql2sql('select c as d from t;') == 'select "c" as "d" from "t";'
