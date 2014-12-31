@@ -91,6 +91,14 @@ def test_select_trivial():
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(ast.ExpLit(ast.LitFloat(1e10)), None)],
             None, None, None, None, None)]
+    assert parse_bql_string('select all 0;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpLit(ast.LitInt(0)), None)],
+            None, None, None, None, None)]
+    assert parse_bql_string('select distinct 0;') == \
+        [ast.Select(ast.SELQUANT_DISTINCT,
+            [ast.SelColExp(ast.ExpLit(ast.LitInt(0)), None)],
+            None, None, None, None, None)]
     assert parse_bql_string('select 0 as z;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(ast.ExpLit(ast.LitInt(0)), 'z')],
