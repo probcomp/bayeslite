@@ -42,3 +42,10 @@ def test_select_trivial():
     assert bql2sql('select * from t, u;') == 'select * from "t", "u";'
     assert bql2sql('select * from t as u;') == 'select * from "t" as "u";'
     assert bql2sql('select * where x;') == 'select * where "x";'
+    assert bql2sql('select * from t where x;') == \
+        'select * from "t" where "x";'
+    assert bql2sql('select * group by x;') == 'select * group by "x";'
+    assert bql2sql('select * from t where x group by y;') == \
+        'select * from "t" where "x" group by "y";'
+    assert bql2sql('select * from t where x group by y, z;') == \
+        'select * from "t" where "x" group by "y", "z";'
