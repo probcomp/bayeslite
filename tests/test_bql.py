@@ -15,6 +15,7 @@
 #   limitations under the License.
 
 import StringIO
+import pytest
 
 import bayeslite.bql as bql
 import bayeslite.parse as parse
@@ -68,5 +69,9 @@ def test_select_trivial():
     assert bql2sql('select * limit 16, 32;') == 'select * limit 32 offset 16;'
 
 def test_select_bql():
+    with pytest.raises(ValueError):
+        bql2sql('select predictive probability of weight;')
+    with pytest.raises(ValueError):
+        bql2sql('select predictive probability of weight from t1, t1;')
     assert bql2sql('select predictive probability of weight from t1;') == \
         'select row_column_predictive_probability(1, rowid, 3) from "t1";'
