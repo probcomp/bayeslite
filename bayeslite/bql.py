@@ -62,6 +62,19 @@ def compile_select(bdb, select, out):
                 (table_id, rowid_col, colno))
         else:
             raise ValueError('Unknown BQL function in select: %s' % (select,))
+    if select.tables is not None:
+        assert 0 < len(select.tables)
+        first = True
+        for seltab in select.tables:
+            if first:
+                out.write(' from ')
+                first = False
+            else:
+                out.write(', ')
+            compile_table_name(bdb, seltab.table, out) # XXX subquery
+            if seltab.name is not None:
+                out.write(' as ')
+                compile_name(bdb, seltabl.name, out)
     if select.condition is not None:
         out.write(' where ')
         compile_expression(bdb, select.condition, out)
