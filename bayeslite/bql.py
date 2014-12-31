@@ -154,8 +154,9 @@ def compile_table_name(bdb, table_name, out):
     compile_name(bdb, table_name, out)
 
 def compile_table_column(bdb, table_name, column_name, out):
-    compile_table_name(bdb, table_name, out)
-    out.write('.')
+    if table_name is not None:
+        compile_table_name(bdb, table_name, out)
+        out.write('.')
     compile_column_name(bdb, table_name, column_name, out)
 
 def compile_column_name(bdb, _table_name, column_name, out):
