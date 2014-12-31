@@ -14,6 +14,19 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from bayeslite.core import *
-import bayeslite.parse as parse
+import StringIO
+
 import bayeslite.bql as bql
+import bayeslite.parse as parse
+
+import test_smoke
+
+def bql2sql(string):
+    with test_smoke.t1() as bdb:
+        phrases = parse.parse_bql_string(string)
+        out = StringIO.StringIO()
+        bql.compile_bql(bdb, phrases, out)
+        return out.getvalue()
+
+def test_select_trivial():
+    assert bql2sql('select 0;') == 'select 0;'

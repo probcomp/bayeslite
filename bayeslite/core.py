@@ -531,6 +531,10 @@ def bayesdb_table_name(bdb, table_id):
     sql = "SELECT name FROM bayesdb_table WHERE id = ?"
     return sqlite3_exec_1(bdb.sqlite, sql, (table_id,))
 
+def bayesdb_table_id(bdb, table_name):
+    sql = "SELECT id FROM bayesdb_table WHERE name = ?"
+    return sqlite3_exec_1(bdb.sqlite, sql, (table_name,))
+
 def bayesdb_column_names(bdb, table_id):
     sql = """
         SELECT name FROM bayesdb_table_column WHERE table_id = ? ORDER BY colno
@@ -543,6 +547,12 @@ def bayesdb_column_name(bdb, table_id, colno):
         SELECT name FROM bayesdb_table_column WHERE table_id = ? AND colno = ?
     """
     return sqlite3_exec_1(bdb.sqlite, sql, (table_id, colno))
+
+def bayesdb_column_number(bdb, table_id, column_name):
+    sql = """
+        SELECT colno FROM bayesdb_table_column WHERE table_id = ? AND name = ?
+    """
+    return sqlite3_exec_1(bdb.sqlite, sql, (table_id, column_name))
 
 def bayesdb_column_values(bdb, table_id, colno):
     qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
