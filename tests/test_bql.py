@@ -58,3 +58,7 @@ def test_select_trivial():
         'select * order by "x" desc, "y";'
     assert bql2sql('select * order by x, y asc;') == \
         'select * order by "x", "y";'
+    assert bql2sql('select * limit 32;') == 'select * limit 32;'
+    assert bql2sql('select * limit 32 offset 16;') == \
+        'select * limit 32 offset 16;'
+    assert bql2sql('select * limit 16, 32;') == 'select * limit 32 offset 16;'
