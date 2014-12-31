@@ -137,7 +137,7 @@ def compile_expression(bdb, exp, out):
 
 def compile_literal(bdb, lit, out):
     if isinstance(lit, ast.LitNull):
-        out.write('NULL')
+        out.write('null')
     elif isinstance(lit, ast.LitInt):
         out.write(str(lit.value))
     elif isinstance(lit, ast.LitFloat):

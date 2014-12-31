@@ -29,7 +29,11 @@ def bql2sql(string):
         return out.getvalue()
 
 def test_select_trivial():
+    assert bql2sql('select null;') == 'select null;'
+    assert bql2sql("select 'x';") == "select 'x';"
     assert bql2sql('select 0;') == 'select 0;'
+    assert bql2sql('select all 0;') == 'select 0;'
+    assert bql2sql('select distinct 0;') == 'select distinct 0;'
     assert bql2sql('select 0 as z;') == 'select 0 as "z";'
     assert bql2sql('select * from t;') == 'select * from "t";'
     assert bql2sql('select t.* from t;') == 'select "t".* from "t";'

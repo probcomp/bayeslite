@@ -27,6 +27,14 @@ def test_empty():
     assert [] == parse_bql_string(' ; ; ')
 
 def test_select_trivial():
+    assert parse_bql_string('select null;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            ast.SelCols([ast.SelColExp(ast.ExpLit(ast.LitNull(None)), None)]),
+            None, None, None, None, None)]
+    assert parse_bql_string("select 'x';") == \
+        [ast.Select(ast.SELQUANT_ALL,
+            ast.SelCols([ast.SelColExp(ast.ExpLit(ast.LitString('x')), None)]),
+            None, None, None, None, None)]
     assert parse_bql_string('select 0;') == \
         [ast.Select(ast.SELQUANT_ALL,
             ast.SelCols([ast.SelColExp(ast.ExpLit(ast.LitInt(0)), None)]),

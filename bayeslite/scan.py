@@ -101,7 +101,7 @@ def scan_quoted_quote(scanner, text):
     assert text[0] == text[1]
     scanner.stringio.write(text[0])
 
-def scan_quoted_end(scanner, token, text):
+def scan_quoted_end(scanner, text, token):
     assert scanner.stringio is not None
     string = scanner.stringio.getvalue()
     scanner.stringio.close()
