@@ -90,3 +90,7 @@ def test_select_bql():
         == \
         'select "label", row_column_predictive_probability(1, rowid, 3)' \
         + ' from "t1";'
+    assert bql2sql('select predictive probability of weight, label from t1;') \
+        == \
+        'select row_column_predictive_probability(1, rowid, 3), "label"' \
+        + ' from "t1";'
