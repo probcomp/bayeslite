@@ -38,9 +38,9 @@ def test_select_trivial():
     assert parse_bql_string('select * from t;') == \
         [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll(None)]),
             [ast.SelTab('t', None)], None, None, None, None)]
-    assert parse_bql_string('select t.* from t;') == \
-        [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll('t')]),
-            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select t1.* from t1;') == \
+        [ast.Select(ast.SELQUANT_ALL, ast.SelCols([ast.SelColAll('t1')]),
+            [ast.SelTab('t1', None)], None, None, None, None)]
     assert parse_bql_string('select c from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             ast.SelCols([ast.SelColExp(ast.ExpCol(None, 'c'), None)]),
