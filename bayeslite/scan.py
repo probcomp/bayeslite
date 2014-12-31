@@ -66,6 +66,10 @@ def scan_integer(scanner, text):
     scanner.produce(grammar.L_INTEGER, int(text, 10))
 
 def scan_float(scanner, text):
+    # XXX Consider a system-independent representation of floats which
+    # we can pass through to the SQL engine.  (E.g., for the benefit
+    # of SQLite4 which will use decimal floating-point arithmetic
+    # instead of binary floating-point arithmetic.)
     scanner.produce(grammar.L_FLOAT, float(text))
 
 def scan_bad(scanner, text):
@@ -129,10 +133,20 @@ class BQLScanner(Plex.Scanner):
     # XXX Support non-US-ASCII Unicode text.
     letter = Plex.Range("azAZ")
     digit = Plex.Range("09")
-    dec = Plex.Rep1(digit)
-    hexit = digit + Plex.Range("afAF")
-    integer_dec = dec
-    integer_hex = Plex.Str("0x", "0X") + Plex.Rep1(hexit)
+    digits = Plex.Rep(digit)
+    digits1 = Plex.Rep1(digit)
+    hexit = digit | Plex.Range("afAF")
+    hexits1 = Plex.Rep1(hexit)
+    integer_dec = digits1
+    integer_hex = Plex.Str("0x", "0X") + hexits1
+    dot = Plex.Str('.')
+    intfrac = digits1 + dot + digits
+    fraconly = dot + digits1
+    optsign = Plex.Opt(Plex.Any('+-'))
+    expmark = Plex.Any('eE')
+    exponent = expmark + optsign + digits1
+    optexp = Plex.Opt(exponent)
+    float_dec = ((intfrac | fraconly) + optexp) | (digits1 + exponent)
     blob = Plex.Str("x'", "X'") + Plex.Rep(hexit + hexit) + Plex.Str("'")
     badblob = Plex.Str("x'", "X'") + Plex.AnyBut("'") + Plex.Str("'")
     name_special = Plex.Any("_$") 
@@ -177,8 +191,7 @@ class BQLScanner(Plex.Scanner):
         (name,                  scan_name),
         (integer_dec,           scan_integer),
         (integer_hex,           scan_integer),
-        # XXX Write down lexical syntax for floats.
-        # (floatlit,              scan_float),
+        (float_dec,             scan_float),
         (Plex.AnyChar,          scan_bad),
         Plex.State("STRING", [
             (Plex.Str("'"),                     scan_string_end),

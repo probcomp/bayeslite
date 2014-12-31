@@ -51,6 +51,46 @@ def test_select_trivial():
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(ast.ExpLit(ast.LitInt(0)), None)],
             None, None, None, None, None)]
+    assert parse_bql_string('select 0.;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpLit(ast.LitFloat(0)), None)],
+            None, None, None, None, None)]
+    assert parse_bql_string('select .0;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpLit(ast.LitFloat(0)), None)],
+            None, None, None, None, None)]
+    assert parse_bql_string('select 0.0;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpLit(ast.LitFloat(0)), None)],
+            None, None, None, None, None)]
+    assert parse_bql_string('select 1e0;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpLit(ast.LitFloat(1)), None)],
+            None, None, None, None, None)]
+    assert parse_bql_string('select 1e+1;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpLit(ast.LitFloat(10)), None)],
+            None, None, None, None, None)]
+    assert parse_bql_string('select 1e-1;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpLit(ast.LitFloat(.1)), None)],
+            None, None, None, None, None)]
+    assert parse_bql_string('select 1.e0;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpLit(ast.LitFloat(1)), None)],
+            None, None, None, None, None)]
+    assert parse_bql_string('select .1e0;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpLit(ast.LitFloat(.1)), None)],
+            None, None, None, None, None)]
+    assert parse_bql_string('select .1e1;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpLit(ast.LitFloat(1)), None)],
+            None, None, None, None, None)]
+    assert parse_bql_string('select 1.e10;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpLit(ast.LitFloat(1e10)), None)],
+            None, None, None, None, None)]
     assert parse_bql_string('select 0 as z;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(ast.ExpLit(ast.LitInt(0)), 'z')],
