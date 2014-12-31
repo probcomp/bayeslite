@@ -27,7 +27,7 @@ QACT_PLOT = 'plot'
 
 Select = namedtuple('Select', [
     'quantifier',               # SELQUANT_*
-    'output',                   # SelCols or SelBQL*
+    'columns',                  # [(SelCol or SelBQL)*]
     'tables',                   # [SelTab] or None (scalar)
     'condition',                # Exp* or None (unconditional)
     'group',                    # [Exp*] or None (unaggregated)
@@ -38,9 +38,6 @@ Select = namedtuple('Select', [
 SELQUANT_DISTINCT = 'distinct'
 SELQUANT_ALL = 'all'
 
-SelCols = namedtuple('SelCols', [
-    'columns',                  # [SelColAll or SelColExp]
-])
 SelColAll = namedtuple('SelColAll', [
     'table',                    # XXX name
 ])

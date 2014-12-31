@@ -85,15 +85,13 @@ class BQLSemantics(object):
     def p_select_quant_all(self):               return ast.SELQUANT_ALL
     def p_select_quant_default(self):           return ast.SELQUANT_ALL
 
-    def p_select_columns_sql(self, columns):    return ast.SelCols(columns)
-    def p_select_columns_bql(self, bql):        return bql
-
-    def p_select_columns1_one(self, c):         return [c]
-    def p_select_columns1_many(self, cs, c):    cs.append(c); return cs
+    def p_select_columns_one(self, c):          return [c]
+    def p_select_columns_many(self, cs, c):     cs.append(c); return cs
 
     def p_select_column_star(self):             return ast.SelColAll(None)
     def p_select_column_qstar(self, table):     return ast.SelColAll(table)
     def p_select_column_exp(self, e, name):     return ast.SelColExp(e, name)
+    def p_select_column_bql(self, bql):		return bql
 
     def p_select_bql_predprob(self, col):       return ast.SelBQLPredProb(col)
     def p_select_bql_prob(self, col, e):        return ast.SelBQLProb(col, e)
@@ -105,7 +103,8 @@ class BQLSemantics(object):
     def p_select_bql_correl(self, cols):        return ast.SelBQLCorrel(*cols)
 
     def p_wrt_none(self):                       return [] # XXX None?
-    def p_wrt_some(self, cols):                 return cols
+    def p_wrt_one(self, collist):               return [collist]
+    def p_wrt_some(self, collists):             return collists
 
     def p_ofwith_with(self, col):               return (col, None)
     def p_ofwith_ofwith(self, col1, col2):      return (col1, col2)

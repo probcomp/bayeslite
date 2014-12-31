@@ -33,35 +33,7 @@ def compile_select(bdb, select, out):
         out.write(' distinct')
     else:
         assert select.quantifier == ast.SELQUANT_ALL
-    if isinstance(select.output, ast.SelCols):
-        assert 0 < len(select.output.columns)
-        first = True
-        for selcol in select.output.columns:
-            if first:
-                out.write(' ')
-                first = False
-            else:
-                out.write(', ')
-            compile_select_column(bdb, selcol, out)
-    else:
-        # Must be a BQL function.
-        out.write(' ')
-        if select.tables is None:
-            raise ValueError('BQL select without table: %s' % (select,))
-        elif len(select.tables) != 1:
-            assert 1 < len(select.tables)
-            raise ValueError('BQL select with >1 table: %s' % (select,))
-        if not isinstance(select.tables[0].table, str): # XXX name
-            raise ValueError('Subquery in BQL select: %s' % (select,))
-        table_id = core.bayesdb_table_id(bdb, select.tables[0].table)
-        rowid_col = 'rowid'     # XXX Don't hard-code this.
-        if isinstance(select.output, ast.SelBQLPredProb):
-            colno = core.bayesdb_column_number(bdb, table_id,
-                select.output.column)
-            out.write('row_column_predictive_probability(%s, %s, %s)' %
-                (table_id, rowid_col, colno))
-        else:
-            assert False
+    compile_select_columns(bdb, select, out)
     if select.tables is not None:
         assert 0 < len(select.tables)
         first = True
@@ -113,7 +85,17 @@ def compile_select(bdb, select, out):
             compile_expression(bdb, select.limit.offset, out)
     out.write(';')
 
-def compile_select_column(bdb, selcol, out):
+def compile_select_columns(bdb, select, out):
+    first = True
+    for selcol in select.columns:
+        if first:
+            out.write(' ')
+            first = False
+        else:
+            out.write(', ')
+        compile_select_column(bdb, selcol, select, out)
+
+def compile_select_column(bdb, selcol, select, out):
     if isinstance(selcol, ast.SelColAll):
         if selcol.table is not None:
             compile_table_name(bdb, selcol.table, out)
@@ -125,7 +107,22 @@ def compile_select_column(bdb, selcol, out):
             out.write(' as ')
             compile_name(bdb, selcol.name, out)
     else:
-        assert isinstance(selcol, SelColAll) or isinstance(selcol, SelColExp)
+        # Must be a BQL function.
+        if select.tables is None:
+            raise ValueError('BQL select without table: %s' % (select,))
+        elif len(select.tables) != 1:
+            assert 1 < len(select.tables)
+            raise ValueError('BQL select with >1 table: %s' % (select,))
+        if not isinstance(select.tables[0].table, str): # XXX name
+            raise ValueError('Subquery in BQL select: %s' % (select,))
+        table_id = core.bayesdb_table_id(bdb, select.tables[0].table)
+        rowid_col = 'rowid'     # XXX Don't hard-code this.
+        if isinstance(selcol, ast.SelBQLPredProb):
+            colno = core.bayesdb_column_number(bdb, table_id, selcol.column)
+            out.write('row_column_predictive_probability(%s, %s, %s)' %
+                (table_id, rowid_col, colno))
+        else:
+            assert False
 
 def compile_expression(bdb, exp, out):
     if isinstance(exp, ast.ExpLit):

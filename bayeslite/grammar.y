@@ -54,16 +54,13 @@ select_quant(distinct)	::= K_DISTINCT.
 select_quant(all)	::= K_ALL.
 select_quant(default)	::= .
 
-/* XXX Allow mixing BQL functions and SQL columns?  */
-select_columns(sql)	::= select_columns1(columns).
-select_columns(bql)	::= select_bql(bql).
-
-select_columns1(one)	::= select_column(c).
-select_columns1(many)	::= select_columns1(cs) T_COMMA select_column(c).
+select_columns(one)	::= select_column(c).
+select_columns(many)	::= select_columns(cs) T_COMMA select_column(c).
 
 select_column(star)	::= T_STAR.
 select_column(qstar)	::= table_name(table) T_DOT T_STAR.
 select_column(exp)	::= expression(e) as(name).
+select_column(bql)	::= select_bql(bql).
 
 /*
  * XXX Why are these allowed only in select, rather than generally
@@ -79,8 +76,15 @@ select_bql(depprob)	::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
 select_bql(mutinf)	::= K_MUTUAL K_INFORMATION ofwith(cols).
 select_bql(correl)	::= K_CORRELATION ofwith(cols).
 
+/*
+ * Parenthesizing the column lists is not what we did before, but is
+ * necessary to avoid ambiguity at the comma: is it another select
+ * column, or is it another wrt column?
+ */
 wrt(none)		::= .
-wrt(some)		::= K_WITH K_RESPECT K_TO column_lists(cols).
+wrt(one)		::= K_WITH K_RESPECT K_TO column_list(collist).
+wrt(some)		::= K_WITH K_RESPECT K_TO
+				T_LROUND column_lists(collists) T_RROUND.
 
 ofwith(with)		::= K_WITH L_NAME(col).
 ofwith(ofwith)		::= K_OF L_NAME(col1) K_WITH L_NAME(col2).
