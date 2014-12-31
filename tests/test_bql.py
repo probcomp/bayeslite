@@ -35,3 +35,10 @@ def test_select_trivial():
     assert bql2sql('select t.* from t;') == 'select "t".* from "t";'
     assert bql2sql('select c from t;') == 'select "c" from "t";'
     assert bql2sql('select c as d from t;') == 'select "c" as "d" from "t";'
+    assert bql2sql('select t.c as d from t;') == \
+        'select "t"."c" as "d" from "t";'
+    assert bql2sql('select t.c as d, p as q, x from t;') == \
+        'select "t"."c" as "d", "p" as "q", "x" from "t";'
+    assert bql2sql('select * from t, u;') == 'select * from "t", "u";'
+    assert bql2sql('select * from t as u;') == 'select * from "t" as "u";'
+    assert bql2sql('select * where x;') == 'select * where "x";'
