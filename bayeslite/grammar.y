@@ -20,12 +20,10 @@ phrases(none)		::= .
 phrases(some)		::= phrases(phrases) phrasesemi(phrase).
 phrasesemi(empty)	::= T_SEMI.
 phrasesemi(nonempty)	::= phrase(phrase) T_SEMI.
-phrase(query)		::= query(q).
+phrase(query)		::= query_action(action) query(q).
 /*
 phrase(command)		::= command(c).
 */
-
-query(q)		::= query_action(action) query_body(body).
 
 query_action(none)	::= .
 query_action(freq)	::= K_FREQ.
@@ -34,13 +32,13 @@ query_action(summarize)	::= K_SUMMARIZE.
 query_action(plot)	::= K_PLOT.
 /* XXX EXPLAIN (QUERY PLAN)?  */
 
-query_body(select)	::= select(q).
+query(select)		::= select(q).
 /*
-query_body(infer)	::= infer(q).
-query_body(simulate)	::= simulate(q).
-query_body(estimate_pairwise_row)
+query(infer)		::= infer(q).
+query(simulate)		::= simulate(q).
+query(estimate_pairwise_row)
 			::= estimate_pairwise_row(q).
-query_body(create_column_list)
+query(create_column_list)
 			::= create_column_list(q).
 */
 
@@ -103,7 +101,7 @@ select_tables(one)	::= select_table(t).
 select_tables(many)	::= select_tables(ts) T_COMMA select_table(t).
 
 select_table(named)	::= table_name(table) as(name).
-select_table(subquery)	::= T_LROUND query_body(q) T_RROUND as(name).
+select_table(subquery)	::= T_LROUND query(q) T_RROUND as(name).
 
 where(unconditional)	::= .
 where(conditional)	::= K_WHERE expression(condition).

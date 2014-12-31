@@ -62,22 +62,21 @@ class BQLSemantics(object):
 
     def p_phrasesemi_empty(self):               return None
     def p_phrasesemi_nonempty(self, phrase):    return phrase
-    def p_phrase_query(self, q):                return q
+    def p_phrase_query(self, action, q):
+        return QueryAction(action, q) if action else q
     def p_phrase_command(self, c):              return c
 
-    def p_query_q(self, action, body):
-        return QueryAction(action, body) if action else body
     def p_query_action_none(self):              return None
     def p_query_action_freq(self):              return ast.QACT_FREQ
     def p_query_action_hist(self):              return ast.QACT_HIST
     def p_query_action_summarize(self):         return ast.QACT_SUMMARIZE
     def p_query_action_plot(self):              return ast.QACT_PLOT
 
-    def p_query_body_select(self, q):           return q
-    def p_query_body_infer(self, q):            return q
-    def p_query_body_simulate(self, q):         return q
-    def p_query_body_estimate_pairwise_row(self, q): return q
-    def p_query_body_create_column_list(self, q): return q
+    def p_query_select(self, q):                return q
+    def p_query_infer(self, q):                 return q
+    def p_query_simulate(self, q):              return q
+    def p_query_estimate_pairwise_row(self, q): return q
+    def p_query_create_column_list(self, q):    return q
 
     def p_select_s(self, quant, cols, tabs, cond, group, ord, lim):
         return ast.Select(quant, cols, tabs, cond, group, ord, lim)
