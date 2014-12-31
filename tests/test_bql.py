@@ -49,3 +49,12 @@ def test_select_trivial():
         'select * from "t" where "x" group by "y";'
     assert bql2sql('select * from t where x group by y, z;') == \
         'select * from "t" where "x" group by "y", "z";'
+    assert bql2sql('select * order by x;') == 'select * order by "x";'
+    assert bql2sql('select * order by x asc;') == 'select * order by "x";'
+    assert bql2sql('select * order by x desc;') == \
+        'select * order by "x" desc;'
+    assert bql2sql('select * order by x, y;') == 'select * order by "x", "y";'
+    assert bql2sql('select * order by x desc, y;') == \
+        'select * order by "x" desc, "y";'
+    assert bql2sql('select * order by x, y asc;') == \
+        'select * order by "x", "y";'

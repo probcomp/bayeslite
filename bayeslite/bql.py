@@ -98,12 +98,13 @@ def compile_select(bdb, select, out):
             else:
                 out.write(', ')
             compile_expression(bdb, order.expression, out)
-            if order.sense == ORD_ASC:
+            if order.sense == ast.ORD_ASC:
                 pass
-            elif order.sense == ORD_DESC:
+            elif order.sense == ast.ORD_DESC:
                 out.write(' desc')
             else:
-                assert order.sense == ORD_ASC or order.sense == ORD_DESC
+                assert order.sense == ast.ORD_ASC or \
+                    order.sense == ast.ORD_DESC
     if select.limit is not None:
         out.write(' limit ')
         compile_expression(bdb, select.limit.limit, out)
