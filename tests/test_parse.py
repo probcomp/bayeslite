@@ -35,6 +35,20 @@ def test_select_trivial():
         [ast.Select(ast.SELQUANT_ALL,
             ast.SelCols([ast.SelColExp(ast.ExpLit(ast.LitString('x')), None)]),
             None, None, None, None, None)]
+    assert parse_bql_string("select 'x''y';") == \
+        [ast.Select(ast.SELQUANT_ALL,
+            ast.SelCols([
+                ast.SelColExp(ast.ExpLit(ast.LitString("x'y")), None),
+            ]),
+            None, None, None, None, None)]
+    assert parse_bql_string('select "x";') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            ast.SelCols([ast.SelColExp(ast.ExpCol(None, 'x'), None)]),
+            None, None, None, None, None)]
+    assert parse_bql_string('select "x""y";') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            ast.SelCols([ast.SelColExp(ast.ExpCol(None, 'x"y'), None)]),
+            None, None, None, None, None)]
     assert parse_bql_string('select 0;') == \
         [ast.Select(ast.SELQUANT_ALL,
             ast.SelCols([ast.SelColExp(ast.ExpLit(ast.LitInt(0)), None)]),

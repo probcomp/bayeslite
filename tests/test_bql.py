@@ -32,6 +32,9 @@ def bql2sql(string):
 def test_select_trivial():
     assert bql2sql('select null;') == 'select null;'
     assert bql2sql("select 'x';") == "select 'x';"
+    assert bql2sql("select 'x''y';") == "select 'x''y';"
+    assert bql2sql('select "x";') == 'select "x";'
+    assert bql2sql('select "x""y";') == 'select "x""y";'
     assert bql2sql('select 0;') == 'select 0;'
     assert bql2sql('select all 0;') == 'select 0;'
     assert bql2sql('select distinct 0;') == 'select distinct 0;'
