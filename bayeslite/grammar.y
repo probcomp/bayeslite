@@ -134,11 +134,13 @@ limit(offset)		::= K_LIMIT expression(limit)
 limit(comma)		::= K_LIMIT expression(offset)
 				T_COMMA expression(limit).
 
-expression(literal)	::= literal(v).
-expression(paren)	::= T_LROUND expression(e) T_RROUND.
-expression(subquery)	::= T_LROUND query(q) T_RROUND.
-expression(column)	::= L_NAME(col).
-expression(tabcol)	::= table_name(tab) T_DOT L_NAME(col).
+expression(primary)	::= primary(e).
+
+primary(literal)	::= literal(v).
+primary(paren)		::= T_LROUND expression(e) T_RROUND.
+primary(subquery)	::= T_LROUND query(q) T_RROUND.
+primary(column)		::= L_NAME(col).
+primary(tabcol)		::= table_name(tab) T_DOT L_NAME(col).
 
 literal(null)		::= K_NULL.
 literal(integer)	::= L_INTEGER(i).

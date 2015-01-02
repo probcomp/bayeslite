@@ -153,11 +153,13 @@ class BQLSemantics(object):
     def p_limit_offset(self, limit, offset):    return ast.Lim(limit, offset)
     def p_limit_comma(self, offset, limit):     return ast.Lim(limit, offset)
 
-    def p_expression_literal(self, v):          return ast.ExpLit(v)
-    def p_expression_paren(self, e):            return e
-    def p_expression_subquery(self, q):         return ast.ExpSub(q)
-    def p_expression_column(self, col):         return ast.ExpCol(None, col)
-    def p_expression_tabcol(self, tab, col):    return ast.ExpCol(tab, col)
+    def p_expression_primary(self, e):          return e
+
+    def p_primary_literal(self, v):             return ast.ExpLit(v)
+    def p_primary_paren(self, e):               return e
+    def p_primary_subquery(self, q):            return ast.ExpSub(q)
+    def p_primary_column(self, col):            return ast.ExpCol(None, col)
+    def p_primary_tabcol(self, tab, col):       return ast.ExpCol(tab, col)
 
     def p_literal_null(self):                   return ast.LitNull(None)
     def p_literal_integer(self, i):             return ast.LitInt(i)
