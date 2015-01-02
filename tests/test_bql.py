@@ -17,6 +17,7 @@
 import StringIO
 import pytest
 
+import bayeslite.ast as ast
 import bayeslite.bql as bql
 import bayeslite.parse as parse
 
@@ -26,7 +27,10 @@ def bql2sql(string):
     with test_smoke.t1() as (bdb, _table_id):
         phrases = parse.parse_bql_string(string)
         out = StringIO.StringIO()
-        bql.compile_bql(bdb, phrases, out)
+        for phrase in phrases:
+            assert ast.is_query(phrase)
+            bql.compile_query(bdb, phrase, out)
+            out.write(';')
         return out.getvalue()
 
 def test_select_trivial():

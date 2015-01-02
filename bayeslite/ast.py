@@ -25,6 +25,10 @@ QACT_HIST = 'hist'
 QACT_SUMMARIZE = 'summarize'
 QACT_PLOT = 'plot'
 
+def is_query(phrase):
+    if isinstance(phrase, Select):      return True
+    return False
+
 Select = namedtuple('Select', [
     'quantifier',               # SELQUANT_*
     'columns',                  # [(SelCol or SelBQL)*]

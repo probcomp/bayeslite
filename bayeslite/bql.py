@@ -19,14 +19,6 @@ import StringIO
 import bayeslite.ast as ast
 import bayeslite.core as core
 
-def compile_bql(bdb, phrases, out):
-    for phrase in phrases:
-        if isinstance(phrase, ast.Select):
-            compile_select(bdb, phrase, out)
-        else:
-            assert False        # XXX
-        out.write(';')
-
 def compile_query(bdb, query, out):
     if isinstance(query, ast.Select):
         compile_select(bdb, query, out)
