@@ -213,6 +213,17 @@ def test_select_trivial():
                 None,
             )],
             None, None, None, None, None)]
+    assert parse_bql_string('select f(f(), f(x), y);') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(
+                ast.ExpApp('f', [
+                    ast.ExpApp('f', []),
+                    ast.ExpApp('f', [ast.ExpCol(None, 'x')]),
+                    ast.ExpCol(None, 'y'),
+                ]),
+                None,
+            )],
+            None, None, None, None, None)]
 
 def test_select_bql():
     assert parse_bql_string('select predictive probability of c from t;') == \

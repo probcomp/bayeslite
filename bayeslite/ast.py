@@ -80,6 +80,7 @@ ExpCol = namedtuple('ExpCol', ['table', 'column'])
 # XXX We will need some kind of type-checking to distinguish
 # subqueries for column lists from subqueries for table rows.
 ExpSub = namedtuple('ExpSub', ['query'])
+ExpApp = namedtuple('ExpApp', ['operator', 'operands'])
 
 LitNull = namedtuple('LitNull', ['value'])
 LitInt = namedtuple('LitInt', ['value'])

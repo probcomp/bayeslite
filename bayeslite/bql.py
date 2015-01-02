@@ -181,6 +181,17 @@ def compile_expression(bdb, exp, out):
         out.write('(')
         compile_query(bdb, exp.query, out)
         out.write(')')
+    elif isinstance(exp, ast.ExpApp):
+        compile_name(bdb, exp.operator, out)
+        out.write('(')
+        first = True
+        for operand in exp.operands:
+            if first:
+                first = False
+            else:
+                out.write(', ')
+            compile_expression(bdb, operand, out)
+        out.write(')')
     else:
         assert False            # XXX
 
