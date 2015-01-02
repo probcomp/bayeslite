@@ -125,9 +125,9 @@ def test_select_trivial():
     assert bql2sql('select a>b>=c<<d>>e&f|g+h-i*j/k;') == \
         'select (("a" > "b") >= (((("c" << "d") >> "e") & "f") |' \
         + ' (("g" + "h") - (("i" * "j") / "k"))));'
-    assert bql2sql('select a/b||~~c collate d collate\'e\'||1;') == \
-        'select ("a" / (("b" || (((~ (~ "c")) COLLATE "d") COLLATE "e"))' \
-        + ' || 1));'
+    assert bql2sql('select a/b%c||~~d collate e collate\'f\'||1;') == \
+        'select (("a" / "b") % (("c" || (((~ (~ "d")) COLLATE "e")' \
+        + ' COLLATE "f")) || 1));'
     assert bql2sql('select cast(f(x) as binary blob);') == \
         'select CAST("f"("x") AS "binary" "blob");'
     assert bql2sql('select cast(42 as varint(73));') == \
@@ -138,10 +138,6 @@ def test_select_trivial():
         'select ((EXISTS (select "a")) AND (NOT (EXISTS (select "b"))));'
 
 def test_select_bql():
-    with pytest.raises(ValueError):
-        bql2sql('select predictive probability of weight;')
-    with pytest.raises(ValueError):
-        bql2sql('select predictive probability of weight from t1, t1;')
     assert bql2sql('select predictive probability of weight from t1;') == \
         'select row_column_predictive_probability(1, rowid, 3) from "t1";'
     assert bql2sql('select label, predictive probability of weight from t1;') \
@@ -158,9 +154,32 @@ def test_select_bql():
         'select row_typicality(1, rowid) from "t1";'
     assert bql2sql('select typicality of age from t1;') == \
         'select column_typicality(1, 2) from "t1";'
+    assert bql2sql('select similarity to 5 with respect to age from t1') == \
+        'select row_similarity(1, rowid, 5, 2) from "t1";'
+    assert bql2sql('select similarity to 5 with respect to (age, weight)' +
+        ' from t1;') == \
+        'select row_similarity(1, rowid, 5, 2, 3) from "t1";'
+    assert bql2sql('select similarity to 5 with respect to (*) from t1;') == \
+        'select row_similarity(1, rowid, 5, 0, 1, 2, 3) from "t1";'
     assert bql2sql('select similarity to 5 with respect to (age, weight)' +
         ' from t1;') == \
         'select row_similarity(1, rowid, 5, 2, 3) from "t1";'
     assert bql2sql('select dependence probability of age with weight' +
         ' from t1;') == \
         'select column_dependence_probability(1, 2, 3) from "t1";'
+    assert bql2sql('select mutual information of age with weight' +
+        ' from t1;') == \
+        'select column_mutual_information(1, 2, 3) from "t1";'
+    assert bql2sql('select correlation of age with weight from t1;') == \
+        'select column_correlation(1, 2, 3) from "t1";'
+
+def test_select_bql_error():
+    with pytest.raises(ValueError):
+        # Need a table.
+        bql2sql('select predictive probability of weight;')
+    with pytest.raises(ValueError):
+        # Need at most one table.
+        bql2sql('select predictive probability of weight from t1, t1;')
+    with pytest.raises(ValueError):
+        # Need a btable, not a subquery.
+        bql2sql('select predictive probability of weight from (select 0);')

@@ -94,6 +94,7 @@ column_lists(many)	::= column_lists(collists)
 				T_COMMA|K_AND column_list(collist).
 column_list(all)	::= T_STAR.
 column_list(column)	::= L_NAME(col).
+/* XXX Subquery, saved lists.  */
 
 as(none)		::= .
 as(some)		::= K_AS L_NAME(name).
