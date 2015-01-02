@@ -226,6 +226,12 @@ primary(cast)		::= K_CAST T_LROUND expression(e)
 primary(exists)		::= K_EXISTS T_LROUND query(q) T_RROUND.
 primary(column)		::= L_NAME(col).
 primary(tabcol)		::= table_name(tab) T_DOT L_NAME(col).
+/*
+ * XXX To do:
+ *
+ * - CASE x WHEN y THEN z ELSE w END
+ * - RAISE (IGNORE|ROLLBACK|ABORT|FAIL, "message")
+ */
 
 literal(null)		::= K_NULL.
 literal(integer)	::= L_INTEGER(i).
