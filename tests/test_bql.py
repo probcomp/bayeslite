@@ -78,6 +78,8 @@ def test_select_trivial():
     assert bql2sql('select * limit 32 offset 16;') == \
         'select * limit 32 offset 16;'
     assert bql2sql('select * limit 16, 32;') == 'select * limit 32 offset 16;'
+    assert bql2sql('select (select0);') == 'select "select0";'
+    assert bql2sql('select (select 0);') == 'select (select 0);'
 
 def test_select_bql():
     with pytest.raises(ValueError):

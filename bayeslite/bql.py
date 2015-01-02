@@ -25,6 +25,13 @@ def compile_bql(bdb, phrases, out):
             compile_select(bdb, phrase, out)
         else:
             assert False        # XXX
+        out.write(';')
+
+def compile_query(bdb, query, out):
+    if isinstance(query, ast.Select):
+        compile_select(bdb, query, out)
+    else:
+        assert False        # XXX
 
 def compile_select(bdb, select, out):
     assert isinstance(select, ast.Select)
@@ -83,7 +90,6 @@ def compile_select(bdb, select, out):
         if select.limit.offset is not None:
             out.write(' offset ')
             compile_expression(bdb, select.limit.offset, out)
-    out.write(';')
 
 def compile_select_columns(bdb, select, out):
     first = True
@@ -179,6 +185,10 @@ def compile_expression(bdb, exp, out):
         compile_literal(bdb, exp.value, out)
     elif isinstance(exp, ast.ExpCol):
         compile_table_column(bdb, exp.table, exp.column, out)
+    elif isinstance(exp, ast.ExpSub):
+        out.write('(')
+        compile_query(bdb, exp.query, out)
+        out.write(')')
     else:
         assert False            # XXX
 
