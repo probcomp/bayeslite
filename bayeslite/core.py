@@ -181,16 +181,16 @@ def bayesdb_install_bql(db, cookie):
     def function(name, nargs, fn):
         db.create_function(name, nargs,
             lambda *args: bayesdb_bql(fn, cookie, *args))
-    function("column_correlation", 3, bayesdb_column_correlation)
+    function("column_correlation", 3, bql_column_correlation)
     function("column_dependence_probability", 3,
-        bayesdb_column_dependence_probability)
-    function("column_mutual_information", 3, bayesdb_column_mutual_information)
-    function("column_typicality", 2, bayesdb_column_typicality)
-    function("column_value_probability", 3, bayesdb_column_value_probability)
-    function("row_similarity", 4, bayesdb_row_similarity)
-    function("row_typicality", 2, bayesdb_row_typicality)
+        bql_column_dependence_probability)
+    function("column_mutual_information", 3, bql_column_mutual_information)
+    function("column_typicality", 2, bql_column_typicality)
+    function("column_value_probability", 3, bql_column_value_probability)
+    function("row_similarity", 4, bql_row_similarity)
+    function("row_typicality", 2, bql_row_typicality)
     function("row_column_predictive_probability", 3,
-        bayesdb_row_column_predictive_probability)
+        bql_row_column_predictive_probability)
 
 # XXX XXX XXX Temporary debugging kludge!
 import traceback
@@ -679,7 +679,7 @@ def bayesdb_models_analyze1(bdb, table_id, modelno, iterations=1):
 ### BayesDB column functions
 
 # Two-column function:  CORRELATION [OF <col0> WITH <col1>]
-def bayesdb_column_correlation(bdb, table_id, colno0, colno1):
+def bql_column_correlation(bdb, table_id, colno0, colno1):
     M_c = bayesdb_metadata(bdb, table_id)
     qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
     qc0 = sqlite3_quote_name(bayesdb_column_name(bdb, table_id, colno0))
@@ -759,7 +759,7 @@ def bayesdb_column_correlation(bdb, table_id, colno0, colno1):
     return correlation
 
 # Two-column function:  DEPENDENCE PROBABILITY [OF <col0> WITH <col1>]
-def bayesdb_column_dependence_probability(bdb, table_id, colno0, colno1):
+def bql_column_dependence_probability(bdb, table_id, colno0, colno1):
     # XXX Push this into the engine.
     if colno0 == colno1:
         return 1
@@ -776,7 +776,7 @@ def bayesdb_column_dependence_probability(bdb, table_id, colno0, colno1):
     return float("NaN") if nmodels == 0 else (float(count) / float(nmodels))
 
 # Two-column function:  MUTUAL INFORMATION [OF <col0> WITH <col1>]
-def bayesdb_column_mutual_information(bdb, table_id, colno0, colno1,
+def bql_column_mutual_information(bdb, table_id, colno0, colno1,
         numsamples=100):
     X_L_list = list(bayesdb_latent_state(bdb, table_id))
     X_D_list = list(bayesdb_latent_data(bdb, table_id))
@@ -796,14 +796,14 @@ def bayesdb_column_mutual_information(bdb, table_id, colno0, colno1,
     return arithmetic_mean(mi)
 
 # One-column function:  TYPICALITY OF <col>
-def bayesdb_column_typicality(bdb, table_id, colno):
+def bql_column_typicality(bdb, table_id, colno):
     return bdb.engine.column_structural_typicality(
         X_L_list=list(bayesdb_latent_state(bdb, table_id)),
         col_id=colno
     )
 
 # One-column function:  PROBABILITY OF <col>=<value>
-def bayesdb_column_value_probability(bdb, table_id, colno, value):
+def bql_column_value_probability(bdb, table_id, colno, value):
     M_c = bayesdb_metadata(bdb, table_id)
     try:
         code = bayesdb_value_to_code(M_c, colno, value)
@@ -825,7 +825,7 @@ def bayesdb_column_value_probability(bdb, table_id, colno, value):
 ### BayesDB row functions
 
 # Row function:  SIMILARITY TO <target_row> [WITH RESPECT TO <columns>]
-def bayesdb_row_similarity(bdb, table_id, row_id, target_row_id, columns):
+def bql_row_similarity(bdb, table_id, row_id, target_row_id, columns):
     return bdb.engine.similarity(
         M_c=bayesdb_metadata(bdb, table_id),
         X_L_list=list(bayesdb_latent_state(bdb, table_id)),
@@ -836,7 +836,7 @@ def bayesdb_row_similarity(bdb, table_id, row_id, target_row_id, columns):
     )
 
 # Row function:  TYPICALITY
-def bayesdb_row_typicality(bdb, table_id, row_id):
+def bql_row_typicality(bdb, table_id, row_id):
     return bdb.engine.row_structural_typicality(
         X_L_list=list(bayesdb_latent_state(bdb, table_id)),
         X_D_list=list(bayesdb_latent_data(bdb, table_id)),
@@ -844,7 +844,7 @@ def bayesdb_row_typicality(bdb, table_id, row_id):
     )
 
 # Row function:  PREDICTIVE PROBABILITY OF <column>
-def bayesdb_row_column_predictive_probability(bdb, table_id, row_id, colno):
+def bql_row_column_predictive_probability(bdb, table_id, row_id, colno):
     M_c = bayesdb_metadata(bdb, table_id)
     value = bayesdb_cell_value(bdb, table_id, row_id, colno)
     code = bayesdb_value_to_code(M_c, colno, value)
@@ -859,7 +859,7 @@ def bayesdb_row_column_predictive_probability(bdb, table_id, row_id, colno):
 
 ### Infer and simulate
 
-def bayesdb_infer(bdb, table_id, colno, row_id, value, confidence_threshold,
+def bql_infer(bdb, table_id, colno, row_id, value, confidence_threshold,
         numsamples=1):
     if value is not None:
         return value

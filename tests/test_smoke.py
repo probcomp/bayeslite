@@ -226,7 +226,7 @@ def test_btable_analysis1(btable_name):
         for conf in [0.01, 0.5, 0.99]])
 def test_t1_infer(row_id, colno, confidence):
     with analyzed_bayesdb_table(t1(), 1, 1) as (bdb, table_id):
-        bayeslite.bayesdb_infer(bdb, table_id, colno, row_id, None, confidence,
+        bayeslite.bql_infer(bdb, table_id, colno, row_id, None, confidence,
             numsamples=1)
 
 @pytest.mark.parametrize('colnos,constraints,numpredictions',
@@ -261,7 +261,7 @@ def test_onecolumn(btable_name, colno):
         pytest.xfail("Crosscat can't handle a table with only one column.")
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
-        bayeslite.bayesdb_column_typicality(bdb, table_id, colno)
+        bayeslite.bql_column_typicality(bdb, table_id, colno)
         bdb.sqlite.execute('select column_typicality(?, ?)', (table_id, colno))
 
 @pytest.mark.parametrize('btable_name,colno0,colno1',
@@ -276,16 +276,16 @@ def test_twocolumn(btable_name, colno0, colno1):
         pytest.skip('Not enough columns in t0.')
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
-        bayeslite.bayesdb_column_correlation(bdb, table_id, colno0, colno1)
+        bayeslite.bql_column_correlation(bdb, table_id, colno0, colno1)
         bayeslite.sqlite3_exec_1(bdb.sqlite,
             'select column_correlation(?, ?, ?)',
             (table_id, colno0, colno1))
-        bayeslite.bayesdb_column_dependence_probability(bdb, table_id, colno0,
+        bayeslite.bql_column_dependence_probability(bdb, table_id, colno0,
             colno1)
         bayeslite.sqlite3_exec_1(bdb.sqlite,
             'select column_dependence_probability(?, ?, ?)',
             (table_id, colno0, colno1))
-        bayeslite.bayesdb_column_mutual_information(bdb, table_id, colno0,
+        bayeslite.bql_column_mutual_information(bdb, table_id, colno0,
             colno1)
         bayeslite.sqlite3_exec_1(bdb.sqlite,
             'select column_mutual_information(?, ?, ?)',
@@ -298,7 +298,7 @@ def test_twocolumn(btable_name, colno0, colno1):
 def test_t1_column_value_probability(colno, row_id):
     with analyzed_bayesdb_table(t1(), 1, 1) as (bdb, table_id):
         value = bayeslite.bayesdb_cell_value(bdb, table_id, row_id, colno)
-        bayeslite.bayesdb_column_value_probability(bdb, table_id, colno, value)
+        bayeslite.bql_column_value_probability(bdb, table_id, colno, value)
         tn = bayeslite.bayesdb_table_name(bdb, table_id)
         cn = bayeslite.bayesdb_column_name(bdb, table_id, colno)
         qt = bayeslite.sqlite3_quote_name(tn)
@@ -322,7 +322,7 @@ def test_row_similarity(btable_name, source, target, colnos):
         pytest.skip('Not enough columns in t0.')
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
-        bayeslite.bayesdb_row_similarity(bdb, table_id, source, target, colnos)
+        bayeslite.bql_row_similarity(bdb, table_id, source, target, colnos)
         # XXX OOPS!  Can't write this in SQL, because no arrays.
         # Variadic sqlite functions?
 
@@ -337,7 +337,7 @@ def test_row_typicality(btable_name, row_id):
         pytest.skip('Not enough columns in t0.')
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
-        bayeslite.bayesdb_row_typicality(bdb, table_id, row_id)
+        bayeslite.bql_row_typicality(bdb, table_id, row_id)
         bayeslite.sqlite3_exec_1(bdb.sqlite, 'select row_typicality(?, ?)',
             (table_id, row_id))
 
@@ -353,7 +353,7 @@ def test_row_column_predictive_probability(btable_name, row_id, colno):
         pytest.skip('Not enough columns in t0.')
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
-        bayeslite.bayesdb_row_column_predictive_probability(bdb, table_id,
+        bayeslite.bql_row_column_predictive_probability(bdb, table_id,
             row_id, colno)
         bayeslite.sqlite3_exec_1(bdb.sqlite,
             'select row_column_predictive_probability(?, ?, ?)',
