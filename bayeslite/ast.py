@@ -73,6 +73,8 @@ Lim = namedtuple('Lim', ['limit', 'offset'])
 
 ExpLit = namedtuple('ExpLit', ['value'])
 ExpCol = namedtuple('ExpCol', ['table', 'column'])
+# XXX We will need some kind of type-checking to distinguish
+# subqueries for column lists from subqueries for table rows.
 ExpSub = namedtuple('ExpSub', ['query'])
 
 LitNull = namedtuple('LitNull', ['value'])
