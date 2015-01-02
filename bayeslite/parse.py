@@ -136,8 +136,6 @@ class BQLSemantics(object):
 
     def p_group_by_none(self):                  return None
     def p_group_by_some(self, keys):            return keys
-    def p_group_keys_one(self, key):            return [key]
-    def p_group_keys_many(self, keys, key):     keys.append(key); return keys
 
     def p_order_by_none(self):                  return None
     def p_order_by_some(self, keys):            return keys

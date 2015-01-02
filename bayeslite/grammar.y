@@ -114,9 +114,7 @@ where(conditional)	::= K_WHERE expression(condition).
 table_name(unqualified)	::= L_NAME(name).
 
 group_by(none)		::= .
-group_by(some)		::= K_GROUP K_BY group_keys(keys).
-group_keys(one)		::= expression(key).
-group_keys(many)	::= group_keys(keys) T_COMMA expression(key).
+group_by(some)		::= K_GROUP K_BY expressions(keys).
 
 order_by(none)		::= .
 order_by(some)		::= K_ORDER K_BY order_keys(keys).
