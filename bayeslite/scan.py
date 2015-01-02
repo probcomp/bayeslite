@@ -33,6 +33,7 @@ keywords = {
     "asc": grammar.K_ASC,
     "between": grammar.K_BETWEEN,
     "by": grammar.K_BY,
+    "cast": grammar.K_CAST,
     "collate": grammar.K_COLLATE,
     "correlation": grammar.K_CORRELATION,
     "dependence": grammar.K_DEPENDENCE,

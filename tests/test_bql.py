@@ -102,6 +102,12 @@ def test_select_trivial():
     assert bql2sql('select a/b||~~c collate d collate\'e\'||1;') == \
         'select ("a" / (("b" || (((~ (~ "c")) COLLATE "d") COLLATE "e"))' \
         + ' || 1));'
+    assert bql2sql('select cast(f(x) as binary blob);') == \
+        'select CAST("f"("x") AS "binary" "blob");'
+    assert bql2sql('select cast(42 as varint(73));') == \
+        'select CAST(42 AS "varint"(73));'
+    assert bql2sql('select cast(f(x, y, z) as varchar(12 ,34));') == \
+        'select CAST("f"("x", "y", "z") AS "varchar"(12, 34));'
 
 def test_select_bql():
     with pytest.raises(ValueError):

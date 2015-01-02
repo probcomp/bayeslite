@@ -81,6 +81,7 @@ ExpCol = namedtuple('ExpCol', ['table', 'column'])
 # subqueries for column lists from subqueries for table rows.
 ExpSub = namedtuple('ExpSub', ['query'])
 ExpCollate = namedtuple('ExpCollate', ['expression', 'collation'])
+ExpCast = namedtuple('ExpCast', ['expression', 'type'])
 ExpApp = namedtuple('ExpApp', ['operator', 'operands'])
 ExpOp = namedtuple('ExpOp', ['operator', 'operands'])
 
@@ -121,3 +122,5 @@ LitNull = namedtuple('LitNull', ['value'])
 LitInt = namedtuple('LitInt', ['value'])
 LitFloat = namedtuple('LitFloat', ['value'])
 LitString = namedtuple('LitString', ['value'])
+
+Type = namedtuple('Type', ['names', 'args'])

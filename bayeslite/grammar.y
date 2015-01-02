@@ -199,6 +199,8 @@ primary(literal)	::= literal(v).
 primary(apply)		::= L_NAME(fn) T_LROUND opt_expressions(es) T_RROUND.
 primary(paren)		::= T_LROUND expression(e) T_RROUND.
 primary(subquery)	::= T_LROUND query(q) T_RROUND.
+primary(cast)		::= K_CAST T_LROUND expression(e)
+				K_AS type(t) T_RROUND.
 primary(column)		::= L_NAME(col).
 primary(tabcol)		::= table_name(tab) T_DOT L_NAME(col).
 
@@ -206,3 +208,13 @@ literal(null)		::= K_NULL.
 literal(integer)	::= L_INTEGER(i).
 literal(float)		::= L_FLOAT(f).
 literal(string)		::= L_STRING(s).
+
+type(name)		::= typename(n).
+type(onearg)		::= typename(n) T_LROUND typearg(a) T_RROUND.
+type(twoarg)		::= typename(n) T_LROUND typearg(a) T_COMMA
+				typearg(b) T_RROUND.
+typename(one)		::= L_NAME(n).
+typename(many)		::= typename(tn) L_NAME(n).
+typearg(unsigned)	::= L_INTEGER(i).
+typearg(positive)	::= T_PLUS L_INTEGER(i).
+typearg(negative)	::= T_MINUS L_INTEGER(i).

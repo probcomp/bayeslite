@@ -215,6 +215,7 @@ class BQLSemantics(object):
     def p_primary_apply(self, fn, es):          return ast.ExpApp(fn, es)
     def p_primary_paren(self, e):               return e
     def p_primary_subquery(self, q):            return ast.ExpSub(q)
+    def p_primary_cast(self, e, t):             return ast.ExpCast(e, t)
     def p_primary_column(self, col):            return ast.ExpCol(None, col)
     def p_primary_tabcol(self, tab, col):       return ast.ExpCol(tab, col)
 
@@ -222,3 +223,12 @@ class BQLSemantics(object):
     def p_literal_integer(self, i):             return ast.LitInt(i)
     def p_literal_float(self, f):               return ast.LitFloat(f)
     def p_literal_string(self, s):              return ast.LitString(s)
+
+    def p_type_name(self, n):                   return ast.Type(n, [])
+    def p_type_onearg(self, n, a):              return ast.Type(n, [a])
+    def p_type_twoarg(self, n, a, b):           return ast.Type(n, [a, b])
+    def p_typename_one(self, n):                return [n]
+    def p_typename_many(self, tn, n):           tn.append(n); return tn
+    def p_typearg_unsigned(self, i):            return i
+    def p_typearg_positive(self, i):            return i
+    def p_typearg_negative(self, i):            return -i

@@ -200,6 +200,12 @@ def compile_expression(bdb, exp, out):
         out.write(' COLLATE ')
         compile_name(bdb, exp.collation, out)
         out.write(')')
+    elif isinstance(exp, ast.ExpCast):
+        out.write('CAST(')
+        compile_expression(bdb, exp.expression, out)
+        out.write(' AS ')
+        compile_type(bdb, exp.type, out)
+        out.write(')')
     else:
         assert False            # XXX
 
@@ -291,3 +297,23 @@ def compile_table_column(bdb, table_name, column_name, out):
 
 def compile_column_name(bdb, _table_name, column_name, out):
     compile_name(bdb, column_name, out)
+
+def compile_type(bdb, type, out):
+    first = True
+    for n in type.names:
+        if first:
+            first = False
+        else:
+            out.write(' ')
+        compile_name(bdb, n, out)
+    if 0 < len(type.args):
+        out.write('(')
+        first = True
+        for a in type.args:
+            if first:
+                first = False
+            else:
+                out.write(', ')
+            assert isinstance(a, int)
+            out.write(str(a))
+        out.write(')')
