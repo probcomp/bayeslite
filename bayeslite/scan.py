@@ -40,6 +40,7 @@ keywords = {
     "desc": grammar.K_DESC,
     "distinct": grammar.K_DISTINCT,
     "escape": grammar.K_ESCAPE,
+    "exists": grammar.K_EXISTS,
     "freq": grammar.K_FREQ,
     "from": grammar.K_FROM,
     "glob": grammar.K_GLOB,

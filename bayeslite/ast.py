@@ -83,6 +83,7 @@ ExpSub = namedtuple('ExpSub', ['query'])
 ExpCollate = namedtuple('ExpCollate', ['expression', 'collation'])
 ExpIn = namedtuple('ExpIn', ['expression', 'positive', 'query'])
 ExpCast = namedtuple('ExpCast', ['expression', 'type'])
+ExpExists = namedtuple('ExpExists', ['query'])
 ExpApp = namedtuple('ExpApp', ['operator', 'operands'])
 ExpOp = namedtuple('ExpOp', ['operator', 'operands'])
 

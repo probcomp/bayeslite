@@ -216,6 +216,13 @@ def compile_expression(bdb, exp, out):
         out.write(' AS ')
         compile_type(bdb, exp.type, out)
         out.write(')')
+    elif isinstance(exp, ast.ExpExists):
+        out.write('(')
+        out.write('EXISTS ')
+        out.write('(')
+        compile_query(bdb, exp.query, out)
+        out.write(')')
+        out.write(')')
     else:
         assert False            # XXX
 

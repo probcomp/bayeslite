@@ -223,6 +223,7 @@ primary(paren)		::= T_LROUND expression(e) T_RROUND.
 primary(subquery)	::= T_LROUND query(q) T_RROUND.
 primary(cast)		::= K_CAST T_LROUND expression(e)
 				K_AS type(t) T_RROUND.
+primary(exists)		::= K_EXISTS T_LROUND query(q) T_RROUND.
 primary(column)		::= L_NAME(col).
 primary(tabcol)		::= table_name(tab) T_DOT L_NAME(col).
 

@@ -245,6 +245,7 @@ class BQLSemantics(object):
     def p_primary_paren(self, e):               return e
     def p_primary_subquery(self, q):            return ast.ExpSub(q)
     def p_primary_cast(self, e, t):             return ast.ExpCast(e, t)
+    def p_primary_exists(self, q):              return ast.ExpExists(q)
     def p_primary_column(self, col):            return ast.ExpCol(None, col)
     def p_primary_tabcol(self, tab, col):       return ast.ExpCol(tab, col)
 

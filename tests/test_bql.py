@@ -134,6 +134,8 @@ def test_select_trivial():
         'select CAST(42 AS "varint"(73));'
     assert bql2sql('select cast(f(x, y, z) as varchar(12 ,34));') == \
         'select CAST("f"("x", "y", "z") AS "varchar"(12, 34));'
+    assert bql2sql('select exists (select a) and not exists (select b);') == \
+        'select ((EXISTS (select "a")) AND (NOT (EXISTS (select "b"))));'
 
 def test_select_bql():
     with pytest.raises(ValueError):
