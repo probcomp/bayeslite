@@ -20,8 +20,7 @@ import bayeslite.ast as ast
 import bayeslite.grammar as grammar
 import bayeslite.scan as scan
 
-def parse_bql(f, context):
-    scanner = scan.BQLScanner(f, context)
+def parse_bql_phrases(scanner):
     semantics = BQLSemantics()
     parser = grammar.Parser(semantics)
     while True:
@@ -29,39 +28,57 @@ def parse_bql(f, context):
         if token[0] == -1:      # error
             semantics.syntax_error(token)
         else:
+            if token[0] == 0:   # EOF
+                # Implicit ; at EOF.
+                parser.feed((grammar.T_SEMI, ';'))
             parser.feed(token)
+        if semantics.phrase is not None:
+            yield semantics.phrase
+            semantics.phrase = None
         if token[0] == 0:       # EOF
             break
-    return semantics.phrases
+
+def parse_bql_string_pos(string):
+    scanner = scan.BQLScanner(StringIO.StringIO(string), '(string)')
+    phrases = parse_bql_phrases(scanner)
+    # XXX Don't dig out internals of scanner: fix plex to have a
+    # public API for finding the current position.
+    return ((phrase, scanner.cur_pos) for phrase in phrases)
+
+def parse_bql_string_pos_1(string):
+    for phrase, pos in parse_bql_string_pos(string):
+        return (phrase, pos)
+    return None
 
 def parse_bql_string(string):
-    return parse_bql(StringIO.StringIO(string), '(string)')
+    return (phrase for phrase, _pos in parse_bql_string_pos(string))
 
 class BQLSemantics(object):
     def __init__(self):
-        self.phrases = None
+        self.phrase = None
+        self.errors = []
 
     def accept(self):
-        assert self.phrases is not None
+        pass
     def parse_failed(self):
-        assert self.phrases is None
         # XXX Raise a principled exception here.
-        raise Exception('Parse failed')
+        raise Exception('Parse failed with errors: %s' % (self.errors,))
     def syntax_error(self, (_number, token)):
-        # XXX Accumulate errors and report principled error at end.
-        raise Exception('Syntax error near %s' % (token,))
+        self.errors.append(('syntax error near %s' % (token,),))
 
     def p_bql_start(self, phrases):
-        self.phrases = phrases
+        pass
     def p_phrases_none(self):
-        return []
+        pass
     def p_phrases_some(self, phrases, phrase):
-        if phrase is not None:
-            phrases.append(phrase)
-        return phrases
+        pass
 
-    def p_phrasesemi_empty(self):               return None
-    def p_phrasesemi_nonempty(self, phrase):    return phrase
+    def p_phrase1_empty(self):
+        pass
+    def p_phrase1_nonempty(self, phrase):
+        assert self.phrase is None
+        self.phrase = phrase
+
     def p_phrase_query(self, action, q):
         return QueryAction(action, q) if action else q
     def p_phrase_command(self, c):              return c

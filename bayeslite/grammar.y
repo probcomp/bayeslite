@@ -17,9 +17,9 @@
 bql(start)		::= phrases(phrases).
 
 phrases(none)		::= .
-phrases(some)		::= phrases(phrases) phrasesemi(phrase).
-phrasesemi(empty)	::= T_SEMI.
-phrasesemi(nonempty)	::= phrase(phrase) T_SEMI.
+phrases(some)		::= phrases(phrases) phrase1(phrase) T_SEMI.
+phrase1(empty)		::= .
+phrase1(nonempty)	::= phrase(phrase).
 phrase(query)		::= query_action(action) query(q).
 /*
 phrase(command)		::= command(c).

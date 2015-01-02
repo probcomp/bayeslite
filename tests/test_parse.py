@@ -15,7 +15,22 @@
 #   limitations under the License.
 
 import bayeslite.ast as ast
-from bayeslite.parse import parse_bql_string
+import bayeslite.parse
+
+def parse_bql_string(string):
+    phrases = list(bayeslite.parse.parse_bql_string(string))
+    phrase_pos = list(bayeslite.parse.parse_bql_string_pos(string))
+    assert len(phrases) == len(phrase_pos)
+    start = 0
+    for i in range(len(phrase_pos)):
+        phrase, pos = phrase_pos[i]
+        assert phrases[i] == phrase
+        substring = buffer(string, start, len(string) - start)
+        phrase0, pos0 = bayeslite.parse.parse_bql_string_pos_1(substring)
+        assert phrase0 == phrase
+        assert pos0 == pos - start
+        start = pos
+    return phrases
 
 def test_empty():
     assert [] == parse_bql_string('')
@@ -25,6 +40,24 @@ def test_empty():
     assert [] == parse_bql_string('; ')
     assert [] == parse_bql_string(' ; ')
     assert [] == parse_bql_string(' ; ; ')
+
+def test_multiquery():
+    assert parse_bql_string('select 0; select 1;') == [
+        ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpLit(ast.LitInt(0)), None)],
+            None, None, None, None, None),
+        ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpLit(ast.LitInt(1)), None)],
+            None, None, None, None, None),
+    ]
+    assert parse_bql_string('select 0; select 1') == [
+        ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpLit(ast.LitInt(0)), None)],
+            None, None, None, None, None),
+        ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpLit(ast.LitInt(1)), None)],
+            None, None, None, None, None),
+    ]
 
 def test_select_trivial():
     assert parse_bql_string('select null;') == \
