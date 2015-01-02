@@ -199,6 +199,20 @@ def test_select_trivial():
         [ast.Select(ast.SELQUANT_ALL, [ast.SelColAll(None)],
             None, None, None, None,
             ast.Lim(ast.ExpLit(ast.LitInt(32)), ast.ExpLit(ast.LitInt(16))))]
+    assert parse_bql_string('select (select0);') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpCol(None, 'select0'), None)],
+            None, None, None, None, None)]
+    assert parse_bql_string('select (select 0);') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(
+                ast.ExpSub(ast.Select(ast.SELQUANT_ALL,
+                    [ast.SelColExp(ast.ExpLit(ast.LitInt(0)), None)],
+                    None, None, None, None, None)
+                ),
+                None,
+            )],
+            None, None, None, None, None)]
 
 def test_select_bql():
     assert parse_bql_string('select predictive probability of c from t;') == \

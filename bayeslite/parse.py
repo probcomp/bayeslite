@@ -155,6 +155,7 @@ class BQLSemantics(object):
 
     def p_expression_literal(self, v):          return ast.ExpLit(v)
     def p_expression_paren(self, e):            return e
+    def p_expression_subquery(self, q):         return ast.ExpSub(q)
     def p_expression_column(self, col):         return ast.ExpCol(None, col)
     def p_expression_tabcol(self, tab, col):    return ast.ExpCol(tab, col)
 

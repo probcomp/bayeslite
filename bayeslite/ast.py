@@ -73,6 +73,7 @@ Lim = namedtuple('Lim', ['limit', 'offset'])
 
 ExpLit = namedtuple('ExpLit', ['value'])
 ExpCol = namedtuple('ExpCol', ['table', 'column'])
+ExpSub = namedtuple('ExpSub', ['query'])
 
 LitNull = namedtuple('LitNull', ['value'])
 LitInt = namedtuple('LitInt', ['value'])
