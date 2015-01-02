@@ -86,9 +86,31 @@ def test_select_trivial():
     assert bql2sql('select (select 0);') == 'select (select 0);'
     assert bql2sql('select f(f(), f(x), y);') == \
         'select "f"("f"(), "f"("x"), "y");'
-    assert bql2sql('select a and b or c or not d is e match f like j;') == \
+    assert bql2sql('select a and b or c or not d is e is not f like j;') == \
         'select ((("a" AND "b") OR "c") OR' \
-        + ' (NOT ((("d" IS "e") MATCH "f") LIKE "j")));'
+        + ' (NOT ((("d" IS "e") IS NOT "f") LIKE "j")));'
+    assert bql2sql('select a like b not like c like d escape e;') == \
+        'select ((("a" LIKE "b") NOT LIKE "c") LIKE "d" ESCAPE "e");'
+    assert bql2sql('select a like b escape c glob d not glob e;') == \
+        'select ((("a" LIKE "b" ESCAPE "c") GLOB "d") NOT GLOB "e");'
+    assert bql2sql('select a not glob b glob c escape d;') == \
+        'select (("a" NOT GLOB "b") GLOB "c" ESCAPE "d");'
+    assert bql2sql('select a glob b escape c regexp e not regexp f;') == \
+        'select ((("a" GLOB "b" ESCAPE "c") REGEXP "e") NOT REGEXP "f");'
+    assert bql2sql('select a not regexp b regexp c escape d;') == \
+        'select (("a" NOT REGEXP "b") REGEXP "c" ESCAPE "d");'
+    assert bql2sql('select a regexp b escape c not regexp d escape e;') == \
+        'select (("a" REGEXP "b" ESCAPE "c") NOT REGEXP "d" ESCAPE "e");'
+    assert bql2sql('select a not regexp b escape c match e not match f;') == \
+        'select ((("a" NOT REGEXP "b" ESCAPE "c") MATCH "e") NOT MATCH "f");'
+    assert bql2sql('select a not match b match c escape d;') == \
+        'select (("a" NOT MATCH "b") MATCH "c" ESCAPE "d");'
+    assert bql2sql('select a match b escape c not match d escape e;') == \
+        'select (("a" MATCH "b" ESCAPE "c") NOT MATCH "d" ESCAPE "e");'
+    assert bql2sql('select a not match b escape c between d and e;') == \
+        'select (("a" NOT MATCH "b" ESCAPE "c") BETWEEN "d" AND "e");'
+    assert bql2sql('select a between b and c and d;') == \
+        'select (("a" BETWEEN "b" AND "c") AND "d");'
     assert bql2sql('select a like b like c escape d between e and f;') == \
         'select ((("a" LIKE "b") LIKE "c" ESCAPE "d") BETWEEN "e" AND "f");'
     assert bql2sql('select a between b and c not between d and e in f;') == \

@@ -150,9 +150,30 @@ boolean_not(not)	::= K_NOT boolean_not(n).
 boolean_not(equality)	::= equality(c).
 
 equality(is)		::= equality(l) K_IS ordering(r).
-equality(match)		::= equality(l) K_MATCH ordering(r).
+equality(isnot)		::= equality(l) K_IS K_NOT ordering(r).
 equality(like)		::= equality(l) K_LIKE ordering(r).
+equality(notlike)	::= equality(l) K_NOT K_LIKE ordering(r).
 equality(like_esc)	::= equality(l) K_LIKE ordering(r)
+				K_ESCAPE ordering(e).
+equality(notlike_esc)	::= equality(l) K_NOT K_LIKE ordering(r)
+				K_ESCAPE ordering(e).
+equality(glob)		::= equality(l) K_GLOB ordering(r).
+equality(notglob)	::= equality(l) K_NOT K_GLOB ordering(r).
+equality(glob_esc)	::= equality(l) K_GLOB ordering(r)
+				K_ESCAPE ordering(e).
+equality(notglob_esc)	::= equality(l) K_NOT K_GLOB ordering(r)
+				K_ESCAPE ordering(e).
+equality(regexp)	::= equality(l) K_REGEXP ordering(r).
+equality(notregexp)	::= equality(l) K_NOT K_REGEXP ordering(r).
+equality(regexp_esc)	::= equality(l) K_REGEXP ordering(r)
+				K_ESCAPE ordering(e).
+equality(notregexp_esc)	::= equality(l) K_NOT K_REGEXP ordering(r)
+				K_ESCAPE ordering(e).
+equality(match)		::= equality(l) K_MATCH ordering(r).
+equality(notmatch)	::= equality(l) K_NOT K_MATCH ordering(r).
+equality(match_esc)	::= equality(l) K_MATCH ordering(r)
+				K_ESCAPE ordering(e).
+equality(notmatch_esc)	::= equality(l) K_NOT K_MATCH ordering(r)
 				K_ESCAPE ordering(e).
 equality(between)	::= equality(m) K_BETWEEN ordering(l)
 				K_AND ordering(r).

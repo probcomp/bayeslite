@@ -166,10 +166,38 @@ class BQLSemantics(object):
     def p_boolean_not_equality(self, c):
                                         return c
     def p_equality_is(self, l, r):      return ast.op(ast.OP_IS, l, r)
-    def p_equality_match(self, l, r):   return ast.op(ast.OP_MATCH, l, r)
+    def p_equality_isnot(self, l, r):   return ast.op(ast.OP_ISNOT, l, r)
     def p_equality_like(self, l, r):    return ast.op(ast.OP_LIKE, l, r)
+    def p_equality_notlike(self, l, r): return ast.op(ast.OP_NOTLIKE, l, r)
     def p_equality_like_esc(self, l, r, e):
                                         return ast.op(ast.OP_LIKE_ESC, l, r, e)
+    def p_equality_notlike_esc(self, l, r, e):
+                                        return ast.op(ast.OP_NOTLIKE_ESC,
+                                            l, r, e)
+    def p_equality_glob(self, l, r):    return ast.op(ast.OP_GLOB, l, r)
+    def p_equality_notglob(self, l, r): return ast.op(ast.OP_NOTGLOB, l, r)
+    def p_equality_glob_esc(self, l, r, e):
+                                        return ast.op(ast.OP_GLOB_ESC, l, r, e)
+    def p_equality_notglob_esc(self, l, r, e):
+                                        return ast.op(ast.OP_NOTGLOB_ESC,
+                                            l, r, e)
+    def p_equality_regexp(self, l, r):  return ast.op(ast.OP_REGEXP, l, r)
+    def p_equality_notregexp(self, l, r):
+                                        return ast.op(ast.OP_NOTREGEXP, l, r)
+    def p_equality_regexp_esc(self, l, r, e):
+                                        return ast.op(ast.OP_REGEXP_ESC,
+                                            l, r, e)
+    def p_equality_notregexp_esc(self, l, r, e):
+                                        return ast.op(ast.OP_NOTREGEXP_ESC,
+                                            l, r, e)
+    def p_equality_match(self, l, r):   return ast.op(ast.OP_MATCH, l, r)
+    def p_equality_notmatch(self, l, r):
+                                        return ast.op(ast.OP_NOTMATCH, l, r)
+    def p_equality_match_esc(self, l, r, e):
+                                        return ast.op(ast.OP_MATCH_ESC, l, r, e)
+    def p_equality_notmatch_esc(self, l, r, e):
+                                        return ast.op(ast.OP_NOTMATCH_ESC,
+                                            l, r, e)
     def p_equality_between(self, m, l, r):
                                         return ast.op(ast.OP_BETWEEN, m, l, r)
     def p_equality_notbetween(self, m, l, r):
