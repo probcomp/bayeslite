@@ -138,7 +138,62 @@ opt_expressions(some)	::= expressions(es).
 expressions(one)	::= expression(e).
 expressions(many)	::= expressions(es) T_COMMA expression(e).
 
-expression(primary)	::= primary(e).
+expression(or)		::= boolean_or(e).
+
+boolean_or(or)		::= boolean_or(l) K_OR boolean_and(r).
+boolean_or(and)		::= boolean_and(a).
+
+boolean_and(and)	::= boolean_and(l) K_AND boolean_not(r).
+boolean_and(not)	::= boolean_not(n).
+
+boolean_not(not)	::= K_NOT boolean_not(n).
+boolean_not(equality)	::= equality(c).
+
+equality(is)		::= equality(l) K_IS ordering(r).
+equality(match)		::= equality(l) K_MATCH ordering(r).
+equality(like)		::= equality(l) K_LIKE ordering(r).
+equality(like_esc)	::= equality(l) K_LIKE ordering(r)
+				K_ESCAPE ordering(e).
+equality(between)	::= equality(m) K_BETWEEN ordering(l)
+				K_AND ordering(r).
+equality(notbetween)	::= equality(m) K_NOT K_BETWEEN ordering(l)
+				K_AND ordering(r).
+equality(in)		::= equality(l) K_IN ordering(r).
+equality(isnull)	::= equality(e) K_ISNULL.
+equality(notnull)	::= equality(e) K_NOTNULL.
+equality(neq)		::= equality(l) T_NEQ ordering(r).
+equality(eq)		::= equality(l) T_EQ ordering(r).
+equality(ordering)	::= ordering(o).
+
+ordering(lt)		::= ordering(l) T_LT bitwise(r).
+ordering(leq)		::= ordering(l) T_LEQ bitwise(r).
+ordering(geq)		::= ordering(l) T_GEQ bitwise(r).
+ordering(gt)		::= ordering(l) T_GT bitwise(r).
+ordering(bitwise)	::= bitwise(b).
+
+bitwise(and)		::= bitwise(l) T_BITAND additive(r).
+bitwise(ior)		::= bitwise(l) T_BITIOR additive(r).
+bitwise(lshift)		::= bitwise(l) T_LSHIFT additive(r).
+bitwise(rshift)		::= bitwise(l) T_RSHIFT additive(r).
+bitwise(additive)	::= additive(a).
+
+additive(add)		::= additive(l) T_PLUS multiplicative(r).
+additive(sub)		::= additive(l) T_MINUS multiplicative(r).
+additive(mult)		::= multiplicative(m).
+
+multiplicative(mul)	::= multiplicative(l) T_STAR concatenative(r).
+multiplicative(div)	::= multiplicative(l) T_SLASH concatenative(r).
+multiplicative(rem)	::= multiplicative(l) T_PERCENT concatenative(r).
+multiplicative(conc)	::= concatenative(c).
+
+concatenative(concat)	::= concatenative(l) T_CONCAT collating(r).
+concatenative(collate)	::= collating(c).
+
+collating(collate)	::= collating(e) K_COLLATE L_NAME|L_STRING(c).
+collating(bitwise_not)	::= bitwise_not(n).
+
+bitwise_not(not)	::= T_BITNOT bitwise_not(n).
+bitwise_not(primary)	::= primary(p).
 
 primary(literal)	::= literal(v).
 primary(apply)		::= L_NAME(fn) T_LROUND opt_expressions(es) T_RROUND.

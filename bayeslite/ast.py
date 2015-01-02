@@ -80,7 +80,42 @@ ExpCol = namedtuple('ExpCol', ['table', 'column'])
 # XXX We will need some kind of type-checking to distinguish
 # subqueries for column lists from subqueries for table rows.
 ExpSub = namedtuple('ExpSub', ['query'])
+ExpCollate = namedtuple('ExpCollate', ['expression', 'collation'])
 ExpApp = namedtuple('ExpApp', ['operator', 'operands'])
+ExpOp = namedtuple('ExpOp', ['operator', 'operands'])
+
+def op(operator, *operands):
+    return ExpOp(operator, operands)
+
+OP_BOOLOR = 'BOOLOR'
+OP_BOOLAND = 'BOOLAND'
+OP_BOOLNOT = 'BOOLNOT'
+OP_IS = 'IS'
+OP_MATCH = 'MATCH'
+OP_LIKE = 'LIKE'
+OP_LIKE_ESC = 'LIKE_ESC'
+OP_BETWEEN = 'BETWEEN'
+OP_NOTBETWEEN = 'NOTBETWEEN'
+OP_IN = 'IN'
+OP_ISNULL = 'ISNULL'
+OP_NOTNULL = 'NOTNULL'
+OP_NEQ = 'NEQ'
+OP_EQ = 'EQ'
+OP_LT = 'LT'
+OP_LEQ = 'LEQ'
+OP_GEQ = 'GEQ'
+OP_GT = 'GT'
+OP_BITAND = 'BITAND'
+OP_BITIOR = 'BITIOR'
+OP_LSHIFT = 'LSHIFT'
+OP_RSHIFT = 'RSHIFT'
+OP_ADD = 'ADD'
+OP_SUB = 'SUB'
+OP_MUL = 'MUL'
+OP_DIV = 'DIV'
+OP_REM = 'REM'
+OP_CONCAT = 'CONCAT'
+OP_BITNOT = 'BITNOT'
 
 LitNull = namedtuple('LitNull', ['value'])
 LitInt = namedtuple('LitInt', ['value'])

@@ -157,7 +157,59 @@ class BQLSemantics(object):
     def p_expressions_one(self, e):             return [e]
     def p_expressions_many(self, es, e):        es.append(e); return es
 
-    def p_expression_primary(self, e):          return e
+    def p_expression_or(self, e):       return e
+    def p_boolean_or_or(self, l, r):    return ast.op(ast.OP_BOOLOR, l, r)
+    def p_boolean_or_and(self, a):      return a
+    def p_boolean_and_and(self, l, r):  return ast.op(ast.OP_BOOLAND, l, r)
+    def p_boolean_and_not(self, n):     return n
+    def p_boolean_not_not(self, n):     return ast.op(ast.OP_BOOLNOT, n)
+    def p_boolean_not_equality(self, c):
+                                        return c
+    def p_equality_is(self, l, r):      return ast.op(ast.OP_IS, l, r)
+    def p_equality_match(self, l, r):   return ast.op(ast.OP_MATCH, l, r)
+    def p_equality_like(self, l, r):    return ast.op(ast.OP_LIKE, l, r)
+    def p_equality_like_esc(self, l, r, e):
+                                        return ast.op(ast.OP_LIKE_ESC, l, r, e)
+    def p_equality_between(self, m, l, r):
+                                        return ast.op(ast.OP_BETWEEN, m, l, r)
+    def p_equality_notbetween(self, m, l, r):
+                                        return ast.op(ast.OP_NOTBETWEEN, m,l,r)
+    def p_equality_in(self, l, r):      return ast.op(ast.OP_IN, l, r)
+    def p_equality_isnull(self, e):     return ast.op(ast.OP_ISNULL, e)
+    def p_equality_notnull(self, e):    return ast.op(ast.OP_NOTNULL, e)
+    def p_equality_neq(self, l, r):     return ast.op(ast.OP_NEQ, l, r)
+    def p_equality_eq(self, l, r):      return ast.op(ast.OP_EQ, l, r)
+    def p_equality_ordering(self, o):   return o
+    def p_ordering_lt(self, l, r):      return ast.op(ast.OP_LT, l, r)
+    def p_ordering_leq(self, l, r):     return ast.op(ast.OP_LEQ, l, r)
+    def p_ordering_geq(self, l, r):     return ast.op(ast.OP_GEQ, l, r)
+    def p_ordering_gt(self, l, r):      return ast.op(ast.OP_GT, l, r)
+    def p_ordering_bitwise(self, b):    return b
+    def p_bitwise_and(self, l, r):      return ast.op(ast.OP_BITAND, l, r)
+    def p_bitwise_ior(self, l, r):      return ast.op(ast.OP_BITIOR, l, r)
+    def p_bitwise_lshift(self, l, r):   return ast.op(ast.OP_LSHIFT, l, r)
+    def p_bitwise_rshift(self, l, r):   return ast.op(ast.OP_RSHIFT, l, r)
+    def p_bitwise_additive(self, a):    return a
+    def p_additive_add(self, l, r):     return ast.op(ast.OP_ADD, l, r)
+    def p_additive_sub(self, l, r):     return ast.op(ast.OP_SUB, l, r)
+    def p_additive_mult(self, m):       return m
+    def p_multiplicative_mul(self, l, r):
+                                        return ast.op(ast.OP_MUL, l, r)
+    def p_multiplicative_div(self, l, r):
+                                        return ast.op(ast.OP_DIV, l, r)
+    def p_multiplicative_rem(self, l, r):
+                                        return ast.op(ast.OP_REM, l, r)
+    def p_multiplicative_conc(self, c): return c
+    def p_concatenative_concat(self, l, r):
+                                        return ast.op(ast.OP_CONCAT, l, r)
+    def p_concatenative_collate(self, c):
+                                        return c
+    def p_collating_collate(self, e, c):
+                                        return ast.ExpCollate(e, c)
+    def p_collating_bitwise_not(self, n):
+                                        return n
+    def p_bitwise_not_not(self, n):     return ast.op(ast.OP_BITNOT, n)
+    def p_bitwise_not_primary(self, p): return p
 
     def p_primary_literal(self, v):             return ast.ExpLit(v)
     def p_primary_apply(self, fn, es):          return ast.ExpApp(fn, es)

@@ -192,8 +192,77 @@ def compile_expression(bdb, exp, out):
                 out.write(', ')
             compile_expression(bdb, operand, out)
         out.write(')')
+    elif isinstance(exp, ast.ExpOp):
+        compile_op(bdb, exp, out)
+    elif isinstance(exp, ast.ExpCollate):
+        out.write('(')
+        compile_expression(bdb, exp.expression, out)
+        out.write(' COLLATE ')
+        compile_name(bdb, exp.collation, out)
+        out.write(')')
     else:
         assert False            # XXX
+
+def compile_op(bdb, op, out):
+    out.write('(')
+    fmt = operator_fmts[op.operator]
+    i = 0
+    r = 0
+    while i < len(fmt):
+        j = fmt.find('%', i)
+        if j == -1:             # Silly indexing convention.
+            j = len(fmt)
+        if i < j:
+            out.write(fmt[i : j])
+        if j == len(fmt):
+            break
+        j += 1                  # Skip %.
+        assert j < len(fmt)
+        d = fmt[j]
+        j += 1                  # Skip directive.
+        if d == '%':
+            out.write('%')
+        elif d == 's':
+            assert r < len(op.operands)
+            compile_expression(bdb, op.operands[r], out)
+            r += 1
+        else:
+            assert d == '%' or d == 's'
+        i = j
+    assert r == len(op.operands)
+    out.write(')')
+
+operator_fmts = {
+    ast.OP_BOOLOR:      '%s OR %s',
+    ast.OP_BOOLAND:     '%s AND %s',
+    ast.OP_BOOLNOT:     'NOT %s',
+    ast.OP_IS:          '%s IS %s',
+    ast.OP_MATCH:       '%s MATCH %s',
+    ast.OP_LIKE:        '%s LIKE %s',
+    ast.OP_LIKE_ESC:    '%s LIKE %s ESCAPE %s',
+    ast.OP_BETWEEN:     '%s BETWEEN %s AND %s',
+    ast.OP_NOTBETWEEN:  '%s NOT BETWEEN %s AND %s',
+    ast.OP_IN:          '%s IN %s',
+    ast.OP_ISNULL:      '%s ISNULL',
+    ast.OP_NOTNULL:     '%s NOTNULL',
+    ast.OP_NEQ:         '%s != %s',
+    ast.OP_EQ:          '%s = %s',
+    ast.OP_LT:          '%s < %s',
+    ast.OP_LEQ:         '%s <= %s',
+    ast.OP_GEQ:         '%s >= %s',
+    ast.OP_GT:          '%s > %s',
+    ast.OP_BITAND:      '%s & %s',
+    ast.OP_BITIOR:      '%s | %s',
+    ast.OP_LSHIFT:      '%s << %s',
+    ast.OP_RSHIFT:      '%s >> %s',
+    ast.OP_ADD:         '%s + %s',
+    ast.OP_SUB:         '%s - %s',
+    ast.OP_MUL:         '%s * %s',
+    ast.OP_DIV:         '%s / %s',
+    ast.OP_REM:         '%s %% %s',
+    ast.OP_CONCAT:      '%s || %s',
+    ast.OP_BITNOT:      '~ %s',
+}
 
 def compile_literal(bdb, lit, out):
     if isinstance(lit, ast.LitNull):

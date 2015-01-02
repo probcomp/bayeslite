@@ -86,6 +86,22 @@ def test_select_trivial():
     assert bql2sql('select (select 0);') == 'select (select 0);'
     assert bql2sql('select f(f(), f(x), y);') == \
         'select "f"("f"(), "f"("x"), "y");'
+    assert bql2sql('select a and b or c or not d is e match f like j;') == \
+        'select ((("a" AND "b") OR "c") OR' \
+        + ' (NOT ((("d" IS "e") MATCH "f") LIKE "j")));'
+    assert bql2sql('select a like b like c escape d between e and f;') == \
+        'select ((("a" LIKE "b") LIKE "c" ESCAPE "d") BETWEEN "e" AND "f");'
+    assert bql2sql('select a between b and c not between d and e in f;') == \
+        'select ((("a" BETWEEN "b" AND "c") NOT BETWEEN "d" AND "e") IN "f");'
+    assert bql2sql('select a in b isnull notnull!=c<>d<e<=f>g;') == \
+        'select ((((("a" IN "b") ISNULL) NOTNULL) != "c") !=' \
+        + ' ((("d" < "e") <= "f") > "g"));'
+    assert bql2sql('select a>b>=c<<d>>e&f|g+h-i*j/k;') == \
+        'select (("a" > "b") >= (((("c" << "d") >> "e") & "f") |' \
+        + ' (("g" + "h") - (("i" * "j") / "k"))));'
+    assert bql2sql('select a/b||~~c collate d collate\'e\'||1;') == \
+        'select ("a" / (("b" || (((~ (~ "c")) COLLATE "d") COLLATE "e"))' \
+        + ' || 1));'
 
 def test_select_bql():
     with pytest.raises(ValueError):
