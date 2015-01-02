@@ -179,7 +179,8 @@ equality(between)	::= equality(m) K_BETWEEN ordering(l)
 				K_AND ordering(r).
 equality(notbetween)	::= equality(m) K_NOT K_BETWEEN ordering(l)
 				K_AND ordering(r).
-equality(in)		::= equality(l) K_IN ordering(r).
+equality(in)		::= equality(e) K_IN T_LROUND query(q) T_RROUND.
+equality(notin)		::= equality(e) K_NOT K_IN T_LROUND query(q) T_RROUND.
 equality(isnull)	::= equality(e) K_ISNULL.
 equality(notnull)	::= equality(e) K_NOTNULL.
 equality(neq)		::= equality(l) T_NEQ ordering(r).

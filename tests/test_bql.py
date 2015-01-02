@@ -113,10 +113,14 @@ def test_select_trivial():
         'select (("a" BETWEEN "b" AND "c") AND "d");'
     assert bql2sql('select a like b like c escape d between e and f;') == \
         'select ((("a" LIKE "b") LIKE "c" ESCAPE "d") BETWEEN "e" AND "f");'
-    assert bql2sql('select a between b and c not between d and e in f;') == \
-        'select ((("a" BETWEEN "b" AND "c") NOT BETWEEN "d" AND "e") IN "f");'
-    assert bql2sql('select a in b isnull notnull!=c<>d<e<=f>g;') == \
-        'select ((((("a" IN "b") ISNULL) NOTNULL) != "c") !=' \
+    assert bql2sql('select a between b and c not between d and e;') == \
+        'select (("a" BETWEEN "b" AND "c") NOT BETWEEN "d" AND "e");'
+    assert bql2sql('select a not between b and c in (select f);') == \
+        'select (("a" NOT BETWEEN "b" AND "c") IN (select "f"));'
+    assert bql2sql('select a in (select b) and c not in (select d);') == \
+        'select (("a" IN (select "b")) AND ("c" NOT IN (select "d")));'
+    assert bql2sql('select a in (select b) isnull notnull!=c<>d<e<=f>g;') == \
+        'select ((((("a" IN (select "b")) ISNULL) NOTNULL) != "c") !=' \
         + ' ((("d" < "e") <= "f") > "g"));'
     assert bql2sql('select a>b>=c<<d>>e&f|g+h-i*j/k;') == \
         'select (("a" > "b") >= (((("c" << "d") >> "e") & "f") |' \

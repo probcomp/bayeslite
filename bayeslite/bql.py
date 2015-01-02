@@ -200,6 +200,16 @@ def compile_expression(bdb, exp, out):
         out.write(' COLLATE ')
         compile_name(bdb, exp.collation, out)
         out.write(')')
+    elif isinstance(exp, ast.ExpIn):
+        out.write('(')
+        compile_expression(bdb, exp.expression, out)
+        if not exp.positive:
+            out.write(' NOT')
+        out.write(' IN ')
+        out.write('(')
+        compile_query(bdb, exp.query, out)
+        out.write(')')
+        out.write(')')
     elif isinstance(exp, ast.ExpCast):
         out.write('CAST(')
         compile_expression(bdb, exp.expression, out)
@@ -262,7 +272,6 @@ operator_fmts = {
     ast.OP_NOTMATCH_ESC: '%s NOT MATCH %s ESCAPE %s',
     ast.OP_BETWEEN:     '%s BETWEEN %s AND %s',
     ast.OP_NOTBETWEEN:  '%s NOT BETWEEN %s AND %s',
-    ast.OP_IN:          '%s IN %s',
     ast.OP_ISNULL:      '%s ISNULL',
     ast.OP_NOTNULL:     '%s NOTNULL',
     ast.OP_NEQ:         '%s != %s',

@@ -202,7 +202,8 @@ class BQLSemantics(object):
                                         return ast.op(ast.OP_BETWEEN, m, l, r)
     def p_equality_notbetween(self, m, l, r):
                                         return ast.op(ast.OP_NOTBETWEEN, m,l,r)
-    def p_equality_in(self, l, r):      return ast.op(ast.OP_IN, l, r)
+    def p_equality_in(self, e, q):      return ast.ExpIn(e, True, q)
+    def p_equality_notin(self, e, q):   return ast.ExpIn(e, False, q)
     def p_equality_isnull(self, e):     return ast.op(ast.OP_ISNULL, e)
     def p_equality_notnull(self, e):    return ast.op(ast.OP_NOTNULL, e)
     def p_equality_neq(self, l, r):     return ast.op(ast.OP_NEQ, l, r)

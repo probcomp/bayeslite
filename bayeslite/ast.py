@@ -81,6 +81,7 @@ ExpCol = namedtuple('ExpCol', ['table', 'column'])
 # subqueries for column lists from subqueries for table rows.
 ExpSub = namedtuple('ExpSub', ['query'])
 ExpCollate = namedtuple('ExpCollate', ['expression', 'collation'])
+ExpIn = namedtuple('ExpIn', ['expression', 'positive', 'query'])
 ExpCast = namedtuple('ExpCast', ['expression', 'type'])
 ExpApp = namedtuple('ExpApp', ['operator', 'operands'])
 ExpOp = namedtuple('ExpOp', ['operator', 'operands'])
@@ -111,7 +112,6 @@ OP_MATCH_ESC = 'MATCH_ESC'
 OP_NOTMATCH_ESC = 'NOTMATCH_ESC'
 OP_BETWEEN = 'BETWEEN'
 OP_NOTBETWEEN = 'NOTBETWEEN'
-OP_IN = 'IN'
 OP_ISNULL = 'ISNULL'
 OP_NOTNULL = 'NOTNULL'
 OP_NEQ = 'NEQ'
