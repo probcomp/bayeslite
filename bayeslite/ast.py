@@ -51,9 +51,9 @@ SelBQLProb = namedtuple('SelBQLProb', ['column', 'value'])
 SelBQLTypRow = namedtuple('SelBQLTypRow', []) # XXX Accept rowid?
 SelBQLTypCol = namedtuple('SelBQLTypCol', ['column'])
 SelBQLSim = namedtuple('SelBQLSim', ['rowid', 'column_lists'])
-SelBQLDepProb = namedtuple('SelBQLDepProb', ['column1', 'column2'])
-SelBQLMutInf = namedtuple('SelBQLMutInf', ['column1', 'column2'])
-SelBQLCorrel = namedtuple('SelBQLCorrel', ['column1', 'column2'])
+SelBQLDepProb = namedtuple('SelBQLDepProb', ['column0', 'column1'])
+SelBQLMutInf = namedtuple('SelBQLMutInf', ['column0', 'column1'])
+SelBQLCorrel = namedtuple('SelBQLCorrel', ['column0', 'column1'])
 
 ColListAll = namedtuple('ColListAll', [])
 ColListLit = namedtuple('ColListLit', ['columns'])

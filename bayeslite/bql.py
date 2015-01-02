@@ -121,8 +121,58 @@ def compile_select_column(bdb, selcol, select, out):
             colno = core.bayesdb_column_number(bdb, table_id, selcol.column)
             out.write('row_column_predictive_probability(%s, %s, %s)' %
                 (table_id, rowid_col, colno))
+        elif isinstance(selcol, ast.SelBQLProb):
+            colno = core.bayesdb_column_number(bdb, table_id, selcol.column)
+            out.write('column_value_probability(%s, %s, ' % (table_id, colno))
+            compile_expression(bdb, selcol.value, out)
+            out.write(')')
+        elif isinstance(selcol, ast.SelBQLTypRow):
+            out.write('row_typicality(%s, rowid)' % (table_id,))
+        elif isinstance(selcol, ast.SelBQLTypCol):
+            colno = core.bayesdb_column_number(bdb, table_id, selcol.column)
+            out.write('column_typicality(%s, %s)' % (table_id, colno))
+        elif isinstance(selcol, ast.SelBQLSim):
+            out.write('row_similarity(%s, rowid, ' % (table_id,))
+            compile_expression(bdb, selcol.rowid, out)
+            out.write(', ')
+            compile_column_lists(bdb, table_id, selcol.column_lists, out)
+            out.write(')')
+        elif isinstance(selcol, ast.SelBQLDepProb):
+            compile_bql_2col(bdb, table_id, 'column_dependence_probability',
+                selcol, out)
+        elif isinstance(selcol, ast.SelBQLMutInf):
+            compile_bql_2col(bdb, table_id, 'column_mutual_information',
+                selcol, out)
+        elif isinstance(selcol, ast.SelBQLCorrel):
+            compile_bql_2col(bdb, table_id, 'column_correlation', selcol, out)
         else:
             assert False
+
+def compile_column_lists(bdb, table_id, column_lists, out):
+    first = True
+    for collist in column_lists:
+        if first:
+            first = False
+        else:
+            out.write(', ')
+        if isinstance(collist, ast.ColListAll):
+            colnos = core.bayesdb_column_numbers(bdb, table_id)
+            out.write(', '.join(str(colno) for colno in colnos))
+        elif isinstance(collist, ast.ColListLit):
+            colnos = (core.bayesdb_column_number(bdb, table_id, column)
+                for column in collist.columns)
+            out.write(', '.join(str(colno) for colno in colnos))
+        elif isinstance(collist, ast.ColListSub):
+            raise NotImplementedError('column list subqueries')
+        elif isinstance(collist, ast.ColListSav):
+            raise NotImplementedError('saved column lists')
+        else:
+            assert False
+
+def compile_bql_2col(bdb, table_id, bqlfn, selcol, out):
+    colno0 = core.bayesdb_column_number(bdb, table_id, selcol.column0)
+    colno1 = core.bayesdb_column_number(bdb, table_id, selcol.column1)
+    out.write('%s(%s, %s, %s)' % (bqlfn, table_id, colno0, colno1))
 
 def compile_expression(bdb, exp, out):
     if isinstance(exp, ast.ExpLit):

@@ -548,6 +548,14 @@ def bayesdb_column_name(bdb, table_id, colno):
     """
     return sqlite3_exec_1(bdb.sqlite, sql, (table_id, colno))
 
+def bayesdb_column_numbers(bdb, table_id):
+    sql = """
+        SELECT colno FROM bayesdb_table_column WHERE table_id = ?
+        ORDER BY colno
+    """
+    for row in bdb.sqlite.execute(sql, (table_id,)):
+        yield row[0]
+
 def bayesdb_column_number(bdb, table_id, column_name):
     sql = """
         SELECT colno FROM bayesdb_table_column WHERE table_id = ? AND name = ?
