@@ -79,9 +79,32 @@ class BQLSemantics(object):
         assert self.phrase is None
         self.phrase = phrase
 
+    def p_phrase_command(self, c):
+        return c
     def p_phrase_query(self, action, q):
         return QueryAction(action, q) if action else q
-    def p_phrase_command(self, c):              return c
+
+    def p_command_createbtab_csv(self, name, file):
+        return ast.CreateBtableCSV(name, file, codebook=None) # XXX codebook
+    def p_command_init_models(self, n, btable):
+        return ast.InitModels(btable, n, config=None) # XXX model config
+    def p_command_analyze_models(self, btable, models, anlimit, wait):
+        iterations = anlimit[1] if anlimit[0] == 'iterations' else None
+        minutes = anlimit[1] if anlimit[0] == 'minutes' else None
+        return ast.AnalyzeModels(btable, models, iterations, minutes, wait)
+
+    def p_opt_modelset_none(self):              return None
+    def p_opt_modelset_some(self, m):           return sorted(m)
+    def p_modelset_one(self, r):                return r
+    def p_modelset_many(self, m, r):            m += r; return m
+    def p_modelrange_single(self, modelno):     return [modelno]
+    def p_modelrange_multi(self, minno, maxno): return range(minno, maxno + 1)
+
+    def p_anlimit_iterations(self, n):          return ('iterations', n)
+    def p_anlimit_minutes(self, n):             return ('minutes', n)
+
+    def p_opt_wait_none(self):                  return False
+    def p_opt_wait_some(self):                  return True
 
     def p_query_action_none(self):              return None
     def p_query_action_freq(self):              return ast.QACT_FREQ

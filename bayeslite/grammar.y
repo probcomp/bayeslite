@@ -20,10 +20,30 @@ phrases(none)		::= .
 phrases(some)		::= phrases(phrases) phrase1(phrase) T_SEMI.
 phrase1(empty)		::= .
 phrase1(nonempty)	::= phrase(phrase).
-phrase(query)		::= query_action(action) query(q).
-/*
 phrase(command)		::= command(c).
-*/
+phrase(query)		::= query_action(action) query(q).
+
+command(createbtab_csv)	::= K_CREATE K_BTABLE L_NAME(name)
+				K_FROM L_STRING(file).
+command(init_models)	::= K_INITIALIZE L_INTEGER(n) K_MODEL|K_MODELS
+				K_FOR table_name(btable).
+command(analyze_models)	::= K_ANALYZE table_name(btable) opt_modelset(models)
+				anlimit(anlimit) opt_wait(wait).
+
+opt_modelset(none)	::= .
+opt_modelset(some)	::= K_MODEL|K_MODELS modelset(m).
+
+modelset(one)		::= modelrange(r).
+modelset(many)		::= modelset(m) T_COMMA modelrange(r).
+
+modelrange(single)	::= L_INTEGER(modelno).
+modelrange(multi)	::= L_INTEGER(minno) T_MINUS L_INTEGER(maxno).
+
+anlimit(iterations)	::= K_FOR L_INTEGER(n) K_ITERATION|K_ITERATIONS.
+anlimit(minutes)	::= K_FOR L_INTEGER(n) K_MINUTE|K_MINUTES.
+
+opt_wait(none)		::= .
+opt_wait(some)		::= K_WAIT.
 
 query_action(none)	::= .
 query_action(freq)	::= K_FREQ.

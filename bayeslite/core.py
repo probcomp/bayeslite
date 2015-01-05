@@ -590,6 +590,12 @@ def bayesdb_set_model(bdb, table_id, modelno, theta):
     """
     bdb.sqlite.execute(sql, (json.dumps(theta), table_id, modelno))
 
+def bayesdb_nmodels(bdb, table_id):
+    sql = """
+        SELECT count(*) FROM bayesdb_model WHERE table_id = ?
+    """
+    return sqlite3_exec_1(bdb.sqlite, sql, (table_id,))
+
 def bayesdb_models(bdb, table_id):
     sql = "SELECT theta FROM bayesdb_model WHERE table_id = ? ORDER BY modelno"
     for row in bdb.sqlite.execute(sql, (table_id,)):
@@ -651,6 +657,10 @@ def bayesdb_models_initialize(bdb, table_id, nmodels, model_config=None):
             bayesdb_init_model(bdb, table_id, modelno, engine_id, theta)
 
 # XXX Background, deadline, &c.
+def bayesdb_models_analyze(bdb, table_id, iterations=1):
+    for modelno in range(bayesdb_nmodels(bdb, table_id)):
+        bayesdb_models_analyze1(bdb, table_id, modelno, iterations=iterations)
+
 def bayesdb_models_analyze1(bdb, table_id, modelno, iterations=1):
     assert 0 <= iterations
     theta = bayesdb_model(bdb, table_id, modelno)

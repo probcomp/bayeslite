@@ -16,6 +16,16 @@
 
 from collections import namedtuple
 
+CreateBtableCSV = namedtuple('CreateBtableCSV', ['name', 'file', 'codebook'])
+InitModels = namedtuple('InitModels', ['btable', 'nmodels', 'config'])
+AnalyzeModels = namedtuple('AnalyzeModels', [
+    'btable',
+    'modelnos',
+    'iterations',
+    'minutes',
+    'wait',
+])
+
 QueryAction = namedtuple('QueryAction', [
     'action',                   # QACT_*
     'query',                    # Select or Infer or ... XXX

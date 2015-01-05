@@ -19,6 +19,39 @@ import StringIO
 import bayeslite.ast as ast
 import bayeslite.core as core
 
+def execute_phrase(bdb, phrase):
+    if ast.is_query(phrase):
+        out = StringIO.StringIO()
+        compile_query(bdb, phrase, out)
+        return bdb.sqlite.execute(out.getvalue())
+    if isinstance(phrase, ast.CreateBtableCSV):
+        # XXX Codebook?
+        core.bayesdb_import_csv_file(bdb, phrase.name, phrase.file)
+        return []
+    elif isinstance(phrase, ast.InitModels):
+        table_id = core.bayesdb_table_id(bdb, phrase.btable)
+        nmodels = phrase.nmodels
+        config = phrase.config
+        core.bayesdb_models_initialize(bdb, table_id, nmodels, config)
+        return []
+    elif isinstance(phrase, ast.AnalyzeModels):
+        table_id = core.bayesdb_table_id(bdb, phrase.btable)
+        modelnos = phrase.modelnos
+        iterations = phrase.iterations
+        minutes = phrase.minutes
+        wait = phrase.wait
+        assert wait             # XXX
+        assert minutes is None  # XXX
+        if modelnos is None:
+            core.bayesdb_models_analyze(bdb, table_id, iterations=iterations)
+        else:
+            for modelno in modelnos:
+                core.bayesdb_models_analyze1(bdb, table_id, modelno,
+                    iterations=iterations)
+        return []
+    else:
+        assert False            # XXX
+
 def compile_query(bdb, query, out):
     if isinstance(query, ast.Select):
         compile_select(bdb, query, out)

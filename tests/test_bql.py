@@ -16,6 +16,7 @@
 
 import StringIO
 import pytest
+import tempfile
 
 import bayeslite.ast as ast
 import bayeslite.bql as bql
@@ -32,6 +33,11 @@ def bql2sql(string):
             bql.compile_query(bdb, phrase, out)
             out.write(';')
         return out.getvalue()
+
+def bql_execute(bdb, string):
+    phrases = parse.parse_bql_string(string)
+    for phrase in phrases:
+        bql.execute_phrase(bdb, phrase)
 
 def test_select_trivial():
     assert bql2sql('select null;') == 'select null;'
@@ -183,3 +189,11 @@ def test_select_bql_error():
     with pytest.raises(ValueError):
         # Need a btable, not a subquery.
         bql2sql('select predictive probability of weight from (select 0);')
+
+def test_trivial_commands():
+    with test_smoke.bayesdb_csv(test_smoke.csv_data) as (bdb, fname):
+        # XXX Query parameters!
+        bql_execute(bdb, "create btable t from '%s'" % (fname,))
+        bql_execute(bdb, 'initialize 1 model for t')
+        bql_execute(bdb, 'analyze t for 1 iteration wait')
+        bql_execute(bdb, 'select * from t')

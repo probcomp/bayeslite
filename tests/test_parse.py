@@ -337,3 +337,25 @@ def test_select_bql():
     assert parse_bql_string('select correlation of c with d from t;') == \
         [ast.Select(ast.SELQUANT_ALL, [ast.SelBQLCorrel('c', 'd')],
             [ast.SelTab('t', None)], None, None, None, None)]
+
+def test_trivial_commands():
+    assert parse_bql_string("create btable t from 'f.csv';") == \
+        [ast.CreateBtableCSV('t', 'f.csv', None)]
+    assert parse_bql_string('initialize 1 model for t;') == \
+        [ast.InitModels('t', 1, None)]
+    assert parse_bql_string('initialize 2 models for t;') == \
+        [ast.InitModels('t', 2, None)]
+    assert parse_bql_string('analyze t for 1 iteration;') == \
+        [ast.AnalyzeModels('t', None, 1, None, False)]
+    assert parse_bql_string('analyze t for 1 iteration wait;') == \
+        [ast.AnalyzeModels('t', None, 1, None, True)]
+    assert parse_bql_string('analyze t for 1 minute;') == \
+        [ast.AnalyzeModels('t', None, None, 1, False)]
+    assert parse_bql_string('analyze t for 1 minute wait;') == \
+        [ast.AnalyzeModels('t', None, None, 1, True)]
+    assert parse_bql_string('analyze t model 1 for 1 iteration;') == \
+        [ast.AnalyzeModels('t', [1], 1, None, False)]
+    assert parse_bql_string('analyze t models 1,2,3 for 1 iteration;') == \
+        [ast.AnalyzeModels('t', [1,2,3], 1, None, False)]
+    assert parse_bql_string('analyze t models 1-3,5 for 1 iteration;') == \
+        [ast.AnalyzeModels('t', [1,2,3,5], 1, None, False)]
