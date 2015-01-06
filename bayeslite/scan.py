@@ -100,8 +100,7 @@ def scan_float(scanner, text):
     scanner.produce(grammar.L_FLOAT, float(text))
 
 def scan_bad(scanner, text):
-    # XXX Syntax error!
-    print "Ignoring bad input: %s" % (text,)
+    scanner.produce(-1, text)   # error
 
 def scan_qname_start(scanner, text):
     assert text == '"'
@@ -151,8 +150,8 @@ def scan_blob(scanner, text):
 def scan_badblob(scanner, text):
     assert text[0] == "x" or text[0] == "X"
     assert text[1] == text[-1] == "'"
-    # XXX Syntax error!
-    print "Ignoring bad input: %s" % (text,)
+    # XXX Report a clearer syntax error.
+    scanner.produce(-1, text)   # error
 
 class BQLScanner(Plex.Scanner):
     line_comment = Plex.Str("--") + Plex.Rep(Plex.AnyBut("\n"))
