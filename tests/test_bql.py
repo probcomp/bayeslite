@@ -194,6 +194,9 @@ def test_trivial_commands():
     with test_smoke.bayesdb_csv(test_smoke.csv_data) as (bdb, fname):
         # XXX Query parameters!
         bql_execute(bdb, "create btable t from '%s'" % (fname,))
-        bql_execute(bdb, 'initialize 1 model for t')
+        bql_execute(bdb, 'initialize 2 models for t')
+        bql_execute(bdb, 'analyze t model 0 for 1 iteration wait')
+        bql_execute(bdb, 'analyze t models 0-1 for 1 iteration wait')
+        bql_execute(bdb, 'analyze t models 0,1 for 1 iteration wait')
         bql_execute(bdb, 'analyze t for 1 iteration wait')
         bql_execute(bdb, 'select * from t')
