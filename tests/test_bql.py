@@ -154,8 +154,15 @@ def test_select_bql():
         == \
         'select row_column_predictive_probability(1, rowid, 3), "label"' \
         + ' from "t1";'
+    assert bql2sql('select predictive probability of weight + 1 from t1;') == \
+        'select (row_column_predictive_probability(1, rowid, 3) + 1)' \
+        + ' from "t1";'
     assert bql2sql('select probability of weight = 20 from t1;') == \
         'select column_value_probability(1, 3, 20) from "t1";'
+    assert bql2sql('select probability of weight = (c + 1) from t1;') == \
+        'select column_value_probability(1, 3, ("c" + 1)) from "t1";'
+    assert bql2sql('select probability of weight = f(c) from t1;') == \
+        'select column_value_probability(1, 3, "f"("c")) from "t1";'
     assert bql2sql('select typicality from t1;') == \
         'select row_typicality(1, rowid) from "t1";'
     assert bql2sql('select typicality of age from t1;') == \
