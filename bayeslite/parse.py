@@ -131,32 +131,6 @@ class BQLSemantics(object):
     def p_select_column_star(self):             return ast.SelColAll(None)
     def p_select_column_qstar(self, table):     return ast.SelColAll(table)
     def p_select_column_exp(self, e, name):     return ast.SelColExp(e, name)
-    def p_select_column_bql(self, bql):		return bql
-
-    def p_select_bql_predprob(self, col):       return ast.SelBQLPredProb(col)
-    def p_select_bql_prob(self, col, e):        return ast.SelBQLProb(col, e)
-    def p_select_bql_typ_row(self):             return ast.SelBQLTypRow()
-    def p_select_bql_typ_col(self, col):        return ast.SelBQLTypCol(col)
-    def p_select_bql_sim(self, row, cols):      return ast.SelBQLSim(row, cols)
-    def p_select_bql_depprob(self, cols):       return ast.SelBQLDepProb(*cols)
-    def p_select_bql_mutinf(self, cols):        return ast.SelBQLMutInf(*cols)
-    def p_select_bql_correl(self, cols):        return ast.SelBQLCorrel(*cols)
-
-    def p_wrt_none(self):                       return [] # XXX None?
-    def p_wrt_one(self, collist):               return [collist]
-    def p_wrt_some(self, collists):             return collists
-
-    def p_ofwith_with(self, col):               return (col, None)
-    def p_ofwith_ofwith(self, col1, col2):      return (col1, col2)
-
-    def p_column_lists_one(self, collist):
-        return [collist]
-    def p_column_lists_many(self, collists, collist):
-        collists.append(collist)
-        return collists
-
-    def p_column_list_all(self):                return ast.ColListAll()
-    def p_column_list_column(self, col):        return ast.ColListLit([col])
 
     def p_as_none(self):                        return None
     def p_as_some(self, name):                  return name
@@ -197,7 +171,10 @@ class BQLSemantics(object):
     def p_expressions_one(self, e):             return [e]
     def p_expressions_many(self, es, e):        es.append(e); return es
 
-    def p_expression_or(self, e):       return e
+    def p_expression_top(self, e):      return e
+    def p_bqlfn0_exp(self, e):          return e
+    def p_expression1_top(self, e):     return e
+
     def p_boolean_or_or(self, l, r):    return ast.op(ast.OP_BOOLOR, l, r)
     def p_boolean_or_and(self, a):      return a
     def p_boolean_and_and(self, l, r):  return ast.op(ast.OP_BOOLAND, l, r)
@@ -288,6 +265,36 @@ class BQLSemantics(object):
     def p_primary_exists(self, q):              return ast.ExpExists(q)
     def p_primary_column(self, col):            return ast.ExpCol(None, col)
     def p_primary_tabcol(self, tab, col):       return ast.ExpCol(tab, col)
+    def p_primary_bql(self, bql):               return bql
+
+    def p_bqlfn_predprob(self, col):            return ast.ExpBQLPredProb(col)
+    def p_bqlfn0_prob(self, col, e):            return ast.ExpBQLProb(col, e)
+    def p_bqlfn_typ(self, col):                 return ast.ExpBQLTyp(col)
+    def p_bqlfn0_sim(self, row):                return ast.ExpBQLSim(row, [])
+    def p_bqlfn0_bqlfn1(self, e):               return e
+    def p_bqlfn1_sim_wrt(self, row, cols):      return ast.ExpBQLSim(row, cols)
+    def p_bqlfn1_exp(self, e):                  return e
+    def p_bqlfn_depprob(self, cols):            return ast.ExpBQLDepProb(*cols)
+    def p_bqlfn_mutinf(self, cols):             return ast.ExpBQLMutInf(*cols)
+    def p_bqlfn_correl(self, cols):             return ast.ExpBQLCorrel(*cols)
+
+    def p_of_none(self):                        return None
+    def p_of_some(self, col):                   return col
+
+    def p_wrt_one(self, collist):               return [collist]
+    def p_wrt_some(self, collists):             return collists
+
+    def p_ofwith_with(self, col):               return (col, None)
+    def p_ofwith_ofwith(self, col1, col2):      return (col1, col2)
+
+    def p_column_lists_one(self, collist):
+        return [collist]
+    def p_column_lists_many(self, collists, collist):
+        collists.append(collist)
+        return collists
+
+    def p_column_list_all(self):                return ast.ColListAll()
+    def p_column_list_column(self, col):        return ast.ColListLit([col])
 
     def p_literal_null(self):                   return ast.LitNull(None)
     def p_literal_integer(self, i):             return ast.LitInt(i)

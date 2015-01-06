@@ -41,7 +41,7 @@ def is_query(phrase):
 
 Select = namedtuple('Select', [
     'quantifier',               # SELQUANT_*
-    'columns',                  # [(SelCol or SelBQL)*]
+    'columns',                  # [SelCol*]
     'tables',                   # [SelTab] or None (scalar)
     'condition',                # Exp* or None (unconditional)
     'group',                    # [Exp*] or None (unaggregated)
@@ -59,15 +59,6 @@ SelColExp = namedtuple('SelColExp', [
     'expression',               # Exp*
     'name',                     # XXX name
 ])
-
-SelBQLPredProb = namedtuple('SelBQLPredProb', ['column'])
-SelBQLProb = namedtuple('SelBQLProb', ['column', 'value'])
-SelBQLTypRow = namedtuple('SelBQLTypRow', []) # XXX Accept rowid?
-SelBQLTypCol = namedtuple('SelBQLTypCol', ['column'])
-SelBQLSim = namedtuple('SelBQLSim', ['rowid', 'column_lists'])
-SelBQLDepProb = namedtuple('SelBQLDepProb', ['column0', 'column1'])
-SelBQLMutInf = namedtuple('SelBQLMutInf', ['column0', 'column1'])
-SelBQLCorrel = namedtuple('SelBQLCorrel', ['column0', 'column1'])
 
 ColListAll = namedtuple('ColListAll', [])
 ColListLit = namedtuple('ColListLit', ['columns'])
@@ -142,6 +133,24 @@ OP_DIV = 'DIV'
 OP_REM = 'REM'
 OP_CONCAT = 'CONCAT'
 OP_BITNOT = 'BITNOT'
+
+ExpBQLPredProb = namedtuple('ExpBQLPredProb', ['column'])
+ExpBQLProb = namedtuple('ExpBQLProb', ['column', 'value'])
+ExpBQLTyp = namedtuple('ExpBQLTypCol', ['column'])
+ExpBQLSim = namedtuple('ExpBQLSim', ['rowid', 'column_lists'])
+ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
+ExpBQLMutInf = namedtuple('ExpBQLMutInf', ['column0', 'column1'])
+ExpBQLCorrel = namedtuple('ExpBQLCorrel', ['column0', 'column1'])
+
+def is_bql(exp):
+    if isinstance(exp, ExpBQLPredProb): return True
+    if isinstance(exp, ExpBQLProb):     return True
+    if isinstance(exp, ExpBQLTyp):      return True
+    if isinstance(exp, ExpBQLSim):      return True
+    if isinstance(exp, ExpBQLDepProb):  return True
+    if isinstance(exp, ExpBQLMutInf):   return True
+    if isinstance(exp, ExpBQLCorrel):   return True
+    return False
 
 LitNull = namedtuple('LitNull', ['value'])
 LitInt = namedtuple('LitInt', ['value'])

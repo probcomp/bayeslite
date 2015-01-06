@@ -58,6 +58,11 @@ def compile_query(bdb, query, out):
     else:
         assert False        # XXX
 
+def compile_subquery(bdb, query, _bql_compiler, out):
+    # XXX Do something with the BQL compiler so we can refer to
+    # BQL-related quantities in the subquery?
+    compile_query(bdb, query, out)
+
 def compile_select(bdb, select, out):
     assert isinstance(select, ast.Select)
     out.write('select')
@@ -81,7 +86,7 @@ def compile_select(bdb, select, out):
                 compile_name(bdb, seltab.name, out)
     if select.condition is not None:
         out.write(' where ')
-        compile_expression(bdb, select.condition, out)
+        compile_row_expression(bdb, select.condition, select, out)
     if select.group is not None:
         assert 0 < len(select.group)
         first = True
@@ -91,7 +96,7 @@ def compile_select(bdb, select, out):
                 first = False
             else:
                 out.write(', ')
-            compile_expression(bdb, key, out)
+            compile_row_expression(bdb, key, select, out)
     if select.order is not None:
         assert 0 < len(select.order)
         first = True
@@ -101,7 +106,7 @@ def compile_select(bdb, select, out):
                 first = False
             else:
                 out.write(', ')
-            compile_expression(bdb, order.expression, out)
+            compile_row_expression(bdb, order.expression, select, out)
             if order.sense == ast.ORD_ASC:
                 pass
             elif order.sense == ast.ORD_DESC:
@@ -111,10 +116,10 @@ def compile_select(bdb, select, out):
                     order.sense == ast.ORD_DESC
     if select.limit is not None:
         out.write(' limit ')
-        compile_expression(bdb, select.limit.limit, out)
+        compile_row_expression(bdb, select.limit.limit, select, out)
         if select.limit.offset is not None:
             out.write(' offset ')
-            compile_expression(bdb, select.limit.offset, out)
+            compile_row_expression(bdb, select.limit.offset, select, out)
 
 def compile_select_columns(bdb, select, out):
     first = True
@@ -133,53 +138,69 @@ def compile_select_column(bdb, selcol, select, out):
             out.write('.')
         out.write('*')
     elif isinstance(selcol, ast.SelColExp):
-        compile_expression(bdb, selcol.expression, out)
+        bql_compiler = BQLCompiler_Row(select)
+        compile_expression(bdb, selcol.expression, bql_compiler, out)
         if selcol.name is not None:
             out.write(' as ')
             compile_name(bdb, selcol.name, out)
     else:
-        # Must be a BQL function.
-        if select.tables is None:
-            raise ValueError('BQL select without table: %s' % (select,))
-        elif len(select.tables) != 1:
-            assert 1 < len(select.tables)
-            raise ValueError('BQL select with >1 table: %s' % (select,))
-        if not isinstance(select.tables[0].table, str): # XXX name
-            raise ValueError('Subquery in BQL select: %s' % (select,))
-        table_id = core.bayesdb_table_id(bdb, select.tables[0].table)
+        assert False
+
+class BQLCompiler_Row(object):
+    def __init__(self, ctx):
+        assert isinstance(ctx, ast.Select)
+        self.ctx = ctx
+
+    def compile_bql(self, bdb, bql, out):
+        assert ast.is_bql(bql)
+        # XXX Can some other context determine the table, so that we can
+        # do selects on multiple tables at once?
+        if self.ctx.tables is None:
+            raise ValueError('BQL row query without table: %s' % (self.ctx,))
+        if len(self.ctx.tables) != 1:
+            assert 1 < len(self.ctx.tables)
+            raise ValueError('BQL row query with >1 table: %s' % (self.ctx,))
+        if not isinstance(self.ctx.tables[0].table, str): # XXX name
+            raise ValueError('Subquery in BQL row query: %s' % (self.ctx,))
+        table_id = core.bayesdb_table_id(bdb, self.ctx.tables[0].table)
         rowid_col = 'rowid'     # XXX Don't hard-code this.
-        if isinstance(selcol, ast.SelBQLPredProb):
-            colno = core.bayesdb_column_number(bdb, table_id, selcol.column)
+        if isinstance(bql, ast.ExpBQLPredProb):
+            if bql.column is None:
+                raise ValueError('Predictive probability at row needs column.')
+            colno = core.bayesdb_column_number(bdb, table_id, bql.column)
             out.write('row_column_predictive_probability(%s, %s, %s)' %
                 (table_id, rowid_col, colno))
-        elif isinstance(selcol, ast.SelBQLProb):
-            colno = core.bayesdb_column_number(bdb, table_id, selcol.column)
+        elif isinstance(bql, ast.ExpBQLProb):
+            if bql.column is None:
+                raise ValueError('Probability of column at row needs column.')
+            colno = core.bayesdb_column_number(bdb, table_id, bql.column)
             out.write('column_value_probability(%s, %s, ' % (table_id, colno))
-            compile_expression(bdb, selcol.value, out)
+            compile_expression(bdb, bql.value, self, out)
             out.write(')')
-        elif isinstance(selcol, ast.SelBQLTypRow):
-            out.write('row_typicality(%s, rowid)' % (table_id,))
-        elif isinstance(selcol, ast.SelBQLTypCol):
-            colno = core.bayesdb_column_number(bdb, table_id, selcol.column)
-            out.write('column_typicality(%s, %s)' % (table_id, colno))
-        elif isinstance(selcol, ast.SelBQLSim):
+        elif isinstance(bql, ast.ExpBQLTyp):
+            if bql.column is None:
+                out.write('row_typicality(%s, rowid)' % (table_id,))
+            else:
+                colno = core.bayesdb_column_number(bdb, table_id, bql.column)
+                out.write('column_typicality(%s, %s)' % (table_id, colno))
+        elif isinstance(bql, ast.ExpBQLSim):
             out.write('row_similarity(%s, rowid, ' % (table_id,))
-            compile_expression(bdb, selcol.rowid, out)
+            compile_expression(bdb, bql.rowid, self, out)
             out.write(', ')
-            compile_column_lists(bdb, table_id, selcol.column_lists, out)
+            compile_column_lists(bdb, table_id, bql.column_lists, self, out)
             out.write(')')
-        elif isinstance(selcol, ast.SelBQLDepProb):
-            compile_bql_2col(bdb, table_id, 'column_dependence_probability',
-                selcol, out)
-        elif isinstance(selcol, ast.SelBQLMutInf):
-            compile_bql_2col(bdb, table_id, 'column_mutual_information',
-                selcol, out)
-        elif isinstance(selcol, ast.SelBQLCorrel):
-            compile_bql_2col(bdb, table_id, 'column_correlation', selcol, out)
+        elif isinstance(bql, ast.ExpBQLDepProb):
+            compile_bql_2col_2(bdb, table_id, 'column_dependence_probability',
+                bql, out)
+        elif isinstance(bql, ast.ExpBQLMutInf):
+            compile_bql_2col_2(bdb, table_id, 'column_mutual_information', bql,
+                out)
+        elif isinstance(bql, ast.ExpBQLCorrel):
+            compile_bql_2col_2(bdb, table_id, 'column_correlation', bql, out)
         else:
-            assert False
+            raise ValueError('Invalid BQL function at row: %s' % (bql,))
 
-def compile_column_lists(bdb, table_id, column_lists, out):
+def compile_column_lists(bdb, table_id, column_lists, _bql_compiler, out):
     first = True
     for collist in column_lists:
         if first:
@@ -200,19 +221,26 @@ def compile_column_lists(bdb, table_id, column_lists, out):
         else:
             assert False
 
-def compile_bql_2col(bdb, table_id, bqlfn, selcol, out):
-    colno0 = core.bayesdb_column_number(bdb, table_id, selcol.column0)
-    colno1 = core.bayesdb_column_number(bdb, table_id, selcol.column1)
+def compile_bql_2col_2(bdb, table_id, bqlfn, bql, out):
+    assert bql.column0 is not None
+    assert bql.column1 is not None
+    colno0 = core.bayesdb_column_number(bdb, table_id, bql.column0)
+    colno1 = core.bayesdb_column_number(bdb, table_id, bql.column1)
     out.write('%s(%s, %s, %s)' % (bqlfn, table_id, colno0, colno1))
 
-def compile_expression(bdb, exp, out):
+def compile_row_expression(bdb, exp, query, out):
+    bql_compiler = BQLCompiler_Row(query)
+    compile_expression(bdb, exp, bql_compiler, out)
+
+def compile_expression(bdb, exp, bql_compiler, out):
     if isinstance(exp, ast.ExpLit):
         compile_literal(bdb, exp.value, out)
     elif isinstance(exp, ast.ExpCol):
         compile_table_column(bdb, exp.table, exp.column, out)
     elif isinstance(exp, ast.ExpSub):
         out.write('(')
-        compile_query(bdb, exp.query, out)
+        # XXX Provide context for row list vs column list wanted.
+        compile_subquery(bdb, exp.query, bql_compiler, out)
         out.write(')')
     elif isinstance(exp, ast.ExpApp):
         compile_name(bdb, exp.operator, out)
@@ -223,29 +251,29 @@ def compile_expression(bdb, exp, out):
                 first = False
             else:
                 out.write(', ')
-            compile_expression(bdb, operand, out)
+            compile_expression(bdb, operand, bql_compiler, out)
         out.write(')')
     elif isinstance(exp, ast.ExpOp):
-        compile_op(bdb, exp, out)
+        compile_op(bdb, exp, bql_compiler, out)
     elif isinstance(exp, ast.ExpCollate):
         out.write('(')
-        compile_expression(bdb, exp.expression, out)
+        compile_expression(bdb, exp.expression, bql_compiler, out)
         out.write(' COLLATE ')
         compile_name(bdb, exp.collation, out)
         out.write(')')
     elif isinstance(exp, ast.ExpIn):
         out.write('(')
-        compile_expression(bdb, exp.expression, out)
+        compile_expression(bdb, exp.expression, bql_compiler, out)
         if not exp.positive:
             out.write(' NOT')
         out.write(' IN ')
         out.write('(')
-        compile_query(bdb, exp.query, out)
+        compile_subquery(bdb, exp.query, bql_compiler, out)
         out.write(')')
         out.write(')')
     elif isinstance(exp, ast.ExpCast):
         out.write('CAST(')
-        compile_expression(bdb, exp.expression, out)
+        compile_expression(bdb, exp.expression, bql_compiler, out)
         out.write(' AS ')
         compile_type(bdb, exp.type, out)
         out.write(')')
@@ -253,13 +281,14 @@ def compile_expression(bdb, exp, out):
         out.write('(')
         out.write('EXISTS ')
         out.write('(')
-        compile_query(bdb, exp.query, out)
+        compile_subquery(bdb, exp.query, bql_compiler, out)
         out.write(')')
         out.write(')')
     else:
-        assert False            # XXX
+        assert ast.is_bql(exp)
+        bql_compiler.compile_bql(bdb, exp, out)
 
-def compile_op(bdb, op, out):
+def compile_op(bdb, op, bql_compiler, out):
     out.write('(')
     fmt = operator_fmts[op.operator]
     i = 0
@@ -280,7 +309,7 @@ def compile_op(bdb, op, out):
             out.write('%')
         elif d == 's':
             assert r < len(op.operands)
-            compile_expression(bdb, op.operands[r], out)
+            compile_expression(bdb, op.operands[r], bql_compiler, out)
             r += 1
         else:
             assert d == '%' or d == 's'

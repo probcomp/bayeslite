@@ -80,41 +80,6 @@ select_columns(many)	::= select_columns(cs) T_COMMA select_column(c).
 select_column(star)	::= T_STAR.
 select_column(qstar)	::= table_name(table) T_DOT T_STAR.
 select_column(exp)	::= expression(e) as(name).
-select_column(bql)	::= select_bql(bql).
-
-/*
- * XXX Why are these allowed only in select, rather than generally
- * anywhere that an expression is allowed?  I'm parroting the old
- * grammar here, but it seems to me this should be changed.
- */
-select_bql(predprob)	::= K_PREDICTIVE K_PROBABILITY K_OF L_NAME(col).
-select_bql(prob)	::= K_PROBABILITY K_OF L_NAME(col) T_EQ expression(e).
-select_bql(typ_row)	::= K_TYPICALITY.
-select_bql(typ_col)	::= K_TYPICALITY K_OF L_NAME(col).
-select_bql(sim)		::= K_SIMILARITY K_TO expression(row) wrt(cols).
-select_bql(depprob)	::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
-select_bql(mutinf)	::= K_MUTUAL K_INFORMATION ofwith(cols).
-select_bql(correl)	::= K_CORRELATION ofwith(cols).
-
-/*
- * Parenthesizing the column lists is not what we did before, but is
- * necessary to avoid ambiguity at the comma: is it another select
- * column, or is it another wrt column?
- */
-wrt(none)		::= .
-wrt(one)		::= K_WITH K_RESPECT K_TO column_list(collist).
-wrt(some)		::= K_WITH K_RESPECT K_TO
-				T_LROUND column_lists(collists) T_RROUND.
-
-ofwith(with)		::= K_WITH L_NAME(col).
-ofwith(ofwith)		::= K_OF L_NAME(col1) K_WITH L_NAME(col2).
-
-column_lists(one)	::= column_list(collist).
-column_lists(many)	::= column_lists(collists)
-				T_COMMA|K_AND column_list(collist).
-column_list(all)	::= T_STAR.
-column_list(column)	::= L_NAME(col).
-/* XXX Subquery, saved lists.  */
 
 as(none)		::= .
 as(some)		::= K_AS L_NAME(name).
@@ -159,7 +124,8 @@ opt_expressions(some)	::= expressions(es).
 expressions(one)	::= expression(e).
 expressions(many)	::= expressions(es) T_COMMA expression(e).
 
-expression(or)		::= boolean_or(e).
+expression(top)		::= bqlfn0(e).
+expression1(top)	::= boolean_or(e).
 
 boolean_or(or)		::= boolean_or(l) K_OR boolean_and(r).
 boolean_or(and)		::= boolean_and(a).
@@ -253,6 +219,90 @@ primary(tabcol)		::= table_name(tab) T_DOT L_NAME(col).
  * - CASE x WHEN y THEN z ELSE w END
  * - RAISE (IGNORE|ROLLBACK|ABORT|FAIL, "message")
  */
+primary(bql)		::= bqlfn(bql).
+
+/*
+ * The BQL functions come in four flavours:
+ *
+ * (1) Functions of two columns: DEPENDENCE PROBABILITY.
+ * (2) Functions of one column: DEPENDENCE PROBABILITY WITH C.
+ * (3) Functions of one row: SIMILARITY TO 5 WITH RESPECT TO C.
+ * (4) Constants: DEPENDENCE PROBABILITY OF C WITH D.
+ *
+ * Although constants can appear in any context (subject to the
+ * constraint that a table is implied by context -- really, the table
+ * should be named in the expression), any context for an expression
+ * makes sense with only one flavour of functions.  For example:
+ *
+ * (1) ESTIMATE PAIRWISE DEPENDENCE PROBABILITY FROM T;
+ * (2) ESTIMATE COLUMNS ORDER BY DEPENDENCE PROBABILITY WITH C;
+ * (3) SELECT SIMILARITY TO 5 WITH RESPECT TO C FROM T;
+ *
+ * It makes no sense to say
+ *
+ *	ESTIMATE COLUMNS FROM T WHERE DEPENDENCE PROBABILITY > 5,
+ *
+ * because WHERE filters a single set of columns, so there's no second
+ * argument for DEPENDENCE PROBABILITY.  Similarly, it makes no sense
+ * to say
+ *
+ *	ESTIMATE COLUMNS FROM T WHERE SIMILARITY TO 5 WITH RESPECT TO C > 5,
+ *
+ * because SIMILARITY TO 5 WITH RESPECT TO C is a function of a row,
+ * not a function of a column.
+ *
+ * We could invent four different expression nonterminals alike in
+ * every way except for which of these options are allowed, but it
+ * would require duplicating all the other rules for expressions, so
+ * instead we'll do a simple-minded type-check after parsing to detect
+ * such mistakes as the above.
+ *
+ * It is tempting to split the `bqlfn' nonterminal into `bql2colfn',
+ * `bql1colfn', `bqlrowfn', `bqlconstfn', but that would lead to
+ * ambiguous rules: for example, TYPICALITY can be a function of a row
+ * or a function of a column.
+ *
+ * XXX How to omit column from PROBABILITY OF to turn it into a
+ * 1-column function rather than a row function?  Currently we accept
+ * ESTIMATE COLUMNS ORDER BY PROBABILITY = 5, but that seems clumsy.
+ *
+ * Dangling if/else issues:
+ *
+ *	SELECT PROBABILITY OF X = 1 - PROBABILITY OF Y = 0 FROM T;
+ *	SELECT SIMILARITY TO SIMILARITY TO 0 WITH RESPECT TO C FROM T;
+ */
+bqlfn(predprob)		::= K_PREDICTIVE K_PROBABILITY of(col).
+bqlfn0(prob)		::= K_PROBABILITY of(col) T_EQ expression(e).
+bqlfn(typ)		::= K_TYPICALITY of(col).
+bqlfn0(sim)		::= K_SIMILARITY K_TO bqlfn0(row).
+bqlfn0(bqlfn1)		::= bqlfn1(e).
+bqlfn1(sim_wrt)		::= K_SIMILARITY K_TO bqlfn1(row) wrt(cols).
+bqlfn1(exp)		::= expression1(e).
+bqlfn(depprob)		::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
+bqlfn(mutinf)		::= K_MUTUAL K_INFORMATION ofwith(cols).
+bqlfn(correl)		::= K_CORRELATION ofwith(cols).
+
+of(none)		::= .
+of(some)		::= K_OF L_NAME(col).
+
+/*
+ * Parenthesizing the column lists is not what we did before, but is
+ * necessary to avoid ambiguity at the comma: is it another select
+ * column, or is it another wrt column?
+ */
+wrt(one)		::= K_WITH K_RESPECT K_TO column_list(collist).
+wrt(some)		::= K_WITH K_RESPECT K_TO
+				T_LROUND column_lists(collists) T_RROUND.
+
+ofwith(with)		::= K_WITH L_NAME(col).
+ofwith(ofwith)		::= K_OF L_NAME(col1) K_WITH L_NAME(col2).
+
+column_lists(one)	::= column_list(collist).
+column_lists(many)	::= column_lists(collists)
+				T_COMMA|K_AND column_list(collist).
+column_list(all)	::= T_STAR.
+column_list(column)	::= L_NAME(col).
+/* XXX Subquery, saved lists.  */
 
 literal(null)		::= K_NULL.
 literal(integer)	::= L_INTEGER(i).
