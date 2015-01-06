@@ -385,9 +385,12 @@ def compile_literal(bdb, lit, out):
     elif isinstance(lit, ast.LitFloat):
         out.write(str(lit.value)) # XXX Make sure floats unparse as such.
     elif isinstance(lit, ast.LitString):
-        out.write("'" + lit.value.replace("'", "''") + "'")
+        compile_string(bdb, lit.value, out)
     else:
         assert False            # XXX
+
+def compile_string(bdb, string, out):
+    out.write("'" + string.replace("'", "''") + "'")
 
 def compile_name(bdb, name, out):
     out.write(core.sqlite3_quote_name(name))
