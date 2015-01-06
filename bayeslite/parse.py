@@ -66,8 +66,15 @@ class BQLSemantics(object):
     def parse_failed(self):
         # XXX Raise a principled exception here.
         raise Exception('Parse failed with errors: %s' % (self.errors,))
-    def syntax_error(self, (_number, token)):
-        self.errors.append('syntax error near %s' % (token,))
+    def syntax_error(self, (number, text)):
+        # XXX Adapt lemonade to help us identify what the allowed
+        # subsequent tokens are.
+        #
+        # XXX Record source position.
+        if number == -1:        # error
+            self.errors.append('skipping bad token: %s' % (text,))
+        else:
+            self.errors.append('syntax error near %s' % (text,))
 
     def p_bql_start(self, phrases):
         pass

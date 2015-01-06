@@ -223,6 +223,9 @@ class BQLScanner(Plex.Scanner):
         (integer_dec,           scan_integer),
         (integer_hex,           scan_integer),
         (float_dec,             scan_float),
+        (integer_dec + name,    scan_bad),
+        (integer_hex + name,    scan_bad),
+        (float_dec + name,      scan_bad),
         (Plex.AnyChar,          scan_bad),
         Plex.State("STRING", [
             (Plex.Str("'"),                     scan_string_end),
