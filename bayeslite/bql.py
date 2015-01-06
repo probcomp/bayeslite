@@ -62,7 +62,8 @@ def compile_query(bdb, query, out):
 def compile_subquery(bdb, query, _bql_compiler, out):
     # XXX Do something with the BQL compiler so we can refer to
     # BQL-related quantities in the subquery?
-    compile_query(bdb, query, out)
+    with compiling_paren(bdb, out, '(', ')'):
+        compile_query(bdb, query, out)
 
 def compile_select(bdb, select, out):
     assert isinstance(select, ast.Select)
@@ -236,9 +237,8 @@ def compile_expression(bdb, exp, bql_compiler, out):
     elif isinstance(exp, ast.ExpCol):
         compile_table_column(bdb, exp.table, exp.column, out)
     elif isinstance(exp, ast.ExpSub):
-        with compiling_paren(bdb, out, '(', ')'):
-            # XXX Provide context for row list vs column list wanted.
-            compile_subquery(bdb, exp.query, bql_compiler, out)
+        # XXX Provide context for row list vs column list wanted.
+        compile_subquery(bdb, exp.query, bql_compiler, out)
     elif isinstance(exp, ast.ExpApp):
         compile_name(bdb, exp.operator, out)
         with compiling_paren(bdb, out, '(', ')'):
@@ -263,8 +263,7 @@ def compile_expression(bdb, exp, bql_compiler, out):
             if not exp.positive:
                 out.write(' NOT')
             out.write(' IN ')
-            with compiling_paren(bdb, out, '(', ')'):
-                compile_subquery(bdb, exp.query, bql_compiler, out)
+            compile_subquery(bdb, exp.query, bql_compiler, out)
     elif isinstance(exp, ast.ExpCast):
         with compiling_paren(bdb, out, 'CAST(', ')'):
             compile_expression(bdb, exp.expression, bql_compiler, out)
@@ -273,8 +272,7 @@ def compile_expression(bdb, exp, bql_compiler, out):
     elif isinstance(exp, ast.ExpExists):
         with compiling_paren(bdb, out, '(', ')'):
             out.write('EXISTS ')
-            with compiling_paren(bdb, out, '(', ')'):
-                compile_subquery(bdb, exp.query, bql_compiler, out)
+            compile_subquery(bdb, exp.query, bql_compiler, out)
     elif isinstance(exp, ast.ExpCase):
         with compiling_paren(bdb, out, '(', ')'):
             with compiling_paren(bdb, out, 'CASE', 'END'):
