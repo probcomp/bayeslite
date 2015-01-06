@@ -15,6 +15,7 @@
 #   limitations under the License.
 
 import StringIO
+import contextlib
 
 import bayeslite.ast as ast
 import bayeslite.core as core
@@ -235,76 +236,65 @@ def compile_expression(bdb, exp, bql_compiler, out):
     elif isinstance(exp, ast.ExpCol):
         compile_table_column(bdb, exp.table, exp.column, out)
     elif isinstance(exp, ast.ExpSub):
-        out.write('(')
-        # XXX Provide context for row list vs column list wanted.
-        compile_subquery(bdb, exp.query, bql_compiler, out)
-        out.write(')')
+        with compiling_paren(bdb, out, '(', ')'):
+            # XXX Provide context for row list vs column list wanted.
+            compile_subquery(bdb, exp.query, bql_compiler, out)
     elif isinstance(exp, ast.ExpApp):
         compile_name(bdb, exp.operator, out)
-        out.write('(')
-        first = True
-        for operand in exp.operands:
-            if first:
-                first = False
-            else:
-                out.write(', ')
-            compile_expression(bdb, operand, bql_compiler, out)
-        out.write(')')
+        with compiling_paren(bdb, out, '(', ')'):
+            first = True
+            for operand in exp.operands:
+                if first:
+                    first = False
+                else:
+                    out.write(', ')
+                compile_expression(bdb, operand, bql_compiler, out)
     elif isinstance(exp, ast.ExpOp):
-        compile_op(bdb, exp, bql_compiler, out)
+        with compiling_paren(bdb, out, '(', ')'):
+            compile_op(bdb, exp, bql_compiler, out)
     elif isinstance(exp, ast.ExpCollate):
-        out.write('(')
-        compile_expression(bdb, exp.expression, bql_compiler, out)
-        out.write(' COLLATE ')
-        compile_name(bdb, exp.collation, out)
-        out.write(')')
+        with compiling_paren(bdb, out, '(', ')'):
+            compile_expression(bdb, exp.expression, bql_compiler, out)
+            out.write(' COLLATE ')
+            compile_name(bdb, exp.collation, out)
     elif isinstance(exp, ast.ExpIn):
-        out.write('(')
-        compile_expression(bdb, exp.expression, bql_compiler, out)
-        if not exp.positive:
-            out.write(' NOT')
-        out.write(' IN ')
-        out.write('(')
-        compile_subquery(bdb, exp.query, bql_compiler, out)
-        out.write(')')
-        out.write(')')
+        with compiling_paren(bdb, out, '(', ')'):
+            compile_expression(bdb, exp.expression, bql_compiler, out)
+            if not exp.positive:
+                out.write(' NOT')
+            out.write(' IN ')
+            with compiling_paren(bdb, out, '(', ')'):
+                compile_subquery(bdb, exp.query, bql_compiler, out)
     elif isinstance(exp, ast.ExpCast):
-        out.write('CAST(')
-        compile_expression(bdb, exp.expression, bql_compiler, out)
-        out.write(' AS ')
-        compile_type(bdb, exp.type, out)
-        out.write(')')
+        with compiling_paren(bdb, out, 'CAST(', ')'):
+            compile_expression(bdb, exp.expression, bql_compiler, out)
+            out.write(' AS ')
+            compile_type(bdb, exp.type, out)
     elif isinstance(exp, ast.ExpExists):
-        out.write('(')
-        out.write('EXISTS ')
-        out.write('(')
-        compile_subquery(bdb, exp.query, bql_compiler, out)
-        out.write(')')
-        out.write(')')
+        with compiling_paren(bdb, out, '(', ')'):
+            out.write('EXISTS ')
+            with compiling_paren(bdb, out, '(', ')'):
+                compile_subquery(bdb, exp.query, bql_compiler, out)
     elif isinstance(exp, ast.ExpCase):
-        out.write('(')
-        out.write('CASE ')
-        if exp.key is not None:
-            compile_expression(bdb, exp.key, bql_compiler, out)
-            out.write(' ')
-        for cond, then in exp.whens:
-            out.write('WHEN ')
-            compile_expression(bdb, cond, bql_compiler, out)
-            out.write(' THEN ')
-            compile_expression(bdb, then, bql_compiler, out)
-            out.write(' ')
-        if exp.otherwise is not None:
-            out.write('ELSE ')
-            compile_expression(bdb, exp.otherwise, bql_compiler, out)
-            out.write(' ')
-        out.write('END')
-        out.write(')')
+        with compiling_paren(bdb, out, '(', ')'):
+            with compiling_paren(bdb, out, 'CASE', 'END'):
+                if exp.key is not None:
+                    out.write(' ')
+                    compile_expression(bdb, exp.key, bql_compiler, out)
+                for cond, then in exp.whens:
+                    out.write(' WHEN ')
+                    compile_expression(bdb, cond, bql_compiler, out)
+                    out.write(' THEN ')
+                    compile_expression(bdb, then, bql_compiler, out)
+                if exp.otherwise is not None:
+                    out.write(' ELSE ')
+                    compile_expression(bdb, exp.otherwise, bql_compiler, out)
+                out.write(' ')
     else:
         assert ast.is_bql(exp)
         bql_compiler.compile_bql(bdb, exp, out)
 
 def compile_op(bdb, op, bql_compiler, out):
-    out.write('(')
     fmt = operator_fmts[op.operator]
     i = 0
     r = 0
@@ -330,7 +320,6 @@ def compile_op(bdb, op, bql_compiler, out):
             assert False        # XXX
         i = j
     assert r == len(op.operands)
-    out.write(')')
 
 operator_fmts = {
     ast.OP_BOOLOR:      '%s OR %s',
@@ -390,7 +379,8 @@ def compile_literal(bdb, lit, out):
         assert False            # XXX
 
 def compile_string(bdb, string, out):
-    out.write("'" + string.replace("'", "''") + "'")
+    with compiling_paren(bdb, out, "'", "'"):
+        out.write(string.replace("'", "''"))
 
 def compile_name(bdb, name, out):
     out.write(core.sqlite3_quote_name(name))
@@ -417,13 +407,18 @@ def compile_type(bdb, type, out):
             out.write(' ')
         compile_name(bdb, n, out)
     if 0 < len(type.args):
-        out.write('(')
-        first = True
-        for a in type.args:
-            if first:
-                first = False
-            else:
-                out.write(', ')
-            assert isinstance(a, int)
-            out.write(str(a))
-        out.write(')')
+        with compiling_paren(bdb, out, '(', ')'):
+            first = True
+            for a in type.args:
+                if first:
+                    first = False
+                else:
+                    out.write(', ')
+                assert isinstance(a, int)
+                out.write(str(a))
+
+@contextlib.contextmanager
+def compiling_paren(bdb, out, start, end):
+    out.write(start)
+    yield
+    out.write(end)
