@@ -255,28 +255,18 @@ class BQLSemantics(object):
     def p_collating_bitwise_not(self, n):
                                         return n
     def p_bitwise_not_not(self, n):     return ast.op(ast.OP_BITNOT, n)
-    def p_bitwise_not_primary(self, p): return p
-
-    def p_primary_literal(self, v):             return ast.ExpLit(v)
-    def p_primary_apply(self, fn, es):          return ast.ExpApp(fn, es)
-    def p_primary_paren(self, e):               return e
-    def p_primary_subquery(self, q):            return ast.ExpSub(q)
-    def p_primary_cast(self, e, t):             return ast.ExpCast(e, t)
-    def p_primary_exists(self, q):              return ast.ExpExists(q)
-    def p_primary_column(self, col):            return ast.ExpCol(None, col)
-    def p_primary_tabcol(self, tab, col):       return ast.ExpCol(tab, col)
-    def p_primary_bql(self, bql):               return bql
+    def p_bitwise_not_bql(self, b):     return b
 
     def p_bqlfn_predprob(self, col):            return ast.ExpBQLPredProb(col)
     def p_bqlfn0_prob(self, col, e):            return ast.ExpBQLProb(col, e)
     def p_bqlfn_typ(self, col):                 return ast.ExpBQLTyp(col)
     def p_bqlfn0_sim(self, row):                return ast.ExpBQLSim(row, [])
-    def p_bqlfn0_bqlfn1(self, e):               return e
-    def p_bqlfn1_sim_wrt(self, row, cols):      return ast.ExpBQLSim(row, cols)
-    def p_bqlfn1_exp(self, e):                  return e
+    def p_bqlfn0_exp(self, e):                  return e
+    def p_bqlfn_sim_wrt(self, row, cols):       return ast.ExpBQLSim(row, cols)
     def p_bqlfn_depprob(self, cols):            return ast.ExpBQLDepProb(*cols)
     def p_bqlfn_mutinf(self, cols):             return ast.ExpBQLMutInf(*cols)
     def p_bqlfn_correl(self, cols):             return ast.ExpBQLCorrel(*cols)
+    def p_bqlfn_primary(self, p):               return p
 
     def p_of_none(self):                        return None
     def p_of_some(self, col):                   return col
@@ -295,6 +285,15 @@ class BQLSemantics(object):
 
     def p_column_list_all(self):                return ast.ColListAll()
     def p_column_list_column(self, col):        return ast.ColListLit([col])
+
+    def p_primary_literal(self, v):             return ast.ExpLit(v)
+    def p_primary_apply(self, fn, es):          return ast.ExpApp(fn, es)
+    def p_primary_paren(self, e):               return e
+    def p_primary_subquery(self, q):            return ast.ExpSub(q)
+    def p_primary_cast(self, e, t):             return ast.ExpCast(e, t)
+    def p_primary_exists(self, q):              return ast.ExpExists(q)
+    def p_primary_column(self, col):            return ast.ExpCol(None, col)
+    def p_primary_tabcol(self, tab, col):       return ast.ExpCol(tab, col)
 
     def p_literal_null(self):                   return ast.LitNull(None)
     def p_literal_integer(self, i):             return ast.LitInt(i)

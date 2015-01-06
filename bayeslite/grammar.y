@@ -125,6 +125,7 @@ expressions(one)	::= expression(e).
 expressions(many)	::= expressions(es) T_COMMA expression(e).
 
 expression(top)		::= bqlfn0(e).
+/* Kludgey workaround for dangling else (or, `dangling with').  */
 expression1(top)	::= boolean_or(e).
 
 boolean_or(or)		::= boolean_or(l) K_OR boolean_and(r).
@@ -202,24 +203,7 @@ collating(collate)	::= collating(e) K_COLLATE L_NAME|L_STRING(c).
 collating(bitwise_not)	::= bitwise_not(n).
 
 bitwise_not(not)	::= T_BITNOT bitwise_not(n).
-bitwise_not(primary)	::= primary(p).
-
-primary(literal)	::= literal(v).
-primary(apply)		::= L_NAME(fn) T_LROUND opt_expressions(es) T_RROUND.
-primary(paren)		::= T_LROUND expression(e) T_RROUND.
-primary(subquery)	::= T_LROUND query(q) T_RROUND.
-primary(cast)		::= K_CAST T_LROUND expression(e)
-				K_AS type(t) T_RROUND.
-primary(exists)		::= K_EXISTS T_LROUND query(q) T_RROUND.
-primary(column)		::= L_NAME(col).
-primary(tabcol)		::= table_name(tab) T_DOT L_NAME(col).
-/*
- * XXX To do:
- *
- * - CASE x WHEN y THEN z ELSE w END
- * - RAISE (IGNORE|ROLLBACK|ABORT|FAIL, "message")
- */
-primary(bql)		::= bqlfn(bql).
+bitwise_not(bql)	::= bqlfn(b).
 
 /*
  * The BQL functions come in four flavours:
@@ -266,21 +250,36 @@ primary(bql)		::= bqlfn(bql).
  * 1-column function rather than a row function?  Currently we accept
  * ESTIMATE COLUMNS ORDER BY PROBABILITY = 5, but that seems clumsy.
  *
- * Dangling if/else issues:
+ * XXX It would be nice if
  *
  *	SELECT PROBABILITY OF X = 1 - PROBABILITY OF Y = 0 FROM T;
- *	SELECT SIMILARITY TO SIMILARITY TO 0 WITH RESPECT TO C FROM T;
+ *
+ * worked to mean
+ *
+ *	SELECT PROBABILITY OF X = (1 - PROBABILITY OF Y = 0) FROM T;
+ *
+ * so that you could also write, e.g.,
+ *
+ *	SELECT PROBABILITY OF X = 1 + 2 FROM T;
+ *
+ * However, changing primary(e) to expression(e) on the right-hand
+ * side of the bqlfn(prob) rule makes the grammar ambiguous, and the
+ * surgery necessary to restore the ambiguity is not there.  So
+ * instead we'll reject unparenthesized PROBABILITY OF X = V with
+ * other operators altogether and require explicit parentheses until
+ * someone wants to do that surgery.
  */
 bqlfn(predprob)		::= K_PREDICTIVE K_PROBABILITY of(col).
-bqlfn0(prob)		::= K_PROBABILITY of(col) T_EQ expression(e).
+bqlfn0(prob)		::= K_PROBABILITY of(col) T_EQ primary(e).
 bqlfn(typ)		::= K_TYPICALITY of(col).
+/* Kludgey workaround for dangling else (or, `dangling with').  */
 bqlfn0(sim)		::= K_SIMILARITY K_TO bqlfn0(row).
-bqlfn0(bqlfn1)		::= bqlfn1(e).
-bqlfn1(sim_wrt)		::= K_SIMILARITY K_TO bqlfn1(row) wrt(cols).
-bqlfn1(exp)		::= expression1(e).
+bqlfn0(exp)		::= expression1(e).
+bqlfn(sim_wrt)		::= K_SIMILARITY K_TO expression1(row) wrt(cols).
 bqlfn(depprob)		::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
 bqlfn(mutinf)		::= K_MUTUAL K_INFORMATION ofwith(cols).
 bqlfn(correl)		::= K_CORRELATION ofwith(cols).
+bqlfn(primary)		::= primary(p).
 
 of(none)		::= .
 of(some)		::= K_OF L_NAME(col).
@@ -303,6 +302,22 @@ column_lists(many)	::= column_lists(collists)
 column_list(all)	::= T_STAR.
 column_list(column)	::= L_NAME(col).
 /* XXX Subquery, saved lists.  */
+
+primary(literal)	::= literal(v).
+primary(apply)		::= L_NAME(fn) T_LROUND opt_expressions(es) T_RROUND.
+primary(paren)		::= T_LROUND expression(e) T_RROUND.
+primary(subquery)	::= T_LROUND query(q) T_RROUND.
+primary(cast)		::= K_CAST T_LROUND expression(e)
+				K_AS type(t) T_RROUND.
+primary(exists)		::= K_EXISTS T_LROUND query(q) T_RROUND.
+primary(column)		::= L_NAME(col).
+primary(tabcol)		::= table_name(tab) T_DOT L_NAME(col).
+/*
+ * XXX To do:
+ *
+ * - CASE x WHEN y THEN z ELSE w END
+ * - RAISE (IGNORE|ROLLBACK|ABORT|FAIL, "message")
+ */
 
 literal(null)		::= K_NULL.
 literal(integer)	::= L_INTEGER(i).

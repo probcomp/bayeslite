@@ -14,6 +14,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import pytest
+
 import bayeslite.ast as ast
 import bayeslite.parse
 
@@ -362,16 +364,22 @@ def test_select_bql():
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(ast.ExpBQLCorrel('c', 'd'), None)],
             [ast.SelTab('t', None)], None, None, None, None)]
-    # assert parse_bql_string('select probability of x = 1 -' +
-    #         ' probability of y = 0 from t;') == \
-    #     [ast.Select(ast.SELQUANT_ALL,
-    #         [ast.SelColExp(ast.ExpBQLProb('x',
-    #                 ast.ExpOp(OP_MINUS, [
-    #                     ast.ExpLit(ast.LitInt(1)),
-    #                     ast.ExpBQLProb('y', ast.ExpLit(ast.LitInt(0))),
-    #                 ])),
-    #             None)],
-    #         [ast.SelTab('t', None)], None, None, None, None)]
+    with pytest.raises(Exception): # XXX Use a specific parse error.
+        parse_bql_string('select probability of x = 1 -' +
+            ' probability of y = 0 from t;')
+        # XXX Should really be this test, but getting the grammar to
+        # admit this unambiguously is too much of a pain at the
+        # moment.
+        assert parse_bql_string('select probability of x = 1 -' +
+                ' probability of y = 0 from t;') == \
+            [ast.Select(ast.SELQUANT_ALL,
+                [ast.SelColExp(ast.ExpBQLProb('x',
+                        ast.ExpOp(ast.OP_SUB, (
+                            ast.ExpLit(ast.LitInt(1)),
+                            ast.ExpBQLProb('y', ast.ExpLit(ast.LitInt(0))),
+                        ))),
+                    None)],
+                [ast.SelTab('t', None)], None, None, None, None)]
 
 def test_trivial_commands():
     assert parse_bql_string("create btable t from 'f.csv';") == \
