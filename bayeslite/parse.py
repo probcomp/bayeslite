@@ -37,6 +37,9 @@ def parse_bql_phrases(scanner):
             semantics.phrase = None
         if token[0] == 0:       # EOF
             break
+    # XXX It seems to me that lemon should do this for us.
+    if 0 < len(semantics.errors):
+        semantics.parse_failed()
 
 def parse_bql_string_pos(string):
     scanner = scan.BQLScanner(StringIO.StringIO(string), '(string)')
@@ -64,7 +67,7 @@ class BQLSemantics(object):
         # XXX Raise a principled exception here.
         raise Exception('Parse failed with errors: %s' % (self.errors,))
     def syntax_error(self, (_number, token)):
-        self.errors.append(('syntax error near %s' % (token,),))
+        self.errors.append('syntax error near %s' % (token,))
 
     def p_bql_start(self, phrases):
         pass
