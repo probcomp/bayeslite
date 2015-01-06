@@ -270,24 +270,22 @@ def compile_expression(bdb, exp, bql_compiler, out):
             out.write(' AS ')
             compile_type(bdb, exp.type, out)
     elif isinstance(exp, ast.ExpExists):
-        with compiling_paren(bdb, out, '(', ')'):
-            out.write('EXISTS ')
-            compile_subquery(bdb, exp.query, bql_compiler, out)
+        out.write('EXISTS ')
+        compile_subquery(bdb, exp.query, bql_compiler, out)
     elif isinstance(exp, ast.ExpCase):
-        with compiling_paren(bdb, out, '(', ')'):
-            with compiling_paren(bdb, out, 'CASE', 'END'):
-                if exp.key is not None:
-                    out.write(' ')
-                    compile_expression(bdb, exp.key, bql_compiler, out)
-                for cond, then in exp.whens:
-                    out.write(' WHEN ')
-                    compile_expression(bdb, cond, bql_compiler, out)
-                    out.write(' THEN ')
-                    compile_expression(bdb, then, bql_compiler, out)
-                if exp.otherwise is not None:
-                    out.write(' ELSE ')
-                    compile_expression(bdb, exp.otherwise, bql_compiler, out)
+        with compiling_paren(bdb, out, 'CASE', 'END'):
+            if exp.key is not None:
                 out.write(' ')
+                compile_expression(bdb, exp.key, bql_compiler, out)
+            for cond, then in exp.whens:
+                out.write(' WHEN ')
+                compile_expression(bdb, cond, bql_compiler, out)
+                out.write(' THEN ')
+                compile_expression(bdb, then, bql_compiler, out)
+            if exp.otherwise is not None:
+                out.write(' ELSE ')
+                compile_expression(bdb, exp.otherwise, bql_compiler, out)
+            out.write(' ')
     else:
         assert ast.is_bql(exp)
         bql_compiler.compile_bql(bdb, exp, out)
