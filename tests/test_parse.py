@@ -380,6 +380,12 @@ def test_select_bql():
                         ))),
                     None)],
                 [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select probability of c1 = f(c2) from t;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpBQLProb('c1',
+                    ast.ExpApp('f', [ast.ExpCol(None, 'c2')])),
+                None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
 
 def test_trivial_commands():
     assert parse_bql_string("create btable t from 'f.csv';") == \
