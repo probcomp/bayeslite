@@ -308,12 +308,23 @@ primary(cast)		::= K_CAST T_LROUND expression(e)
 primary(exists)		::= K_EXISTS T_LROUND query(q) T_RROUND.
 primary(column)		::= L_NAME(col).
 primary(tabcol)		::= table_name(tab) T_DOT L_NAME(col).
+primary(case)		::= K_CASE opt_case_key(k) opt_case_whens(ws)
+				opt_case_else(e) K_END.
 /*
  * XXX To do:
  *
- * - CASE x WHEN y THEN z ELSE w END
  * - RAISE (IGNORE|ROLLBACK|ABORT|FAIL, "message")
  */
+
+opt_case_key(none)	::= .
+opt_case_key(some)	::= expression(k).
+
+opt_case_whens(none)	::= .
+opt_case_whens(some)	::= opt_case_whens(ws) K_WHEN expression(w)
+				K_THEN expression(t).
+
+opt_case_else(none)	::= .
+opt_case_else(some)	::= K_ELSE expression(e).
 
 literal(null)		::= K_NULL.
 literal(integer)	::= L_INTEGER(i).

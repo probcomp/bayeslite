@@ -296,6 +296,14 @@ class BQLSemantics(object):
     def p_primary_exists(self, q):              return ast.ExpExists(q)
     def p_primary_column(self, col):            return ast.ExpCol(None, col)
     def p_primary_tabcol(self, tab, col):       return ast.ExpCol(tab, col)
+    def p_primary_case(self, k, ws, e):         return ast.ExpCase(k, ws, e)
+
+    def p_opt_case_key_none(self):              return None
+    def p_opt_case_key_some(self, k):           return k
+    def p_opt_case_whens_none(self):            return []
+    def p_opt_case_whens_some(self, ws, w, t):  ws.append((w, t)); return ws
+    def p_opt_case_else_none(self):             return None
+    def p_opt_case_else_some(self, e):          return e
 
     def p_literal_null(self):                   return ast.LitNull(None)
     def p_literal_integer(self, i):             return ast.LitInt(i)

@@ -281,6 +281,24 @@ def compile_expression(bdb, exp, bql_compiler, out):
         compile_subquery(bdb, exp.query, bql_compiler, out)
         out.write(')')
         out.write(')')
+    elif isinstance(exp, ast.ExpCase):
+        out.write('(')
+        out.write('CASE ')
+        if exp.key is not None:
+            compile_expression(bdb, exp.key, bql_compiler, out)
+            out.write(' ')
+        for cond, then in exp.whens:
+            out.write('WHEN ')
+            compile_expression(bdb, cond, bql_compiler, out)
+            out.write(' THEN ')
+            compile_expression(bdb, then, bql_compiler, out)
+            out.write(' ')
+        if exp.otherwise is not None:
+            out.write('ELSE ')
+            compile_expression(bdb, exp.otherwise, bql_compiler, out)
+            out.write(' ')
+        out.write('END')
+        out.write(')')
     else:
         assert ast.is_bql(exp)
         bql_compiler.compile_bql(bdb, exp, out)

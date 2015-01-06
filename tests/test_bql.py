@@ -142,6 +142,12 @@ def test_select_trivial():
         'select CAST("f"("x", "y", "z") AS "varchar"(12, 34));'
     assert bql2sql('select exists (select a) and not exists (select b);') == \
         'select ((EXISTS (select "a")) AND (NOT (EXISTS (select "b"))));'
+    assert bql2sql('select case when a - b then c else d end from t;') == \
+        'select (CASE WHEN ("a" - "b") THEN "c" ELSE "d" END) from "t";'
+    assert bql2sql('select case f(a) when b + c then d else e end from t;') \
+        == \
+        'select (CASE "f"("a") WHEN ("b" + "c") THEN "d" ELSE "e" END)' \
+        + ' from "t";'
 
 def test_select_bql():
     assert bql2sql('select predictive probability of weight from t1;') == \
