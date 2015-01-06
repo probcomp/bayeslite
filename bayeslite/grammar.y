@@ -124,9 +124,7 @@ opt_expressions(some)	::= expressions(es).
 expressions(one)	::= expression(e).
 expressions(many)	::= expressions(es) T_COMMA expression(e).
 
-expression(top)		::= bqlfn0(e).
-/* Kludgey workaround for dangling else (or, `dangling with').  */
-expression1(top)	::= boolean_or(e).
+expression(top)		::= boolean_or(e).
 
 boolean_or(or)		::= boolean_or(l) K_OR boolean_and(r).
 boolean_or(and)		::= boolean_and(a).
@@ -270,12 +268,9 @@ bitwise_not(bql)	::= bqlfn(b).
  * someone wants to do that surgery.
  */
 bqlfn(predprob)		::= K_PREDICTIVE K_PROBABILITY of(col).
-bqlfn0(prob)		::= K_PROBABILITY of(col) T_EQ primary(e).
+bqlfn(prob)		::= K_PROBABILITY of(col) T_EQ primary(e).
 bqlfn(typ)		::= K_TYPICALITY of(col).
-/* Kludgey workaround for dangling else (or, `dangling with').  */
-bqlfn0(sim)		::= K_SIMILARITY K_TO bqlfn0(row).
-bqlfn0(exp)		::= expression1(e).
-bqlfn(sim_wrt)		::= K_SIMILARITY K_TO expression1(row) wrt(cols).
+bqlfn(sim)		::= K_SIMILARITY K_TO primary(row) wrt(cols).
 bqlfn(depprob)		::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
 bqlfn(mutinf)		::= K_MUTUAL K_INFORMATION ofwith(cols).
 bqlfn(correl)		::= K_CORRELATION ofwith(cols).
@@ -289,6 +284,7 @@ of(some)		::= K_OF L_NAME(col).
  * necessary to avoid ambiguity at the comma: is it another select
  * column, or is it another wrt column?
  */
+wrt(none)		::= .
 wrt(one)		::= K_WITH K_RESPECT K_TO column_list(collist).
 wrt(some)		::= K_WITH K_RESPECT K_TO
 				T_LROUND column_lists(collists) T_RROUND.

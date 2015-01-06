@@ -364,16 +364,9 @@ def test_select_bql():
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(ast.ExpBQLCorrel('c', 'd'), None)],
             [ast.SelTab('t', None)], None, None, None, None)]
-    assert parse_bql_string('select similarity to similarity to 0' +
-            ' with respect to c from t;') == \
-        [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(
-                ast.ExpBQLSim(ast.ExpBQLSim(ast.ExpLit(ast.LitInt(0)),
-                        [ast.ColListLit(['c'])]),
-                    []),
-                None,
-            )],
-            [ast.SelTab('t', None)], None, None, None, None)]
+    with pytest.raises(Exception):
+        parse_bql_string('select similarity to similarity to 0' +
+            ' with respect to c from t;')
     with pytest.raises(Exception): # XXX Use a specific parse error.
         parse_bql_string('select probability of x = 1 -' +
             ' probability of y = 0 from t;')

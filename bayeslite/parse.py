@@ -258,11 +258,9 @@ class BQLSemantics(object):
     def p_bitwise_not_bql(self, b):     return b
 
     def p_bqlfn_predprob(self, col):            return ast.ExpBQLPredProb(col)
-    def p_bqlfn0_prob(self, col, e):            return ast.ExpBQLProb(col, e)
+    def p_bqlfn_prob(self, col, e):             return ast.ExpBQLProb(col, e)
     def p_bqlfn_typ(self, col):                 return ast.ExpBQLTyp(col)
-    def p_bqlfn0_sim(self, row):                return ast.ExpBQLSim(row, [])
-    def p_bqlfn0_exp(self, e):                  return e
-    def p_bqlfn_sim_wrt(self, row, cols):       return ast.ExpBQLSim(row, cols)
+    def p_bqlfn_sim(self, row, cols):           return ast.ExpBQLSim(row, cols)
     def p_bqlfn_depprob(self, cols):            return ast.ExpBQLDepProb(*cols)
     def p_bqlfn_mutinf(self, cols):             return ast.ExpBQLMutInf(*cols)
     def p_bqlfn_correl(self, cols):             return ast.ExpBQLCorrel(*cols)
@@ -271,6 +269,7 @@ class BQLSemantics(object):
     def p_of_none(self):                        return None
     def p_of_some(self, col):                   return col
 
+    def p_wrt_none(self):                       return []
     def p_wrt_one(self, collist):               return [collist]
     def p_wrt_some(self, collists):             return collists
 
