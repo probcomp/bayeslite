@@ -112,8 +112,7 @@ def compile_select(bdb, select, out):
             elif order.sense == ast.ORD_DESC:
                 out.write(' desc')
             else:
-                assert order.sense == ast.ORD_ASC or \
-                    order.sense == ast.ORD_DESC
+                assert False    # XXX
     if select.limit is not None:
         out.write(' limit ')
         compile_row_expression(bdb, select.limit.limit, select, out)
@@ -144,7 +143,7 @@ def compile_select_column(bdb, selcol, select, out):
             out.write(' as ')
             compile_name(bdb, selcol.name, out)
     else:
-        assert False
+        assert False            # XXX
 
 class BQLCompiler_Row(object):
     def __init__(self, ctx):
@@ -171,8 +170,6 @@ class BQLCompiler_Row(object):
             out.write('row_column_predictive_probability(%s, %s, %s)' %
                 (table_id, rowid_col, colno))
         elif isinstance(bql, ast.ExpBQLProb):
-            if bql.column is None:
-                raise ValueError('Probability of column at row needs column.')
             colno = core.bayesdb_column_number(bdb, table_id, bql.column)
             out.write('column_value_probability(%s, %s, ' % (table_id, colno))
             compile_expression(bdb, bql.value, self, out)
@@ -198,7 +195,7 @@ class BQLCompiler_Row(object):
         elif isinstance(bql, ast.ExpBQLCorrel):
             compile_bql_2col_2(bdb, table_id, 'column_correlation', bql, out)
         else:
-            raise ValueError('Invalid BQL function at row: %s' % (bql,))
+            assert False        # XXX
 
 def compile_column_lists(bdb, table_id, column_lists, _bql_compiler, out):
     first = True
@@ -219,7 +216,7 @@ def compile_column_lists(bdb, table_id, column_lists, _bql_compiler, out):
         elif isinstance(collist, ast.ColListSav):
             raise NotImplementedError('saved column lists')
         else:
-            assert False
+            assert False        # XXX
 
 def compile_bql_2col_2(bdb, table_id, bqlfn, bql, out):
     assert bql.column0 is not None
@@ -312,7 +309,7 @@ def compile_op(bdb, op, bql_compiler, out):
             compile_expression(bdb, op.operands[r], bql_compiler, out)
             r += 1
         else:
-            assert d == '%' or d == 's'
+            assert False        # XXX
         i = j
     assert r == len(op.operands)
     out.write(')')

@@ -189,6 +189,9 @@ def test_select_bql_error():
     with pytest.raises(ValueError):
         # Need a btable, not a subquery.
         bql2sql('select predictive probability of weight from (select 0);')
+    with pytest.raises(ValueError):
+        # Need a column.
+        bql2sql('select predictive probability from t1;')
 
 def test_trivial_commands():
     with test_smoke.bayesdb_csv(test_smoke.csv_data) as (bdb, fname):
