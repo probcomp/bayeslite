@@ -258,11 +258,13 @@ bitwise_not(bql)	::= bqlfn(b).
  *
  * so that you could also write, e.g.,
  *
- *	SELECT PROBABILITY OF X = 1 + 2 FROM T;
+ *	SELECT PROBABILITY OF X = A + B FROM T;
+ *
+ * with A + B meaning the right-hand side of the equation.
  *
  * However, changing primary(e) to expression(e) on the right-hand
  * side of the bqlfn(prob) rule makes the grammar ambiguous, and the
- * surgery necessary to restore the ambiguity is not there.  So
+ * surgery necessary to restore the ambiguity is too much trouble.  So
  * instead we'll reject unparenthesized PROBABILITY OF X = V with
  * other operators altogether and require explicit parentheses until
  * someone wants to do that surgery.
