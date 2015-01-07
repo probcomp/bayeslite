@@ -69,9 +69,9 @@ def compile_subquery(bdb, query, _bql_compiler, out):
 
 def compile_select(bdb, select, out):
     assert isinstance(select, ast.Select)
-    out.write('select')
+    out.write('SELECT')
     if select.quantifier == ast.SELQUANT_DISTINCT:
-        out.write(' distinct')
+        out.write(' DISTINCT')
     else:
         assert select.quantifier == ast.SELQUANT_ALL
     compile_select_columns(bdb, select, out)
@@ -80,23 +80,23 @@ def compile_select(bdb, select, out):
         first = True
         for seltab in select.tables:
             if first:
-                out.write(' from ')
+                out.write(' FROM ')
                 first = False
             else:
                 out.write(', ')
             compile_table_name(bdb, seltab.table, out) # XXX subquery
             if seltab.name is not None:
-                out.write(' as ')
+                out.write(' AS ')
                 compile_name(bdb, seltab.name, out)
     if select.condition is not None:
-        out.write(' where ')
+        out.write(' WHERE ')
         compile_row_expression(bdb, select.condition, select, out)
     if select.group is not None:
         assert 0 < len(select.group)
         first = True
         for key in select.group:
             if first:
-                out.write(' group by ')
+                out.write(' GROUP BY ')
                 first = False
             else:
                 out.write(', ')
@@ -106,7 +106,7 @@ def compile_select(bdb, select, out):
         first = True
         for order in select.order:
             if first:
-                out.write(' order by ')
+                out.write(' ORDER BY ')
                 first = False
             else:
                 out.write(', ')
@@ -114,14 +114,14 @@ def compile_select(bdb, select, out):
             if order.sense == ast.ORD_ASC:
                 pass
             elif order.sense == ast.ORD_DESC:
-                out.write(' desc')
+                out.write(' DESC')
             else:
                 assert False    # XXX
     if select.limit is not None:
-        out.write(' limit ')
+        out.write(' LIMIT ')
         compile_row_expression(bdb, select.limit.limit, select, out)
         if select.limit.offset is not None:
-            out.write(' offset ')
+            out.write(' OFFSET ')
             compile_row_expression(bdb, select.limit.offset, select, out)
 
 def compile_select_columns(bdb, select, out):
@@ -144,7 +144,7 @@ def compile_select_column(bdb, selcol, select, out):
         bql_compiler = BQLCompiler_Row(select)
         compile_expression(bdb, selcol.expression, bql_compiler, out)
         if selcol.name is not None:
-            out.write(' as ')
+            out.write(' AS ')
             compile_name(bdb, selcol.name, out)
     else:
         assert False            # XXX
@@ -159,11 +159,11 @@ def compile_estcols(bdb, estcols, out):
     assert isinstance(estcols, ast.EstCols)
     # XXX UH OH!  This will have the effect of shadowing names.  We
     # need an alpha-renaming pass.
-    out.write('select name from bayesdb_table_column where table_id = %d' %
+    out.write('SELECT name FROM bayesdb_table_column WHERE table_id = %d' %
         (core.bayesdb_table_id(bdb, estcols.btable),))
     colno_exp = 'colno'         # XXX
     if estcols.condition is not None:
-        out.write(' and ')
+        out.write(' AND ')
         compile_1col_expression(bdb, estcols.condition, estcols, colno_exp,
             out)
     if estcols.order is not None:
@@ -171,7 +171,7 @@ def compile_estcols(bdb, estcols, out):
         first = True
         for order in estcols.order:
             if first:
-                out.write(' order by ')
+                out.write(' ORDER BY ')
                 first = False
             else:
                 out.write(', ')
@@ -180,15 +180,15 @@ def compile_estcols(bdb, estcols, out):
             if order.sense == ast.ORD_ASC:
                 pass
             elif order.sense == ast.ORD_DESC:
-                out.write(' desc')
+                out.write(' DESC')
             else:
                 assert False    # XXX
     if estcols.limit is not None:
-        out.write(' limit ')
+        out.write(' LIMIT ')
         compile_1col_expression(bdb, estcols.limit.limit, estcols, colno_exp,
             out)
         if estcols.limit.offset is not None:
-            out.write(' offset ')
+            out.write(' OFFSET ')
             compile_1col_expression(bdb, estcols.limit.offset, estcols,
                 colno_exp, out)
 
@@ -468,7 +468,7 @@ operator_fmts = {
 
 def compile_literal(bdb, lit, out):
     if isinstance(lit, ast.LitNull):
-        out.write('null')
+        out.write('NULL')
     elif isinstance(lit, ast.LitInt):
         out.write(str(lit.value))
     elif isinstance(lit, ast.LitFloat):

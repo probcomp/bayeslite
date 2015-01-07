@@ -40,128 +40,128 @@ def bql_execute(bdb, string):
         bql.execute_phrase(bdb, phrase)
 
 def test_select_trivial():
-    assert bql2sql('select null;') == 'select null;'
-    assert bql2sql("select 'x';") == "select 'x';"
-    assert bql2sql("select 'x''y';") == "select 'x''y';"
-    assert bql2sql('select "x";') == 'select "x";'
-    assert bql2sql('select "x""y";') == 'select "x""y";'
-    assert bql2sql('select 0;') == 'select 0;'
-    assert bql2sql('select 0.;') == 'select 0.0;'
-    assert bql2sql('select .0;') == 'select 0.0;'
-    assert bql2sql('select 0.0;') == 'select 0.0;'
-    assert bql2sql('select 1e0;') == 'select 1.0;'
-    assert bql2sql('select 1e+1;') == 'select 10.0;'
-    assert bql2sql('select 1e-1;') == 'select 0.1;'
-    assert bql2sql('select .1e0;') == 'select 0.1;'
-    assert bql2sql('select 1.e10;') == 'select 10000000000.0;'
-    assert bql2sql('select all 0;') == 'select 0;'
-    assert bql2sql('select distinct 0;') == 'select distinct 0;'
-    assert bql2sql('select 0 as z;') == 'select 0 as "z";'
-    assert bql2sql('select * from t;') == 'select * from "t";'
-    assert bql2sql('select t.* from t;') == 'select "t".* from "t";'
-    assert bql2sql('select c from t;') == 'select "c" from "t";'
-    assert bql2sql('select c as d from t;') == 'select "c" as "d" from "t";'
+    assert bql2sql('select null;') == 'SELECT NULL;'
+    assert bql2sql("select 'x';") == "SELECT 'x';"
+    assert bql2sql("select 'x''y';") == "SELECT 'x''y';"
+    assert bql2sql('select "x";') == 'SELECT "x";'
+    assert bql2sql('select "x""y";') == 'SELECT "x""y";'
+    assert bql2sql('select 0;') == 'SELECT 0;'
+    assert bql2sql('select 0.;') == 'SELECT 0.0;'
+    assert bql2sql('select .0;') == 'SELECT 0.0;'
+    assert bql2sql('select 0.0;') == 'SELECT 0.0;'
+    assert bql2sql('select 1e0;') == 'SELECT 1.0;'
+    assert bql2sql('select 1e+1;') == 'SELECT 10.0;'
+    assert bql2sql('select 1e-1;') == 'SELECT 0.1;'
+    assert bql2sql('select .1e0;') == 'SELECT 0.1;'
+    assert bql2sql('select 1.e10;') == 'SELECT 10000000000.0;'
+    assert bql2sql('select all 0;') == 'SELECT 0;'
+    assert bql2sql('select distinct 0;') == 'SELECT DISTINCT 0;'
+    assert bql2sql('select 0 as z;') == 'SELECT 0 AS "z";'
+    assert bql2sql('select * from t;') == 'SELECT * FROM "t";'
+    assert bql2sql('select t.* from t;') == 'SELECT "t".* FROM "t";'
+    assert bql2sql('select c from t;') == 'SELECT "c" FROM "t";'
+    assert bql2sql('select c as d from t;') == 'SELECT "c" AS "d" FROM "t";'
     assert bql2sql('select t.c as d from t;') == \
-        'select "t"."c" as "d" from "t";'
+        'SELECT "t"."c" AS "d" FROM "t";'
     assert bql2sql('select t.c as d, p as q, x from t;') == \
-        'select "t"."c" as "d", "p" as "q", "x" from "t";'
-    assert bql2sql('select * from t, u;') == 'select * from "t", "u";'
-    assert bql2sql('select * from t as u;') == 'select * from "t" as "u";'
-    assert bql2sql('select * where x;') == 'select * where "x";'
+        'SELECT "t"."c" AS "d", "p" AS "q", "x" FROM "t";'
+    assert bql2sql('select * from t, u;') == 'SELECT * FROM "t", "u";'
+    assert bql2sql('select * from t as u;') == 'SELECT * FROM "t" AS "u";'
+    assert bql2sql('select * where x;') == 'SELECT * WHERE "x";'
     assert bql2sql('select * from t where x;') == \
-        'select * from "t" where "x";'
-    assert bql2sql('select * group by x;') == 'select * group by "x";'
+        'SELECT * FROM "t" WHERE "x";'
+    assert bql2sql('select * group by x;') == 'SELECT * GROUP BY "x";'
     assert bql2sql('select * from t where x group by y;') == \
-        'select * from "t" where "x" group by "y";'
+        'SELECT * FROM "t" WHERE "x" GROUP BY "y";'
     assert bql2sql('select * from t where x group by y, z;') == \
-        'select * from "t" where "x" group by "y", "z";'
-    assert bql2sql('select * order by x;') == 'select * order by "x";'
-    assert bql2sql('select * order by x asc;') == 'select * order by "x";'
+        'SELECT * FROM "t" WHERE "x" GROUP BY "y", "z";'
+    assert bql2sql('select * order by x;') == 'SELECT * ORDER BY "x";'
+    assert bql2sql('select * order by x asc;') == 'SELECT * ORDER BY "x";'
     assert bql2sql('select * order by x desc;') == \
-        'select * order by "x" desc;'
-    assert bql2sql('select * order by x, y;') == 'select * order by "x", "y";'
+        'SELECT * ORDER BY "x" DESC;'
+    assert bql2sql('select * order by x, y;') == 'SELECT * ORDER BY "x", "y";'
     assert bql2sql('select * order by x desc, y;') == \
-        'select * order by "x" desc, "y";'
+        'SELECT * ORDER BY "x" DESC, "y";'
     assert bql2sql('select * order by x, y asc;') == \
-        'select * order by "x", "y";'
-    assert bql2sql('select * limit 32;') == 'select * limit 32;'
+        'SELECT * ORDER BY "x", "y";'
+    assert bql2sql('select * limit 32;') == 'SELECT * LIMIT 32;'
     assert bql2sql('select * limit 32 offset 16;') == \
-        'select * limit 32 offset 16;'
-    assert bql2sql('select * limit 16, 32;') == 'select * limit 32 offset 16;'
-    assert bql2sql('select (select0);') == 'select "select0";'
-    assert bql2sql('select (select 0);') == 'select (select 0);'
+        'SELECT * LIMIT 32 OFFSET 16;'
+    assert bql2sql('select * limit 16, 32;') == 'SELECT * LIMIT 32 OFFSET 16;'
+    assert bql2sql('select (select0);') == 'SELECT "select0";'
+    assert bql2sql('select (select 0);') == 'SELECT (SELECT 0);'
     assert bql2sql('select f(f(), f(x), y);') == \
-        'select "f"("f"(), "f"("x"), "y");'
+        'SELECT "f"("f"(), "f"("x"), "y");'
     assert bql2sql('select a and b or c or not d is e is not f like j;') == \
-        'select ((("a" AND "b") OR "c") OR' \
+        'SELECT ((("a" AND "b") OR "c") OR' \
         + ' (NOT ((("d" IS "e") IS NOT "f") LIKE "j")));'
     assert bql2sql('select a like b not like c like d escape e;') == \
-        'select ((("a" LIKE "b") NOT LIKE "c") LIKE "d" ESCAPE "e");'
+        'SELECT ((("a" LIKE "b") NOT LIKE "c") LIKE "d" ESCAPE "e");'
     assert bql2sql('select a like b escape c glob d not glob e;') == \
-        'select ((("a" LIKE "b" ESCAPE "c") GLOB "d") NOT GLOB "e");'
+        'SELECT ((("a" LIKE "b" ESCAPE "c") GLOB "d") NOT GLOB "e");'
     assert bql2sql('select a not glob b glob c escape d;') == \
-        'select (("a" NOT GLOB "b") GLOB "c" ESCAPE "d");'
+        'SELECT (("a" NOT GLOB "b") GLOB "c" ESCAPE "d");'
     assert bql2sql('select a glob b escape c regexp e not regexp f;') == \
-        'select ((("a" GLOB "b" ESCAPE "c") REGEXP "e") NOT REGEXP "f");'
+        'SELECT ((("a" GLOB "b" ESCAPE "c") REGEXP "e") NOT REGEXP "f");'
     assert bql2sql('select a not regexp b regexp c escape d;') == \
-        'select (("a" NOT REGEXP "b") REGEXP "c" ESCAPE "d");'
+        'SELECT (("a" NOT REGEXP "b") REGEXP "c" ESCAPE "d");'
     assert bql2sql('select a regexp b escape c not regexp d escape e;') == \
-        'select (("a" REGEXP "b" ESCAPE "c") NOT REGEXP "d" ESCAPE "e");'
+        'SELECT (("a" REGEXP "b" ESCAPE "c") NOT REGEXP "d" ESCAPE "e");'
     assert bql2sql('select a not regexp b escape c match e not match f;') == \
-        'select ((("a" NOT REGEXP "b" ESCAPE "c") MATCH "e") NOT MATCH "f");'
+        'SELECT ((("a" NOT REGEXP "b" ESCAPE "c") MATCH "e") NOT MATCH "f");'
     assert bql2sql('select a not match b match c escape d;') == \
-        'select (("a" NOT MATCH "b") MATCH "c" ESCAPE "d");'
+        'SELECT (("a" NOT MATCH "b") MATCH "c" ESCAPE "d");'
     assert bql2sql('select a match b escape c not match d escape e;') == \
-        'select (("a" MATCH "b" ESCAPE "c") NOT MATCH "d" ESCAPE "e");'
+        'SELECT (("a" MATCH "b" ESCAPE "c") NOT MATCH "d" ESCAPE "e");'
     assert bql2sql('select a not match b escape c between d and e;') == \
-        'select (("a" NOT MATCH "b" ESCAPE "c") BETWEEN "d" AND "e");'
+        'SELECT (("a" NOT MATCH "b" ESCAPE "c") BETWEEN "d" AND "e");'
     assert bql2sql('select a between b and c and d;') == \
-        'select (("a" BETWEEN "b" AND "c") AND "d");'
+        'SELECT (("a" BETWEEN "b" AND "c") AND "d");'
     assert bql2sql('select a like b like c escape d between e and f;') == \
-        'select ((("a" LIKE "b") LIKE "c" ESCAPE "d") BETWEEN "e" AND "f");'
+        'SELECT ((("a" LIKE "b") LIKE "c" ESCAPE "d") BETWEEN "e" AND "f");'
     assert bql2sql('select a between b and c not between d and e;') == \
-        'select (("a" BETWEEN "b" AND "c") NOT BETWEEN "d" AND "e");'
+        'SELECT (("a" BETWEEN "b" AND "c") NOT BETWEEN "d" AND "e");'
     assert bql2sql('select a not between b and c in (select f);') == \
-        'select (("a" NOT BETWEEN "b" AND "c") IN (select "f"));'
+        'SELECT (("a" NOT BETWEEN "b" AND "c") IN (SELECT "f"));'
     assert bql2sql('select a in (select b) and c not in (select d);') == \
-        'select (("a" IN (select "b")) AND ("c" NOT IN (select "d")));'
+        'SELECT (("a" IN (SELECT "b")) AND ("c" NOT IN (SELECT "d")));'
     assert bql2sql('select a in (select b) isnull notnull!=c<>d<e<=f>g;') == \
-        'select ((((("a" IN (select "b")) ISNULL) NOTNULL) != "c") !=' \
+        'SELECT ((((("a" IN (SELECT "b")) ISNULL) NOTNULL) != "c") !=' \
         + ' ((("d" < "e") <= "f") > "g"));'
     assert bql2sql('select a>b>=c<<d>>e&f|g+h-i*j/k;') == \
-        'select (("a" > "b") >= (((("c" << "d") >> "e") & "f") |' \
+        'SELECT (("a" > "b") >= (((("c" << "d") >> "e") & "f") |' \
         + ' (("g" + "h") - (("i" * "j") / "k"))));'
     assert bql2sql('select a/b%c||~~d collate e collate\'f\'||1;') == \
-        'select (("a" / "b") % (("c" || (((~ (~ "d")) COLLATE "e")' \
+        'SELECT (("a" / "b") % (("c" || (((~ (~ "d")) COLLATE "e")' \
         + ' COLLATE "f")) || 1));'
     assert bql2sql('select cast(f(x) as binary blob);') == \
-        'select CAST("f"("x") AS "binary" "blob");'
+        'SELECT CAST("f"("x") AS "binary" "blob");'
     assert bql2sql('select cast(42 as varint(73));') == \
-        'select CAST(42 AS "varint"(73));'
+        'SELECT CAST(42 AS "varint"(73));'
     assert bql2sql('select cast(f(x, y, z) as varchar(12 ,34));') == \
-        'select CAST("f"("x", "y", "z") AS "varchar"(12, 34));'
+        'SELECT CAST("f"("x", "y", "z") AS "varchar"(12, 34));'
     assert bql2sql('select exists (select a) and not exists (select b);') == \
-        'select (EXISTS (select "a") AND (NOT EXISTS (select "b")));'
+        'SELECT (EXISTS (SELECT "a") AND (NOT EXISTS (SELECT "b")));'
     assert bql2sql('select case when a - b then c else d end from t;') == \
-        'select CASE WHEN ("a" - "b") THEN "c" ELSE "d" END from "t";'
+        'SELECT CASE WHEN ("a" - "b") THEN "c" ELSE "d" END FROM "t";'
     assert bql2sql('select case f(a) when b + c then d else e end from t;') \
         == \
-        'select CASE "f"("a") WHEN ("b" + "c") THEN "d" ELSE "e" END from "t";'
+        'SELECT CASE "f"("a") WHEN ("b" + "c") THEN "d" ELSE "e" END FROM "t";'
 
 def test_select_bql():
     assert bql2sql('select predictive probability of weight from t1;') == \
-        'select row_column_predictive_probability(1, rowid, 3) from "t1";'
+        'SELECT row_column_predictive_probability(1, rowid, 3) FROM "t1";'
     assert bql2sql('select label, predictive probability of weight from t1;') \
         == \
-        'select "label", row_column_predictive_probability(1, rowid, 3)' \
-        + ' from "t1";'
+        'SELECT "label", row_column_predictive_probability(1, rowid, 3)' \
+        + ' FROM "t1";'
     assert bql2sql('select predictive probability of weight, label from t1;') \
         == \
-        'select row_column_predictive_probability(1, rowid, 3), "label"' \
-        + ' from "t1";'
+        'SELECT row_column_predictive_probability(1, rowid, 3), "label"' \
+        + ' FROM "t1";'
     assert bql2sql('select predictive probability of weight + 1 from t1;') == \
-        'select (row_column_predictive_probability(1, rowid, 3) + 1)' \
-        + ' from "t1";'
+        'SELECT (row_column_predictive_probability(1, rowid, 3) + 1)' \
+        + ' FROM "t1";'
     with pytest.raises(ValueError):
         # Need a table.
         bql2sql('select predictive probability of weight;')
@@ -175,28 +175,28 @@ def test_select_bql():
         # Need a column.
         bql2sql('select predictive probability from t1;')
     assert bql2sql('select probability of weight = 20 from t1;') == \
-        'select column_value_probability(1, 3, 20) from "t1";'
+        'SELECT column_value_probability(1, 3, 20) FROM "t1";'
     assert bql2sql('select probability of weight = (c + 1) from t1;') == \
-        'select column_value_probability(1, 3, ("c" + 1)) from "t1";'
+        'SELECT column_value_probability(1, 3, ("c" + 1)) FROM "t1";'
     assert bql2sql('select probability of weight = f(c) from t1;') == \
-        'select column_value_probability(1, 3, "f"("c")) from "t1";'
+        'SELECT column_value_probability(1, 3, "f"("c")) FROM "t1";'
     assert bql2sql('select typicality from t1;') == \
-        'select row_typicality(1, rowid) from "t1";'
+        'SELECT row_typicality(1, rowid) FROM "t1";'
     assert bql2sql('select typicality of age from t1;') == \
-        'select column_typicality(1, 2) from "t1";'
+        'SELECT column_typicality(1, 2) FROM "t1";'
     assert bql2sql('select similarity to 5 with respect to age from t1') == \
-        'select row_similarity(1, rowid, 5, 2) from "t1";'
+        'SELECT row_similarity(1, rowid, 5, 2) FROM "t1";'
     assert bql2sql('select similarity to 5 with respect to (age, weight)' +
         ' from t1;') == \
-        'select row_similarity(1, rowid, 5, 2, 3) from "t1";'
+        'SELECT row_similarity(1, rowid, 5, 2, 3) FROM "t1";'
     assert bql2sql('select similarity to 5 with respect to (*) from t1;') == \
-        'select row_similarity(1, rowid, 5, 0, 1, 2, 3) from "t1";'
+        'SELECT row_similarity(1, rowid, 5, 0, 1, 2, 3) FROM "t1";'
     assert bql2sql('select similarity to 5 with respect to (age, weight)' +
         ' from t1;') == \
-        'select row_similarity(1, rowid, 5, 2, 3) from "t1";'
+        'SELECT row_similarity(1, rowid, 5, 2, 3) FROM "t1";'
     assert bql2sql('select dependence probability of age with weight' +
         ' from t1;') == \
-        'select column_dependence_probability(1, 2, 3) from "t1";'
+        'SELECT column_dependence_probability(1, 2, 3) FROM "t1";'
     with pytest.raises(ValueError):
         # Need both columns fixed.
         bql2sql('select dependence probability with age from t1;')
@@ -205,7 +205,7 @@ def test_select_bql():
         bql2sql('select dependence probability from t1;')
     assert bql2sql('select mutual information of age with weight' +
         ' from t1;') == \
-        'select column_mutual_information(1, 2, 3) from "t1";'
+        'SELECT column_mutual_information(1, 2, 3) FROM "t1";'
     with pytest.raises(ValueError):
         # Need both columns fixed.
         bql2sql('select mutual information with age from t1;')
@@ -213,7 +213,7 @@ def test_select_bql():
         # Need both columns fixed.
         bql2sql('select mutual information from t1;')
     assert bql2sql('select correlation of age with weight from t1;') == \
-        'select column_correlation(1, 2, 3) from "t1";'
+        'SELECT column_correlation(1, 2, 3) FROM "t1";'
     with pytest.raises(ValueError):
         # Need both columns fixed.
         bql2sql('select correlation with age from t1;')
@@ -222,12 +222,12 @@ def test_select_bql():
         bql2sql('select correlation from t1;')
 
 def test_estimate_columns_trivial():
-    prefix = 'select name from bayesdb_table_column where table_id = 1'
+    prefix = 'SELECT name FROM bayesdb_table_column WHERE table_id = 1'
     assert bql2sql('estimate columns from t1;') == \
         prefix + ';'
     assert bql2sql('estimate columns from t1 where' +
             ' (probability of value 42) > 0.5') == \
-        prefix + ' and (column_value_probability(1, colno, 42) > 0.5);'
+        prefix + ' AND (column_value_probability(1, colno, 42) > 0.5);'
     # XXX ESTIMATE COLUMNS FROM T1 WHERE PROBABILITY OF 1 > 0.5
     with pytest.raises(ValueError):
         # Must omit column.
@@ -238,7 +238,7 @@ def test_estimate_columns_trivial():
         bql2sql('estimate columns from t1 where' +
             ' predictive probability of x > 0;')
     assert bql2sql('estimate columns from t1 where typicality > 0.5;') == \
-        prefix + ' and (column_typicality(1, colno) > 0.5);'
+        prefix + ' AND (column_typicality(1, colno) > 0.5);'
     with pytest.raises(ValueError):
         # Must omit column.
         bql2sql('estimate columns from t1 where typicality of c > 0.5;')
@@ -248,7 +248,7 @@ def test_estimate_columns_trivial():
             ' similarity to x with respect to c > 0;')
     assert bql2sql('estimate columns from t1 where' +
             ' dependence probability with age > 0.5;') == \
-        prefix + ' and (column_dependence_probability(1, 2, colno) > 0.5);'
+        prefix + ' AND (column_dependence_probability(1, 2, colno) > 0.5);'
     with pytest.raises(ValueError):
         # Must omit exactly one column.
         bql2sql('estimate columns from t1 where' +
@@ -258,7 +258,7 @@ def test_estimate_columns_trivial():
         bql2sql('estimate columns from t1 where dependence probability > 0.5;')
     assert bql2sql('estimate columns from t1 order by' +
             ' mutual information with age;') == \
-        prefix + ' order by column_mutual_information(1, 2, colno);'
+        prefix + ' ORDER BY column_mutual_information(1, 2, colno);'
     with pytest.raises(ValueError):
         # Must omit exactly one column.
         bql2sql('estimate columns from t1 order by' +
@@ -268,7 +268,7 @@ def test_estimate_columns_trivial():
         bql2sql('estimate columns from t1 where mutual information > 0.5;')
     assert bql2sql('estimate columns from t1 order by' +
             ' correlation with age desc;') == \
-        prefix + ' order by column_correlation(1, 2, colno) desc;'
+        prefix + ' ORDER BY column_correlation(1, 2, colno) DESC;'
     with pytest.raises(ValueError):
         # Must omit exactly one column.
         bql2sql('estimate columns from t1 order by' +
