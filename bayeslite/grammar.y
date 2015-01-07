@@ -53,6 +53,7 @@ query_action(plot)	::= K_PLOT.
 /* XXX EXPLAIN (QUERY PLAN)?  */
 
 query(select)		::= select(q).
+query(estcols)		::= estcols(q).
 /*
 query(infer)		::= infer(q).
 query(simulate)		::= simulate(q).
@@ -69,6 +70,13 @@ select(s)		::= K_SELECT select_quant(quant) select_columns(cols)
 				group_by(group)
 				order_by(ord)
 				limit(lim).
+
+/*
+ * XXX Can we reformulate this elegantly as a SELECT on the columns of
+ * the btable?
+ */
+estcols(e)		::= K_ESTIMATE K_COLUMNS K_FROM table_name(btable)
+				where(cond) order_by(ord) limit(lim) as(sav).
 
 select_quant(distinct)	::= K_DISTINCT.
 select_quant(all)	::= K_ALL.
@@ -291,6 +299,7 @@ wrt(one)		::= K_WITH K_RESPECT K_TO column_list(collist).
 wrt(some)		::= K_WITH K_RESPECT K_TO
 				T_LROUND column_lists(collists) T_RROUND.
 
+ofwith(none)		::= .
 ofwith(with)		::= K_WITH L_NAME(col).
 ofwith(ofwith)		::= K_OF L_NAME(col1) K_WITH L_NAME(col2).
 

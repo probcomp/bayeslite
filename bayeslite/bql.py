@@ -25,7 +25,7 @@ def execute_phrase(bdb, phrase):
         out = StringIO.StringIO()
         compile_query(bdb, phrase, out)
         return bdb.sqlite.execute(out.getvalue())
-    if isinstance(phrase, ast.CreateBtableCSV):
+    elif isinstance(phrase, ast.CreateBtableCSV):
         # XXX Codebook?
         core.bayesdb_import_csv_file(bdb, phrase.name, phrase.file)
         return []
@@ -56,6 +56,8 @@ def execute_phrase(bdb, phrase):
 def compile_query(bdb, query, out):
     if isinstance(query, ast.Select):
         compile_select(bdb, query, out)
+    elif isinstance(query, ast.EstCols):
+        compile_estcols(bdb, query, out)
     else:
         assert False        # XXX
 
@@ -147,6 +149,49 @@ def compile_select_column(bdb, selcol, select, out):
     else:
         assert False            # XXX
 
+# XXX Use context to determine whether to yield column names or
+# numbers, so that top-level queries yield names, but, e.g.,
+# subqueries in SIMILARITY TO 0 WITH RESPECT TO (...) yield numbers
+# since that's what row_similarity wants.
+#
+# XXX Use query parameters, not quotation.
+def compile_estcols(bdb, estcols, out):
+    assert isinstance(estcols, ast.EstCols)
+    # XXX UH OH!  This will have the effect of shadowing names.  We
+    # need an alpha-renaming pass.
+    out.write('select name from bayesdb_table_column where table_id = %d' %
+        (core.bayesdb_table_id(bdb, estcols.btable),))
+    colno_exp = 'colno'         # XXX
+    if estcols.condition is not None:
+        out.write(' and ')
+        compile_1col_expression(bdb, estcols.condition, estcols, colno_exp,
+            out)
+    if estcols.order is not None:
+        assert 0 < len(estcols.order)
+        first = True
+        for order in estcols.order:
+            if first:
+                out.write(' order by ')
+                first = False
+            else:
+                out.write(', ')
+            compile_1col_expression(bdb, order.expression, estcols, colno_exp,
+                out)
+            if order.sense == ast.ORD_ASC:
+                pass
+            elif order.sense == ast.ORD_DESC:
+                out.write(' desc')
+            else:
+                assert False    # XXX
+    if estcols.limit is not None:
+        out.write(' limit ')
+        compile_1col_expression(bdb, estcols.limit.limit, estcols, colno_exp,
+            out)
+        if estcols.limit.offset is not None:
+            out.write(' offset ')
+            compile_1col_expression(bdb, estcols.limit.offset, estcols,
+                colno_exp, out)
+
 class BQLCompiler_Row(object):
     def __init__(self, ctx):
         assert isinstance(ctx, ast.Select)
@@ -172,6 +217,11 @@ class BQLCompiler_Row(object):
             out.write('row_column_predictive_probability(%s, %s, %s)' %
                 (table_id, rowid_col, colno))
         elif isinstance(bql, ast.ExpBQLProb):
+            # XXX Why is this independent of the row?  Can't we
+            # condition on the values of the row?  Maybe need another
+            # notation; PROBABILITY OF X = V GIVEN ...?
+            if bql.column is None:
+                raise ValueError('Probability of value at row needs column.')
             colno = core.bayesdb_column_number(bdb, table_id, bql.column)
             out.write('column_value_probability(%s, %s, ' % (table_id, colno))
             compile_expression(bdb, bql.value, self, out)
@@ -190,12 +240,52 @@ class BQLCompiler_Row(object):
             out.write(')')
         elif isinstance(bql, ast.ExpBQLDepProb):
             compile_bql_2col_2(bdb, table_id, 'column_dependence_probability',
-                bql, out)
+                'Dependence probability', bql, out)
         elif isinstance(bql, ast.ExpBQLMutInf):
-            compile_bql_2col_2(bdb, table_id, 'column_mutual_information', bql,
-                out)
+            compile_bql_2col_2(bdb, table_id, 'column_mutual_information',
+                'Mutual information', bql, out)
         elif isinstance(bql, ast.ExpBQLCorrel):
-            compile_bql_2col_2(bdb, table_id, 'column_correlation', bql, out)
+            compile_bql_2col_2(bdb, table_id, 'column_correlation',
+                'Column correlation', bql, out)
+        else:
+            assert False        # XXX
+
+class BQLCompiler_1Col(object):
+    def __init__(self, ctx, colno_exp):
+        assert isinstance(ctx, ast.EstCols)
+        assert isinstance(colno_exp, str)
+        self.ctx = ctx
+        self.colno_exp = colno_exp
+
+    def compile_bql(self, bdb, bql, out):
+        assert ast.is_bql(bql)
+        assert self.ctx.btable is not None
+        table_id = core.bayesdb_table_id(bdb, self.ctx.btable)
+        if isinstance(bql, ast.ExpBQLProb):
+            if bql.column is not None:
+                raise ValueError('Probability of value needs no column.')
+            out.write('column_value_probability(%s, %s, ' %
+                (table_id, self.colno_exp))
+            compile_expression(bdb, bql.value, self, out)
+            out.write(')')
+        elif isinstance(bql, ast.ExpBQLPredProb):
+            # XXX Is this true?
+            raise ValueError('Predictive probability makes sense only at row.')
+        elif isinstance(bql, ast.ExpBQLTyp):
+            if bql.column is not None:
+                raise ValueError('Typicality of column needs no column.')
+            out.write('column_typicality(%s, %s)' % (table_id, self.colno_exp))
+        elif isinstance(bql, ast.ExpBQLSim):
+            raise ValueError('Similarity to row makes sense only at row.')
+        elif isinstance(bql, ast.ExpBQLDepProb):
+            compile_bql_2col_1(bdb, table_id, 'column_dependence_probability',
+                'Dependence probability', bql, self.colno_exp, out)
+        elif isinstance(bql, ast.ExpBQLMutInf):
+            compile_bql_2col_1(bdb, table_id, 'column_mutual_information',
+                'Mutual information', bql, self.colno_exp, out)
+        elif isinstance(bql, ast.ExpBQLCorrel):
+            compile_bql_2col_1(bdb, table_id, 'column_correlation',
+                'Column correlation', bql, self.colno_exp, out)
         else:
             assert False        # XXX
 
@@ -220,15 +310,29 @@ def compile_column_lists(bdb, table_id, column_lists, _bql_compiler, out):
         else:
             assert False        # XXX
 
-def compile_bql_2col_2(bdb, table_id, bqlfn, bql, out):
-    assert bql.column0 is not None
-    assert bql.column1 is not None
+def compile_bql_2col_2(bdb, table_id, bqlfn, desc, bql, out):
+    if bql.column0 is None:
+        raise ValueError(desc + ' needs exactly two columns.')
+    if bql.column1 is None:
+        raise ValueError(desc + ' needs exactly two columns.')
     colno0 = core.bayesdb_column_number(bdb, table_id, bql.column0)
     colno1 = core.bayesdb_column_number(bdb, table_id, bql.column1)
     out.write('%s(%s, %s, %s)' % (bqlfn, table_id, colno0, colno1))
 
+def compile_bql_2col_1(bdb, table_id, bqlfn, desc, bql, colno1_exp, out):
+    if bql.column0 is None:
+        raise ValueError(desc + ' needs at least one column.')
+    if bql.column1 is not None:
+        raise ValueError(desc + ' needs at most one column.')
+    colno0 = core.bayesdb_column_number(bdb, table_id, bql.column0)
+    out.write('%s(%s, %s, %s)' % (bqlfn, table_id, colno0, colno1_exp))
+
 def compile_row_expression(bdb, exp, query, out):
     bql_compiler = BQLCompiler_Row(query)
+    compile_expression(bdb, exp, bql_compiler, out)
+
+def compile_1col_expression(bdb, exp, query, colno_exp, out):
+    bql_compiler = BQLCompiler_1Col(query, colno_exp)
     compile_expression(bdb, exp, bql_compiler, out)
 
 def compile_expression(bdb, exp, bql_compiler, out):

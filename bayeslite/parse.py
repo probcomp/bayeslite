@@ -123,6 +123,7 @@ class BQLSemantics(object):
     def p_query_action_plot(self):              return ast.QACT_PLOT
 
     def p_query_select(self, q):                return q
+    def p_query_estcols(self, q):               return q
     def p_query_infer(self, q):                 return q
     def p_query_simulate(self, q):              return q
     def p_query_estimate_pairwise_row(self, q): return q
@@ -130,6 +131,9 @@ class BQLSemantics(object):
 
     def p_select_s(self, quant, cols, tabs, cond, group, ord, lim):
         return ast.Select(quant, cols, tabs, cond, group, ord, lim)
+
+    def p_estcols_e(self, btable, cond, ord, lim, sav):
+        return ast.EstCols(btable, cond, ord, lim, sav)
 
     def p_select_quant_distinct(self):          return ast.SELQUANT_DISTINCT
     def p_select_quant_all(self):               return ast.SELQUANT_ALL
@@ -283,6 +287,7 @@ class BQLSemantics(object):
     def p_wrt_one(self, collist):               return [collist]
     def p_wrt_some(self, collists):             return collists
 
+    def p_ofwith_none(self):                    return (None, None)
     def p_ofwith_with(self, col):               return (col, None)
     def p_ofwith_ofwith(self, col1, col2):      return (col1, col2)
 

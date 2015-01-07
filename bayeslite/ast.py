@@ -37,6 +37,7 @@ QACT_PLOT = 'plot'
 
 def is_query(phrase):
     if isinstance(phrase, Select):      return True
+    if isinstance(phrase, EstCols):     return True
     return False
 
 Select = namedtuple('Select', [
@@ -60,15 +61,23 @@ SelColExp = namedtuple('SelColExp', [
     'name',                     # XXX name
 ])
 
-ColListAll = namedtuple('ColListAll', [])
-ColListLit = namedtuple('ColListLit', ['columns'])
-ColListSub = namedtuple('ColListSub', ['query']) # subquery
-ColListSav = namedtuple('ColListSav', ['name']) # saved
-
 SelTab = namedtuple('SelTab', [
     'table',                    # XXX subquery or XXX name
     'name',                     # XXX name
 ])
+
+EstCols = namedtuple('EstCols', [
+    'btable',                   # XXX name
+    'condition',                # Exp* or None (unconditional)
+    'order',                    # [Ord] or None (unordered)
+    'limit',                    # Lim or None (unlimited),
+    'save_name',                # XXX name or None (don't save)
+])
+
+ColListAll = namedtuple('ColListAll', [])
+ColListLit = namedtuple('ColListLit', ['columns'])
+ColListSub = namedtuple('ColListSub', ['query']) # subquery
+ColListSav = namedtuple('ColListSav', ['name']) # saved
 
 Ord = namedtuple('Ord', ['expression', 'sense'])
 ORD_ASC = True
@@ -138,7 +147,7 @@ OP_BITNOT = 'BITNOT'
 
 ExpBQLPredProb = namedtuple('ExpBQLPredProb', ['column'])
 ExpBQLProb = namedtuple('ExpBQLProb', ['column', 'value'])
-ExpBQLTyp = namedtuple('ExpBQLTypCol', ['column'])
+ExpBQLTyp = namedtuple('ExpBQLTyp', ['column'])
 ExpBQLSim = namedtuple('ExpBQLSim', ['rowid', 'column_lists'])
 ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
 ExpBQLMutInf = namedtuple('ExpBQLMutInf', ['column0', 'column1'])

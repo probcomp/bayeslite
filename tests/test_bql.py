@@ -162,6 +162,18 @@ def test_select_bql():
     assert bql2sql('select predictive probability of weight + 1 from t1;') == \
         'select (row_column_predictive_probability(1, rowid, 3) + 1)' \
         + ' from "t1";'
+    with pytest.raises(ValueError):
+        # Need a table.
+        bql2sql('select predictive probability of weight;')
+    with pytest.raises(ValueError):
+        # Need at most one table.
+        bql2sql('select predictive probability of weight from t1, t1;')
+    with pytest.raises(ValueError):
+        # Need a btable, not a subquery.
+        bql2sql('select predictive probability of weight from (select 0);')
+    with pytest.raises(ValueError):
+        # Need a column.
+        bql2sql('select predictive probability from t1;')
     assert bql2sql('select probability of weight = 20 from t1;') == \
         'select column_value_probability(1, 3, 20) from "t1";'
     assert bql2sql('select probability of weight = (c + 1) from t1;') == \
@@ -185,25 +197,71 @@ def test_select_bql():
     assert bql2sql('select dependence probability of age with weight' +
         ' from t1;') == \
         'select column_dependence_probability(1, 2, 3) from "t1";'
+    with pytest.raises(ValueError):
+        # Need both columns fixed.
+        bql2sql('select dependence probability with age from t1;')
+    with pytest.raises(ValueError):
+        # Need both columns fixed.
+        bql2sql('select dependence probability from t1;')
     assert bql2sql('select mutual information of age with weight' +
         ' from t1;') == \
         'select column_mutual_information(1, 2, 3) from "t1";'
+    with pytest.raises(ValueError):
+        # Need both columns fixed.
+        bql2sql('select mutual information with age from t1;')
+    with pytest.raises(ValueError):
+        # Need both columns fixed.
+        bql2sql('select mutual information from t1;')
     assert bql2sql('select correlation of age with weight from t1;') == \
         'select column_correlation(1, 2, 3) from "t1";'
+    with pytest.raises(ValueError):
+        # Need both columns fixed.
+        bql2sql('select correlation with age from t1;')
+    with pytest.raises(ValueError):
+        # Need both columns fixed.
+        bql2sql('select correlation from t1;')
 
-def test_select_bql_error():
+def test_estimate_columns_trivial():
+    prefix = 'select name from bayesdb_table_column where table_id = 1'
+    assert bql2sql('estimate columns from t1;') == \
+        prefix + ';'
+    # XXX ESTIMATE COLUMNS FROM T1 WHERE PROBABILITY OF 1 > 0.5
     with pytest.raises(ValueError):
-        # Need a table.
-        bql2sql('select predictive probability of weight;')
+        bql2sql('estimate columns from t1 where (probability of x = 0) > 0.5;')
     with pytest.raises(ValueError):
-        # Need at most one table.
-        bql2sql('select predictive probability of weight from t1, t1;')
+        bql2sql('estimate columns from t1 where' +
+            ' predictive probability of x > 0;')
+    assert bql2sql('estimate columns from t1 where typicality > 0.5;') == \
+        prefix + ' and (column_typicality(1, colno) > 0.5);'
     with pytest.raises(ValueError):
-        # Need a btable, not a subquery.
-        bql2sql('select predictive probability of weight from (select 0);')
+        bql2sql('estimate columns from t1 where typicality of c > 0.5;')
     with pytest.raises(ValueError):
-        # Need a column.
-        bql2sql('select predictive probability from t1;')
+        bql2sql('estimate columns from t1 where' +
+            ' similarity to x with respect to c > 0;')
+    assert bql2sql('estimate columns from t1 where' +
+            ' dependence probability with age > 0.5;') == \
+        prefix + ' and (column_dependence_probability(1, 2, colno) > 0.5);'
+    with pytest.raises(ValueError):
+        bql2sql('estimate columns from t1 where' +
+            ' dependence probability of age with weight > 0.5;')
+    with pytest.raises(ValueError):
+        bql2sql('estimate columns from t1 where dependence probability > 0.5;')
+    assert bql2sql('estimate columns from t1 order by' +
+            ' mutual information with age;') == \
+        prefix + ' order by column_mutual_information(1, 2, colno);'
+    with pytest.raises(ValueError):
+        bql2sql('estimate columns from t1 order by' +
+            ' mutual information of age with weight;')
+    with pytest.raises(ValueError):
+        bql2sql('estimate columns from t1 where mutual information > 0.5;')
+    assert bql2sql('estimate columns from t1 order by' +
+            ' correlation with age desc;') == \
+        prefix + ' order by column_correlation(1, 2, colno) desc;'
+    with pytest.raises(ValueError):
+        bql2sql('estimate columns from t1 order by' +
+            ' correlation of age with weight;')
+    with pytest.raises(ValueError):
+        bql2sql('estimate columns from t1 where correlation > 0.5;')
 
 def test_trivial_commands():
     with test_smoke.bayesdb_csv(test_smoke.csv_data) as (bdb, fname):
