@@ -230,40 +230,51 @@ def test_estimate_columns_trivial():
         prefix + ' and (column_value_probability(1, colno, 42) > 0.5);'
     # XXX ESTIMATE COLUMNS FROM T1 WHERE PROBABILITY OF 1 > 0.5
     with pytest.raises(ValueError):
+        # Must omit column.
         bql2sql('estimate columns from t1 where (probability of x = 0) > 0.5;')
     with pytest.raises(ValueError):
+        # Must omit column.  PREDICTIVE PROBABILITY makes no sense
+        # without row.
         bql2sql('estimate columns from t1 where' +
             ' predictive probability of x > 0;')
     assert bql2sql('estimate columns from t1 where typicality > 0.5;') == \
         prefix + ' and (column_typicality(1, colno) > 0.5);'
     with pytest.raises(ValueError):
+        # Must omit column.
         bql2sql('estimate columns from t1 where typicality of c > 0.5;')
     with pytest.raises(ValueError):
+        # SIMILARITY makes no sense without row.
         bql2sql('estimate columns from t1 where' +
             ' similarity to x with respect to c > 0;')
     assert bql2sql('estimate columns from t1 where' +
             ' dependence probability with age > 0.5;') == \
         prefix + ' and (column_dependence_probability(1, 2, colno) > 0.5);'
     with pytest.raises(ValueError):
+        # Must omit exactly one column.
         bql2sql('estimate columns from t1 where' +
             ' dependence probability of age with weight > 0.5;')
     with pytest.raises(ValueError):
+        # Must omit exactly one column.
         bql2sql('estimate columns from t1 where dependence probability > 0.5;')
     assert bql2sql('estimate columns from t1 order by' +
             ' mutual information with age;') == \
         prefix + ' order by column_mutual_information(1, 2, colno);'
     with pytest.raises(ValueError):
+        # Must omit exactly one column.
         bql2sql('estimate columns from t1 order by' +
             ' mutual information of age with weight;')
     with pytest.raises(ValueError):
+        # Must omit exactly one column.
         bql2sql('estimate columns from t1 where mutual information > 0.5;')
     assert bql2sql('estimate columns from t1 order by' +
             ' correlation with age desc;') == \
         prefix + ' order by column_correlation(1, 2, colno) desc;'
     with pytest.raises(ValueError):
+        # Must omit exactly one column.
         bql2sql('estimate columns from t1 order by' +
             ' correlation of age with weight;')
     with pytest.raises(ValueError):
+        # Must omit exactly one column.
         bql2sql('estimate columns from t1 where correlation > 0.5;')
 
 def test_trivial_commands():
