@@ -171,7 +171,7 @@ def test_select_bql():
     with pytest.raises(ValueError):
         # Need a btable, not a subquery.
         bql2sql('select predictive probability of weight from (select 0);')
-    with pytest.raises(ValueError):
+    with pytest.raises(Exception): # XXX Use a specific parse error.
         # Need a column.
         bql2sql('select predictive probability from t1;')
     assert bql2sql('select probability of weight = 20 from t1;') == \
@@ -225,6 +225,9 @@ def test_estimate_columns_trivial():
     prefix = 'select name from bayesdb_table_column where table_id = 1'
     assert bql2sql('estimate columns from t1;') == \
         prefix + ';'
+    assert bql2sql('estimate columns from t1 where' +
+            ' (probability of value 42) > 0.5') == \
+        prefix + ' and (column_value_probability(1, colno, 42) > 0.5);'
     # XXX ESTIMATE COLUMNS FROM T1 WHERE PROBABILITY OF 1 > 0.5
     with pytest.raises(ValueError):
         bql2sql('estimate columns from t1 where (probability of x = 0) > 0.5;')

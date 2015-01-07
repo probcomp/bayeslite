@@ -271,25 +271,24 @@ class BQLSemantics(object):
     def p_bitwise_not_not(self, n):     return ast.op(ast.OP_BITNOT, n)
     def p_bitwise_not_bql(self, b):     return b
 
-    def p_bqlfn_predprob(self, col):            return ast.ExpBQLPredProb(col)
-    def p_bqlfn_prob(self, col, e):             return ast.ExpBQLProb(col, e)
-    def p_bqlfn_typ(self, col):                 return ast.ExpBQLTyp(col)
-    def p_bqlfn_sim(self, row, cols):           return ast.ExpBQLSim(row, cols)
+    def p_bqlfn_predprob_row(self, col):        return ast.ExpBQLPredProb(col)
+    def p_bqlfn_prob_const(self, col, e):       return ast.ExpBQLProb(col, e)
+    def p_bqlfn_prob_1col(self, e):             return ast.ExpBQLProb(None, e)
+    def p_bqlfn_typ_1col_or_row(self):          return ast.ExpBQLTyp(None)
+    def p_bqlfn_typ_const(self, col):           return ast.ExpBQLTyp(col)
+    def p_bqlfn_sim_row(self, row, cols):       return ast.ExpBQLSim(row, cols)
     def p_bqlfn_depprob(self, cols):            return ast.ExpBQLDepProb(*cols)
     def p_bqlfn_mutinf(self, cols):             return ast.ExpBQLMutInf(*cols)
     def p_bqlfn_correl(self, cols):             return ast.ExpBQLCorrel(*cols)
     def p_bqlfn_primary(self, p):               return p
 
-    def p_of_none(self):                        return None
-    def p_of_some(self, col):                   return col
-
     def p_wrt_none(self):                       return []
     def p_wrt_one(self, collist):               return [collist]
     def p_wrt_some(self, collists):             return collists
 
-    def p_ofwith_none(self):                    return (None, None)
-    def p_ofwith_with(self, col):               return (col, None)
-    def p_ofwith_ofwith(self, col1, col2):      return (col1, col2)
+    def p_ofwith_bql_2col(self):                return (None, None)
+    def p_ofwith_bql_1col(self, col):           return (col, None)
+    def p_ofwith_bql_const(self, col1, col2):   return (col1, col2)
 
     def p_column_lists_one(self, collist):
         return [collist]

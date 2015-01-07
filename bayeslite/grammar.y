@@ -277,17 +277,16 @@ bitwise_not(bql)	::= bqlfn(b).
  * other operators altogether and require explicit parentheses until
  * someone wants to do that surgery.
  */
-bqlfn(predprob)		::= K_PREDICTIVE K_PROBABILITY of(col).
-bqlfn(prob)		::= K_PROBABILITY of(col) T_EQ primary(e).
-bqlfn(typ)		::= K_TYPICALITY of(col).
-bqlfn(sim)		::= K_SIMILARITY K_TO primary(row) wrt(cols).
+bqlfn(predprob_row)	::= K_PREDICTIVE K_PROBABILITY K_OF L_NAME(col).
+bqlfn(prob_const)	::= K_PROBABILITY K_OF L_NAME(col) T_EQ primary(e).
+bqlfn(prob_1col)	::= K_PROBABILITY K_OF K_VALUE primary(e).
+bqlfn(typ_1col_or_row)	::= K_TYPICALITY.
+bqlfn(typ_const)	::= K_TYPICALITY K_OF L_NAME(col).
+bqlfn(sim_row)		::= K_SIMILARITY K_TO primary(row) wrt(cols).
 bqlfn(depprob)		::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
 bqlfn(mutinf)		::= K_MUTUAL K_INFORMATION ofwith(cols).
 bqlfn(correl)		::= K_CORRELATION ofwith(cols).
 bqlfn(primary)		::= primary(p).
-
-of(none)		::= .
-of(some)		::= K_OF L_NAME(col).
 
 /*
  * Parenthesizing the column lists is not what we did before, but is
@@ -299,9 +298,9 @@ wrt(one)		::= K_WITH K_RESPECT K_TO column_list(collist).
 wrt(some)		::= K_WITH K_RESPECT K_TO
 				T_LROUND column_lists(collists) T_RROUND.
 
-ofwith(none)		::= .
-ofwith(with)		::= K_WITH L_NAME(col).
-ofwith(ofwith)		::= K_OF L_NAME(col1) K_WITH L_NAME(col2).
+ofwith(bql_2col)	::= .
+ofwith(bql_1col)	::= K_WITH L_NAME(col).
+ofwith(bql_const)	::= K_OF L_NAME(col1) K_WITH L_NAME(col2).
 
 column_lists(one)	::= column_list(collist).
 column_lists(many)	::= column_lists(collists)

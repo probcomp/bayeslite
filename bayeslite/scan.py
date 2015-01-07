@@ -88,6 +88,7 @@ keywords = {
     "then": grammar.K_THEN,
     "to": grammar.K_TO,
     "typicality": grammar.K_TYPICALITY,
+    "value": grammar.K_VALUE,
     "wait": grammar.K_WAIT,
     "when": grammar.K_WHEN,
     "where": grammar.K_WHERE,
