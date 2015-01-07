@@ -22,10 +22,10 @@ import bayeslite.ast as ast
 import bayeslite.bql as bql
 import bayeslite.parse as parse
 
-import test_smoke
+import test_core
 
 def bql2sql(string):
-    with test_smoke.t1() as (bdb, _table_id):
+    with test_core.t1() as (bdb, _table_id):
         phrases = parse.parse_bql_string(string)
         out = StringIO.StringIO()
         for phrase in phrases:
@@ -278,7 +278,7 @@ def test_estimate_columns_trivial():
         bql2sql('estimate columns from t1 where correlation > 0.5;')
 
 def test_trivial_commands():
-    with test_smoke.bayesdb_csv(test_smoke.csv_data) as (bdb, fname):
+    with test_core.bayesdb_csv(test_core.csv_data) as (bdb, fname):
         # XXX Query parameters!
         bql_execute(bdb, "create btable t from '%s'" % (fname,))
         bql_execute(bdb, 'initialize 2 models for t')
