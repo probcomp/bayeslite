@@ -711,6 +711,7 @@ def bayesdb_models_analyze1(bdb, table_id, modelno, iterations=1):
         X_D=theta["X_D"],
         n_steps=iterations
     )
+    theta["iterations"] += iterations
     theta["X_L"] = X_L
     theta["X_D"] = X_D
     # XXX Cargo-culted from old persistence layer's update_model.
