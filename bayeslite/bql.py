@@ -79,17 +79,7 @@ def compile_select(bdb, select, out):
     compile_select_columns(bdb, select, out)
     if select.tables is not None:
         assert 0 < len(select.tables)
-        first = True
-        for seltab in select.tables:
-            if first:
-                out.write(' FROM ')
-                first = False
-            else:
-                out.write(', ')
-            compile_table_name(bdb, seltab.table, out) # XXX subquery
-            if seltab.name is not None:
-                out.write(' AS ')
-                compile_name(bdb, seltab.name, out)
+        compile_select_tables(bdb, select, out)
     if select.condition is not None:
         out.write(' WHERE ')
         compile_row_expression(bdb, select.condition, select, out)
@@ -148,6 +138,28 @@ def compile_select_column(bdb, selcol, select, out):
         if selcol.name is not None:
             out.write(' AS ')
             compile_name(bdb, selcol.name, out)
+    else:
+        assert False            # XXX
+
+def compile_select_tables(bdb, select, out):
+    first = True
+    for seltab in select.tables:
+        if first:
+            out.write(' FROM ')
+            first = False
+        else:
+            out.write(', ')
+        compile_select_table(bdb, seltab.table, out)
+        if seltab.name is not None:
+            out.write(' AS ')
+            compile_name(bdb, seltab.name, out)
+
+def compile_select_table(bdb, table, out):
+    if ast.is_query(table):
+        bql_compiler = None     # XXX
+        compile_subquery(bdb, table, bql_compiler, out)
+    elif isinstance(table, str): # XXX name
+        compile_table_name(bdb, table, out)
     else:
         assert False            # XXX
 

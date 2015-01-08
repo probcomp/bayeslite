@@ -67,6 +67,9 @@ def test_select_trivial():
         'SELECT "t"."c" AS "d", "p" AS "q", "x" FROM "t";'
     assert bql2sql('select * from t, u;') == 'SELECT * FROM "t", "u";'
     assert bql2sql('select * from t as u;') == 'SELECT * FROM "t" AS "u";'
+    assert bql2sql('select * from (select 0);') == 'SELECT * FROM (SELECT 0);'
+    assert bql2sql('select t.c from (select d as c from u) as t;') == \
+        'SELECT "t"."c" FROM (SELECT "d" AS "c" FROM "u") AS "t";'
     assert bql2sql('select * where x;') == 'SELECT * WHERE "x";'
     assert bql2sql('select * from t where x;') == \
         'SELECT * FROM "t" WHERE "x";'
