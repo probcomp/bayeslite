@@ -281,7 +281,10 @@ def test_trivial_commands():
     with test_core.bayesdb_csv(test_core.csv_data) as (bdb, fname):
         # XXX Query parameters!
         bql_execute(bdb, "create btable t from '%s'" % (fname,))
+        bql_execute(bdb, "create btable if not exists t from '%s'" % (fname,))
         bql_execute(bdb, 'initialize 2 models for t')
+        bql_execute(bdb, 'initialize 1 model if not exists for t')
+        bql_execute(bdb, 'initialize 2 models if not exists for t')
         bql_execute(bdb, 'analyze t model 0 for 1 iteration wait')
         bql_execute(bdb, 'analyze t models 0-1 for 1 iteration wait')
         bql_execute(bdb, 'analyze t models 0,1 for 1 iteration wait')
