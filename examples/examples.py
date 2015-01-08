@@ -74,8 +74,8 @@ for i in range(nmodels):
     bayeslite.bayesdb_models_analyze1(bdb, 1, i)
     bayeslite.bayesdb_models_analyze1(bdb, 1, i)
     bayeslite.bayesdb_models_analyze1(bdb, 1, i)
-print bayeslite.bayesdb_infer(bdb, 1, 2, 4, None, 0.1, numsamples=1)
-print bayeslite.bayesdb_infer(bdb, 1, 3, 5, None, 0.1, numsamples=1)
+print bayeslite.bql_infer(bdb, 1, 2, 4, None, 0.1, numsamples=1)
+print bayeslite.bql_infer(bdb, 1, 3, 5, None, 0.1, numsamples=1)
 
 for x in bayeslite.bayesdb_simulate(bdb, 1, [(2, 42)], [0, 1, 2, 3], 10):
     print x
