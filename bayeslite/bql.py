@@ -27,13 +27,15 @@ def execute_phrase(bdb, phrase):
         return bdb.sqlite.execute(out.getvalue())
     elif isinstance(phrase, ast.CreateBtableCSV):
         # XXX Codebook?
-        core.bayesdb_import_csv_file(bdb, phrase.name, phrase.file)
+        core.bayesdb_import_csv_file(bdb, phrase.name, phrase.file,
+            ifnotexists=phrase.ifnotexists)
         return []
     elif isinstance(phrase, ast.InitModels):
         table_id = core.bayesdb_table_id(bdb, phrase.btable)
         nmodels = phrase.nmodels
         config = phrase.config
-        core.bayesdb_models_initialize(bdb, table_id, nmodels, config)
+        core.bayesdb_models_initialize(bdb, table_id, nmodels, config,
+            ifnotexists=phrase.ifnotexists)
         return []
     elif isinstance(phrase, ast.AnalyzeModels):
         table_id = core.bayesdb_table_id(bdb, phrase.btable)

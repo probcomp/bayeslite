@@ -23,12 +23,16 @@ phrase1(nonempty)	::= phrase(phrase).
 phrase(command)		::= command(c).
 phrase(query)		::= query_action(action) query(q).
 
-command(createbtab_csv)	::= K_CREATE K_BTABLE L_NAME(name)
-				K_FROM L_STRING(file).
+command(createbtab_csv)	::= K_CREATE K_BTABLE ifnotexists(ifnotexists)
+				L_NAME(name) K_FROM L_STRING(file).
 command(init_models)	::= K_INITIALIZE L_INTEGER(n) K_MODEL|K_MODELS
+				ifnotexists(ifnotexists)
 				K_FOR table_name(btable).
 command(analyze_models)	::= K_ANALYZE table_name(btable) opt_modelset(models)
 				anlimit(anlimit) opt_wait(wait).
+
+ifnotexists(none)	::= .
+ifnotexists(some)	::= K_IF K_NOT K_EXISTS.
 
 opt_modelset(none)	::= .
 opt_modelset(some)	::= K_MODEL|K_MODELS modelset(m).

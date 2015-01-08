@@ -55,6 +55,7 @@ keywords = {
     "glob": grammar.K_GLOB,
     "group": grammar.K_GROUP,
     "hist": grammar.K_HIST,
+    "if": grammar.K_IF,
     "in": grammar.K_IN,
     "information": grammar.K_INFORMATION,
     "initialize": grammar.K_INITIALIZE,

@@ -400,7 +400,16 @@ def bayesdb_read_csv_with_header(pathname):
         return column_names, rows
 
 # XXX Is this the schema language we want?
-def bayesdb_import_csv_file(bdb, table, pathname, column_types=None):
+def bayesdb_import_csv_file(bdb, table, pathname, column_types=None,
+        ifnotexists=False):
+    if ifnotexists:
+        with sqlite3_savepoint(bdb.sqlite):
+            if not bayesdb_table_exists(bdb, table):
+                _bayesdb_import_csv_file(bdb, table, pathname, column_types)
+    else:
+        _bayesdb_import_csv_file(bdb, table, pathname, column_types)
+
+def _bayesdb_import_csv_file(bdb, table, pathname, column_types):
     # XXX Strip ignored columns.
     # XXX Limit the number of rows.
     column_names, rows = bayesdb_read_csv_with_header(pathname)
@@ -527,6 +536,10 @@ def bayesdb_metadata(bdb, table_id):
     data = sqlite3_exec_1(bdb.sqlite, sql, (table_id,))
     return json.loads(data)
 
+def bayesdb_table_exists(bdb, table_name):
+    sql = "SELECT COUNT(*) FROM bayesdb_table WHERE name = ?"
+    return 0 < sqlite3_exec_1(bdb.sqlite, sql, (table_name,))
+
 def bayesdb_table_name(bdb, table_id):
     sql = "SELECT name FROM bayesdb_table WHERE id = ?"
     return sqlite3_exec_1(bdb.sqlite, sql, (table_id,))
@@ -576,11 +589,12 @@ def bayesdb_cell_value(bdb, table_id, row_id, colno):
 
 ### BayesDB model access
 
-def bayesdb_init_model(bdb, table_id, modelno, engine_id, theta):
+def bayesdb_init_model(bdb, table_id, modelno, engine_id, theta,
+        ifnotexists=False):
     insert_sql = """
-        INSERT INTO bayesdb_model (table_id, modelno, engine_id, theta)
+        INSERT %s INTO bayesdb_model (table_id, modelno, engine_id, theta)
         VALUES (?, ?, ?, ?)
-    """
+    """ % ("OR IGNORE" if ifnotexists else "")
     bdb.sqlite.execute(insert_sql,
         (table_id, modelno, engine_id, json.dumps(theta)))
 
@@ -589,6 +603,12 @@ def bayesdb_set_model(bdb, table_id, modelno, theta):
         UPDATE bayesdb_model SET theta = ? WHERE table_id = ? AND modelno = ?
     """
     bdb.sqlite.execute(sql, (json.dumps(theta), table_id, modelno))
+
+def bayesdb_has_model(bdb, table_id, modelno):
+    sql = """
+        SELECT count(*) FROM bayesdb_model WHERE table_id = ? AND modelno = ?
+    """
+    return 0 < sqlite3_exec_1(bdb.sqlite, sql, (table_id, modelno))
 
 def bayesdb_nmodels(bdb, table_id):
     sql = """
@@ -622,7 +642,22 @@ def bayesdb_latent_data(bdb, table_id):
 
 ### BayesDB model commands
 
-def bayesdb_models_initialize(bdb, table_id, nmodels, model_config=None):
+def bayesdb_models_initialize(bdb, table_id, nmodels, model_config=None,
+        ifnotexists=False):
+    if ifnotexists:
+        # Find whether all model numbers are filled.  If so, don't
+        # bother with initialization.
+        #
+        # XXX Are the models dependent on one another, or can we just
+        # ask the engine to initialize as many models as we don't have
+        # and fill in the gaps?
+        done = True
+        for modelno in range(nmodels):
+            if not bayesdb_has_model(bdb, table_id, modelno):
+                done = False
+                break
+        if done:
+            return
     assert model_config is None         # XXX For now.
     assert 0 < nmodels
     engine_sql = "SELECT id FROM bayesdb_engine WHERE name = ?"
@@ -654,7 +689,8 @@ def bayesdb_models_initialize(bdb, table_id, nmodels, model_config=None):
                 "num_views": [],
                 "model_config": model_config,
             }
-            bayesdb_init_model(bdb, table_id, modelno, engine_id, theta)
+            bayesdb_init_model(bdb, table_id, modelno, engine_id, theta,
+                ifnotexists=ifnotexists)
 
 # XXX Background, deadline, &c.
 def bayesdb_models_analyze(bdb, table_id, iterations=1):

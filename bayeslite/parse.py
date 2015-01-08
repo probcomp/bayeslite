@@ -94,14 +94,19 @@ class BQLSemantics(object):
     def p_phrase_query(self, action, q):
         return QueryAction(action, q) if action else q
 
-    def p_command_createbtab_csv(self, name, file):
-        return ast.CreateBtableCSV(name, file, codebook=None) # XXX codebook
-    def p_command_init_models(self, n, btable):
-        return ast.InitModels(btable, n, config=None) # XXX model config
+    def p_command_createbtab_csv(self, ifnotexists, name, file):
+        # XXX codebook
+        return ast.CreateBtableCSV(ifnotexists, name, file, codebook=None)
+    def p_command_init_models(self, n, ifnotexists, btable):
+        # XXX model config
+        return ast.InitModels(ifnotexists, btable, n, config=None)
     def p_command_analyze_models(self, btable, models, anlimit, wait):
         iterations = anlimit[1] if anlimit[0] == 'iterations' else None
         minutes = anlimit[1] if anlimit[0] == 'minutes' else None
         return ast.AnalyzeModels(btable, models, iterations, minutes, wait)
+
+    def p_ifnotexists_none(self):               return False
+    def p_ifnotexists_some(self):               return True
 
     def p_opt_modelset_none(self):              return None
     def p_opt_modelset_some(self, m):           return sorted(m)

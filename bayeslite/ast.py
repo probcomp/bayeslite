@@ -16,8 +16,18 @@
 
 from collections import namedtuple
 
-CreateBtableCSV = namedtuple('CreateBtableCSV', ['name', 'file', 'codebook'])
-InitModels = namedtuple('InitModels', ['btable', 'nmodels', 'config'])
+CreateBtableCSV = namedtuple('CreateBtableCSV', [
+    'ifnotexists',
+    'name',
+    'file',
+    'codebook',
+])
+InitModels = namedtuple('InitModels', [
+    'ifnotexists',
+    'btable',
+    'nmodels',
+    'config',
+])
 AnalyzeModels = namedtuple('AnalyzeModels', [
     'btable',
     'modelnos',

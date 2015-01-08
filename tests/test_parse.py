@@ -400,11 +400,17 @@ def test_trivial_precedence_error():
 
 def test_trivial_commands():
     assert parse_bql_string("create btable t from 'f.csv';") == \
-        [ast.CreateBtableCSV('t', 'f.csv', None)]
+        [ast.CreateBtableCSV(False, 't', 'f.csv', None)]
+    assert parse_bql_string("create btable if not exists t from 'f.csv';") == \
+        [ast.CreateBtableCSV(True, 't', 'f.csv', None)]
     assert parse_bql_string('initialize 1 model for t;') == \
-        [ast.InitModels('t', 1, None)]
+        [ast.InitModels(False, 't', 1, None)]
+    assert parse_bql_string('initialize 1 model if not exists for t;') == \
+        [ast.InitModels(True, 't', 1, None)]
     assert parse_bql_string('initialize 2 models for t;') == \
-        [ast.InitModels('t', 2, None)]
+        [ast.InitModels(False, 't', 2, None)]
+    assert parse_bql_string('initialize 2 models if not exists for t;') == \
+        [ast.InitModels(True, 't', 2, None)]
     assert parse_bql_string('analyze t for 1 iteration;') == \
         [ast.AnalyzeModels('t', None, 1, None, False)]
     assert parse_bql_string('analyze t for 1 iteration wait;') == \
