@@ -326,7 +326,7 @@ def bayesdb_create_metadata(bdb, table, column_names, column_types):
     assert ncols == len(column_types)
     return {
         "name_to_idx": dict(zip(column_names, range(ncols))),
-        "idx_to_name": dict(zip(map(str, range(ncols)), column_names)),
+        "idx_to_name": dict(zip(map(unicode, range(ncols)), column_names)),
         "column_metadata":
             [metadata_generators[column_types[name]](bdb, table, name)
                 for name in column_names],
@@ -381,6 +381,10 @@ metadata_generators = {
 
 ### Importing CSV tables
 
+# XXX Allow the user to pass in the desired encoding (and CSV dialect,
+# &c.).
+#
+# XXX Support pandas data frames...
 def bayesdb_read_csv_with_header(pathname):
     with open(pathname, "rU") as f:
         reader = csv.reader(f)
@@ -388,12 +392,13 @@ def bayesdb_read_csv_with_header(pathname):
             header = reader.next()
         except StopIteration:
             raise IOError("Empty CSV file")
-        column_names = [n.strip() for n in header]
+        # XXX Let the user pass in the desired encoding.
+        column_names = [unicode(n, "utf8").strip() for n in header]
         ncols = len(column_names)
         if ncols == 0:
             raise IOError("No columns in CSV file!")
-        # XXX Can we get the CSV reader to strip for us?
-        rows = [[v.strip() for v in row] for row in reader]
+        # XXX Can we get the CSV reader to decode and strip for us?
+        rows = [[unicode(v, "utf8").strip() for v in row] for row in reader]
         for row in rows:
             if len(row) != ncols:
                 raise IOError("Mismatched number of columns")
@@ -482,16 +487,17 @@ def bayesdb_csv_column_keyable_p(rows, i):
     if bayesdb_csv_column_integerable_p(rows, i):
         return len(rows) == len(unique([int(row[i]) for row in rows]))
     elif not bayesdb_csv_column_floatable_p(rows, i):
-        # XXX Is str(...) necessary?  I think they should all be
+        # XXX Is unicode(...) necessary?  I think they should all be
         # strings here.  Where can stripping happen?
-        return len(rows) == len(unique([str(row[i]).strip() for row in rows]))
+        assert all(row[i] == unicode(row[i]).strip() for row in rows)
+        return len(rows) == len(unique([row[i] for row in rows]))
     else:
         return False
 
 def bayesdb_csv_column_integerable_p(rows, i):
     try:
         for row in rows:
-            if str(row[i]) != str(int(row[i])):
+            if unicode(row[i]) != unicode(int(row[i])):
                 return False
     except ValueError:
         return False
@@ -969,7 +975,7 @@ def bayesdb_value_to_code(M_c, colno, value):
         if value is None:
             return float("NaN")         # XXX !?!??!
         # XXX Crosscat expects floating-point codes.
-        return float(metadata["code_to_value"][str(value)])
+        return float(metadata["code_to_value"][unicode(value)])
     elif bayesdb_modeltype_numerical_p(modeltype):
         if value is None:
             return float("NaN")
@@ -984,7 +990,7 @@ def bayesdb_code_to_value(M_c, colno, code):
         if math.isnan(code):
             return None
         # XXX Whattakludge.
-        return metadata["value_to_code"][str(int(code))]
+        return metadata["value_to_code"][unicode(int(code))]
     elif bayesdb_modeltype_numerical_p(modeltype):
         if math.isnan(code):
             return None
