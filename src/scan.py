@@ -184,7 +184,7 @@ class BQLScanner(Plex.Scanner):
     float_dec = ((intfrac | fraconly) + optexp) | (digits1 + exponent)
     blob = Plex.Str("x'", "X'") + Plex.Rep(hexit + hexit) + Plex.Str("'")
     badblob = Plex.Str("x'", "X'") + Plex.AnyBut("'") + Plex.Str("'")
-    name_special = Plex.Any("_$") 
+    name_special = Plex.Any("_$")
     name = (letter | name_special) + Plex.Rep(letter | digit | name_special)
 
     lexicon = Plex.Lexicon([
