@@ -230,6 +230,7 @@ def bayesdb_import_sqlite_table(bdb, table,
         column_names, column_types)
     metadata = bayesdb_create_metadata(bdb, table, column_names, column_types)
     metadata_json = json.dumps(metadata)
+    # XXX Check that rowids are contiguous.
     with sqlite3_savepoint(bdb.sqlite):
         table_sql = "INSERT INTO bayesdb_table (name, metadata) VALUES (?, ?)"
         table_cursor = bdb.sqlite.execute(table_sql, (table, metadata_json))
@@ -587,11 +588,11 @@ def bayesdb_column_values(bdb, table_id, colno):
     for row in bdb.sqlite.execute("SELECT %s FROM %s" % (qc, qt)):
         yield row[0]
 
-def bayesdb_cell_value(bdb, table_id, row_id, colno):
+def bayesdb_cell_value(bdb, table_id, rowid, colno):
     qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
     qc = sqlite3_quote_name(bayesdb_column_name(bdb, table_id, colno))
     sql = "SELECT %s FROM %s WHERE rowid = ?" % (qc, qt)
-    return sqlite3_exec_1(bdb.sqlite, sql, (row_id,))
+    return sqlite3_exec_1(bdb.sqlite, sql, (rowid,))
 
 ### BayesDB model access
 
@@ -865,54 +866,54 @@ def bql_column_value_probability(bdb, table_id, colno, value):
     X_L_list = list(bayesdb_latent_state(bdb, table_id))
     X_D_list = list(bayesdb_latent_data(bdb, table_id))
     # Fabricate a nonexistent (`unobserved') row id.
-    row_id = len(X_D_list[0][0])
+    fake_row_id = len(X_D_list[0][0])
     r = bdb.engine.simple_predictive_probability_multistate(
         M_c=M_c,
         X_L_list=X_L_list,
         X_D_list=X_D_list,
         Y=[],
-        Q=[(row_id, colno, code)]
+        Q=[(fake_row_id, colno, code)]
     )
     return math.exp(r)
 
 ### BayesDB row functions
 
 # Row function:  SIMILARITY TO <target_row> [WITH RESPECT TO <columns>]
-def bql_row_similarity(bdb, table_id, row_id, target_row_id, columns):
+def bql_row_similarity(bdb, table_id, rowid, target_rowid, columns):
     return bdb.engine.similarity(
         M_c=bayesdb_metadata(bdb, table_id),
         X_L_list=list(bayesdb_latent_state(bdb, table_id)),
         X_D_list=list(bayesdb_latent_data(bdb, table_id)),
-        given_row_id=row_id,
-        target_row_id=target_row_id,
+        given_row_id=sqlite3_rowid_to_engine_row_id(rowid),
+        target_row_id=sqlite3_rowid_to_engine_row_id(target_rowid),
         target_columns=columns
     )
 
 # Row function:  TYPICALITY
-def bql_row_typicality(bdb, table_id, row_id):
+def bql_row_typicality(bdb, table_id, rowid):
     return bdb.engine.row_structural_typicality(
         X_L_list=list(bayesdb_latent_state(bdb, table_id)),
         X_D_list=list(bayesdb_latent_data(bdb, table_id)),
-        row_id=row_id
+        row_id=sqlite3_rowid_to_engine_row_id(rowid)
     )
 
 # Row function:  PREDICTIVE PROBABILITY OF <column>
-def bql_row_column_predictive_probability(bdb, table_id, row_id, colno):
+def bql_row_column_predictive_probability(bdb, table_id, rowid, colno):
     M_c = bayesdb_metadata(bdb, table_id)
-    value = bayesdb_cell_value(bdb, table_id, row_id, colno)
+    value = bayesdb_cell_value(bdb, table_id, rowid, colno)
     code = bayesdb_value_to_code(M_c, colno, value)
     r = bdb.engine.simple_predictive_probability_multistate(
         M_c=M_c,
         X_L_list=list(bayesdb_latent_state(bdb, table_id)),
         X_D_list=list(bayesdb_latent_data(bdb, table_id)),
         Y=[],
-        Q=[(row_id, colno, code)]
+        Q=[(sqlite3_rowid_to_engine_row_id(rowid), colno, code)]
     )
     return math.exp(r)
 
 ### Infer and simulate
 
-def bql_infer(bdb, table_id, colno, row_id, value, confidence_threshold,
+def bql_infer(bdb, table_id, colno, rowid, value, confidence_threshold,
         numsamples=1):
     if value is not None:
         return value
@@ -921,10 +922,11 @@ def bql_infer(bdb, table_id, colno, row_id, value, confidence_threshold,
     qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
     qcns = ",".join(map(sqlite3_quote_name, column_names))
     select_sql = "SELECT %s FROM %s WHERE rowid = ?" % (qcns, qt)
-    c = bdb.sqlite.execute(select_sql, (row_id,))
+    c = bdb.sqlite.execute(select_sql, (rowid,))
     row = c.fetchone()
     assert row is not None
     assert c.fetchone() is None
+    row_id = sqlite3_rowid_to_engine_row_id(rowid)
     code, confidence = bdb.engine.impute_and_confidence(
         M_c=M_c,
         X_L=list(bayesdb_latent_state(bdb, table_id)),
@@ -943,19 +945,20 @@ def bql_infer(bdb, table_id, colno, row_id, value, confidence_threshold,
 def bayesdb_simulate(bdb, table_id, constraints, colnos, numpredictions=1):
     M_c = bayesdb_metadata(bdb, table_id)
     qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
-    maxrowid = sqlite3_exec_1(bdb.sqlite, "SELECT max(rowid) FROM %s" % (qt,))
-    fakerowid = maxrowid + 1
+    max_rowid = sqlite3_exec_1(bdb.sqlite, "SELECT max(rowid) FROM %s" % (qt,))
+    fake_rowid = max_rowid + 1
+    fake_row_id = sqlite3_rowid_to_engine_row_id(fake_rowid)
     # XXX Why special-case empty constraints?
     Y = None
     if constraints is not None:
-        Y = [(fakerowid, colno, bayesdb_value_to_code(M_c, colno, value))
+        Y = [(fake_row_id, colno, bayesdb_value_to_code(M_c, colno, value))
              for colno, value in constraints]
     raw_outputs = bdb.engine.simple_predictive_sample(
         M_c=M_c,
         X_L=list(bayesdb_latent_state(bdb, table_id)),
         X_D=list(bayesdb_latent_data(bdb, table_id)),
         Y=Y,
-        Q=[(fakerowid, colno) for colno in colnos],
+        Q=[(fake_row_id, colno) for colno in colnos],
         n=numpredictions
     )
     return [[bayesdb_code_to_value(M_c, colno, code)
@@ -1007,6 +1010,21 @@ bayesdb_modeltypes_numerical = \
     set(mt for _ct, cont_p, _sql, mt in bayesdb_type_table if cont_p)
 def bayesdb_modeltype_numerical_p(modeltype):
     return modeltype in bayesdb_modeltypes_numerical
+
+# By default, SQLite3 automatically numbers rows starting at 1, and
+# not necessarily contiguously (although they are noncontiguous only
+# if rows are deleted).  Crosscat expects contiguous 0-indexed row
+# ids.  For now, we'll judiciously map between them, and maintain the
+# convention that `rowid' means a SQLite3 rowid (like the ROWID column
+# built-in to tables by default) and `row_id' means a Crosscat row id.
+#
+# XXX Revisit row numbering between SQLite3 and Crosscat.
+
+def sqlite3_rowid_to_engine_row_id(rowid):
+    return rowid - 1
+
+def engine_row_id_to_sqlite3_rowid(row_id):
+    return row_id + 1
 
 ### SQLite3 utilities
 

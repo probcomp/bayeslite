@@ -85,6 +85,12 @@ def analyzed_bayesdb_table(mkbdb, nmodels, nsteps):
             bayeslite.bayesdb_models_analyze1(bdb, table_id, modelno, nsteps)
         yield bdb, table_id
 
+def bayesdb_maxrowid(bdb, table_id):
+    table_name = bayeslite.bayesdb_table_name(bdb, table_id)
+    qt = bayeslite.sqlite3_quote_name(table_name)
+    sql = 'select max(rowid) from %s' % (qt,)
+    return bayeslite.sqlite3_exec_1(bdb.sqlite, sql)
+
 def t0_schema(bdb):
     bdb.sqlite.execute('create table t0 (id integer primary key)')
 def t0_data(bdb):
@@ -219,14 +225,15 @@ def test_btable_analysis1(btable_name):
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1):
         pass
 
-@pytest.mark.parametrize('row_id,colno,confidence',
+@pytest.mark.parametrize('rowid,colno,confidence',
     [(i+1, j, conf)
         for i in range(min(5, len(t1_rows)))
         for j in range(3)
         for conf in [0.01, 0.5, 0.99]])
-def test_t1_infer(row_id, colno, confidence):
+def test_t1_infer(rowid, colno, confidence):
     with analyzed_bayesdb_table(t1(), 1, 1) as (bdb, table_id):
-        bayeslite.bql_infer(bdb, table_id, colno, row_id, None, confidence,
+        if rowid == 0: rowid = bayesdb_maxrowid(bdb, table_id)
+        bayeslite.bql_infer(bdb, table_id, colno, rowid, None, confidence,
             numsamples=1)
 
 @pytest.mark.parametrize('colnos,constraints,numpredictions',
@@ -239,14 +246,14 @@ def test_t1_simulate(colnos, constraints, numpredictions):
         pytest.xfail("Crosscat can't simulate zero columns.")
     with analyzed_bayesdb_table(t1(), 1, 1) as (bdb, table_id):
         if constraints is not None:
-            row_id = 1          # XXX Avoid hard-coding this.
+            rowid = 1           # XXX Avoid hard-coding this.
             # Can't use t1_rows[0][i] because not all t1-based tables
             # use the same column indexing -- some use a subset of the
             # columns.
             #
             # XXX Automatically test the correct exception.
             constraints = \
-                [(i, bayeslite.bayesdb_cell_value(bdb, table_id, row_id, i))
+                [(i, bayeslite.bayesdb_cell_value(bdb, table_id, rowid, i))
                     for i in constraints]
         bayeslite.bayesdb_simulate(bdb, table_id, constraints, colnos,
             numpredictions=numpredictions)
@@ -291,13 +298,14 @@ def test_twocolumn(btable_name, colno0, colno1):
             'select column_mutual_information(?, ?, ?)',
             (table_id, colno0, colno1))
 
-@pytest.mark.parametrize('colno,row_id',
-    [(colno, row_id)
+@pytest.mark.parametrize('colno,rowid',
+    [(colno, rowid)
         for colno in range(3)
-        for row_id in range(1,6)])
-def test_t1_column_value_probability(colno, row_id):
+        for rowid in range(6)])
+def test_t1_column_value_probability(colno, rowid):
     with analyzed_bayesdb_table(t1(), 1, 1) as (bdb, table_id):
-        value = bayeslite.bayesdb_cell_value(bdb, table_id, row_id, colno)
+        if rowid == 0: rowid = bayesdb_maxrowid(bdb, table_id)
+        value = bayeslite.bayesdb_cell_value(bdb, table_id, rowid, colno)
         bayeslite.bql_column_value_probability(bdb, table_id, colno, value)
         tn = bayeslite.bayesdb_table_name(bdb, table_id)
         cn = bayeslite.bayesdb_column_name(bdb, table_id, colno)
@@ -307,7 +315,7 @@ def test_t1_column_value_probability(colno, row_id):
             select column_value_probability(?, ?,
                 (select %s from %s where rowid = ?))
         ''' % (qc, qt)
-        bayeslite.sqlite3_exec_1(bdb.sqlite, sql, (table_id, colno, row_id))
+        bayeslite.sqlite3_exec_1(bdb.sqlite, sql, (table_id, colno, rowid))
 
 @pytest.mark.parametrize('btable_name,source,target,colnos',
     [(btable_name, source, target, list(colnos))
@@ -326,38 +334,40 @@ def test_row_similarity(btable_name, source, target, colnos):
         # XXX OOPS!  Can't write this in SQL, because no arrays.
         # Variadic sqlite functions?
 
-@pytest.mark.parametrize('btable_name,row_id',
-    [(btable_name, row_id)
+@pytest.mark.parametrize('btable_name,rowid',
+    [(btable_name, rowid)
         for btable_name in btable_generators.keys()
-        for row_id in range(1,4)])
-def test_row_typicality(btable_name, row_id):
+        for rowid in range(4)])
+def test_row_typicality(btable_name, rowid):
     if btable_name == 't0':
         pytest.xfail("Crosscat can't handle a table with only one column.")
     if btable_name == 't0' and colnos != [] and colnos != [0]:
         pytest.skip('Not enough columns in t0.')
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
-        bayeslite.bql_row_typicality(bdb, table_id, row_id)
+        if rowid == 0: rowid = bayesdb_maxrowid(bdb, table_id)
+        bayeslite.bql_row_typicality(bdb, table_id, rowid)
         bayeslite.sqlite3_exec_1(bdb.sqlite, 'select row_typicality(?, ?)',
-            (table_id, row_id))
+            (table_id, rowid))
 
-@pytest.mark.parametrize('btable_name,row_id,colno',
-    [(btable_name, row_id, colno)
+@pytest.mark.parametrize('btable_name,rowid,colno',
+    [(btable_name, rowid, colno)
         for btable_name in btable_generators.keys()
-        for row_id in range(1,4)
+        for rowid in range(4)
         for colno in range(3)])
-def test_row_column_predictive_probability(btable_name, row_id, colno):
+def test_row_column_predictive_probability(btable_name, rowid, colno):
     if btable_name == 't0':
         pytest.xfail("Crosscat can't handle a table with only one column.")
     if btable_name == 't0' and colnos != [] and colnos != [0]:
         pytest.skip('Not enough columns in t0.')
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
+        if rowid == 0: rowid = bayesdb_maxrowid(bdb, table_id)
         bayeslite.bql_row_column_predictive_probability(bdb, table_id,
-            row_id, colno)
+            rowid, colno)
         bayeslite.sqlite3_exec_1(bdb.sqlite,
             'select row_column_predictive_probability(?, ?, ?)',
-            (table_id, row_id, colno))
+            (table_id, rowid, colno))
 
 @contextlib.contextmanager
 def bayesdb_csv(csv):
