@@ -25,7 +25,7 @@ except ImportError:
 # distutils.command.build to include a dependency mechanism, but this
 # is more expedient for now.
 grammars = [
-    'bayeslite/grammar.y',
+    'src/grammar.y',
 ]
 
 import distutils.spawn
@@ -61,6 +61,7 @@ setup(
         'bayeslite.plex',
     ],
     package_dir={
+        'bayeslite': 'src',
         'bayeslite.plex': 'external/plex/dist/Plex',
     },
     install_requires=[
