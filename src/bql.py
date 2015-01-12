@@ -64,6 +64,8 @@ def compile_query(bdb, query, out):
         compile_select(bdb, query, out)
     elif isinstance(query, ast.EstCols):
         compile_estcols(bdb, query, out)
+    elif isinstance(query, ast.EstPairCols):
+        compile_estpaircols(bdb, query, out)
     else:
         assert False        # XXX
 
@@ -210,6 +212,45 @@ def compile_estcols(bdb, estcols, out):
             compile_1col_expression(bdb, estcols.limit.offset, estcols,
                 colno_exp, out)
 
+def compile_estpaircols(bdb, estpaircols, out):
+    assert isinstance(estpaircols, ast.EstPairCols)
+    out.write('SELECT c0.name, c1.name')
+    out.write(' FROM bayesdb_table_column AS c0, bayesdb_table_column AS c1')
+    table_id = core.bayesdb_table_id(bdb, estpaircols.btable)
+    out.write(' WHERE c0.table_id = %d AND c1.table_id = %d' %
+        (table_id, table_id))
+    colno0_exp = 'c0.colno'     # XXX
+    colno1_exp = 'c1.colno'     # XXX
+    if estpaircols.condition is not None:
+        out.write(' AND ')
+        compile_2col_expression(bdb, estpaircols.condition, estpaircols,
+            colno0_exp, colno1_exp, out)
+    if estpaircols.order is not None:
+        assert 0 < len(estpaircols.order)
+        first = True
+        for order in estpaircols.order:
+            if first:
+                out.write(' ORDER BY ')
+                first = False
+            else:
+                out.write(', ')
+            compile_2col_expression(bdb, order.expression, estpaircols,
+                colno0_exp, colno1_exp, out)
+            if order.sense == ast.ORD_ASC:
+                pass
+            elif order.sense == ast.ORD_DESC:
+                out.write(' DESC')
+            else:
+                assert False    # XXX
+    if estpaircols.limit is not None:
+        out.write(' LIMIT ')
+        compile_2col_expression(bdb, estpaircols.limit.limit, estpaircols,
+            colno0_exp, colno1_exp, out)
+        if estpaircols.limit.offset is not None:
+            out.write(' OFFSET ')
+            compile_2col_expression(bdb, estpaircols.limit.offset, estpaircols,
+                colno0_exp, colno1_exp, out)
+
 class BQLCompiler_Row(object):
     def __init__(self, ctx):
         assert isinstance(ctx, ast.Select)
@@ -307,6 +348,42 @@ class BQLCompiler_1Col(object):
         else:
             assert False        # XXX
 
+class BQLCompiler_2Col(object):
+    def __init__(self, ctx, colno0_exp, colno1_exp):
+        assert isinstance(ctx, ast.EstPairCols)
+        assert isinstance(colno0_exp, str)
+        assert isinstance(colno1_exp, str)
+        self.ctx = ctx
+        self.colno0_exp = colno0_exp
+        self.colno1_exp = colno1_exp
+
+    def compile_bql(self, bdb, bql, out):
+        assert ast.is_bql(bql)
+        assert self.ctx.btable is not None
+        table_id = core.bayesdb_table_id(bdb, self.ctx.btable)
+        if isinstance(bql, ast.ExpBQLProb):
+            raise ValueError('Probability of value is one-column function.')
+        elif isinstance(bql, ast.ExpBQLPredProb):
+            raise ValueError('Predictive probability is one-column function.')
+        elif isinstance(bql, ast.ExpBQLTyp):
+            raise ValueError('Typicality is one-column function.')
+        elif isinstance(bql, ast.ExpBQLSim):
+            raise ValueError('Similarity to row makes sense only at row.')
+        elif isinstance(bql, ast.ExpBQLDepProb):
+            compile_bql_2col_0(bdb, table_id, 'column_dependence_probability',
+                'Dependence probability', bql,
+                self.colno0_exp, self.colno1_exp, out)
+        elif isinstance(bql, ast.ExpBQLMutInf):
+            compile_bql_2col_0(bdb, table_id, 'column_mutual_information',
+                'Mutual Information', bql,
+                self.colno0_exp, self.colno1_exp, out)
+        elif isinstance(bql, ast.ExpBQLCorrel):
+            compile_bql_2col_0(bdb, table_id, 'column_correlation',
+                'Correlation', bql,
+                self.colno0_exp, self.colno1_exp, out)
+        else:
+            assert False        # XXX
+
 def compile_column_lists(bdb, table_id, column_lists, _bql_compiler, out):
     first = True
     for collist in column_lists:
@@ -345,12 +422,24 @@ def compile_bql_2col_1(bdb, table_id, bqlfn, desc, bql, colno1_exp, out):
     colno0 = core.bayesdb_column_number(bdb, table_id, bql.column0)
     out.write('%s(%s, %s, %s)' % (bqlfn, table_id, colno0, colno1_exp))
 
+def compile_bql_2col_0(bdb, table_id, bqlfn, desc, bql, colno0_exp, colno1_exp,
+        out):
+    if bql.column0 is not None:
+        raise ValueError(desc + ' needs no columns.')
+    if bql.column1 is not None:
+        raise ValueError(desc + ' needs no columns.')
+    out.write('%s(%s, %s, %s)' % (bqlfn, table_id, colno0_exp, colno1_exp))
+
 def compile_row_expression(bdb, exp, query, out):
     bql_compiler = BQLCompiler_Row(query)
     compile_expression(bdb, exp, bql_compiler, out)
 
 def compile_1col_expression(bdb, exp, query, colno_exp, out):
     bql_compiler = BQLCompiler_1Col(query, colno_exp)
+    compile_expression(bdb, exp, bql_compiler, out)
+
+def compile_2col_expression(bdb, exp, query, colno0_exp, colno1_exp, out):
+    bql_compiler = BQLCompiler_2Col(query, colno0_exp, colno1_exp)
     compile_expression(bdb, exp, bql_compiler, out)
 
 def compile_expression(bdb, exp, bql_compiler, out):

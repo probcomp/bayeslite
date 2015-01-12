@@ -48,6 +48,7 @@ QACT_PLOT = 'plot'
 def is_query(phrase):
     if isinstance(phrase, Select):      return True
     if isinstance(phrase, EstCols):     return True
+    if isinstance(phrase, EstPairCols): return True
     return False
 
 Select = namedtuple('Select', [
@@ -77,6 +78,14 @@ SelTab = namedtuple('SelTab', [
 ])
 
 EstCols = namedtuple('EstCols', [
+    'btable',                   # XXX name
+    'condition',                # Exp* or None (unconditional)
+    'order',                    # [Ord] or None (unordered)
+    'limit',                    # Lim or None (unlimited),
+    'save_name',                # XXX name or None (don't save)
+])
+
+EstPairCols = namedtuple('EstPairCols', [
     'btable',                   # XXX name
     'condition',                # Exp* or None (unconditional)
     'order',                    # [Ord] or None (unordered)

@@ -78,6 +78,7 @@ keywords = {
     "offset": grammar.K_OFFSET,
     "or": grammar.K_OR,
     "order": grammar.K_ORDER,
+    "pairwise": grammar.K_PAIRWISE,
     "plot": grammar.K_PLOT,
     "predictive": grammar.K_PREDICTIVE,
     "probability": grammar.K_PROBABILITY,

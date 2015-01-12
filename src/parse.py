@@ -129,6 +129,7 @@ class BQLSemantics(object):
 
     def p_query_select(self, q):                return q
     def p_query_estcols(self, q):               return q
+    def p_query_estpaircols(self, q):           return q
     def p_query_infer(self, q):                 return q
     def p_query_simulate(self, q):              return q
     def p_query_estimate_pairwise_row(self, q): return q
@@ -139,6 +140,9 @@ class BQLSemantics(object):
 
     def p_estcols_e(self, btable, cond, ord, lim, sav):
         return ast.EstCols(btable, cond, ord, lim, sav)
+
+    def p_estpaircols_e(self, btable, cond, ord, lim, sav):
+        return ast.EstPairCols(btable, cond, ord, lim, sav)
 
     def p_select_quant_distinct(self):          return ast.SELQUANT_DISTINCT
     def p_select_quant_all(self):               return ast.SELQUANT_ALL

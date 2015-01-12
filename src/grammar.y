@@ -58,6 +58,7 @@ query_action(plot)	::= K_PLOT.
 
 query(select)		::= select(q).
 query(estcols)		::= estcols(q).
+query(estpaircols)	::= estpaircols(q).
 /*
 query(infer)		::= infer(q).
 query(simulate)		::= simulate(q).
@@ -80,6 +81,13 @@ select(s)		::= K_SELECT select_quant(quant) select_columns(cols)
  * the btable?
  */
 estcols(e)		::= K_ESTIMATE K_COLUMNS K_FROM table_name(btable)
+				where(cond) order_by(ord) limit(lim) as(sav).
+
+/*
+ * XXX This is really just a SELECT on the join of the table's list of
+ * columns with itself.
+ */
+estpaircols(e)		::= K_ESTIMATE K_PAIRWISE K_FROM table_name(btable)
 				where(cond) order_by(ord) limit(lim) as(sav).
 
 select_quant(distinct)	::= K_DISTINCT.
