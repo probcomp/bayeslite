@@ -224,12 +224,13 @@ bitwise_not(not)	::= T_BITNOT bitwise_not(n).
 bitwise_not(bql)	::= bqlfn(b).
 
 /*
- * The BQL functions come in four flavours:
+ * The BQL functions come in five flavours:
  *
  * (1) Functions of two columns: DEPENDENCE PROBABILITY.
  * (2) Functions of one column: DEPENDENCE PROBABILITY WITH C.
- * (3) Functions of one row: SIMILARITY TO 5 WITH RESPECT TO C.
- * (4) Constants: DEPENDENCE PROBABILITY OF C WITH D.
+ * (3) Functions of two rows: SIMILARITY WITH RESPECT TO C.
+ * (4) Functions of one row: SIMILARITY TO 5 WITH RESPECT TO C.
+ * (5) Constants: DEPENDENCE PROBABILITY OF C WITH D.
  *
  * Although constants can appear in any context (subject to the
  * constraint that a table is implied by context -- really, the table
@@ -264,10 +265,6 @@ bitwise_not(bql)	::= bqlfn(b).
  * ambiguous rules: for example, TYPICALITY can be a function of a row
  * or a function of a column.
  *
- * XXX How to omit column from PROBABILITY OF to turn it into a
- * 1-column function rather than a row function?  Currently we accept
- * ESTIMATE COLUMNS ORDER BY PROBABILITY = 5, but that seems clumsy.
- *
  * XXX It would be nice if
  *
  *	SELECT PROBABILITY OF X = 1 - PROBABILITY OF Y = 0 FROM T;
@@ -294,7 +291,8 @@ bqlfn(prob_const)	::= K_PROBABILITY K_OF L_NAME(col) T_EQ primary(e).
 bqlfn(prob_1col)	::= K_PROBABILITY K_OF K_VALUE primary(e).
 bqlfn(typ_1col_or_row)	::= K_TYPICALITY.
 bqlfn(typ_const)	::= K_TYPICALITY K_OF L_NAME(col).
-bqlfn(sim_row)		::= K_SIMILARITY K_TO primary(row) wrt(cols).
+bqlfn(sim_1row)		::= K_SIMILARITY K_TO primary(row) wrt(cols).
+bqlfn(sim_2row)		::= K_SIMILARITY wrt(cols).
 bqlfn(depprob)		::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
 bqlfn(mutinf)		::= K_MUTUAL K_INFORMATION ofwith(cols).
 bqlfn(correl)		::= K_CORRELATION ofwith(cols).

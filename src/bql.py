@@ -292,6 +292,8 @@ class BQLCompiler_Row(object):
                 colno = core.bayesdb_column_number(bdb, table_id, bql.column)
                 out.write('column_typicality(%s, %s)' % (table_id, colno))
         elif isinstance(bql, ast.ExpBQLSim):
+            if bql.rowid is None:
+                raise ValueError('Similarity as 1-row function needs row.')
             out.write('row_similarity(%s, rowid, ' % (table_id,))
             compile_expression(bdb, bql.rowid, self, out)
             out.write(', ')

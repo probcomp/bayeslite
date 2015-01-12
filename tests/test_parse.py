@@ -302,9 +302,18 @@ def test_select_bql():
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(ast.ExpBQLTyp('c'), None)],
             [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select similarity from t;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpBQLSim(None, []), None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select similarity to 8 from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(ast.ExpBQLSim(ast.ExpLit(ast.LitInt(8)), []),
+                None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select similarity with respect to c from t;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpBQLSim(None, [ast.ColListLit(['c'])]),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string(
