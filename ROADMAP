@@ -6,8 +6,9 @@ ESTIMATE COLUMNS, ESTIMATE PAIRWISE, &c., are silly.  Should just be a
 uniform part of SELECT: they're really just select on the table of
 columns of a btable.
 
-	SELECT MUTUAL INFORMATION OF c1 WITH c2
-	  FROM COLUMNS OF t AS c1, COLUMNS OF t AS c2;
+	SELECT c1.name, c2.name
+	  FROM COLUMNS OF t AS c1, COLUMNS OF t AS c2
+	  ORDER BY MUTUAL INFORMATION OF c1 WITH c2;
 
 	SELECT SIMILARITY OF r1 TO r2 WITH RESPECT TO (c1, c2)
 	  FROM t AS r1, t AS r2;
@@ -15,10 +16,15 @@ columns of a btable.
 	SELECT c.name, SIMILARITY OF r1 TO r2 WITH RESPECT TO c
 	  FROM COLUMNS OF t AS c, t AS r1, t AS r2;
 
+Problem -- need to be able to use these as select columns:
+
+	SELECT name, (ESTIMATE COLUMNS FROM t ORDER BY TYPICALITY)
+	  FROM t ORDER BY name;
+
 INFER should also just be an expression which can be used inside
 SELECT:
 
-	SELECT INFER age CONF 0.9 FROM t;
+	SELECT name, INFER age CONF 0.9 FROM t;
 
 On the other hand, SIMULATE makes sense as a table constructor:
 
