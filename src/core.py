@@ -208,6 +208,8 @@ def bayesdb_bql(fn, cookie, *args):
 
 @contextlib.contextmanager
 def bayesdb_transaction(bdb):
+    # XXX Can't do this simultaneously in multiple threads.  Need
+    # lightweight per-thread state.
     if bdb.txn_depth == 0:
         assert bdb.metadata_cache is None
         assert bdb.models_cache is None
