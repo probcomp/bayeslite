@@ -1,6 +1,36 @@
-* Bayeslite roadmap
+Bayeslite roadmap
 
-2014-11-13
+* 2015-01-12
+
+ESTIMATE COLUMNS, ESTIMATE PAIRWISE, &c., are silly.  Should just be a
+uniform part of SELECT: they're really just select on the table of
+columns of a btable.
+
+	SELECT MUTUAL INFORMATION OF c1 WITH c2
+	  FROM COLUMNS OF t AS c1, COLUMNS OF t AS c2;
+
+	SELECT SIMILARITY OF r1 TO r2 WITH RESPECT TO (c1, c2)
+	  FROM t AS r1, t AS r2;
+
+	SELECT c.name, SIMILARITY OF r1 TO r2 WITH RESPECT TO c
+	  FROM COLUMNS OF t AS c, t AS r1, t AS r2;
+
+INFER should also just be an expression which can be used inside
+SELECT:
+
+	SELECT INFER age CONF 0.9 FROM t;
+
+On the other hand, SIMULATE makes sense as a table constructor:
+
+	SELECT * FROM (SIMULATE weight, age FROM t) ORDER BY age;
+
+PLOT, SUMMARIZE, HIST, &c., should not be part of the query language.
+They should sit outside, like the `.'-commands of the sqlite3 shell:
+
+	bql> .plot SELECT MUTUAL INFORMATION OF c1 WITH c2
+	             FROM COLUMNS OF t AS c1, COLUMNS OF t AS c2;
+
+* 2014-11-13
 
 ** Major to do
 
