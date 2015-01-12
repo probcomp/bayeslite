@@ -73,11 +73,15 @@ class BayesDB(object):
         # will not randomly begin and commit transactions where we
         # didn't ask it to.
         self.sqlite = sqlite3.connect(pathname, isolation_level=None)
+        self.txn_depth = 0
+        self.metadata_cache = None
+        self.models_cache = None
         bayesdb_install_schema(self.sqlite)
         bayesdb_install_bql(self.sqlite, self)
 
     def close(self):
         """Close the database.  Further use is not allowed."""
+        assert self.txn_depth == 0, "pending BayesDB transactions"
         self.sqlite.close()
         self.sqlite = None
 
@@ -201,6 +205,27 @@ def bayesdb_bql(fn, cookie, *args):
     except Exception as e:
         print traceback.format_exc()
         raise e
+
+@contextlib.contextmanager
+def bayesdb_transaction(bdb):
+    if bdb.txn_depth == 0:
+        assert bdb.metadata_cache is None
+        assert bdb.models_cache is None
+        bdb.metadata_cache = {}
+        bdb.models_cache = {}
+    else:
+        assert bdb.metadata_cache is not None
+        assert bdb.models_cache is not None
+    bdb.txn_depth += 1
+    try:
+        with sqlite3_savepoint(bdb):
+            yield
+    finally:
+        assert 0 < bdb.txn_depth
+        bdb.txn_depth -= 1
+        if bdb.txn_depth == 0:
+            bdb.metadata_cache = None
+            bdb.models_cache = None
 
 ### Importing SQLite tables
 
@@ -537,11 +562,17 @@ def bayesdb_data(bdb, table_id):
         yield tuple(bayesdb_value_to_code(M_c, i, v)
             for i, v in enumerate(row))
 
-# XXX Cache this?
 def bayesdb_metadata(bdb, table_id):
+    if bdb.metadata_cache is not None:
+        if table_id in bdb.metadata_cache:
+            return bdb.metadata_cache[table_id]
     sql = "SELECT metadata FROM bayesdb_table WHERE id = ?"
-    data = sqlite3_exec_1(bdb.sqlite, sql, (table_id,))
-    return json.loads(data)
+    metadata_json = sqlite3_exec_1(bdb.sqlite, sql, (table_id,))
+    metadata = json.loads(metadata_json)
+    if bdb.metadata_cache is not None:
+        assert table_id not in bdb.metadata_cache
+        bdb.metadata_cache[table_id] = metadata
+    return metadata
 
 def bayesdb_table_exists(bdb, table_name):
     sql = "SELECT COUNT(*) FROM bayesdb_table WHERE name = ?"
@@ -602,16 +633,30 @@ def bayesdb_init_model(bdb, table_id, modelno, engine_id, theta,
         INSERT %s INTO bayesdb_model (table_id, modelno, engine_id, theta)
         VALUES (?, ?, ?, ?)
     """ % ("OR IGNORE" if ifnotexists else "")
-    bdb.sqlite.execute(insert_sql,
-        (table_id, modelno, engine_id, json.dumps(theta)))
+    theta_json = json.dumps(theta)
+    bdb.sqlite.execute(insert_sql, (table_id, modelno, engine_id, theta_json))
+    if bdb.models_cache is not None:
+        key = (table_id, modelno)
+        if ifnotexists:
+            if key not in bdb.models_cache:
+                bdb.models_cache[key] = theta
+        else:
+            assert key not in bdb.models_cache
+            bdb.models_cache[key] = theta
 
 def bayesdb_set_model(bdb, table_id, modelno, theta):
     sql = """
         UPDATE bayesdb_model SET theta = ? WHERE table_id = ? AND modelno = ?
     """
-    bdb.sqlite.execute(sql, (json.dumps(theta), table_id, modelno))
+    theta_json = json.dumps(theta)
+    bdb.sqlite.execute(sql, (theta_json, table_id, modelno))
+    if bdb.models_cache is not None:
+        bdb.models_cache[table_id, modelno] = theta
 
 def bayesdb_has_model(bdb, table_id, modelno):
+    if bdb.models_cache is not None:
+        if (table_id, modelno) in bdb.models_cache:
+            return True
     sql = """
         SELECT count(*) FROM bayesdb_model WHERE table_id = ? AND modelno = ?
     """
@@ -624,15 +669,24 @@ def bayesdb_nmodels(bdb, table_id):
     return sqlite3_exec_1(bdb.sqlite, sql, (table_id,))
 
 def bayesdb_models(bdb, table_id):
-    sql = "SELECT theta FROM bayesdb_model WHERE table_id = ? ORDER BY modelno"
-    for row in bdb.sqlite.execute(sql, (table_id,)):
-        yield json.loads(row[0])
+    for modelno in range(bayesdb_nmodels(bdb, table_id)):
+        yield bayesdb_model(bdb, table_id, modelno)
 
 def bayesdb_model(bdb, table_id, modelno):
+    if bdb.models_cache is not None:
+        key = (table_id, modelno)
+        if key in bdb.models_cache:
+            return bdb.models_cache[key]
     sql = """
         SELECT theta FROM bayesdb_model WHERE table_id = ? AND modelno = ?
     """
-    return json.loads(sqlite3_exec_1(bdb.sqlite, sql, (table_id, modelno)))
+    theta_json = sqlite3_exec_1(bdb.sqlite, sql, (table_id, modelno))
+    theta = json.loads(theta_json)
+    if bdb.models_cache is not None:
+        key = (table_id, modelno)
+        assert key not in bdb.models_cache
+        bdb.models_cache[key] = theta
+    return theta
 
 # XXX Silly name.
 def bayesdb_latent_stata(bdb, table_id):

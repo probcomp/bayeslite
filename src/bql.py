@@ -22,9 +22,13 @@ import bayeslite.core as core
 
 def execute_phrase(bdb, phrase):
     if ast.is_query(phrase):
-        out = StringIO.StringIO()
-        compile_query(bdb, phrase, out)
-        return bdb.sqlite.execute(out.getvalue())
+        # Compile the query in the transaction in case we need to
+        # execute subqueries to determine column lists.  Compiling is
+        # a quick tree descent, so this should be fast.
+        with core.bayesdb_transaction(bdb):
+            out = StringIO.StringIO()
+            compile_query(bdb, phrase, out)
+            return bdb.sqlite.execute(out.getvalue())
     elif isinstance(phrase, ast.CreateBtableCSV):
         # XXX Codebook?
         core.bayesdb_import_csv_file(bdb, phrase.name, phrase.file,
