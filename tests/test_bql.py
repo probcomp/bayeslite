@@ -340,6 +340,13 @@ def test_estimate_pairwise_trivial():
         prefix + ' AND' + \
         ' (column_correlation(1, c0.colno, c1.colno) > 0.5);'
 
+def test_estimate_pairwise_row():
+    prefix = 'SELECT r0.rowid, r1.rowid'
+    infix = ' FROM t1 AS r0, t1 AS r1'
+    assert bql2sql('estimate pairwise row similarity with respect to age' +
+            ' from t1;') == \
+        prefix + ', row_similarity(1, r0.rowid, r1.rowid, 2)' + infix + ';'
+
 def test_trivial_commands():
     with test_core.bayesdb_csv(test_core.csv_data) as (bdb, fname):
         # XXX Query parameters!

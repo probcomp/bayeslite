@@ -84,6 +84,7 @@ keywords = {
     "probability": grammar.K_PROBABILITY,
     "regexp": grammar.K_REGEXP,
     "respect": grammar.K_RESPECT,
+    "row": grammar.K_ROW,
     "select": grammar.K_SELECT,
     "similarity": grammar.K_SIMILARITY,
     "summarize": grammar.K_SUMMARIZE,

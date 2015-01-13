@@ -59,6 +59,7 @@ query_action(plot)	::= K_PLOT.
 query(select)		::= select(q).
 query(estcols)		::= estcols(q).
 query(estpaircols)	::= estpaircols(q).
+query(estpairrow)	::= estpairrow(q).
 /*
 query(infer)		::= infer(q).
 query(simulate)		::= simulate(q).
@@ -88,6 +89,18 @@ estcols(e)		::= K_ESTIMATE K_COLUMNS K_FROM table_name(btable)
  * columns with itself.
  */
 estpaircols(e)		::= K_ESTIMATE K_PAIRWISE K_FROM table_name(btable)
+				where(cond) order_by(ord) limit(lim) as(sav).
+
+/*
+ * XXX This is really just a SELECT on the join of the table with
+ * itself.
+ *
+ * XXX Support multiple column output?  Not clear that's worthwhile at
+ * the moment: the only thing it is sensible to do here right now is
+ * SIMILARITY.
+ */
+estpairrow(e)		::= K_ESTIMATE K_PAIRWISE K_ROW expression(e)
+				K_FROM table_name(btable)
 				where(cond) order_by(ord) limit(lim) as(sav).
 
 select_quant(distinct)	::= K_DISTINCT.

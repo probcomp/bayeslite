@@ -49,6 +49,7 @@ def is_query(phrase):
     if isinstance(phrase, Select):      return True
     if isinstance(phrase, EstCols):     return True
     if isinstance(phrase, EstPairCols): return True
+    if isinstance(phrase, EstPairRow):  return True
     return False
 
 Select = namedtuple('Select', [
@@ -86,6 +87,15 @@ EstCols = namedtuple('EstCols', [
 ])
 
 EstPairCols = namedtuple('EstPairCols', [
+    'btable',                   # XXX name
+    'condition',                # Exp* or None (unconditional)
+    'order',                    # [Ord] or None (unordered)
+    'limit',                    # Lim or None (unlimited),
+    'save_name',                # XXX name or None (don't save)
+])
+
+EstPairRow = namedtuple('EstPairRow', [
+    'expression',               # Exp*
     'btable',                   # XXX name
     'condition',                # Exp* or None (unconditional)
     'order',                    # [Ord] or None (unordered)

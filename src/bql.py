@@ -66,6 +66,8 @@ def compile_query(bdb, query, out):
         compile_estcols(bdb, query, out)
     elif isinstance(query, ast.EstPairCols):
         compile_estpaircols(bdb, query, out)
+    elif isinstance(query, ast.EstPairRow):
+        compile_estpairrow(bdb, query, out)
     else:
         assert False        # XXX
 
@@ -88,7 +90,7 @@ def compile_select(bdb, select, out):
         compile_select_tables(bdb, select, out)
     if select.condition is not None:
         out.write(' WHERE ')
-        compile_row_expression(bdb, select.condition, select, out)
+        compile_1row_expression(bdb, select.condition, select, out)
     if select.group is not None:
         assert 0 < len(select.group)
         first = True
@@ -98,7 +100,7 @@ def compile_select(bdb, select, out):
                 first = False
             else:
                 out.write(', ')
-            compile_row_expression(bdb, key, select, out)
+            compile_1row_expression(bdb, key, select, out)
     if select.order is not None:
         assert 0 < len(select.order)
         first = True
@@ -108,7 +110,7 @@ def compile_select(bdb, select, out):
                 first = False
             else:
                 out.write(', ')
-            compile_row_expression(bdb, order.expression, select, out)
+            compile_1row_expression(bdb, order.expression, select, out)
             if order.sense == ast.ORD_ASC:
                 pass
             elif order.sense == ast.ORD_DESC:
@@ -117,10 +119,10 @@ def compile_select(bdb, select, out):
                 assert False    # XXX
     if select.limit is not None:
         out.write(' LIMIT ')
-        compile_row_expression(bdb, select.limit.limit, select, out)
+        compile_1row_expression(bdb, select.limit.limit, select, out)
         if select.limit.offset is not None:
             out.write(' OFFSET ')
-            compile_row_expression(bdb, select.limit.offset, select, out)
+            compile_1row_expression(bdb, select.limit.offset, select, out)
 
 def compile_select_columns(bdb, select, out):
     first = True
@@ -139,7 +141,7 @@ def compile_select_column(bdb, selcol, select, out):
             out.write('.')
         out.write('*')
     elif isinstance(selcol, ast.SelColExp):
-        bql_compiler = BQLCompiler_Row(select)
+        bql_compiler = BQLCompiler_1Row(select)
         compile_expression(bdb, selcol.expression, bql_compiler, out)
         if selcol.name is not None:
             out.write(' AS ')
@@ -251,7 +253,46 @@ def compile_estpaircols(bdb, estpaircols, out):
             compile_2col_expression(bdb, estpaircols.limit.offset, estpaircols,
                 colno0_exp, colno1_exp, out)
 
-class BQLCompiler_Row(object):
+def compile_estpairrow(bdb, estpairrow, out):
+    assert isinstance(estpairrow, ast.EstPairRow)
+    table_name = estpairrow.btable
+    rowid0_exp = 'r0.rowid'
+    rowid1_exp = 'r1.rowid'
+    out.write('SELECT %s, %s, ' % (rowid0_exp, rowid1_exp))
+    compile_2row_expression(bdb, estpairrow.expression, estpairrow,
+        rowid0_exp, rowid1_exp, out)
+    out.write(' FROM %s AS r0, %s AS r1' % (table_name, table_name))
+    if estpairrow.condition is not None:
+        out.write(' WHERE ')
+        compile_2row_expression(bdb, estpairrow.condition, estpairrow,
+            rowid0_exp, rowid1_exp, out)
+    if estpairrow.order is not None:
+        assert 0 < len(estpairrow.order)
+        first = True
+        for order in estpairrow.order:
+            if first:
+                out.write(' ORDER BY ')
+                first = False
+            else:
+                out.write(', ')
+            compile_2row_expression(bdb, order.expression, estpairrow,
+                rowid0_exp, rowid1_exp, out)
+            if order.sense == ast.ORD_ASC:
+                pass
+            elif order.sense == ast.ORD_DESC:
+                out.write(' DESC')
+            else:
+                assert False    # XXX
+    if estpairrow.limit is not None:
+        out.write(' LIMIT ')
+        compile_2row_expression(bdb, estpairrow.limit.limit, estpairrow,
+            rowid0_exp, rowid1_exp, out)
+        if estpairrow.limit.offset is not None:
+            out.write(' OFFSET ')
+            compile_2row_expression(bdb, estpairrow.limit.offset, estpairrow,
+                rowid0_exp, rowid1_exp, out)
+
+class BQLCompiler_1Row(object):
     def __init__(self, ctx):
         assert isinstance(ctx, ast.Select)
         self.ctx = ctx
@@ -308,6 +349,41 @@ class BQLCompiler_Row(object):
         elif isinstance(bql, ast.ExpBQLCorrel):
             compile_bql_2col_2(bdb, table_id, 'column_correlation',
                 'Column correlation', bql, out)
+        else:
+            assert False        # XXX
+
+class BQLCompiler_2Row(object):
+    def __init__(self, ctx, rowid0_exp, rowid1_exp):
+        assert isinstance(ctx, ast.EstPairRow)
+        assert isinstance(rowid0_exp, str)
+        assert isinstance(rowid1_exp, str)
+        self.ctx = ctx
+        self.rowid0_exp = rowid0_exp
+        self.rowid1_exp = rowid1_exp
+
+    def compile_bql(self, bdb, bql, out):
+        assert ast.is_bql(bql)
+        assert self.ctx.btable is not None
+        table_id = core.bayesdb_table_id(bdb, self.ctx.btable)
+        if isinstance(bql, ast.ExpBQLProb):
+            raise ValueError('Probability of value is 1-row function.')
+        elif isinstance(bql, ast.ExpBQLPredProb):
+            raise ValueError('Predictive probability is 1-row function.')
+        elif isinstance(bql, ast.ExpBQLTyp):
+            raise ValueError('Typicality is 1-row function.')
+        elif isinstance(bql, ast.ExpBQLSim):
+            if bql.rowid is not None:
+                raise ValueError('Similarity neds no row id in 2-row context.')
+            out.write('row_similarity(%s, %s, %s, ' %
+                (table_id, self.rowid0_exp, self.rowid1_exp))
+            compile_column_lists(bdb, table_id, bql.column_lists, self, out)
+            out.write(')')
+        elif isinstance(bql, ast.ExpBQLDepProb):
+            raise ValueError('Dependence probability is 0-row function.')
+        elif isinstance(bql, ast.ExpBQLMutInf):
+            raise ValueError('Mutual information is 0-row function.')
+        elif isinstance(bql, ast.ExpBQLCorrel):
+            raise ValueError('Column correlation is 0-row function.')
         else:
             assert False        # XXX
 
@@ -432,8 +508,12 @@ def compile_bql_2col_0(bdb, table_id, bqlfn, desc, bql, colno0_exp, colno1_exp,
         raise ValueError(desc + ' needs no columns.')
     out.write('%s(%s, %s, %s)' % (bqlfn, table_id, colno0_exp, colno1_exp))
 
-def compile_row_expression(bdb, exp, query, out):
-    bql_compiler = BQLCompiler_Row(query)
+def compile_1row_expression(bdb, exp, query, out):
+    bql_compiler = BQLCompiler_1Row(query)
+    compile_expression(bdb, exp, bql_compiler, out)
+
+def compile_2row_expression(bdb, exp, query, rowid0_exp, rowid1_exp, out):
+    bql_compiler = BQLCompiler_2Row(query, rowid0_exp, rowid1_exp)
     compile_expression(bdb, exp, bql_compiler, out)
 
 def compile_1col_expression(bdb, exp, query, colno_exp, out):
