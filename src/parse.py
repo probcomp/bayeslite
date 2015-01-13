@@ -296,7 +296,7 @@ class BQLSemantics(object):
     def p_bqlfn_correl(self, cols):             return ast.ExpBQLCorrel(*cols)
     def p_bqlfn_primary(self, p):               return p
 
-    def p_wrt_none(self):                       return []
+    def p_wrt_none(self):                       return [ast.ColListAll()]
     def p_wrt_one(self, collist):               return [collist]
     def p_wrt_some(self, collists):             return collists
 

@@ -187,6 +187,8 @@ def test_select_bql():
         'SELECT row_typicality(1, rowid) FROM "t1";'
     assert bql2sql('select typicality of age from t1;') == \
         'SELECT column_typicality(1, 2) FROM "t1";'
+    assert bql2sql('select similarity to 5 from t1;') == \
+        'SELECT row_similarity(1, rowid, 5, 0, 1, 2, 3) FROM "t1";'
     assert bql2sql('select similarity to 5 with respect to age from t1') == \
         'SELECT row_similarity(1, rowid, 5, 2) FROM "t1";'
     assert bql2sql('select similarity to 5 with respect to (age, weight)' +
@@ -343,6 +345,9 @@ def test_estimate_pairwise_trivial():
 def test_estimate_pairwise_row():
     prefix = 'SELECT r0.rowid, r1.rowid'
     infix = ' FROM t1 AS r0, t1 AS r1'
+    assert bql2sql('estimate pairwise row similarity from t1;') == \
+        prefix + ', row_similarity(1, r0.rowid, r1.rowid, 0, 1, 2, 3)' + \
+        infix + ';'
     assert bql2sql('estimate pairwise row similarity with respect to age' +
             ' from t1;') == \
         prefix + ', row_similarity(1, r0.rowid, r1.rowid, 2)' + infix + ';'
