@@ -37,7 +37,8 @@ def bql2sql(string):
 def bql_execute(bdb, string):
     phrases = parse.parse_bql_string(string)
     for phrase in phrases:
-        bql.execute_phrase(bdb, phrase)
+        for row in bql.execute_phrase(bdb, phrase):
+            pass
 
 def test_select_trivial():
     assert bql2sql('select null;') == 'SELECT NULL;'
