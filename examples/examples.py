@@ -8,6 +8,22 @@
 import bayeslite
 import crosscat.CrossCatClient
 
+import bayeslite.bql as bql
+import bayeslite.parse as parse
+
+def bql_exec(bdb, string):
+    phrases = parse.parse_bql_string(string)
+    phrase = phrases.next()
+    done = None
+    try:
+        phrases.next()
+        done = False
+    except StopIteration:
+        done = True
+    if done is not True:
+        raise ValueError('>1 phrase: %s' % (string,))
+    return bql.execute_phrase(bdb, phrase)
+
 crosscat = crosscat.CrossCatClient.get_CrossCatClient("local", seed=0)
 
 bdb = bayeslite.BayesDB(crosscat)
@@ -54,6 +70,7 @@ print "### bayesdb_table"
 for x in bdb.sqlite.execute("select * from bayesdb_table"): print x
 print "### bayesdb_table_column"
 for x in bdb.sqlite.execute("select * from bayesdb_table_column"): print x
+for x in bql_exec(bdb, "select correlation of age with weight from zoot"): print x
 for x in bdb.sqlite.execute("select column_correlation(1, 2, 3)"): print x
 nmodels = 4
 bayeslite.bayesdb_models_initialize(bdb, 1, nmodels)
