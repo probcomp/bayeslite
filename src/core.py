@@ -191,7 +191,7 @@ def bayesdb_install_bql(db, cookie):
     function("column_mutual_information", 3, bql_column_mutual_information)
     function("column_typicality", 2, bql_column_typicality)
     function("column_value_probability", 3, bql_column_value_probability)
-    function("row_similarity", 4, bql_row_similarity)
+    function("row_similarity", -1, bql_row_similarity)
     function("row_typicality", 2, bql_row_typicality)
     function("row_column_predictive_probability", 3,
         bql_row_column_predictive_probability)
@@ -935,14 +935,14 @@ def bql_column_value_probability(bdb, table_id, colno, value):
 ### BayesDB row functions
 
 # Row function:  SIMILARITY TO <target_row> [WITH RESPECT TO <columns>]
-def bql_row_similarity(bdb, table_id, rowid, target_rowid, columns):
+def bql_row_similarity(bdb, table_id, rowid, target_rowid, *columns):
     return bdb.engine.similarity(
         M_c=bayesdb_metadata(bdb, table_id),
         X_L_list=list(bayesdb_latent_state(bdb, table_id)),
         X_D_list=list(bayesdb_latent_data(bdb, table_id)),
         given_row_id=sqlite3_rowid_to_engine_row_id(rowid),
         target_row_id=sqlite3_rowid_to_engine_row_id(target_rowid),
-        target_columns=columns
+        target_columns=list(columns)
     )
 
 # Row function:  TYPICALITY

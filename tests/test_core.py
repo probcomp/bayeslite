@@ -330,9 +330,10 @@ def test_row_similarity(btable_name, source, target, colnos):
         pytest.skip('Not enough columns in t0.')
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
-        bayeslite.bql_row_similarity(bdb, table_id, source, target, colnos)
-        # XXX OOPS!  Can't write this in SQL, because no arrays.
-        # Variadic sqlite functions?
+        bayeslite.bql_row_similarity(bdb, table_id, source, target, *colnos)
+        sql = 'select row_similarity(?, ?, ?%s%s)' % \
+            ('' if 0 == len(colnos) else ', ', ', '.join(map(str, colnos)))
+        bayeslite.sqlite3_exec_1(bdb.sqlite, sql, (table_id, source, target))
 
 @pytest.mark.parametrize('btable_name,rowid',
     [(btable_name, rowid)
