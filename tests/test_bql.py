@@ -365,3 +365,4 @@ def test_trivial_commands():
         bql_execute(bdb, 'analyze t models 0,1 for 1 iteration wait')
         bql_execute(bdb, 'analyze t for 1 iteration wait')
         bql_execute(bdb, 'select * from t')
+        bql_execute(bdb, 'estimate pairwise row similarity from t')
