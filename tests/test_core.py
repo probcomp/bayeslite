@@ -269,7 +269,8 @@ def test_onecolumn(btable_name, colno):
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
         bayeslite.bql_column_typicality(bdb, table_id, colno)
-        bdb.sqlite.execute('select column_typicality(?, ?)', (table_id, colno))
+        bdb.sqlite.execute('select bql_column_typicality(?, ?)',
+            (table_id, colno))
 
 @pytest.mark.parametrize('btable_name,colno0,colno1',
     [(btable_name, colno0, colno1)
@@ -285,17 +286,17 @@ def test_twocolumn(btable_name, colno0, colno1):
             as (bdb, table_id):
         bayeslite.bql_column_correlation(bdb, table_id, colno0, colno1)
         bayeslite.sqlite3_exec_1(bdb.sqlite,
-            'select column_correlation(?, ?, ?)',
+            'select bql_column_correlation(?, ?, ?)',
             (table_id, colno0, colno1))
         bayeslite.bql_column_dependence_probability(bdb, table_id, colno0,
             colno1)
         bayeslite.sqlite3_exec_1(bdb.sqlite,
-            'select column_dependence_probability(?, ?, ?)',
+            'select bql_column_dependence_probability(?, ?, ?)',
             (table_id, colno0, colno1))
         bayeslite.bql_column_mutual_information(bdb, table_id, colno0,
             colno1)
         bayeslite.sqlite3_exec_1(bdb.sqlite,
-            'select column_mutual_information(?, ?, ?)',
+            'select bql_column_mutual_information(?, ?, ?)',
             (table_id, colno0, colno1))
 
 @pytest.mark.parametrize('colno,rowid',
@@ -312,7 +313,7 @@ def test_t1_column_value_probability(colno, rowid):
         qt = bayeslite.sqlite3_quote_name(tn)
         qc = bayeslite.sqlite3_quote_name(cn)
         sql = '''
-            select column_value_probability(?, ?,
+            select bql_column_value_probability(?, ?,
                 (select %s from %s where rowid = ?))
         ''' % (qc, qt)
         bayeslite.sqlite3_exec_1(bdb.sqlite, sql, (table_id, colno, rowid))
@@ -331,7 +332,7 @@ def test_row_similarity(btable_name, source, target, colnos):
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
         bayeslite.bql_row_similarity(bdb, table_id, source, target, *colnos)
-        sql = 'select row_similarity(?, ?, ?%s%s)' % \
+        sql = 'select bql_row_similarity(?, ?, ?%s%s)' % \
             ('' if 0 == len(colnos) else ', ', ', '.join(map(str, colnos)))
         bayeslite.sqlite3_exec_1(bdb.sqlite, sql, (table_id, source, target))
 
@@ -348,7 +349,7 @@ def test_row_typicality(btable_name, rowid):
             as (bdb, table_id):
         if rowid == 0: rowid = bayesdb_maxrowid(bdb, table_id)
         bayeslite.bql_row_typicality(bdb, table_id, rowid)
-        bayeslite.sqlite3_exec_1(bdb.sqlite, 'select row_typicality(?, ?)',
+        bayeslite.sqlite3_exec_1(bdb.sqlite, 'select bql_row_typicality(?, ?)',
             (table_id, rowid))
 
 @pytest.mark.parametrize('btable_name,rowid,colno',
@@ -367,7 +368,7 @@ def test_row_column_predictive_probability(btable_name, rowid, colno):
         bayeslite.bql_row_column_predictive_probability(bdb, table_id,
             rowid, colno)
         bayeslite.sqlite3_exec_1(bdb.sqlite,
-            'select row_column_predictive_probability(?, ?, ?)',
+            'select bql_row_column_predictive_probability(?, ?, ?)',
             (table_id, rowid, colno))
 
 @contextlib.contextmanager

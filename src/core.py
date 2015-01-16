@@ -185,17 +185,17 @@ def bayesdb_install_bql(db, cookie):
     def function(name, nargs, fn):
         db.create_function(name, nargs,
             lambda *args: bayesdb_bql(fn, cookie, *args))
-    function("column_correlation", 3, bql_column_correlation)
-    function("column_dependence_probability", 3,
+    function("bql_column_correlation", 3, bql_column_correlation)
+    function("bql_column_dependence_probability", 3,
         bql_column_dependence_probability)
-    function("column_mutual_information", 3, bql_column_mutual_information)
-    function("column_typicality", 2, bql_column_typicality)
-    function("column_value_probability", 3, bql_column_value_probability)
-    function("row_similarity", -1, bql_row_similarity)
-    function("row_typicality", 2, bql_row_typicality)
-    function("row_column_predictive_probability", 3,
+    function("bql_column_mutual_information", 3, bql_column_mutual_information)
+    function("bql_column_typicality", 2, bql_column_typicality)
+    function("bql_column_value_probability", 3, bql_column_value_probability)
+    function("bql_row_similarity", -1, bql_row_similarity)
+    function("bql_row_typicality", 2, bql_row_typicality)
+    function("bql_row_column_predictive_probability", 3,
         bql_row_column_predictive_probability)
-    function("infer", 5, bql_infer)
+    function("bql_infer", 5, bql_infer)
 
 # XXX XXX XXX Temporary debugging kludge!
 import traceback

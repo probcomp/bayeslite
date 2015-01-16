@@ -174,7 +174,7 @@ def compile_select_table(bdb, table, out):
 # XXX Use context to determine whether to yield column names or
 # numbers, so that top-level queries yield names, but, e.g.,
 # subqueries in SIMILARITY TO 0 WITH RESPECT TO (...) yield numbers
-# since that's what row_similarity wants.
+# since that's what bql_row_similarity wants.
 #
 # XXX Use query parameters, not quotation.
 def compile_estcols(bdb, estcols, out):
@@ -314,7 +314,7 @@ class BQLCompiler_1Row(object):
             if bql.column is None:
                 raise ValueError('Predictive probability at row needs column.')
             colno = core.bayesdb_column_number(bdb, table_id, bql.column)
-            out.write('row_column_predictive_probability(%s, %s, %s)' %
+            out.write('bql_row_column_predictive_probability(%s, %s, %s)' %
                 (table_id, rowid_col, colno))
         elif isinstance(bql, ast.ExpBQLProb):
             # XXX Why is this independent of the row?  Can't we
@@ -323,36 +323,40 @@ class BQLCompiler_1Row(object):
             if bql.column is None:
                 raise ValueError('Probability of value at row needs column.')
             colno = core.bayesdb_column_number(bdb, table_id, bql.column)
-            out.write('column_value_probability(%s, %s, ' % (table_id, colno))
+            out.write('bql_column_value_probability(%s, %s, ' %
+                (table_id, colno))
             compile_expression(bdb, bql.value, self, out)
             out.write(')')
         elif isinstance(bql, ast.ExpBQLTyp):
             if bql.column is None:
-                out.write('row_typicality(%s, rowid)' % (table_id,))
+                out.write('bql_row_typicality(%s, rowid)' % (table_id,))
             else:
                 colno = core.bayesdb_column_number(bdb, table_id, bql.column)
-                out.write('column_typicality(%s, %s)' % (table_id, colno))
+                out.write('bql_column_typicality(%s, %s)' % (table_id, colno))
         elif isinstance(bql, ast.ExpBQLSim):
             if bql.rowid is None:
                 raise ValueError('Similarity as 1-row function needs row.')
-            out.write('row_similarity(%s, rowid, ' % (table_id,))
+            out.write('bql_row_similarity(%s, rowid, ' % (table_id,))
             compile_expression(bdb, bql.rowid, self, out)
             out.write(', ')
             compile_column_lists(bdb, table_id, bql.column_lists, self, out)
             out.write(')')
         elif isinstance(bql, ast.ExpBQLDepProb):
-            compile_bql_2col_2(bdb, table_id, 'column_dependence_probability',
+            compile_bql_2col_2(bdb, table_id,
+                'bql_column_dependence_probability',
                 'Dependence probability', bql, out)
         elif isinstance(bql, ast.ExpBQLMutInf):
-            compile_bql_2col_2(bdb, table_id, 'column_mutual_information',
+            compile_bql_2col_2(bdb, table_id,
+                'bql_column_mutual_information',
                 'Mutual information', bql, out)
         elif isinstance(bql, ast.ExpBQLCorrel):
-            compile_bql_2col_2(bdb, table_id, 'column_correlation',
+            compile_bql_2col_2(bdb, table_id,
+                'bql_column_correlation',
                 'Column correlation', bql, out)
         elif isinstance(bql, ast.ExpBQLInfer):
             assert bql.column is not None
             colno = core.bayesdb_column_number(bdb, table_id, bql.column)
-            out.write('infer(%d, %d, rowid, ' % (table_id, colno))
+            out.write('bql_infer(%d, %d, rowid, ' % (table_id, colno))
             compile_column_name(bdb, self.ctx.tables[0].table, bql.column, out)
             out.write(', ')
             compile_expression(bdb, bql.confidence, self, out)
@@ -382,7 +386,7 @@ class BQLCompiler_2Row(object):
         elif isinstance(bql, ast.ExpBQLSim):
             if bql.rowid is not None:
                 raise ValueError('Similarity neds no row id in 2-row context.')
-            out.write('row_similarity(%s, %s, %s, ' %
+            out.write('bql_row_similarity(%s, %s, %s, ' %
                 (table_id, self.rowid0_exp, self.rowid1_exp))
             compile_column_lists(bdb, table_id, bql.column_lists, self, out)
             out.write(')')
@@ -411,7 +415,7 @@ class BQLCompiler_1Col(object):
         if isinstance(bql, ast.ExpBQLProb):
             if bql.column is not None:
                 raise ValueError('Probability of value needs no column.')
-            out.write('column_value_probability(%s, %s, ' %
+            out.write('bql_column_value_probability(%s, %s, ' %
                 (table_id, self.colno_exp))
             compile_expression(bdb, bql.value, self, out)
             out.write(')')
@@ -421,17 +425,21 @@ class BQLCompiler_1Col(object):
         elif isinstance(bql, ast.ExpBQLTyp):
             if bql.column is not None:
                 raise ValueError('Typicality of column needs no column.')
-            out.write('column_typicality(%s, %s)' % (table_id, self.colno_exp))
+            out.write('bql_column_typicality(%s, %s)' %
+                (table_id, self.colno_exp))
         elif isinstance(bql, ast.ExpBQLSim):
             raise ValueError('Similarity to row makes sense only at row.')
         elif isinstance(bql, ast.ExpBQLDepProb):
-            compile_bql_2col_1(bdb, table_id, 'column_dependence_probability',
+            compile_bql_2col_1(bdb, table_id,
+                'bql_column_dependence_probability',
                 'Dependence probability', bql, self.colno_exp, out)
         elif isinstance(bql, ast.ExpBQLMutInf):
-            compile_bql_2col_1(bdb, table_id, 'column_mutual_information',
+            compile_bql_2col_1(bdb, table_id,
+                'bql_column_mutual_information',
                 'Mutual information', bql, self.colno_exp, out)
         elif isinstance(bql, ast.ExpBQLCorrel):
-            compile_bql_2col_1(bdb, table_id, 'column_correlation',
+            compile_bql_2col_1(bdb, table_id,
+                'bql_column_correlation',
                 'Column correlation', bql, self.colno_exp, out)
         elif isinstance(bql, ast.ExpBQLInfer):
             raise ValueError('Infer is a 1-row function.')
@@ -460,15 +468,18 @@ class BQLCompiler_2Col(object):
         elif isinstance(bql, ast.ExpBQLSim):
             raise ValueError('Similarity to row makes sense only at row.')
         elif isinstance(bql, ast.ExpBQLDepProb):
-            compile_bql_2col_0(bdb, table_id, 'column_dependence_probability',
+            compile_bql_2col_0(bdb, table_id,
+                'bql_column_dependence_probability',
                 'Dependence probability', bql,
                 self.colno0_exp, self.colno1_exp, out)
         elif isinstance(bql, ast.ExpBQLMutInf):
-            compile_bql_2col_0(bdb, table_id, 'column_mutual_information',
+            compile_bql_2col_0(bdb, table_id,
+                'bql_column_mutual_information',
                 'Mutual Information', bql,
                 self.colno0_exp, self.colno1_exp, out)
         elif isinstance(bql, ast.ExpBQLCorrel):
-            compile_bql_2col_0(bdb, table_id, 'column_correlation',
+            compile_bql_2col_0(bdb, table_id,
+                'bql_column_correlation',
                 'Correlation', bql,
                 self.colno0_exp, self.colno1_exp, out)
         elif isinstance(bql, ast.ExpBQLInfer):

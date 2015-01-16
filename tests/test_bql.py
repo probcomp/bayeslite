@@ -154,17 +154,17 @@ def test_select_trivial():
 
 def test_select_bql():
     assert bql2sql('select predictive probability of weight from t1;') == \
-        'SELECT row_column_predictive_probability(1, rowid, 3) FROM "t1";'
+        'SELECT bql_row_column_predictive_probability(1, rowid, 3) FROM "t1";'
     assert bql2sql('select label, predictive probability of weight from t1;') \
         == \
-        'SELECT "label", row_column_predictive_probability(1, rowid, 3)' \
+        'SELECT "label", bql_row_column_predictive_probability(1, rowid, 3)' \
         + ' FROM "t1";'
     assert bql2sql('select predictive probability of weight, label from t1;') \
         == \
-        'SELECT row_column_predictive_probability(1, rowid, 3), "label"' \
+        'SELECT bql_row_column_predictive_probability(1, rowid, 3), "label"' \
         + ' FROM "t1";'
     assert bql2sql('select predictive probability of weight + 1 from t1;') == \
-        'SELECT (row_column_predictive_probability(1, rowid, 3) + 1)' \
+        'SELECT (bql_row_column_predictive_probability(1, rowid, 3) + 1)' \
         + ' FROM "t1";'
     with pytest.raises(ValueError):
         # Need a table.
@@ -179,30 +179,30 @@ def test_select_bql():
         # Need a column.
         bql2sql('select predictive probability from t1;')
     assert bql2sql('select probability of weight = 20 from t1;') == \
-        'SELECT column_value_probability(1, 3, 20) FROM "t1";'
+        'SELECT bql_column_value_probability(1, 3, 20) FROM "t1";'
     assert bql2sql('select probability of weight = (c + 1) from t1;') == \
-        'SELECT column_value_probability(1, 3, ("c" + 1)) FROM "t1";'
+        'SELECT bql_column_value_probability(1, 3, ("c" + 1)) FROM "t1";'
     assert bql2sql('select probability of weight = f(c) from t1;') == \
-        'SELECT column_value_probability(1, 3, "f"("c")) FROM "t1";'
+        'SELECT bql_column_value_probability(1, 3, "f"("c")) FROM "t1";'
     assert bql2sql('select typicality from t1;') == \
-        'SELECT row_typicality(1, rowid) FROM "t1";'
+        'SELECT bql_row_typicality(1, rowid) FROM "t1";'
     assert bql2sql('select typicality of age from t1;') == \
-        'SELECT column_typicality(1, 2) FROM "t1";'
+        'SELECT bql_column_typicality(1, 2) FROM "t1";'
     assert bql2sql('select similarity to 5 from t1;') == \
-        'SELECT row_similarity(1, rowid, 5, 0, 1, 2, 3) FROM "t1";'
+        'SELECT bql_row_similarity(1, rowid, 5, 0, 1, 2, 3) FROM "t1";'
     assert bql2sql('select similarity to 5 with respect to age from t1') == \
-        'SELECT row_similarity(1, rowid, 5, 2) FROM "t1";'
+        'SELECT bql_row_similarity(1, rowid, 5, 2) FROM "t1";'
     assert bql2sql('select similarity to 5 with respect to (age, weight)' +
         ' from t1;') == \
-        'SELECT row_similarity(1, rowid, 5, 2, 3) FROM "t1";'
+        'SELECT bql_row_similarity(1, rowid, 5, 2, 3) FROM "t1";'
     assert bql2sql('select similarity to 5 with respect to (*) from t1;') == \
-        'SELECT row_similarity(1, rowid, 5, 0, 1, 2, 3) FROM "t1";'
+        'SELECT bql_row_similarity(1, rowid, 5, 0, 1, 2, 3) FROM "t1";'
     assert bql2sql('select similarity to 5 with respect to (age, weight)' +
         ' from t1;') == \
-        'SELECT row_similarity(1, rowid, 5, 2, 3) FROM "t1";'
+        'SELECT bql_row_similarity(1, rowid, 5, 2, 3) FROM "t1";'
     assert bql2sql('select dependence probability of age with weight' +
         ' from t1;') == \
-        'SELECT column_dependence_probability(1, 2, 3) FROM "t1";'
+        'SELECT bql_column_dependence_probability(1, 2, 3) FROM "t1";'
     with pytest.raises(ValueError):
         # Need both columns fixed.
         bql2sql('select dependence probability with age from t1;')
@@ -211,7 +211,7 @@ def test_select_bql():
         bql2sql('select dependence probability from t1;')
     assert bql2sql('select mutual information of age with weight' +
         ' from t1;') == \
-        'SELECT column_mutual_information(1, 2, 3) FROM "t1";'
+        'SELECT bql_column_mutual_information(1, 2, 3) FROM "t1";'
     with pytest.raises(ValueError):
         # Need both columns fixed.
         bql2sql('select mutual information with age from t1;')
@@ -219,7 +219,7 @@ def test_select_bql():
         # Need both columns fixed.
         bql2sql('select mutual information from t1;')
     assert bql2sql('select correlation of age with weight from t1;') == \
-        'SELECT column_correlation(1, 2, 3) FROM "t1";'
+        'SELECT bql_column_correlation(1, 2, 3) FROM "t1";'
     with pytest.raises(ValueError):
         # Need both columns fixed.
         bql2sql('select correlation with age from t1;')
@@ -227,7 +227,7 @@ def test_select_bql():
         # Need both columns fixed.
         bql2sql('select correlation from t1;')
     assert bql2sql('select infer age conf 0.9 from t1;') == \
-        'SELECT infer(1, 2, rowid, "age", 0.9) FROM "t1";'
+        'SELECT bql_infer(1, 2, rowid, "age", 0.9) FROM "t1";'
 
 def test_estimate_columns_trivial():
     prefix = 'SELECT name FROM bayesdb_table_column WHERE table_id = 1'
@@ -235,7 +235,7 @@ def test_estimate_columns_trivial():
         prefix + ';'
     assert bql2sql('estimate columns from t1 where' +
             ' (probability of value 42) > 0.5') == \
-        prefix + ' AND (column_value_probability(1, colno, 42) > 0.5);'
+        prefix + ' AND (bql_column_value_probability(1, colno, 42) > 0.5);'
     # XXX ESTIMATE COLUMNS FROM T1 WHERE PROBABILITY OF 1 > 0.5
     with pytest.raises(ValueError):
         # Must omit column.
@@ -246,7 +246,7 @@ def test_estimate_columns_trivial():
         bql2sql('estimate columns from t1 where' +
             ' predictive probability of x > 0;')
     assert bql2sql('estimate columns from t1 where typicality > 0.5;') == \
-        prefix + ' AND (column_typicality(1, colno) > 0.5);'
+        prefix + ' AND (bql_column_typicality(1, colno) > 0.5);'
     with pytest.raises(ValueError):
         # Must omit column.
         bql2sql('estimate columns from t1 where typicality of c > 0.5;')
@@ -256,7 +256,7 @@ def test_estimate_columns_trivial():
             ' similarity to x with respect to c > 0;')
     assert bql2sql('estimate columns from t1 where' +
             ' dependence probability with age > 0.5;') == \
-        prefix + ' AND (column_dependence_probability(1, 2, colno) > 0.5);'
+        prefix + ' AND (bql_column_dependence_probability(1, 2, colno) > 0.5);'
     with pytest.raises(ValueError):
         # Must omit exactly one column.
         bql2sql('estimate columns from t1 where' +
@@ -266,7 +266,7 @@ def test_estimate_columns_trivial():
         bql2sql('estimate columns from t1 where dependence probability > 0.5;')
     assert bql2sql('estimate columns from t1 order by' +
             ' mutual information with age;') == \
-        prefix + ' ORDER BY column_mutual_information(1, 2, colno);'
+        prefix + ' ORDER BY bql_column_mutual_information(1, 2, colno);'
     with pytest.raises(ValueError):
         # Must omit exactly one column.
         bql2sql('estimate columns from t1 order by' +
@@ -276,7 +276,7 @@ def test_estimate_columns_trivial():
         bql2sql('estimate columns from t1 where mutual information > 0.5;')
     assert bql2sql('estimate columns from t1 order by' +
             ' correlation with age desc;') == \
-        prefix + ' ORDER BY column_correlation(1, 2, colno) DESC;'
+        prefix + ' ORDER BY bql_column_correlation(1, 2, colno) DESC;'
     with pytest.raises(ValueError):
         # Must omit exactly one column.
         bql2sql('estimate columns from t1 order by' +
@@ -322,7 +322,7 @@ def test_estimate_pairwise_trivial():
     assert bql2sql('estimate pairwise from t1 where' +
             ' dependence probability > 0.5;') == \
         prefix + ' AND' + \
-        ' (column_dependence_probability(1, c0.colno, c1.colno) > 0.5);'
+        ' (bql_column_dependence_probability(1, c0.colno, c1.colno) > 0.5);'
     with pytest.raises(ValueError):
         # Must omit both columns.
         bql2sql('estimate pairwise from t1 where' +
@@ -334,7 +334,7 @@ def test_estimate_pairwise_trivial():
     assert bql2sql('estimate pairwise from t1 where' +
             ' mutual information > 0.5;') == \
         prefix + ' AND' + \
-        ' (column_mutual_information(1, c0.colno, c1.colno) > 0.5);'
+        ' (bql_column_mutual_information(1, c0.colno, c1.colno) > 0.5);'
     with pytest.raises(ValueError):
         # Must omit both columns.
         bql2sql('estimate pairwise from t1 where' +
@@ -346,7 +346,7 @@ def test_estimate_pairwise_trivial():
     assert bql2sql('estimate pairwise from t1 where' +
             ' correlation > 0.5;') == \
         prefix + ' AND' + \
-        ' (column_correlation(1, c0.colno, c1.colno) > 0.5);'
+        ' (bql_column_correlation(1, c0.colno, c1.colno) > 0.5);'
     with pytest.raises(ValueError):
         # Makes no sense.
         bql2sql('estimate pairwise columns from t1 where' +
@@ -356,11 +356,11 @@ def test_estimate_pairwise_row():
     prefix = 'SELECT r0.rowid, r1.rowid'
     infix = ' FROM t1 AS r0, t1 AS r1'
     assert bql2sql('estimate pairwise row similarity from t1;') == \
-        prefix + ', row_similarity(1, r0.rowid, r1.rowid, 0, 1, 2, 3)' + \
+        prefix + ', bql_row_similarity(1, r0.rowid, r1.rowid, 0, 1, 2, 3)' + \
         infix + ';'
     assert bql2sql('estimate pairwise row similarity with respect to age' +
             ' from t1;') == \
-        prefix + ', row_similarity(1, r0.rowid, r1.rowid, 2)' + infix + ';'
+        prefix + ', bql_row_similarity(1, r0.rowid, r1.rowid, 2)' + infix + ';'
     with pytest.raises(ValueError):
         # INFER is a 1-row function.
         bql2sql('estimate pairwise row infer age conf 0.9 from t1;')
