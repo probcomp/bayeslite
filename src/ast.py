@@ -181,6 +181,7 @@ ExpBQLSim = namedtuple('ExpBQLSim', ['rowid', 'column_lists'])
 ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
 ExpBQLMutInf = namedtuple('ExpBQLMutInf', ['column0', 'column1'])
 ExpBQLCorrel = namedtuple('ExpBQLCorrel', ['column0', 'column1'])
+ExpBQLInfer = namedtuple('ExpBQLInfer', ['column', 'confidence'])
 
 def is_bql(exp):
     if isinstance(exp, ExpBQLPredProb): return True
@@ -190,6 +191,7 @@ def is_bql(exp):
     if isinstance(exp, ExpBQLDepProb):  return True
     if isinstance(exp, ExpBQLMutInf):   return True
     if isinstance(exp, ExpBQLCorrel):   return True
+    if isinstance(exp, ExpBQLInfer):    return True
     return False
 
 LitNull = namedtuple('LitNull', ['value'])

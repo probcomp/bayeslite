@@ -226,6 +226,8 @@ def test_select_bql():
     with pytest.raises(ValueError):
         # Need both columns fixed.
         bql2sql('select correlation from t1;')
+    assert bql2sql('select infer age conf 0.9 from t1;') == \
+        'SELECT infer(1, 2, rowid, "age", 0.9) FROM "t1";'
 
 def test_estimate_columns_trivial():
     prefix = 'SELECT name FROM bayesdb_table_column WHERE table_id = 1'
@@ -282,6 +284,9 @@ def test_estimate_columns_trivial():
     with pytest.raises(ValueError):
         # Must omit exactly one column.
         bql2sql('estimate columns from t1 where correlation > 0.5;')
+    with pytest.raises(ValueError):
+        # Makes no sense.
+        bql2sql('estimate columns from t1 where infer age conf 0.9 > 30;')
 
 def test_estimate_pairwise_trivial():
     prefix = 'SELECT c0.name, c1.name'
@@ -342,6 +347,10 @@ def test_estimate_pairwise_trivial():
             ' correlation > 0.5;') == \
         prefix + ' AND' + \
         ' (column_correlation(1, c0.colno, c1.colno) > 0.5);'
+    with pytest.raises(ValueError):
+        # Makes no sense.
+        bql2sql('estimate pairwise columns from t1 where' +
+            ' infer age conf 0.9 > 30;')
 
 def test_estimate_pairwise_row():
     prefix = 'SELECT r0.rowid, r1.rowid'
@@ -352,6 +361,9 @@ def test_estimate_pairwise_row():
     assert bql2sql('estimate pairwise row similarity with respect to age' +
             ' from t1;') == \
         prefix + ', row_similarity(1, r0.rowid, r1.rowid, 2)' + infix + ';'
+    with pytest.raises(ValueError):
+        # INFER is a 1-row function.
+        bql2sql('estimate pairwise row infer age conf 0.9 from t1;')
 
 def test_trivial_commands():
     with test_core.bayesdb_csv(test_core.csv_data) as (bdb, fname):

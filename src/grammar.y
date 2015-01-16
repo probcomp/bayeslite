@@ -309,6 +309,7 @@ bqlfn(sim_2row)		::= K_SIMILARITY wrt(cols).
 bqlfn(depprob)		::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
 bqlfn(mutinf)		::= K_MUTUAL K_INFORMATION ofwith(cols).
 bqlfn(correl)		::= K_CORRELATION ofwith(cols).
+bqlfn(infer)		::= K_INFER L_NAME(col) K_CONF primary(cf).
 bqlfn(primary)		::= primary(p).
 
 /*

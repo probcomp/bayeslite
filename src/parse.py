@@ -294,6 +294,7 @@ class BQLSemantics(object):
     def p_bqlfn_depprob(self, cols):            return ast.ExpBQLDepProb(*cols)
     def p_bqlfn_mutinf(self, cols):             return ast.ExpBQLMutInf(*cols)
     def p_bqlfn_correl(self, cols):             return ast.ExpBQLCorrel(*cols)
+    def p_bqlfn_infer(self, col, cf):           return ast.ExpBQLInfer(col, cf)
     def p_bqlfn_primary(self, p):               return p
 
     def p_wrt_none(self):                       return [ast.ColListAll()]

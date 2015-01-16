@@ -349,6 +349,14 @@ class BQLCompiler_1Row(object):
         elif isinstance(bql, ast.ExpBQLCorrel):
             compile_bql_2col_2(bdb, table_id, 'column_correlation',
                 'Column correlation', bql, out)
+        elif isinstance(bql, ast.ExpBQLInfer):
+            assert bql.column is not None
+            colno = core.bayesdb_column_number(bdb, table_id, bql.column)
+            out.write('infer(%d, %d, rowid, ' % (table_id, colno))
+            compile_column_name(bdb, self.ctx.tables[0].table, bql.column, out)
+            out.write(', ')
+            compile_expression(bdb, bql.confidence, self, out)
+            out.write(')')
         else:
             assert False        # XXX
 
@@ -384,6 +392,8 @@ class BQLCompiler_2Row(object):
             raise ValueError('Mutual information is 0-row function.')
         elif isinstance(bql, ast.ExpBQLCorrel):
             raise ValueError('Column correlation is 0-row function.')
+        elif isinstance(bql, ast.ExpBQLInfer):
+            raise ValueError('Infer is a 1-row function.')
         else:
             assert False        # XXX
 
@@ -423,6 +433,8 @@ class BQLCompiler_1Col(object):
         elif isinstance(bql, ast.ExpBQLCorrel):
             compile_bql_2col_1(bdb, table_id, 'column_correlation',
                 'Column correlation', bql, self.colno_exp, out)
+        elif isinstance(bql, ast.ExpBQLInfer):
+            raise ValueError('Infer is a 1-row function.')
         else:
             assert False        # XXX
 
@@ -459,6 +471,8 @@ class BQLCompiler_2Col(object):
             compile_bql_2col_0(bdb, table_id, 'column_correlation',
                 'Correlation', bql,
                 self.colno0_exp, self.colno1_exp, out)
+        elif isinstance(bql, ast.ExpBQLInfer):
+            raise ValueError('Infer is a 1-row function.')
         else:
             assert False        # XXX
 
