@@ -195,6 +195,7 @@ def bayesdb_install_bql(db, cookie):
     function("row_typicality", 2, bql_row_typicality)
     function("row_column_predictive_probability", 3,
         bql_row_column_predictive_probability)
+    function("infer", 5, bql_infer)
 
 # XXX XXX XXX Temporary debugging kludge!
 import traceback

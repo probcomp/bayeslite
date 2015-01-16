@@ -379,3 +379,4 @@ def test_trivial_commands():
         bql_execute(bdb, 'analyze t for 1 iteration wait')
         bql_execute(bdb, 'select * from t')
         bql_execute(bdb, 'estimate pairwise row similarity from t')
+        bql_execute(bdb, 'select infer age conf 0.9 from t')
