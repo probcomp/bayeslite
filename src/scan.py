@@ -112,6 +112,36 @@ def scan_float(scanner, text):
     # instead of binary floating-point arithmetic.)
     scanner.produce(grammar.L_FLOAT, float(text))
 
+def scan_numpar_next(scanner, text):
+    # Numbered parameters are 1-indexed.
+    scanner.n_numpar += 1
+    scanner.produce(grammar.L_NUMPAR, scanner.n_numpar)
+
+def scan_numpar(scanner, text):
+    assert text[0] == '?'
+    if 20 < len(text):          # 2^64 < 10^20
+        scan_bad(scanner, text)
+    else:
+        n = int(text[1:])
+        if n == 0:
+            # Numbered parameters are 1-indexed.
+            scanner.produce(-1, text)
+        else:
+            scanner.n_numpar = max(n, scanner.n_numpar)
+            scanner.produce(grammar.L_NUMPAR, n)
+
+def scan_nampar(scanner, text):
+    text = text.lower()         # XXX fold case
+    n = None
+    if text in scanner.nampar_map:
+        n = scanner.nampar_map[text]
+    else:
+        # Numbered parameters are 1-indexed.
+        scanner.n_numpar += 1
+        n = scanner.n_numpar
+        scanner.nampar_map[text] = n
+    scanner.produce(grammar.L_NAMPAR, (n, text))
+
 def scan_bad(scanner, text):
     scanner.produce(-1, text)   # error
 
@@ -218,11 +248,12 @@ class BQLScanner(Plex.Scanner):
         (Plex.Str("&"),         grammar.T_BITAND),
         (Plex.Str("~"),         grammar.T_BITNOT),
         (Plex.Str("."),         grammar.T_DOT),
-        # (Plex.Str("?"),         grammar.L_NUMVAR),
-        # (Plex.Str("?") + dec,   grammar.L_NUMVAR),
-        # (Plex.Str(":") + name,  grammar.L_NAMVAR),
-        # (Plex.Str("@") + name,  grammar.L_NAMVAR),
-        # (Plex.Str("$") + name,  grammar.L_NAMVAR),
+        (Plex.Str("?"),         scan_numpar_next),
+        (Plex.Str("?") + integer_dec,
+                                scan_numpar),
+        (Plex.Str(":") + name,  scan_nampar),
+        (Plex.Str("@") + name,  scan_nampar),
+        (Plex.Str("$") + name,  scan_nampar),
         (Plex.Str("'"),         scan_string_start),
         (Plex.Str('"'),         scan_qname_start),
         (blob,                  scan_blob),
@@ -251,6 +282,8 @@ class BQLScanner(Plex.Scanner):
         Plex.Scanner.__init__(self, self.lexicon, f, context)
         self.stringio = None
         self.stringquote = None
+        self.n_numpar = 0
+        self.nampar_map = {}
 
     def produce(self, token, value=None):
         if token is None:       # EOF

@@ -34,6 +34,25 @@ def bql2sql(string):
             out.write(';')
         return out.getvalue()
 
+# XXX Kludgey mess.  Please reorganize.
+def bql2sqlparam(string):
+    with test_core.t1() as (bdb, _table_id):
+        phrases = parse.parse_bql_string(string)
+        out0 = StringIO.StringIO()
+        for phrase in phrases:
+            out = None
+            if isinstance(phrase, ast.Parametrized):
+                out = bql.Output(phrase.n_numpar, phrase.nampar_map)
+                phrase = phrase.phrase
+            else:
+                out = StringIO.StringIO()
+            assert ast.is_query(phrase)
+            bql.compile_query(bdb, phrase, out)
+            # XXX Do something about the parameters.
+            out0.write(out.getvalue())
+            out0.write(';')
+        return out0.getvalue()
+
 def bql_execute(bdb, string):
     phrases = parse.parse_bql_string(string)
     for phrase in phrases:
@@ -380,3 +399,11 @@ def test_trivial_commands():
         bql_execute(bdb, 'select * from t')
         bql_execute(bdb, 'estimate pairwise row similarity from t')
         bql_execute(bdb, 'select infer age conf 0.9 from t')
+
+def test_parametrized():
+    assert bql2sqlparam('select * from t where id = ?') == \
+        'SELECT * FROM "t" WHERE ("id" = ?1);'
+    assert bql2sqlparam('select * from t where id = :foo') == \
+        'SELECT * FROM "t" WHERE ("id" = ?1);'
+    assert bql2sqlparam('select * from t where id = ?123') == \
+        'SELECT * FROM "t" WHERE ("id" = ?123);'

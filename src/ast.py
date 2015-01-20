@@ -16,6 +16,12 @@
 
 from collections import namedtuple
 
+Parametrized = namedtuple('Parametrized', [
+    'phrase',                   # command or query
+    'n_numpar',                 # number of numeric parameters
+    'nampar_map',               # map from parameter name to number
+])
+
 CreateBtableCSV = namedtuple('CreateBtableCSV', [
     'ifnotexists',
     'name',
@@ -115,6 +121,8 @@ ORD_DESC = False
 Lim = namedtuple('Lim', ['limit', 'offset'])
 
 ExpLit = namedtuple('ExpLit', ['value'])
+ExpNumpar = namedtuple('ExpNumpar', ['number'])
+ExpNampar = namedtuple('ExpNampar', ['number', 'name'])
 ExpCol = namedtuple('ExpCol', ['table', 'column'])
 # XXX We will need some kind of type-checking to distinguish
 # subqueries for column lists from subqueries for table rows.

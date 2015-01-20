@@ -435,3 +435,85 @@ def test_trivial_commands():
         [ast.AnalyzeModels('t', [1,2,3], 1, None, False)]
     assert parse_bql_string('analyze t models 1-3,5 for 1 iteration;') == \
         [ast.AnalyzeModels('t', [1,2,3,5], 1, None, False)]
+
+def test_parametrized():
+    assert parse_bql_string('select * from t where id = ?;') == \
+        [ast.Parametrized(ast.Select(ast.SELQUANT_ALL, [ast.SelColAll(None)],
+                [ast.SelTab('t', None)],
+                ast.ExpOp(ast.OP_EQ, (
+                    ast.ExpCol(None, 'id'),
+                    ast.ExpNumpar(1),
+                )),
+                None, None, None),
+            1, {})]
+    assert parse_bql_string('select * from t where id = ?123;') == \
+        [ast.Parametrized(ast.Select(ast.SELQUANT_ALL, [ast.SelColAll(None)],
+                [ast.SelTab('t', None)],
+                ast.ExpOp(ast.OP_EQ, (
+                    ast.ExpCol(None, 'id'),
+                    ast.ExpNumpar(123),
+                )),
+                None, None, None),
+            123, {})]
+    assert parse_bql_string('select * from t where id = :foo;') == \
+        [ast.Parametrized(ast.Select(ast.SELQUANT_ALL, [ast.SelColAll(None)],
+                [ast.SelTab('t', None)],
+                ast.ExpOp(ast.OP_EQ, (
+                    ast.ExpCol(None, 'id'),
+                    ast.ExpNampar(1, ':foo'),
+                )),
+                None, None, None),
+            1, {':foo': 1})]
+    assert parse_bql_string('select * from t where a = :foo and b = @foo;') \
+        == \
+        [ast.Parametrized(ast.Select(ast.SELQUANT_ALL, [ast.SelColAll(None)],
+                [ast.SelTab('t', None)],
+                ast.ExpOp(ast.OP_BOOLAND, (
+                    ast.ExpOp(ast.OP_EQ, (
+                        ast.ExpCol(None, 'a'),
+                        ast.ExpNampar(1, ':foo'),
+                    )),
+                    ast.ExpOp(ast.OP_EQ, (
+                        ast.ExpCol(None, 'b'),
+                        ast.ExpNampar(2, '@foo'),
+                    )),
+                )),
+                None, None, None),
+            2, {':foo': 1, '@foo': 2})]
+    assert parse_bql_string('select * from t where a = $foo and b = ?1;') == \
+        [ast.Parametrized(ast.Select(ast.SELQUANT_ALL, [ast.SelColAll(None)],
+                [ast.SelTab('t', None)],
+                ast.ExpOp(ast.OP_BOOLAND, (
+                    ast.ExpOp(ast.OP_EQ, (
+                        ast.ExpCol(None, 'a'),
+                        ast.ExpNampar(1, '$foo'),
+                    )),
+                    ast.ExpOp(ast.OP_EQ, (
+                        ast.ExpCol(None, 'b'),
+                        ast.ExpNumpar(1),
+                    )),
+                )),
+                None, None, None),
+            1, {'$foo': 1})]
+    assert parse_bql_string('select * from t' +
+            ' where a = ?123 and b = :foo and c = ?124;') == \
+        [ast.Parametrized(ast.Select(ast.SELQUANT_ALL, [ast.SelColAll(None)],
+                [ast.SelTab('t', None)],
+                ast.ExpOp(ast.OP_BOOLAND, (
+                    ast.ExpOp(ast.OP_BOOLAND, (
+                        ast.ExpOp(ast.OP_EQ, (
+                            ast.ExpCol(None, 'a'),
+                            ast.ExpNumpar(123),
+                        )),
+                        ast.ExpOp(ast.OP_EQ, (
+                            ast.ExpCol(None, 'b'),
+                            ast.ExpNampar(124, ':foo'),
+                        )),
+                    )),
+                    ast.ExpOp(ast.OP_EQ, (
+                        ast.ExpCol(None, 'c'),
+                        ast.ExpNumpar(124),
+                    )),
+                )),
+                None, None, None),
+            124, {':foo': 124})]

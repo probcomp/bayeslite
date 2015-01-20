@@ -334,6 +334,8 @@ column_list(column)	::= L_NAME(col).
 /* XXX Subquery, saved lists.  */
 
 primary(literal)	::= literal(v).
+primary(numpar)		::= L_NUMPAR(n).
+primary(nampar)		::= L_NAMPAR(n).
 primary(apply)		::= L_NAME(fn) T_LROUND opt_expressions(es) T_RROUND.
 primary(paren)		::= T_LROUND expression(e) T_RROUND.
 primary(subquery)	::= T_LROUND query(q) T_RROUND.

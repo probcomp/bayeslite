@@ -20,28 +20,43 @@ import contextlib
 import bayeslite.ast as ast
 import bayeslite.core as core
 
-def execute_phrase(bdb, phrase):
+def execute_phrase(bdb, phrase, params=None):
+    if isinstance(phrase, ast.Parametrized):
+        n_numpar = phrase.n_numpar
+        nampar_map = phrase.nampar_map
+        phrase = phrase.phrase
+        assert 0 < n_numpar
+        if params is None:
+            raise ValueError('No parameters supplied to query')
+    else:
+        n_numpar = 0
+        nampar_map = None
+        # Ignore extraneous parameters.  XXX Bad idea?
     if ast.is_query(phrase):
         # Compile the query in the transaction in case we need to
         # execute subqueries to determine column lists.  Compiling is
         # a quick tree descent, so this should be fast.
         with core.bayesdb_transaction(bdb):
-            out = StringIO.StringIO()
+            out = Output(n_numpar, nampar_map)
             compile_query(bdb, phrase, out)
-            return bdb.sqlite.execute(out.getvalue())
-    elif isinstance(phrase, ast.CreateBtableCSV):
+            if params is None:
+                return bdb.sqlite.execute(out.getvalue())
+            else:
+                return bdb.sqlite.execute(out.getvalue(),
+                    out.getparams(params))
+    if isinstance(phrase, ast.CreateBtableCSV):
         # XXX Codebook?
         core.bayesdb_import_csv_file(bdb, phrase.name, phrase.file,
             ifnotexists=phrase.ifnotexists)
         return []
-    elif isinstance(phrase, ast.InitModels):
+    if isinstance(phrase, ast.InitModels):
         table_id = core.bayesdb_table_id(bdb, phrase.btable)
         nmodels = phrase.nmodels
         config = phrase.config
         core.bayesdb_models_initialize(bdb, table_id, nmodels, config,
             ifnotexists=phrase.ifnotexists)
         return []
-    elif isinstance(phrase, ast.AnalyzeModels):
+    if isinstance(phrase, ast.AnalyzeModels):
         table_id = core.bayesdb_table_id(bdb, phrase.btable)
         modelnos = phrase.modelnos
         iterations = phrase.iterations
@@ -56,8 +71,49 @@ def execute_phrase(bdb, phrase):
                 core.bayesdb_models_analyze1(bdb, table_id, modelno,
                     iterations=iterations)
         return []
-    else:
-        assert False            # XXX
+    assert False                # XXX
+
+class Output(object):
+    def __init__(self, n_numpar, nampar_map):
+        self.stringio = StringIO.StringIO()
+        self.n_numpar = n_numpar
+        self.nampar_map = nampar_map
+
+    def getvalue(self):
+        return self.stringio.getvalue()
+
+    def getparams(self, params):
+        # XXX Will need subparameters for subqueries.
+        if isinstance(params, dict):
+            seen = [False] * self.n_numpar
+            paramlist = [None] * self.n_numpar
+            for nam in self.nampar_map:
+                num = self.nampar_map[nam]
+                assert num < self.n_numpar
+                assert not seen[num]
+                seen[num] = True
+                paramlist[num] = params[nam]
+            if not all(seen):
+                raise ValueError('Missing parameters: %s' %
+                    (set(n for n in range(self.n_numpar) if not seen[n]),))
+            return paramlist
+        elif isinstance(params, tuple) or isinstance(params, list):
+            if len(params) < self.n_numpar:
+                raise ValueError('Too few parameters for BQL query: %d < %d' %
+                    (len(params), self.n_numpar))
+            if len(params) > self.n_numpar:
+                raise ValueError('Too many parameters for BQL query: %d < %d' %
+                    (len(params), self.n_numpar))
+        else:
+            raise TypeError('Invalid query parameters: %s' % (params,))
+
+    def write(self, text):
+        self.stringio.write(text)
+
+    def write_numpar(self, n):
+        assert 0 < n
+        assert n <= self.n_numpar
+        self.write('?%d' % (n,))
 
 def compile_query(bdb, query, out):
     if isinstance(query, ast.Select):
@@ -552,6 +608,8 @@ def compile_2col_expression(bdb, exp, query, colno0_exp, colno1_exp, out):
 def compile_expression(bdb, exp, bql_compiler, out):
     if isinstance(exp, ast.ExpLit):
         compile_literal(bdb, exp.value, out)
+    elif isinstance(exp, ast.ExpNumpar) or isinstance(exp, ast.ExpNampar):
+        out.write_numpar(exp.number)
     elif isinstance(exp, ast.ExpCol):
         compile_table_column(bdb, exp.table, exp.column, out)
     elif isinstance(exp, ast.ExpSub):

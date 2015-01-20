@@ -33,8 +33,14 @@ def parse_bql_phrases(scanner):
                 parser.feed((grammar.T_SEMI, ';'))
             parser.feed(token)
         if semantics.phrase is not None:
-            yield semantics.phrase
+            phrase = semantics.phrase
             semantics.phrase = None
+            if 0 < scanner.n_numpar:
+                n_numpar = scanner.n_numpar
+                nampar_map = scanner.nampar_map
+                yield ast.Parametrized(phrase, n_numpar, nampar_map)
+            else:
+                yield phrase
         if token[0] == 0:       # EOF
             break
     # XXX It seems to me that lemon should do this for us.
@@ -315,6 +321,8 @@ class BQLSemantics(object):
     def p_column_list_column(self, col):        return ast.ColListLit([col])
 
     def p_primary_literal(self, v):             return ast.ExpLit(v)
+    def p_primary_numpar(self, n):              return ast.ExpNumpar(n)
+    def p_primary_nampar(self, n):              return ast.ExpNampar(n[0],n[1])
     def p_primary_apply(self, fn, es):          return ast.ExpApp(fn, es)
     def p_primary_paren(self, e):               return e
     def p_primary_subquery(self, q):            return ast.ExpSub(q)
