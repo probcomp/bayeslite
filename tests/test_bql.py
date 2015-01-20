@@ -408,13 +408,19 @@ def test_parametrized():
     assert bql2sqlparam('select * from t where id = ?') == \
         'SELECT * FROM "t" WHERE ("id" = ?1);'
     assert bql2sqlparam('select * from t where id = :foo') == \
-        'SELECT * FROM "t" WHERE ("id" = :foo);'
+        'SELECT * FROM "t" WHERE ("id" = ?1);'
     assert bql2sqlparam('select * from t where id = $foo') == \
-        'SELECT * FROM "t" WHERE ("id" = :foo);'
+        'SELECT * FROM "t" WHERE ("id" = ?1);'
     assert bql2sqlparam('select * from t where id = @foo') == \
-        'SELECT * FROM "t" WHERE ("id" = :foo);'
+        'SELECT * FROM "t" WHERE ("id" = ?1);'
     assert bql2sqlparam('select * from t where id = ?123') == \
         'SELECT * FROM "t" WHERE ("id" = ?123);'
+    assert bql2sqlparam('select * from t where a = $foo and b = ?1;') == \
+        'SELECT * FROM "t" WHERE (("a" = ?1) AND ("b" = ?1));'
+    assert bql2sqlparam('select * from t' +
+            ' where a = ?123 and b = :foo and c = ?124') == \
+        'SELECT * FROM "t" WHERE' + \
+        ' ((("a" = ?123) AND ("b" = ?124)) AND ("c" = ?124));'
     with test_core.bayesdb_csv(test_core.csv_data) as (bdb, fname):
         bql_execute(bdb, "create btable t from '%s'" % (fname,))
         assert bql_execute(bdb, 'select * from t where height > ?', (70,)) == \
@@ -423,8 +429,16 @@ def test_parametrized():
                 ('30', 'M', '70000', '73', 'sales', '4'),
             ]]
         assert bql_execute(bdb, 'select age from t where division = :division',
-                {'division': 'sales'}) == \
-            [[
-                ('34',),
-                ('30',),
-            ]]
+                {':division': 'sales'}) == \
+            [[('34',), ('30',)]]
+        assert bql_execute(bdb, 'select division from t' +
+                    ' where age < @age and rank > ?;',
+                (40, 4)) == \
+            [[('accounting',)]]
+        assert bql_execute(bdb, 'select division from t' +
+                    ' where age < @age and rank > :rank;',
+                {':RANK': 4, '@aGe': 40}) == \
+            [[('accounting',)]]
+        with pytest.raises(ValueError):
+            bql_execute(bdb, 'select * from t where age < ? and rank > :r',
+                {':r': 4})

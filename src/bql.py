@@ -42,7 +42,8 @@ def execute_phrase(bdb, phrase, bindings=None):
             if bindings is None:
                 return bdb.sqlite.execute(out.getvalue())
             else:
-                return bdb.sqlite.execute(out.getvalue(), bindings)
+                return bdb.sqlite.execute(out.getvalue(),
+                    out.getbindings(bindings))
     if isinstance(phrase, ast.CreateBtableCSV):
         # XXX Codebook?
         core.bayesdb_import_csv_file(bdb, phrase.name, phrase.file,
@@ -81,6 +82,43 @@ class Output(object):
     def getvalue(self):
         return self.stringio.getvalue()
 
+    def getbindings(self, bindings):
+        if isinstance(bindings, dict):
+            unknown = set([])
+            missing = set(self.nampar_map)
+            bindings_list = [None] * self.n_numpar
+            for name in bindings:
+                lname = name.lower()
+                if lname not in self.nampar_map:
+                    unknown.add(name)
+                    continue
+                missing.remove(lname)
+                # Numbered parameters are 1-indexed.
+                i = self.nampar_map[lname] - 1
+                assert bindings_list[i] is None
+                bindings_list[i] = bindings[name]
+            if 0 < len(missing):
+                raise ValueError('Missing parameter bindings: %s' % (missing,))
+            if 0 < len(unknown):
+                raise ValueError('Unknown parameter bindings: %s' % (unknown,))
+            if len(bindings) < self.n_numpar:
+                missing_numbers = set(range(1, self.n_numpar + 1))
+                for name in bindings:
+                    missing_numbers.remove(self.nampar_map[name.lower()])
+                raise ValueError('Missing parameter numbers: %s' %
+                    (missing_numbers,))
+            return bindings_list
+        elif isinstance(bindings, tuple) or isinstance(bindings, list):
+            if len(bindings) < self.n_numpar:
+                raise ValueError('Too few parameter bindings: %d < %d' %
+                    (len(bindings), self.n_numpar))
+            if len(bindings) > self.n_numpar:
+                raise ValueError('Too many parameter bindings: %d > %d' %
+                    (len(bindings), self.n_numpar))
+            return bindings
+        else:
+            raise TypeError('Invalid query bindings: %s' % (bindings,))
+
     def write(self, text):
         self.stringio.write(text)
 
@@ -93,9 +131,7 @@ class Output(object):
         assert 0 < n
         assert n <= self.n_numpar
         assert self.nampar_map[name] == n
-        # XXX Neither Python's sqlite3 module nor apsw supports
-        # distinguishing parameters by the :, $, or @ character.
-        self.write(':%s' % (name[1:],))
+        self.write_numpar(n)
 
 def compile_query(bdb, query, out):
     if isinstance(query, ast.Select):
