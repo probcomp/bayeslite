@@ -20,18 +20,18 @@ import contextlib
 import bayeslite.ast as ast
 import bayeslite.core as core
 
-def execute_phrase(bdb, phrase, params=None):
+def execute_phrase(bdb, phrase, bindings=None):
     if isinstance(phrase, ast.Parametrized):
         n_numpar = phrase.n_numpar
         nampar_map = phrase.nampar_map
         phrase = phrase.phrase
         assert 0 < n_numpar
-        if params is None:
-            raise ValueError('No parameters supplied to query')
+        if bindings is None:
+            raise ValueError('No bindings supplied to parametrized query')
     else:
         n_numpar = 0
         nampar_map = None
-        # Ignore extraneous parameters.  XXX Bad idea?
+        # Ignore extraneous bindings.  XXX Bad idea?
     if ast.is_query(phrase):
         # Compile the query in the transaction in case we need to
         # execute subqueries to determine column lists.  Compiling is
@@ -39,11 +39,10 @@ def execute_phrase(bdb, phrase, params=None):
         with core.bayesdb_transaction(bdb):
             out = Output(n_numpar, nampar_map)
             compile_query(bdb, phrase, out)
-            if params is None:
+            if bindings is None:
                 return bdb.sqlite.execute(out.getvalue())
             else:
-                return bdb.sqlite.execute(out.getvalue(),
-                    out.getparams(params))
+                return bdb.sqlite.execute(out.getvalue(), bindings)
     if isinstance(phrase, ast.CreateBtableCSV):
         # XXX Codebook?
         core.bayesdb_import_csv_file(bdb, phrase.name, phrase.file,
@@ -82,31 +81,6 @@ class Output(object):
     def getvalue(self):
         return self.stringio.getvalue()
 
-    def getparams(self, params):
-        # XXX Will need subparameters for subqueries.
-        if isinstance(params, dict):
-            seen = [False] * self.n_numpar
-            paramlist = [None] * self.n_numpar
-            for nam in self.nampar_map:
-                num = self.nampar_map[nam]
-                assert num < self.n_numpar
-                assert not seen[num]
-                seen[num] = True
-                paramlist[num] = params[nam]
-            if not all(seen):
-                raise ValueError('Missing parameters: %s' %
-                    (set(n for n in range(self.n_numpar) if not seen[n]),))
-            return paramlist
-        elif isinstance(params, tuple) or isinstance(params, list):
-            if len(params) < self.n_numpar:
-                raise ValueError('Too few parameters for BQL query: %d < %d' %
-                    (len(params), self.n_numpar))
-            if len(params) > self.n_numpar:
-                raise ValueError('Too many parameters for BQL query: %d < %d' %
-                    (len(params), self.n_numpar))
-        else:
-            raise TypeError('Invalid query parameters: %s' % (params,))
-
     def write(self, text):
         self.stringio.write(text)
 
@@ -114,6 +88,14 @@ class Output(object):
         assert 0 < n
         assert n <= self.n_numpar
         self.write('?%d' % (n,))
+
+    def write_nampar(self, name, n):
+        assert 0 < n
+        assert n <= self.n_numpar
+        assert self.nampar_map[name] == n
+        # XXX Neither Python's sqlite3 module nor apsw supports
+        # distinguishing parameters by the :, $, or @ character.
+        self.write(':%s' % (name[1:],))
 
 def compile_query(bdb, query, out):
     if isinstance(query, ast.Select):
@@ -608,8 +590,10 @@ def compile_2col_expression(bdb, exp, query, colno0_exp, colno1_exp, out):
 def compile_expression(bdb, exp, bql_compiler, out):
     if isinstance(exp, ast.ExpLit):
         compile_literal(bdb, exp.value, out)
-    elif isinstance(exp, ast.ExpNumpar) or isinstance(exp, ast.ExpNampar):
+    elif isinstance(exp, ast.ExpNumpar):
         out.write_numpar(exp.number)
+    elif isinstance(exp, ast.ExpNampar):
+        out.write_nampar(exp.name, exp.number)
     elif isinstance(exp, ast.ExpCol):
         compile_table_column(bdb, exp.table, exp.column, out)
     elif isinstance(exp, ast.ExpSub):

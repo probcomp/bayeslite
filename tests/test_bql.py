@@ -53,11 +53,15 @@ def bql2sqlparam(string):
             out0.write(';')
         return out0.getvalue()
 
-def bql_execute(bdb, string):
+def bql_execute(bdb, string, bindings=None):
     phrases = parse.parse_bql_string(string)
+    tables = []
     for phrase in phrases:
-        for row in bql.execute_phrase(bdb, phrase):
-            pass
+        table = []
+        for row in bql.execute_phrase(bdb, phrase, bindings):
+            table.append(row)
+        tables.append(table)
+    return tables
 
 def test_select_trivial():
     assert bql2sql('select null;') == 'SELECT NULL;'
@@ -404,6 +408,23 @@ def test_parametrized():
     assert bql2sqlparam('select * from t where id = ?') == \
         'SELECT * FROM "t" WHERE ("id" = ?1);'
     assert bql2sqlparam('select * from t where id = :foo') == \
-        'SELECT * FROM "t" WHERE ("id" = ?1);'
+        'SELECT * FROM "t" WHERE ("id" = :foo);'
+    assert bql2sqlparam('select * from t where id = $foo') == \
+        'SELECT * FROM "t" WHERE ("id" = :foo);'
+    assert bql2sqlparam('select * from t where id = @foo') == \
+        'SELECT * FROM "t" WHERE ("id" = :foo);'
     assert bql2sqlparam('select * from t where id = ?123') == \
         'SELECT * FROM "t" WHERE ("id" = ?123);'
+    with test_core.bayesdb_csv(test_core.csv_data) as (bdb, fname):
+        bql_execute(bdb, "create btable t from '%s'" % (fname,))
+        assert bql_execute(bdb, 'select * from t where height > ?', (70,)) == \
+            [[
+                ('41', 'M', '65600', '72', 'marketing', '4'),
+                ('30', 'M', '70000', '73', 'sales', '4'),
+            ]]
+        assert bql_execute(bdb, 'select age from t where division = :division',
+                {'division': 'sales'}) == \
+            [[
+                ('34',),
+                ('30',),
+            ]]
