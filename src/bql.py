@@ -76,8 +76,14 @@ def execute_phrase(bdb, phrase, bindings=None):
 class Output(object):
     def __init__(self, n_numpar, nampar_map):
         self.stringio = StringIO.StringIO()
-        self.n_numpar = n_numpar
-        self.nampar_map = nampar_map
+        # Below, `number' means 1-based, and `index' means 0-based.  n
+        # is a source language number; m, an output sqlite3 number; i,
+        # an input index passed by the caller, and j, an output index
+        # of the tuple we pass to sqlite3.
+        self.n_numpar = n_numpar        # number of numbered parameters
+        self.nampar_map = nampar_map    # map of param name -> param number
+        self.renumber = {}              # map of input number -> output number
+        self.select = []                # map of output index -> input index
 
     def getvalue(self):
         return self.stringio.getvalue()
@@ -93,10 +99,11 @@ class Output(object):
                     unknown.add(name)
                     continue
                 missing.remove(lname)
-                # Numbered parameters are 1-indexed.
-                i = self.nampar_map[lname] - 1
-                assert bindings_list[i] is None
-                bindings_list[i] = bindings[name]
+                n = self.nampar_map[lname]
+                m = self.renumber[n]
+                j = m - 1
+                assert bindings_list[j] is None
+                bindings_list[j] = bindings[name]
             if 0 < len(missing):
                 raise ValueError('Missing parameter bindings: %s' % (missing,))
             if 0 < len(unknown):
@@ -115,7 +122,8 @@ class Output(object):
             if len(bindings) > self.n_numpar:
                 raise ValueError('Too many parameter bindings: %d > %d' %
                     (len(bindings), self.n_numpar))
-            return bindings
+            assert len(self.select) <= self.n_numpar
+            return [bindings[j] for j in self.select]
         else:
             raise TypeError('Invalid query bindings: %s' % (bindings,))
 
@@ -125,7 +133,16 @@ class Output(object):
     def write_numpar(self, n):
         assert 0 < n
         assert n <= self.n_numpar
-        self.write('?%d' % (n,))
+        i = n - 1
+        m = None
+        if n in self.renumber:
+            m = self.renumber[n]
+        else:
+            j = len(self.select)
+            m = j + 1
+            self.select.append(i)
+            self.renumber[n] = m
+        self.write('?%d' % (m,))
 
     def write_nampar(self, name, n):
         assert 0 < n

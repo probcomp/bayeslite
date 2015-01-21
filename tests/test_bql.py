@@ -414,16 +414,22 @@ def test_parametrized():
     assert bql2sqlparam('select * from t where id = @foo') == \
         'SELECT * FROM "t" WHERE ("id" = ?1);'
     assert bql2sqlparam('select * from t where id = ?123') == \
-        'SELECT * FROM "t" WHERE ("id" = ?123);'
+        'SELECT * FROM "t" WHERE ("id" = ?1);'
     assert bql2sqlparam('select * from t where a = $foo and b = ?1;') == \
         'SELECT * FROM "t" WHERE (("a" = ?1) AND ("b" = ?1));'
     assert bql2sqlparam('select * from t' +
             ' where a = ?123 and b = :foo and c = ?124') == \
         'SELECT * FROM "t" WHERE' + \
-        ' ((("a" = ?123) AND ("b" = ?124)) AND ("c" = ?124));'
+        ' ((("a" = ?1) AND ("b" = ?2)) AND ("c" = ?2));'
     with test_core.bayesdb_csv(test_core.csv_data) as (bdb, fname):
         bql_execute(bdb, "create btable t from '%s'" % (fname,))
         assert bql_execute(bdb, 'select * from t where height > ?', (70,)) == \
+            [[
+                ('41', 'M', '65600', '72', 'marketing', '4'),
+                ('30', 'M', '70000', '73', 'sales', '4'),
+            ]]
+        assert bql_execute(bdb, 'select * from t where height > ?123',
+                (0,)*122 + (70,)) == \
             [[
                 ('41', 'M', '65600', '72', 'marketing', '4'),
                 ('30', 'M', '70000', '73', 'sales', '4'),
