@@ -331,7 +331,13 @@ column_lists(many)	::= column_lists(collists)
 				T_COMMA|K_AND column_list(collist).
 column_list(all)	::= T_STAR.
 column_list(column)	::= L_NAME(col).
-/* XXX Subquery, saved lists.  */
+/*
+ * XXX Should really allow any SELECT on a table of columns.  But
+ * until we have that notion, are there any other kinds of subqueries
+ * that make sense here?
+ */
+column_list(subquery)	::= T_LROUND estcols(q) T_RROUND.
+/* XXX Saved lists.  */
 
 primary(literal)	::= literal(v).
 primary(numpar)		::= L_NUMPAR(n).

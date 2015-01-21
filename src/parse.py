@@ -319,6 +319,7 @@ class BQLSemantics(object):
 
     def p_column_list_all(self):                return ast.ColListAll()
     def p_column_list_column(self, col):        return ast.ColListLit([col])
+    def p_column_list_subquery(self, q):        return ast.ColListSub(q)
 
     def p_primary_literal(self, v):             return ast.ExpLit(v)
     def p_primary_numpar(self, n):              return ast.ExpNumpar(n)

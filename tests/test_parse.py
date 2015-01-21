@@ -348,6 +348,19 @@ def test_select_bql():
                     [ast.ColListLit(['c']), ast.ColListLit(['d'])]),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select similarity to 8 with respect to' +
+            ' (estimate columns from t order by typicality limit 1)' +
+            ' from t;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpBQLSim(ast.ExpLit(ast.LitInt(8)),
+                    [ast.ColListSub(
+                        ast.EstCols('t', None,
+                            [ast.Ord(ast.ExpBQLTyp(None), ast.ORD_ASC)],
+                            ast.Lim(ast.ExpLit(ast.LitInt(1)), None),
+                            None)
+                    )]),
+                None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select dependence probability with c from t;') ==\
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(ast.ExpBQLDepProb('c', None), None)],

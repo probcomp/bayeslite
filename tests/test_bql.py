@@ -448,3 +448,6 @@ def test_parametrized():
         with pytest.raises(ValueError):
             bql_execute(bdb, 'select * from t where age < ? and rank > :r',
                 {':r': 4})
+        with pytest.raises(NotImplementedError):
+            bql_execute(bdb, 'select similarity to 0 with respect to' +
+                ' (estimate columns from t limit 1) from t;')
