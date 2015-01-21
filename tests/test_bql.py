@@ -42,7 +42,8 @@ def bql2sqlparam(string):
         for phrase in phrases:
             out = None
             if isinstance(phrase, ast.Parametrized):
-                out = bql.Output(phrase.n_numpar, phrase.nampar_map)
+                bindings = (None,) * phrase.n_numpar
+                out = bql.Output(phrase.n_numpar, phrase.nampar_map, bindings)
                 phrase = phrase.phrase
             else:
                 out = StringIO.StringIO()
@@ -53,7 +54,7 @@ def bql2sqlparam(string):
             out0.write(';')
         return out0.getvalue()
 
-def bql_execute(bdb, string, bindings=None):
+def bql_execute(bdb, string, bindings=()):
     phrases = parse.parse_bql_string(string)
     tables = []
     for phrase in phrases:
@@ -448,6 +449,10 @@ def test_parametrized():
         with pytest.raises(ValueError):
             bql_execute(bdb, 'select * from t where age < ? and rank > :r',
                 {':r': 4})
-        with pytest.raises(NotImplementedError):
-            bql_execute(bdb, 'select similarity to 0 with respect to' +
-                ' (estimate columns from t limit 1) from t;')
+        # XXX Test what query this actually executes...
+        bql_execute(bdb, 'initialize 1 model for t;')
+        bql_execute(bdb, 'analyze t for 1 iteration wait;')
+        bql_execute(bdb, 'select similarity to 1 with respect to' +
+            ' (estimate columns from t limit 1) from t;')
+        bql_execute(bdb, 'select similarity to 1 with respect to' +
+            ' (estimate columns from t limit ?) from t;', (1,))

@@ -20,14 +20,12 @@ import contextlib
 import bayeslite.ast as ast
 import bayeslite.core as core
 
-def execute_phrase(bdb, phrase, bindings=None):
+def execute_phrase(bdb, phrase, bindings=()):
     if isinstance(phrase, ast.Parametrized):
         n_numpar = phrase.n_numpar
         nampar_map = phrase.nampar_map
         phrase = phrase.phrase
         assert 0 < n_numpar
-        if bindings is None:
-            raise ValueError('No bindings supplied to parametrized query')
     else:
         n_numpar = 0
         nampar_map = None
@@ -41,13 +39,9 @@ def execute_phrase(bdb, phrase, bindings=None):
         # will happen outside the transaction.  Hmm.  Maybe we'll just
         # require the user to enact another transaction in that case.
         with core.bayesdb_transaction(bdb):
-            out = Output(n_numpar, nampar_map)
+            out = Output(n_numpar, nampar_map, bindings)
             compile_query(bdb, phrase, out)
-            if bindings is None:
-                return bdb.sqlite.execute(out.getvalue())
-            else:
-                return bdb.sqlite.execute(out.getvalue(),
-                    out.getbindings(bindings))
+            return bdb.sqlite.execute(out.getvalue(), out.getbindings())
     if isinstance(phrase, ast.CreateBtableCSV):
         # XXX Codebook?
         core.bayesdb_import_csv_file(bdb, phrase.name, phrase.file,
@@ -78,7 +72,7 @@ def execute_phrase(bdb, phrase, bindings=None):
     assert False                # XXX
 
 class Output(object):
-    def __init__(self, n_numpar, nampar_map):
+    def __init__(self, n_numpar, nampar_map, bindings):
         self.stringio = StringIO.StringIO()
         # Below, `number' means 1-based, and `index' means 0-based.  n
         # is a source language number; m, an output sqlite3 number; i,
@@ -86,18 +80,22 @@ class Output(object):
         # of the tuple we pass to sqlite3.
         self.n_numpar = n_numpar        # number of numbered parameters
         self.nampar_map = nampar_map    # map of param name -> param number
+        self.bindings = bindings        # map of input index -> value
         self.renumber = {}              # map of input number -> output number
         self.select = []                # map of output index -> input index
+
+    def subquery(self):
+        return Output(self.n_numpar, self.nampar_map, self.bindings)
 
     def getvalue(self):
         return self.stringio.getvalue()
 
-    def getbindings(self, bindings):
-        if isinstance(bindings, dict):
+    def getbindings(self):
+        if isinstance(self.bindings, dict):
             unknown = set([])
             missing = set(self.nampar_map)
             bindings_list = [None] * self.n_numpar
-            for name in bindings:
+            for name in self.bindings:
                 lname = name.lower()
                 if lname not in self.nampar_map:
                     unknown.add(name)
@@ -107,29 +105,30 @@ class Output(object):
                 m = self.renumber[n]
                 j = m - 1
                 assert bindings_list[j] is None
-                bindings_list[j] = bindings[name]
+                bindings_list[j] = self.bindings[name]
             if 0 < len(missing):
                 raise ValueError('Missing parameter bindings: %s' % (missing,))
             if 0 < len(unknown):
                 raise ValueError('Unknown parameter bindings: %s' % (unknown,))
-            if len(bindings) < self.n_numpar:
+            if len(self.bindings) < self.n_numpar:
                 missing_numbers = set(range(1, self.n_numpar + 1))
-                for name in bindings:
+                for name in self.bindings:
                     missing_numbers.remove(self.nampar_map[name.lower()])
                 raise ValueError('Missing parameter numbers: %s' %
                     (missing_numbers,))
             return bindings_list
-        elif isinstance(bindings, tuple) or isinstance(bindings, list):
-            if len(bindings) < self.n_numpar:
+        elif isinstance(self.bindings, tuple) or \
+             isinstance(self.bindings, list):
+            if len(self.bindings) < self.n_numpar:
                 raise ValueError('Too few parameter bindings: %d < %d' %
-                    (len(bindings), self.n_numpar))
-            if len(bindings) > self.n_numpar:
+                    (len(self.bindings), self.n_numpar))
+            if len(self.bindings) > self.n_numpar:
                 raise ValueError('Too many parameter bindings: %d > %d' %
-                    (len(bindings), self.n_numpar))
+                    (len(self.bindings), self.n_numpar))
             assert len(self.select) <= self.n_numpar
-            return [bindings[j] for j in self.select]
+            return [self.bindings[j] for j in self.select]
         else:
-            raise TypeError('Invalid query bindings: %s' % (bindings,))
+            raise TypeError('Invalid query bindings: %s' % (self.bindings,))
 
     def write(self, text):
         self.stringio.write(text)
@@ -597,7 +596,28 @@ def compile_column_lists(bdb, table_id, column_lists, _bql_compiler, out):
                 for column in collist.columns)
             out.write(', '.join(str(colno) for colno in colnos))
         elif isinstance(collist, ast.ColListSub):
-            raise NotImplementedError('column list subqueries')
+            # XXX We need some kind of type checking to guarantee that
+            # what we get out of this will be a list of columns in the
+            # table implied by the surrounding context.
+            subout = out.subquery()
+            compile_query(bdb, collist.query, subout)
+            subquery = subout.getvalue()
+            subbindings = subout.getbindings()
+            columns = bdb.sqlite.execute(subquery, subbindings).fetchall()
+            subfirst = True
+            for column in columns:
+                if subfirst:
+                    subfirst = False
+                else:
+                    out.write(', ')
+                if len(column) != 1:
+                    raise ValueError('ESTIMATE COLUMNS subquery returned' +
+                        ' multi-cell rows.')
+                if not isinstance(column[0], unicode):
+                    raise TypeError('ESTIMATE COLUMNS subquery returned' +
+                        ' non-string.')
+                colno = core.bayesdb_column_number(bdb, table_id, column[0])
+                out.write('%d' % (colno,))
         elif isinstance(collist, ast.ColListSav):
             raise NotImplementedError('saved column lists')
         else:
