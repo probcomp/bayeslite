@@ -36,6 +36,10 @@ def execute_phrase(bdb, phrase, bindings=None):
         # Compile the query in the transaction in case we need to
         # execute subqueries to determine column lists.  Compiling is
         # a quick tree descent, so this should be fast.
+        #
+        # XXX OOPS!  If we return a lazy iterable from this, iteration
+        # will happen outside the transaction.  Hmm.  Maybe we'll just
+        # require the user to enact another transaction in that case.
         with core.bayesdb_transaction(bdb):
             out = Output(n_numpar, nampar_map)
             compile_query(bdb, phrase, out)
