@@ -95,10 +95,8 @@ class BQLSemantics(object):
         assert self.phrase is None
         self.phrase = phrase
 
-    def p_phrase_command(self, c):
-        return c
-    def p_phrase_query(self, action, q):
-        return QueryAction(action, q) if action else q
+    def p_phrase_command(self, c):              return c
+    def p_phrase_query(self, q):                return q
 
     def p_command_createbtab_csv(self, ifnotexists, name, file):
         # XXX codebook

@@ -42,15 +42,6 @@ AnalyzeModels = namedtuple('AnalyzeModels', [
     'wait',
 ])
 
-QueryAction = namedtuple('QueryAction', [
-    'action',                   # QACT_*
-    'query',                    # Select or Infer or ... XXX
-])
-QACT_FREQ = 'freq'
-QACT_HIST = 'hist'
-QACT_SUMMARIZE = 'summarize'
-QACT_PLOT = 'plot'
-
 def is_query(phrase):
     if isinstance(phrase, Select):      return True
     if isinstance(phrase, EstCols):     return True

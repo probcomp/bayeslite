@@ -21,7 +21,7 @@ phrases(some)		::= phrases(phrases) phrase1(phrase) T_SEMI.
 phrase1(empty)		::= .
 phrase1(nonempty)	::= phrase(phrase).
 phrase(command)		::= command(c).
-phrase(query)		::= query_action(action) query(q).
+phrase(query)		::= query(q).
 
 command(createbtab_csv)	::= K_CREATE K_BTABLE ifnotexists(ifnotexists)
 				L_NAME(name) K_FROM L_STRING(file).
@@ -48,13 +48,6 @@ anlimit(minutes)	::= K_FOR L_INTEGER(n) K_MINUTE|K_MINUTES.
 
 opt_wait(none)		::= .
 opt_wait(some)		::= K_WAIT.
-
-query_action(none)	::= .
-query_action(freq)	::= K_FREQ.
-query_action(hist)	::= K_HIST.
-query_action(summarize)	::= K_SUMMARIZE.
-query_action(plot)	::= K_PLOT.
-/* XXX EXPLAIN (QUERY PLAN)?  */
 
 query(select)		::= select(q).
 query(estcols)		::= estcols(q).
