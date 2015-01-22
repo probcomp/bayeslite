@@ -298,6 +298,10 @@ bitwise_not(bql)	::= bqlfn(b).
  * instead we'll reject unparenthesized PROBABILITY OF X = V with
  * other operators altogether and require explicit parentheses until
  * someone wants to do that surgery.
+ *
+ * XXX Oops -- some restructing of the grammar caused us to cease
+ * rejecting unparenthesized PROBABILITY OF X = V with other
+ * operators.
  */
 bqlfn(predprob_row)	::= K_PREDICTIVE K_PROBABILITY K_OF L_NAME(col).
 bqlfn(prob_const)	::= K_PROBABILITY K_OF L_NAME(col) T_EQ primary(e).
