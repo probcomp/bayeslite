@@ -656,9 +656,11 @@ def ReportTable(lemp, outputStream=None):
     #
 
     if lemp.has_fallback:
-        for i in range(lemp.nterminal):
+        mx = lemp.nterminal - 1
+        while mx > 0 and lemp.symbols[mx].fallback is None:
+            mx -= 1
+        for i in range(mx + 1):
             p = lemp.symbols[i]
-            
             if p.fallback is None:
                 fprintf(out, "%s  0,  # %10s => nothing\n", indent, p.name)
             else:
