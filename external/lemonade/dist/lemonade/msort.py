@@ -43,7 +43,7 @@ def merge(a, b, cmp, next):
     elif b is None:
         head = a
     else:
-        if cmp(a, b) < 0:
+        if cmp(a, b) <= 0:
             ptr = a
             a = getattr(a, next)
         else:
@@ -52,7 +52,7 @@ def merge(a, b, cmp, next):
 
         head = ptr
         while a and b:
-            if cmp(a, b) < 0:
+            if cmp(a, b) <= 0:
                 setattr(ptr, next, a)
                 ptr = a
                 a = getattr(a, next)
@@ -102,7 +102,7 @@ def msort(list, next, cmp):
     ep = None
     for i in range(LISTSIZE):
         if set[i]:
-            ep = merge(ep, set[i], cmp, next)
+            ep = merge(set[i], ep, cmp, next)
 
     return ep
 

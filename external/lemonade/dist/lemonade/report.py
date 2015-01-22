@@ -342,13 +342,18 @@ axset = struct(
         'stp',      # A state
         'isTkn',    # True to use tokens.  False for non-terminals
         'nAction',  # Number of actions
+        'iOrder',   # Original order of action sets
         )
     )
 
 
 def axset_compare(a, b):
     '''Compare to axset structures for sorting purposes.'''
-    return b.nAction - a.nAction
+    c = b.nAction - a.nAction
+    if c == 0:
+        c = b.iOrder - a.iOrder
+    assert c != 0 or a == b
+    return c
 
 
 def writeRuleText(out, rp):
@@ -435,11 +440,13 @@ def ReportTable(lemp, outputStream=None):
             stp = stp,
             isTkn = True,
             nAction = stp.nTknAct,
+            iOrder = -1,
             )
         ax[i*2+1] = axset(
             stp = stp,
             isTkn = False,
             nAction = stp.nNtAct,
+            iOrder = -1,
             )
 
 
@@ -450,6 +457,8 @@ def ReportTable(lemp, outputStream=None):
     mxTknOfst = mnTknOfst = 0
     mxNtOfst = mnNtOfst = 0
 
+    for i in range(lemp.nstate*2):
+        ax[i].iOrder = i
     ax.sort(cmp = axset_compare)
     pActtab = acttab_alloc()
 
@@ -808,6 +817,9 @@ def stateResortCompare(a, b):
     n = b.nNtAct - a.nNtAct
     if n == 0:
         n = b.nTknAct - a.nTknAct
+        if n == 0:
+            n = b.statenum - a.statenum
+    assert n != 0
     return n
 
 

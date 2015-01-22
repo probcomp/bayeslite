@@ -240,6 +240,7 @@ def Symbolcmpp(a, b):
     # else:
     if True:
         i2 = b.index + 10000000*(b.name[0] > 'Z')
+    assert i1 != i2 or a.name == b.name
     return i1 - i2
 
 

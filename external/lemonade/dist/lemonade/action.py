@@ -15,6 +15,7 @@ def actioncmp(ap1, ap2):
         rc = ap1.type - ap2.type
     if rc == 0 and ap1.type == REDUCE:
         rc = ap1.x.rp.index - ap2.x.rp.index
+    assert rc != 0 or ap1 == ap2
     return rc
 
 
