@@ -86,7 +86,6 @@ class Parser(object):
     #  yy_default[]       Default action for each state.
 
     %%
-    YY_SZ_ACTTAB = len(yy_action)
 
 
     # The next table maps tokens into fallback tokens.  If a construct
@@ -193,14 +192,14 @@ class Parser(object):
         '''
         yyTraceFILE = self.yyTraceFILE
         stateno = self.yystack[-1].stateno
-        if stateno > self.YY_SHIFT_MAX:
+        if stateno > self.YY_SHIFT_COUNT:
             return self.yy_default[stateno]
         i = self.yy_shift_ofst[stateno]
         if i == self.YY_SHIFT_USE_DFLT:
             return self.yy_default[stateno]
         assert iLookAhead != self.YYNOCODE
         i += iLookAhead
-        if i < 0 or i >= self.YY_SZ_ACTTAB or self.yy_lookahead[i] != iLookAhead:
+        if i < 0 or i >= self.YY_ACTTAB_COUNT or self.yy_lookahead[i] != iLookAhead:
             if iLookAhead > 0:
                 yyFallback = self.yyFallback
                 yyTokenName = self.yyTokenName
@@ -216,7 +215,12 @@ class Parser(object):
                 YYWILDCARD = self.YYWILDCARD
                 if YYWILDCARD is not None:
                     j = i - iLookAhead + YYWILDCARD
-                    if j >= 0 and j < self.YY_SZ_ACTTAB and self.yy_lookahead[j] == YYWILDCARD:
+                    # [TRC 20150122: Lemon avoids generating tests
+                    # against j if they can never fail, based on
+                    # compile-time values here, presumably to limit
+                    # compiler warnings.  Not so easy to do in Python
+                    # so we'll just skip that.]
+                    if j >= 0 and j < self.YY_ACTTAB_COUNT and self.yy_lookahead[j] == YYWILDCARD:
                         if yyTraceFILE:
                             yyTraceFILE.write(
                                 "%sWILDCARD %s => %s\n" %
@@ -241,19 +245,19 @@ class Parser(object):
         '''
         YYERRORSYMBOL = self.YYERRORSYMBOL
         if YYERRORSYMBOL is not None:
-            if stateno > self.YY_REDUCE_MAX:
+            if stateno > self.YY_REDUCE_COUNT:
                 return self.yy_default[stateno]
         else:
-            assert stateno <= self.YY_REDUCE_MAX
+            assert stateno <= self.YY_REDUCE_COUNT
         i = self.yy_reduce_ofst[stateno]
         assert i != self.YY_REDUCE_USE_DFLT
         assert iLookAhead != self.YYNOCODE
         i += iLookAhead
         if YYERRORSYMBOL is not None:
-            if i < 0 or i >= self.YY_SZ_ACTTAB or self.yy_lookahead[i] != iLookAhead:
+            if i < 0 or i >= self.YY_ACTTAB_COUNT or self.yy_lookahead[i] != iLookAhead:
                 return self.yy_default[stateno]
         else:
-            assert i >= 0 and i < self.YY_SZ_ACTTAB
+            assert i >= 0 and i < self.YY_ACTTAB_COUNT
             assert self.yy_lookahead[i] == iLookAhead
         return self.yy_action[i]
 

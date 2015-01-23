@@ -513,10 +513,10 @@ def ReportTable(lemp, outputStream=None):
     #
     # Output the yy_action table
     #
-    
-    fprintf(out, "%syy_action = [\n", indent)
 
     n = acttab_size(pActtab)
+    fprintf(out, "%sYY_ACTTAB_COUNT = %d\n", indent, n)
+    fprintf(out, "%syy_action = [\n", indent)
 
     j = 0
     for i in range(n):
@@ -572,7 +572,9 @@ def ReportTable(lemp, outputStream=None):
     while n > 0 and lemp.sorted[n-1].iTknOfst == NO_OFFSET:
         n -= 1
 
-    fprintf(out, "%sYY_SHIFT_MAX = %d\n", indent, n - 1)
+    fprintf(out, "%sYY_SHIFT_COUNT = %d\n", indent, n - 1)
+    fprintf(out, "%sYY_SHIFT_MIN = %d\n", indent, mnTknOfst)
+    fprintf(out, "%sYY_SHIFT_MAX = %d\n", indent, mxTknOfst)
     fprintf(out, "%syy_shift_ofst = [\n", indent)
 
     j = 0
@@ -607,7 +609,9 @@ def ReportTable(lemp, outputStream=None):
     while n > 0 and lemp.sorted[n-1].iNtOfst == NO_OFFSET:
         n -= 1
 
-    fprintf(out, "%sYY_REDUCE_MAX = %d\n", indent, n - 1)
+    fprintf(out, "%sYY_REDUCE_COUNT = %d\n", indent, n - 1)
+    fprintf(out, "%sYY_REDUCE_MIN = %d\n", indent, mnNtOfst)
+    fprintf(out, "%sYY_REDUCE_MAX = %d\n", indent, mxNtOfst)
     fprintf(out, "%syy_reduce_ofst = [\n", indent)
 
     j = 0

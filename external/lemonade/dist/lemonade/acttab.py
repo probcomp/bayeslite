@@ -114,23 +114,9 @@ def acttab_insert(p):
     #
     # i is the index in p.aAction[] where p.mnLookahead is inserted.
 
-    i = 0 # in case the range is empty
-    for i in range(p.nAction + p.mnLookahead):
-        if p.aAction[i].lookahead < 0:
-            for j in range(p.nLookahead):
-                k = p.aLookahead[j].lookahead - p.mnLookahead + i
-                if k < 0:
-                    break
-                if p.aAction[k].lookahead >= 0:
-                    break
-            else:
-                for j in range(p.nAction):
-                    if p.aAction[j].lookahead == j + p.mnLookahead - i:
-                        break
-                else:
-                    break # Fits in empty slots
-
-        elif p.aAction[i].lookahead == p.mnLookahead:
+    for i in range(p.nAction - 1, -1, -1):
+        # First look for an existing action table entry that can be reused
+        if p.aAction[i].lookahead == p.mnLookahead:
             if p.aAction[i].action != p.mnAction:
                 continue
             for j in range(p.nLookahead):
@@ -150,6 +136,24 @@ def acttab_insert(p):
                         n += 1
                 if n == p.nLookahead:
                     break # Same as a prior transaction set
+    else:
+        # If no reusable entry is found, look for an empty slot
+        for i in range(p.nAction):
+            if p.aAction[i].lookahead < 0:
+                for j in range(p.nLookahead):
+                    k = p.aLookahead[j].lookahead - p.mnLookahead + i
+                    if k < 0:
+                        break
+                    if p.aAction[k].lookahead >= 0:
+                        break
+                else:
+                    for j in range(p.nAction):
+                        if p.aAction[j].lookahead == j + p.mnLookahead - i:
+                            break
+                    else:
+                        break   # Fits in empty slots
+        else:
+            i = p.nAction
 
     # Insert transaction set at index i.
     for j in range(p.nLookahead):
@@ -159,7 +163,7 @@ def acttab_insert(p):
         if k >= p.nAction:
             p.nAction = k + 1
     p.nLookahead = 0
-    
+
     # Return the offset that is added to the lookahead in order to get
     # the index into yy_action of the action.
     return i - p.mnLookahead
