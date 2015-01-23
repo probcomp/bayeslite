@@ -9,6 +9,22 @@ from ccruft import struct
 
 # The state of the yy_action table under construction is an instance
 # of the following structure.
+#
+# The yy_action table maps the pair (state_number, lookahead) into an
+# action_number.  The table is an array of integers pairs.  The state_number
+# determines an initial offset into the yy_action array.  The lookahead
+# value is then added to this initial offset to get an index X into the
+# yy_action array. If the aAction[X].lookahead equals the value of the
+# of the lookahead input, then the value of the action_number output is
+# aAction[X].action.  If the lookaheads do not match then the
+# default action for the state_number is returned.
+#
+# All actions associated with a single state_number are first entered
+# into aLookahead[] using multiple calls to acttab_action().  Then the
+# actions for that single state_number are placed into the aAction[]
+# array with a single call to acttab_insert().  The acttab_insert() call
+# also resets the aLookahead[] array in preparation for the next
+# state number.
 
 acttab = struct(
     'acttab',
@@ -59,7 +75,11 @@ def acttab_alloc():
 
 
 def acttab_action(p, lookahead, _action):
-    '''Add a new action to the current transaction set.'''
+    '''Add a new action to the current transaction set.
+
+    This routine is called once for each lookahead for a particular
+    state.
+    '''
 
     if p.nLookahead >= p.nLookaheadAlloc:
         p.nLookaheadAlloc += 25
@@ -106,17 +126,16 @@ def acttab_insert(p):
         p.aAction.extend([action(-1,-1) for i in range(p.nActionAlloc - oldAlloc)])
 
 
-    # Scan the existing action table looking for an offset where we
-    # can insert the current transaction set.  Fall out of the loop
-    # when that offset is found.  In the worst case, we fall out of
-    # the loop when i reaches p.nAction, which means we append the new
-    # transaction set.
+    # Scan the existing action table looking for an offset that is a
+    # duplicate of the current transaction set.  Fall out of the loop
+    # if and when the duplicate is found.
     #
     # i is the index in p.aAction[] where p.mnLookahead is inserted.
 
     for i in range(p.nAction - 1, -1, -1):
-        # First look for an existing action table entry that can be reused
         if p.aAction[i].lookahead == p.mnLookahead:
+            # All lookaheads and actions in the aLookahead[] transaction
+            # must match against the candidate aAction[i] entry.
             if p.aAction[i].action != p.mnAction:
                 continue
             for j in range(p.nLookahead):
@@ -128,6 +147,8 @@ def acttab_insert(p):
                 if p.aLookahead[j].action != p.aAction[k].action:
                     break
             else:
+                # No possible lookahead value that is not in the aLookahead[]
+                # transaction is allowed to match aAction[i].
                 n = 0
                 for j in range(p.nAction):
                     if p.aAction[j].lookahead < 0:
@@ -135,10 +156,17 @@ def acttab_insert(p):
                     if p.aAction[j].lookahead == j + p.mnLookahead - i:
                         n += 1
                 if n == p.nLookahead:
-                    break # Same as a prior transaction set
+                    break       # An exact match is found at offset i
     else:
-        # If no reusable entry is found, look for an empty slot
-        for i in range(p.nAction):
+        # If no existing offsets exactly match the current transaction, find an
+        # an empty offset in the aAction[] table in which we can add the
+        # aLookahead[] transaction.
+        #
+        # Look for holes in the aAction[] table that fit the current
+        # aLookahead[] transaction.  Leave i set to the offset of the hole.
+        # If no holes are found, i is left at p.nAction, wihch means the
+        # transaction will be appended.
+        for i in range(p.nActionAlloc - p.mxLookahead):
             if p.aAction[i].lookahead < 0:
                 for j in range(p.nLookahead):
                     k = p.aLookahead[j].lookahead - p.mnLookahead + i
