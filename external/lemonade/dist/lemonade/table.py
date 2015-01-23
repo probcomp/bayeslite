@@ -141,7 +141,7 @@ def arrayof(array):
 def strhash(x):
     h = 0
     for c in x:
-        h = h*13 + ord(c)
+        h = 0xffffffff & (h*13 + ord(c))
     return h
 
 
@@ -305,7 +305,7 @@ def statehash(a):
     '''Hash a state.'''
     h = 0
     while a:
-        h = h*571 + a.rp.index*37 + a.dot
+        h = 0xffffffff & (h*571 + a.rp.index*37 + a.dot)
         a = a.bp
     return h
 
@@ -351,7 +351,7 @@ def State_arrayof():
 def confighash(a):
     '''Hash a configuration.'''
     h = 0
-    h = h*571 + a.rp.index*37 + a.dot
+    h = 0xffffffff & (h*571 + a.rp.index*37 + a.dot)
     return h
 
 
