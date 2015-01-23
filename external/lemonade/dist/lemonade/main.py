@@ -26,6 +26,10 @@ def main(argv):
     parser.add_option("-g",
                       action="store_true", dest='rpflag', default=False,
                       help="print grammar without actions")
+    parser.add_option("-p",
+                      action="store_true", dest='showPrecedenceConflict',
+                      default=False,
+                      help="show conflicts resolved by precedence rules")
     parser.add_option("-q",
                       action="store_true", dest='quiet', default=False,
                       help="don't print the report file")
@@ -52,6 +56,7 @@ def main(argv):
             basisflag = options.basisflag,
             rpflag = options.rpflag,
             compress = not options.compress,
+            showPrecedenceConflict = options.showPrecedenceConflict,
             quiet = options.quiet,
             statistics = options.statistics,
             )
@@ -69,6 +74,7 @@ def generate(inputFile,
              basisflag = False,
              rpflag = False,
              compress = True,
+             showPrecedenceConflict = False,
              quiet = True,
              statistics = False,
              ):
@@ -163,7 +169,7 @@ def generate(inputFile,
 
         # Generate a report of the parser generated.  (the "y.output" file)
         if not quiet:
-            ReportOutput(lem)
+            ReportOutput(lem, showPrecedenceConflict)
 
         # Generate the source code for the parser
         ReportTable(lem, outputStream)

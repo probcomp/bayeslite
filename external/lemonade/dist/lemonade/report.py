@@ -106,7 +106,7 @@ def ConfigPrint(fp, cfp):
     return
 
 
-def PrintAction(ap, fp, indent):
+def PrintAction(ap, fp, indent, showPrecedenceConflict=False):
     '''Print an action to the given file stream.  Return False if
     nothing was actually printed.
     '''
@@ -133,13 +133,27 @@ def PrintAction(ap, fp, indent):
         fprintf(fp, "%*s shift  %d ** Parsing conflict **",
                 indent, ap.sp.name, ap.x.stp.statenum)
 
-    elif ap.type in (SH_RESOLVED, RD_RESOLVED, NOT_USED):
+    elif ap.type == SH_RESOLVED:
+        if showPrecedenceConflict:
+            fprintf(fp, "%*s shift  %d -- dropped by precedence",
+                    indent, ap.sp.name, ap.x.stp.statenum)
+        else:
+            result = False
+
+    elif ap.type == RD_RESOLVED:
+        if showPrecedenceConflict:
+            fprintf(fp, "%*s reduce %d -- dropped by precedence",
+                    indent, ap.sp.name, ap.x.rp.index)
+        else:
+            result = False
+
+    elif ap.type == NOT_USED:
         result = False
 
     return result
 
 
-def ReportOutput(lemp):
+def ReportOutput(lemp, showPrecedenceConflict=False):
     '''Generate the "y.output" log file.'''
 
     from set import SetFind
@@ -172,7 +186,7 @@ def ReportOutput(lemp):
 
         fprintf(fp, "\n")
         for ap in iterlinks(stp.ap):
-            if PrintAction(ap, fp, 30):
+            if PrintAction(ap, fp, 30, showPrecedenceConflict):
                 fprintf(fp, "\n")
 
         fprintf(fp, "\n")
