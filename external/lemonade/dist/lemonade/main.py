@@ -33,6 +33,9 @@ def main(argv):
     parser.add_option("-q",
                       action="store_true", dest='quiet', default=False,
                       help="don't print the report file")
+    parser.add_option("-r",
+                      action="store_true", dest='noResort', default=False,
+                      help="do not sort or renumber states")
     parser.add_option("-s",
                       action="store_true", dest='statistics', default=False,
                       help="print parser stats to standard output")
@@ -58,6 +61,7 @@ def main(argv):
             compress = not options.compress,
             showPrecedenceConflict = options.showPrecedenceConflict,
             quiet = options.quiet,
+            noResort = options.noResort,
             statistics = options.statistics,
             )
     except EmptyGrammarError:
@@ -76,6 +80,7 @@ def generate(inputFile,
              compress = True,
              showPrecedenceConflict = False,
              quiet = True,
+             noResort = False,
              statistics = False,
              ):
     import sys
@@ -163,9 +168,11 @@ def generate(inputFile,
         if compress:
             CompressTables(lem)
 
-        # Reorder and renumber the states so that states with fewer
-        # choices occur at the end.
-        ResortStates(lem)
+        # Reorder and renumber the states so that states with fewer choices
+        # occur at the end.  This is an optimization that helps make the
+        # generated parser tables smaller.
+        if not noResort:
+            ResortStates(lem)
 
         # Generate a report of the parser generated.  (the "y.output" file)
         if not quiet:

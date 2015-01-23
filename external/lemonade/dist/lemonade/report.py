@@ -130,19 +130,19 @@ def PrintAction(ap, fp, indent, showPrecedenceConflict=False):
                 indent, ap.sp.name, ap.x.rp.index)
 
     elif ap.type == SSCONFLICT:
-        fprintf(fp, "%*s shift  %d ** Parsing conflict **",
+        fprintf(fp, "%*s shift  %-3d ** Parsing conflict **",
                 indent, ap.sp.name, ap.x.stp.statenum)
 
     elif ap.type == SH_RESOLVED:
         if showPrecedenceConflict:
-            fprintf(fp, "%*s shift  %d -- dropped by precedence",
+            fprintf(fp, "%*s shift  %-3d -- dropped by precedence",
                     indent, ap.sp.name, ap.x.stp.statenum)
         else:
             result = False
 
     elif ap.type == RD_RESOLVED:
         if showPrecedenceConflict:
-            fprintf(fp, "%*s reduce %d -- dropped by precedence",
+            fprintf(fp, "%*s reduce %-3d -- dropped by precedence",
                     indent, ap.sp.name, ap.x.rp.index)
         else:
             result = False

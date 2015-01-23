@@ -403,7 +403,7 @@ def resolve_conflict(apx, apy):
             # Not enough precedence information.
             apy.type = SRCONFLICT
             errcnt += 1
-        elif spx.prec > spy.prec: # Lower precedence wins
+        elif spx.prec > spy.prec: # higher precedence wins
             apy.type = RD_RESOLVED
         elif spx.prec < spy.prec:
             apx.type = SH_RESOLVED
