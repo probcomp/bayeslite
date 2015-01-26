@@ -64,8 +64,5 @@ setup(
         'bayeslite': 'src',
         'bayeslite.plex': 'external/plex/dist/Plex',
     },
-    install_requires=[
-        'scipy',
-    ],
     license='Apache License, Version 2.0',
 )

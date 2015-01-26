@@ -36,8 +36,6 @@
 import contextlib
 import json
 import math
-import scipy.stats              # pearsonr, chi2_contingency, f_oneway
-                                # (For CORRELATION OF <col0> WITH <col1> only.)
 import sqlite3
 
 bayesdb_type_table = [
@@ -646,6 +644,7 @@ def bayesdb_models_analyze1(bdb, table_id, modelno, iterations=1):
 
 # Two-column function:  CORRELATION [OF <col0> WITH <col1>]
 def bql_column_correlation(bdb, table_id, colno0, colno1):
+    import scipy.stats          # pearsonr, chi2_contingency, f_oneway
     M_c = bayesdb_metadata(bdb, table_id)
     qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
     qc0 = sqlite3_quote_name(bayesdb_column_name(bdb, table_id, colno0))
