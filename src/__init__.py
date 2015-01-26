@@ -15,5 +15,6 @@
 #   limitations under the License.
 
 from bayeslite.core import *
+import bayeslite.import_csv as import_csv
 import bayeslite.parse as parse
 import bayeslite.bql as bql

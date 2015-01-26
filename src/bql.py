@@ -19,6 +19,7 @@ import contextlib
 
 import bayeslite.ast as ast
 import bayeslite.core as core
+import bayeslite.import_csv as import_csv
 
 def execute_phrase(bdb, phrase, bindings=()):
     if isinstance(phrase, ast.Parametrized):
@@ -44,7 +45,7 @@ def execute_phrase(bdb, phrase, bindings=()):
             return bdb.sqlite.execute(out.getvalue(), out.getbindings())
     if isinstance(phrase, ast.CreateBtableCSV):
         # XXX Codebook?
-        core.bayesdb_import_csv_file(bdb, phrase.name, phrase.file,
+        import_csv.bayesdb_import_csv_file(bdb, phrase.name, phrase.file,
             ifnotexists=phrase.ifnotexists)
         return []
     if isinstance(phrase, ast.InitModels):
