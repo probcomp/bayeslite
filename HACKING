@@ -1,0 +1,15 @@
+Every commit on long-term branches including master should pass
+
+% ./check.sh
+
+which builds bayeslite and runs the automatic tests.  Please run this
+in your .git/hooks/pre-commit script during development, and in each
+commit please add or update automatic tests for any bugs you add or
+features you fix in the that commit.
+
+check.sh enters the test/ directory and passes its arguments to
+py.test.  Thus, if you're hacking a limited part of bayeslite, you can
+run a subset of the tests by naming the test_*.py files to run on the
+check.sh command line in .git/hooks/pre-commit.  However, please
+double-check that every commit you have made passes all tests before
+publishing the commits.
