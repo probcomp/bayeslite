@@ -9,6 +9,7 @@ import bayeslite
 import crosscat.CrossCatClient
 
 import bayeslite.bql as bql
+import bayeslite.import_csv as import_csv
 import bayeslite.parse as parse
 
 def bql_exec(bdb, string):
@@ -71,7 +72,7 @@ for x in bdb.sqlite.execute("select * from bayesdb_table"): print x
 print "### bayesdb_table_column"
 for x in bdb.sqlite.execute("select * from bayesdb_table_column"): print x
 for x in bql_exec(bdb, "select correlation of age with weight from zoot"): print x
-for x in bdb.sqlite.execute("select column_correlation(1, 2, 3)"): print x
+for x in bdb.sqlite.execute("select bql_column_correlation(1, 2, 3)"): print x
 nmodels = 4
 bayeslite.bayesdb_models_initialize(bdb, 1, nmodels)
 for i in range(nmodels):
@@ -97,11 +98,11 @@ print bayeslite.bql_infer(bdb, 1, 3, 5, None, 0.1, numsamples=1)
 for x in bayeslite.bayesdb_simulate(bdb, 1, [(2, 42)], [0, 1, 2, 3], 10):
     print x
 
-bayeslite.bayesdb_import_csv_file(bdb, "flights", "flights.csv")
+bayeslite.import_csv.bayesdb_import_csv_file(bdb, "flights", "flights.csv")
 
 cdb = bayeslite.BayesDB(crosscat)
-bayeslite.bayesdb_import_csv_file(cdb, "flights", "flights.csv")
-bayeslite.bayesdb_import_csv_file(cdb, "dha", "dha.csv")
+bayeslite.import_csv.bayesdb_import_csv_file(cdb, "flights", "flights.csv")
+bayeslite.import_csv.bayesdb_import_csv_file(cdb, "dha", "dha.csv")
 dha_id = bayeslite.sqlite3_exec_1(cdb.sqlite,
     "SELECT id FROM bayesdb_table WHERE name = 'dha'")
 for x in cdb.sqlite.execute("SELECT * FROM bayesdb_table"): print x
@@ -118,8 +119,8 @@ estimate_columns = """
     SELECT c.name
       FROM bayesdb_table_column AS c
      WHERE c.table_id = (SELECT id FROM bayesdb_table WHERE name = 'dha')
-       AND column_typicality(c.table_id, c.colno) > 0.4
-     ORDER BY column_dependence_probability(c.table_id, c.colno,
+       AND bql_column_typicality(c.table_id, c.colno) > 0.4
+     ORDER BY bql_column_dependence_probability(c.table_id, c.colno,
                   (SELECT colno FROM bayesdb_table_column
                     WHERE table_id = c.table_id AND name = 'N_DEATH_ILL'))
 """
@@ -127,10 +128,10 @@ for x in cdb.sqlite.execute(estimate_columns): print x
 
 q = '''
 select c.name as name,
-       column_dependence_probability(:table, c.colno,
+       bql_column_dependence_probability(:table, c.colno,
            (select colno from bayesdb_table_column
              where table_id = :table and name = 'NAME')) as depprob,
-       column_typicality(:table, c.colno) as typ
+       bql_column_typicality(:table, c.colno) as typ
   from bayesdb_table_column as c
  where c.table_id = :table
    and depprob > 0.05
