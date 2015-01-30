@@ -41,6 +41,10 @@ import sqlite3
 from bayeslite.sqlite3_util import sqlite3_exec_1
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
+from bayeslite.util import arithmetic_mean
+from bayeslite.util import unique
+from bayeslite.util import unique_indices
+
 bayesdb_type_table = [
     # column type, numerical?, default sqlite, default model type
     ("categorical",     False,  "text",         "symmetric_dirichlet_discrete"),
@@ -826,64 +830,3 @@ def sqlite3_rowid_to_engine_row_id(rowid):
 
 def engine_row_id_to_sqlite3_rowid(row_id):
     return row_id + 1
-
-### Miscellaneous utilities
-
-def unique(array):
-    """Return a sorted array of the unique elements in ARRAY.
-
-    No element may be a floating-point NaN.  If your data set includes
-    NaNs, omit them before passing them here.
-    """
-    for x in array:
-        assert not (type(x) == float and math.isnan(x))
-    if len(array) < 2:
-        return array
-    array_sorted = sorted(array)
-    array_unique = [array_sorted[0]]
-    for x in array_sorted[1:]:
-        assert array_unique[-1] <= x
-        if array_unique[-1] != x:
-            array_unique.append(x)
-    return array_unique
-
-def unique_indices(array):
-    """Return an array of the indices of the unique elements in ARRAY.
-
-    No element may be a floating-point NaN.  If your data set includes
-    NaNs, omit them before passing them here.
-    """
-    for x in array:
-        assert not (type(x) == float and math.isnan(x))
-    if len(array) == 0:
-        return []
-    if len(array) == 1:
-        return [0]
-    array_sorted = sorted((x, i) for i, x in enumerate(array))
-    array_unique = [array_sorted[0][1]]
-    for x, i in array_sorted[1:]:
-        assert array[array_unique[-1]] <= x
-        if array[array_unique[-1]] != x:
-            array_unique.append(i)
-    return sorted(array_unique)
-
-def arithmetic_mean(array):
-    """Return the arithmetic mean of elements of ARRAY in floating-point."""
-    return float_sum(array) / len(array)
-
-def float_sum(array):
-    """Return the sum of elements of ARRAY in floating-point.
-
-    This implementation uses Kahan-Babuška summation.
-    """
-    s = 0
-    c = 0
-    for x in array:
-        xf = float(x)
-        s1 = s + xf
-        if abs(x) < abs(s):
-            c += ((s - s1) + xf)
-        else:
-            c += ((xf - s1) + s)
-        s = s1
-    return (s + c)
