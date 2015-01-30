@@ -50,7 +50,7 @@ def test_bad_db_application_id():
     with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
         with sqlite3.connect(f.name, isolation_level=None) as db:
             db.execute('PRAGMA application_id = 42')
-            db.execute('PRAGMA user_version = 1')
+            db.execute('PRAGMA user_version = 2')
         with pytest.raises(IOError):
             with bayesdb(pathname=f.name):
                 pass
@@ -200,6 +200,14 @@ def test_t1_nokey():
     with sqlite_bayesdb_table(bayesdb(), 't1', t1_schema, t1_data,
             column_names=['age', 'weight']):
         pass
+
+def test_t1_nocase():
+    with sqlite_bayesdb_table(bayesdb(), 't1', t1_schema, t1_data) \
+            as (bdb, table_id):
+        bdb.execute('select id from t1')
+        bdb.execute('select ID from T1')
+        bdb.execute('select iD from T1')
+        bdb.execute('select Id from T1')
 
 btable_generators = {
     't0': t0,

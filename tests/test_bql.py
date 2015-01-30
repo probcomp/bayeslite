@@ -396,8 +396,14 @@ def test_trivial_commands():
         bdb.execute('analyze t models 0,1 for 1 iteration wait')
         bdb.execute('analyze t for 1 iteration wait')
         bdb.execute('select * from t')
+        bdb.execute('select * from T')
         bdb.execute('estimate pairwise row similarity from t')
         bdb.execute('select infer age conf 0.9 from t')
+        bdb.execute('select infer AGE conf 0.9 from T')
+        bdb.execute('select infer aGe conf 0.9 from T')
+        with pytest.raises(AssertionError):
+            # XXX Assertion error is a bug here, please fix.
+            bdb.execute('select infer agee conf 0.9 from t')
 
 def test_parametrized():
     assert bql2sqlparam('select * from t where id = ?') == \
