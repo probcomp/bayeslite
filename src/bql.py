@@ -39,7 +39,7 @@ def execute_phrase(bdb, phrase, bindings=()):
         # XXX OOPS!  If we return a lazy iterable from this, iteration
         # will happen outside the transaction.  Hmm.  Maybe we'll just
         # require the user to enact another transaction in that case.
-        with core.bayesdb_transaction(bdb):
+        with bdb.savepoint():
             out = Output(n_numpar, nampar_map, bindings)
             compile_query(bdb, phrase, out)
             return bdb.sqlite.execute(out.getvalue(), out.getbindings())

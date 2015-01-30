@@ -34,7 +34,7 @@ import bayeslite.core as core
 def bayesdb_import_generated(bdb, table, generator, column_types=None,
         ifnotexists=False):
     if ifnotexists:
-        with core.sqlite3_savepoint(bdb.sqlite):
+        with bdb.savepoint():
             if not core.bayesdb_table_exists(bdb, table):
                 column_names, rows = generator()
                 _bayesdb_import(bdb, table, column_names, rows, column_types)
@@ -45,7 +45,7 @@ def bayesdb_import_generated(bdb, table, generator, column_types=None,
 def bayesdb_import(bdb, table, column_names, rows, column_types=None,
         ifnotexists=False):
     if ifnotexists:
-        with core.sqlite3_savepoint(bdb.sqlite):
+        with bdb.savepoint():
             if not core.bayesdb_table_exists(bdb, table):
                 _bayesdb_import(bdb, table, column_names, rows, column_types)
     else:
@@ -66,7 +66,7 @@ def _bayesdb_import(bdb, table, column_names, rows, column_types):
     assert ncols == len(column_types)
     qt = core.sqlite3_quote_name(table)
     table_def = bayesdb_table_definition(table, column_names, column_types)
-    with core.sqlite3_savepoint(bdb.sqlite):
+    with bdb.savepoint():
         bdb.sqlite.execute(table_def)
         qcns = ",".join(map(core.sqlite3_quote_name, column_names))
         qcps = ",".join("?" * ncols)

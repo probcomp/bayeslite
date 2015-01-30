@@ -80,6 +80,13 @@ class IBayesDB(object):
     def execute(self, query, *args):
         """Execute a BQL query and return a cursor for its results."""
         raise NotImplementedError
+
+    def savepoint(self):
+        """Enter a savepoint.  On return, commit; on exception, roll back.
+
+        Savepoints may be nested.
+        """
+        raise NotImplementedError
 
 ### BayesDB SQL schema
 
@@ -193,28 +200,6 @@ def bayesdb_bql(fn, cookie, *args):
         print traceback.format_exc()
         raise e
 
-@contextlib.contextmanager
-def bayesdb_transaction(bdb):
-    # XXX Can't do this simultaneously in multiple threads.  Need
-    # lightweight per-thread state.
-    if bdb.txn_depth == 0:
-        assert bdb.metadata_cache is None
-        assert bdb.models_cache is None
-        bdb.metadata_cache = {}
-        bdb.models_cache = {}
-    else:
-        assert bdb.metadata_cache is not None
-        assert bdb.models_cache is not None
-    bdb.txn_depth += 1
-    try:
-        with sqlite3_savepoint(bdb):
-            yield
-    finally:
-        assert 0 < bdb.txn_depth
-        bdb.txn_depth -= 1
-        if bdb.txn_depth == 0:
-            bdb.metadata_cache = None
-            bdb.models_cache = None
 
 ### Importing SQLite tables
 
@@ -245,7 +230,7 @@ def bayesdb_import_sqlite_table(bdb, table,
     metadata = bayesdb_create_metadata(bdb, table, column_names, column_types)
     metadata_json = json.dumps(metadata)
     # XXX Check that rowids are contiguous.
-    with sqlite3_savepoint(bdb.sqlite):
+    with bdb.savepoint():
         table_sql = "INSERT INTO bayesdb_table (name, metadata) VALUES (?, ?)"
         table_cursor = bdb.sqlite.execute(table_sql, (table, metadata_json))
         table_id = table_cursor.lastrowid
@@ -584,7 +569,7 @@ def bayesdb_models_initialize(bdb, table_id, nmodels, model_config=None,
     if nmodels == 1:            # XXX Ugh.  Fix crosscat so it doesn't do this.
         X_L_list = [X_L_list]
         X_D_list = [X_D_list]
-    with sqlite3_savepoint(bdb.sqlite):
+    with bdb.savepoint():
         for modelno, (X_L, X_D) in enumerate(zip(X_L_list, X_D_list)):
             theta = {
                 "X_L": X_L,
@@ -960,49 +945,6 @@ def sqlite3_column_affinity(column_type):
         return "REAL"
     else:
         return "NUMERIC"
-
-@contextlib.contextmanager
-def sqlite3_transaction(db):
-    """Run a transaction.  On return, commit.  On exception, roll back.
-
-    Transactions may not be nested.  Use savepoints if you want a
-    nestable analogue to transactions.
-    """
-    db.execute("BEGIN")
-    ok = False
-    try:
-        yield
-        db.execute("COMMIT")
-        ok = True
-    finally:
-        if not ok:
-            db.execute("ROLLBACK")
-
-import binascii
-import os
-
-@contextlib.contextmanager
-def sqlite3_savepoint(db):
-    """Run a savepoint.  On return, commit; on exception, roll back.
-
-    Savepoints are like transactions, but they may be nested in
-    transactions or in other savepoints.
-    """
-    # This is not symmetric with sqlite3_transaction because ROLLBACK
-    # undoes any effects and makes the transaction cease to be,
-    # whereas ROLLBACK TO undoes any effects but leaves the savepoint
-    # as is.  So for either success or failure we must release the
-    # savepoint explicitly.
-    savepoint = binascii.b2a_hex(os.urandom(32))
-    db.execute("SAVEPOINT x%s" % (savepoint,))
-    ok = False
-    try:
-        yield
-        ok = True
-    finally:
-        if not ok:
-            db.execute("ROLLBACK TO x%s" % (savepoint,))
-        db.execute("RELEASE x%s" % (savepoint,))
 
 ### Trivial SQLite3 utility tests
 

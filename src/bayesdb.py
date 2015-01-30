@@ -14,6 +14,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import binascii
+import contextlib
+import os
 import sqlite3
 
 import bayeslite.core as core
@@ -53,3 +56,71 @@ class BayesDB(core.IBayesDB):
         # could hook into the sqlite parser, but that's not going to
         # happen.
         return self.sqlite.execute(query, *args)
+
+    @contextlib.contextmanager
+    def savepoint(bdb):
+        """Enter a savepoint.  On return, commit; on exception, roll back.
+
+        Savepoints may be nested.  Parsed metadata and models are
+        cached in Python during a savepoint.
+        """
+        # XXX Can't do this simultaneously in multiple threads.  Need
+        # lightweight per-thread state.
+        if bdb.txn_depth == 0:
+            assert bdb.metadata_cache is None
+            assert bdb.models_cache is None
+            bdb.metadata_cache = {}
+            bdb.models_cache = {}
+        else:
+            assert bdb.metadata_cache is not None
+            assert bdb.models_cache is not None
+        bdb.txn_depth += 1
+        try:
+            with sqlite3_savepoint(bdb):
+                yield
+        finally:
+            assert 0 < bdb.txn_depth
+            bdb.txn_depth -= 1
+            if bdb.txn_depth == 0:
+                bdb.metadata_cache = None
+                bdb.models_cache = None
+
+@contextlib.contextmanager
+def sqlite3_transaction(db):
+    """Run a transaction.  On return, commit.  On exception, roll back.
+
+    Transactions may not be nested.  Use savepoints if you want a
+    nestable analogue to transactions.
+    """
+    db.execute("BEGIN")
+    ok = False
+    try:
+        yield
+        db.execute("COMMIT")
+        ok = True
+    finally:
+        if not ok:
+            db.execute("ROLLBACK")
+
+@contextlib.contextmanager
+def sqlite3_savepoint(db):
+    """Run a savepoint.  On return, commit; on exception, roll back.
+
+    Savepoints are like transactions, but they may be nested in
+    transactions or in other savepoints.
+    """
+    # This is not symmetric with sqlite3_transaction because ROLLBACK
+    # undoes any effects and makes the transaction cease to be,
+    # whereas ROLLBACK TO undoes any effects but leaves the savepoint
+    # as is.  So for either success or failure we must release the
+    # savepoint explicitly.
+    savepoint = binascii.b2a_hex(os.urandom(32))
+    db.execute("SAVEPOINT x%s" % (savepoint,))
+    ok = False
+    try:
+        yield
+        ok = True
+    finally:
+        if not ok:
+            db.execute("ROLLBACK TO x%s" % (savepoint,))
+        db.execute("RELEASE x%s" % (savepoint,))
