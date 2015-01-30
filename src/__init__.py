@@ -14,6 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from bayeslite.bayesdb import *
 from bayeslite.core import *
 import bayeslite.import_csv as import_csv
 import bayeslite.parse as parse

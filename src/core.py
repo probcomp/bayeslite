@@ -56,45 +56,32 @@ bayesdb_type_table = [
 #       continuous -> numerical
 #       multinomial -> categorical.
 
-### BayesDB class
+### BayesDB class interface
 
-class BayesDB(object):
-    """Class of Bayesian databases.
+class IBayesDB(object):
+    """Interface of Bayesian databases."""
 
-    Interface is loosely based on PEP-249 DB-API.
-    """
-
-    def __init__(self, engine, pathname=":memory:"):
+    def __init__(self, engine):
         self.engine = engine
-        # isolation_level=None actually means that the sqlite3 module
-        # will not randomly begin and commit transactions where we
-        # didn't ask it to.
-        self.sqlite = sqlite3.connect(pathname, isolation_level=None)
+        self.sqlite = None
         self.txn_depth = 0
         self.metadata_cache = None
         self.models_cache = None
-        bayesdb_install_schema(self.sqlite)
-        bayesdb_install_bql(self.sqlite, self)
+        raise NotImplementedError
 
     def close(self):
         """Close the database.  Further use is not allowed."""
-        assert self.txn_depth == 0, "pending BayesDB transactions"
-        self.sqlite.close()
-        self.sqlite = None
+        raise NotImplementedError
 
     def cursor(self):
         """Return a cursor fit for executing BQL queries."""
-        # XXX Make our own cursors that handle BQL.
-        return self.sqlite.cursor()
+        raise NotImplementedError
 
     def execute(self, query, *args):
         """Execute a BQL query and return a cursor for its results."""
-        # XXX Parse and compile query first.  Would be nice if we
-        # could hook into the sqlite parser, but that's not going to
-        # happen.
-        return self.sqlite.execute(query, *args)
+        raise NotImplementedError
 
-### BayesDB SQLite setup
+### BayesDB SQL schema
 
 # XXX Temporary location for the schema.  Move this somewhere else!
 bayesdb_schema = """
@@ -143,6 +130,8 @@ CREATE TABLE bayesdb_model (
 );
 COMMIT;
 """
+
+### BayesDB SQLite setup
 
 def bayesdb_install_schema(db):
     # XXX Check the engine too, and/or add support for multiple
@@ -177,7 +166,7 @@ def bayesdb_install_schema(db):
         raise IOError("Invalid application_id: 0x%08x" % application_id)
     elif user_version != 1:
         raise IOError("Unknown database version: %d" % user_version)
-
+
 def bayesdb_install_bql(db, cookie):
     def function(name, nargs, fn):
         db.create_function(name, nargs,
