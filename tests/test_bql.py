@@ -56,14 +56,7 @@ def bql2sqlparam(string):
         return out0.getvalue()
 
 def bql_execute(bdb, string, bindings=()):
-    phrases = parse.parse_bql_string(string)
-    tables = []
-    for phrase in phrases:
-        table = []
-        for row in bql.execute_phrase(bdb, phrase, bindings):
-            table.append(row)
-        tables.append(table)
-    return tables
+    return map(tuple, bdb.execute(string, bindings))
 
 def test_select_trivial():
     assert bql2sql('select null;') == 'SELECT NULL;'
@@ -393,18 +386,18 @@ def test_estimate_pairwise_row():
 def test_trivial_commands():
     with test_csv.bayesdb_csv(test_csv.csv_data) as (bdb, fname):
         # XXX Query parameters!
-        bql_execute(bdb, "create btable t from '%s'" % (fname,))
-        bql_execute(bdb, "create btable if not exists t from '%s'" % (fname,))
-        bql_execute(bdb, 'initialize 2 models for t')
-        bql_execute(bdb, 'initialize 1 model if not exists for t')
-        bql_execute(bdb, 'initialize 2 models if not exists for t')
-        bql_execute(bdb, 'analyze t model 0 for 1 iteration wait')
-        bql_execute(bdb, 'analyze t models 0-1 for 1 iteration wait')
-        bql_execute(bdb, 'analyze t models 0,1 for 1 iteration wait')
-        bql_execute(bdb, 'analyze t for 1 iteration wait')
-        bql_execute(bdb, 'select * from t')
-        bql_execute(bdb, 'estimate pairwise row similarity from t')
-        bql_execute(bdb, 'select infer age conf 0.9 from t')
+        bdb.execute("create btable t from '%s'" % (fname,))
+        bdb.execute("create btable if not exists t from '%s'" % (fname,))
+        bdb.execute('initialize 2 models for t')
+        bdb.execute('initialize 1 model if not exists for t')
+        bdb.execute('initialize 2 models if not exists for t')
+        bdb.execute('analyze t model 0 for 1 iteration wait')
+        bdb.execute('analyze t models 0-1 for 1 iteration wait')
+        bdb.execute('analyze t models 0,1 for 1 iteration wait')
+        bdb.execute('analyze t for 1 iteration wait')
+        bdb.execute('select * from t')
+        bdb.execute('estimate pairwise row similarity from t')
+        bdb.execute('select infer age conf 0.9 from t')
 
 def test_parametrized():
     assert bql2sqlparam('select * from t where id = ?') == \
@@ -424,36 +417,36 @@ def test_parametrized():
         'SELECT * FROM "t" WHERE' + \
         ' ((("a" = ?1) AND ("b" = ?2)) AND ("c" = ?2));'
     with test_csv.bayesdb_csv(test_csv.csv_data) as (bdb, fname):
-        bql_execute(bdb, "create btable t from '%s'" % (fname,))
+        bdb.execute("create btable t from '%s'" % (fname,))
         assert bql_execute(bdb, 'select * from t where height > ?', (70,)) == \
-            [[
+            [
                 ('41', 'M', '65600', '72', 'marketing', '4'),
                 ('30', 'M', '70000', '73', 'sales', '4'),
-            ]]
+            ]
         assert bql_execute(bdb, 'select * from t where height > ?123',
                 (0,)*122 + (70,)) == \
-            [[
+            [
                 ('41', 'M', '65600', '72', 'marketing', '4'),
                 ('30', 'M', '70000', '73', 'sales', '4'),
-            ]]
+            ]
         assert bql_execute(bdb, 'select age from t where division = :division',
                 {':division': 'sales'}) == \
-            [[('34',), ('30',)]]
+            [('34',), ('30',)]
         assert bql_execute(bdb, 'select division from t' +
                     ' where age < @age and rank > ?;',
                 (40, 4)) == \
-            [[('accounting',)]]
+            [('accounting',)]
         assert bql_execute(bdb, 'select division from t' +
                     ' where age < @age and rank > :rank;',
                 {':RANK': 4, '@aGe': 40}) == \
-            [[('accounting',)]]
+            [('accounting',)]
         with pytest.raises(ValueError):
-            bql_execute(bdb, 'select * from t where age < ? and rank > :r',
+            bdb.execute('select * from t where age < ? and rank > :r',
                 {':r': 4})
         # XXX Test what query this actually executes...
-        bql_execute(bdb, 'initialize 1 model for t;')
-        bql_execute(bdb, 'analyze t for 1 iteration wait;')
-        bql_execute(bdb, 'select similarity to 1 with respect to' +
+        bdb.execute('initialize 1 model for t;')
+        bdb.execute('analyze t for 1 iteration wait;')
+        bdb.execute('select similarity to 1 with respect to' +
             ' (estimate columns from t limit 1) from t;')
-        bql_execute(bdb, 'select similarity to 1 with respect to' +
+        bdb.execute('select similarity to 1 with respect to' +
             ' (estimate columns from t limit ?) from t;', (1,))

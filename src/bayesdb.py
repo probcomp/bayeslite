@@ -19,9 +19,11 @@ import contextlib
 import os
 import sqlite3
 
+import bayeslite.bql as bql
 import bayeslite.core as core
+import bayeslite.parse as parse
 import bayeslite.schema as schema
-
+
 class BayesDB(core.IBayesDB):
     """Class of Bayesian databases.
 
@@ -46,17 +48,23 @@ class BayesDB(core.IBayesDB):
         self.sqlite.close()
         self.sqlite = None
 
-    def cursor(self):
-        """Return a cursor fit for executing BQL queries."""
-        # XXX Make our own cursors that handle BQL.
-        return self.sqlite.cursor()
-
-    def execute(self, query, *args):
+    def execute(self, string, bindings=()):
         """Execute a BQL query and return a cursor for its results."""
-        # XXX Parse and compile query first.  Would be nice if we
-        # could hook into the sqlite parser, but that's not going to
-        # happen.
-        return self.sqlite.execute(query, *args)
+        phrases = parse.parse_bql_string(string)
+        phrase = None
+        try:
+            phrase = phrases.next()
+        except StopIteration:
+            raise ValueError('no BQL phrase in string')
+        more = None
+        try:
+            phrases.next()
+            more = True
+        except StopIteration:
+            more = False
+        if more:
+            raise ValueError('>1 phrase in string')
+        return bql.execute_phrase(self, phrase, bindings)
 
     @contextlib.contextmanager
     def savepoint(bdb):
@@ -77,7 +85,7 @@ class BayesDB(core.IBayesDB):
             assert bdb.models_cache is not None
         bdb.txn_depth += 1
         try:
-            with sqlite3_savepoint(bdb):
+            with sqlite3_savepoint(bdb.sqlite):
                 yield
         finally:
             assert 0 < bdb.txn_depth
@@ -85,6 +93,8 @@ class BayesDB(core.IBayesDB):
             if bdb.txn_depth == 0:
                 bdb.metadata_cache = None
                 bdb.models_cache = None
+
+### SQLite transaction/savepoint utilities
 
 @contextlib.contextmanager
 def sqlite3_transaction(db):
