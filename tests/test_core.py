@@ -23,6 +23,10 @@ import tempfile
 import crosscat.CrossCatClient
 
 import bayeslite
+import bayeslite.core as core
+
+from bayeslite.sqlite3_util import sqlite3_exec_1
+from bayeslite.sqlite3_util import sqlite3_quote_name
 
 def powerset(s):
     s = list(s)
@@ -73,23 +77,23 @@ def sqlite_bayesdb_table(mkbdb, name, schema, data, **kwargs):
         data(bdb)
         bayeslite.bayesdb_import_sqlite_table(bdb, name, **kwargs)
         sql = 'select id from bayesdb_table where name = ?'
-        table_id = bayeslite.sqlite3_exec_1(bdb.sqlite, sql, (name,))
+        table_id = sqlite3_exec_1(bdb.sqlite, sql, (name,))
         assert table_id == 1
         yield bdb, table_id
 
 @contextlib.contextmanager
 def analyzed_bayesdb_table(mkbdb, nmodels, nsteps):
     with mkbdb as (bdb, table_id):
-        bayeslite.bayesdb_models_initialize(bdb, table_id, nmodels)
+        core.bayesdb_models_initialize(bdb, table_id, nmodels)
         for modelno in range(nmodels):
-            bayeslite.bayesdb_models_analyze1(bdb, table_id, modelno, nsteps)
+            core.bayesdb_models_analyze1(bdb, table_id, modelno, nsteps)
         yield bdb, table_id
 
 def bayesdb_maxrowid(bdb, table_id):
     table_name = bayeslite.bayesdb_table_name(bdb, table_id)
-    qt = bayeslite.sqlite3_quote_name(table_name)
+    qt = sqlite3_quote_name(table_name)
     sql = 'select max(rowid) from %s' % (qt,)
-    return bayeslite.sqlite3_exec_1(bdb.sqlite, sql)
+    return sqlite3_exec_1(bdb.sqlite, sql)
 
 def t0_schema(bdb):
     bdb.sqlite.execute('create table t0 (id integer primary key)')
@@ -241,7 +245,7 @@ def test_btable_analysis1(btable_name):
 def test_t1_infer(rowid, colno, confidence):
     with analyzed_bayesdb_table(t1(), 1, 1) as (bdb, table_id):
         if rowid == 0: rowid = bayesdb_maxrowid(bdb, table_id)
-        bayeslite.bql_infer(bdb, table_id, colno, rowid, None, confidence,
+        core.bql_infer(bdb, table_id, colno, rowid, None, confidence,
             numsamples=1)
 
 @pytest.mark.parametrize('colnos,constraints,numpredictions',
@@ -261,7 +265,7 @@ def test_t1_simulate(colnos, constraints, numpredictions):
             #
             # XXX Automatically test the correct exception.
             constraints = \
-                [(i, bayeslite.bayesdb_cell_value(bdb, table_id, rowid, i))
+                [(i, core.bayesdb_cell_value(bdb, table_id, rowid, i))
                     for i in constraints]
         bayeslite.bayesdb_simulate(bdb, table_id, constraints, colnos,
             numpredictions=numpredictions)
@@ -276,7 +280,7 @@ def test_onecolumn(btable_name, colno):
         pytest.xfail("Crosscat can't handle a table with only one column.")
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
-        bayeslite.bql_column_typicality(bdb, table_id, colno)
+        core.bql_column_typicality(bdb, table_id, colno)
         bdb.sqlite.execute('select bql_column_typicality(?, ?)',
             (table_id, colno))
 
@@ -292,18 +296,16 @@ def test_twocolumn(btable_name, colno0, colno1):
         pytest.skip('Not enough columns in t0.')
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
-        bayeslite.bql_column_correlation(bdb, table_id, colno0, colno1)
-        bayeslite.sqlite3_exec_1(bdb.sqlite,
+        core.bql_column_correlation(bdb, table_id, colno0, colno1)
+        sqlite3_exec_1(bdb.sqlite,
             'select bql_column_correlation(?, ?, ?)',
             (table_id, colno0, colno1))
-        bayeslite.bql_column_dependence_probability(bdb, table_id, colno0,
-            colno1)
-        bayeslite.sqlite3_exec_1(bdb.sqlite,
+        core.bql_column_dependence_probability(bdb, table_id, colno0, colno1)
+        sqlite3_exec_1(bdb.sqlite,
             'select bql_column_dependence_probability(?, ?, ?)',
             (table_id, colno0, colno1))
-        bayeslite.bql_column_mutual_information(bdb, table_id, colno0,
-            colno1)
-        bayeslite.sqlite3_exec_1(bdb.sqlite,
+        core.bql_column_mutual_information(bdb, table_id, colno0, colno1)
+        sqlite3_exec_1(bdb.sqlite,
             'select bql_column_mutual_information(?, ?, ?)',
             (table_id, colno0, colno1))
 
@@ -314,17 +316,17 @@ def test_twocolumn(btable_name, colno0, colno1):
 def test_t1_column_value_probability(colno, rowid):
     with analyzed_bayesdb_table(t1(), 1, 1) as (bdb, table_id):
         if rowid == 0: rowid = bayesdb_maxrowid(bdb, table_id)
-        value = bayeslite.bayesdb_cell_value(bdb, table_id, rowid, colno)
-        bayeslite.bql_column_value_probability(bdb, table_id, colno, value)
+        value = core.bayesdb_cell_value(bdb, table_id, rowid, colno)
+        core.bql_column_value_probability(bdb, table_id, colno, value)
         tn = bayeslite.bayesdb_table_name(bdb, table_id)
         cn = bayeslite.bayesdb_column_name(bdb, table_id, colno)
-        qt = bayeslite.sqlite3_quote_name(tn)
-        qc = bayeslite.sqlite3_quote_name(cn)
+        qt = sqlite3_quote_name(tn)
+        qc = sqlite3_quote_name(cn)
         sql = '''
             select bql_column_value_probability(?, ?,
                 (select %s from %s where rowid = ?))
         ''' % (qc, qt)
-        bayeslite.sqlite3_exec_1(bdb.sqlite, sql, (table_id, colno, rowid))
+        sqlite3_exec_1(bdb.sqlite, sql, (table_id, colno, rowid))
 
 @pytest.mark.parametrize('btable_name,source,target,colnos',
     [(btable_name, source, target, list(colnos))
@@ -339,10 +341,10 @@ def test_row_similarity(btable_name, source, target, colnos):
         pytest.skip('Not enough columns in t0.')
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
-        bayeslite.bql_row_similarity(bdb, table_id, source, target, *colnos)
+        core.bql_row_similarity(bdb, table_id, source, target, *colnos)
         sql = 'select bql_row_similarity(?, ?, ?%s%s)' % \
             ('' if 0 == len(colnos) else ', ', ', '.join(map(str, colnos)))
-        bayeslite.sqlite3_exec_1(bdb.sqlite, sql, (table_id, source, target))
+        sqlite3_exec_1(bdb.sqlite, sql, (table_id, source, target))
 
 @pytest.mark.parametrize('btable_name,rowid',
     [(btable_name, rowid)
@@ -356,8 +358,8 @@ def test_row_typicality(btable_name, rowid):
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
         if rowid == 0: rowid = bayesdb_maxrowid(bdb, table_id)
-        bayeslite.bql_row_typicality(bdb, table_id, rowid)
-        bayeslite.sqlite3_exec_1(bdb.sqlite, 'select bql_row_typicality(?, ?)',
+        core.bql_row_typicality(bdb, table_id, rowid)
+        sqlite3_exec_1(bdb.sqlite, 'select bql_row_typicality(?, ?)',
             (table_id, rowid))
 
 @pytest.mark.parametrize('btable_name,rowid,colno',
@@ -373,8 +375,7 @@ def test_row_column_predictive_probability(btable_name, rowid, colno):
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
         if rowid == 0: rowid = bayesdb_maxrowid(bdb, table_id)
-        bayeslite.bql_row_column_predictive_probability(bdb, table_id,
-            rowid, colno)
-        bayeslite.sqlite3_exec_1(bdb.sqlite,
+        core.bql_row_column_predictive_probability(bdb, table_id, rowid, colno)
+        sqlite3_exec_1(bdb.sqlite,
             'select bql_row_column_predictive_probability(?, ?, ?)',
             (table_id, rowid, colno))

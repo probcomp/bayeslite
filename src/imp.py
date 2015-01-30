@@ -22,6 +22,7 @@ import math
 import bayeslite.core as core
 
 from bayeslite.sqlite3_util import sqlite3_quote_name
+from bayeslite.util import unique
 
 # XXX The schema language here, such as it is, is pretty limited.
 # Perhaps generating the SQL schema is the wrong approach here.  When
@@ -125,12 +126,12 @@ def bayesdb_import_guess_column_type(rows, i, may_be_key,
 
 def bayesdb_import_column_keyable_p(rows, i):
     if bayesdb_import_column_integerable_p(rows, i):
-        return len(rows) == len(core.unique([int(row[i]) for row in rows]))
+        return len(rows) == len(unique([int(row[i]) for row in rows]))
     elif not bayesdb_import_column_floatable_p(rows, i):
         # XXX Is unicode(...) necessary?  I think they should all be
         # strings here.  Where can stripping happen?
         assert all(row[i] == unicode(row[i]).strip() for row in rows)
-        return len(rows) == len(core.unique([row[i] for row in rows]))
+        return len(rows) == len(unique([row[i] for row in rows]))
     else:
         return False
 
@@ -154,7 +155,7 @@ def bayesdb_import_column_floatable_p(rows, i):
 def bayesdb_import_column_numerical_p(rows, i, count_cutoff, ratio_cutoff):
     if not bayesdb_import_column_floatable_p(rows, i):
         return False
-    ndistinct = len(core.unique([float(row[i]) for row in rows
+    ndistinct = len(unique([float(row[i]) for row in rows
         if not math.isnan(float(row[i]))]))
     if ndistinct <= count_cutoff:
         return False
