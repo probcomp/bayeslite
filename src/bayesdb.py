@@ -20,6 +20,7 @@ import os
 import sqlite3
 
 import bayeslite.core as core
+import bayeslite.schema as schema
 
 class BayesDB(core.IBayesDB):
     """Class of Bayesian databases.
@@ -36,7 +37,7 @@ class BayesDB(core.IBayesDB):
         self.txn_depth = 0
         self.metadata_cache = None
         self.models_cache = None
-        core.bayesdb_install_schema(self.sqlite)
+        schema.bayesdb_install_schema(self.sqlite)
         core.bayesdb_install_bql(self.sqlite, self)
 
     def close(self):
