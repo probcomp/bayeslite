@@ -16,6 +16,8 @@
 
 import sqlite3
 
+from bayeslite.sqlite3_util import sqlite3_exec_1
+
 bayesdb_schema = """
 PRAGMA foreign_keys = ON;
 PRAGMA application_id = 1113146434; -- #x42594442, `BYDB'
@@ -98,12 +100,3 @@ def bayesdb_install_schema(db):
         raise IOError("Invalid application_id: 0x%08x" % application_id)
     elif user_version != 1:
         raise IOError("Unknown database version: %d" % user_version)
-
-def sqlite3_exec_1(db, query, *args):
-    """Execute a query returning a 1x1 table, and return its one value."""
-    cursor = db.execute(query, *args)
-    row = cursor.fetchone()
-    assert row
-    assert len(row) == 1
-    assert cursor.fetchone() == None
-    return row[0]

@@ -14,15 +14,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import binascii
 import contextlib
-import os
 import sqlite3
 
 import bayeslite.bql as bql
 import bayeslite.core as core
 import bayeslite.parse as parse
 import bayeslite.schema as schema
+
+from bayeslite.sqlite3_util import sqlite3_savepoint
 
 class BayesDB(core.IBayesDB):
     """Class of Bayesian databases.
@@ -93,45 +93,3 @@ class BayesDB(core.IBayesDB):
             if bdb.txn_depth == 0:
                 bdb.metadata_cache = None
                 bdb.models_cache = None
-
-### SQLite transaction/savepoint utilities
-
-@contextlib.contextmanager
-def sqlite3_transaction(db):
-    """Run a transaction.  On return, commit.  On exception, roll back.
-
-    Transactions may not be nested.  Use savepoints if you want a
-    nestable analogue to transactions.
-    """
-    db.execute("BEGIN")
-    ok = False
-    try:
-        yield
-        db.execute("COMMIT")
-        ok = True
-    finally:
-        if not ok:
-            db.execute("ROLLBACK")
-
-@contextlib.contextmanager
-def sqlite3_savepoint(db):
-    """Run a savepoint.  On return, commit; on exception, roll back.
-
-    Savepoints are like transactions, but they may be nested in
-    transactions or in other savepoints.
-    """
-    # This is not symmetric with sqlite3_transaction because ROLLBACK
-    # undoes any effects and makes the transaction cease to be,
-    # whereas ROLLBACK TO undoes any effects but leaves the savepoint
-    # as is.  So for either success or failure we must release the
-    # savepoint explicitly.
-    savepoint = binascii.b2a_hex(os.urandom(32))
-    db.execute("SAVEPOINT x%s" % (savepoint,))
-    ok = False
-    try:
-        yield
-        ok = True
-    finally:
-        if not ok:
-            db.execute("ROLLBACK TO x%s" % (savepoint,))
-        db.execute("RELEASE x%s" % (savepoint,))

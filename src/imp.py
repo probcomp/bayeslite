@@ -21,6 +21,8 @@ import math
 
 import bayeslite.core as core
 
+from bayeslite.sqlite3_util import sqlite3_quote_name
+
 # XXX The schema language here, such as it is, is pretty limited.
 # Perhaps generating the SQL schema is the wrong approach here.  When
 # this refactoring is done, perhaps we ought to separate
@@ -64,11 +66,11 @@ def _bayesdb_import(bdb, table, column_names, rows, column_types):
                 raise IOError("Imported data has unknown column: %s" % (name,))
     ncols = len(column_names)
     assert ncols == len(column_types)
-    qt = core.sqlite3_quote_name(table)
+    qt = sqlite3_quote_name(table)
     table_def = bayesdb_table_definition(table, column_names, column_types)
     with bdb.savepoint():
         bdb.sqlite.execute(table_def)
-        qcns = ",".join(map(core.sqlite3_quote_name, column_names))
+        qcns = ",".join(map(sqlite3_quote_name, column_names))
         qcps = ",".join("?" * ncols)
         insert_sql = "INSERT INTO %s (%s) VALUES (%s)" % (qt, qcns, qcps)
         bdb.sqlite.executemany(insert_sql, rows)
@@ -78,13 +80,13 @@ def _bayesdb_import(bdb, table, column_names, rows, column_types):
 def bayesdb_table_definition(table, column_names, column_types):
     column_defs = [bayesdb_column_definition(name, column_types[name])
         for name in column_names]
-    qt = core.sqlite3_quote_name(table)
+    qt = sqlite3_quote_name(table)
     return ("CREATE TABLE %s (%s)" % (qt, ",".join(column_defs)))
 
 bayesdb_column_type_to_sqlite_type = \
     dict((ct, sql) for ct, _cont_p, sql, _mt in core.bayesdb_type_table)
 def bayesdb_column_definition(column_name, column_type):
-    qcn = core.sqlite3_quote_name(column_name)
+    qcn = sqlite3_quote_name(column_name)
     sqlite_type = bayesdb_column_type_to_sqlite_type[column_type]
     qualifiers = []
     if column_type == "key":

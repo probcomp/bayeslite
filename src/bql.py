@@ -21,6 +21,8 @@ import bayeslite.ast as ast
 import bayeslite.core as core
 import bayeslite.import_csv as import_csv
 
+from bayeslite.sqlite3_util import sqlite3_quote_name
+
 def execute_phrase(bdb, phrase, bindings=()):
     if isinstance(phrase, ast.Parametrized):
         n_numpar = phrase.n_numpar
@@ -817,7 +819,7 @@ def compile_string(bdb, string, out):
         out.write(string.replace("'", "''"))
 
 def compile_name(bdb, name, out):
-    out.write(core.sqlite3_quote_name(name))
+    out.write(sqlite3_quote_name(name))
 
 def compile_table_name(bdb, table_name, out):
     # XXX Qualified table names.
