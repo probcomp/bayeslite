@@ -67,7 +67,7 @@ class BayesDB(core.IBayesDB):
         return bql.execute_phrase(self, phrase, bindings)
 
     @contextlib.contextmanager
-    def savepoint(bdb):
+    def savepoint(self):
         """Enter a savepoint.  On return, commit; on exception, roll back.
 
         Savepoints may be nested.  Parsed metadata and models are
@@ -75,21 +75,21 @@ class BayesDB(core.IBayesDB):
         """
         # XXX Can't do this simultaneously in multiple threads.  Need
         # lightweight per-thread state.
-        if bdb.txn_depth == 0:
-            assert bdb.metadata_cache is None
-            assert bdb.models_cache is None
-            bdb.metadata_cache = {}
-            bdb.models_cache = {}
+        if self.txn_depth == 0:
+            assert self.metadata_cache is None
+            assert self.models_cache is None
+            self.metadata_cache = {}
+            self.models_cache = {}
         else:
-            assert bdb.metadata_cache is not None
-            assert bdb.models_cache is not None
-        bdb.txn_depth += 1
+            assert self.metadata_cache is not None
+            assert self.models_cache is not None
+        self.txn_depth += 1
         try:
-            with sqlite3_savepoint(bdb.sqlite):
+            with sqlite3_savepoint(self.sqlite):
                 yield
         finally:
-            assert 0 < bdb.txn_depth
-            bdb.txn_depth -= 1
-            if bdb.txn_depth == 0:
-                bdb.metadata_cache = None
-                bdb.models_cache = None
+            assert 0 < self.txn_depth
+            self.txn_depth -= 1
+            if self.txn_depth == 0:
+                self.metadata_cache = None
+                self.models_cache = None
