@@ -95,6 +95,41 @@ def bayesdb_maxrowid(bdb, table_id):
     sql = 'select max(rowid) from %s' % (qt,)
     return sqlite3_exec_1(bdb.sqlite, sql)
 
+def test_casefold_colname():
+    def t(name, sql, *args, **kwargs):
+        def schema(bdb):
+            bdb.sqlite.execute(sql)
+        def data(_bdb):
+            pass
+        return sqlite_bayesdb_table(bayesdb(), name, schema, data, *args,
+            **kwargs)
+    with pytest.raises(sqlite3.OperationalError):
+        with t('t', 'create table t(x, X)'):
+            pass
+    with pytest.raises(ValueError):
+        with t('t', 'create table t(x, y)', column_names=['x', 'x']):
+            pass
+    with pytest.raises(ValueError):
+        with t('t', 'create table t(x, y)', column_names=['x', 'X']):
+            pass
+    with pytest.raises(ValueError):
+        with t('t', 'create table t(x, y)',
+                column_types={'x': 'categorical', 'X': 'numerical'}):
+            pass
+    with pytest.raises(ValueError):
+        with t('t', 'create table t(x, y)',
+                column_names=['x', 'X'],
+                column_types={'x': 'categorical', 'X': 'numerical'}):
+            pass
+    with t('t', 'create table t(x, y)', column_names=['x', 'Y']):
+        pass
+    with t('t', 'create table t(x, y)', column_names=['x', 'Y'],
+            column_types={'X': 'categorical', 'y': 'numerical'}):
+        pass
+    with t('t', 'CREATE TABLE T(X, Y)', column_names=['x', 'Y'],
+            column_types={'X': 'categorical', 'y': 'numerical'}):
+        pass
+
 def t0_schema(bdb):
     bdb.sqlite.execute('create table t0 (id integer primary key)')
 def t0_data(bdb):

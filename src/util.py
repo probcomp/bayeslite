@@ -74,3 +74,7 @@ def float_sum(array):
             c += ((xf - s1) + s)
         s = s1
     return (s + c)
+
+def casefold(string):
+    # XXX Not really right, but it'll do for now.
+    return string.upper().lower()

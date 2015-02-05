@@ -42,6 +42,7 @@ from bayeslite.sqlite3_util import sqlite3_exec_1
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
 from bayeslite.util import arithmetic_mean
+from bayeslite.util import casefold
 from bayeslite.util import unique
 from bayeslite.util import unique_indices
 
@@ -168,23 +169,30 @@ def bayesdb_determine_columns(bdb, table, column_names, column_types):
     column_descs = cursor.fetchall()
     if column_names is None:
         column_names = [name for _i, name, _t, _n, _d, _p in column_descs]
-        column_name_set = set(column_names)
     else:
-        all_names = set(name for _i, name, _t, _n, _d, _p in column_descs)
+        column_name_superset = set(casefold(name)
+            for _i, name, _t, _n, _d, _p in column_descs)
+        assert len(column_name_superset) == len(column_descs)
         for name in column_names:
-            if name not in all_names:
+            if casefold(name) not in column_name_superset:
                 raise ValueError("Unknown column: %s" % (name,))
-    column_name_set = set(column_names)
+    column_name_set = set(casefold(name) for name in column_names)
+    if len(column_name_set) < len(column_names):
+        raise ValueError("Column names differ only by case: %s" %
+            (column_names,))
     if column_types is None:
         column_types = dict(bayesdb_guess_column(bdb, table, desc)
             for desc in column_descs if desc[1] in column_name_set)
     else:
         for name in column_types:
-            if name not in column_name_set:
+            if casefold(name) not in column_name_set:
                 raise ValueError("Unknown column: %s" % (name,))
+        column_types_name_set = set(casefold(name) for name in column_types)
         for name in column_name_set:
-            if name not in column_types:
+            if name not in column_types_name_set:
                 raise ValueError("Unknown column: %s" % (name,))
+        if "rowid" in column_types_name_set:
+            raise ValueError("Can't use rowid!")
     key = None
     for name in column_types:
         if column_types[name] == "key":
@@ -244,12 +252,19 @@ def bayesdb_column_floatable_p(bdb, table, column_desc):
 def bayesdb_create_metadata(bdb, table, column_names, column_types):
     ncols = len(column_names)
     assert ncols == len(column_types)
+    # Weird contortions to ignore case distinctions in column_names
+    # and the keys of column_types.
+    column_positions = dict((casefold(name), i)
+        for i, name in enumerate(column_names))
+    column_metadata = [None] * ncols
+    for name in column_types:
+        metadata = metadata_generators[column_types[name]](bdb, table, name)
+        column_metadata[column_positions[casefold(name)]] = metadata
+    assert all(metadata is not None for metadata in column_metadata)
     return {
         "name_to_idx": dict(zip(column_names, range(ncols))),
         "idx_to_name": dict(zip(map(unicode, range(ncols)), column_names)),
-        "column_metadata":
-            [metadata_generators[column_types[name]](bdb, table, name)
-                for name in column_names],
+        "column_metadata": column_metadata,
     }
 
 def bayesdb_metadata_numerical(_bdb, _table, _column_name):
