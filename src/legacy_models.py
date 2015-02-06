@@ -18,7 +18,9 @@ import gzip
 import pickle
 
 import bayeslite.core as core
+
 from bayeslite.sqlite3_util import sqlite3_exec_1
+from bayeslite.util import casefold
 
 renamed_column_types = {
     'continuous': 'numerical',
@@ -77,8 +79,8 @@ def bayesdb_load_legacy_models(bdb, table_name, pathname, ifnotexists=False,
     # XXX Check whether models is a dict mapping integers to thetas.
     # XXX Check whether the thetas look sensible.
 
-    column_types = dict((column_name.lower(),
-            schema[column_name]['cctype'].lower())
+    column_types = dict((casefold(column_name),
+                         casefold(schema[column_name]['cctype']))
         for column_name in schema)
 
     # Ready to update the database.  Do it in a savepoint in case
@@ -133,6 +135,6 @@ def bayesdb_load_legacy_models(bdb, table_name, pathname, ifnotexists=False,
 def bayesdb_column_types(bdb, table_id):
     M_c = core.bayesdb_metadata(bdb, table_id)
     metadata = M_c['column_metadata']
-    return dict((core.bayesdb_column_name(bdb, table_id, colno).lower(),
-            metadata[colno]['modeltype'].lower())
+    return dict((casefold(core.bayesdb_column_name(bdb, table_id, colno)),
+                 casefold(metadata[colno]['modeltype']))
         for colno in core.bayesdb_column_numbers(bdb, table_id))
