@@ -22,6 +22,7 @@ import bayeslite.core as core
 import bayeslite.import_csv as import_csv
 
 from bayeslite.sqlite3_util import sqlite3_quote_name
+from bayeslite.util import casefold
 
 def execute_phrase(bdb, phrase, bindings=()):
     '''Execute the BQL AST phrase PHRASE and return a cursor of results.'''
@@ -120,12 +121,12 @@ class Output(object):
             # renumber to find its output position for passage to
             # sqlite3.
             for name in self.bindings:
-                lname = name.lower()
-                if lname not in self.nampar_map:
+                name_folded = casefold(name)
+                if name_folded not in self.nampar_map:
                     unknown.add(name)
                     continue
-                missing.remove(lname)
-                n = self.nampar_map[lname]
+                missing.remove(name_folded)
+                n = self.nampar_map[name_folded]
                 m = self.renumber[n]
                 j = m - 1
                 assert bindings_list[j] is None
@@ -144,7 +145,7 @@ class Output(object):
             if len(self.bindings) < self.n_numpar:
                 missing_numbers = set(range(1, self.n_numpar + 1))
                 for name in self.bindings:
-                    missing_numbers.remove(self.nampar_map[name.lower()])
+                    missing_numbers.remove(self.nampar_map[casefold(name)])
                 raise ValueError('Missing parameter numbers: %s' %
                     (missing_numbers,))
 

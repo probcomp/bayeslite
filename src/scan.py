@@ -19,10 +19,13 @@ import StringIO
 import bayeslite.grammar as grammar
 import bayeslite.plex as Plex
 
+from bayeslite.util import casefold
+
 '''
 grep -o 'K_[A-Z0-9_]*' < grammar.y | sort -u | awk '
 {
     sub("^K_", "", $1)
+    # All keywords are US-ASCII, so tolower is the same as casefold.
     printf("    \"%s\": grammar.K_%s,\n", tolower($1), $1)
 }'
 '''
@@ -96,7 +99,8 @@ keywords = {
     "with": grammar.K_WITH,
 }
 def scan_name(_scanner, text):
-    return keywords.get(text) or keywords.get(text.lower()) or grammar.L_NAME;
+    return keywords.get(text) or keywords.get(casefold(text)) or \
+        grammar.L_NAME;
 
 def scan_integer(scanner, text):
     scanner.produce(grammar.L_INTEGER, int(text, 10))
@@ -127,7 +131,7 @@ def scan_numpar(scanner, text):
             scanner.produce(grammar.L_NUMPAR, n)
 
 def scan_nampar(scanner, text):
-    text = text.lower()         # XXX fold case
+    text = casefold(text)
     n = None
     if text in scanner.nampar_map:
         n = scanner.nampar_map[text]
