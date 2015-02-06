@@ -313,13 +313,15 @@ def compile_estcols(bdb, estcols, out):
 
 def compile_estpaircols(bdb, estpaircols, out):
     assert isinstance(estpaircols, ast.EstPairCols)
-    out.write('SELECT c0.name, c1.name')
+    colno0_exp = 'c0.colno'     # XXX
+    colno1_exp = 'c1.colno'     # XXX
+    out.write('SELECT c0.name, c1.name, ')
+    compile_2col_expression(bdb, estpaircols.expression, estpaircols,
+        colno0_exp, colno1_exp, out)
     out.write(' FROM bayesdb_table_column AS c0, bayesdb_table_column AS c1')
     table_id = core.bayesdb_table_id(bdb, estpaircols.btable)
     out.write(' WHERE c0.table_id = %d AND c1.table_id = %d' %
         (table_id, table_id))
-    colno0_exp = 'c0.colno'     # XXX
-    colno1_exp = 'c1.colno'     # XXX
     if estpaircols.condition is not None:
         out.write(' AND ')
         compile_2col_expression(bdb, estpaircols.condition, estpaircols,

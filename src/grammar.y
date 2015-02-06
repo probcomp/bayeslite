@@ -81,7 +81,8 @@ estcols(e)		::= K_ESTIMATE K_COLUMNS K_FROM table_name(btable)
  * XXX This is really just a SELECT on the join of the table's list of
  * columns with itself.
  */
-estpaircols(e)		::= K_ESTIMATE K_PAIRWISE K_FROM table_name(btable)
+estpaircols(e)		::= K_ESTIMATE K_PAIRWISE expression(e)
+				K_FROM table_name(btable)
 				where(cond) order_by(ord) limit(lim) as(sav).
 
 /*

@@ -146,8 +146,8 @@ class BQLSemantics(object):
     def p_estcols_e(self, btable, cond, ord, lim, sav):
         return ast.EstCols(btable, cond, ord, lim, sav)
 
-    def p_estpaircols_e(self, btable, cond, ord, lim, sav):
-        return ast.EstPairCols(btable, cond, ord, lim, sav)
+    def p_estpaircols_e(self, e, btable, cond, ord, lim, sav):
+        return ast.EstPairCols(e, btable, cond, ord, lim, sav)
 
     def p_estpairrow_e(self, e, btable, cond, ord, lim, sav):
         return ast.EstPairRow(e, btable, cond, ord, lim, sav)
