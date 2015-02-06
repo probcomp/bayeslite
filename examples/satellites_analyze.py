@@ -41,7 +41,7 @@ def print_cursors(cursors):
 
 bdb = bayeslite.BayesDB(localengine.LocalEngine(seed=0), pathname='satellites.bdb')
 bdb.execute("create btable if not exists SATELLITES" +
-    " from 'satellites.utf8.csv'")
+    " from 'satellites.csv'")
 bdb.execute('initialize 10 models if not exists for SATELLITES')
 if iterations is not None:
     modelspec = 'models %s' % (modelnos,) if modelnos is not None else ''
