@@ -54,6 +54,14 @@ def test_csv_import_toomanycols():
         with pytest.raises(IOError):
             bayeslite.bayesdb_import_csv_file(bdb, 'bad', fname)
 
+def test_csv_import_dupcols():
+    with bayesdb_csv('foo,foo\n0,1\n') as (bdb, fname):
+        with pytest.raises(IOError):
+            bayeslite.bayesdb_import_csv_file(bdb, 'bad', fname)
+    with bayesdb_csv('foo,FOO\n0,1\n') as (bdb, fname):
+        with pytest.raises(IOError):
+            bayeslite.bayesdb_import_csv_file(bdb, 'bad', fname)
+
 # Where did I get these data?  The gender balance needs work, as does
 # representation of nonbinaries.
 csv_data = '''age, gender, salary, height, division, rank

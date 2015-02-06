@@ -20,6 +20,9 @@ import math
 import bayeslite.core as core
 import bayeslite.imp as imp
 
+from bayeslite.util import casefold
+from bayeslite.util import unique
+
 # XXX Allow the user to pass in the desired encoding (and CSV dialect,
 # &c.).
 def bayesdb_read_csv_with_header(pathname):
@@ -29,8 +32,11 @@ def bayesdb_read_csv_with_header(pathname):
             header = reader.next()
         except StopIteration:
             raise IOError("Empty CSV file")
+        # Strip whitespace, preserve case, and compare case-insensitively.
         # XXX Let the user pass in the desired encoding.
-        column_names = [unicode(n, "utf8").strip() for n in header]
+        column_names = [unicode(name, "utf8").strip() for name in header]
+        if len(unique(map(casefold, column_names))) < len(column_names):
+            raise IOError("Repeated CSV column names")
         ncols = len(column_names)
         if ncols == 0:
             raise IOError("No columns in CSV file!")
