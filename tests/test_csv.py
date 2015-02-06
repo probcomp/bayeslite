@@ -14,6 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import StringIO
 import contextlib
 import pytest
 import tempfile
@@ -23,7 +24,12 @@ import bayeslite
 import test_core
 
 @contextlib.contextmanager
-def bayesdb_csv(csv):
+def bayesdb_csv_stream(csv):
+    with test_core.bayesdb() as bdb:
+        yield (bdb, StringIO.StringIO(csv))
+
+@contextlib.contextmanager
+def bayesdb_csv_file(csv):
     with test_core.bayesdb() as bdb:
         with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
             with open(f.name, 'w') as out:
@@ -31,43 +37,43 @@ def bayesdb_csv(csv):
             yield (bdb, f.name)
 
 def test_csv_import_empty():
-    with bayesdb_csv('') as (bdb, fname):
+    with bayesdb_csv_stream('') as (bdb, f):
         with pytest.raises(IOError):
-            bayeslite.bayesdb_import_csv_file(bdb, 'empty', fname)
+            bayeslite.bayesdb_import_csv(bdb, 'empty', f)
 
 def test_csv_import_nocols():
-    with bayesdb_csv('\n') as (bdb, fname):
+    with bayesdb_csv_stream('\n') as (bdb, f):
         # CSV import rejects no columns.
         with pytest.raises(IOError):
-            bayeslite.bayesdb_import_csv_file(bdb, 'nocols', fname)
+            bayeslite.bayesdb_import_csv(bdb, 'nocols', f)
 
 def test_csv_import_onecol_key():
-    with bayesdb_csv('foo\n0\none\n2\n') as (bdb, fname):
+    with bayesdb_csv_stream('foo\n0\none\n2\n') as (bdb, f):
         # foo will be a key column, hence no columns to model.
         with pytest.raises(ValueError):
-            bayeslite.bayesdb_import_csv_file(bdb, 'onecol_key', fname)
+            bayeslite.bayesdb_import_csv(bdb, 'onecol_key', f)
 
 def test_csv_import_onecol():
-    with bayesdb_csv('foo\n0\none\n2\n0\n') as (bdb, fname):
-        bayeslite.bayesdb_import_csv_file(bdb, 'onecol', fname)
+    with bayesdb_csv_stream('foo\n0\none\n2\n0\n') as (bdb, f):
+        bayeslite.bayesdb_import_csv(bdb, 'onecol', f)
 
 def test_csv_import_toofewcols():
-    with bayesdb_csv('foo,bar\n0,1\n0\n') as (bdb, fname):
+    with bayesdb_csv_stream('foo,bar\n0,1\n0\n') as (bdb, f):
         with pytest.raises(IOError):
-            bayeslite.bayesdb_import_csv_file(bdb, 'bad', fname)
+            bayeslite.bayesdb_import_csv(bdb, 'bad', f)
 
 def test_csv_import_toomanycols():
-    with bayesdb_csv('foo,bar\n0,1\n0,1,2\n') as (bdb, fname):
+    with bayesdb_csv_stream('foo,bar\n0,1\n0,1,2\n') as (bdb, f):
         with pytest.raises(IOError):
-            bayeslite.bayesdb_import_csv_file(bdb, 'bad', fname)
+            bayeslite.bayesdb_import_csv(bdb, 'bad', f)
 
 def test_csv_import_dupcols():
-    with bayesdb_csv('foo,foo\n0,1\n') as (bdb, fname):
+    with bayesdb_csv_stream('foo,foo\n0,1\n') as (bdb, f):
         with pytest.raises(IOError):
-            bayeslite.bayesdb_import_csv_file(bdb, 'bad', fname)
-    with bayesdb_csv('foo,FOO\n0,1\n') as (bdb, fname):
+            bayeslite.bayesdb_import_csv(bdb, 'bad', f)
+    with bayesdb_csv_stream('foo,FOO\n0,1\n') as (bdb, f):
         with pytest.raises(IOError):
-            bayeslite.bayesdb_import_csv_file(bdb, 'bad', fname)
+            bayeslite.bayesdb_import_csv(bdb, 'bad', f)
 
 # Where did I get these data?  The gender balance needs work, as does
 # representation of nonbinaries.
@@ -82,12 +88,16 @@ csv_data = '''age, gender, salary, height, division, rank
 '''
 
 def test_csv_import():
-    with bayesdb_csv(csv_data) as (bdb, fname):
+    with bayesdb_csv_stream(csv_data) as (bdb, f):
+        bayeslite.bayesdb_import_csv(bdb, 'employees', f)
+
+def test_csv_import_file():
+    with bayesdb_csv_file(csv_data) as (bdb, fname):
         bayeslite.bayesdb_import_csv_file(bdb, 'employees', fname)
 
 def test_csv_import_schema():
-    with bayesdb_csv(csv_data) as (bdb, fname):
-        bayeslite.bayesdb_import_csv_file(bdb, 'employees', fname,
+    with bayesdb_csv_stream(csv_data) as (bdb, f):
+        bayeslite.bayesdb_import_csv(bdb, 'employees', f,
             column_types={
                 'age': 'numerical',
                 'gender': 'categorical',
@@ -98,8 +108,8 @@ def test_csv_import_schema():
             })
 
 def test_csv_import_schema_case():
-    with bayesdb_csv(csv_data) as (bdb, fname):
-        bayeslite.bayesdb_import_csv_file(bdb, 'employees', fname,
+    with bayesdb_csv_stream(csv_data) as (bdb, f):
+        bayeslite.bayesdb_import_csv(bdb, 'employees', f,
             column_types={
                 'age': 'numerical',
                 'GENDER': 'categorical',
@@ -110,9 +120,9 @@ def test_csv_import_schema_case():
             })
 
 def test_csv_import_badschema0():
-    with bayesdb_csv(csv_data) as (bdb, fname):
+    with bayesdb_csv_stream(csv_data) as (bdb, f):
         with pytest.raises(IOError):
-            bayeslite.bayesdb_import_csv_file(bdb, 'employees', fname,
+            bayeslite.bayesdb_import_csv(bdb, 'employees', f,
                 column_types={
                     'age': 'numerical',
                     'division': 'categorical',
@@ -120,9 +130,9 @@ def test_csv_import_badschema0():
                 })
 
 def test_csv_import_badschema1():
-    with bayesdb_csv(csv_data) as (bdb, fname):
+    with bayesdb_csv_stream(csv_data) as (bdb, f):
         with pytest.raises(IOError):
-            bayeslite.bayesdb_import_csv_file(bdb, 'employees', fname,
+            bayeslite.bayesdb_import_csv(bdb, 'employees', f,
                 column_types={
                     'age': 'numerical',
                     'zorblaxianism': 'categorical',

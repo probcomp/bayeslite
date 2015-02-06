@@ -29,5 +29,6 @@ from bayeslite.core import bayesdb_table_name
 from bayeslite.legacy_models import bayesdb_load_legacy_models
 from bayeslite.imp import bayesdb_import
 from bayeslite.imp import bayesdb_import_generated
+from bayeslite.import_csv import bayesdb_import_csv
 from bayeslite.import_csv import bayesdb_import_csv_file
 from bayeslite.import_pandas import bayesdb_import_pandas_df

@@ -390,7 +390,7 @@ def test_estimate_pairwise_row():
         bql2sql('estimate pairwise row infer age conf 0.9 from t1;')
 
 def test_trivial_commands():
-    with test_csv.bayesdb_csv(test_csv.csv_data) as (bdb, fname):
+    with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
         # XXX Query parameters!
         bdb.execute("create btable t from '%s'" % (fname,))
         bdb.execute("create btable if not exists t from '%s'" % (fname,))
@@ -428,7 +428,7 @@ def test_parametrized():
             ' where a = ?123 and b = :foo and c = ?124') == \
         'SELECT * FROM "t" WHERE' + \
         ' ((("a" = ?1) AND ("b" = ?2)) AND ("c" = ?2));'
-    with test_csv.bayesdb_csv(test_csv.csv_data) as (bdb, fname):
+    with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
         bdb.execute("create btable t from '%s'" % (fname,))
         assert bql_execute(bdb, 'select * from t where height > ?', (70,)) == \
             [

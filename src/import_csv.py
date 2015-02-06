@@ -25,31 +25,35 @@ from bayeslite.util import unique
 
 # XXX Allow the user to pass in the desired encoding (and CSV dialect,
 # &c.).
-def bayesdb_read_csv_with_header(pathname):
-    with open(pathname, "rU") as f:
-        reader = csv.reader(f)
-        try:
-            header = reader.next()
-        except StopIteration:
-            raise IOError("Empty CSV file")
-        # Strip whitespace, preserve case, and compare case-insensitively.
-        # XXX Let the user pass in the desired encoding.
-        column_names = [unicode(name, "utf8").strip() for name in header]
-        if len(unique(map(casefold, column_names))) < len(column_names):
-            raise IOError("Repeated CSV column names")
-        ncols = len(column_names)
-        if ncols == 0:
-            raise IOError("No columns in CSV file!")
-        # XXX Can we get the CSV reader to decode and strip for us?
-        rows = [[unicode(v, "utf8").strip() for v in row] for row in reader]
-        for row in rows:
-            if len(row) != ncols:
-                raise IOError("Mismatched number of columns")
-        return column_names, rows
+def bayesdb_read_csv_with_header(f):
+    reader = csv.reader(f)
+    try:
+        header = reader.next()
+    except StopIteration:
+        raise IOError("Empty CSV file")
+    # Strip whitespace, preserve case, and compare case-insensitively.
+    # XXX Let the user pass in the desired encoding.
+    column_names = [unicode(name, "utf8").strip() for name in header]
+    if len(unique(map(casefold, column_names))) < len(column_names):
+        raise IOError("Repeated CSV column names")
+    ncols = len(column_names)
+    if ncols == 0:
+        raise IOError("No columns in CSV file!")
+    # XXX Can we get the CSV reader to decode and strip for us?
+    rows = [[unicode(v, "utf8").strip() for v in row] for row in reader]
+    for row in rows:
+        if len(row) != ncols:
+            raise IOError("Mismatched number of columns")
+    return column_names, rows
+
+def bayesdb_import_csv(bdb, table, f, column_types=None, ifnotexists=False):
+    def generator():
+        return bayesdb_read_csv_with_header(f)
+    imp.bayesdb_import_generated(bdb, table, generator, column_types,
+        ifnotexists)
 
 def bayesdb_import_csv_file(bdb, table, pathname, column_types=None,
         ifnotexists=False):
-    def generator():
-        return bayesdb_read_csv_with_header(pathname)
-    imp.bayesdb_import_generated(bdb, table, generator, column_types,
-        ifnotexists)
+    with open(pathname, "rU") as f:
+        bayesdb_import_csv(bdb, table, f, column_types=column_types,
+            ifnotexists=ifnotexists)
