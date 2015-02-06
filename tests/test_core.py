@@ -131,10 +131,10 @@ def test_casefold_colname():
         pass
 
 def t0_schema(bdb):
-    bdb.sqlite.execute('create table t0 (id integer primary key)')
+    bdb.sqlite.execute('create table t0 (id integer primary key, n integer)')
 def t0_data(bdb):
-    bdb.sqlite.executemany('insert into t0 (id) values (?)',
-        [(0,), (1,), (42,)])
+    bdb.sqlite.executemany('insert into t0 (id, n) values (?, ?)',
+        [(0, 0), (1, 1), (42, 42)])
 
 def t0():
     return sqlite_bayesdb_table(bayesdb(), 't0', t0_schema, t0_data)
@@ -142,13 +142,13 @@ def t0():
 def test_t0_badname():
     with pytest.raises(ValueError):
         with sqlite_bayesdb_table(bayesdb(), 't0', t0_schema, t0_data,
-                column_names=['id', 'nid']):
+                column_names=['n', 'm']):
             pass
 
 def test_t0_badtype():
     with pytest.raises(ValueError):
         with sqlite_bayesdb_table(bayesdb(), 't0', t0_schema, t0_data,
-                column_types={'nid': 'categorical'}):
+                column_types={'m': 'categorical'}):
             pass
 
 def test_t0_missingtype():
@@ -275,7 +275,7 @@ def test_btable_analysis1(btable_name):
 @pytest.mark.parametrize('rowid,colno,confidence',
     [(i+1, j, conf)
         for i in range(min(5, len(t1_rows)))
-        for j in range(3)
+        for j in range(2)
         for conf in [0.01, 0.5, 0.99]])
 def test_t1_infer(rowid, colno, confidence):
     with analyzed_bayesdb_table(t1(), 1, 1) as (bdb, table_id):
@@ -285,8 +285,8 @@ def test_t1_infer(rowid, colno, confidence):
 
 @pytest.mark.parametrize('colnos,constraints,numpredictions',
     [(colnos, constraints, numpred)
-        for colnos in powerset(range(3))
-        for constraints in [None] + list(powerset(range(3)))
+        for colnos in powerset(range(2))
+        for constraints in [None] + list(powerset(range(2)))
         for numpred in range(3)])
 def test_t1_simulate(colnos, constraints, numpredictions):
     if len(colnos) == 0:
@@ -308,7 +308,7 @@ def test_t1_simulate(colnos, constraints, numpredictions):
 @pytest.mark.parametrize('btable_name,colno',
     [(btable_name, colno)
         for btable_name in btable_generators.keys()
-        for colno in range(3)])
+        for colno in range(2)])
 def test_onecolumn(btable_name, colno):
     if btable_name == 't0':
         # XXX Also too few columns for this test.
@@ -322,8 +322,8 @@ def test_onecolumn(btable_name, colno):
 @pytest.mark.parametrize('btable_name,colno0,colno1',
     [(btable_name, colno0, colno1)
         for btable_name in btable_generators.keys()
-        for colno0 in range(3)
-        for colno1 in range(3)])
+        for colno0 in range(2)
+        for colno1 in range(2)])
 def test_twocolumn(btable_name, colno0, colno1):
     if btable_name == 't0':
         pytest.xfail("Crosscat can't handle a table with only one column.")
@@ -346,7 +346,7 @@ def test_twocolumn(btable_name, colno0, colno1):
 
 @pytest.mark.parametrize('colno,rowid',
     [(colno, rowid)
-        for colno in range(3)
+        for colno in range(2)
         for rowid in range(6)])
 def test_t1_column_value_probability(colno, rowid):
     with analyzed_bayesdb_table(t1(), 1, 1) as (bdb, table_id):
@@ -368,7 +368,7 @@ def test_t1_column_value_probability(colno, rowid):
         for btable_name in btable_generators.keys()
         for source in range(1,3)
         for target in range(2,4)
-        for colnos in powerset(range(3))])
+        for colnos in powerset(range(2))])
 def test_row_similarity(btable_name, source, target, colnos):
     if btable_name == 't0':
         pytest.xfail("Crosscat can't handle a table with only one column.")
@@ -401,7 +401,7 @@ def test_row_typicality(btable_name, rowid):
     [(btable_name, rowid, colno)
         for btable_name in btable_generators.keys()
         for rowid in range(4)
-        for colno in range(3)])
+        for colno in range(2)])
 def test_row_column_predictive_probability(btable_name, rowid, colno):
     if btable_name == 't0':
         pytest.xfail("Crosscat can't handle a table with only one column.")

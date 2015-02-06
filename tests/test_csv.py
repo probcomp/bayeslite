@@ -37,11 +37,18 @@ def test_csv_import_empty():
 
 def test_csv_import_nocols():
     with bayesdb_csv('\n') as (bdb, fname):
+        # CSV import rejects no columns.
         with pytest.raises(IOError):
             bayeslite.bayesdb_import_csv_file(bdb, 'nocols', fname)
 
-def test_csv_import_onecol():
+def test_csv_import_onecol_key():
     with bayesdb_csv('foo\n0\none\n2\n') as (bdb, fname):
+        # foo will be a key column, hence no columns to model.
+        with pytest.raises(ValueError):
+            bayeslite.bayesdb_import_csv_file(bdb, 'onecol_key', fname)
+
+def test_csv_import_onecol():
+    with bayesdb_csv('foo\n0\none\n2\n0\n') as (bdb, fname):
         bayeslite.bayesdb_import_csv_file(bdb, 'onecol', fname)
 
 def test_csv_import_toofewcols():
@@ -71,6 +78,7 @@ csv_data = '''age, gender, salary, height, division, rank
 23, F, 81000, 67, data science, 3
 36, F, 96000, 70, management, 2
 30, M, 70000, 73, sales, 4
+30, F, 81000, 73, engineering, 3
 '''
 
 def test_csv_import():
@@ -84,9 +92,21 @@ def test_csv_import_schema():
                 'age': 'numerical',
                 'gender': 'categorical',
                 'salary': 'cyclic',
-                'height': 'key',
+                'height': 'ignore',
                 'division': 'categorical',
                 'rank': 'categorical',
+            })
+
+def test_csv_import_schema_case():
+    with bayesdb_csv(csv_data) as (bdb, fname):
+        bayeslite.bayesdb_import_csv_file(bdb, 'employees', fname,
+            column_types={
+                'age': 'numerical',
+                'GENDER': 'categorical',
+                'salary': 'cyclic',
+                'HEIght': 'ignore',
+                'division': 'categorical',
+                'RANK': 'categorical',
             })
 
 def test_csv_import_badschema0():

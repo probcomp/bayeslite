@@ -17,11 +17,13 @@
 # XXX This module would be called `import', but Python won't let me
 # use Python keywords as module names.
 
+import itertools
 import math
 
 import bayeslite.core as core
 
 from bayeslite.sqlite3_util import sqlite3_quote_name
+from bayeslite.util import casefold
 from bayeslite.util import unique
 
 # XXX The schema language here, such as it is, is pretty limited.
@@ -55,31 +57,63 @@ def bayesdb_import(bdb, table, column_names, rows, column_types=None,
         _bayesdb_import(bdb, table, column_names, rows, column_types)
 
 def _bayesdb_import(bdb, table, column_names, rows, column_types):
+    # Map the case-folded names to their positions.
+    column_names_folded = {}
+    for i, name in enumerate(column_names):
+        if casefold(name) in column_names_folded:
+            raise IOError("Column names differ only in case: %s, %s" %
+                (column_names[column_names_folded[casefold(name)]], name))
+        column_names_folded[casefold(name)] = i
+    assert len(column_names_folded) == len(column_names)
+
+    # Determine the column types.
     if column_types is None:
         column_types = bayesdb_import_guess_column_types(column_names, rows)
     else:
         if len(column_types) != len(column_names):
             raise IOError("Imported data has %d columns, expected %d" %
                 (len(column_names), len(column_types)))
-        for name in column_names:
-            if name not in column_types:
+        for name in column_types:
+            if casefold(name) not in column_names_folded:
                 # XXX Ignore this column?  Treat as numerical?  Infer?
                 raise IOError("Imported data has unknown column: %s" % (name,))
-    ncols = len(column_names)
-    assert ncols == len(column_types)
+
+    # Determine the non-ignored columns.
+    column_types_folded = dict((casefold(name), column_types[name])
+        for name in column_types)
+    nonignored_indices = []
+    for i, name in enumerate(column_names):
+        if column_types_folded[casefold(name)] == "ignore":
+            continue
+        nonignored_indices.append(i)
+    nonignored_column_names = [column_names[i] for i in nonignored_indices]
+    nonignored_column_types = dict((name, column_types[name])
+        for name in column_types if column_types[name] != "ignore")
+    nonignored_column_types_folded = dict((name, column_types_folded[name])
+        for name in column_types_folded
+        if column_types_folded[name] != "ignore")
+
+    # Generate the SQL schema.
+    ncols = len(nonignored_column_names)
+    assert ncols == len(nonignored_column_types)
     qt = sqlite3_quote_name(table)
-    table_def = bayesdb_table_definition(table, column_names, column_types)
+    table_def = bayesdb_table_definition(table, nonignored_column_names,
+        nonignored_column_types_folded)
+
+    # Instantiate the SQL schema and import the data.
     with bdb.savepoint():
         bdb.sqlite.execute(table_def)
-        qcns = ",".join(map(sqlite3_quote_name, column_names))
+        qcns = ",".join(map(sqlite3_quote_name, nonignored_column_names))
         qcps = ",".join("?" * ncols)
         insert_sql = "INSERT INTO %s (%s) VALUES (%s)" % (qt, qcns, qcps)
-        bdb.sqlite.executemany(insert_sql, rows)
-        core.bayesdb_import_sqlite_table(bdb, table, column_names,
-            column_types)
+        bdb.sqlite.executemany(insert_sql,
+            (tuple(row[i] for i in nonignored_indices) for row in rows))
+        core.bayesdb_import_sqlite_table(bdb, table, nonignored_column_names,
+            nonignored_column_types)
 
-def bayesdb_table_definition(table, column_names, column_types):
-    column_defs = [bayesdb_column_definition(name, column_types[name])
+def bayesdb_table_definition(table, column_names, column_types_folded):
+    column_defs = [bayesdb_column_definition(name,
+            column_types_folded[casefold(name)])
         for name in column_names]
     qt = sqlite3_quote_name(table)
     return ("CREATE TABLE %s (%s)" % (qt, ",".join(column_defs)))

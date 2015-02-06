@@ -162,11 +162,15 @@ def bayesdb_import_sqlite_table(bdb, table,
                 VALUES (?, ?, ?)
             """
             bdb.sqlite.execute(column_sql, (table_id, name, colno))
-
+
 def bayesdb_determine_columns(bdb, table, column_names, column_types):
+    # Find the columns as SQLite knows about them.
     qt = sqlite3_quote_name(table)
     cursor = bdb.sqlite.execute("PRAGMA table_info(%s)" % (qt,))
     column_descs = cursor.fetchall()
+
+    # Determine the column names, which must all be among the ones
+    # SQLite knows about.
     if column_names is None:
         column_names = [name for _i, name, _t, _n, _d, _p in column_descs]
     else:
@@ -175,24 +179,36 @@ def bayesdb_determine_columns(bdb, table, column_names, column_types):
         assert len(column_name_superset) == len(column_descs)
         for name in column_names:
             if casefold(name) not in column_name_superset:
-                raise ValueError("Unknown column: %s" % (name,))
-    column_name_set = set(casefold(name) for name in column_names)
-    if len(column_name_set) < len(column_names):
-        raise ValueError("Column names differ only by case: %s" %
-            (column_names,))
+                raise ValueError("Unknown column named: %s" % (name,))
+
+    # Make sure there are no names that differ only by case.
+    column_names_folded = {}
+    for name in column_names:
+        if casefold(name) in column_names_folded:
+            raise ValueError("Column names differ only in case: %s, %s" %
+                (column_names_folded[casefold(name)], name))
+        column_names_folded[casefold(name)] = name
+
+    # Determine the column types.  If none are given, guess them from
+    # the data in the table; otherwise, make sure every name in
+    # column_types appears in the list of column names.
     if column_types is None:
         column_types = dict(bayesdb_guess_column(bdb, table, desc)
-            for desc in column_descs if desc[1] in column_name_set)
+            for desc in column_descs
+            if casefold(desc[1]) in column_names_folded)
     else:
         for name in column_types:
-            if casefold(name) not in column_name_set:
-                raise ValueError("Unknown column: %s" % (name,))
-        column_types_name_set = set(casefold(name) for name in column_types)
-        for name in column_name_set:
-            if name not in column_types_name_set:
-                raise ValueError("Unknown column: %s" % (name,))
-        if "rowid" in column_types_name_set:
-            raise ValueError("Can't use rowid!")
+            if casefold(name) not in column_names_folded:
+                raise ValueError("Unknown column typed: %s" % (name,))
+
+    # Make sure every column named is given a type.
+    column_types_folded = dict((casefold(name), column_types[name])
+        for name in column_types)
+    for name in column_names_folded:
+        if name not in column_types_folded:
+            raise ValueError("Named column missing type: %s" % (name,))
+
+    # Make sure there's at most one key column.
     key = None
     for name in column_types:
         if column_types[name] == "key":
@@ -200,23 +216,26 @@ def bayesdb_determine_columns(bdb, table, column_names, column_types):
                 key = name
             else:
                 raise ValueError("More than one key: %s, %s" % (key, name))
-    if key is None:
-        # XXX Find some way to call it `key', instead of `rowid'?  And
-        # make it start at 0 instead of 1...?
-        #
-        # XXX Quote rowid?  What a pain...  (Could use any of rowid,
-        # _rowid_, or oid in sqlite, but they can all be shadowed.)
-        assert "rowid" not in column_types
-        column_names = ["rowid"] + column_names
-        column_types = column_types.copy()
-        column_types["rowid"] = "key"
-    return column_names, column_types
 
+    # Rip out the key column and the ignored columns.
+    modelled_column_names = [name for name in column_names
+        if column_types_folded[casefold(name)] not in ("key", "ignore")]
+    modelled_column_types = dict((name, column_types[name])
+        for name in column_types
+        if column_types[name] not in ("key", "ignore"))
+
+    # Make sure at least one column is modelled.
+    if len(modelled_column_names) == 0:
+        raise ValueError("No columns to model")
+
+    return modelled_column_names, modelled_column_types
+
 # XXX Pass count_cutoff/ratio_cutoff through from above.
 def bayesdb_guess_column(bdb, table, column_desc,
         count_cutoff=20, ratio_cutoff=0.02):
     (_cid, column_name, _sql_type, _nonnull, _default, primary_key) = \
         column_desc
+    # XXXX Can we ask about unique constraints too?
     if primary_key:
         return (column_name, "key")
     # XXX Use sqlite column type as a heuristic?  Won't help for CSV.
