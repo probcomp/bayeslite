@@ -68,7 +68,7 @@ class BayesDB(core.IBayesDB):
 
     @contextlib.contextmanager
     def savepoint(self):
-        """Enter a savepoint.  On return, commit; on exception, roll back.
+        """Savepoint context.  On return, commit; on exception, roll back.
 
         Savepoints may be nested.  Parsed metadata and models are
         cached in Python during a savepoint.

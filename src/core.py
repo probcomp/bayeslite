@@ -89,8 +89,9 @@ class IBayesDB(object):
         """Execute a BQL query and return a cursor for its results."""
         raise NotImplementedError
 
+    @contextlib.contextmanager
     def savepoint(self):
-        """Enter a savepoint.  On return, commit; on exception, roll back.
+        """Savepoint context.  On return, commit; on exception, roll back.
 
         Savepoints may be nested.
         """
