@@ -30,8 +30,7 @@ class BayesDB(core.IBayesDB):
     Interface is loosely based on PEP-249 DB-API.
     """
 
-    def __init__(self, engine, pathname=":memory:"):
-        self.engine = engine
+    def __init__(self, pathname=":memory:"):
         # isolation_level=None actually means that the sqlite3 module
         # will not randomly begin and commit transactions where we
         # didn't ask it to.
@@ -39,6 +38,8 @@ class BayesDB(core.IBayesDB):
         self.txn_depth = 0
         self.metadata_cache = None
         self.models_cache = None
+        self.metamodels_by_id = {}
+        self.default_metamodel_id = None
         schema.bayesdb_install_schema(self.sqlite)
         core.bayesdb_install_bql(self.sqlite, self)
 

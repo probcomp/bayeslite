@@ -69,12 +69,13 @@ bayesdb_type_table = [
 class IBayesDB(object):
     """Interface of Bayesian databases."""
 
-    def __init__(self, engine):
-        self.engine = engine
+    def __init__(self):
         self.sqlite = None
         self.txn_depth = 0
         self.metadata_cache = None
         self.models_cache = None
+        self.metamodels_by_id = {}
+        self.default_metamodel_id = None
         raise NotImplementedError
 
     def close(self):
@@ -122,6 +123,29 @@ def bayesdb_bql(fn, cookie, *args):
     except Exception as e:
         print traceback.format_exc()
         raise e
+
+def bayesdb_register_metamodel(bdb, name, engine):
+    with bdb.savepoint():
+        # Name it in the SQL database.
+        insert_sql = """
+            INSERT OR IGNORE INTO bayesdb_metamodel (name) VALUES (?)
+        """
+        bdb.sqlite.execute(insert_sql, (name,))
+        # Associate it with the engine by id.
+        #
+        # XXX Can't use lastrowid here because
+        # sqlite3_last_insert_rowid doesn't consider INSERT OR IGNORE
+        # to be successful if it has to ignore the insertion, even
+        # though the obvious sensible thing to do is to return the
+        # existing rowid.
+        lookup_sql = "SELECT id FROM bayesdb_metamodel WHERE name = ?"
+        metamodel_id = sqlite3_exec_1(bdb, lookup_sql, (name,))
+        bdb.metamodels_by_id[metamodel_id] = engine
+
+def bayesdb_set_default_metamodel(bdb, name):
+    lookup_sql = "SELECT id FROM bayesdb_metamodel WHERE name = ?"
+    metamodel_id = sqlite3_exec_1(bdb, lookup_sql, (name,))
+    bdb.default_metamodel_id = metamodel_id
 
 ### Importing SQLite tables
 
@@ -140,7 +164,7 @@ def bayesdb_attach_sqlite_file(bdb, name, pathname):
 #
 # XXX Allow ignored columns?
 def bayesdb_import_sqlite_table(bdb, table,
-        column_names=None, column_types=None):
+        column_names=None, column_types=None, metamodel=None):
     """Import a SQLite table for use in a BayesDB with BQL.
 
     COLUMN_NAMES is a list specifying the desired order and selection
@@ -153,8 +177,20 @@ def bayesdb_import_sqlite_table(bdb, table,
     metadata_json = json.dumps(metadata)
     # XXX Check that rowids are contiguous.
     with bdb.savepoint():
-        table_sql = "INSERT INTO bayesdb_table (name, metadata) VALUES (?, ?)"
-        table_cursor = bdb.sqlite.execute(table_sql, (table, metadata_json))
+        metamodel_id = None
+        if metamodel is not None:
+            metamodel_sql = "SELECT id FROM bayesdb_metamodel WHERE name = ?"
+            metamodel_id = sqlite3_exec_1(bdb, metamodel_sql, (metamodel,))
+        elif bdb.default_metamodel_id is not None:
+            metamodel_id = bdb.default_metamodel_id
+        else:
+            raise ValueError("No metamodel given and no default metamodel!")
+        table_sql = """
+            INSERT INTO bayesdb_table (name, metamodel_id, metadata)
+                VALUES (?, ?, ?)
+        """
+        table_bindings = (table, metamodel_id, metadata_json)
+        table_cursor = bdb.sqlite.execute(table_sql, table_bindings)
         table_id = table_cursor.lastrowid
         assert table_id is not None
         for colno, name in enumerate(column_names):
@@ -371,6 +407,15 @@ def bayesdb_table_id(bdb, table_name):
     sql = "SELECT id FROM bayesdb_table WHERE name = ?"
     return sqlite3_exec_1(bdb.sqlite, sql, (table_name,))
 
+def bayesdb_table_engine(bdb, table_id):
+    sql = "SELECT metamodel_id FROM bayesdb_table WHERE id = ?"
+    metamodel_id = sqlite3_exec_1(bdb.sqlite, sql, (table_id,))
+    if metamodel_id not in bdb.metamodels_by_id:
+        sql = "SELECT name FROM bayesdb_metamodel WHERE id = ?"
+        metamodel_name = sqlite3_exec_1(bdb.sqlite, sql, (metamodel_id,))
+        raise ValueError("No engine for metamodel: %s", (metamodel_name,))
+    return bdb.metamodels_by_id[metamodel_id]
+
 def bayesdb_column_names(bdb, table_id):
     sql = """
         SELECT name FROM bayesdb_table_column WHERE table_id = ? ORDER BY colno
@@ -412,14 +457,13 @@ def bayesdb_cell_value(bdb, table_id, rowid, colno):
 
 ### BayesDB model access
 
-def bayesdb_init_model(bdb, table_id, modelno, engine_id, theta,
-        ifnotexists=False):
+def bayesdb_init_model(bdb, table_id, modelno, theta, ifnotexists=False):
     insert_sql = """
-        INSERT %s INTO bayesdb_model (table_id, modelno, engine_id, theta)
-        VALUES (?, ?, ?, ?)
+        INSERT %s INTO bayesdb_model (table_id, modelno, theta)
+        VALUES (?, ?, ?)
     """ % ("OR IGNORE" if ifnotexists else "")
     theta_json = json.dumps(theta)
-    bdb.sqlite.execute(insert_sql, (table_id, modelno, engine_id, theta_json))
+    bdb.sqlite.execute(insert_sql, (table_id, modelno, theta_json))
     if bdb.models_cache is not None:
         key = (table_id, modelno)
         if ifnotexists:
@@ -506,14 +550,13 @@ def bayesdb_models_initialize(bdb, table_id, nmodels, model_config=None,
             return
     assert model_config is None         # XXX For now.
     assert 0 < nmodels
-    engine_sql = "SELECT id FROM bayesdb_engine WHERE name = ?"
-    engine_id = sqlite3_exec_1(bdb.sqlite, engine_sql, ("crosscat",)) # XXX
+    engine = bayesdb_table_engine(bdb, table_id)
     model_config = {
         "kernel_list": (),
         "initialization": "from_the_prior",
         "row_initialization": "from_the_prior",
     }
-    X_L_list, X_D_list = bdb.engine.initialize(
+    X_L_list, X_D_list = engine.initialize(
         M_c=bayesdb_metadata(bdb, table_id),
         M_r=None,            # XXX
         T=list(bayesdb_data(bdb, table_id)),
@@ -535,7 +578,7 @@ def bayesdb_models_initialize(bdb, table_id, nmodels, model_config=None,
                 "num_views": [],
                 "model_config": model_config,
             }
-            bayesdb_init_model(bdb, table_id, modelno, engine_id, theta,
+            bayesdb_init_model(bdb, table_id, modelno, theta,
                 ifnotexists=ifnotexists)
 
 # XXX Background, deadline, &c.
@@ -548,7 +591,8 @@ def bayesdb_models_analyze1(bdb, table_id, modelno, iterations=1):
     theta = bayesdb_model(bdb, table_id, modelno)
     if iterations < 1:
         return
-    X_L, X_D, diagnostics = bdb.engine.analyze(
+    engine = bayesdb_table_engine(bdb, table_id)
+    X_L, X_D, diagnostics = engine.analyze(
         M_c=bayesdb_metadata(bdb, table_id),
         T=list(bayesdb_data(bdb, table_id)),
         do_diagnostics=True,
@@ -599,7 +643,7 @@ def bql_column_correlation(bdb, table_id, colno0, colno1):
         return 0
     assert n == len(data0)
     assert n == len(data1)
-    # XXX Push this into the engine.
+    # XXX Push this into the metamodel.
     modeltype0 = M_c["column_metadata"][colno0]["modeltype"]
     modeltype1 = M_c["column_metadata"][colno1]["modeltype"]
     correlation = float("NaN")  # Default result.
@@ -654,7 +698,7 @@ def bql_column_correlation(bdb, table_id, colno0, colno1):
 
 # Two-column function:  DEPENDENCE PROBABILITY [OF <col0> WITH <col1>]
 def bql_column_dependence_probability(bdb, table_id, colno0, colno1):
-    # XXX Push this into the engine.
+    # XXX Push this into the metamodel.
     if colno0 == colno1:
         return 1
     count = 0
@@ -672,9 +716,10 @@ def bql_column_dependence_probability(bdb, table_id, colno0, colno1):
 # Two-column function:  MUTUAL INFORMATION [OF <col0> WITH <col1>]
 def bql_column_mutual_information(bdb, table_id, colno0, colno1,
         numsamples=100):
+    engine = bayesdb_table_engine(bdb, table_id)
     X_L_list = list(bayesdb_latent_state(bdb, table_id))
     X_D_list = list(bayesdb_latent_data(bdb, table_id))
-    r = bdb.engine.mutual_information(
+    r = engine.mutual_information(
         M_c=bayesdb_metadata(bdb, table_id),
         X_L_list=X_L_list,
         X_D_list=X_D_list,
@@ -691,13 +736,15 @@ def bql_column_mutual_information(bdb, table_id, colno0, colno1,
 
 # One-column function:  TYPICALITY OF <col>
 def bql_column_typicality(bdb, table_id, colno):
-    return bdb.engine.column_structural_typicality(
+    engine = bayesdb_table_engine(bdb, table_id)
+    return engine.column_structural_typicality(
         X_L_list=list(bayesdb_latent_state(bdb, table_id)),
         col_id=colno
     )
 
 # One-column function:  PROBABILITY OF <col>=<value>
 def bql_column_value_probability(bdb, table_id, colno, value):
+    engine = bayesdb_table_engine(bdb, table_id)
     M_c = bayesdb_metadata(bdb, table_id)
     try:
         code = bayesdb_value_to_code(M_c, colno, value)
@@ -707,7 +754,7 @@ def bql_column_value_probability(bdb, table_id, colno, value):
     X_D_list = list(bayesdb_latent_data(bdb, table_id))
     # Fabricate a nonexistent (`unobserved') row id.
     fake_row_id = len(X_D_list[0][0])
-    r = bdb.engine.simple_predictive_probability_multistate(
+    r = engine.simple_predictive_probability_multistate(
         M_c=M_c,
         X_L_list=X_L_list,
         X_D_list=X_D_list,
@@ -720,7 +767,8 @@ def bql_column_value_probability(bdb, table_id, colno, value):
 
 # Row function:  SIMILARITY TO <target_row> [WITH RESPECT TO <columns>]
 def bql_row_similarity(bdb, table_id, rowid, target_rowid, *columns):
-    return bdb.engine.similarity(
+    engine = bayesdb_table_engine(bdb, table_id)
+    return engine.similarity(
         M_c=bayesdb_metadata(bdb, table_id),
         X_L_list=list(bayesdb_latent_state(bdb, table_id)),
         X_D_list=list(bayesdb_latent_data(bdb, table_id)),
@@ -731,7 +779,8 @@ def bql_row_similarity(bdb, table_id, rowid, target_rowid, *columns):
 
 # Row function:  TYPICALITY
 def bql_row_typicality(bdb, table_id, rowid):
-    return bdb.engine.row_structural_typicality(
+    engine = bayesdb_table_engine(bdb, table_id)
+    return engine.row_structural_typicality(
         X_L_list=list(bayesdb_latent_state(bdb, table_id)),
         X_D_list=list(bayesdb_latent_data(bdb, table_id)),
         row_id=sqlite3_rowid_to_engine_row_id(rowid)
@@ -739,10 +788,11 @@ def bql_row_typicality(bdb, table_id, rowid):
 
 # Row function:  PREDICTIVE PROBABILITY OF <column>
 def bql_row_column_predictive_probability(bdb, table_id, rowid, colno):
+    engine = bayesdb_table_engine(bdb, table_id)
     M_c = bayesdb_metadata(bdb, table_id)
     value = bayesdb_cell_value(bdb, table_id, rowid, colno)
     code = bayesdb_value_to_code(M_c, colno, value)
-    r = bdb.engine.simple_predictive_probability_multistate(
+    r = engine.simple_predictive_probability_multistate(
         M_c=M_c,
         X_L_list=list(bayesdb_latent_state(bdb, table_id)),
         X_D_list=list(bayesdb_latent_data(bdb, table_id)),
@@ -757,6 +807,7 @@ def bql_infer(bdb, table_id, colno, rowid, value, confidence_threshold,
         numsamples=1):
     if value is not None:
         return value
+    engine = bayesdb_table_engine(bdb, table_id)
     M_c = bayesdb_metadata(bdb, table_id)
     column_names = bayesdb_column_names(bdb, table_id)
     qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
@@ -767,7 +818,7 @@ def bql_infer(bdb, table_id, colno, rowid, value, confidence_threshold,
     assert row is not None
     assert c.fetchone() is None
     row_id = sqlite3_rowid_to_engine_row_id(rowid)
-    code, confidence = bdb.engine.impute_and_confidence(
+    code, confidence = engine.impute_and_confidence(
         M_c=M_c,
         X_L=list(bayesdb_latent_state(bdb, table_id)),
         X_D=list(bayesdb_latent_data(bdb, table_id)),
@@ -783,6 +834,7 @@ def bql_infer(bdb, table_id, colno, rowid, value, confidence_threshold,
 
 # XXX Create a virtual table that simulates results?
 def bayesdb_simulate(bdb, table_id, constraints, colnos, numpredictions=1):
+    engine = bayesdb_table_engine(bdb, table_id)
     M_c = bayesdb_metadata(bdb, table_id)
     qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
     max_rowid = sqlite3_exec_1(bdb.sqlite, "SELECT max(rowid) FROM %s" % (qt,))
@@ -793,7 +845,7 @@ def bayesdb_simulate(bdb, table_id, constraints, colnos, numpredictions=1):
     if constraints is not None:
         Y = [(fake_row_id, colno, bayesdb_value_to_code(M_c, colno, value))
              for colno, value in constraints]
-    raw_outputs = bdb.engine.simple_predictive_sample(
+    raw_outputs = engine.simple_predictive_sample(
         M_c=M_c,
         X_L=list(bayesdb_latent_state(bdb, table_id)),
         X_D=list(bayesdb_latent_data(bdb, table_id)),

@@ -36,7 +36,7 @@ allowed_column_types = {
 }
 
 def bayesdb_load_legacy_models(bdb, table_name, pathname, ifnotexists=False,
-        gzipped=None):
+        gzipped=None, metamodel=None):
 
     # Load the pickled file -- gzipped, if gzipped is true or if
     # gzipped is not specified and the file ends in .pkl.gz.
@@ -78,6 +78,7 @@ def bayesdb_load_legacy_models(bdb, table_name, pathname, ifnotexists=False,
     # XXX Check whether the schema resembles a sane btable schema.
     # XXX Check whether models is a dict mapping integers to thetas.
     # XXX Check whether the thetas look sensible.
+    # XXX Check whether the metamodel makes sense of it!
 
     column_types = dict((casefold(column_name),
                          casefold(schema[column_name]['cctype']))
@@ -119,10 +120,6 @@ def bayesdb_load_legacy_models(bdb, table_name, pathname, ifnotexists=False,
         modelno_max = sqlite3_exec_1(bdb.sqlite, modelno_max_sql, (table_id,))
         modelno_start = 0 if modelno_max is None else modelno_max + 1
 
-        # XXX Urk.  Need a serious story about engine identifiers.
-        engine_sql = 'SELECT id FROM bayesdb_engine WHERE name = ?'
-        engine_id = sqlite3_exec_1(bdb.sqlite, engine_sql, ('crosscat',))
-
         # Consistently number the models consecutively in order of the
         # external numbering starting at the smallest nonnegative
         # model number not currently used.  Do not vary based on the
@@ -130,7 +127,7 @@ def bayesdb_load_legacy_models(bdb, table_name, pathname, ifnotexists=False,
         for i, modelno_ext in enumerate(sorted(models.keys())):
             modelno = modelno_start + i
             theta = models[modelno_ext]
-            core.bayesdb_init_model(bdb, table_id, modelno, engine_id, theta)
+            core.bayesdb_init_model(bdb, table_id, modelno, theta)
 
 def bayesdb_column_types(bdb, table_id):
     M_c = core.bayesdb_metadata(bdb, table_id)

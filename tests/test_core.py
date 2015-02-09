@@ -20,7 +20,7 @@ import pytest
 import sqlite3
 import tempfile
 
-import crosscat.CrossCatClient
+import crosscat.LocalEngine
 
 import bayeslite
 import bayeslite.core as core
@@ -34,13 +34,17 @@ def powerset(s):
     return itertools.chain.from_iterable(combinations)
 
 def local_crosscat():
-    return crosscat.CrossCatClient.get_CrossCatClient('local', seed=0)
+    return crosscat.LocalEngine.LocalEngine(seed=0)
 
 @contextlib.contextmanager
-def bayesdb(engine=None, **kwargs):
+def bayesdb(metamodel=None, engine=None, **kwargs):
+    if metamodel is None:
+        metamodel = 'crosscat'
     if engine is None:
         engine = local_crosscat()
-    bdb = bayeslite.BayesDB(engine, **kwargs)
+    bdb = bayeslite.BayesDB(**kwargs)
+    bayeslite.bayesdb_register_metamodel(bdb, metamodel, engine)
+    bayeslite.bayesdb_set_default_metamodel(bdb, metamodel)
     try:
         yield bdb
     finally:
@@ -54,7 +58,7 @@ def test_bad_db_application_id():
     with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
         with sqlite3.connect(f.name, isolation_level=None) as db:
             db.execute('PRAGMA application_id = 42')
-            db.execute('PRAGMA user_version = 2')
+            db.execute('PRAGMA user_version = 3')
         with pytest.raises(IOError):
             with bayesdb(pathname=f.name):
                 pass
@@ -69,6 +73,35 @@ def test_bad_db_user_version():
         with pytest.raises(IOError):
             with bayesdb(pathname=f.name):
                 pass
+
+def test_hackmetamodel():
+    bdb = bayeslite.BayesDB()
+    bdb.sqlite.execute('CREATE TABLE t(a INTEGER, b TEXT)')
+    bdb.sqlite.execute("INSERT INTO t (a, b) VALUES (42, 'fnord')")
+    bdb.sqlite.execute('CREATE TABLE u AS SELECT * FROM t')
+    with pytest.raises(ValueError):
+        bayeslite.bayesdb_import_sqlite_table(bdb, 't')
+    # XXX Fails with an assert instead.  Fix me!
+    # with pytest.raises(ValueError):
+    #     bayeslite.bayesdb_import_sqlite_table(bdb, 't', metamodel='dotdog')
+    bayeslite.bayesdb_register_metamodel(bdb, 'dotdog', local_crosscat())
+    with pytest.raises(ValueError):
+        bayeslite.bayesdb_import_sqlite_table(bdb, 't')
+    # XXX Fails with an assert instead.  Fix me!
+    # with pytest.raises(ValueError):
+    #     bayeslite.bayesdb_import_sqlite_table(bdb, 't', metamodel='crosscat')
+    bayeslite.bayesdb_import_sqlite_table(bdb, 't', metamodel='dotdog')
+    with pytest.raises(sqlite3.IntegrityError):
+        bayeslite.bayesdb_import_sqlite_table(bdb, 't', metamodel='dotdog')
+    bayeslite.bayesdb_set_default_metamodel(bdb, 'dotdog')
+    # XXX Fails with an assert instead.  Fix me!
+    # with pytest.raises(ValueError):
+    #     bayeslite.bayesdb_import_sqlite_table(bdb, 'u', metamodel='crosscat')
+    bayeslite.bayesdb_import_sqlite_table(bdb, 'u')
+    with pytest.raises(sqlite3.IntegrityError):
+        bayeslite.bayesdb_import_sqlite_table(bdb, 'u')
+    with pytest.raises(sqlite3.IntegrityError):
+        bayeslite.bayesdb_import_sqlite_table(bdb, 'u', metamodel='dotdog')
 
 @contextlib.contextmanager
 def sqlite_bayesdb_table(mkbdb, name, schema, data, **kwargs):

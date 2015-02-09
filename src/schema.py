@@ -21,20 +21,19 @@ from bayeslite.sqlite3_util import sqlite3_exec_1
 bayesdb_schema = """
 PRAGMA foreign_keys = ON;
 PRAGMA application_id = 1113146434; -- #x42594442, `BYDB'
-PRAGMA user_version = 2;
+PRAGMA user_version = 3;
 
 BEGIN;
-CREATE TABLE bayesdb_engine (
+CREATE TABLE bayesdb_metamodel (
 	id		INTEGER NOT NULL UNIQUE PRIMARY KEY CHECK (id >= 0),
 	name		TEXT COLLATE NOCASE NOT NULL UNIQUE
 );
-
-INSERT INTO bayesdb_engine (id, name) VALUES (0, 'crosscat');
 
 CREATE TABLE bayesdb_table (
 	id		INTEGER NOT NULL UNIQUE PRIMARY KEY CHECK (id >= 0),
 	name		TEXT COLLATE NOCASE NOT NULL UNIQUE,
 				-- REFERENCES sqlite_master(name)
+	metamodel_id	INTEGER NOT NULL REFERENCES bayesdb_metamodel(id),
 	metadata	BLOB NOT NULL
 );
 
@@ -47,13 +46,9 @@ CREATE TABLE bayesdb_table_column (
 	UNIQUE (table_id, colno)
 );
 
--- XXX Include the engine in the primary key, or move engine to
--- bayesdb_table and allow multiple bayesdb `tables' (i.e., generative
--- model schemas) per sqlite table.
 CREATE TABLE bayesdb_model (
 	table_id	INTEGER NOT NULL REFERENCES bayesdb_table(id),
 	modelno		INTEGER NOT NULL CHECK (modelno >= 0),
-	engine_id	INTEGER NOT NULL REFERENCES bayesdb_engine(id),
 	theta		BLOB NOT NULL,
 	PRIMARY KEY (table_id, modelno)
 );
@@ -63,8 +58,6 @@ COMMIT;
 ### BayesDB SQLite setup
 
 def bayesdb_install_schema(db):
-    # XXX Check the engine too, and/or add support for multiple
-    # simultaneous engines.
     application_id = sqlite3_exec_1(db, "PRAGMA application_id")
     user_version = sqlite3_exec_1(db, "PRAGMA user_version")
     if application_id == 0 and user_version == 0:
@@ -90,8 +83,8 @@ def bayesdb_install_schema(db):
         with db:
             db.executescript(bayesdb_schema)
         assert sqlite3_exec_1(db, "PRAGMA application_id") == 0x42594442
-        assert sqlite3_exec_1(db, "PRAGMA user_version") == 2
+        assert sqlite3_exec_1(db, "PRAGMA user_version") == 3
     elif application_id != 0x42594442:
         raise IOError("Invalid application_id: 0x%08x" % application_id)
-    elif user_version != 2:
+    elif user_version != 3:
         raise IOError("Unknown database version: %d" % user_version)

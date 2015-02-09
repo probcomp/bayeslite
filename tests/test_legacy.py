@@ -17,15 +17,17 @@
 import os
 
 import bayeslite
-import crosscat.LocalEngine as localengine
+import crosscat.LocalEngine
 
 root = os.path.dirname(os.path.abspath(__file__))
 dha_csv = root + '/dha.csv'
 dha_models = root + '/dha_models.pkl.gz'
 
 def test_legacy_models():
-    engine = localengine.LocalEngine(seed=0)
-    bdb = bayeslite.BayesDB(engine, ':memory:')
+    bdb = bayeslite.BayesDB()
+    engine = crosscat.LocalEngine.LocalEngine(seed=0)
+    bayeslite.bayesdb_register_metamodel(bdb, 'crosscat', engine)
+    bayeslite.bayesdb_set_default_metamodel(bdb, 'crosscat')
     bayeslite.bayesdb_import_csv_file(bdb, 'dha', dha_csv)
     bayeslite.bayesdb_load_legacy_models(bdb, 'dha', dha_models)
     bql = '''
