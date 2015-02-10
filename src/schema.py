@@ -16,12 +16,15 @@
 
 from bayeslite.sqlite3_util import sqlite3_exec_1
 
-bayesdb_schema = """
+# Pragmas that must go outside any transaction.
+bayesdb_pragmas = """
 PRAGMA foreign_keys = ON;
+"""
+
+bayesdb_schema = """
 PRAGMA application_id = 1113146434; -- #x42594442, `BYDB'
 PRAGMA user_version = 3;
 
-BEGIN;
 CREATE TABLE bayesdb_metamodel (
 	id		INTEGER NOT NULL UNIQUE PRIMARY KEY CHECK (id >= 0),
 	name		TEXT COLLATE NOCASE NOT NULL UNIQUE
@@ -50,7 +53,6 @@ CREATE TABLE bayesdb_model (
 	theta		BLOB NOT NULL,
 	PRIMARY KEY (table_id, modelno)
 );
-COMMIT;
 """
 
 ### BayesDB SQLite setup
@@ -69,14 +71,9 @@ def bayesdb_install_schema(db):
         # cursor execution.  If this were the builtin Python sqlite3
         # module, we'd have to use db.executescript (and a kludgey
         # workaround for the transactional semantics).
-        try:
+        db.cursor().execute(bayesdb_pragmas)
+        with db:
             db.cursor().execute(bayesdb_schema)
-        except Exception:
-            try:
-                db.cursor().execute("ROLLBACK")
-            except apsw.Error:
-                pass
-            raise
         assert sqlite3_exec_1(db, "PRAGMA application_id") == 0x42594442
         assert sqlite3_exec_1(db, "PRAGMA user_version") == 3
     elif application_id != 0x42594442:
