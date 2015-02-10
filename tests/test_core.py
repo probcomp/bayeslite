@@ -14,10 +14,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import apsw
 import contextlib
 import itertools
 import pytest
-import sqlite3
 import tempfile
 
 import crosscat.LocalEngine
@@ -56,9 +56,9 @@ def test_openclose():
 
 def test_bad_db_application_id():
     with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
-        with sqlite3.connect(f.name, isolation_level=None) as db:
-            db.execute('PRAGMA application_id = 42')
-            db.execute('PRAGMA user_version = 3')
+        with apsw.Connection(f.name) as db:
+            db.cursor().execute('PRAGMA application_id = 42')
+            db.cursor().execute('PRAGMA user_version = 3')
         with pytest.raises(IOError):
             with bayesdb(pathname=f.name):
                 pass
@@ -67,9 +67,9 @@ def test_bad_db_user_version():
     # XXX Would be nice to avoid a named temporary file here.  Pass
     # the sqlite3 database connection in?
     with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
-        with sqlite3.connect(f.name, isolation_level=None) as db:
-            db.execute('PRAGMA application_id = 1113146434')
-            db.execute('PRAGMA user_version = 42')
+        with apsw.Connection(f.name) as db:
+            db.cursor().execute('PRAGMA application_id = 1113146434')
+            db.cursor().execute('PRAGMA user_version = 42')
         with pytest.raises(IOError):
             with bayesdb(pathname=f.name):
                 pass
@@ -91,16 +91,16 @@ def test_hackmetamodel():
     # with pytest.raises(ValueError):
     #     bayeslite.bayesdb_import_sqlite_table(bdb, 't', metamodel='crosscat')
     bayeslite.bayesdb_import_sqlite_table(bdb, 't', metamodel='dotdog')
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(apsw.ConstraintError):
         bayeslite.bayesdb_import_sqlite_table(bdb, 't', metamodel='dotdog')
     bayeslite.bayesdb_set_default_metamodel(bdb, 'dotdog')
     # XXX Fails with an assert instead.  Fix me!
     # with pytest.raises(ValueError):
     #     bayeslite.bayesdb_import_sqlite_table(bdb, 'u', metamodel='crosscat')
     bayeslite.bayesdb_import_sqlite_table(bdb, 'u')
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(apsw.ConstraintError):
         bayeslite.bayesdb_import_sqlite_table(bdb, 'u')
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(apsw.ConstraintError):
         bayeslite.bayesdb_import_sqlite_table(bdb, 'u', metamodel='dotdog')
 
 @contextlib.contextmanager
@@ -136,7 +136,7 @@ def test_casefold_colname():
             pass
         return sqlite_bayesdb_table(bayesdb(), name, schema, data, *args,
             **kwargs)
-    with pytest.raises(sqlite3.OperationalError):
+    with pytest.raises(apsw.SQLError):
         with t('t', 'create table t(x, X)'):
             pass
     with pytest.raises(ValueError):

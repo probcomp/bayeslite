@@ -38,6 +38,7 @@ import json
 import math
 
 from bayeslite.sqlite3_util import sqlite3_quote_name
+from bayeslite.sqlite3_util import sqlite3_last_insert_rowid
 
 from bayeslite.util import arithmetic_mean
 from bayeslite.util import casefold
@@ -101,8 +102,8 @@ class IBayesDB(object):
 
 def bayesdb_install_bql(db, cookie):
     def function(name, nargs, fn):
-        db.create_function(name, nargs,
-            lambda *args: bayesdb_bql(fn, cookie, *args))
+        fn_wrapper = lambda *args: bayesdb_bql(fn, cookie, *args)
+        db.createscalarfunction(name, fn_wrapper, nargs)
     function("bql_column_correlation", 3, bql_column_correlation)
     function("bql_column_dependence_probability", 3,
         bql_column_dependence_probability)
@@ -134,11 +135,10 @@ def bayesdb_register_metamodel(bdb, name, engine):
         bdb.sql_execute(insert_sql, (name,))
         # Associate it with the engine by id.
         #
-        # XXX Can't use lastrowid here because
-        # sqlite3_last_insert_rowid doesn't consider INSERT OR IGNORE
-        # to be successful if it has to ignore the insertion, even
-        # though the obvious sensible thing to do is to return the
-        # existing rowid.
+        # XXX Can't use sqlite3_last_insert_rowid here because it
+        # doesn't consider INSERT OR IGNORE to be successful if it has
+        # to ignore the insertion, even though the obvious sensible
+        # thing to do is to return the existing rowid.
         lookup_sql = "SELECT id FROM bayesdb_metamodel WHERE name = ?"
         metamodel_id = bayesdb_sql_execute1(bdb, lookup_sql, (name,))
         bdb.metamodels_by_id[metamodel_id] = engine
@@ -193,7 +193,7 @@ def bayesdb_import_sqlite_table(bdb, table,
         """
         table_bindings = (table, metamodel_id, metadata_json)
         table_cursor = bdb.sql_execute(table_sql, table_bindings)
-        table_id = table_cursor.lastrowid
+        table_id = sqlite3_last_insert_rowid(table_cursor)
         assert table_id is not None
         for colno, name in enumerate(column_names):
             column_sql = """
@@ -816,9 +816,17 @@ def bql_infer(bdb, table_id, colno, rowid, value, confidence_threshold,
     qcns = ",".join(map(sqlite3_quote_name, column_names))
     select_sql = "SELECT %s FROM %s WHERE rowid = ?" % (qcns, qt)
     c = bdb.sql_execute(select_sql, (rowid,))
-    row = c.fetchone()
-    assert row is not None
-    assert c.fetchone() is None
+    row = None
+    try:
+        row = c.next()
+    except StopIteration:
+        raise ValueError('Row %u does not exist' % (rowid,))
+    try:
+        c.next()
+    except StopIteration:
+        pass
+    else:
+        raise ValueError('More than one row with id %u' % (rowid,))
     row_id = sqlite3_rowid_to_engine_row_id(rowid)
     code, confidence = engine.impute_and_confidence(
         M_c=M_c,
@@ -922,8 +930,17 @@ def engine_row_id_to_sqlite3_rowid(row_id):
 
 def bayesdb_sql_execute1(bdb, sql, bindings=()):
     cursor = bdb.sql_execute(sql, bindings)
-    row = cursor.fetchone()
-    assert row
-    assert len(row) == 1
-    assert cursor.fetchone() is None
+    row = None
+    try:
+        row = cursor.next()
+    except StopIteration:
+        raise ValueError('Query failed to return one row')
+    if len(row) != 1:
+        raise ValueError('Query failed to return one column')
+    try:
+        cursor.next()
+    except StopIteration:
+        pass
+    else:
+        raise ValueError('Query returned more than one row')
     return row[0]

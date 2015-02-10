@@ -64,5 +64,8 @@ setup(
         'bayeslite': 'src',
         'bayeslite.plex': 'external/plex/dist/Plex',
     },
+    install_requires=[
+        'apsw>=3.8.2-r1',
+    ],
     license='Apache License, Version 2.0',
 )

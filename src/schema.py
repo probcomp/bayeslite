@@ -65,21 +65,18 @@ def bayesdb_install_schema(db):
         # did not have an application_id or user_version set?  Hope
         # everyone else sets application_id and user_version too...
         #
-        # XXX Idiotic Python sqlite3 module has no way to execute a
-        # string with multiple SQL commands that doesn't muck with the
-        # application's transactions -- db.executescript("...") will
-        # issue a COMMIT first, if there is a transaction pending, so
-        # we can't just write
-        #
-        #   with sqlite3_transaction(db):
-        #       db.executescript(bayesdb_schema)
-        #
-        # Instead, we abuse the use of sqlite database connections as
-        # context managers that commit/rollback if there is a
-        # transaction active.  Otherwise we make no use of the sqlite3
-        # module's automatic transaction handling.
-        with db:
-            db.executescript(bayesdb_schema)
+        # XXX We rely on APSW's support for multiple statements per
+        # cursor execution.  If this were the builtin Python sqlite3
+        # module, we'd have to use db.executescript (and a kludgey
+        # workaround for the transactional semantics).
+        try:
+            db.cursor().execute(bayesdb_schema)
+        except Exception:
+            try:
+                db.cursor().execute("ROLLBACK")
+            except apsw.Error:
+                pass
+            raise
         assert sqlite3_exec_1(db, "PRAGMA application_id") == 0x42594442
         assert sqlite3_exec_1(db, "PRAGMA user_version") == 3
     elif application_id != 0x42594442:

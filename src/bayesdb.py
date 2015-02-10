@@ -14,8 +14,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import apsw
 import contextlib
-import sqlite3
 
 import bayeslite.bql as bql
 import bayeslite.core as core
@@ -31,10 +31,7 @@ class BayesDB(core.IBayesDB):
     """
 
     def __init__(self, pathname=":memory:"):
-        # isolation_level=None actually means that the sqlite3 module
-        # will not randomly begin and commit transactions where we
-        # didn't ask it to.
-        self.sqlite3 = sqlite3.connect(pathname, isolation_level=None)
+        self.sqlite3 = apsw.Connection(pathname)
         self.txn_depth = 0
         self.metadata_cache = None
         self.models_cache = None
@@ -91,7 +88,9 @@ class BayesDB(core.IBayesDB):
         """Execute a SQL query on the underlying SQLite database."""
         if self.sql_tracer:
             self.sql_tracer(string, bindings)
-        return self.sqlite3.execute(string, bindings)
+        cursor = self.sqlite3.cursor()
+        cursor.execute(string, bindings)
+        return cursor
 
     @contextlib.contextmanager
     def savepoint(self):

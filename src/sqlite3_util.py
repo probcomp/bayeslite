@@ -25,15 +25,15 @@ def sqlite3_transaction(db):
     Transactions may not be nested.  Use savepoints if you want a
     nestable analogue to transactions.
     """
-    db.execute("BEGIN")
+    db.cursor().execute("BEGIN")
     ok = False
     try:
         yield
-        db.execute("COMMIT")
+        db.cursor().execute("COMMIT")
         ok = True
     finally:
         if not ok:
-            db.execute("ROLLBACK")
+            db.cursor().execute("ROLLBACK")
 
 @contextlib.contextmanager
 def sqlite3_savepoint(db):
@@ -48,15 +48,15 @@ def sqlite3_savepoint(db):
     # as is.  So for either success or failure we must release the
     # savepoint explicitly.
     savepoint = binascii.b2a_hex(os.urandom(32))
-    db.execute("SAVEPOINT x%s" % (savepoint,))
+    db.cursor().execute("SAVEPOINT x%s" % (savepoint,))
     ok = False
     try:
         yield
         ok = True
     finally:
         if not ok:
-            db.execute("ROLLBACK TO x%s" % (savepoint,))
-        db.execute("RELEASE x%s" % (savepoint,))
+            db.cursor().execute("ROLLBACK TO x%s" % (savepoint,))
+        db.cursor().execute("RELEASE x%s" % (savepoint,))
 
 def sqlite3_exec_1(db, query, *args):
     """Execute a query returning a 1x1 table, and return its one value.
@@ -64,12 +64,25 @@ def sqlite3_exec_1(db, query, *args):
     Do not call this if you cannot guarantee the result is a 1x1
     table.  Beware passing user-controlled input in here.
     """
-    cursor = db.execute(query, *args)
-    row = cursor.fetchone()
-    assert row
-    assert len(row) == 1
-    assert cursor.fetchone() == None
+    cursor = db.cursor()
+    cursor.execute(query, *args)
+    row = None
+    try:
+        row = cursor.next()
+    except StopIteration:
+        raise ValueError("Query failed to return one row")
+    if len(row) != 1:
+        raise ValueError("Query failed to return one column")
+    try:
+        cursor.next()
+    except StopIteration:
+        pass
+    else:
+        raise ValueError("Query returned more than one row")
     return row[0]
+
+def sqlite3_last_insert_rowid(cursor):
+    return cursor.getconnection().last_insert_rowid()
 
 def sqlite3_quote_name(name):
     """Quote NAME as a SQL identifier, e.g. a table or column name.

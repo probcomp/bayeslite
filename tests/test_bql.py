@@ -407,8 +407,10 @@ def test_trivial_commands():
         bdb.execute('select infer age conf 0.9 from t')
         bdb.execute('select infer AGE conf 0.9 from T')
         bdb.execute('select infer aGe conf 0.9 from T')
-        with pytest.raises(AssertionError):
-            # XXX Assertion error is a bug here, please fix.
+        with pytest.raises(ValueError):
+            # XXX Value error is not quite right here -- should be
+            # more specific, and the error message should be better.
+            # But this will do for now.
             bdb.execute('select infer agee conf 0.9 from t')
 
 def test_parametrized():
