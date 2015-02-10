@@ -457,10 +457,49 @@ def test_parametrized():
         with pytest.raises(ValueError):
             bdb.execute('select * from t where age < ? and rank > :r',
                 {':r': 4})
-        # XXX Test what query this actually executes...
+        def sqltraced_execute(query, *args):
+            sql = []
+            def trace(string, _bindings):
+                sql.append(' '.join(string.split()))
+            bdb.sql_trace(trace)
+            bdb.execute(query, *args)
+            bdb.sql_untrace(trace)
+            return sql
         bdb.execute('initialize 1 model for t;')
         bdb.execute('analyze t for 1 iteration wait;')
-        bdb.execute('select similarity to 1 with respect to' +
-            ' (estimate columns from t limit 1) from t;')
-        bdb.execute('select similarity to 1 with respect to' +
-            ' (estimate columns from t limit ?) from t;', (1,))
+        assert sqltraced_execute('select similarity to 1 with respect to' +
+                ' (estimate columns from t limit 1) from t;') == [
+            'SELECT id FROM bayesdb_table WHERE name = ?',
+            'SELECT id FROM bayesdb_table WHERE name = ?',
+            # *** ESTIMATE COLUMNS:
+            'SELECT name FROM bayesdb_table_column WHERE table_id = 1' +
+                ' LIMIT 1',
+            'SELECT colno FROM bayesdb_table_column WHERE table_id = ?' +
+                ' AND name = ?',
+            # *** SELECT SIMILARITY TO 1:
+            'SELECT bql_row_similarity(1, rowid, 1, 0) FROM "t"',
+            'SELECT metamodel_id FROM bayesdb_table WHERE id = ?',
+            'SELECT metadata FROM bayesdb_table WHERE id = ?',
+            'SELECT count(*) FROM bayesdb_model WHERE table_id = ?',
+            'SELECT theta FROM bayesdb_model' +
+                ' WHERE table_id = ? AND modelno = ?',
+            'SELECT count(*) FROM bayesdb_model WHERE table_id = ?',
+        ]
+        assert sqltraced_execute('select similarity to 1 with respect to' +
+                ' (estimate columns from t limit ?) from t;', (1,)) == [
+            'SELECT id FROM bayesdb_table WHERE name = ?',
+            'SELECT id FROM bayesdb_table WHERE name = ?',
+            # *** ESTIMATE COLUMNS:
+            'SELECT name FROM bayesdb_table_column WHERE table_id = 1' +
+                ' LIMIT ?1',
+            'SELECT colno FROM bayesdb_table_column WHERE table_id = ?' +
+                ' AND name = ?',
+            # *** SELECT SIMILARITY TO 1:
+            'SELECT bql_row_similarity(1, rowid, 1, 0) FROM "t"',
+            'SELECT metamodel_id FROM bayesdb_table WHERE id = ?',
+            'SELECT metadata FROM bayesdb_table WHERE id = ?',
+            'SELECT count(*) FROM bayesdb_model WHERE table_id = ?',
+            'SELECT theta FROM bayesdb_model' +
+                ' WHERE table_id = ? AND modelno = ?',
+            'SELECT count(*) FROM bayesdb_model WHERE table_id = ?',
+        ]

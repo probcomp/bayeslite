@@ -40,6 +40,8 @@ class BayesDB(core.IBayesDB):
         self.models_cache = None
         self.metamodels_by_id = {}
         self.default_metamodel_id = None
+        self.tracer = None
+        self.sql_tracer = None
         schema.bayesdb_install_schema(self.sqlite3)
         core.bayesdb_install_bql(self.sqlite3, self)
 
@@ -49,8 +51,26 @@ class BayesDB(core.IBayesDB):
         self.sqlite3.close()
         self.sqlite3 = None
 
+    def trace(self, tracer):
+        assert self.tracer is None
+        self.tracer = tracer
+
+    def untrace(self, tracer):
+        assert self.tracer == tracer
+        self.tracer = None
+
+    def sql_trace(self, tracer):
+        assert self.sql_tracer is None
+        self.sql_tracer = tracer
+
+    def sql_untrace(self, tracer):
+        assert self.sql_tracer == tracer
+        self.sql_tracer = None
+
     def execute(self, string, bindings=()):
         """Execute a BQL query and return a cursor for its results."""
+        if self.tracer:
+            self.tracer(string, bindings)
         phrases = parse.parse_bql_string(string)
         phrase = None
         try:
@@ -69,6 +89,8 @@ class BayesDB(core.IBayesDB):
 
     def sql_execute(self, string, bindings=()):
         """Execute a SQL query on the underlying SQLite database."""
+        if self.sql_tracer:
+            self.sql_tracer(string, bindings)
         return self.sqlite3.execute(string, bindings)
 
     @contextlib.contextmanager
