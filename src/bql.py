@@ -46,7 +46,7 @@ def execute_phrase(bdb, phrase, bindings=()):
         with bdb.savepoint():
             out = Output(n_numpar, nampar_map, bindings)
             compile_query(bdb, phrase, out)
-            return bdb.sqlite.execute(out.getvalue(), out.getbindings())
+            return bdb.sql_execute(out.getvalue(), out.getbindings())
     if isinstance(phrase, ast.CreateBtableCSV):
         # XXX Codebook?
         import_csv.bayesdb_import_csv_file(bdb, phrase.name, phrase.file,
@@ -657,7 +657,7 @@ def compile_column_lists(bdb, table_id, column_lists, _bql_compiler, out):
             compile_query(bdb, collist.query, subout)
             subquery = subout.getvalue()
             subbindings = subout.getbindings()
-            columns = bdb.sqlite.execute(subquery, subbindings).fetchall()
+            columns = bdb.sql_execute(subquery, subbindings).fetchall()
             subfirst = True
             for column in columns:
                 if subfirst:

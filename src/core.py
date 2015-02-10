@@ -36,9 +36,7 @@
 import contextlib
 import json
 import math
-import sqlite3
 
-from bayeslite.sqlite3_util import sqlite3_exec_1
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
 from bayeslite.util import arithmetic_mean
@@ -70,7 +68,6 @@ class IBayesDB(object):
     """Interface of Bayesian databases."""
 
     def __init__(self):
-        self.sqlite = None
         self.txn_depth = 0
         self.metadata_cache = None
         self.models_cache = None
@@ -88,6 +85,10 @@ class IBayesDB(object):
 
     def execute(self, query, *args):
         """Execute a BQL query and return a cursor for its results."""
+        raise NotImplementedError
+
+    def sql_execute(self, query, *args):
+        """Execute a SQL query on the underlying database."""
         raise NotImplementedError
 
     @contextlib.contextmanager
@@ -130,7 +131,7 @@ def bayesdb_register_metamodel(bdb, name, engine):
         insert_sql = """
             INSERT OR IGNORE INTO bayesdb_metamodel (name) VALUES (?)
         """
-        bdb.sqlite.execute(insert_sql, (name,))
+        bdb.sql_execute(insert_sql, (name,))
         # Associate it with the engine by id.
         #
         # XXX Can't use lastrowid here because
@@ -139,12 +140,12 @@ def bayesdb_register_metamodel(bdb, name, engine):
         # though the obvious sensible thing to do is to return the
         # existing rowid.
         lookup_sql = "SELECT id FROM bayesdb_metamodel WHERE name = ?"
-        metamodel_id = sqlite3_exec_1(bdb, lookup_sql, (name,))
+        metamodel_id = bayesdb_sql_execute1(bdb, lookup_sql, (name,))
         bdb.metamodels_by_id[metamodel_id] = engine
 
 def bayesdb_set_default_metamodel(bdb, name):
     lookup_sql = "SELECT id FROM bayesdb_metamodel WHERE name = ?"
-    metamodel_id = sqlite3_exec_1(bdb, lookup_sql, (name,))
+    metamodel_id = bayesdb_sql_execute1(bdb, lookup_sql, (name,))
     bdb.default_metamodel_id = metamodel_id
 
 ### Importing SQLite tables
@@ -155,7 +156,7 @@ def bayesdb_attach_sqlite_file(bdb, name, pathname):
     # Turns out Python urlparse is broken and can't handle relative
     # pathnames.  Urgh.
     #uri = urlparse.urlunparse("file", "", urllib.quote(pathname), "", "", "")
-    bdb.sqlite.execute("ATTACH DATABASE ? AS %s" % (name,), pathname)
+    bdb.sql_execute("ATTACH DATABASE ? AS %s" % (name,), pathname)
 
 # def bayesdb_attach_sqlite_uri(bdb, name, uri):
 #     ...
@@ -180,7 +181,8 @@ def bayesdb_import_sqlite_table(bdb, table,
         metamodel_id = None
         if metamodel is not None:
             metamodel_sql = "SELECT id FROM bayesdb_metamodel WHERE name = ?"
-            metamodel_id = sqlite3_exec_1(bdb, metamodel_sql, (metamodel,))
+            metamodel_id = bayesdb_sql_execute1(bdb, metamodel_sql,
+                (metamodel,))
         elif bdb.default_metamodel_id is not None:
             metamodel_id = bdb.default_metamodel_id
         else:
@@ -190,7 +192,7 @@ def bayesdb_import_sqlite_table(bdb, table,
                 VALUES (?, ?, ?)
         """
         table_bindings = (table, metamodel_id, metadata_json)
-        table_cursor = bdb.sqlite.execute(table_sql, table_bindings)
+        table_cursor = bdb.sql_execute(table_sql, table_bindings)
         table_id = table_cursor.lastrowid
         assert table_id is not None
         for colno, name in enumerate(column_names):
@@ -198,12 +200,12 @@ def bayesdb_import_sqlite_table(bdb, table,
                 INSERT INTO bayesdb_table_column (table_id, name, colno)
                 VALUES (?, ?, ?)
             """
-            bdb.sqlite.execute(column_sql, (table_id, name, colno))
+            bdb.sql_execute(column_sql, (table_id, name, colno))
 
 def bayesdb_determine_columns(bdb, table, column_names, column_types):
     # Find the columns as SQLite knows about them.
     qt = sqlite3_quote_name(table)
-    cursor = bdb.sqlite.execute("PRAGMA table_info(%s)" % (qt,))
+    cursor = bdb.sql_execute("PRAGMA table_info(%s)" % (qt,))
     column_descs = cursor.fetchall()
 
     # Determine the column names, which must all be among the ones
@@ -279,11 +281,11 @@ def bayesdb_guess_column(bdb, table, column_desc,
     qt = sqlite3_quote_name(table)
     qcn = sqlite3_quote_name(column_name)
     ndistinct_sql = "SELECT COUNT(DISTINCT %s) FROM %s" % (qcn, qt)
-    ndistinct = sqlite3_exec_1(bdb.sqlite, ndistinct_sql)
+    ndistinct = bayesdb_sql_execute1(bdb, ndistinct_sql)
     if ndistinct <= count_cutoff:
         return (column_name, "categorical")
     ndata_sql = "SELECT COUNT(%s) FROM %s" % (qcn, qt)
-    ndata = sqlite3_exec_1(bdb.sqlite, ndata_sql)
+    ndata = bayesdb_sql_execute1(bdb, ndata_sql)
     if (float(ndistinct) / float(ndata)) <= ratio_cutoff:
         return (column_name, "categorical")
     if not bayesdb_column_floatable_p(bdb, table, column_desc):
@@ -297,7 +299,7 @@ def bayesdb_column_floatable_p(bdb, table, column_desc):
     qt = sqlite3_quote_name(table)
     qcn = sqlite3_quote_name(column_name)
     sql = "SELECT %s FROM %s WHERE %s IS NOT NULL" % (qcn, qt, qcn)
-    cursor = bdb.sqlite.execute(sql)
+    cursor = bdb.sql_execute(sql)
     try:
         for row in cursor:
             float(row[0])
@@ -353,7 +355,7 @@ def bayesdb_metadata_categorical(bdb, table, column_name):
     sql = """
         SELECT DISTINCT %s FROM %s WHERE %s IS NOT NULL ORDER BY %s
     """ % (qcn, qt, qcn, qcn)
-    cursor = bdb.sqlite.execute(sql)
+    cursor = bdb.sql_execute(sql)
     codes = [row[0] for row in cursor]
     ncodes = len(codes)
     return {
@@ -379,7 +381,7 @@ def bayesdb_data(bdb, table_id):
     qt = sqlite3_quote_name(table)
     qcns = ",".join(map(sqlite3_quote_name, column_names))
     sql = "SELECT %s FROM %s" % (qcns, qt)
-    for row in bdb.sqlite.execute(sql):
+    for row in bdb.sql_execute(sql):
         yield tuple(bayesdb_value_to_code(M_c, i, v)
             for i, v in enumerate(row))
 
@@ -388,7 +390,7 @@ def bayesdb_metadata(bdb, table_id):
         if table_id in bdb.metadata_cache:
             return bdb.metadata_cache[table_id]
     sql = "SELECT metadata FROM bayesdb_table WHERE id = ?"
-    metadata_json = sqlite3_exec_1(bdb.sqlite, sql, (table_id,))
+    metadata_json = bayesdb_sql_execute1(bdb, sql, (table_id,))
     metadata = json.loads(metadata_json)
     if bdb.metadata_cache is not None:
         assert table_id not in bdb.metadata_cache
@@ -397,22 +399,22 @@ def bayesdb_metadata(bdb, table_id):
 
 def bayesdb_table_exists(bdb, table_name):
     sql = "SELECT COUNT(*) FROM bayesdb_table WHERE name = ?"
-    return 0 < sqlite3_exec_1(bdb.sqlite, sql, (table_name,))
+    return 0 < bayesdb_sql_execute1(bdb, sql, (table_name,))
 
 def bayesdb_table_name(bdb, table_id):
     sql = "SELECT name FROM bayesdb_table WHERE id = ?"
-    return sqlite3_exec_1(bdb.sqlite, sql, (table_id,))
+    return bayesdb_sql_execute1(bdb, sql, (table_id,))
 
 def bayesdb_table_id(bdb, table_name):
     sql = "SELECT id FROM bayesdb_table WHERE name = ?"
-    return sqlite3_exec_1(bdb.sqlite, sql, (table_name,))
+    return bayesdb_sql_execute1(bdb, sql, (table_name,))
 
 def bayesdb_table_engine(bdb, table_id):
     sql = "SELECT metamodel_id FROM bayesdb_table WHERE id = ?"
-    metamodel_id = sqlite3_exec_1(bdb.sqlite, sql, (table_id,))
+    metamodel_id = bayesdb_sql_execute1(bdb, sql, (table_id,))
     if metamodel_id not in bdb.metamodels_by_id:
         sql = "SELECT name FROM bayesdb_metamodel WHERE id = ?"
-        metamodel_name = sqlite3_exec_1(bdb.sqlite, sql, (metamodel_id,))
+        metamodel_name = bayesdb_sql_execute1(bdb, sql, (metamodel_id,))
         raise ValueError("No engine for metamodel: %s", (metamodel_name,))
     return bdb.metamodels_by_id[metamodel_id]
 
@@ -420,40 +422,40 @@ def bayesdb_column_names(bdb, table_id):
     sql = """
         SELECT name FROM bayesdb_table_column WHERE table_id = ? ORDER BY colno
     """
-    for row in bdb.sqlite.execute(sql, (table_id,)):
+    for row in bdb.sql_execute(sql, (table_id,)):
         yield row[0]
 
 def bayesdb_column_name(bdb, table_id, colno):
     sql = """
         SELECT name FROM bayesdb_table_column WHERE table_id = ? AND colno = ?
     """
-    return sqlite3_exec_1(bdb.sqlite, sql, (table_id, colno))
+    return bayesdb_sql_execute1(bdb, sql, (table_id, colno))
 
 def bayesdb_column_numbers(bdb, table_id):
     sql = """
         SELECT colno FROM bayesdb_table_column WHERE table_id = ?
         ORDER BY colno
     """
-    for row in bdb.sqlite.execute(sql, (table_id,)):
+    for row in bdb.sql_execute(sql, (table_id,)):
         yield row[0]
 
 def bayesdb_column_number(bdb, table_id, column_name):
     sql = """
         SELECT colno FROM bayesdb_table_column WHERE table_id = ? AND name = ?
     """
-    return sqlite3_exec_1(bdb.sqlite, sql, (table_id, column_name))
+    return bayesdb_sql_execute1(bdb, sql, (table_id, column_name))
 
 def bayesdb_column_values(bdb, table_id, colno):
     qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
     qc = sqlite3_quote_name(bayesdb_column_name(bdb, table_id, colno))
-    for row in bdb.sqlite.execute("SELECT %s FROM %s" % (qc, qt)):
+    for row in bdb.sql_execute("SELECT %s FROM %s" % (qc, qt)):
         yield row[0]
 
 def bayesdb_cell_value(bdb, table_id, rowid, colno):
     qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
     qc = sqlite3_quote_name(bayesdb_column_name(bdb, table_id, colno))
     sql = "SELECT %s FROM %s WHERE rowid = ?" % (qc, qt)
-    return sqlite3_exec_1(bdb.sqlite, sql, (rowid,))
+    return bayesdb_sql_execute1(bdb, sql, (rowid,))
 
 ### BayesDB model access
 
@@ -463,7 +465,7 @@ def bayesdb_init_model(bdb, table_id, modelno, theta, ifnotexists=False):
         VALUES (?, ?, ?)
     """ % ("OR IGNORE" if ifnotexists else "")
     theta_json = json.dumps(theta)
-    bdb.sqlite.execute(insert_sql, (table_id, modelno, theta_json))
+    bdb.sql_execute(insert_sql, (table_id, modelno, theta_json))
     if bdb.models_cache is not None:
         key = (table_id, modelno)
         if ifnotexists:
@@ -478,7 +480,7 @@ def bayesdb_set_model(bdb, table_id, modelno, theta):
         UPDATE bayesdb_model SET theta = ? WHERE table_id = ? AND modelno = ?
     """
     theta_json = json.dumps(theta)
-    bdb.sqlite.execute(sql, (theta_json, table_id, modelno))
+    bdb.sql_execute(sql, (theta_json, table_id, modelno))
     if bdb.models_cache is not None:
         bdb.models_cache[table_id, modelno] = theta
 
@@ -489,13 +491,13 @@ def bayesdb_has_model(bdb, table_id, modelno):
     sql = """
         SELECT count(*) FROM bayesdb_model WHERE table_id = ? AND modelno = ?
     """
-    return 0 < sqlite3_exec_1(bdb.sqlite, sql, (table_id, modelno))
+    return 0 < bayesdb_sql_execute1(bdb, sql, (table_id, modelno))
 
 def bayesdb_nmodels(bdb, table_id):
     sql = """
         SELECT count(*) FROM bayesdb_model WHERE table_id = ?
     """
-    return sqlite3_exec_1(bdb.sqlite, sql, (table_id,))
+    return bayesdb_sql_execute1(bdb, sql, (table_id,))
 
 def bayesdb_models(bdb, table_id):
     for modelno in range(bayesdb_nmodels(bdb, table_id)):
@@ -509,7 +511,7 @@ def bayesdb_model(bdb, table_id, modelno):
     sql = """
         SELECT theta FROM bayesdb_model WHERE table_id = ? AND modelno = ?
     """
-    theta_json = sqlite3_exec_1(bdb.sqlite, sql, (table_id, modelno))
+    theta_json = bayesdb_sql_execute1(bdb, sql, (table_id, modelno))
     theta = json.loads(theta_json)
     if bdb.models_cache is not None:
         key = (table_id, modelno)
@@ -629,7 +631,7 @@ def bql_column_correlation(bdb, table_id, colno0, colno1):
         data_sql = """
             SELECT %s, %s FROM %s WHERE %s IS NOT NULL AND %s IS NOT NULL
         """ % (qc0, qc1, qt, qc0, qc1)
-        for row in bdb.sqlite.execute(data_sql):
+        for row in bdb.sql_execute(data_sql):
             data0.append(bayesdb_value_to_code(M_c, colno0, row[0]))
             data1.append(bayesdb_value_to_code(M_c, colno1, row[1]))
             n += 1
@@ -813,7 +815,7 @@ def bql_infer(bdb, table_id, colno, rowid, value, confidence_threshold,
     qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
     qcns = ",".join(map(sqlite3_quote_name, column_names))
     select_sql = "SELECT %s FROM %s WHERE rowid = ?" % (qcns, qt)
-    c = bdb.sqlite.execute(select_sql, (rowid,))
+    c = bdb.sql_execute(select_sql, (rowid,))
     row = c.fetchone()
     assert row is not None
     assert c.fetchone() is None
@@ -837,7 +839,7 @@ def bayesdb_simulate(bdb, table_id, constraints, colnos, numpredictions=1):
     engine = bayesdb_table_engine(bdb, table_id)
     M_c = bayesdb_metadata(bdb, table_id)
     qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
-    max_rowid = sqlite3_exec_1(bdb.sqlite, "SELECT max(rowid) FROM %s" % (qt,))
+    max_rowid = bayesdb_sql_execute1(bdb, "SELECT max(rowid) FROM %s" % (qt,))
     fake_rowid = max_rowid + 1
     fake_row_id = sqlite3_rowid_to_engine_row_id(fake_rowid)
     # XXX Why special-case empty constraints?
@@ -917,3 +919,11 @@ def sqlite3_rowid_to_engine_row_id(rowid):
 
 def engine_row_id_to_sqlite3_rowid(row_id):
     return row_id + 1
+
+def bayesdb_sql_execute1(bdb, sql, bindings=()):
+    cursor = bdb.sql_execute(sql, bindings)
+    row = cursor.fetchone()
+    assert row
+    assert len(row) == 1
+    assert cursor.fetchone() is None
+    return row[0]

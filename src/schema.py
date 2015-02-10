@@ -14,8 +14,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import sqlite3
-
 from bayeslite.sqlite3_util import sqlite3_exec_1
 
 bayesdb_schema = """

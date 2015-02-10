@@ -102,12 +102,13 @@ def _bayesdb_import(bdb, table, column_names, rows, column_types):
 
     # Instantiate the SQL schema and import the data.
     with bdb.savepoint():
-        bdb.sqlite.execute(table_def)
+        bdb.sql_execute(table_def)
         qcns = ",".join(map(sqlite3_quote_name, nonignored_column_names))
         qcps = ",".join("?" * ncols)
         insert_sql = "INSERT INTO %s (%s) VALUES (%s)" % (qt, qcns, qcps)
-        bdb.sqlite.executemany(insert_sql,
-            (tuple(row[i] for i in nonignored_indices) for row in rows))
+        for row in rows:
+            bdb.sql_execute(insert_sql,
+                tuple(row[i] for i in nonignored_indices))
         core.bayesdb_import_sqlite_table(bdb, table, nonignored_column_names,
             nonignored_column_types)
 

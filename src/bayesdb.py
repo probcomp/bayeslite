@@ -34,20 +34,20 @@ class BayesDB(core.IBayesDB):
         # isolation_level=None actually means that the sqlite3 module
         # will not randomly begin and commit transactions where we
         # didn't ask it to.
-        self.sqlite = sqlite3.connect(pathname, isolation_level=None)
+        self.sqlite3 = sqlite3.connect(pathname, isolation_level=None)
         self.txn_depth = 0
         self.metadata_cache = None
         self.models_cache = None
         self.metamodels_by_id = {}
         self.default_metamodel_id = None
-        schema.bayesdb_install_schema(self.sqlite)
-        core.bayesdb_install_bql(self.sqlite, self)
+        schema.bayesdb_install_schema(self.sqlite3)
+        core.bayesdb_install_bql(self.sqlite3, self)
 
     def close(self):
         """Close the database.  Further use is not allowed."""
         assert self.txn_depth == 0, "pending BayesDB transactions"
-        self.sqlite.close()
-        self.sqlite = None
+        self.sqlite3.close()
+        self.sqlite3 = None
 
     def execute(self, string, bindings=()):
         """Execute a BQL query and return a cursor for its results."""
@@ -66,6 +66,10 @@ class BayesDB(core.IBayesDB):
         if more:
             raise ValueError('>1 phrase in string')
         return bql.execute_phrase(self, phrase, bindings)
+
+    def sql_execute(self, string, bindings=()):
+        """Execute a SQL query on the underlying SQLite database."""
+        return self.sqlite3.execute(string, bindings)
 
     @contextlib.contextmanager
     def savepoint(self):
@@ -86,7 +90,7 @@ class BayesDB(core.IBayesDB):
             assert self.models_cache is not None
         self.txn_depth += 1
         try:
-            with sqlite3_savepoint(self.sqlite):
+            with sqlite3_savepoint(self.sqlite3):
                 yield
         finally:
             assert 0 < self.txn_depth

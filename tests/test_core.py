@@ -76,9 +76,9 @@ def test_bad_db_user_version():
 
 def test_hackmetamodel():
     bdb = bayeslite.BayesDB()
-    bdb.sqlite.execute('CREATE TABLE t(a INTEGER, b TEXT)')
-    bdb.sqlite.execute("INSERT INTO t (a, b) VALUES (42, 'fnord')")
-    bdb.sqlite.execute('CREATE TABLE u AS SELECT * FROM t')
+    bdb.sql_execute('CREATE TABLE t(a INTEGER, b TEXT)')
+    bdb.sql_execute("INSERT INTO t (a, b) VALUES (42, 'fnord')")
+    bdb.sql_execute('CREATE TABLE u AS SELECT * FROM t')
     with pytest.raises(ValueError):
         bayeslite.bayesdb_import_sqlite_table(bdb, 't')
     # XXX Fails with an assert instead.  Fix me!
@@ -110,7 +110,7 @@ def sqlite_bayesdb_table(mkbdb, name, schema, data, **kwargs):
         data(bdb)
         bayeslite.bayesdb_import_sqlite_table(bdb, name, **kwargs)
         sql = 'select id from bayesdb_table where name = ?'
-        table_id = sqlite3_exec_1(bdb.sqlite, sql, (name,))
+        table_id = core.bayesdb_sql_execute1(bdb, sql, (name,))
         assert table_id == 1
         yield bdb, table_id
 
@@ -126,12 +126,12 @@ def bayesdb_maxrowid(bdb, table_id):
     table_name = bayeslite.bayesdb_table_name(bdb, table_id)
     qt = sqlite3_quote_name(table_name)
     sql = 'select max(rowid) from %s' % (qt,)
-    return sqlite3_exec_1(bdb.sqlite, sql)
+    return core.bayesdb_sql_execute1(bdb, sql)
 
 def test_casefold_colname():
     def t(name, sql, *args, **kwargs):
         def schema(bdb):
-            bdb.sqlite.execute(sql)
+            bdb.sql_execute(sql)
         def data(_bdb):
             pass
         return sqlite_bayesdb_table(bayesdb(), name, schema, data, *args,
@@ -164,10 +164,10 @@ def test_casefold_colname():
         pass
 
 def t0_schema(bdb):
-    bdb.sqlite.execute('create table t0 (id integer primary key, n integer)')
+    bdb.sql_execute('create table t0 (id integer primary key, n integer)')
 def t0_data(bdb):
-    bdb.sqlite.executemany('insert into t0 (id, n) values (?, ?)',
-        [(0, 0), (1, 1), (42, 42)])
+    for row in [(0, 0), (1, 1), (42, 42)]:
+        bdb.sql_execute('insert into t0 (id, n) values (?, ?)', row)
 
 def t0():
     return sqlite_bayesdb_table(bayesdb(), 't0', t0_schema, t0_data)
@@ -191,7 +191,7 @@ def test_t0_missingtype():
             pass
 
 def t1_schema(bdb):
-    bdb.sqlite.execute('''
+    bdb.sql_execute('''
         create table t1 (
             id integer primary key,
             label text,
@@ -200,8 +200,9 @@ def t1_schema(bdb):
         )
     ''')
 def t1_data(bdb):
-    bdb.sqlite.executemany('insert into t1 (label,age,weight) values (?,?,?)',
-        t1_rows)
+    for row in t1_rows:
+        bdb.sql_execute('insert into t1 (label,age,weight) values (?,?,?)',
+            row)
 
 t1_rows = [
     ('foo', 12, 24),
@@ -349,7 +350,7 @@ def test_onecolumn(btable_name, colno):
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
         core.bql_column_typicality(bdb, table_id, colno)
-        bdb.sqlite.execute('select bql_column_typicality(?, ?)',
+        bdb.sql_execute('select bql_column_typicality(?, ?)',
             (table_id, colno))
 
 @pytest.mark.parametrize('btable_name,colno0,colno1',
@@ -365,16 +366,13 @@ def test_twocolumn(btable_name, colno0, colno1):
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
         core.bql_column_correlation(bdb, table_id, colno0, colno1)
-        sqlite3_exec_1(bdb.sqlite,
-            'select bql_column_correlation(?, ?, ?)',
+        bdb.sql_execute('select bql_column_correlation(?, ?, ?)',
             (table_id, colno0, colno1))
         core.bql_column_dependence_probability(bdb, table_id, colno0, colno1)
-        sqlite3_exec_1(bdb.sqlite,
-            'select bql_column_dependence_probability(?, ?, ?)',
+        bdb.sql_execute('select bql_column_dependence_probability(?, ?, ?)',
             (table_id, colno0, colno1))
         core.bql_column_mutual_information(bdb, table_id, colno0, colno1)
-        sqlite3_exec_1(bdb.sqlite,
-            'select bql_column_mutual_information(?, ?, ?)',
+        bdb.sql_execute('select bql_column_mutual_information(?, ?, ?)',
             (table_id, colno0, colno1))
 
 @pytest.mark.parametrize('colno,rowid',
@@ -394,7 +392,7 @@ def test_t1_column_value_probability(colno, rowid):
             select bql_column_value_probability(?, ?,
                 (select %s from %s where rowid = ?))
         ''' % (qc, qt)
-        sqlite3_exec_1(bdb.sqlite, sql, (table_id, colno, rowid))
+        bdb.sql_execute(sql, (table_id, colno, rowid))
 
 @pytest.mark.parametrize('btable_name,source,target,colnos',
     [(btable_name, source, target, list(colnos))
@@ -412,7 +410,7 @@ def test_row_similarity(btable_name, source, target, colnos):
         core.bql_row_similarity(bdb, table_id, source, target, *colnos)
         sql = 'select bql_row_similarity(?, ?, ?%s%s)' % \
             ('' if 0 == len(colnos) else ', ', ', '.join(map(str, colnos)))
-        sqlite3_exec_1(bdb.sqlite, sql, (table_id, source, target))
+        bdb.sql_execute(sql, (table_id, source, target))
 
 @pytest.mark.parametrize('btable_name,rowid',
     [(btable_name, rowid)
@@ -427,8 +425,7 @@ def test_row_typicality(btable_name, rowid):
             as (bdb, table_id):
         if rowid == 0: rowid = bayesdb_maxrowid(bdb, table_id)
         core.bql_row_typicality(bdb, table_id, rowid)
-        sqlite3_exec_1(bdb.sqlite, 'select bql_row_typicality(?, ?)',
-            (table_id, rowid))
+        bdb.sql_execute('select bql_row_typicality(?, ?)', (table_id, rowid))
 
 @pytest.mark.parametrize('btable_name,rowid,colno',
     [(btable_name, rowid, colno)
@@ -444,6 +441,5 @@ def test_row_column_predictive_probability(btable_name, rowid, colno):
             as (bdb, table_id):
         if rowid == 0: rowid = bayesdb_maxrowid(bdb, table_id)
         core.bql_row_column_predictive_probability(bdb, table_id, rowid, colno)
-        sqlite3_exec_1(bdb.sqlite,
-            'select bql_row_column_predictive_probability(?, ?, ?)',
-            (table_id, rowid, colno))
+        sql = 'select bql_row_column_predictive_probability(?, ?, ?)'
+        bdb.sql_execute(sql, (table_id, rowid, colno))

@@ -19,7 +19,6 @@ import pickle
 
 import bayeslite.core as core
 
-from bayeslite.sqlite3_util import sqlite3_exec_1
 from bayeslite.util import casefold
 
 renamed_column_types = {
@@ -98,10 +97,10 @@ def bayesdb_load_legacy_models(bdb, table_name, pathname, ifnotexists=False,
                     raise ValueError('legacy models mismatch schema: %s' %
                         (table_name,))
                 # XXX Name this operation: DROP BTABLE ...
-                bdb.sqlite.execute('''
+                bdb.sql_execute('''
                     DELETE FROM bayesdb_table_column WHERE table_id = ?
                 ''', (table_id,))
-                bdb.sqlite.execute('DELETE FROM bayesdb_table WHERE id = ?',
+                bdb.sql_execute('DELETE FROM bayesdb_table WHERE id = ?',
                     (table_id,))
                 core.bayesdb_import_sqlite_table(bdb, table_name,
                     column_types=column_types)
@@ -117,7 +116,8 @@ def bayesdb_load_legacy_models(bdb, table_name, pathname, ifnotexists=False,
         modelno_max_sql = '''
             SELECT MAX(modelno) FROM bayesdb_model WHERE table_id = ?
         '''
-        modelno_max = sqlite3_exec_1(bdb.sqlite, modelno_max_sql, (table_id,))
+        modelno_max = core.bayesdb_sql_execute1(bdb, modelno_max_sql,
+            (table_id,))
         modelno_start = 0 if modelno_max is None else modelno_max + 1
 
         # Consistently number the models consecutively in order of the
