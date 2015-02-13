@@ -320,7 +320,7 @@ def bayesdb_create_metadata(bdb, table, column_names, column_types):
         column_metadata[column_positions[casefold(name)]] = metadata
     assert all(metadata is not None for metadata in column_metadata)
     return {
-        "name_to_idx": dict(zip(column_names, range(ncols))),
+        "name_to_idx": dict(zip(map(casefold, column_names), range(ncols))),
         "idx_to_name": dict(zip(map(unicode, range(ncols)), column_names)),
         "column_metadata": column_metadata,
     }
