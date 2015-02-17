@@ -21,6 +21,7 @@ import sqlite3
 import tempfile
 
 import crosscat.LocalEngine
+import crosscat.MultiprocessingEngine
 
 import bayeslite
 import bayeslite.core as core
@@ -36,12 +37,21 @@ def powerset(s):
 def local_crosscat():
     return crosscat.LocalEngine.LocalEngine(seed=0)
 
+# FIXME (2/17/2015): All tests pass w/ multiprocessing engine, but they take
+# much longer to complete (about 30s). This is going to be annoying for pre-
+# commite testing. For now, I'm leaving it up to the user to decide (through
+# commenting the correct line of code in bayesdb()) which engine(s) to test 
+# with.
+def multiprocessing_crosscat():
+    return crosscat.MultiprocessingEngine.MultiprocessingEngine(seed=0)
+
 @contextlib.contextmanager
 def bayesdb(metamodel=None, engine=None, **kwargs):
     if metamodel is None:
         metamodel = 'crosscat'
     if engine is None:
         engine = local_crosscat()
+        # engine = multiprocessing_crosscat() # uncomment to test w/ MPEngine
     bdb = bayeslite.BayesDB(**kwargs)
     bayeslite.bayesdb_register_metamodel(bdb, metamodel, engine)
     bayeslite.bayesdb_set_default_metamodel(bdb, metamodel)
