@@ -65,8 +65,12 @@ def execute_phrase(bdb, phrase, bindings=()):
         iterations = phrase.iterations
         minutes = phrase.minutes
         wait = phrase.wait
-        assert wait             # XXX
-        assert minutes is None  # XXX
+        if not wait: # XXX
+            raise NotImplementedError("Background ANALYZE not yet supported."
+                "Please use 'WAIT' keyword.")
+        if minutes is not None: # XXX
+            raise NotImplementedError("'ANALYZE FOR XX MINUTES' not yet supported"
+                " Please use 'ANALYZE FOR XX ITERATIONS WAIT'.")
         if modelnos is None:
             core.bayesdb_models_analyze(bdb, table_id, iterations=iterations)
         else:
