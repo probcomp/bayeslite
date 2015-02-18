@@ -37,11 +37,6 @@ def powerset(s):
 def local_crosscat():
     return crosscat.LocalEngine.LocalEngine(seed=0)
 
-# FIXME (2/17/2015): All tests pass w/ multiprocessing engine, but they take
-# much longer to complete (about 30s). This is going to be annoying for pre-
-# commite testing. For now, I'm leaving it up to the user to decide (through
-# commenting the correct line of code in bayesdb()) which engine(s) to test 
-# with.
 def multiprocessing_crosscat():
     return crosscat.MultiprocessingEngine.MultiprocessingEngine(seed=0)
 
@@ -51,7 +46,6 @@ def bayesdb(metamodel=None, engine=None, **kwargs):
         metamodel = 'crosscat'
     if engine is None:
         engine = local_crosscat()
-        # engine = multiprocessing_crosscat() # uncomment to test w/ MPEngine
     bdb = bayeslite.BayesDB(**kwargs)
     bayeslite.bayesdb_register_metamodel(bdb, metamodel, engine)
     bayeslite.bayesdb_set_default_metamodel(bdb, metamodel)
@@ -260,6 +254,10 @@ def t1_subcat():
             'age': 'categorical',
         })
 
+def t1_mp():
+    return sqlite_bayesdb_table(bayesdb(engine=multiprocessing_crosscat()),
+        't1', t1_schema, t1_data)
+
 def test_t1_missingtype():
     with pytest.raises(ValueError):
         with sqlite_bayesdb_table(bayesdb(), 't1', t1_schema, t1_data,
@@ -313,6 +311,13 @@ def test_btable_analysis1(btable_name):
     if btable_name == 't0':
         pytest.xfail("Crosscat can't handle a table with only one column.")
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1):
+        pass
+
+# The multiprocessing engine has a large overhead, too much to try
+# every normal test with it, so we'll just run this one test to make
+# sure it doesn't crash and burn with ten models.
+def test_btable_mp_analysis():
+    with analyzed_bayesdb_table(t1_mp(), 10, 2):
         pass
 
 @pytest.mark.parametrize('rowid,colno,confidence',
