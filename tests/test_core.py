@@ -128,8 +128,7 @@ def sqlite_bayesdb_table(mkbdb, name, schema, data, **kwargs):
 def analyzed_bayesdb_table(mkbdb, nmodels, nsteps):
     with mkbdb as (bdb, table_id):
         core.bayesdb_models_initialize(bdb, table_id, nmodels)
-        for modelno in range(nmodels):
-            core.bayesdb_models_analyze1(bdb, table_id, modelno, nsteps)
+        core.bayesdb_models_analyze(bdb, table_id, iterations=nsteps)
         yield bdb, table_id
 
 def bayesdb_maxrowid(bdb, table_id):

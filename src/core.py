@@ -37,8 +37,6 @@ import contextlib
 import json
 import math
 
-from itertools import izip, count
-
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
 from bayeslite.util import arithmetic_mean
@@ -586,34 +584,39 @@ def bayesdb_models_initialize(bdb, table_id, nmodels, model_config=None,
                 ifnotexists=ifnotexists)
 
 # XXX Background, deadline, &c.
-def bayesdb_models_analyze(bdb, table_id, iterations=1):
-    # The below code causes models to be analyzed in serial. Serial analyze is 
-    # OK (for now) if the user specifies specific models.
-    #
-    # for modelno in range(bayesdb_nmodels(bdb, table_id)):
-    #     bayesdb_models_analyze1(bdb, table_id, modelno, iterations=iterations)
-
-    # TODO: A lot of code repated here. Separate.
-    X_L_list = []
-    X_D_list = []
-    for modelno in range(bayesdb_nmodels(bdb, table_id)):
-        theta = bayesdb_model(bdb, table_id, modelno)
-        X_L_list.append(theta["X_L"])
-        X_D_list.append(theta["X_D"])
-
+def bayesdb_models_analyze(bdb, table_id, modelnos=None, iterations=1):
+    assert 0 <= iterations
+    # Need this to be a list so we can map the results from the engine
+    # back.  Sort for consistency.
+    if modelnos is None:
+        sql = '''
+            SELECT modelno FROM bayesdb_model WHERE table_id = ?
+                ORDER BY modelno
+        '''
+        modelnos = [row[0] for row in bdb.sql_execute(sql, (table_id,))]
+    else:
+        modelnos = sorted(list(modelnos))
+        for modelno in modelnos:
+            if not bayesdb_has_model(bdb, table_id, modelno):
+                raise ValueError("No such model: %d" % (modelno,))
+    if iterations == 0:
+        return
+    thetas = [bayesdb_model(bdb, table_id, modelno) for modelno in modelnos]
     engine = bayesdb_table_engine(bdb, table_id)
     X_L_list, X_D_list, diagnostics = engine.analyze(
         M_c=bayesdb_metadata(bdb, table_id),
         T=list(bayesdb_data(bdb, table_id)),
         do_diagnostics=True,
-        kernel_list=theta["model_config"]["kernel_list"],
-        X_L=X_L_list,
-        X_D=X_D_list,
-        n_steps=iterations
+        # XXX Require the models share a common kernel_list.
+        kernel_list=thetas[0]["model_config"]["kernel_list"],
+        X_L=[theta["X_L"] for theta in thetas],
+        X_D=[theta["X_D"] for theta in thetas],
+        n_steps=iterations,
     )
-    
-    for modelno, X_L, X_D in izip(count(), X_L_list, X_D_list):
-        theta = bayesdb_model(bdb, table_id, modelno)
+    for (modelno, theta, X_L, X_D) \
+            in zip(modelnos, thetas, X_L_list, X_D_list):
+        # XXX For some reason, crosscat fails this assertion.
+        # XXX assert theta == bayesdb_model(bdb, table_id, modelno)
         theta["iterations"] += iterations
         theta["X_L"] = X_L
         theta["X_D"] = X_D
@@ -625,34 +628,6 @@ def bayesdb_models_analyze(bdb, table_id, iterations=1):
             else:
                 theta[diag_key] = diag_list
         bayesdb_set_model(bdb, table_id, modelno, theta)
-
-
-def bayesdb_models_analyze1(bdb, table_id, modelno, iterations=1):
-    assert 0 <= iterations
-    theta = bayesdb_model(bdb, table_id, modelno)
-    if iterations < 1:
-        return
-    engine = bayesdb_table_engine(bdb, table_id)
-    X_L, X_D, diagnostics = engine.analyze(
-        M_c=bayesdb_metadata(bdb, table_id),
-        T=list(bayesdb_data(bdb, table_id)),
-        do_diagnostics=True,
-        kernel_list=theta["model_config"]["kernel_list"],
-        X_L=theta["X_L"],
-        X_D=theta["X_D"],
-        n_steps=iterations
-    )
-    theta["iterations"] += iterations
-    theta["X_L"] = X_L
-    theta["X_D"] = X_D
-    # XXX Cargo-culted from old persistence layer's update_model.
-    for diag_key in "column_crp_alpha", "logscore", "num_views":
-        diag_list = [l[0] for l in diagnostics[diag_key]]
-        if diag_key in theta and type(theta[diag_key]) == list:
-            theta[diag_key] += diag_list
-        else:
-            theta[diag_key] = diag_list
-    bayesdb_set_model(bdb, table_id, modelno, theta)
 
 ### BayesDB column functions
 
