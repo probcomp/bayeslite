@@ -411,6 +411,11 @@ def test_trivial_commands():
             # XXX Assertion error is a bug here, please fix.
             bdb.execute('select infer agee conf 0.9 from t')
 
+def test_trivial_deadline():
+    with test_core.t1() as (bdb, _table_id):
+        bdb.execute('initialize 1 model for t1')
+        bdb.execute('analyze t1 for 1 second wait')
+
 def test_parametrized():
     assert bql2sqlparam('select * from t where id = ?') == \
         'SELECT * FROM "t" WHERE ("id" = ?1);'

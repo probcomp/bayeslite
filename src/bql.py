@@ -63,16 +63,13 @@ def execute_phrase(bdb, phrase, bindings=()):
         table_id = core.bayesdb_table_id(bdb, phrase.btable)
         modelnos = phrase.modelnos
         iterations = phrase.iterations
-        minutes = phrase.minutes
+        seconds = phrase.seconds
         wait = phrase.wait
         if not wait: # XXX
             raise NotImplementedError("Background ANALYZE not yet supported."
-                "Please use 'WAIT' keyword.")
-        if minutes is not None: # XXX
-            raise NotImplementedError("'ANALYZE FOR XX MINUTES' not yet supported"
-                " Please use 'ANALYZE FOR XX ITERATIONS WAIT'.")
+                " Please use 'WAIT' keyword.")
         core.bayesdb_models_analyze(bdb, table_id, modelnos=modelnos,
-            iterations=iterations)
+            iterations=iterations, max_seconds=seconds)
         return []
     assert False                # XXX
 

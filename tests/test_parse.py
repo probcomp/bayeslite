@@ -439,9 +439,21 @@ def test_trivial_commands():
     assert parse_bql_string('analyze t for 1 iteration wait;') == \
         [ast.AnalyzeModels('t', None, 1, None, True)]
     assert parse_bql_string('analyze t for 1 minute;') == \
-        [ast.AnalyzeModels('t', None, None, 1, False)]
+        [ast.AnalyzeModels('t', None, None, 60, False)]
     assert parse_bql_string('analyze t for 1 minute wait;') == \
+        [ast.AnalyzeModels('t', None, None, 60, True)]
+    assert parse_bql_string('analyze t for 2 minutes;') == \
+        [ast.AnalyzeModels('t', None, None, 120, False)]
+    assert parse_bql_string('analyze t for 2 minutes wait;') == \
+        [ast.AnalyzeModels('t', None, None, 120, True)]
+    assert parse_bql_string('analyze t for 1 second;') == \
+        [ast.AnalyzeModels('t', None, None, 1, False)]
+    assert parse_bql_string('analyze t for 1 second wait;') == \
         [ast.AnalyzeModels('t', None, None, 1, True)]
+    assert parse_bql_string('analyze t for 2 seconds;') == \
+        [ast.AnalyzeModels('t', None, None, 2, False)]
+    assert parse_bql_string('analyze t for 2 seconds wait;') == \
+        [ast.AnalyzeModels('t', None, None, 2, True)]
     assert parse_bql_string('analyze t model 1 for 1 iteration;') == \
         [ast.AnalyzeModels('t', [1], 1, None, False)]
     assert parse_bql_string('analyze t models 1,2,3 for 1 iteration;') == \

@@ -36,6 +36,7 @@
 import contextlib
 import json
 import math
+import time
 
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
@@ -583,11 +584,14 @@ def bayesdb_models_initialize(bdb, table_id, nmodels, model_config=None,
             bayesdb_init_model(bdb, table_id, modelno, theta,
                 ifnotexists=ifnotexists)
 
-# XXX Background, deadline, &c.
-def bayesdb_models_analyze(bdb, table_id, modelnos=None, iterations=1):
-    assert 0 <= iterations
-    # Need this to be a list so we can map the results from the engine
-    # back.  Sort for consistency.
+# XXX Background, &c.
+def bayesdb_models_analyze(bdb, table_id, modelnos=None, iterations=1,
+        max_seconds=None):
+    assert iterations is None or 0 <= iterations
+    assert iterations is not None or max_seconds is not None
+    # Get a list of model numbers.  It must be a list so that we can
+    # map the results from the engine back into the database.  Sort it
+    # for consistency.
     if modelnos is None:
         sql = '''
             SELECT modelno FROM bayesdb_model WHERE table_id = ?
@@ -599,34 +603,62 @@ def bayesdb_models_analyze(bdb, table_id, modelnos=None, iterations=1):
         for modelno in modelnos:
             if not bayesdb_has_model(bdb, table_id, modelno):
                 raise ValueError("No such model: %d" % (modelno,))
-    if iterations == 0:
-        return
+
+    # Get the models and the metamodel engine.
     thetas = [bayesdb_model(bdb, table_id, modelno) for modelno in modelnos]
     engine = bayesdb_table_engine(bdb, table_id)
-    X_L_list, X_D_list, diagnostics = engine.analyze(
-        M_c=bayesdb_metadata(bdb, table_id),
-        T=list(bayesdb_data(bdb, table_id)),
-        do_diagnostics=True,
-        # XXX Require the models share a common kernel_list.
-        kernel_list=thetas[0]["model_config"]["kernel_list"],
-        X_L=[theta["X_L"] for theta in thetas],
-        X_D=[theta["X_D"] for theta in thetas],
-        n_steps=iterations,
-    )
+    X_L_list = [theta["X_L"] for theta in thetas]
+    X_D_list = [theta["X_D"] for theta in thetas]
+
+    # Iterate analysis.  If we have a deadline, do one step at a time
+    # until we pass the deadline; otherwise, ask the metamodel engine
+    # to do all the iterations for us.
+    #
+    # When counting time, we use time.time() rather than time.clock()
+    # to count actual elapsed time, not just CPU time of the Python
+    # process, in case the metamodel engine runs anything in another
+    # process.
+    #
+    # XXX Using time.time() is wrong too -- we ought to use a
+    # monotonic clock.  But &@^#!$& Python doesn't have one.
+    iterations_completed = 0
+    if max_seconds is not None:
+        deadline = time.time() + max_seconds
+    while (iterations is None or 0 < iterations) and \
+          (max_seconds is None or time.time() < deadline):
+        n_steps = 1
+        if iterations is not None and max_seconds is None:
+            n_steps = iterations
+        X_L_list, X_D_list, diagnostics = engine.analyze(
+            M_c=bayesdb_metadata(bdb, table_id),
+            T=list(bayesdb_data(bdb, table_id)),
+            do_diagnostics=True,
+            # XXX Require the models share a common kernel_list.
+            kernel_list=thetas[0]["model_config"]["kernel_list"],
+            X_L=X_L_list,
+            X_D=X_D_list,
+            n_steps=n_steps,
+        )
+        iterations_completed += n_steps
+        if iterations is not None:
+            iterations -= n_steps
+        # XXX Cargo-culted from old persistence layer's update_model.
+        for modelno, theta in zip(modelnos, thetas):
+            for diag_key in "column_crp_alpha", "logscore", "num_views":
+                diag_list = [l[modelno] for l in diagnostics[diag_key]]
+                if diag_key in theta and type(theta[diag_key]) == list:
+                    theta[diag_key] += diag_list
+                else:
+                    theta[diag_key] = diag_list
+
+    # Put the new models in the database.
     for (modelno, theta, X_L, X_D) \
             in zip(modelnos, thetas, X_L_list, X_D_list):
         # XXX For some reason, crosscat fails this assertion.
         # XXX assert theta == bayesdb_model(bdb, table_id, modelno)
-        theta["iterations"] += iterations
+        theta["iterations"] += iterations_completed
         theta["X_L"] = X_L
         theta["X_D"] = X_D
-        # XXX Cargo-culted from old persistence layer's update_model.
-        for diag_key in "column_crp_alpha", "logscore", "num_views":
-            diag_list = [l[modelno] for l in diagnostics[diag_key]]
-            if diag_key in theta and type(theta[diag_key]) == list:
-                theta[diag_key] += diag_list
-            else:
-                theta[diag_key] = diag_list
         bayesdb_set_model(bdb, table_id, modelno, theta)
 
 ### BayesDB column functions

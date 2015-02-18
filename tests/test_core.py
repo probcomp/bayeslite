@@ -119,10 +119,11 @@ def sqlite_bayesdb_table(mkbdb, name, schema, data, **kwargs):
         yield bdb, table_id
 
 @contextlib.contextmanager
-def analyzed_bayesdb_table(mkbdb, nmodels, nsteps):
+def analyzed_bayesdb_table(mkbdb, nmodels, nsteps, max_seconds=None):
     with mkbdb as (bdb, table_id):
         core.bayesdb_models_initialize(bdb, table_id, nmodels)
-        core.bayesdb_models_analyze(bdb, table_id, iterations=nsteps)
+        core.bayesdb_models_analyze(bdb, table_id, iterations=nsteps,
+            max_seconds=max_seconds)
         yield bdb, table_id
 
 def bayesdb_maxrowid(bdb, table_id):
@@ -316,8 +317,28 @@ def test_btable_analysis1(btable_name):
 # The multiprocessing engine has a large overhead, too much to try
 # every normal test with it, so we'll just run this one test to make
 # sure it doesn't crash and burn with ten models.
-def test_btable_mp_analysis():
+def test_t1_mp_analysis():
     with analyzed_bayesdb_table(t1_mp(), 10, 2):
+        pass
+
+def test_t1_mp_analysis_time_deadline():
+    with analyzed_bayesdb_table(t1_mp(), 10, None, max_seconds=1):
+        pass
+
+def test_t1_mp_analysis_iter_deadline():
+    with analyzed_bayesdb_table(t1_mp(), 10, 1, max_seconds=10):
+        pass
+
+def test_t1_analysis_time_deadline():
+    with analyzed_bayesdb_table(t1(), 10, None, max_seconds=1):
+        pass
+
+def test_t1_analysis_iter_deadline():
+    with analyzed_bayesdb_table(t1(), 10, 1, max_seconds=10):
+        pass
+
+def test_btable_mp_analysis_iter_deadline():
+    with analyzed_bayesdb_table(t1_mp(), 10, 1, max_seconds=10):
         pass
 
 @pytest.mark.parametrize('rowid,colno,confidence',
