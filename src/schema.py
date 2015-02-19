@@ -14,7 +14,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import sqlite3
+
 from bayeslite.sqlite3_util import sqlite3_exec_1
+
+if sqlite3.sqlite_version_info < (3, 7, 17):
+    # 3.7.17 introduced application_id.
+    raise ImportError('Bayeslite requires SQLite >=3.7.17')
 
 bayesdb_schema = """
 PRAGMA foreign_keys = ON;
