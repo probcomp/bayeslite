@@ -57,13 +57,13 @@ COMMIT;
 
 def bayesdb_install_schema(db):
     application_id = 0
-    no_application_id = None
+    application_id_ok = None
     if db.execute("PRAGMA application_id").fetchall():
         application_id = sqlite3_exec_1(db, "PRAGMA application_id")
-        no_application_id = False
+        application_id_ok = True
     else:
         # raise Warning('SQLite is too old!')
-        no_application_id = True
+        application_id_ok = False
     user_version = sqlite3_exec_1(db, "PRAGMA user_version")
     if application_id == 0 and user_version == 0:
         # Assume we just created the database.
@@ -87,10 +87,10 @@ def bayesdb_install_schema(db):
         # module's automatic transaction handling.
         with db:
             db.executescript(bayesdb_schema)
-        if not no_application_id:
+        if application_id_ok:
             assert sqlite3_exec_1(db, "PRAGMA application_id") == 0x42594442
         assert sqlite3_exec_1(db, "PRAGMA user_version") == 3
-    elif application_id != 0x42594442:
+    elif application_id_ok and application_id != 0x42594442:
         raise IOError("Invalid application_id: 0x%08x" % application_id)
     elif user_version != 3:
         raise IOError("Unknown database version: %d" % user_version)
