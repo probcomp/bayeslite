@@ -80,11 +80,13 @@ def bayesdb_install_schema(db):
         # module's automatic transaction handling.
         with db:
             db.executescript(bayesdb_schema)
-        application_id = sqlite3_exec_1(db, "PRAGMA application_id")
-        if application_id == 0:
+        rows = db.execute("PRAGMA application_id").fetchall()
+        if len(rows) == 0:
             raise Warning('SQLite is too old!')
         else:
-            assert application_id == 0x42594442
+            assert len(rows) == 1
+            assert len(rows[0]) == 1
+            assert rows[0][0] == 0x42594442
         assert sqlite3_exec_1(db, "PRAGMA user_version") == 3
     elif application_id != 0x42594442:
         raise IOError("Invalid application_id: 0x%08x" % application_id)
