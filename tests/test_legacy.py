@@ -47,3 +47,22 @@ def test_legacy_models():
         ('Covington KY',),
         ('Akron OH',),
     ]
+    # Tickles an issue in case-folding of column names.
+    bql = '''
+        SELECT name
+            FROM dha
+            ORDER BY PREDICTIVE PROBABILITY OF mdcr_spnd_amblnc ASC
+            LIMIT 10
+    '''
+    assert list(bdb.execute(bql)) == [
+        ('McAllen TX',),
+        ('Beaumont TX',),
+        ('Worcester MA',),
+        ('Corpus Christi TX',),
+        ('Temple TX',),
+        ('Kingsport TN',),
+        ('Lebanon NH',),
+        ('Takoma Park MD',),
+        ('Bangor ME',),
+        ('Panama City FL',),
+    ]

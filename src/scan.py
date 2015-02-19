@@ -87,6 +87,8 @@ keywords = {
     "regexp": grammar.K_REGEXP,
     "respect": grammar.K_RESPECT,
     "row": grammar.K_ROW,
+    "second": grammar.K_SECOND,
+    "seconds": grammar.K_SECONDS,
     "select": grammar.K_SELECT,
     "similarity": grammar.K_SIMILARITY,
     "then": grammar.K_THEN,

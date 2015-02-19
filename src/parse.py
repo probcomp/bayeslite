@@ -106,8 +106,8 @@ class BQLSemantics(object):
         return ast.InitModels(ifnotexists, btable, n, config=None)
     def p_command_analyze_models(self, btable, models, anlimit, wait):
         iterations = anlimit[1] if anlimit[0] == 'iterations' else None
-        minutes = anlimit[1] if anlimit[0] == 'minutes' else None
-        return ast.AnalyzeModels(btable, models, iterations, minutes, wait)
+        seconds = anlimit[1] if anlimit[0] == 'seconds' else None
+        return ast.AnalyzeModels(btable, models, iterations, seconds, wait)
 
     def p_ifnotexists_none(self):               return False
     def p_ifnotexists_some(self):               return True
@@ -120,7 +120,8 @@ class BQLSemantics(object):
     def p_modelrange_multi(self, minno, maxno): return range(minno, maxno + 1)
 
     def p_anlimit_iterations(self, n):          return ('iterations', n)
-    def p_anlimit_minutes(self, n):             return ('minutes', n)
+    def p_anlimit_minutes(self, n):             return ('seconds', 60*n)
+    def p_anlimit_seconds(self, n):             return ('seconds', n)
 
     def p_opt_wait_none(self):                  return False
     def p_opt_wait_some(self):                  return True

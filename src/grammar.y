@@ -45,6 +45,7 @@ modelrange(multi)	::= L_INTEGER(minno) T_MINUS L_INTEGER(maxno).
 
 anlimit(iterations)	::= K_FOR L_INTEGER(n) K_ITERATION|K_ITERATIONS.
 anlimit(minutes)	::= K_FOR L_INTEGER(n) K_MINUTE|K_MINUTES.
+anlimit(seconds)	::= K_FOR L_INTEGER(n) K_SECOND|K_SECONDS.
 
 opt_wait(none)		::= .
 opt_wait(some)		::= K_WAIT.

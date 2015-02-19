@@ -14,7 +14,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import apsw
+
 from bayeslite.sqlite3_util import sqlite3_exec_1
+
+if apsw.SQLITE_VERSION_NUMBER < 3007017:
+    # 3.7.17 introduced application_id.
+    raise ImportError('Bayeslite requires SQLite >=3.7.17')
 
 # Pragmas that must go outside any transaction.
 bayesdb_pragmas = """

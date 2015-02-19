@@ -38,7 +38,7 @@ AnalyzeModels = namedtuple('AnalyzeModels', [
     'btable',
     'modelnos',
     'iterations',
-    'minutes',
+    'seconds',
     'wait',
 ])
 
