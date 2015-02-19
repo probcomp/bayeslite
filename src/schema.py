@@ -62,7 +62,7 @@ def bayesdb_install_schema(db):
         application_id = sqlite3_exec_1(db, "PRAGMA application_id")
         no_application_id = False
     else:
-        raise Warning('SQLite is too old!')
+        # raise Warning('SQLite is too old!')
         no_application_id = True
     user_version = sqlite3_exec_1(db, "PRAGMA user_version")
     if application_id == 0 and user_version == 0:
