@@ -14,13 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import sqlite3
-
 from bayeslite.sqlite3_util import sqlite3_exec_1
-
-if sqlite3.sqlite_version_info < (3, 7, 17):
-    # 3.7.17 introduced application_id.
-    raise ImportError('Bayeslite requires SQLite >=3.7.17')
 
 bayesdb_schema = """
 PRAGMA foreign_keys = ON;
@@ -86,7 +80,11 @@ def bayesdb_install_schema(db):
         # module's automatic transaction handling.
         with db:
             db.executescript(bayesdb_schema)
-        assert sqlite3_exec_1(db, "PRAGMA application_id") == 0x42594442
+        application_id = sqlite3_exec_1(db, "PRAGMA application_id")
+        if application_id == 0:
+            raise Warning('SQLite is too old!')
+        else:
+            assert application_id == 0x42594442
         assert sqlite3_exec_1(db, "PRAGMA user_version") == 3
     elif application_id != 0x42594442:
         raise IOError("Invalid application_id: 0x%08x" % application_id)
