@@ -16,6 +16,7 @@
 
 # Public API.
 from bayeslite.bayesdb import BayesDB
+from bayeslite.codebook import bayesdb_import_codebook_csv_file
 from bayeslite.core import bayesdb_attach_sqlite_file
 from bayeslite.core import bayesdb_column_name
 from bayeslite.core import bayesdb_column_names

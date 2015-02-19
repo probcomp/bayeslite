@@ -16,7 +16,7 @@
 
 from bayeslite.sqlite3_util import sqlite3_exec_1
 
-bayesdb_schema = """
+bayesdb_schema_3 = """
 PRAGMA foreign_keys = ON;
 PRAGMA application_id = 1113146434; -- #x42594442, `BYDB'
 PRAGMA user_version = 3;
@@ -52,12 +52,33 @@ CREATE TABLE bayesdb_model (
 );
 COMMIT;
 """
+
+bayesdb_schema_3to4 = """
+BEGIN;
+PRAGMA user_version = 4;
+
+ALTER TABLE bayesdb_table_column ADD COLUMN short_name TEXT;
+ALTER TABLE bayesdb_table_column ADD COLUMN description TEXT;
+
+CREATE TABLE bayesdb_value_map (
+	table_id	INTEGER NOT NULL REFERENCES bayesdb_table(id),
+	colno		INTEGER NOT NULL,
+	value		TEXT NOT NULL,
+	extended_value	TEXT NOT NULL,
+	PRIMARY KEY(table_id, colno, value),
+	FOREIGN KEY(table_id, colno)
+		REFERENCES bayesdb_table_column(table_id, colno)
+);
+COMMIT;
+"""
 
 ### BayesDB SQLite setup
 
 def bayesdb_install_schema(db):
+    # Find the current application id and user version.
     application_id = 0
     application_id_ok = None
+    fixup_application_id = False
     if db.execute("PRAGMA application_id").fetchall():
         application_id = sqlite3_exec_1(db, "PRAGMA application_id")
         application_id_ok = True
@@ -65,6 +86,8 @@ def bayesdb_install_schema(db):
         # raise Warning('SQLite is too old!')
         application_id_ok = False
     user_version = sqlite3_exec_1(db, "PRAGMA user_version")
+
+    # Check them.  If zero, install the schema.  If not, maybe fail.
     if application_id == 0 and user_version == 0:
         # Assume we just created the database.
         #
@@ -86,20 +109,30 @@ def bayesdb_install_schema(db):
         # transaction active.  Otherwise we make no use of the sqlite3
         # module's automatic transaction handling.
         with db:
-            db.executescript(bayesdb_schema)
+            db.executescript(bayesdb_schema_3)
+            db.executescript(bayesdb_schema_3to4)
         if application_id_ok:
             assert sqlite3_exec_1(db, "PRAGMA application_id") == 0x42594442
-        assert sqlite3_exec_1(db, "PRAGMA user_version") == 3
-    elif application_id_ok and \
-         application_id == 0 and \
-         user_version == 3:
+        return
+    elif application_id == 0 and \
+         db.execute("PRAGMA table_info(bayesdb_table)").fetchall():
         # Assume we created it on a system with no application_id
-        # support, and just fix that up.
-        if db.execute("PRAGMA table_info(bayesdb_table)").fetchall():
-            db.execute("PRAGMA application_id = 1113146434")
-        else:
-            raise IOError("Invalid application id: 0x%08x" % (application_id,))
-    elif application_id_ok and application_id != 0x42594442:
+        # support, and just fix that up if we have it now.
+        if application_id_ok:
+            fixup_application_id = True
+    else:
         raise IOError("Invalid application_id: 0x%08x" % (application_id,))
-    elif user_version != 3:
+    # Check the schema version and apply upgrades if necessary.
+    if user_version == 3:
+        with db:
+            db.executescript(bayesdb_schema_3to4)
+    elif user_version == 4:
+        pass
+    else:
         raise IOError("Unknown database version: %d" % (user_version,))
+        pass
+    if fixup_application_id:
+        db.execute("PRAGMA application_id = 1113146434")
+    if application_id_ok:
+        assert sqlite3_exec_1(db, "PRAGMA application_id") == 0x42594442
+    assert sqlite3_exec_1(db, "PRAGMA user_version") == 4
