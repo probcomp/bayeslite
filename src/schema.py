@@ -90,7 +90,16 @@ def bayesdb_install_schema(db):
         if application_id_ok:
             assert sqlite3_exec_1(db, "PRAGMA application_id") == 0x42594442
         assert sqlite3_exec_1(db, "PRAGMA user_version") == 3
+    elif application_id_ok and \
+         application_id == 0 and \
+         user_version == 3:
+        # Assume we created it on a system with no application_id
+        # support, and just fix that up.
+        if db.execute("PRAGMA table_info(bayesdb_table)").fetchall():
+            db.execute("PRAGMA application_id = 1113146434")
+        else:
+            raise IOError("Invalid application id: 0x%08x" % (application_id,))
     elif application_id_ok and application_id != 0x42594442:
-        raise IOError("Invalid application_id: 0x%08x" % application_id)
+        raise IOError("Invalid application_id: 0x%08x" % (application_id,))
     elif user_version != 3:
-        raise IOError("Unknown database version: %d" % user_version)
+        raise IOError("Unknown database version: %d" % (user_version,))
