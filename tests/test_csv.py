@@ -144,7 +144,7 @@ def test_csv_import_badschema1():
 
 csv_data_missing = '''a,b,c
 1,2,3
-10,nan,30
+10,,30
 100,200,nan
 4,5,6
 '''

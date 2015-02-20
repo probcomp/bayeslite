@@ -121,7 +121,7 @@ def _bayesdb_import(bdb, table, column_names, rows, column_types):
             nonignored_column_types)
 
 bayesdb_import_mungers = {
-    'numerical': float,
+    "numerical": lambda v: float('NaN' if v == '' else v),
 }
 
 def bayesdb_table_definition(table, column_names, column_types_folded):
@@ -194,6 +194,9 @@ def bayesdb_import_column_integerable_p(rows, i):
 def bayesdb_import_column_floatable_p(rows, i):
     try:
         for row in rows:
+            # We treat an empty string as missing and equivalent to NaN.
+            if row[i] == '':
+                continue
             float(row[i])
     except ValueError:
         return False
