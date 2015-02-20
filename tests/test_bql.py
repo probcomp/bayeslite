@@ -172,17 +172,17 @@ def test_select_trivial():
 
 def test_select_bql():
     assert bql2sql('select predictive probability of weight from t1;') == \
-        'SELECT bql_row_column_predictive_probability(1, rowid, 2) FROM "t1";'
+        'SELECT bql_row_column_predictive_probability(1, _rowid_, 2) FROM "t1";'
     assert bql2sql('select label, predictive probability of weight from t1;') \
         == \
-        'SELECT "label", bql_row_column_predictive_probability(1, rowid, 2)' \
+        'SELECT "label", bql_row_column_predictive_probability(1, _rowid_, 2)' \
         + ' FROM "t1";'
     assert bql2sql('select predictive probability of weight, label from t1;') \
         == \
-        'SELECT bql_row_column_predictive_probability(1, rowid, 2), "label"' \
+        'SELECT bql_row_column_predictive_probability(1, _rowid_, 2), "label"' \
         + ' FROM "t1";'
     assert bql2sql('select predictive probability of weight + 1 from t1;') == \
-        'SELECT (bql_row_column_predictive_probability(1, rowid, 2) + 1)' \
+        'SELECT (bql_row_column_predictive_probability(1, _rowid_, 2) + 1)' \
         + ' FROM "t1";'
     with pytest.raises(ValueError):
         # Need a table.
@@ -203,21 +203,21 @@ def test_select_bql():
     assert bql2sql('select probability of weight = f(c) from t1;') == \
         'SELECT bql_column_value_probability(1, 2, "f"("c")) FROM "t1";'
     assert bql2sql('select typicality from t1;') == \
-        'SELECT bql_row_typicality(1, rowid) FROM "t1";'
+        'SELECT bql_row_typicality(1, _rowid_) FROM "t1";'
     assert bql2sql('select typicality of age from t1;') == \
         'SELECT bql_column_typicality(1, 1) FROM "t1";'
     assert bql2sql('select similarity to 5 from t1;') == \
-        'SELECT bql_row_similarity(1, rowid, 5, 0, 1, 2) FROM "t1";'
+        'SELECT bql_row_similarity(1, _rowid_, 5, 0, 1, 2) FROM "t1";'
     assert bql2sql('select similarity to 5 with respect to age from t1') == \
-        'SELECT bql_row_similarity(1, rowid, 5, 1) FROM "t1";'
+        'SELECT bql_row_similarity(1, _rowid_, 5, 1) FROM "t1";'
     assert bql2sql('select similarity to 5 with respect to (age, weight)' +
         ' from t1;') == \
-        'SELECT bql_row_similarity(1, rowid, 5, 1, 2) FROM "t1";'
+        'SELECT bql_row_similarity(1, _rowid_, 5, 1, 2) FROM "t1";'
     assert bql2sql('select similarity to 5 with respect to (*) from t1;') == \
-        'SELECT bql_row_similarity(1, rowid, 5, 0, 1, 2) FROM "t1";'
+        'SELECT bql_row_similarity(1, _rowid_, 5, 0, 1, 2) FROM "t1";'
     assert bql2sql('select similarity to 5 with respect to (age, weight)' +
         ' from t1;') == \
-        'SELECT bql_row_similarity(1, rowid, 5, 1, 2) FROM "t1";'
+        'SELECT bql_row_similarity(1, _rowid_, 5, 1, 2) FROM "t1";'
     assert bql2sql('select dependence probability of age with weight' +
         ' from t1;') == \
         'SELECT bql_column_dependence_probability(1, 1, 2) FROM "t1";'
@@ -245,7 +245,7 @@ def test_select_bql():
         # Need both columns fixed.
         bql2sql('select correlation from t1;')
     assert bql2sql('select infer age conf 0.9 from t1;') == \
-        'SELECT bql_infer(1, 1, rowid, "age", 0.9) FROM "t1";'
+        'SELECT bql_infer(1, 1, _rowid_, "age", 0.9) FROM "t1";'
 
 def test_estimate_columns_trivial():
     prefix = 'SELECT name FROM bayesdb_table_column WHERE table_id = 1'
@@ -378,14 +378,15 @@ def test_estimate_pairwise_trivial():
             ' where infer age conf 0.9 > 30;')
 
 def test_estimate_pairwise_row():
-    prefix = 'SELECT r0.rowid, r1.rowid'
+    prefix = 'SELECT r0._rowid_, r1._rowid_'
     infix = ' FROM t1 AS r0, t1 AS r1'
     assert bql2sql('estimate pairwise row similarity from t1;') == \
-        prefix + ', bql_row_similarity(1, r0.rowid, r1.rowid, 0, 1, 2)' + \
+        prefix + ', bql_row_similarity(1, r0._rowid_, r1._rowid_, 0, 1, 2)' + \
         infix + ';'
     assert bql2sql('estimate pairwise row similarity with respect to age' +
             ' from t1;') == \
-        prefix + ', bql_row_similarity(1, r0.rowid, r1.rowid, 1)' + infix + ';'
+        prefix + ', bql_row_similarity(1, r0._rowid_, r1._rowid_, 1)' + \
+        infix + ';'
     with pytest.raises(ValueError):
         # INFER is a 1-row function.
         bql2sql('estimate pairwise row infer age conf 0.9 from t1;')
@@ -483,7 +484,7 @@ def test_parametrized():
             'SELECT colno FROM bayesdb_table_column WHERE table_id = ?' +
                 ' AND name = ?',
             # *** SELECT SIMILARITY TO 1:
-            'SELECT bql_row_similarity(1, rowid, 1, 0) FROM "t"',
+            'SELECT bql_row_similarity(1, _rowid_, 1, 0) FROM "t"',
             'SELECT metamodel_id FROM bayesdb_table WHERE id = ?',
             'SELECT metadata FROM bayesdb_table WHERE id = ?',
             'SELECT count(*) FROM bayesdb_model WHERE table_id = ?',
@@ -501,7 +502,7 @@ def test_parametrized():
             'SELECT colno FROM bayesdb_table_column WHERE table_id = ?' +
                 ' AND name = ?',
             # *** SELECT SIMILARITY TO 1:
-            'SELECT bql_row_similarity(1, rowid, 1, 0) FROM "t"',
+            'SELECT bql_row_similarity(1, _rowid_, 1, 0) FROM "t"',
             'SELECT metamodel_id FROM bayesdb_table WHERE id = ?',
             'SELECT metadata FROM bayesdb_table WHERE id = ?',
             'SELECT count(*) FROM bayesdb_model WHERE table_id = ?',

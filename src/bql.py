@@ -403,8 +403,8 @@ def compile_estpaircols(bdb, estpaircols, out):
 def compile_estpairrow(bdb, estpairrow, out):
     assert isinstance(estpairrow, ast.EstPairRow)
     table_name = estpairrow.btable
-    rowid0_exp = 'r0.rowid'
-    rowid1_exp = 'r1.rowid'
+    rowid0_exp = 'r0._rowid_'
+    rowid1_exp = 'r1._rowid_'
     out.write('SELECT %s, %s, ' % (rowid0_exp, rowid1_exp))
     compile_2row_expression(bdb, estpairrow.expression, estpairrow,
         rowid0_exp, rowid1_exp, out)
@@ -456,7 +456,7 @@ class BQLCompiler_1Row(object):
         if not isinstance(self.ctx.tables[0].table, str): # XXX name
             raise ValueError('Subquery in BQL row query: %s' % (self.ctx,))
         table_id = core.bayesdb_table_id(bdb, self.ctx.tables[0].table)
-        rowid_col = 'rowid'     # XXX Don't hard-code this.
+        rowid_col = '_rowid_'   # XXX Don't hard-code this.
         if isinstance(bql, ast.ExpBQLPredProb):
             if bql.column is None:
                 raise ValueError('Predictive probability at row needs column.')
@@ -476,14 +476,14 @@ class BQLCompiler_1Row(object):
             out.write(')')
         elif isinstance(bql, ast.ExpBQLTyp):
             if bql.column is None:
-                out.write('bql_row_typicality(%s, rowid)' % (table_id,))
+                out.write('bql_row_typicality(%s, _rowid_)' % (table_id,))
             else:
                 colno = core.bayesdb_column_number(bdb, table_id, bql.column)
                 out.write('bql_column_typicality(%s, %s)' % (table_id, colno))
         elif isinstance(bql, ast.ExpBQLSim):
             if bql.rowid is None:
                 raise ValueError('Similarity as 1-row function needs row.')
-            out.write('bql_row_similarity(%s, rowid, ' % (table_id,))
+            out.write('bql_row_similarity(%s, _rowid_, ' % (table_id,))
             compile_expression(bdb, bql.rowid, self, out)
             out.write(', ')
             compile_column_lists(bdb, table_id, bql.column_lists, self, out)
@@ -503,7 +503,7 @@ class BQLCompiler_1Row(object):
         elif isinstance(bql, ast.ExpBQLInfer):
             assert bql.column is not None
             colno = core.bayesdb_column_number(bdb, table_id, bql.column)
-            out.write('bql_infer(%d, %d, rowid, ' % (table_id, colno))
+            out.write('bql_infer(%d, %d, _rowid_, ' % (table_id, colno))
             compile_column_name(bdb, self.ctx.tables[0].table, bql.column, out)
             out.write(', ')
             compile_expression(bdb, bql.confidence, self, out)

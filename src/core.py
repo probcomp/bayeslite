@@ -462,7 +462,7 @@ def bayesdb_column_values(bdb, table_id, colno):
 def bayesdb_cell_value(bdb, table_id, rowid, colno):
     qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
     qc = sqlite3_quote_name(bayesdb_column_name(bdb, table_id, colno))
-    sql = "SELECT %s FROM %s WHERE rowid = ?" % (qc, qt)
+    sql = "SELECT %s FROM %s WHERE _rowid_ = ?" % (qc, qt)
     return bayesdb_sql_execute1(bdb, sql, (rowid,))
 
 ### BayesDB model access
@@ -867,7 +867,7 @@ def bql_infer(bdb, table_id, colno, rowid, value, confidence_threshold,
     column_names = bayesdb_column_names(bdb, table_id)
     qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
     qcns = ",".join(map(sqlite3_quote_name, column_names))
-    select_sql = "SELECT %s FROM %s WHERE rowid = ?" % (qcns, qt)
+    select_sql = "SELECT %s FROM %s WHERE _rowid_ = ?" % (qcns, qt)
     c = bdb.sql_execute(select_sql, (rowid,))
     row = c.fetchone()
     assert row is not None
@@ -892,7 +892,8 @@ def bayesdb_simulate(bdb, table_id, constraints, colnos, numpredictions=1):
     engine = bayesdb_table_engine(bdb, table_id)
     M_c = bayesdb_metadata(bdb, table_id)
     qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
-    max_rowid = bayesdb_sql_execute1(bdb, "SELECT max(rowid) FROM %s" % (qt,))
+    max_rowid = bayesdb_sql_execute1(bdb,
+        "SELECT max(_rowid_) FROM %s" % (qt,))
     fake_rowid = max_rowid + 1
     fake_row_id = sqlite3_rowid_to_engine_row_id(fake_rowid)
     # XXX Why special-case empty constraints?
