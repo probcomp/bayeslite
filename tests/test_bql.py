@@ -307,8 +307,9 @@ def test_estimate_columns_trivial():
         bql2sql('estimate columns from t1 where infer age conf 0.9 > 30;')
 
 def test_estimate_pairwise_trivial():
-    prefix = 'SELECT c0.name, c1.name, '
-    infix = ' FROM bayesdb_table_column AS c0, bayesdb_table_column AS c1'
+    prefix = 'SELECT 1 AS table_id, c0.name AS name0, c1.name AS name1, '
+    infix = ' AS value'
+    infix += ' FROM bayesdb_table_column AS c0, bayesdb_table_column AS c1'
     infix += ' WHERE c0.table_id = 1 AND c1.table_id = 1'
     assert bql2sql('estimate pairwise dependence probability from t1;') == \
         prefix + 'bql_column_dependence_probability(1, c0.colno, c1.colno)' + \
