@@ -107,10 +107,22 @@ def _bayesdb_import(bdb, table, column_names, rows, column_types):
         qcps = ",".join("?" * ncols)
         insert_sql = "INSERT INTO %s (%s) VALUES (%s)" % (qt, qcns, qcps)
         for row in rows:
-            bdb.sql_execute(insert_sql,
-                tuple(row[i] for i in nonignored_indices))
+            munged_row = []
+            for i, name in zip(nonignored_indices, nonignored_column_names):
+                column_type = column_types_folded[casefold(name)]
+                value = None
+                if column_type in bayesdb_import_mungers:
+                    value = bayesdb_import_mungers[column_type](row[i])
+                else:
+                    value = row[i]
+                munged_row.append(value)
+            bdb.sql_execute(insert_sql, munged_row)
         core.bayesdb_import_sqlite_table(bdb, table, nonignored_column_names,
             nonignored_column_types)
+
+bayesdb_import_mungers = {
+    "numerical": lambda v: float('NaN' if v == '' else v),
+}
 
 def bayesdb_table_definition(table, column_names, column_types_folded):
     column_defs = [bayesdb_column_definition(name,
@@ -182,6 +194,9 @@ def bayesdb_import_column_integerable_p(rows, i):
 def bayesdb_import_column_floatable_p(rows, i):
     try:
         for row in rows:
+            # We treat an empty string as missing and equivalent to NaN.
+            if row[i] == '':
+                continue
             float(row[i])
     except ValueError:
         return False

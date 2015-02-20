@@ -141,3 +141,27 @@ def test_csv_import_badschema1():
                     'division': 'categorical',
                     'rank': 'categorical',
                 })
+
+csv_data_missing = '''a,b,c
+1,2,3
+10,,30
+100,200,nan
+4,5,6
+'''
+
+def test_csv_missing():
+    with bayesdb_csv_stream(csv_data_missing) as (bdb, f):
+        # XXX Test the automatic column type guessing too.
+        bayeslite.bayesdb_import_csv(bdb, 't', f,
+            column_types={
+                'a': 'numerical',
+                'b': 'numerical',
+                'c': 'numerical',
+            })
+        # XXX These should be proper NaNs, not None.
+        assert list(bdb.execute('select * from t')) == [
+            (1.0, 2.0, 3.0),
+            (10.0, None, 30.0),
+            (100.0, 200.0, None),
+            (4.0, 5.0, 6.0),
+        ]

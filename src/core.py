@@ -426,6 +426,13 @@ def bayesdb_column_names(bdb, table_id):
     for row in bdb.sql_execute(sql, (table_id,)):
         yield row[0]
 
+def bayesdb_column_exists(bdb, table_id, name):
+    sql = """
+        SELECT count(*) FROM bayesdb_table_column
+            WHERE table_id = ? AND name = ?
+    """
+    return 0 < bayesdb_sql_execute1(bdb, sql, (table_id, name))
+
 def bayesdb_column_name(bdb, table_id, colno):
     sql = """
         SELECT name FROM bayesdb_table_column WHERE table_id = ? AND colno = ?
