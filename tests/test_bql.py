@@ -229,13 +229,22 @@ def test_select_bql():
         bql2sql('select dependence probability from t1;')
     assert bql2sql('select mutual information of age with weight' +
         ' from t1;') == \
-        'SELECT bql_column_mutual_information(1, 1, 2) FROM "t1";'
+        'SELECT bql_column_mutual_information(1, 1, 2, NULL) FROM "t1";'
+    assert bql2sql('select mutual information of age with weight' +
+        ' using 42 samples from t1;') == \
+        'SELECT bql_column_mutual_information(1, 1, 2, 42) FROM "t1";'
     with pytest.raises(ValueError):
         # Need both columns fixed.
         bql2sql('select mutual information with age from t1;')
     with pytest.raises(ValueError):
         # Need both columns fixed.
         bql2sql('select mutual information from t1;')
+    with pytest.raises(ValueError):
+        # Need both columns fixed.
+        bql2sql('select mutual information using 42 samples with age from t1;')
+    with pytest.raises(ValueError):
+        # Need both columns fixed.
+        bql2sql('select mutual information using 42 samples from t1;')
     assert bql2sql('select correlation of age with weight from t1;') == \
         'SELECT bql_column_correlation(1, 1, 2) FROM "t1";'
     with pytest.raises(ValueError):
@@ -284,7 +293,10 @@ def test_estimate_columns_trivial():
         bql2sql('estimate columns from t1 where dependence probability > 0.5;')
     assert bql2sql('estimate columns from t1 order by' +
             ' mutual information with age;') == \
-        prefix + ' ORDER BY bql_column_mutual_information(1, 1, colno);'
+        prefix + ' ORDER BY bql_column_mutual_information(1, 1, colno, NULL);'
+    assert bql2sql('estimate columns from t1 order by' +
+            ' mutual information with age using 42 samples;') == \
+        prefix + ' ORDER BY bql_column_mutual_information(1, 1, colno, 42);'
     with pytest.raises(ValueError):
         # Must omit exactly one column.
         bql2sql('estimate columns from t1 order by' +
@@ -292,6 +304,14 @@ def test_estimate_columns_trivial():
     with pytest.raises(ValueError):
         # Must omit exactly one column.
         bql2sql('estimate columns from t1 where mutual information > 0.5;')
+    with pytest.raises(ValueError):
+        # Must omit exactly one column.
+        bql2sql('estimate columns from t1 order by' +
+            ' mutual information of age with weight using 42 samples;')
+    with pytest.raises(ValueError):
+        # Must omit exactly one column.
+        bql2sql('estimate columns from t1 where' +
+            ' mutual information using 42 samples > 0.5;')
     assert bql2sql('estimate columns from t1 order by' +
             ' correlation with age desc;') == \
         prefix + ' ORDER BY bql_column_correlation(1, 1, colno) DESC;'
@@ -319,6 +339,10 @@ def test_estimate_pairwise_trivial():
         bql2sql('estimate pairwise mutual information from t1 where'
             ' (probability of x = 0) > 0.5;')
     with pytest.raises(ValueError):
+        # PROBABILITY OF = is a row function.
+        bql2sql('estimate pairwise mutual information using 42 samples'
+            ' from t1 where (probability of x = 0) > 0.5;')
+    with pytest.raises(ValueError):
         # PROBABILITY OF VALUE is 1-column.
         bql2sql('estimate pairwise correlation from t1 where' +
             ' (probability of value 0) > 0.5;')
@@ -331,6 +355,10 @@ def test_estimate_pairwise_trivial():
         bql2sql('estimate pairwise mutual information from t1' +
             ' where typicality of x > 0.5;')
     with pytest.raises(ValueError):
+        # TYPICALITY OF is a row function.
+        bql2sql('estimate pairwise mutual information using 42 samples from t1'
+            ' where typicality of x > 0.5;')
+    with pytest.raises(ValueError):
         # TYPICALITY is 1-column.
         bql2sql('estimate pairwise correlation from t1 where typicality > 0.5;')
     with pytest.raises(ValueError):
@@ -341,6 +369,10 @@ def test_estimate_pairwise_trivial():
         # Must omit both columns.
         bql2sql('estimate pairwise mutual information from t1 where' +
             ' dependence probability with weight > 0.5;')
+    with pytest.raises(ValueError):
+        # Must omit both columns.
+        bql2sql('estimate pairwise mutual information using 42 samples'
+            ' from t1 where dependence probability with weight > 0.5;')
     assert bql2sql('estimate pairwise correlation from t1 where' +
             ' dependence probability > 0.5;') == \
         prefix + 'bql_column_correlation(1, c0.colno, c1.colno)' + \
@@ -352,13 +384,26 @@ def test_estimate_pairwise_trivial():
             ' mutual information of age with weight > 0.5;')
     with pytest.raises(ValueError):
         # Must omit both columns.
+        bql2sql('estimate pairwise dependence probability from t1 where' +
+            ' mutual information of age using 42 samples with weight > 0.5;')
+    with pytest.raises(ValueError):
+        # Must omit both columns.
         bql2sql('estimate pairwise mutual information from t1 where' +
             ' mutual information with weight > 0.5;')
+    with pytest.raises(ValueError):
+        # Must omit both columns.
+        bql2sql('estimate pairwise mutual information using 42 samples from t1'
+            ' where mutual information with weight using 42 samples > 0.5;')
     assert bql2sql('estimate pairwise correlation from t1 where' +
             ' mutual information > 0.5;') == \
         prefix + 'bql_column_correlation(1, c0.colno, c1.colno)' + \
         infix + ' AND' + \
-        ' (bql_column_mutual_information(1, c0.colno, c1.colno) > 0.5);'
+        ' (bql_column_mutual_information(1, c0.colno, c1.colno, NULL) > 0.5);'
+    assert bql2sql('estimate pairwise correlation from t1 where' +
+            ' mutual information using 42 samples > 0.5;') == \
+        prefix + 'bql_column_correlation(1, c0.colno, c1.colno)' + \
+        infix + ' AND' + \
+        ' (bql_column_mutual_information(1, c0.colno, c1.colno, 42) > 0.5);'
     with pytest.raises(ValueError):
         # Must omit both columns.
         bql2sql('estimate pairwise dependence probability from t1 where' +
@@ -367,6 +412,10 @@ def test_estimate_pairwise_trivial():
         # Must omit both columns.
         bql2sql('estimate pairwise mutual information from t1 where' +
             ' correlation with weight > 0.5;')
+    with pytest.raises(ValueError):
+        # Must omit both columns.
+        bql2sql('estimate pairwise mutual information using 42 samples from t1'
+            ' where correlation with weight > 0.5;')
     assert bql2sql('estimate pairwise correlation from t1 where' +
             ' correlation > 0.5;') == \
         prefix + 'bql_column_correlation(1, c0.colno, c1.colno)' + \

@@ -306,7 +306,8 @@ bqlfn(typ_const)	::= K_TYPICALITY K_OF L_NAME(col).
 bqlfn(sim_1row)		::= K_SIMILARITY K_TO primary(row) wrt(cols).
 bqlfn(sim_2row)		::= K_SIMILARITY wrt(cols).
 bqlfn(depprob)		::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
-bqlfn(mutinf)		::= K_MUTUAL K_INFORMATION ofwith(cols).
+bqlfn(mutinf)		::= K_MUTUAL K_INFORMATION ofwith(cols)
+				opt_nsamples(nsamp).
 bqlfn(correl)		::= K_CORRELATION ofwith(cols).
 bqlfn(infer)		::= K_INFER L_NAME(col) K_CONF primary(cf).
 bqlfn(primary)		::= primary(p).
@@ -324,6 +325,9 @@ wrt(some)		::= K_WITH K_RESPECT K_TO
 ofwith(bql_2col)	::= .
 ofwith(bql_1col)	::= K_WITH L_NAME(col).
 ofwith(bql_const)	::= K_OF L_NAME(col1) K_WITH L_NAME(col2).
+
+opt_nsamples(none)	::= .
+opt_nsamples(some)	::= K_USING primary(nsamples) K_SAMPLES.
 
 column_lists(one)	::= column_list(collist).
 column_lists(many)	::= column_lists(collists)

@@ -179,7 +179,7 @@ ExpBQLProb = namedtuple('ExpBQLProb', ['column', 'value'])
 ExpBQLTyp = namedtuple('ExpBQLTyp', ['column'])
 ExpBQLSim = namedtuple('ExpBQLSim', ['rowid', 'column_lists'])
 ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
-ExpBQLMutInf = namedtuple('ExpBQLMutInf', ['column0', 'column1'])
+ExpBQLMutInf = namedtuple('ExpBQLMutInf', ['column0', 'column1', 'nsamples'])
 ExpBQLCorrel = namedtuple('ExpBQLCorrel', ['column0', 'column1'])
 ExpBQLInfer = namedtuple('ExpBQLInfer', ['column', 'confidence'])
 

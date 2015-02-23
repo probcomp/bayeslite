@@ -107,7 +107,7 @@ def bayesdb_install_bql(db, cookie):
     function("bql_column_correlation", 3, bql_column_correlation)
     function("bql_column_dependence_probability", 3,
         bql_column_dependence_probability)
-    function("bql_column_mutual_information", 3, bql_column_mutual_information)
+    function("bql_column_mutual_information", 4, bql_column_mutual_information)
     function("bql_column_typicality", 2, bql_column_typicality)
     function("bql_column_value_probability", 3, bql_column_value_probability)
     function("bql_row_similarity", -1, bql_row_similarity)
@@ -770,7 +770,9 @@ def bql_column_dependence_probability(bdb, table_id, colno0, colno1):
 
 # Two-column function:  MUTUAL INFORMATION [OF <col0> WITH <col1>]
 def bql_column_mutual_information(bdb, table_id, colno0, colno1,
-        numsamples=100):
+        numsamples=None):
+    if numsamples is None:
+        numsamples = 100
     engine = bayesdb_table_engine(bdb, table_id)
     X_L_list = list(bayesdb_latent_state(bdb, table_id))
     X_D_list = list(bayesdb_latent_data(bdb, table_id))

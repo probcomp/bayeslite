@@ -372,12 +372,20 @@ def test_select_bql():
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select mutual information with c from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLMutInf('c', None), None)],
+            [ast.SelColExp(ast.ExpBQLMutInf('c', None, None), None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string(
             'select mutual information of c with d from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLMutInf('c', 'd'), None)],
+            [ast.SelColExp(ast.ExpBQLMutInf('c', 'd', None), None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select mutual information of c with d' +
+            ' using (1+2) samples from t;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpBQLMutInf('c', 'd',
+                    ast.op(ast.OP_ADD, ast.ExpLit(ast.LitInt(1)),
+                        ast.ExpLit(ast.LitInt(2)))),
+                None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select correlation with c from t;') == \
         [ast.Select(ast.SELQUANT_ALL,

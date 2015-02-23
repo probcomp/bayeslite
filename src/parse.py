@@ -297,7 +297,8 @@ class BQLSemantics(object):
     def p_bqlfn_sim_1row(self, row, cols):      return ast.ExpBQLSim(row, cols)
     def p_bqlfn_sim_2row(self, cols):           return ast.ExpBQLSim(None,cols)
     def p_bqlfn_depprob(self, cols):            return ast.ExpBQLDepProb(*cols)
-    def p_bqlfn_mutinf(self, cols):             return ast.ExpBQLMutInf(*cols)
+    def p_bqlfn_mutinf(self, cols, nsamp):
+        return ast.ExpBQLMutInf(cols[0], cols[1], nsamp)
     def p_bqlfn_correl(self, cols):             return ast.ExpBQLCorrel(*cols)
     def p_bqlfn_infer(self, col, cf):           return ast.ExpBQLInfer(col, cf)
     def p_bqlfn_primary(self, p):               return p
@@ -309,6 +310,9 @@ class BQLSemantics(object):
     def p_ofwith_bql_2col(self):                return (None, None)
     def p_ofwith_bql_1col(self, col):           return (col, None)
     def p_ofwith_bql_const(self, col1, col2):   return (col1, col2)
+
+    def p_opt_nsamples_none(self):              return None
+    def p_opt_nsamples_some(self, nsamples):    return nsamples
 
     def p_column_lists_one(self, collist):
         return [collist]

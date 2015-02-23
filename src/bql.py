@@ -491,15 +491,15 @@ class BQLCompiler_1Row(object):
         elif isinstance(bql, ast.ExpBQLDepProb):
             compile_bql_2col_2(bdb, table_id,
                 'bql_column_dependence_probability',
-                'Dependence probability', bql, out)
+                'Dependence probability', None, bql, self, out)
         elif isinstance(bql, ast.ExpBQLMutInf):
             compile_bql_2col_2(bdb, table_id,
                 'bql_column_mutual_information',
-                'Mutual information', bql, out)
+                'Mutual information', compile_mutinf_extra, bql, self, out)
         elif isinstance(bql, ast.ExpBQLCorrel):
             compile_bql_2col_2(bdb, table_id,
                 'bql_column_correlation',
-                'Column correlation', bql, out)
+                'Column correlation', None, bql, self, out)
         elif isinstance(bql, ast.ExpBQLInfer):
             assert bql.column is not None
             colno = core.bayesdb_column_number(bdb, table_id, bql.column)
@@ -579,15 +579,16 @@ class BQLCompiler_1Col(object):
         elif isinstance(bql, ast.ExpBQLDepProb):
             compile_bql_2col_1(bdb, table_id,
                 'bql_column_dependence_probability',
-                'Dependence probability', bql, self.colno_exp, out)
+                'Dependence probability', None, bql, self.colno_exp, self, out)
         elif isinstance(bql, ast.ExpBQLMutInf):
             compile_bql_2col_1(bdb, table_id,
                 'bql_column_mutual_information',
-                'Mutual information', bql, self.colno_exp, out)
+                'Mutual information',
+                compile_mutinf_extra, bql, self.colno_exp, self, out)
         elif isinstance(bql, ast.ExpBQLCorrel):
             compile_bql_2col_1(bdb, table_id,
                 'bql_column_correlation',
-                'Column correlation', bql, self.colno_exp, out)
+                'Column correlation', None, bql, self.colno_exp, self, out)
         elif isinstance(bql, ast.ExpBQLInfer):
             raise ValueError('Infer is a 1-row function.')
         else:
@@ -617,18 +618,21 @@ class BQLCompiler_2Col(object):
         elif isinstance(bql, ast.ExpBQLDepProb):
             compile_bql_2col_0(bdb, table_id,
                 'bql_column_dependence_probability',
-                'Dependence probability', bql,
-                self.colno0_exp, self.colno1_exp, out)
+                'Dependence probability',
+                None,
+                bql, self.colno0_exp, self.colno1_exp, self, out)
         elif isinstance(bql, ast.ExpBQLMutInf):
             compile_bql_2col_0(bdb, table_id,
                 'bql_column_mutual_information',
-                'Mutual Information', bql,
-                self.colno0_exp, self.colno1_exp, out)
+                'Mutual Information',
+                compile_mutinf_extra,
+                bql, self.colno0_exp, self.colno1_exp, self, out)
         elif isinstance(bql, ast.ExpBQLCorrel):
             compile_bql_2col_0(bdb, table_id,
                 'bql_column_correlation',
-                'Correlation', bql,
-                self.colno0_exp, self.colno1_exp, out)
+                'Correlation',
+                None,
+                bql, self.colno0_exp, self.colno1_exp, self, out)
         elif isinstance(bql, ast.ExpBQLInfer):
             raise ValueError('Infer is a 1-row function.')
         else:
@@ -676,30 +680,48 @@ def compile_column_lists(bdb, table_id, column_lists, _bql_compiler, out):
         else:
             assert False        # XXX
 
-def compile_bql_2col_2(bdb, table_id, bqlfn, desc, bql, out):
+def compile_bql_2col_2(bdb, table_id, bqlfn, desc, extra, bql, bql_compiler,
+        out):
     if bql.column0 is None:
         raise ValueError(desc + ' needs exactly two columns.')
     if bql.column1 is None:
         raise ValueError(desc + ' needs exactly two columns.')
     colno0 = core.bayesdb_column_number(bdb, table_id, bql.column0)
     colno1 = core.bayesdb_column_number(bdb, table_id, bql.column1)
-    out.write('%s(%s, %s, %s)' % (bqlfn, table_id, colno0, colno1))
+    out.write('%s(%s, %s, %s' % (bqlfn, table_id, colno0, colno1))
+    if extra:
+        extra(bdb, table_id, bql, bql_compiler, out)
+    out.write(')')
 
-def compile_bql_2col_1(bdb, table_id, bqlfn, desc, bql, colno1_exp, out):
+def compile_bql_2col_1(bdb, table_id, bqlfn, desc, extra, bql, colno1_exp,
+        bql_compiler, out):
     if bql.column0 is None:
         raise ValueError(desc + ' needs at least one column.')
     if bql.column1 is not None:
         raise ValueError(desc + ' needs at most one column.')
     colno0 = core.bayesdb_column_number(bdb, table_id, bql.column0)
-    out.write('%s(%s, %s, %s)' % (bqlfn, table_id, colno0, colno1_exp))
+    out.write('%s(%s, %s, %s' % (bqlfn, table_id, colno0, colno1_exp))
+    if extra:
+        extra(bdb, table_id, bql, bql_compiler, out)
+    out.write(')')
 
-def compile_bql_2col_0(bdb, table_id, bqlfn, desc, bql, colno0_exp, colno1_exp,
-        out):
+def compile_bql_2col_0(bdb, table_id, bqlfn, desc, extra, bql,
+        colno0_exp, colno1_exp, bql_compiler, out):
     if bql.column0 is not None:
         raise ValueError(desc + ' needs no columns.')
     if bql.column1 is not None:
         raise ValueError(desc + ' needs no columns.')
-    out.write('%s(%s, %s, %s)' % (bqlfn, table_id, colno0_exp, colno1_exp))
+    out.write('%s(%s, %s, %s' % (bqlfn, table_id, colno0_exp, colno1_exp))
+    if extra:
+        extra(bdb, table_id, bql, bql_compiler, out)
+    out.write(')')
+
+def compile_mutinf_extra(bdb, table_id, bql, bql_compiler, out):
+    out.write(', ')
+    if bql.nsamples:
+        compile_expression(bdb, bql.nsamples, bql_compiler, out)
+    else:
+        out.write('NULL')
 
 def compile_1row_expression(bdb, exp, query, out):
     bql_compiler = BQLCompiler_1Row(query)

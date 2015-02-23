@@ -407,7 +407,13 @@ def test_twocolumn(btable_name, colno0, colno1):
         bdb.sql_execute('select bql_column_dependence_probability(?, ?, ?)',
             (table_id, colno0, colno1))
         core.bql_column_mutual_information(bdb, table_id, colno0, colno1)
-        bdb.sql_execute('select bql_column_mutual_information(?, ?, ?)',
+        core.bql_column_mutual_information(bdb, table_id, colno0, colno1, None)
+        core.bql_column_mutual_information(bdb, table_id, colno0, colno1, 1)
+        bdb.sql_execute('select bql_column_mutual_information(?, ?, ?, NULL)',
+            (table_id, colno0, colno1))
+        bdb.sql_execute('select bql_column_mutual_information(?, ?, ?, 1)',
+            (table_id, colno0, colno1))
+        bdb.sql_execute('select bql_column_mutual_information(?, ?, ?, 100)',
             (table_id, colno0, colno1))
 
 @pytest.mark.parametrize('colno,rowid',
