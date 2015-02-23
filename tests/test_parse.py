@@ -17,18 +17,18 @@
 import pytest
 
 import bayeslite.ast as ast
-import bayeslite.parse
+import bayeslite.parse as parse
 
 def parse_bql_string(string):
-    phrases = list(bayeslite.parse.parse_bql_string(string))
-    phrase_pos = list(bayeslite.parse.parse_bql_string_pos(string))
+    phrases = list(parse.parse_bql_string(string))
+    phrase_pos = list(parse.parse_bql_string_pos(string))
     assert len(phrases) == len(phrase_pos)
     start = 0
     for i in range(len(phrase_pos)):
         phrase, pos = phrase_pos[i]
         assert phrases[i] == phrase
         substring = buffer(string, start, len(string) - start)
-        phrase0, pos0 = bayeslite.parse.parse_bql_string_pos_1(substring)
+        phrase0, pos0 = parse.parse_bql_string_pos_1(substring)
         assert phrase0 == phrase
         assert pos0 == pos - start
         start = pos
@@ -550,3 +550,17 @@ def test_parametrized():
                 )),
                 None, None, None),
             124, {':foo': 124})]
+
+def test_complete():
+    assert parse.bql_string_complete_p('')
+    assert parse.bql_string_complete_p(';')
+    assert parse.bql_string_complete_p(';;;')
+    assert parse.bql_string_complete_p('\n;\n;;;\n;\n')
+    assert not parse.bql_string_complete_p('select 0')
+    assert parse.bql_string_complete_p('select 0;')
+    assert not parse.bql_string_complete_p('select 0\nfrom t')
+    assert parse.bql_string_complete_p('select 0\nfrom t;')
+    assert not parse.bql_string_complete_p('select 0;select 1')
+    assert parse.bql_string_complete_p('select 0;select 1;')
+    assert not parse.bql_string_complete_p('select 0;\nselect 1')
+    assert parse.bql_string_complete_p('select 0;\nselect 1;')

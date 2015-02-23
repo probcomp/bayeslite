@@ -23,7 +23,7 @@ import bayeslite.scan as scan
 def parse_bql_phrases(scanner):
     semantics = BQLSemantics()
     parser = grammar.Parser(semantics)
-    while True:
+    while not semantics.failed:
         token = scanner.read()
         if token[0] == -1:      # error
             semantics.syntax_error(token)
@@ -43,9 +43,11 @@ def parse_bql_phrases(scanner):
                 yield phrase
         if token[0] == 0:       # EOF
             break
-    # XXX It seems to me that lemon should do this for us.
     if 0 < len(semantics.errors):
-        semantics.parse_failed()
+        # XXX Raise a principled exception here.
+        raise Exception('Parse failed with errors: %s' % (self.errors,))
+    if semantics.failed:
+        raise Exception('Parse failed mysteriously!')
 
 def parse_bql_string_pos(string):
     scanner = scan.BQLScanner(StringIO.StringIO(string), '(string)')
@@ -62,16 +64,42 @@ def parse_bql_string_pos_1(string):
 def parse_bql_string(string):
     return (phrase for phrase, _pos in parse_bql_string_pos(string))
 
+def bql_string_complete_p(string):
+    scanner = scan.BQLScanner(StringIO.StringIO(string), '(string)')
+    semantics = BQLSemantics()
+    parser = grammar.Parser(semantics)
+    nonsemi = False
+    while not semantics.failed:
+        token = scanner.read()
+        if token[0] == -1:      # error
+            # Say it's complete so the caller will try to parse it and
+            # choke on the error.
+            return True
+        elif token[0] == 0:
+            # EOF.  Hope we have a complete phrase.
+            break
+        elif token[0] != grammar.T_SEMI:
+            # Got a non-semicolon token.  Clear any previous phrase,
+            # if we had one.
+            nonsemi = True
+            semantics.phrase = None
+        parser.feed(token)
+    if 0 < len(semantics.errors):
+        return True
+    if semantics.failed:
+        return True
+    return (not nonsemi) or (semantics.phrase is not None)
+
 class BQLSemantics(object):
     def __init__(self):
         self.phrase = None
         self.errors = []
+        self.failed = False
 
     def accept(self):
         pass
     def parse_failed(self):
-        # XXX Raise a principled exception here.
-        raise Exception('Parse failed with errors: %s' % (self.errors,))
+        self.failed = True
     def syntax_error(self, (number, text)):
         # XXX Adapt lemonade to help us identify what the allowed
         # subsequent tokens are.
