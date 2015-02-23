@@ -193,7 +193,7 @@ def test_select_bql():
     with pytest.raises(ValueError):
         # Need a btable, not a subquery.
         bql2sql('select predictive probability of weight from (select 0);')
-    with pytest.raises(Exception): # XXX Use a specific parse error.
+    with pytest.raises(parse.ParseError):
         # Need a column.
         bql2sql('select predictive probability from t1;')
     assert bql2sql('select probability of weight = 20 from t1;') == \
