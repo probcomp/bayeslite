@@ -18,7 +18,7 @@ export PYTHONPATH="${PYTHONPATH:+${PYTHONPATH}:}${bayeslite}"
     rm -rf build
     "$PYTHON" setup.py build
     if [ $# -eq 0 ]; then
-        "$PY_TEST" tests shell
+        "$PY_TEST" tests shell/tests
     else
         "$PY_TEST" "$@"
     fi

@@ -64,8 +64,8 @@ setup(
     package_dir={
         'bayeslite': 'src',
         'bayeslite.plex': 'external/plex/dist/Plex',
-        'bayeslite.shell': 'shell',
+        'bayeslite.shell': 'shell/src',
     },
-    scripts=['scripts/bayeslite'],
+    scripts=['shell/scripts/bayeslite'],
     license='Apache License, Version 2.0',
 )
