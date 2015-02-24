@@ -23,6 +23,8 @@ phrase1(nonempty)	::= phrase(phrase).
 phrase(command)		::= command(c).
 phrase(query)		::= query(q).
 
+/* XXX Need database names.  */
+command(droptable)	::= K_DROP K_TABLE ifexists(ifexists) L_NAME(name).
 command(createtab_as)	::= K_CREATE K_TABLE ifnotexists(ifnotexists)
 				L_NAME(name) K_AS query(query).
 command(createbtab_csv)	::= K_CREATE K_BTABLE ifnotexists(ifnotexists)
@@ -33,6 +35,8 @@ command(init_models)	::= K_INITIALIZE L_INTEGER(n) K_MODEL|K_MODELS
 command(analyze_models)	::= K_ANALYZE table_name(btable) opt_modelset(models)
 				anlimit(anlimit) opt_wait(wait).
 
+ifexists(none)		::= .
+ifexists(some)		::= K_IF K_EXISTS.
 ifnotexists(none)	::= .
 ifnotexists(some)	::= K_IF K_NOT K_EXISTS.
 

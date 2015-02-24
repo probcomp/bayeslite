@@ -16,6 +16,7 @@
 
 import StringIO
 import pytest
+import sqlite3
 import tempfile
 
 import bayeslite.ast as ast
@@ -563,6 +564,17 @@ def test_parametrized():
 def test_createtab():
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
         bdb.execute("create btable t from '%s'" % (fname,))
+        bdb.execute("create table u as select * from t where gender = 'F'")
+        assert bql_execute(bdb, 'select * from u') == [
+            ('23', 'F', '81000', '67', 'data science', '3'),
+            ('36', 'F', '96000', '70', 'management', '2'),
+            ('30', 'F', '81000', '73', 'engineering', '3'),
+        ]
+        with pytest.raises(sqlite3.OperationalError):
+            bdb.execute("create table u as select * from t where gender = 'F'")
+        bdb.execute('drop table u')
+        with pytest.raises(sqlite3.OperationalError):
+            bql_execute(bdb, 'select * from u')
         bdb.execute("create table u as select * from t where gender = 'F'")
         assert bql_execute(bdb, 'select * from u') == [
             ('23', 'F', '81000', '67', 'data science', '3'),

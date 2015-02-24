@@ -23,6 +23,11 @@ Parametrized = namedtuple('Parametrized', [
 ])
 
 # XXX Pass through other SQL DDL and DML commands.
+DropTable = namedtuple('DropTable', [
+    # XXX Database name, &c.
+    'ifexists',
+    'name'
+])
 CreateTableAs = namedtuple('CreateTableAs', [
     # XXX Database name, &c.
     'ifnotexists',

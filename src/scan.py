@@ -48,6 +48,7 @@ keywords = {
     "dependence": grammar.K_DEPENDENCE,
     "desc": grammar.K_DESC,
     "distinct": grammar.K_DISTINCT,
+    "drop": grammar.K_DROP,
     "else": grammar.K_ELSE,
     "end": grammar.K_END,
     "escape": grammar.K_ESCAPE,

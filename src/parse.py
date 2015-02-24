@@ -139,6 +139,8 @@ class BQLSemantics(object):
     def p_phrase_command(self, c):              return c
     def p_phrase_query(self, q):                return q
 
+    def p_command_droptable(self, ifexists, name):
+        return ast.DropTable(ifexists, name)
     def p_command_createtab_as(self, ifnotexists, name, query):
         return ast.CreateTableAs(ifnotexists, name, query)
     def p_command_createbtab_csv(self, ifnotexists, name, file):
@@ -152,6 +154,8 @@ class BQLSemantics(object):
         seconds = anlimit[1] if anlimit[0] == 'seconds' else None
         return ast.AnalyzeModels(btable, models, iterations, seconds, wait)
 
+    def p_ifexists_none(self):                  return False
+    def p_ifexists_some(self):                  return True
     def p_ifnotexists_none(self):               return False
     def p_ifnotexists_some(self):               return True
 

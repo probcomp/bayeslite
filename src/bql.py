@@ -47,6 +47,10 @@ def execute_phrase(bdb, phrase, bindings=()):
             out = Output(n_numpar, nampar_map, bindings)
             compile_query(bdb, phrase, out)
             return bdb.sql_execute(out.getvalue(), out.getbindings())
+    if isinstance(phrase, ast.DropTable):
+        ifexists = 'IF EXISTS ' if phrase.ifexists else ''
+        qt = sqlite3_quote_name(phrase.name)
+        return bdb.sql_execute('DROP TABLE %s%s' % (ifexists, qt))
     if isinstance(phrase, ast.CreateTableAs):
         assert ast.is_query(phrase.query)
         with bdb.savepoint():
