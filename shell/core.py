@@ -18,6 +18,7 @@ import StringIO
 import cmd
 import traceback
 
+import bayeslite
 import bayeslite.core as core
 import bayeslite.parse as parse
 import bayeslite.shell.pretty as pretty
@@ -59,13 +60,46 @@ class Shell(cmd.Cmd):
             try:
                 with self.bdb.savepoint():
                     pretty.pp_cursor(self.stdout, self.bdb.execute(bql))
-            except Exception as e:
+            except Exception:
                 self.stdout.write(traceback.format_exc())
         else:
             self.prompt = self.waiting_prompt
         return False
 
+    def do_csv(self, line):
+        # XXX Lousy, lousy tokenizer.
+        tokens = line.split()
+        if len(tokens) != 2:
+            self.stdout.write('Usage: import <table> </path/to/data.csv>\n')
+        table = tokens[0]
+        pathname = tokens[1]
+        try:
+            bayeslite.bayesdb_import_csv_file(self.bdb, table, pathname)
+        except Exception:
+            self.stdout.write(traceback.format_exc())
+
+    def do_codebook(self, line):
+        # XXX Lousy, lousy tokenizer.
+        tokens = line.split()
+        if len(tokens) != 2:
+            self.stdout.write('Usage:'
+                ' codebook <table> </path/to/codebook.csv>\n')
+        table = tokens[0]
+        pathname = tokens[1]
+        bayeslite.bayesdb_import_codebook_csv_file(self.bdb, table, pathname)
+
+    def do_loadmodels(self, line):
+        # XXX Lousy, lousy tokenizer.
+        tokens = line.split()
+        if len(tokens) != 2:
+            self.stdout.write('Usage:'
+                ' loadmodels <table> </path/to/models.pkl.gz>\n')
+        table = tokens[0]
+        pathname = tokens[1]
+        bayeslite.bayesdb_load_legacy_models(self.bdb, table, pathname)
+
     def do_describe(self, line):
+        # XXX Lousy, lousy tokenizer.
         tokens = line.split()
         if len(tokens) == 0:
             self.stdout.write('Describe what, pray tell?\n')
