@@ -66,5 +66,6 @@ setup(
         'bayeslite.plex': 'external/plex/dist/Plex',
         'bayeslite.shell': 'shell',
     },
+    scripts=['scripts/bayeslite'],
     license='Apache License, Version 2.0',
 )
