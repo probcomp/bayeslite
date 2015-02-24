@@ -559,3 +559,13 @@ def test_parametrized():
                 ' WHERE table_id = ? AND modelno = ?',
             'SELECT count(*) FROM bayesdb_model WHERE table_id = ?',
         ]
+
+def test_createtab():
+    with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
+        bdb.execute("create btable t from '%s'" % (fname,))
+        bdb.execute("create table u as select * from t where gender = 'F'")
+        assert bql_execute(bdb, 'select * from u') == [
+            ('23', 'F', '81000', '67', 'data science', '3'),
+            ('36', 'F', '96000', '70', 'management', '2'),
+            ('30', 'F', '81000', '73', 'engineering', '3'),
+        ]

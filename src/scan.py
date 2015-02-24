@@ -92,6 +92,7 @@ keywords = {
     "seconds": grammar.K_SECONDS,
     "select": grammar.K_SELECT,
     "similarity": grammar.K_SIMILARITY,
+    "table": grammar.K_TABLE,
     "then": grammar.K_THEN,
     "to": grammar.K_TO,
     "typicality": grammar.K_TYPICALITY,

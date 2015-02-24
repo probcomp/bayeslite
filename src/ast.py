@@ -22,6 +22,13 @@ Parametrized = namedtuple('Parametrized', [
     'nampar_map',               # map from parameter name to number
 ])
 
+# XXX Pass through other SQL DDL and DML commands.
+CreateTableAs = namedtuple('CreateTableAs', [
+    # XXX Database name, &c.
+    'ifnotexists',
+    'name',
+    'query',
+])
 CreateBtableCSV = namedtuple('CreateBtableCSV', [
     'ifnotexists',
     'name',

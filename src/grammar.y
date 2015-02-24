@@ -23,6 +23,8 @@ phrase1(nonempty)	::= phrase(phrase).
 phrase(command)		::= command(c).
 phrase(query)		::= query(q).
 
+command(createtab_as)	::= K_CREATE K_TABLE ifnotexists(ifnotexists)
+				L_NAME(name) K_AS query(query).
 command(createbtab_csv)	::= K_CREATE K_BTABLE ifnotexists(ifnotexists)
 				L_NAME(name) K_FROM L_STRING(file).
 command(init_models)	::= K_INITIALIZE L_INTEGER(n) K_MODEL|K_MODELS

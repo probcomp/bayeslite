@@ -47,6 +47,15 @@ def execute_phrase(bdb, phrase, bindings=()):
             out = Output(n_numpar, nampar_map, bindings)
             compile_query(bdb, phrase, out)
             return bdb.sql_execute(out.getvalue(), out.getbindings())
+    if isinstance(phrase, ast.CreateTableAs):
+        assert ast.is_query(phrase.query)
+        with bdb.savepoint():
+            out = Output(n_numpar, nampar_map, bindings)
+            qt = sqlite3_quote_name(phrase.name)
+            ifnotexists = 'IF NOT EXISTS ' if phrase.ifnotexists else ''
+            out.write('CREATE TABLE %s%s AS ' % (ifnotexists, qt,))
+            compile_query(bdb, phrase.query, out)
+            return bdb.sql_execute(out.getvalue(), out.getbindings())
     if isinstance(phrase, ast.CreateBtableCSV):
         # XXX Codebook?
         import_csv.bayesdb_import_csv_file(bdb, phrase.name, phrase.file,

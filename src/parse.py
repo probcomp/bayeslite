@@ -139,6 +139,8 @@ class BQLSemantics(object):
     def p_phrase_command(self, c):              return c
     def p_phrase_query(self, q):                return q
 
+    def p_command_createtab_as(self, ifnotexists, name, query):
+        return ast.CreateTableAs(ifnotexists, name, query)
     def p_command_createbtab_csv(self, ifnotexists, name, file):
         # XXX codebook
         return ast.CreateBtableCSV(ifnotexists, name, file, codebook=None)
