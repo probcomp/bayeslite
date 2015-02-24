@@ -20,8 +20,11 @@ import bayeslite
 import bayeslite.shell.core as shell
 
 def usage(stderr, argv):
+    progname = argv[0]
+    if progname.rfind('/'):
+        progname = progname[progname.rfind('/') + 1:]
     stderr.write('Usage: %s [-j <njob>] [-s <seed>] [<file.bdb>]\n'
-        % (argv[0],))
+        % (progname,))
     return 1
 
 def run(stdin, stdout, stderr, argv):
@@ -30,7 +33,7 @@ def run(stdin, stdout, stderr, argv):
     try:
         opts, args = getopt.getopt(argv[1:], '?hj:s:', [])
     except getopt.GetoptError as e:
-        stderr.write('%s' % (str(e),))
+        stderr.write('%s\n' % (str(e),))
         return usage(stderr, argv)
     for o, a in opts:
         if o in ('-h', '-?'):
