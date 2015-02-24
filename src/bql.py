@@ -775,6 +775,9 @@ def compile_expression(bdb, exp, bql_compiler, out):
                 else:
                     out.write(', ')
                 compile_expression(bdb, operand, bql_compiler, out)
+    elif isinstance(exp, ast.ExpAppStar):
+        compile_name(bdb, exp.operator, out)
+        out.write('(*)')
     elif isinstance(exp, ast.ExpOp):
         with compiling_paren(bdb, out, '(', ')'):
             compile_op(bdb, exp, bql_compiler, out)

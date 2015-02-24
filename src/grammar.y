@@ -355,6 +355,7 @@ primary(literal)	::= literal(v).
 primary(numpar)		::= L_NUMPAR(n).
 primary(nampar)		::= L_NAMPAR(n).
 primary(apply)		::= L_NAME(fn) T_LROUND opt_expressions(es) T_RROUND.
+primary(apply_star)	::= L_NAME(fn) T_LROUND T_STAR T_RROUND.
 primary(paren)		::= T_LROUND expression(e) T_RROUND.
 primary(subquery)	::= T_LROUND query(q) T_RROUND.
 primary(cast)		::= K_CAST T_LROUND expression(e)

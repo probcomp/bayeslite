@@ -137,6 +137,7 @@ ExpIn = namedtuple('ExpIn', ['expression', 'positive', 'query'])
 ExpCast = namedtuple('ExpCast', ['expression', 'type'])
 ExpExists = namedtuple('ExpExists', ['query'])
 ExpApp = namedtuple('ExpApp', ['operator', 'operands'])
+ExpAppStar = namedtuple('ExpAppStar', ['operator'])
 # Else clause is called `otherwise' because we can't use a Python keyword.
 ExpCase = namedtuple('ExpCase', ['key', 'whens', 'otherwise'])
 ExpOp = namedtuple('ExpOp', ['operator', 'operands'])
