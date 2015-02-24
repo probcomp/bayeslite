@@ -15,6 +15,8 @@
 #   limitations under the License.
 
 def pp_cursor(out, cursor):
+    if cursor.description is None:
+        return
     labels = [d[0] for d in cursor.description]
     table = list(cursor)
     # XXX Consider quotation/escapes.
