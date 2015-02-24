@@ -30,6 +30,7 @@ DropTable = namedtuple('DropTable', [
 ])
 CreateTableAs = namedtuple('CreateTableAs', [
     # XXX Database name, &c.
+    'temp',
     'ifnotexists',
     'name',
     'query',

@@ -56,8 +56,9 @@ def execute_phrase(bdb, phrase, bindings=()):
         with bdb.savepoint():
             out = Output(n_numpar, nampar_map, bindings)
             qt = sqlite3_quote_name(phrase.name)
+            temp = 'TEMP ' if phrase.temp else ''
             ifnotexists = 'IF NOT EXISTS ' if phrase.ifnotexists else ''
-            out.write('CREATE TABLE %s%s AS ' % (ifnotexists, qt,))
+            out.write('CREATE %sTABLE %s%s AS ' % (temp, ifnotexists, qt))
             compile_query(bdb, phrase.query, out)
             return bdb.sql_execute(out.getvalue(), out.getbindings())
     if isinstance(phrase, ast.CreateBtableCSV):

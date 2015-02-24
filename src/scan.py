@@ -94,6 +94,8 @@ keywords = {
     "select": grammar.K_SELECT,
     "similarity": grammar.K_SIMILARITY,
     "table": grammar.K_TABLE,
+    "temp": grammar.K_TEMP,
+    "temporary": grammar.K_TEMPORARY,
     "then": grammar.K_THEN,
     "to": grammar.K_TO,
     "typicality": grammar.K_TYPICALITY,

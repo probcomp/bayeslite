@@ -141,8 +141,8 @@ class BQLSemantics(object):
 
     def p_command_droptable(self, ifexists, name):
         return ast.DropTable(ifexists, name)
-    def p_command_createtab_as(self, ifnotexists, name, query):
-        return ast.CreateTableAs(ifnotexists, name, query)
+    def p_command_createtab_as(self, temp, ifnotexists, name, query):
+        return ast.CreateTableAs(temp, ifnotexists, name, query)
     def p_command_createbtab_csv(self, ifnotexists, name, file):
         # XXX codebook
         return ast.CreateBtableCSV(ifnotexists, name, file, codebook=None)
@@ -154,6 +154,8 @@ class BQLSemantics(object):
         seconds = anlimit[1] if anlimit[0] == 'seconds' else None
         return ast.AnalyzeModels(btable, models, iterations, seconds, wait)
 
+    def p_opt_temp_none(self):                  return False
+    def p_opt_temp_some(self):                  return True
     def p_ifexists_none(self):                  return False
     def p_ifexists_some(self):                  return True
     def p_ifnotexists_none(self):               return False

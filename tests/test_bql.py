@@ -575,9 +575,11 @@ def test_createtab():
         bdb.execute('drop table u')
         with pytest.raises(sqlite3.OperationalError):
             bql_execute(bdb, 'select * from u')
-        bdb.execute("create table u as select * from t where gender = 'F'")
+        bdb.execute("create temp table u as select * from t where gender = 'F'")
         assert bql_execute(bdb, 'select * from u') == [
             ('23', 'F', '81000', '67', 'data science', '3'),
             ('36', 'F', '96000', '70', 'management', '2'),
             ('30', 'F', '81000', '73', 'engineering', '3'),
         ]
+        # XXX Test to make sure TEMP is passed through, and the table
+        # doesn't persist on disk.
