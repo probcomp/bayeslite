@@ -488,6 +488,8 @@ def test_parametrized():
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
         bdb.execute("create btable t from '%s'" % (fname,))
         assert bql_execute(bdb, 'select count(*) from t') == [(7,)]
+        assert bql_execute(bdb, 'select count(distinct division) from t') == \
+            [(6,)]
         assert bql_execute(bdb, 'select * from t where height > ?', (70,)) == \
             [
                 ('41', 'M', '65600', '72', 'marketing', '4'),

@@ -376,7 +376,8 @@ class BQLSemantics(object):
     def p_primary_literal(self, v):             return ast.ExpLit(v)
     def p_primary_numpar(self, n):              return ast.ExpNumpar(n)
     def p_primary_nampar(self, n):              return ast.ExpNampar(n[0],n[1])
-    def p_primary_apply(self, fn, es):          return ast.ExpApp(fn, es)
+    def p_primary_apply(self, fn, es):          return ast.ExpApp(False,fn,es)
+    def p_primary_apply_distinct(self, fn, es): return ast.ExpApp(True, fn, es)
     def p_primary_apply_star(self, fn):         return ast.ExpAppStar(fn)
     def p_primary_paren(self, e):               return e
     def p_primary_subquery(self, q):            return ast.ExpSub(q)

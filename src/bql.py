@@ -768,6 +768,8 @@ def compile_expression(bdb, exp, bql_compiler, out):
     elif isinstance(exp, ast.ExpApp):
         compile_name(bdb, exp.operator, out)
         with compiling_paren(bdb, out, '(', ')'):
+            if exp.distinct:
+                out.write('DISTINCT ')
             first = True
             for operand in exp.operands:
                 if first:
