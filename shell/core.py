@@ -34,12 +34,14 @@ class MockCursor(object):
         return iter(self.rows)
 
 class Shell(cmd.Cmd):
-    default_prompt = 'bayeslite> '
-    waiting_prompt = '      ...> '
+    def_prompt          = 'bayeslite> '
+    bql_prompt          = '   bql...> '
+    sql_prompt          = '   sql...> '
+    python_prompt       = 'python...> '
 
     def __init__(self, bdb):
         self.bdb = bdb
-        self.prompt = self.default_prompt
+        self.prompt = self.def_prompt
         self.bql = StringIO.StringIO()
         cmd.Cmd.__init__(self, 'Tab')
 
@@ -56,15 +58,38 @@ class Shell(cmd.Cmd):
         if parse.bql_string_complete_p(bql):
             # Reset the BQL input.
             self.bql = StringIO.StringIO()
-            self.prompt = self.default_prompt
+            self.prompt = self.def_prompt
             try:
                 with self.bdb.savepoint():
-                    pretty.pp_cursor(self.stdout, self.bdb.execute(bql))
+                    cursor = self.bdb.execute(bql)
+                    pretty.pp_cursor(self.stdout, cursor)
             except Exception:
                 self.stdout.write(traceback.format_exc())
         else:
-            self.prompt = self.waiting_prompt
+            self.prompt = self.bql_prompt
         return False
+
+    def do_sql(self, line):
+        pretty.pp_cursor(self.stdout, self.bdb.sql_execute(line))
+        return False
+
+    def do_python(self, line):
+        self.stdout.write('%s\n' % (repr(eval(line)),))
+        return False
+
+    def trace(self, q, b):
+        self.stdout.write('--> %s %s\n' % (q, b))
+
+    def sql_trace(self, q, b):
+        self.stdout.write('==> %s %s\n' % (q, b))
+
+    def do_trace(self, line):
+        if line == 'bql':
+            self.bdb.trace(self.trace)
+        elif line == 'sql':
+            self.bdb.sql_trace(self.sql_trace)
+        else:
+            self.stdout.write('Trace what?\n')
 
     def do_csv(self, line):
         # XXX Lousy, lousy tokenizer.
