@@ -456,6 +456,7 @@ def test_trivial_commands():
         bdb.execute('select * from t')
         bdb.execute('select * from T')
         bdb.execute('estimate pairwise row similarity from t')
+        bdb.execute('select value from (estimate pairwise correlation from t)')
         bdb.execute('select infer age conf 0.9 from t')
         bdb.execute('select infer AGE conf 0.9 from T')
         bdb.execute('select infer aGe conf 0.9 from T')

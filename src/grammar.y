@@ -397,3 +397,85 @@ typename(many)		::= typename(tn) L_NAME(n).
 typearg(unsigned)	::= L_INTEGER(i).
 typearg(positive)	::= T_PLUS L_INTEGER(i).
 typearg(negative)	::= T_MINUS L_INTEGER(i).
+
+/*
+ * XXX For some reason, putting CASE and WHEN here break the parser.
+ * Needs further analysis.
+ */
+%fallback L_NAME
+	K_ALL
+	K_ANALYZE
+	K_AND
+	K_AS
+	K_ASC
+	K_BETWEEN
+	K_BTABLE
+	K_BY
+	/* K_CASE */
+	K_CAST
+	K_COLLATE
+	K_COLUMNS
+	K_CONF
+	K_CORRELATION
+	K_CREATE
+	K_DEPENDENCE
+	K_DESC
+	K_DISTINCT
+	K_DROP
+	K_ELSE
+	K_END
+	K_ESCAPE
+	K_ESTIMATE
+	K_EXISTS
+	K_FOR
+	K_FROM
+	K_GLOB
+	K_GROUP
+	K_IF
+	K_IN
+	K_INFER
+	K_INFORMATION
+	K_INITIALIZE
+	K_IS
+	K_ISNULL
+	K_ITERATION
+	K_ITERATIONS
+	K_LIKE
+	K_LIMIT
+	K_MATCH
+	K_MINUTE
+	K_MINUTES
+	K_MODEL
+	K_MODELS
+	K_MUTUAL
+	K_NOT
+	K_NOTNULL
+	K_NULL
+	K_OF
+	K_OFFSET
+	K_OR
+	K_ORDER
+	K_PAIRWISE
+	K_PREDICTIVE
+	K_PROBABILITY
+	K_REGEXP
+	K_RESPECT
+	K_ROW
+	K_SAMPLES
+	K_SECOND
+	K_SECONDS
+	K_SELECT
+	K_SIMILARITY
+	K_TABLE
+	K_TEMP
+	K_TEMPORARY
+	K_THEN
+	K_TO
+	K_TYPICALITY
+	K_USING
+	K_VALUE
+	K_WAIT
+	/* K_WHEN */
+	K_WHERE
+	K_WITH
+	.
