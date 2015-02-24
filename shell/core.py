@@ -33,9 +33,12 @@ class MockCursor(object):
         return iter(self.rows)
 
 class Shell(cmd.Cmd):
+    default_prompt = 'bayeslite> '
+    waiting_prompt = '      ...> '
+
     def __init__(self, bdb):
         self.bdb = bdb
-        self.prompt = 'bayeslite> '
+        self.prompt = self.default_prompt
         self.bql = StringIO.StringIO()
         cmd.Cmd.__init__(self, 'Tab')
 
@@ -52,11 +55,14 @@ class Shell(cmd.Cmd):
         if parse.bql_string_complete_p(bql):
             # Reset the BQL input.
             self.bql = StringIO.StringIO()
+            self.prompt = self.default_prompt
             try:
                 with self.bdb.savepoint():
                     pretty.pp_cursor(self.stdout, self.bdb.execute(bql))
             except Exception as e:
                 self.stdout.write(traceback.format_exc())
+        else:
+            self.prompt = self.waiting_prompt
         return False
 
     def do_describe(self, line):
