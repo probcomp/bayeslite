@@ -107,6 +107,14 @@ class Shell(cmd.Cmd):
         else:
             self.stdout.write('Trace what?\n')
 
+    def do_untrace(self, line):
+        if line == 'bql':
+            self.bdb.untrace(self.trace)
+        elif line == 'sql':
+            self.bdb.sql_untrace(self.sql_trace)
+        else:
+            self.stdout.write('Untrace what?\n')
+
     def do_csv(self, line):
         # XXX Lousy, lousy tokenizer.
         tokens = line.split()
