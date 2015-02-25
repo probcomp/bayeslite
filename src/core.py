@@ -501,15 +501,12 @@ def bayesdb_has_model(bdb, table_id, modelno):
     """
     return 0 < bayesdb_sql_execute1(bdb, sql, (table_id, modelno))
 
-def bayesdb_nmodels(bdb, table_id):
-    sql = """
-        SELECT count(*) FROM bayesdb_model WHERE table_id = ?
-    """
-    return bayesdb_sql_execute1(bdb, sql, (table_id,))
-
 def bayesdb_models(bdb, table_id):
-    for modelno in range(bayesdb_nmodels(bdb, table_id)):
-        yield bayesdb_model(bdb, table_id, modelno)
+    sql = """
+        SELECT modelno FROM bayesdb_model WHERE table_id = ?
+    """
+    for row in bdb.sql_execute(sql, (table_id,)):
+        yield bayesdb_model(bdb, table_id, row[0])
 
 def bayesdb_model(bdb, table_id, modelno):
     if bdb.models_cache is not None:

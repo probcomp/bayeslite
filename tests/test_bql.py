@@ -541,10 +541,10 @@ def test_parametrized():
             'SELECT bql_row_similarity(1, _rowid_, 1, 0) FROM "t"',
             'SELECT metamodel_id FROM bayesdb_table WHERE id = ?',
             'SELECT metadata FROM bayesdb_table WHERE id = ?',
-            'SELECT count(*) FROM bayesdb_model WHERE table_id = ?',
+            'SELECT modelno FROM bayesdb_model WHERE table_id = ?',
             'SELECT theta FROM bayesdb_model' +
                 ' WHERE table_id = ? AND modelno = ?',
-            'SELECT count(*) FROM bayesdb_model WHERE table_id = ?',
+            'SELECT modelno FROM bayesdb_model WHERE table_id = ?',
         ]
         assert sqltraced_execute('select similarity to 1 with respect to' +
                 ' (estimate columns from t limit ?) from t;', (1,)) == [
@@ -559,10 +559,10 @@ def test_parametrized():
             'SELECT bql_row_similarity(1, _rowid_, 1, 0) FROM "t"',
             'SELECT metamodel_id FROM bayesdb_table WHERE id = ?',
             'SELECT metadata FROM bayesdb_table WHERE id = ?',
-            'SELECT count(*) FROM bayesdb_model WHERE table_id = ?',
+            'SELECT modelno FROM bayesdb_model WHERE table_id = ?',
             'SELECT theta FROM bayesdb_model' +
                 ' WHERE table_id = ? AND modelno = ?',
-            'SELECT count(*) FROM bayesdb_model WHERE table_id = ?',
+            'SELECT modelno FROM bayesdb_model WHERE table_id = ?',
         ]
 
 def test_createtab():

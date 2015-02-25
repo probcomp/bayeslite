@@ -93,7 +93,11 @@ def bayesdb_load_legacy_models(bdb, table_name, pathname, ifnotexists=False,
             # fail.  If there are no existing models, change the schema.
             table_id = core.bayesdb_table_id(bdb, table_name)
             if column_types != bayesdb_column_types(bdb, table_id):
-                if 0 < core.bayesdb_nmodels(bdb, table_id):
+                try:
+                    core.bayesdb_models(bdb, table_id).next()
+                except StopIteration:
+                    pass
+                else:
                     raise ValueError('legacy models mismatch schema: %s' %
                         (table_name,))
                 # XXX Name this operation: DROP BTABLE ...
