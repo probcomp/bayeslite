@@ -44,22 +44,32 @@ class Shell(cmd.Cmd):
         self.prompt = self.def_prompt
         self.bql = StringIO.StringIO()
         self.identchars += '.'
+        self._cmds = set([])
         cmd.Cmd.__init__(self, 'Tab')
 
         # Awful kludge to make commands begin with `.'.
         #
         # XXX Does not disable the `quit' command and whatever other
         # bollocks is built-in.
-        setattr(self, 'do_.codebook', self.dot_codebook)
-        setattr(self, 'do_.csv', self.dot_csv)
-        setattr(self, 'do_.describe', self.dot_describe)
-        setattr(self, 'do_.loadmodels', self.dot_loadmodels)
-        setattr(self, 'do_.python', self.dot_python)
-        setattr(self, 'do_.sql', self.dot_sql)
-        setattr(self, 'do_.trace', self.dot_trace)
-        setattr(self, 'do_.untrace', self.dot_untrace)
+        self._installcmd('codebook', self.dot_codebook)
+        self._installcmd('csv', self.dot_csv)
+        self._installcmd('describe', self.dot_describe)
+        self._installcmd('help', self.dot_help)
+        self._installcmd('loadmodels', self.dot_loadmodels)
+        self._installcmd('python', self.dot_python)
+        self._installcmd('sql', self.dot_sql)
+        self._installcmd('trace', self.dot_trace)
+        self._installcmd('untrace', self.dot_untrace)
+
+    def _installcmd(self, name, method):
+        assert not hasattr(self, 'do_.%s' % (name,))
+        assert name not in self._cmds
+        setattr(self, 'do_.%s' % (name,), method)
+        self._cmds.add(name)
 
     def cmdloop(self, *args, **kwargs):
+        self.stdout.write('Welcome to the Bayeslite shell.\n')
+        self.stdout.write('Type `.help\' for help.\n')
         while True:
             try:
                 cmd.Cmd.cmdloop(self, *args, **kwargs)
@@ -93,7 +103,36 @@ class Shell(cmd.Cmd):
             self.prompt = self.bql_prompt
         return False
 
+    def dot_help(self, line):
+        '''show help for commands
+        [<cmd> ...]
+
+        Show help for commands.  With no arguments, list all commands.
+        '''
+        tokens = line.split()
+        if len(tokens) == 0:
+            pad = max(len(cmd) for cmd in self._cmds)
+            for cmd in sorted(self._cmds):
+                method = getattr(self, 'do_.%s' % (cmd,))
+                doc = [line.strip() for line in method.__doc__.splitlines()]
+                assert 1 < len(doc)
+                self.stdout.write(' %*s    %s\n' % (pad, cmd, doc[0]))
+        else:
+            for cmd in tokens:
+                if not hasattr(self, 'do_.%s' % (cmd,)):
+                    self.stdout.write('No such command %s.\n' % (repr(cmd),))
+                    return
+                method = getattr(self, 'do_.%s' % (cmd,))
+                doc = [line.strip() for line in method.__doc__.splitlines()]
+                assert 1 < len(doc)
+                self.stdout.write('.%s %s' % (cmd, '\n'.join(doc[1:])))
+
     def dot_sql(self, line):
+        '''execute a SQL query
+        <query>
+
+        Execute a SQL query on the underlying SQLite database.
+        '''
         try:
             pretty.pp_cursor(self.stdout, self.bdb.sql_execute(line))
         except Exception:
@@ -101,6 +140,14 @@ class Shell(cmd.Cmd):
         return False
 
     def dot_python(self, line):
+        '''evaluate a Python expression
+        <expression>
+
+        Evaluate a Python expression in the underlying Python
+        interpreter.
+
+        `bdb' is (XXX not yet) bound to the BayesDB instance.
+        '''
         try:
             self.stdout.write('%s\n' % (repr(eval(line)),))
         except Exception:
@@ -114,6 +161,12 @@ class Shell(cmd.Cmd):
         self.stdout.write('==> %s %s\n' % (q.strip(), b))
 
     def dot_trace(self, line):
+        '''trace queries
+        [bql|sql]
+
+        Trace BQL or SQL queries executed in the database.
+        Use `.untrace' to undo.
+        '''
         if line == 'bql':
             self.bdb.trace(self._trace)
         elif line == 'sql':
@@ -122,6 +175,12 @@ class Shell(cmd.Cmd):
             self.stdout.write('Trace what?\n')
 
     def dot_untrace(self, line):
+        '''untrace queries
+        [bql|sql]
+
+        Untrace BQL or SQL queries executed in the database after
+        `.trace' traced them.
+        '''
         if line == 'bql':
             self.bdb.untrace(self._trace)
         elif line == 'sql':
@@ -130,10 +189,16 @@ class Shell(cmd.Cmd):
             self.stdout.write('Untrace what?\n')
 
     def dot_csv(self, line):
+        '''create table from CSV file
+        <btable> </path/to/data.csv>
+
+        Create a BayesDB table named <btable> from the data in
+        </path/to/data.csv>, heuristically guessing column types.
+        '''
         # XXX Lousy, lousy tokenizer.
         tokens = line.split()
         if len(tokens) != 2:
-            self.stdout.write('Usage: import <table> </path/to/data.csv>\n')
+            self.stdout.write('Usage: .csv <btable> </path/to/data.csv>\n')
             return
         table = tokens[0]
         pathname = tokens[1]
@@ -143,11 +208,17 @@ class Shell(cmd.Cmd):
             self.stdout.write(traceback.format_exc())
 
     def dot_codebook(self, line):
+        '''load codebook for table
+        <btable> </path/to/codebook.csv>
+
+        Load a codebook -- short names, descriptions, and value
+        descriptions for the columns of a table -- from a CSV file.
+        '''
         # XXX Lousy, lousy tokenizer.
         tokens = line.split()
         if len(tokens) != 2:
             self.stdout.write('Usage:'
-                ' codebook <table> </path/to/codebook.csv>\n')
+                ' .codebook <btable> </path/to/codebook.csv>\n')
             return
         table = tokens[0]
         pathname = tokens[1]
@@ -158,11 +229,18 @@ class Shell(cmd.Cmd):
             self.stdout.write(traceback.format_exc())
 
     def dot_loadmodels(self, line):
+        '''load legacy models
+        <btable> </path/to/models.pkl.gz>
+
+        Load legacy BayesDB models for <btable>.  Must be compatible
+        with <btable>'s existing schema, or there must be no existing
+        models for <btable>.
+        '''
         # XXX Lousy, lousy tokenizer.
         tokens = line.split()
         if len(tokens) != 2:
             self.stdout.write('Usage:'
-                ' loadmodels <table> </path/to/models.pkl.gz>\n')
+                ' .loadmodels <btable> </path/to/models.pkl.gz>\n')
             return
         table = tokens[0]
         pathname = tokens[1]
@@ -172,6 +250,12 @@ class Shell(cmd.Cmd):
             self.stdout.write(traceback.format_exc())
 
     def dot_describe(self, line):
+        '''describe BayesDB entities
+        [btable|btables|columns|models] [<btable>]
+
+        Print a human-readable description of the specified BayesDB
+        entities.
+        '''
         # XXX Lousy, lousy tokenizer.
         tokens = line.split()
         if len(tokens) == 0:
