@@ -40,12 +40,12 @@ class Shell(cmd.Cmd):
     python_prompt       = 'python...> '
 
     def __init__(self, bdb):
-        self.bdb = bdb
         self.prompt = self.def_prompt
         self.bql = StringIO.StringIO()
         self.identchars += '.'
         cmd.Cmd.__init__(self, 'Tab')
 
+        self._bdb = bdb
         self._cmds = set([])
         self._traced = False
         self._sql_traced = False
@@ -97,8 +97,8 @@ class Shell(cmd.Cmd):
             self.bql = StringIO.StringIO()
             self.prompt = self.def_prompt
             try:
-                with self.bdb.savepoint():
-                    cursor = self.bdb.execute(bql)
+                with self._bdb.savepoint():
+                    cursor = self._bdb.execute(bql)
                     pretty.pp_cursor(self.stdout, cursor)
             except Exception:
                 self.stdout.write(traceback.format_exc())
@@ -137,7 +137,7 @@ class Shell(cmd.Cmd):
         Execute a SQL query on the underlying SQLite database.
         '''
         try:
-            pretty.pp_cursor(self.stdout, self.bdb.sql_execute(line))
+            pretty.pp_cursor(self.stdout, self._bdb.sql_execute(line))
         except Exception:
             self.stdout.write(traceback.format_exc())
         return False
@@ -153,7 +153,7 @@ class Shell(cmd.Cmd):
         '''
         try:
             globals = {'bayeslite': bayeslite}
-            locals = {'bdb': self.bdb}
+            locals = {'bdb': self._bdb}
             value = eval(line, globals, locals)
             self.stdout.write('%s\n' % (repr(value),))
         except Exception:
@@ -175,11 +175,11 @@ class Shell(cmd.Cmd):
         '''
         if line == 'bql':
             if not self._traced:
-                self.bdb.trace(self._trace)
+                self._bdb.trace(self._trace)
                 self._traced = True
         elif line == 'sql':
             if not self._sql_traced:
-                self.bdb.sql_trace(self._sql_trace)
+                self._bdb.sql_trace(self._sql_trace)
                 self._sql_traced = True
         else:
             self.stdout.write('Trace what?\n')
@@ -193,11 +193,11 @@ class Shell(cmd.Cmd):
         '''
         if line == 'bql':
             if self._traced:
-                self.bdb.untrace(self._trace)
+                self._bdb.untrace(self._trace)
                 self._traced = False
         elif line == 'sql':
             if self._sql_traced:
-                self.bdb.sql_untrace(self._sql_trace)
+                self._bdb.sql_untrace(self._sql_trace)
                 self._sql_traced = False
         else:
             self.stdout.write('Untrace what?\n')
@@ -217,7 +217,7 @@ class Shell(cmd.Cmd):
         table = tokens[0]
         pathname = tokens[1]
         try:
-            bayeslite.bayesdb_import_csv_file(self.bdb, table, pathname)
+            bayeslite.bayesdb_import_csv_file(self._bdb, table, pathname)
         except Exception:
             self.stdout.write(traceback.format_exc())
 
@@ -237,7 +237,7 @@ class Shell(cmd.Cmd):
         table = tokens[0]
         pathname = tokens[1]
         try:
-            bayeslite.bayesdb_import_codebook_csv_file(self.bdb, table,
+            bayeslite.bayesdb_import_codebook_csv_file(self._bdb, table,
                 pathname)
         except Exception:
             self.stdout.write(traceback.format_exc())
@@ -259,7 +259,7 @@ class Shell(cmd.Cmd):
         table = tokens[0]
         pathname = tokens[1]
         try:
-            bayeslite.bayesdb_load_legacy_models(self.bdb, table, pathname)
+            bayeslite.bayesdb_load_legacy_models(self._bdb, table, pathname)
         except Exception:
             self.stdout.write(traceback.format_exc())
 
@@ -291,26 +291,26 @@ class Shell(cmd.Cmd):
                     FROM bayesdb_table AS t, bayesdb_metamodel AS m
                     WHERE %s AND t.metamodel_id = m.id
             ''' % (qualifier,)
-            with self.bdb.savepoint():
-                pretty.pp_cursor(self.stdout, self.bdb.execute(sql, params))
+            with self._bdb.savepoint():
+                pretty.pp_cursor(self.stdout, self._bdb.execute(sql, params))
         elif casefold(tokens[0]) == 'columns':
             if len(tokens) != 2:
                 self.stdout.write('Describe columns of what btable?\n')
                 return
             table_name = tokens[1]
-            with self.bdb.savepoint():
-                if not core.bayesdb_table_exists(self.bdb, table_name):
+            with self._bdb.savepoint():
+                if not core.bayesdb_table_exists(self._bdb, table_name):
                     self.stdout.write('No such btable: %s\n' % (table_name,))
                     return
-                table_id = core.bayesdb_table_id(self.bdb, table_name)
-                M_c = core.bayesdb_metadata(self.bdb, table_id)
+                table_id = core.bayesdb_table_id(self._bdb, table_name)
+                M_c = core.bayesdb_metadata(self._bdb, table_id)
                 sql = '''
                     SELECT c.colno, c.name, c.short_name
                         FROM bayesdb_table AS t, bayesdb_table_column AS c
                         WHERE t.id = ? AND c.table_id = t.id
                 '''
                 params = (table_id,)
-                cursor0 = self.bdb.sql_execute(sql, params)
+                cursor0 = self._bdb.sql_execute(sql, params)
                 description = (
                     ('colno',),
                     ('name',),
@@ -328,17 +328,17 @@ class Shell(cmd.Cmd):
                 self.stdout.write('Describe models of what btable?\n')
                 return
             table_name = tokens[1]
-            with self.bdb.savepoint():
-                if not core.bayesdb_table_exists(self.bdb, table_name):
+            with self._bdb.savepoint():
+                if not core.bayesdb_table_exists(self._bdb, table_name):
                     self.stdout.write('No such btable: %s\n', table_name)
                     return
-                table_id = core.bayesdb_table_id(self.bdb, table_name)
+                table_id = core.bayesdb_table_id(self._bdb, table_name)
                 modelnos = None
                 if len(tokens) == 2:
                     sql = '''
                         SELECT modelno FROM bayesdb_model WHERE table_id = ?
                     '''
-                    cursor = self.bdb.sql_execute(sql, (table_id,))
+                    cursor = self._bdb.sql_execute(sql, (table_id,))
                     modelnos = (row[0] for row in cursor)
                 else:
                     for token in tokens[2:]:
@@ -349,13 +349,13 @@ class Shell(cmd.Cmd):
                                 (token,))
                             return
                         else:
-                            if not core.bayesdb_has_model(self.bdb, table_id,
+                            if not core.bayesdb_has_model(self._bdb, table_id,
                                     modelno):
                                 self.stdout.write('No such model: %d\n' %
                                     (modelno,))
                                 return
                     modelnos = map(int, tokens[2:])
-                models = ((modelno, core.bayesdb_model(self.bdb, table_id,
+                models = ((modelno, core.bayesdb_model(self._bdb, table_id,
                         modelno))
                     for modelno in modelnos)
                 cursor = MockCursor([('modelno',), ('iterations',)],
