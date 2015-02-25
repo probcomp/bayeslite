@@ -107,25 +107,25 @@ class Shell(cmd.Cmd):
             self.stdout.write(traceback.format_exc())
         return False
 
-    def trace(self, q, b):
+    def _trace(self, q, b):
         self.stdout.write('--> %s %s\n' % (q.strip(), b))
 
-    def sql_trace(self, q, b):
+    def _sql_trace(self, q, b):
         self.stdout.write('==> %s %s\n' % (q.strip(), b))
 
     def dot_trace(self, line):
         if line == 'bql':
-            self.bdb.trace(self.trace)
+            self.bdb.trace(self._trace)
         elif line == 'sql':
-            self.bdb.sql_trace(self.sql_trace)
+            self.bdb.sql_trace(self._sql_trace)
         else:
             self.stdout.write('Trace what?\n')
 
     def dot_untrace(self, line):
         if line == 'bql':
-            self.bdb.untrace(self.trace)
+            self.bdb.untrace(self._trace)
         elif line == 'sql':
-            self.bdb.sql_untrace(self.sql_trace)
+            self.bdb.sql_untrace(self._sql_trace)
         else:
             self.stdout.write('Untrace what?\n')
 
