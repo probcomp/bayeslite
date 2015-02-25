@@ -80,11 +80,17 @@ class Shell(cmd.Cmd):
         return False
 
     def do_sql(self, line):
-        pretty.pp_cursor(self.stdout, self.bdb.sql_execute(line))
+        try:
+            pretty.pp_cursor(self.stdout, self.bdb.sql_execute(line))
+        except Exception:
+            self.stdout.write(traceback.format_exc())
         return False
 
     def do_python(self, line):
-        self.stdout.write('%s\n' % (repr(eval(line)),))
+        try:
+            self.stdout.write('%s\n' % (repr(eval(line)),))
+        except Exception:
+            self.stdout.write(traceback.format_exc())
         return False
 
     def trace(self, q, b):
