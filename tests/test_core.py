@@ -121,7 +121,7 @@ def sqlite_bayesdb_table(mkbdb, name, schema, data, **kwargs):
 @contextlib.contextmanager
 def analyzed_bayesdb_table(mkbdb, nmodels, nsteps, max_seconds=None):
     with mkbdb as (bdb, table_id):
-        core.bayesdb_models_initialize(bdb, table_id, nmodels)
+        core.bayesdb_models_initialize(bdb, table_id, range(nmodels))
         core.bayesdb_models_analyze(bdb, table_id, iterations=nsteps,
             max_seconds=max_seconds)
         yield bdb, table_id

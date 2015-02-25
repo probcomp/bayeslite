@@ -70,7 +70,7 @@ def execute_phrase(bdb, phrase, bindings=()):
         table_id = core.bayesdb_table_id(bdb, phrase.btable)
         nmodels = phrase.nmodels
         config = phrase.config
-        core.bayesdb_models_initialize(bdb, table_id, nmodels, config,
+        core.bayesdb_models_initialize(bdb, table_id, range(nmodels), config,
             ifnotexists=phrase.ifnotexists)
         return []
     if isinstance(phrase, ast.AnalyzeModels):

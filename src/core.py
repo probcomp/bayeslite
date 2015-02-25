@@ -542,7 +542,7 @@ def bayesdb_latent_data(bdb, table_id):
 
 ### BayesDB model commands
 
-def bayesdb_models_initialize(bdb, table_id, nmodels, model_config=None,
+def bayesdb_models_initialize(bdb, table_id, modelnos, model_config=None,
         ifnotexists=False):
     if ifnotexists:
         # Find whether all model numbers are filled.  If so, don't
@@ -552,14 +552,14 @@ def bayesdb_models_initialize(bdb, table_id, nmodels, model_config=None,
         # ask the engine to initialize as many models as we don't have
         # and fill in the gaps?
         done = True
-        for modelno in range(nmodels):
+        for modelno in modelnos:
             if not bayesdb_has_model(bdb, table_id, modelno):
                 done = False
                 break
         if done:
             return
     assert model_config is None         # XXX For now.
-    assert 0 < nmodels
+    assert 0 < len(modelnos)
     engine = bayesdb_table_engine(bdb, table_id)
     model_config = {
         "kernel_list": (),
@@ -570,15 +570,15 @@ def bayesdb_models_initialize(bdb, table_id, nmodels, model_config=None,
         M_c=bayesdb_metadata(bdb, table_id),
         M_r=None,            # XXX
         T=list(bayesdb_data(bdb, table_id)),
-        n_chains=nmodels,
+        n_chains=len(modelnos),
         initialization=model_config["initialization"],
         row_initialization=model_config["row_initialization"]
     )
-    if nmodels == 1:            # XXX Ugh.  Fix crosscat so it doesn't do this.
+    if len(modelnos) == 1:      # XXX Ugh.  Fix crosscat so it doesn't do this.
         X_L_list = [X_L_list]
         X_D_list = [X_D_list]
     with bdb.savepoint():
-        for modelno, (X_L, X_D) in enumerate(zip(X_L_list, X_D_list)):
+        for modelno, (X_L, X_D) in zip(modelnos, zip(X_L_list, X_D_list)):
             theta = {
                 "X_L": X_L,
                 "X_D": X_D,
