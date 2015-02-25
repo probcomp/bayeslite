@@ -114,12 +114,14 @@ class Shell(cmd.Cmd):
         '''
         tokens = line.split()
         if len(tokens) == 0:
-            pad = max(len(cmd) for cmd in self._cmds)
+            pad = max(1 + len(cmd) for cmd in self._cmds)
             for cmd in sorted(self._cmds):
                 method = getattr(self, 'do_.%s' % (cmd,))
                 doc = [line.strip() for line in method.__doc__.splitlines()]
                 assert 1 < len(doc)
-                self.stdout.write(' %*s    %s\n' % (pad, cmd, doc[0]))
+                self.stdout.write(' %*s    %s\n' % (pad, '.' + cmd, doc[0]))
+            self.stdout.write('Type `.help <cmd>\''
+                ' for help on the command <cmd>.\n')
         else:
             for cmd in tokens:
                 if not hasattr(self, 'do_.%s' % (cmd,)):
