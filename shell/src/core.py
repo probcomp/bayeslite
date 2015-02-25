@@ -146,10 +146,13 @@ class Shell(cmd.Cmd):
         Evaluate a Python expression in the underlying Python
         interpreter.
 
-        `bdb' is (XXX not yet) bound to the BayesDB instance.
+        `bdb' is bound to the BayesDB instance.
         '''
         try:
-            self.stdout.write('%s\n' % (repr(eval(line)),))
+            globals = {'bayeslite': bayeslite}
+            locals = {'bdb': self.bdb}
+            value = eval(line, globals, locals)
+            self.stdout.write('%s\n' % (repr(value),))
         except Exception:
             self.stdout.write(traceback.format_exc())
         return False
