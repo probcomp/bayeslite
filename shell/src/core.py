@@ -94,10 +94,10 @@ class Shell(cmd.Cmd):
         return False
 
     def trace(self, q, b):
-        self.stdout.write('--> %s %s\n' % (q, b))
+        self.stdout.write('--> %s %s\n' % (q.strip(), b))
 
     def sql_trace(self, q, b):
-        self.stdout.write('==> %s %s\n' % (q, b))
+        self.stdout.write('==> %s %s\n' % (q.strip(), b))
 
     def do_trace(self, line):
         if line == 'bql':
