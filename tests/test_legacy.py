@@ -37,6 +37,11 @@ def test_legacy_models():
     bayeslite.bayesdb_import_csv_file(bdb, 'dha', dha_csv)
     bayeslite.bayesdb_load_legacy_models(bdb, 'dha', dha_models)
     bayeslite.bayesdb_import_codebook_csv_file(bdb, 'dha', dha_codebook)
+    # Need to be able to overwrite existing codebook.
+    #
+    # XXX Not sure this is the right API.  What if overwrite is a
+    # mistake?
+    bayeslite.bayesdb_import_codebook_csv_file(bdb, 'dha', dha_codebook)
     bql = '''
         SELECT name FROM dha
             ORDER BY SIMILARITY TO (SELECT rowid FROM dha WHERE name = ?) DESC

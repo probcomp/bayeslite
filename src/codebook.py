@@ -50,6 +50,11 @@ def bayesdb_import_codebook_csv_file(bdb, table_name, pathname):
             if value_map_json != 'NaN':      # ...
                 value_map = json.loads(value_map_json)
                 sql = '''
+                    DELETE FROM bayesdb_value_map
+                        WHERE table_id = ? AND colno = ?
+                '''
+                bdb.sql_execute(sql, (table_id, colno))
+                sql = '''
                     INSERT INTO bayesdb_value_map
                         (table_id, colno, value, extended_value)
                         VALUES (?, ?, ?, ?)
