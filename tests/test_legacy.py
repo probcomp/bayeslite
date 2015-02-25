@@ -17,6 +17,7 @@
 # XXX This is turning into more than just a test of legacy models...
 
 import os
+import pytest
 
 import bayeslite
 import crosscat.LocalEngine
@@ -31,6 +32,8 @@ def test_legacy_models():
     engine = crosscat.LocalEngine.LocalEngine(seed=0)
     bayeslite.bayesdb_register_metamodel(bdb, 'crosscat', engine)
     bayeslite.bayesdb_set_default_metamodel(bdb, 'crosscat')
+    with pytest.raises(ValueError):
+        bayeslite.bayesdb_load_legacy_models(bdb, 'dha', dha_models)
     bayeslite.bayesdb_import_csv_file(bdb, 'dha', dha_csv)
     bayeslite.bayesdb_load_legacy_models(bdb, 'dha', dha_models)
     bayeslite.bayesdb_import_codebook_csv_file(bdb, 'dha', dha_codebook)
