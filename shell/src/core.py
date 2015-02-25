@@ -134,6 +134,7 @@ class Shell(cmd.Cmd):
         tokens = line.split()
         if len(tokens) != 2:
             self.stdout.write('Usage: import <table> </path/to/data.csv>\n')
+            return
         table = tokens[0]
         pathname = tokens[1]
         try:
@@ -147,9 +148,14 @@ class Shell(cmd.Cmd):
         if len(tokens) != 2:
             self.stdout.write('Usage:'
                 ' codebook <table> </path/to/codebook.csv>\n')
+            return
         table = tokens[0]
         pathname = tokens[1]
-        bayeslite.bayesdb_import_codebook_csv_file(self.bdb, table, pathname)
+        try:
+            bayeslite.bayesdb_import_codebook_csv_file(self.bdb, table,
+                pathname)
+        except Exception:
+            self.stdout.write(traceback.format_exc())
 
     def dot_loadmodels(self, line):
         # XXX Lousy, lousy tokenizer.
@@ -157,17 +163,22 @@ class Shell(cmd.Cmd):
         if len(tokens) != 2:
             self.stdout.write('Usage:'
                 ' loadmodels <table> </path/to/models.pkl.gz>\n')
+            return
         table = tokens[0]
         pathname = tokens[1]
-        bayeslite.bayesdb_load_legacy_models(self.bdb, table, pathname)
+        try:
+            bayeslite.bayesdb_load_legacy_models(self.bdb, table, pathname)
+        except Exception:
+            self.stdout.write(traceback.format_exc())
 
     def dot_describe(self, line):
         # XXX Lousy, lousy tokenizer.
         tokens = line.split()
         if len(tokens) == 0:
             self.stdout.write('Describe what, pray tell?\n')
-        elif casefold(tokens[0]) == 'btable' or \
-             casefold(tokens[0]) == 'btables':
+            return
+        if casefold(tokens[0]) == 'btable' or \
+           casefold(tokens[0]) == 'btables':
             params = None
             qualifier = None
             if len(tokens) == 1:
