@@ -43,7 +43,21 @@ class Shell(cmd.Cmd):
         self.bdb = bdb
         self.prompt = self.def_prompt
         self.bql = StringIO.StringIO()
+        self.identchars += '.'
         cmd.Cmd.__init__(self, 'Tab')
+
+        # Awful kludge to make commands begin with `.'.
+        #
+        # XXX Does not disable the `quit' command and whatever other
+        # bollocks is built-in.
+        setattr(self, 'do_.codebook', self.dot_codebook)
+        setattr(self, 'do_.csv', self.dot_csv)
+        setattr(self, 'do_.describe', self.dot_describe)
+        setattr(self, 'do_.loadmodels', self.dot_loadmodels)
+        setattr(self, 'do_.python', self.dot_python)
+        setattr(self, 'do_.sql', self.dot_sql)
+        setattr(self, 'do_.trace', self.dot_trace)
+        setattr(self, 'do_.untrace', self.dot_untrace)
 
     def cmdloop(self, *args, **kwargs):
         while True:
@@ -79,14 +93,14 @@ class Shell(cmd.Cmd):
             self.prompt = self.bql_prompt
         return False
 
-    def do_sql(self, line):
+    def dot_sql(self, line):
         try:
             pretty.pp_cursor(self.stdout, self.bdb.sql_execute(line))
         except Exception:
             self.stdout.write(traceback.format_exc())
         return False
 
-    def do_python(self, line):
+    def dot_python(self, line):
         try:
             self.stdout.write('%s\n' % (repr(eval(line)),))
         except Exception:
@@ -99,7 +113,7 @@ class Shell(cmd.Cmd):
     def sql_trace(self, q, b):
         self.stdout.write('==> %s %s\n' % (q.strip(), b))
 
-    def do_trace(self, line):
+    def dot_trace(self, line):
         if line == 'bql':
             self.bdb.trace(self.trace)
         elif line == 'sql':
@@ -107,7 +121,7 @@ class Shell(cmd.Cmd):
         else:
             self.stdout.write('Trace what?\n')
 
-    def do_untrace(self, line):
+    def dot_untrace(self, line):
         if line == 'bql':
             self.bdb.untrace(self.trace)
         elif line == 'sql':
@@ -115,7 +129,7 @@ class Shell(cmd.Cmd):
         else:
             self.stdout.write('Untrace what?\n')
 
-    def do_csv(self, line):
+    def dot_csv(self, line):
         # XXX Lousy, lousy tokenizer.
         tokens = line.split()
         if len(tokens) != 2:
@@ -127,7 +141,7 @@ class Shell(cmd.Cmd):
         except Exception:
             self.stdout.write(traceback.format_exc())
 
-    def do_codebook(self, line):
+    def dot_codebook(self, line):
         # XXX Lousy, lousy tokenizer.
         tokens = line.split()
         if len(tokens) != 2:
@@ -137,7 +151,7 @@ class Shell(cmd.Cmd):
         pathname = tokens[1]
         bayeslite.bayesdb_import_codebook_csv_file(self.bdb, table, pathname)
 
-    def do_loadmodels(self, line):
+    def dot_loadmodels(self, line):
         # XXX Lousy, lousy tokenizer.
         tokens = line.split()
         if len(tokens) != 2:
@@ -147,7 +161,7 @@ class Shell(cmd.Cmd):
         pathname = tokens[1]
         bayeslite.bayesdb_load_legacy_models(self.bdb, table, pathname)
 
-    def do_describe(self, line):
+    def dot_describe(self, line):
         # XXX Lousy, lousy tokenizer.
         tokens = line.split()
         if len(tokens) == 0:
