@@ -501,12 +501,14 @@ def bayesdb_has_model(bdb, table_id, modelno):
     """
     return 0 < bayesdb_sql_execute1(bdb, sql, (table_id, modelno))
 
-def bayesdb_models(bdb, table_id):
-    sql = """
-        SELECT modelno FROM bayesdb_model WHERE table_id = ?
-    """
-    for row in bdb.sql_execute(sql, (table_id,)):
-        yield bayesdb_model(bdb, table_id, row[0])
+def bayesdb_modelnos(bdb, table_id):
+    sql = "SELECT modelno FROM bayesdb_model WHERE table_id = ?"
+    return (row[0] for row in bdb.sql_execute(sql, (table_id,)))
+
+def bayesdb_models(bdb, table_id, modelnos=None):
+    if modelnos is None:
+        modelnos = bayesdb_modelnos(bdb, table_id)
+    return (bayesdb_model(bdb, table_id, modelno) for modelno in modelnos)
 
 def bayesdb_model(bdb, table_id, modelno):
     if bdb.models_cache is not None:
@@ -597,11 +599,7 @@ def bayesdb_models_analyze(bdb, table_id, modelnos=None, iterations=1,
     # map the results from the engine back into the database.  Sort it
     # for consistency.
     if modelnos is None:
-        sql = '''
-            SELECT modelno FROM bayesdb_model WHERE table_id = ?
-                ORDER BY modelno
-        '''
-        modelnos = [row[0] for row in bdb.sql_execute(sql, (table_id,))]
+        modelnos = list(bayesdb_modelnos(bdb, table_id))
     else:
         modelnos = sorted(list(modelnos))
         for modelno in modelnos:
@@ -911,6 +909,58 @@ def bayesdb_simulate(bdb, table_id, constraints, colnos, numpredictions=1):
     return [[bayesdb_code_to_value(M_c, colno, code)
             for (colno, code) in zip(colnos, raw_output)]
         for raw_output in raw_outputs]
+
+# XXX Create a virtual table that automatically does this on insert?
+def bayesdb_insert(bdb, table_id, row):
+    bayesdb_insertmany(bdb, table_id, [row])
+
+def bayesdb_insertmany(bdb, table_id, rows):
+    with bdb.savepoint():
+        # Insert the data into the table.
+        table_name = bayesdb_table_name(bdb, table_id)
+        qt = sqlite3_quote_name(table_name)
+        cursor = bdb.sql_execute("PRAGMA table_info(%s)" % (qt,))
+        sql_column_names = [row[1] for row in cursor]
+        qcns = map(sqlite3_quote_name, sql_column_names)
+        sql = """
+            INSERT INTO %s (%s) VALUES (%s)
+        """ % (qt, ", ".join(qcns), ", ".join("?" for _qcn in qcns))
+        for row in rows:
+            bdb.sql_execute(sql, row)
+
+        # Find the indices of the modelled columns.
+        modelled_column_names = list(bayesdb_column_names(bdb, table_id))
+        remap = []
+        for i, name in enumerate(sql_column_names):
+            colno = len(remap)
+            if len(modelled_column_names) <= colno:
+                break
+            if casefold(name) == casefold(modelled_column_names[colno]):
+                remap.append(i)
+        assert len(remap) == len(modelled_column_names)
+        M_c = bayesdb_metadata(bdb, table_id)
+        modelled_rows = [[bayesdb_value_to_code(M_c, colno, row[i])
+                for colno, i in enumerate(remap)]
+            for row in rows]
+
+        # Update the models.
+        T = list(bayesdb_data(bdb, table_id))
+        engine = bayesdb_table_engine(bdb, table_id)
+        modelnos = bayesdb_modelnos(bdb, table_id)
+        models = list(bayesdb_models(bdb, table_id, modelnos))
+        X_L_list, X_D_list, T = engine.insert(
+            M_c=M_c,
+            T=T,
+            X_L_list=[theta["X_L"] for theta in models],
+            X_D_list=[theta["X_D"] for theta in models],
+            new_rows=modelled_rows,
+        )
+        assert T == list(bayesdb_data(bdb, table_id)) + modelled_rows
+        for (modelno, theta), (X_L, X_D) \
+                in zip(zip(modelnos, models), zip(X_L_list, X_D_list)):
+            theta["X_L"] = X_L
+            theta["X_D"] = X_D
+            bayesdb_set_model(bdb, table_id, modelno, theta)
 
 ### BayesDB utilities
 
