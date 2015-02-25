@@ -44,8 +44,11 @@ class Shell(cmd.Cmd):
         self.prompt = self.def_prompt
         self.bql = StringIO.StringIO()
         self.identchars += '.'
-        self._cmds = set([])
         cmd.Cmd.__init__(self, 'Tab')
+
+        self._cmds = set([])
+        self._traced = False
+        self._sql_traced = False
 
         # Awful kludge to make commands begin with `.'.
         #
@@ -171,9 +174,13 @@ class Shell(cmd.Cmd):
         Use `.untrace' to undo.
         '''
         if line == 'bql':
-            self.bdb.trace(self._trace)
+            if not self._traced:
+                self.bdb.trace(self._trace)
+                self._traced = True
         elif line == 'sql':
-            self.bdb.sql_trace(self._sql_trace)
+            if not self._sql_traced:
+                self.bdb.sql_trace(self._sql_trace)
+                self._sql_traced = True
         else:
             self.stdout.write('Trace what?\n')
 
@@ -185,9 +192,13 @@ class Shell(cmd.Cmd):
         `.trace' traced them.
         '''
         if line == 'bql':
-            self.bdb.untrace(self._trace)
+            if self._traced:
+                self.bdb.untrace(self._trace)
+                self._traced = False
         elif line == 'sql':
-            self.bdb.sql_untrace(self._sql_trace)
+            if self._sql_traced:
+                self.bdb.sql_untrace(self._sql_trace)
+                self._sql_traced = False
         else:
             self.stdout.write('Untrace what?\n')
 
