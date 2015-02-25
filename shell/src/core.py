@@ -45,6 +45,16 @@ class Shell(cmd.Cmd):
         self.bql = StringIO.StringIO()
         cmd.Cmd.__init__(self, 'Tab')
 
+    def cmdloop(self, *args, **kwargs):
+        while True:
+            try:
+                cmd.Cmd.cmdloop(self, *args, **kwargs)
+            except KeyboardInterrupt:
+                self.stdout.write('^C\n')
+                continue
+            else:
+                break
+
     def default(self, line):
         # XXX What is this idiocy?  End-of-input is reported the same
         # as the line with characters `E', `O', `F'.
