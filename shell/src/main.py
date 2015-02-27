@@ -61,13 +61,13 @@ def run(stdin, stdout, stderr, argv):
         pathname = args[0]
     else:
         return usage(stderr, argv)
-    if seed is None:
-        import os
-        seedbuf = os.urandom(32)
-        seed = 0
-        for b in seedbuf:
-            seed <<= 8
-            seed |= ord(b)
+    # if seed is None:
+    #     import os
+    #     seedbuf = os.urandom(32)
+    #     seed = 0
+    #     for b in seedbuf:
+    #         seed <<= 8
+    #         seed |= ord(b)
     bdb = bayeslite.BayesDB(pathname=pathname)
     crosscat = None
     if njob:
