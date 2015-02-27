@@ -157,6 +157,8 @@ class BQLSemantics(object):
         return ast.AnalyzeModels(btable, models, iterations, seconds, wait)
     def p_command_drop_models(self, models, btable):
         return ast.DropModels(btable, models)
+    def p_command_rename_btable(self, oldname, newname):
+        return ast.RenameBtable(oldname, newname)
 
     def p_opt_temp_none(self):                  return False
     def p_opt_temp_some(self):                  return True

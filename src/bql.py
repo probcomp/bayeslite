@@ -105,6 +105,18 @@ def execute_phrase(bdb, phrase, bindings=()):
             table_id = core.bayesdb_table_id(bdb, phrase.btable)
             core.bayesdb_models_drop(bdb, table_id, phrase.modelnos)
             return []
+    if isinstance(phrase, ast.RenameBtable):
+        # XXX Move this to core.py?
+        with bdb.savepoint():
+            if not core.bayesdb_table_exists(bdb, phrase.oldname):
+                # XXX More specific exception.
+                raise ValueError('No such table: %s' % (phrase.oldname,))
+            qto = sqlite3_quote_name(phrase.oldname)
+            qtn = sqlite3_quote_name(phrase.newname)
+            bdb.sql_execute('ALTER TABLE %s RENAME TO %s' % (qto, qtn))
+            bdb.sql_execute('UPDATE bayesdb_table SET name = ? WHERE name = ?',
+                (phrase.newname, phrase.oldname))
+            return []
     assert False                # XXX
 
 # Output: Compiled SQL output accumulator.  Like StringIO.StringIO()

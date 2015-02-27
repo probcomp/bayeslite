@@ -38,6 +38,8 @@ command(analyze_models)	::= K_ANALYZE table_name(btable) opt_anmodelset(models)
 				anlimit(anlimit) opt_wait(wait).
 command(drop_models)	::= K_DROP K_MODEL|K_MODELS opt_modelset(models)
 				K_FROM table_name(btable).
+command(rename_btable)	::= K_ALTER K_BTABLE table_name(oldname)
+				K_RENAME K_TO table_name(newname).
 
 opt_temp(none)		::= .
 opt_temp(some)		::= K_TEMP|K_TEMPORARY.

@@ -462,6 +462,11 @@ def test_trivial_commands():
         bdb.execute('initialize 2 models for t')
         bdb.execute('initialize 1 model if not exists for t')
         bdb.execute('initialize 2 models if not exists for t')
+        bdb.execute('alter btable t rename to t0')
+        bdb.execute('select count(*) from t0')
+        with pytest.raises(sqlite3.OperationalError):
+            bdb.execute('select count(*) from t')
+        bdb.execute('alter btable t0 rename to t')
         bdb.execute('analyze t model 0 for 1 iteration wait')
         bdb.execute('analyze t models 0-1 for 1 iteration wait')
         bdb.execute('analyze t models 0,1 for 1 iteration wait')

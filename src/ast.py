@@ -62,6 +62,10 @@ DropModels = namedtuple('DropModels', [
     'btable',
     'modelnos',
 ])
+RenameBtable = namedtuple('RenameBtable',[
+    'oldname',
+    'newname',
+])
 
 def is_query(phrase):
     if isinstance(phrase, Select):      return True
