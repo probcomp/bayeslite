@@ -49,6 +49,7 @@ bayesdb_type_table = [
     # column type, numerical?, default sqlite, default model type
     ("categorical",     False,  "text",         "symmetric_dirichlet_discrete"),
     ("cyclic",          True,   "real",         "vonmises"),
+    ("ignore",          False,  "text",         None),
     ("key",             False,  "text",         None),
     ("numerical",       True,   "real",         "normal_inverse_gamma"),
 ]
