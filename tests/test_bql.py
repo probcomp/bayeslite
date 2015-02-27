@@ -548,7 +548,9 @@ def test_parametrized():
         bdb.execute('analyze t for 1 iteration wait;')
         assert sqltraced_execute('select similarity to 1 with respect to' +
                 ' (estimate columns from t limit 1) from t;') == [
+            'SELECT COUNT(*) FROM bayesdb_table WHERE name = ?',
             'SELECT id FROM bayesdb_table WHERE name = ?',
+            'SELECT COUNT(*) FROM bayesdb_table WHERE name = ?',
             'SELECT id FROM bayesdb_table WHERE name = ?',
             # *** ESTIMATE COLUMNS:
             'SELECT name FROM bayesdb_table_column WHERE table_id = 1' +
@@ -566,7 +568,9 @@ def test_parametrized():
         ]
         assert sqltraced_execute('select similarity to 1 with respect to' +
                 ' (estimate columns from t limit ?) from t;', (1,)) == [
+            'SELECT COUNT(*) FROM bayesdb_table WHERE name = ?',
             'SELECT id FROM bayesdb_table WHERE name = ?',
+            'SELECT COUNT(*) FROM bayesdb_table WHERE name = ?',
             'SELECT id FROM bayesdb_table WHERE name = ?',
             # *** ESTIMATE COLUMNS:
             'SELECT name FROM bayesdb_table_column WHERE table_id = 1' +
