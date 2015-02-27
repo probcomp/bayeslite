@@ -100,6 +100,11 @@ def execute_phrase(bdb, phrase, bindings=()):
         core.bayesdb_models_analyze(bdb, table_id, modelnos=modelnos,
             iterations=iterations, max_seconds=seconds)
         return []
+    if isinstance(phrase, ast.DropModels):
+        with bdb.savepoint():
+            table_id = core.bayesdb_table_id(bdb, phrase.btable)
+            core.bayesdb_models_drop(bdb, table_id, phrase.modelnos)
+            return []
     assert False                # XXX
 
 # Output: Compiled SQL output accumulator.  Like StringIO.StringIO()

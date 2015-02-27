@@ -58,6 +58,10 @@ AnalyzeModels = namedtuple('AnalyzeModels', [
     'seconds',
     'wait',
 ])
+DropModels = namedtuple('DropModels', [
+    'btable',
+    'modelnos',
+])
 
 def is_query(phrase):
     if isinstance(phrase, Select):      return True

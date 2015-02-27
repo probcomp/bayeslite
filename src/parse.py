@@ -155,6 +155,8 @@ class BQLSemantics(object):
         iterations = anlimit[1] if anlimit[0] == 'iterations' else None
         seconds = anlimit[1] if anlimit[0] == 'seconds' else None
         return ast.AnalyzeModels(btable, models, iterations, seconds, wait)
+    def p_command_drop_models(self, models, btable):
+        return ast.DropModels(btable, models)
 
     def p_opt_temp_none(self):                  return False
     def p_opt_temp_some(self):                  return True
@@ -163,6 +165,8 @@ class BQLSemantics(object):
     def p_ifnotexists_none(self):               return False
     def p_ifnotexists_some(self):               return True
 
+    def p_opt_anmodelset_none(self):            return None
+    def p_opt_anmodelset_some(self, m):         return sorted(m)
     def p_opt_modelset_none(self):              return None
     def p_opt_modelset_some(self, m):           return sorted(m)
     def p_modelset_one(self, r):                return r

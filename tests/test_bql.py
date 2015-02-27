@@ -447,6 +447,19 @@ def test_trivial_commands():
         bdb.execute("create btable t from '%s'" % (fname,))
         bdb.execute("create btable if not exists t from '%s'" % (fname,))
         bdb.execute('initialize 2 models for t')
+        with pytest.raises(sqlite3.IntegrityError):
+            bdb.execute('initialize 2 models for t')
+        bdb.execute('drop models from t')
+        bdb.execute('drop models from t')
+        bdb.execute('initialize 2 models for t')
+        with pytest.raises(sqlite3.IntegrityError):
+            bdb.execute('initialize 2 models for t')
+        with pytest.raises(ValueError):
+            bdb.execute('drop models 0-2 from t')
+        bdb.execute('drop models 0-1 from t')
+        with pytest.raises(ValueError):
+            bdb.execute('drop models 0-1 from t')
+        bdb.execute('initialize 2 models for t')
         bdb.execute('initialize 1 model if not exists for t')
         bdb.execute('initialize 2 models if not exists for t')
         bdb.execute('analyze t model 0 for 1 iteration wait')
