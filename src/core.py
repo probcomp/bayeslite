@@ -49,6 +49,7 @@ bayesdb_type_table = [
     # column type, numerical?, default sqlite, default model type
     ("categorical",     False,  "text",         "symmetric_dirichlet_discrete"),
     ("cyclic",          True,   "real",         "vonmises"),
+    ("ignore",          False,  "text",         None),
     ("key",             False,  "text",         None),
     ("numerical",       True,   "real",         "normal_inverse_gamma"),
 ]
@@ -662,6 +663,19 @@ def bayesdb_models_analyze(bdb, table_id, modelnos=None, iterations=1,
         theta["X_L"] = X_L
         theta["X_D"] = X_D
         bayesdb_set_model(bdb, table_id, modelno, theta)
+
+def bayesdb_models_drop(bdb, table_id, modelnos=None):
+    if modelnos is None:
+        bdb.sql_execute('DELETE FROM bayesdb_model WHERE table_id = ?',
+            (table_id,))
+    else:
+        modelnos = sorted(list(modelnos))
+        for modelno in modelnos:
+            if not bayesdb_has_model(bdb, table_id, modelno):
+                raise ValueError("No such model: %d" % (modelno,))
+        sql = 'DELETE FROM bayesdb_model WHERE table_id = ? AND modelno = ?'
+        for modelno in modelnos:
+            bdb.sql_execute(sql, (table_id, modelno))
 
 ### BayesDB column functions
 

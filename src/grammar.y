@@ -28,13 +28,18 @@ command(droptable)	::= K_DROP K_TABLE ifexists(ifexists) L_NAME(name).
 command(createtab_as)	::= K_CREATE opt_temp(temp) K_TABLE
 				ifnotexists(ifnotexists)
 				L_NAME(name) K_AS query(query).
+command(dropbtable)	::= K_DROP K_BTABLE ifexists(ifexists) L_NAME(name).
 command(createbtab_csv)	::= K_CREATE K_BTABLE ifnotexists(ifnotexists)
 				L_NAME(name) K_FROM L_STRING(file).
 command(init_models)	::= K_INITIALIZE L_INTEGER(n) K_MODEL|K_MODELS
 				ifnotexists(ifnotexists)
 				K_FOR table_name(btable).
-command(analyze_models)	::= K_ANALYZE table_name(btable) opt_modelset(models)
+command(analyze_models)	::= K_ANALYZE table_name(btable) opt_anmodelset(models)
 				anlimit(anlimit) opt_wait(wait).
+command(drop_models)	::= K_DROP K_MODEL|K_MODELS opt_modelset(models)
+				K_FROM table_name(btable).
+command(rename_btable)	::= K_ALTER K_BTABLE table_name(oldname)
+				K_RENAME K_TO table_name(newname).
 
 opt_temp(none)		::= .
 opt_temp(some)		::= K_TEMP|K_TEMPORARY.
@@ -43,8 +48,11 @@ ifexists(some)		::= K_IF K_EXISTS.
 ifnotexists(none)	::= .
 ifnotexists(some)	::= K_IF K_NOT K_EXISTS.
 
+opt_anmodelset(none)	::= .
+opt_anmodelset(some)	::= K_MODEL|K_MODELS modelset(m).
+
 opt_modelset(none)	::= .
-opt_modelset(some)	::= K_MODEL|K_MODELS modelset(m).
+opt_modelset(some)	::= modelset(m).
 
 modelset(one)		::= modelrange(r).
 modelset(many)		::= modelset(m) T_COMMA modelrange(r).

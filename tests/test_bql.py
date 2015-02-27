@@ -428,8 +428,8 @@ def test_estimate_pairwise_trivial():
             ' where infer age conf 0.9 > 30;')
 
 def test_estimate_pairwise_row():
-    prefix = 'SELECT r0._rowid_, r1._rowid_'
-    infix = ' FROM t1 AS r0, t1 AS r1'
+    prefix = 'SELECT r0._rowid_ AS rowid0, r1._rowid_ AS rowid1'
+    infix = ' AS value FROM t1 AS r0, t1 AS r1'
     assert bql2sql('estimate pairwise row similarity from t1;') == \
         prefix + ', bql_row_similarity(1, r0._rowid_, r1._rowid_, 0, 1, 2)' + \
         infix + ';'
@@ -447,8 +447,26 @@ def test_trivial_commands():
         bdb.execute("create btable t from '%s'" % (fname,))
         bdb.execute("create btable if not exists t from '%s'" % (fname,))
         bdb.execute('initialize 2 models for t')
+        with pytest.raises(sqlite3.IntegrityError):
+            bdb.execute('initialize 2 models for t')
+        bdb.execute('drop models from t')
+        bdb.execute('drop models from t')
+        bdb.execute('initialize 2 models for t')
+        with pytest.raises(sqlite3.IntegrityError):
+            bdb.execute('initialize 2 models for t')
+        with pytest.raises(ValueError):
+            bdb.execute('drop models 0-2 from t')
+        bdb.execute('drop models 0-1 from t')
+        with pytest.raises(ValueError):
+            bdb.execute('drop models 0-1 from t')
+        bdb.execute('initialize 2 models for t')
         bdb.execute('initialize 1 model if not exists for t')
         bdb.execute('initialize 2 models if not exists for t')
+        bdb.execute('alter btable t rename to t0')
+        bdb.execute('select count(*) from t0')
+        with pytest.raises(sqlite3.OperationalError):
+            bdb.execute('select count(*) from t')
+        bdb.execute('alter btable t0 rename to t')
         bdb.execute('analyze t model 0 for 1 iteration wait')
         bdb.execute('analyze t models 0-1 for 1 iteration wait')
         bdb.execute('analyze t models 0,1 for 1 iteration wait')
@@ -530,7 +548,9 @@ def test_parametrized():
         bdb.execute('analyze t for 1 iteration wait;')
         assert sqltraced_execute('select similarity to 1 with respect to' +
                 ' (estimate columns from t limit 1) from t;') == [
+            'SELECT COUNT(*) FROM bayesdb_table WHERE name = ?',
             'SELECT id FROM bayesdb_table WHERE name = ?',
+            'SELECT COUNT(*) FROM bayesdb_table WHERE name = ?',
             'SELECT id FROM bayesdb_table WHERE name = ?',
             # *** ESTIMATE COLUMNS:
             'SELECT name FROM bayesdb_table_column WHERE table_id = 1' +
@@ -548,7 +568,9 @@ def test_parametrized():
         ]
         assert sqltraced_execute('select similarity to 1 with respect to' +
                 ' (estimate columns from t limit ?) from t;', (1,)) == [
+            'SELECT COUNT(*) FROM bayesdb_table WHERE name = ?',
             'SELECT id FROM bayesdb_table WHERE name = ?',
+            'SELECT COUNT(*) FROM bayesdb_table WHERE name = ?',
             'SELECT id FROM bayesdb_table WHERE name = ?',
             # *** ESTIMATE COLUMNS:
             'SELECT name FROM bayesdb_table_column WHERE table_id = 1' +
@@ -567,6 +589,15 @@ def test_parametrized():
 
 def test_createtab():
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
+        with pytest.raises(ValueError): # XXX More specific error.
+            bdb.execute('drop btable t')
+        bdb.execute('drop btable if exists t')
+        bdb.execute("create btable t from '%s'" % (fname,))
+        bdb.execute("create btable if not exists t from '%s'" % (fname,))
+        bdb.execute('drop btable t')
+        with pytest.raises(ValueError): # XXX More specific error.
+            bdb.execute('drop btable t')
+        bdb.execute('drop btable if exists t')
         bdb.execute("create btable t from '%s'" % (fname,))
         bdb.execute("create table u as select * from t where gender = 'F'")
         assert bql_execute(bdb, 'select * from u') == [

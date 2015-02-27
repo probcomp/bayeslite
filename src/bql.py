@@ -51,6 +51,21 @@ def execute_phrase(bdb, phrase, bindings=()):
         ifexists = 'IF EXISTS ' if phrase.ifexists else ''
         qt = sqlite3_quote_name(phrase.name)
         return bdb.sql_execute('DROP TABLE %s%s' % (ifexists, qt))
+    if isinstance(phrase, ast.DropBtable):
+        with bdb.savepoint():
+            if core.bayesdb_table_exists(bdb, phrase.name):
+                table_id = core.bayesdb_table_id(bdb, phrase.name)
+                bdb.sql_execute('''
+                    DELETE FROM bayesdb_table_column WHERE table_id = ?
+                ''', (table_id,))
+                bdb.sql_execute('DELETE FROM bayesdb_table WHERE id = ?',
+                    (table_id,))
+                qt = sqlite3_quote_name(phrase.name)
+                bdb.sql_execute('DROP TABLE %s' % (qt,))
+            elif not phrase.ifexists:
+                # XXX More specific exception.
+                raise ValueError('No such btable: %s' % (phrase.name,))
+        return []
     if isinstance(phrase, ast.CreateTableAs):
         assert ast.is_query(phrase.query)
         with bdb.savepoint():
@@ -67,6 +82,8 @@ def execute_phrase(bdb, phrase, bindings=()):
             ifnotexists=phrase.ifnotexists)
         return []
     if isinstance(phrase, ast.InitModels):
+        if not core.bayesdb_table_exists(bdb, phrase.btable):
+            raise ValueError('No such btable: %s' % (phrase.btable,))
         table_id = core.bayesdb_table_id(bdb, phrase.btable)
         nmodels = phrase.nmodels
         config = phrase.config
@@ -74,6 +91,8 @@ def execute_phrase(bdb, phrase, bindings=()):
             ifnotexists=phrase.ifnotexists)
         return []
     if isinstance(phrase, ast.AnalyzeModels):
+        if not core.bayesdb_table_exists(bdb, phrase.btable):
+            raise ValueError('No such btable: %s' % (phrase.btable,))
         table_id = core.bayesdb_table_id(bdb, phrase.btable)
         modelnos = phrase.modelnos
         iterations = phrase.iterations
@@ -85,6 +104,25 @@ def execute_phrase(bdb, phrase, bindings=()):
         core.bayesdb_models_analyze(bdb, table_id, modelnos=modelnos,
             iterations=iterations, max_seconds=seconds)
         return []
+    if isinstance(phrase, ast.DropModels):
+        with bdb.savepoint():
+            if not core.bayesdb_table_exists(bdb, phrase.btable):
+                raise ValueError('No such btable: %s' % (phrase.btable,))
+            table_id = core.bayesdb_table_id(bdb, phrase.btable)
+            core.bayesdb_models_drop(bdb, table_id, phrase.modelnos)
+            return []
+    if isinstance(phrase, ast.RenameBtable):
+        # XXX Move this to core.py?
+        with bdb.savepoint():
+            if not core.bayesdb_table_exists(bdb, phrase.oldname):
+                # XXX More specific exception.
+                raise ValueError('No such table: %s' % (phrase.oldname,))
+            qto = sqlite3_quote_name(phrase.oldname)
+            qtn = sqlite3_quote_name(phrase.newname)
+            bdb.sql_execute('ALTER TABLE %s RENAME TO %s' % (qto, qtn))
+            bdb.sql_execute('UPDATE bayesdb_table SET name = ? WHERE name = ?',
+                (phrase.newname, phrase.oldname))
+            return []
     assert False                # XXX
 
 # Output: Compiled SQL output accumulator.  Like StringIO.StringIO()
@@ -338,6 +376,8 @@ def compile_estcols(bdb, estcols, out):
     assert isinstance(estcols, ast.EstCols)
     # XXX UH OH!  This will have the effect of shadowing names.  We
     # need an alpha-renaming pass.
+    if not core.bayesdb_table_exists(bdb, estcols.btable):
+        raise ValueError('No such btable: %s' % (estcols.btable,))
     out.write('SELECT name FROM bayesdb_table_column WHERE table_id = %d' %
         (core.bayesdb_table_id(bdb, estcols.btable),))
     colno_exp = 'colno'         # XXX
@@ -375,6 +415,8 @@ def compile_estpaircols(bdb, estpaircols, out):
     assert isinstance(estpaircols, ast.EstPairCols)
     colno0_exp = 'c0.colno'     # XXX
     colno1_exp = 'c1.colno'     # XXX
+    if not core.bayesdb_table_exists(bdb, estpaircols.btable):
+        raise ValueError('No such btable: %s' % (estpaircols.btable,))
     table_id = core.bayesdb_table_id(bdb, estpaircols.btable)
     out.write('SELECT %d AS table_id, c0.name AS name0, c1.name AS name1, ' %
         (table_id,))
@@ -419,9 +461,10 @@ def compile_estpairrow(bdb, estpairrow, out):
     table_name = estpairrow.btable
     rowid0_exp = 'r0._rowid_'
     rowid1_exp = 'r1._rowid_'
-    out.write('SELECT %s, %s, ' % (rowid0_exp, rowid1_exp))
+    out.write('SELECT %s AS rowid0, %s AS rowid1, ' % (rowid0_exp, rowid1_exp))
     compile_2row_expression(bdb, estpairrow.expression, estpairrow,
         rowid0_exp, rowid1_exp, out)
+    out.write(' AS value')
     out.write(' FROM %s AS r0, %s AS r1' % (table_name, table_name))
     if estpairrow.condition is not None:
         out.write(' WHERE ')
@@ -469,6 +512,9 @@ class BQLCompiler_1Row(object):
             raise ValueError('BQL row query with >1 table: %s' % (self.ctx,))
         if not isinstance(self.ctx.tables[0].table, str): # XXX name
             raise ValueError('Subquery in BQL row query: %s' % (self.ctx,))
+        if not core.bayesdb_table_exists(bdb, self.ctx.tables[0].table):
+            raise ValueError('No such btable: %s' %
+                (self.ctx.tables[0].table,))
         table_id = core.bayesdb_table_id(bdb, self.ctx.tables[0].table)
         rowid_col = '_rowid_'   # XXX Don't hard-code this.
         if isinstance(bql, ast.ExpBQLPredProb):
@@ -537,6 +583,8 @@ class BQLCompiler_2Row(object):
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
         assert self.ctx.btable is not None
+        if not core.bayesdb_table_exists(bdb, self.ctx.btable):
+            raise ValueError('No such btable: %s' % (self.ctx.btable,))
         table_id = core.bayesdb_table_id(bdb, self.ctx.btable)
         if isinstance(bql, ast.ExpBQLProb):
             raise ValueError('Probability of value is 1-row function.')
@@ -572,6 +620,8 @@ class BQLCompiler_1Col(object):
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
         assert self.ctx.btable is not None
+        if not core.bayesdb_table_exists(bdb, self.ctx.btable):
+            raise ValueError('No such btable: %s' % (self.ctx.btable,))
         table_id = core.bayesdb_table_id(bdb, self.ctx.btable)
         if isinstance(bql, ast.ExpBQLProb):
             if bql.column is not None:
@@ -620,6 +670,8 @@ class BQLCompiler_2Col(object):
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
         assert self.ctx.btable is not None
+        if not core.bayesdb_table_exists(bdb, self.ctx.btable):
+            raise ValueError('No such btable: %s' % (self.ctx.btable,))
         table_id = core.bayesdb_table_id(bdb, self.ctx.btable)
         if isinstance(bql, ast.ExpBQLProb):
             raise ValueError('Probability of value is one-column function.')

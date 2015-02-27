@@ -17,6 +17,7 @@
 import StringIO
 import contextlib
 import pytest
+import sqlite3
 import tempfile
 
 import bayeslite
@@ -106,6 +107,15 @@ def test_csv_import_schema():
                 'division': 'categorical',
                 'rank': 'categorical',
             })
+        # XXX Currently this test fails because we compile the query
+        # into `SELECT "idontexist" FROM "employees"', and for
+        # compatibility with MySQL idiocy or something, SQLite treats
+        # double-quotes as single-quotes if the alternative would be
+        # an error.
+        #
+        # with pytest.raises(sqlite3.OperationalError):
+        #     bdb.execute('select idontexist from employees')
+        bdb.execute('select height from employees')
 
 def test_csv_import_schema_case():
     with bayesdb_csv_stream(csv_data) as (bdb, f):

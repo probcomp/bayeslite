@@ -35,6 +35,10 @@ CreateTableAs = namedtuple('CreateTableAs', [
     'name',
     'query',
 ])
+DropBtable = namedtuple('DropBtable', [
+    'ifexists',
+    'name',
+])
 CreateBtableCSV = namedtuple('CreateBtableCSV', [
     'ifnotexists',
     'name',
@@ -53,6 +57,14 @@ AnalyzeModels = namedtuple('AnalyzeModels', [
     'iterations',
     'seconds',
     'wait',
+])
+DropModels = namedtuple('DropModels', [
+    'btable',
+    'modelnos',
+])
+RenameBtable = namedtuple('RenameBtable',[
+    'oldname',
+    'newname',
 ])
 
 def is_query(phrase):

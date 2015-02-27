@@ -31,6 +31,7 @@ grep -o 'K_[A-Z0-9_]*' < grammar.y | sort -u | awk '
 '''
 keywords = {
     "all": grammar.K_ALL,
+    "alter": grammar.K_ALTER,
     "analyze": grammar.K_ANALYZE,
     "and": grammar.K_AND,
     "as": grammar.K_AS,
@@ -86,6 +87,7 @@ keywords = {
     "predictive": grammar.K_PREDICTIVE,
     "probability": grammar.K_PROBABILITY,
     "regexp": grammar.K_REGEXP,
+    "rename": grammar.K_RENAME,
     "respect": grammar.K_RESPECT,
     "row": grammar.K_ROW,
     "samples": grammar.K_SAMPLES,
