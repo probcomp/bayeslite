@@ -143,6 +143,8 @@ class BQLSemantics(object):
         return ast.DropTable(ifexists, name)
     def p_command_createtab_as(self, temp, ifnotexists, name, query):
         return ast.CreateTableAs(temp, ifnotexists, name, query)
+    def p_command_dropbtable(self, ifexists, name):
+        return ast.DropBtable(ifexists, name)
     def p_command_createbtab_csv(self, ifnotexists, name, file):
         # XXX codebook
         return ast.CreateBtableCSV(ifnotexists, name, file, codebook=None)

@@ -567,6 +567,15 @@ def test_parametrized():
 
 def test_createtab():
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
+        with pytest.raises(ValueError): # XXX More specific error.
+            bdb.execute('drop btable t')
+        bdb.execute('drop btable if exists t')
+        bdb.execute("create btable t from '%s'" % (fname,))
+        bdb.execute("create btable if not exists t from '%s'" % (fname,))
+        bdb.execute('drop btable t')
+        with pytest.raises(ValueError): # XXX More specific error.
+            bdb.execute('drop btable t')
+        bdb.execute('drop btable if exists t')
         bdb.execute("create btable t from '%s'" % (fname,))
         bdb.execute("create table u as select * from t where gender = 'F'")
         assert bql_execute(bdb, 'select * from u') == [

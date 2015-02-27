@@ -35,6 +35,10 @@ CreateTableAs = namedtuple('CreateTableAs', [
     'name',
     'query',
 ])
+DropBtable = namedtuple('DropBtable', [
+    'ifexists',
+    'name',
+])
 CreateBtableCSV = namedtuple('CreateBtableCSV', [
     'ifnotexists',
     'name',

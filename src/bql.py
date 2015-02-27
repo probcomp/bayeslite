@@ -51,6 +51,21 @@ def execute_phrase(bdb, phrase, bindings=()):
         ifexists = 'IF EXISTS ' if phrase.ifexists else ''
         qt = sqlite3_quote_name(phrase.name)
         return bdb.sql_execute('DROP TABLE %s%s' % (ifexists, qt))
+    if isinstance(phrase, ast.DropBtable):
+        with bdb.savepoint():
+            if core.bayesdb_table_exists(bdb, phrase.name):
+                table_id = core.bayesdb_table_id(bdb, phrase.name)
+                bdb.sql_execute('''
+                    DELETE FROM bayesdb_table_column WHERE table_id = ?
+                ''', (table_id,))
+                bdb.sql_execute('DELETE FROM bayesdb_table WHERE id = ?',
+                    (table_id,))
+                qt = sqlite3_quote_name(phrase.name)
+                bdb.sql_execute('DROP TABLE %s' % (qt,))
+            elif not phrase.ifexists:
+                # XXX More specific exception.
+                raise ValueError('No such btable: %s' % (phrase.name,))
+        return []
     if isinstance(phrase, ast.CreateTableAs):
         assert ast.is_query(phrase.query)
         with bdb.savepoint():
