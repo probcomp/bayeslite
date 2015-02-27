@@ -388,36 +388,44 @@ class Shell(cmd.Cmd):
         plottype = line[:space]
         query = line[space+1:]
         if plottype == 'zmatrix':
-            import matplotlib.pyplot
-            import pandas
-            import seaborn
-            cursor = self._bdb.execute(query)
-            if cursor.description is None:
-                self.stdout.write('No columns in the query!\n')
-                return
-            column_names = [d[0] for d in cursor.description]
-            if len(column_names) != 4:
-                self.stdout.write('Query must have exactly four columns.\n')
-                return
-            column_names = column_names[1:]
-            rows = ((name0, name1, v) for _t, name0, name1, v in cursor)
-            rows = list(rows)
-            df = pandas.DataFrame.from_records(rows, columns=column_names)
-            df = df.pivot(column_names[0], column_names[1], column_names[2])
-            clustermap = seaborn.clustermap(df, linewidths=0)
-            matplotlib.pyplot.show(clustermap)
+            try:
+                import matplotlib.pyplot
+                import pandas
+                import seaborn
+                cursor = self._bdb.execute(query)
+                if cursor.description is None:
+                    self.stdout.write('No columns in the query!\n')
+                    return
+                column_names = [d[0] for d in cursor.description]
+                if len(column_names) != 4:
+                    self.stdout.write('Query must have'
+                        ' exactly four columns.\n')
+                    return
+                column_names = column_names[1:]
+                rows = ((name0, name1, v) for _t, name0, name1, v in cursor)
+                rows = list(rows)
+                df = pandas.DataFrame.from_records(rows, columns=column_names)
+                df = df.pivot(column_names[0], column_names[1],
+                    column_names[2])
+                clustermap = seaborn.clustermap(df, linewidths=0)
+                matplotlib.pyplot.show(clustermap)
+            except Exception:
+                self.stdout.write(traceback.format_exc())
         elif plottype == 'pair':
-            import matplotlib.pyplot
-            import pandas
-            import seaborn
-            cursor = self._bdb.execute(query)
-            if cursor.description is None:
-                self.stdout.write('No columns in the query!\n')
-                return
-            column_names = [d[0] for d in cursor.description]
-            df = pandas.DataFrame.from_records(cursor, columns=column_names,
-                coerce_float=True)
-            pairplot = seaborn.pairplot(df.dropna())
-            matplotlib.pyplot.show(pairplot)
+            try:
+                import matplotlib.pyplot
+                import pandas
+                import seaborn
+                cursor = self._bdb.execute(query)
+                if cursor.description is None:
+                    self.stdout.write('No columns in the query!\n')
+                    return
+                column_names = [d[0] for d in cursor.description]
+                df = pandas.DataFrame.from_records(cursor,
+                    columns=column_names, coerce_float=True)
+                pairplot = seaborn.pairplot(df.dropna())
+                matplotlib.pyplot.show(pairplot)
+            except Exception:
+                self.stdout.write(traceback.format_exc())
         else:
             self.stdout.write('I don\'t know that kind of plot.\n')
