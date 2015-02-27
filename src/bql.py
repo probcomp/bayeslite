@@ -461,9 +461,10 @@ def compile_estpairrow(bdb, estpairrow, out):
     table_name = estpairrow.btable
     rowid0_exp = 'r0._rowid_'
     rowid1_exp = 'r1._rowid_'
-    out.write('SELECT %s, %s, ' % (rowid0_exp, rowid1_exp))
+    out.write('SELECT %s AS rowid0, %s AS rowid1, ' % (rowid0_exp, rowid1_exp))
     compile_2row_expression(bdb, estpairrow.expression, estpairrow,
         rowid0_exp, rowid1_exp, out)
+    out.write(' AS value')
     out.write(' FROM %s AS r0, %s AS r1' % (table_name, table_name))
     if estpairrow.condition is not None:
         out.write(' WHERE ')

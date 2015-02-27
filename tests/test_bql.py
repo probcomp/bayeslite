@@ -428,8 +428,8 @@ def test_estimate_pairwise_trivial():
             ' where infer age conf 0.9 > 30;')
 
 def test_estimate_pairwise_row():
-    prefix = 'SELECT r0._rowid_, r1._rowid_'
-    infix = ' FROM t1 AS r0, t1 AS r1'
+    prefix = 'SELECT r0._rowid_ AS rowid0, r1._rowid_ AS rowid1'
+    infix = ' AS value FROM t1 AS r0, t1 AS r1'
     assert bql2sql('estimate pairwise row similarity from t1;') == \
         prefix + ', bql_row_similarity(1, r0._rowid_, r1._rowid_, 0, 1, 2)' + \
         infix + ';'
