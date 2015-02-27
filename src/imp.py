@@ -206,7 +206,7 @@ def bayesdb_import_column_numerical_p(rows, i, count_cutoff, ratio_cutoff):
     if not bayesdb_import_column_floatable_p(rows, i):
         return False
     ndistinct = len(unique([float(row[i]) for row in rows
-        if not math.isnan(float(row[i]))]))
+        if row[i] != '' and not math.isnan(float(row[i]))]))
     if ndistinct <= count_cutoff:
         return False
     ndata = len(rows)
