@@ -59,6 +59,7 @@ class Shell(cmd.Cmd):
         self._installcmd('describe', self.dot_describe)
         self._installcmd('help', self.dot_help)
         self._installcmd('loadmodels', self.dot_loadmodels)
+        self._installcmd('plot', self.dot_plot)
         self._installcmd('python', self.dot_python)
         self._installcmd('sql', self.dot_sql)
         self._installcmd('trace', self.dot_trace)
@@ -367,3 +368,56 @@ class Shell(cmd.Cmd):
         else:
             self.stdout.write('I don\'t know what a %s is.\n' %
                 (repr(tokens[0]),))
+
+    def dot_plot(self, line):
+        '''plot the result of a query
+        [zmatrix|pair] <query>
+
+        Plot the result of <query>.
+
+        For `zmatrix\', <query> must return a table of the form
+        (table_id, name0, name1, value).
+
+        For `pair\', <query> may return anything.
+        '''
+        # Get the plot type.
+        space = line.find(' ')
+        if space == -1:
+            self.stdout.write('Plot what?\n')
+            return
+        plottype = line[:space]
+        query = line[space+1:]
+        if plottype == 'zmatrix':
+            import matplotlib.pyplot
+            import pandas
+            import seaborn
+            cursor = self._bdb.execute(query)
+            if cursor.description is None:
+                self.stdout.write('No columns in the query!\n')
+                return
+            column_names = [d[0] for d in cursor.description]
+            if len(column_names) != 4:
+                self.stdout.write('Query must have exactly four columns.\n')
+                return
+            column_names = column_names[1:]
+            rows = ((name0, name1, v) for _t, name0, name1, v in cursor)
+            rows = list(rows)
+            df = pandas.DataFrame.from_records(rows, columns=column_names)
+            df = df.pivot(column_names[0], column_names[1], column_names[2])
+            clustermap = seaborn.clustermap(df, linewidths=0)
+            matplotlib.pyplot.show(clustermap)
+        elif plottype == 'pair':
+            import matplotlib.pyplot
+            import pandas
+            import seaborn
+            cursor = self._bdb.execute(query)
+            if cursor.description is None:
+                self.stdout.write('No columns in the query!\n')
+                return
+            column_names = [d[0] for d in cursor.description]
+            df = pandas.DataFrame.from_records(cursor, columns=column_names,
+                coerce_float=True)
+            pairplot = seaborn.pairplot(df.dropna())
+            matplotlib.pyplot.show(pairplot)
+        else:
+            self.stdout.write('I don\'t know that kind of plot.\n')
