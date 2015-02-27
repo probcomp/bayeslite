@@ -15,6 +15,8 @@
 #   limitations under the License.
 
 def pp_cursor(out, cursor):
+    if not cursor:              # XXX Oogly hack!
+        return
     if cursor.description is None:
         return
     labels = [d[0] for d in cursor.description]
