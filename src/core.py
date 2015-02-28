@@ -833,6 +833,8 @@ def bql_column_value_probability(bdb, table_id, colno, value):
 
 # Row function:  SIMILARITY TO <target_row> [WITH RESPECT TO <columns>]
 def bql_row_similarity(bdb, table_id, rowid, target_rowid, *columns):
+    if len(columns) == 0:
+        columns = bayesdb_column_numbers(bdb, table_id)
     engine = bayesdb_table_engine(bdb, table_id)
     return engine.similarity(
         M_c=bayesdb_metadata(bdb, table_id),
