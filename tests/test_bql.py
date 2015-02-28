@@ -208,14 +208,14 @@ def test_select_bql():
     assert bql2sql('select typicality of age from t1;') == \
         'SELECT bql_column_typicality(1, 1) FROM "t1";'
     assert bql2sql('select similarity to 5 from t1;') == \
-        'SELECT bql_row_similarity(1, _rowid_, 5, 0, 1, 2) FROM "t1";'
+        'SELECT bql_row_similarity(1, _rowid_, 5) FROM "t1";'
     assert bql2sql('select similarity to 5 with respect to age from t1') == \
         'SELECT bql_row_similarity(1, _rowid_, 5, 1) FROM "t1";'
     assert bql2sql('select similarity to 5 with respect to (age, weight)' +
         ' from t1;') == \
         'SELECT bql_row_similarity(1, _rowid_, 5, 1, 2) FROM "t1";'
     assert bql2sql('select similarity to 5 with respect to (*) from t1;') == \
-        'SELECT bql_row_similarity(1, _rowid_, 5, 0, 1, 2) FROM "t1";'
+        'SELECT bql_row_similarity(1, _rowid_, 5) FROM "t1";'
     assert bql2sql('select similarity to 5 with respect to (age, weight)' +
         ' from t1;') == \
         'SELECT bql_row_similarity(1, _rowid_, 5, 1, 2) FROM "t1";'
@@ -431,7 +431,7 @@ def test_estimate_pairwise_row():
     prefix = 'SELECT r0._rowid_ AS rowid0, r1._rowid_ AS rowid1'
     infix = ' AS value FROM t1 AS r0, t1 AS r1'
     assert bql2sql('estimate pairwise row similarity from t1;') == \
-        prefix + ', bql_row_similarity(1, r0._rowid_, r1._rowid_, 0, 1, 2)' + \
+        prefix + ', bql_row_similarity(1, r0._rowid_, r1._rowid_)' + \
         infix + ';'
     assert bql2sql('estimate pairwise row similarity with respect to age' +
             ' from t1;') == \

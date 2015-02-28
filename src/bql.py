@@ -545,8 +545,20 @@ class BQLCompiler_1Row(object):
                 raise ValueError('Similarity as 1-row function needs row.')
             out.write('bql_row_similarity(%s, _rowid_, ' % (table_id,))
             compile_expression(bdb, bql.rowid, self, out)
-            out.write(', ')
-            compile_column_lists(bdb, table_id, bql.column_lists, self, out)
+            import sys
+            print >>sys.stderr, bql.column_lists
+            print >>sys.stderr, len(bql.column_lists) == 1
+            print >>sys.stderr, isinstance(bql.column_lists[0], ast.ColListAll)
+            if len(bql.column_lists) == 1 and \
+               isinstance(bql.column_lists[0], ast.ColListAll):
+                # We'll likely run up against SQLite's limit on the
+                # number of arguments in this case.  Instead, let
+                # bql_row_similarity find the columns.
+                pass
+            else:
+                out.write(', ')
+                compile_column_lists(bdb, table_id, bql.column_lists, self,
+                    out)
             out.write(')')
         elif isinstance(bql, ast.ExpBQLDepProb):
             compile_bql_2col_2(bdb, table_id,
@@ -595,9 +607,18 @@ class BQLCompiler_2Row(object):
         elif isinstance(bql, ast.ExpBQLSim):
             if bql.rowid is not None:
                 raise ValueError('Similarity neds no row id in 2-row context.')
-            out.write('bql_row_similarity(%s, %s, %s, ' %
+            out.write('bql_row_similarity(%s, %s, %s' %
                 (table_id, self.rowid0_exp, self.rowid1_exp))
-            compile_column_lists(bdb, table_id, bql.column_lists, self, out)
+            if len(bql.column_lists) == 1 and \
+               isinstance(bql.column_lists[0], ast.ColListAll):
+                # We'll likely run up against SQLite's limit on the
+                # number of arguments in this case.  Instead, let
+                # bql_row_similarity find the columns.
+                pass
+            else:
+                out.write(', ')
+                compile_column_lists(bdb, table_id, bql.column_lists, self,
+                    out)
             out.write(')')
         elif isinstance(bql, ast.ExpBQLDepProb):
             raise ValueError('Dependence probability is 0-row function.')
