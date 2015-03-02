@@ -30,3 +30,4 @@ Miscellaneous things to do:
 - Allow statements and expressions alike in .python command.
 - Subsampling analysis, post-analysis insertion.
 - Support some kind of progress notification for long queries.
+- Automatic tests for schema upgrades.
