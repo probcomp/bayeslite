@@ -32,3 +32,4 @@ Miscellaneous things to do:
 - Support some kind of progress notification for long queries.
 - Automatic tests for schema upgrades.
 - Figure out how to write transactions command by command in shell.
+- Support renaming columns.
