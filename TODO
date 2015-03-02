@@ -31,3 +31,4 @@ Miscellaneous things to do:
 - Subsampling analysis, post-analysis insertion.
 - Support some kind of progress notification for long queries.
 - Automatic tests for schema upgrades.
+- Figure out how to write transactions command by command in shell.
