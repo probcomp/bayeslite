@@ -114,7 +114,7 @@ def bayesdb_install_schema(db):
         # support, and just fix that up if we have it now.
         if application_id_ok:
             fixup_application_id = True
-    else:
+    elif application_id != 0x42594442:
         raise IOError("Invalid application_id: 0x%08x" % (application_id,))
     # Check the schema version and apply upgrades if necessary.
     if user_version == 3:

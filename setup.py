@@ -59,13 +59,16 @@ setup(
     packages=[
         'bayeslite',
         'bayeslite.plex',
+        'bayeslite.shell',
     ],
     package_dir={
         'bayeslite': 'src',
         'bayeslite.plex': 'external/plex/dist/Plex',
+        'bayeslite.shell': 'shell/src',
     },
     install_requires=[
         'apsw>=3.8.2-r1',
     ],
+    scripts=['shell/scripts/bayeslite'],
     license='Apache License, Version 2.0',
 )

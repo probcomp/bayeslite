@@ -16,6 +16,7 @@
 
 import csv
 import json
+import math
 
 import bayeslite.core as core
 
@@ -47,8 +48,16 @@ def bayesdb_import_codebook_csv_file(bdb, table_name, pathname):
                 raise IOError('Column does not exist in table %s: %s' %
                     (repr(table_name), repr(column_name)))
             colno = core.bayesdb_column_number(bdb, table_id, column_name)
-            if value_map_json != 'NaN':      # ...
-                value_map = json.loads(value_map_json)
+            value_map = json.loads(value_map_json)
+            if isinstance(value_map, float) and math.isnan(value_map):
+                # No value map.
+                pass
+            elif isinstance(value_map, dict):
+                sql = '''
+                    DELETE FROM bayesdb_value_map
+                        WHERE table_id = ? AND colno = ?
+                '''
+                bdb.sql_execute(sql, (table_id, colno))
                 sql = '''
                     INSERT INTO bayesdb_value_map
                         (table_id, colno, value, extended_value)
@@ -56,6 +65,10 @@ def bayesdb_import_codebook_csv_file(bdb, table_name, pathname):
                 '''
                 for v in sorted(value_map.keys()):
                     bdb.sql_execute(sql, (table_id, colno, v, value_map[v]))
+            else:
+                # XXX Arbitrary input in error message...
+                raise IOError('Invalid value map for column %s' %
+                    (repr(column_name),))
             sql = '''
                 UPDATE bayesdb_table_column
                     SET short_name = ?, description = ?

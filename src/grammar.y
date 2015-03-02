@@ -23,19 +23,36 @@ phrase1(nonempty)	::= phrase(phrase).
 phrase(command)		::= command(c).
 phrase(query)		::= query(q).
 
+/* XXX Need database names.  */
+command(droptable)	::= K_DROP K_TABLE ifexists(ifexists) L_NAME(name).
+command(createtab_as)	::= K_CREATE opt_temp(temp) K_TABLE
+				ifnotexists(ifnotexists)
+				L_NAME(name) K_AS query(query).
+command(dropbtable)	::= K_DROP K_BTABLE ifexists(ifexists) L_NAME(name).
 command(createbtab_csv)	::= K_CREATE K_BTABLE ifnotexists(ifnotexists)
 				L_NAME(name) K_FROM L_STRING(file).
 command(init_models)	::= K_INITIALIZE L_INTEGER(n) K_MODEL|K_MODELS
 				ifnotexists(ifnotexists)
 				K_FOR table_name(btable).
-command(analyze_models)	::= K_ANALYZE table_name(btable) opt_modelset(models)
+command(analyze_models)	::= K_ANALYZE table_name(btable) opt_anmodelset(models)
 				anlimit(anlimit) opt_wait(wait).
+command(drop_models)	::= K_DROP K_MODEL|K_MODELS opt_modelset(models)
+				K_FROM table_name(btable).
+command(rename_btable)	::= K_ALTER K_BTABLE table_name(oldname)
+				K_RENAME K_TO table_name(newname).
 
+opt_temp(none)		::= .
+opt_temp(some)		::= K_TEMP|K_TEMPORARY.
+ifexists(none)		::= .
+ifexists(some)		::= K_IF K_EXISTS.
 ifnotexists(none)	::= .
 ifnotexists(some)	::= K_IF K_NOT K_EXISTS.
 
+opt_anmodelset(none)	::= .
+opt_anmodelset(some)	::= K_MODEL|K_MODELS modelset(m).
+
 opt_modelset(none)	::= .
-opt_modelset(some)	::= K_MODEL|K_MODELS modelset(m).
+opt_modelset(some)	::= modelset(m).
 
 modelset(one)		::= modelrange(r).
 modelset(many)		::= modelset(m) T_COMMA modelrange(r).
@@ -306,7 +323,8 @@ bqlfn(typ_const)	::= K_TYPICALITY K_OF L_NAME(col).
 bqlfn(sim_1row)		::= K_SIMILARITY K_TO primary(row) wrt(cols).
 bqlfn(sim_2row)		::= K_SIMILARITY wrt(cols).
 bqlfn(depprob)		::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
-bqlfn(mutinf)		::= K_MUTUAL K_INFORMATION ofwith(cols).
+bqlfn(mutinf)		::= K_MUTUAL K_INFORMATION ofwith(cols)
+				opt_nsamples(nsamp).
 bqlfn(correl)		::= K_CORRELATION ofwith(cols).
 bqlfn(infer)		::= K_INFER L_NAME(col) K_CONF primary(cf).
 bqlfn(primary)		::= primary(p).
@@ -325,6 +343,9 @@ ofwith(bql_2col)	::= .
 ofwith(bql_1col)	::= K_WITH L_NAME(col).
 ofwith(bql_const)	::= K_OF L_NAME(col1) K_WITH L_NAME(col2).
 
+opt_nsamples(none)	::= .
+opt_nsamples(some)	::= K_USING primary(nsamples) K_SAMPLES.
+
 column_lists(one)	::= column_list(collist).
 column_lists(many)	::= column_lists(collists)
 				T_COMMA|K_AND column_list(collist).
@@ -342,6 +363,9 @@ primary(literal)	::= literal(v).
 primary(numpar)		::= L_NUMPAR(n).
 primary(nampar)		::= L_NAMPAR(n).
 primary(apply)		::= L_NAME(fn) T_LROUND opt_expressions(es) T_RROUND.
+primary(apply_distinct)	::= L_NAME(fn) T_LROUND K_DISTINCT opt_expressions(es)
+				T_RROUND.
+primary(apply_star)	::= L_NAME(fn) T_LROUND T_STAR T_RROUND.
 primary(paren)		::= T_LROUND expression(e) T_RROUND.
 primary(subquery)	::= T_LROUND query(q) T_RROUND.
 primary(cast)		::= K_CAST T_LROUND expression(e)
@@ -381,3 +405,85 @@ typename(many)		::= typename(tn) L_NAME(n).
 typearg(unsigned)	::= L_INTEGER(i).
 typearg(positive)	::= T_PLUS L_INTEGER(i).
 typearg(negative)	::= T_MINUS L_INTEGER(i).
+
+/*
+ * XXX For some reason, putting CASE and WHEN here break the parser.
+ * Needs further analysis.
+ */
+%fallback L_NAME
+	K_ALL
+	K_ANALYZE
+	K_AND
+	K_AS
+	K_ASC
+	K_BETWEEN
+	K_BTABLE
+	K_BY
+	/* K_CASE */
+	K_CAST
+	K_COLLATE
+	K_COLUMNS
+	K_CONF
+	K_CORRELATION
+	K_CREATE
+	K_DEPENDENCE
+	K_DESC
+	K_DISTINCT
+	K_DROP
+	K_ELSE
+	K_END
+	K_ESCAPE
+	K_ESTIMATE
+	K_EXISTS
+	K_FOR
+	K_FROM
+	K_GLOB
+	K_GROUP
+	K_IF
+	K_IN
+	K_INFER
+	K_INFORMATION
+	K_INITIALIZE
+	K_IS
+	K_ISNULL
+	K_ITERATION
+	K_ITERATIONS
+	K_LIKE
+	K_LIMIT
+	K_MATCH
+	K_MINUTE
+	K_MINUTES
+	K_MODEL
+	K_MODELS
+	K_MUTUAL
+	K_NOT
+	K_NOTNULL
+	K_NULL
+	K_OF
+	K_OFFSET
+	K_OR
+	K_ORDER
+	K_PAIRWISE
+	K_PREDICTIVE
+	K_PROBABILITY
+	K_REGEXP
+	K_RESPECT
+	K_ROW
+	K_SAMPLES
+	K_SECOND
+	K_SECONDS
+	K_SELECT
+	K_SIMILARITY
+	K_TABLE
+	K_TEMP
+	K_TEMPORARY
+	K_THEN
+	K_TO
+	K_TYPICALITY
+	K_USING
+	K_VALUE
+	K_WAIT
+	/* K_WHEN */
+	K_WHERE
+	K_WITH
+	.

@@ -29,6 +29,8 @@ import bayeslite.core as core
 from bayeslite.sqlite3_util import sqlite3_exec_1
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
+import test_csv
+
 def powerset(s):
     s = list(s)
     combinations = (itertools.combinations(s, r) for r in range(len(s) + 1))
@@ -121,7 +123,7 @@ def sqlite_bayesdb_table(mkbdb, name, schema, data, **kwargs):
 @contextlib.contextmanager
 def analyzed_bayesdb_table(mkbdb, nmodels, nsteps, max_seconds=None):
     with mkbdb as (bdb, table_id):
-        core.bayesdb_models_initialize(bdb, table_id, nmodels)
+        core.bayesdb_models_initialize(bdb, table_id, range(nmodels))
         core.bayesdb_models_analyze(bdb, table_id, iterations=nsteps,
             max_seconds=max_seconds)
         yield bdb, table_id
@@ -407,7 +409,13 @@ def test_twocolumn(btable_name, colno0, colno1):
         bdb.sql_execute('select bql_column_dependence_probability(?, ?, ?)',
             (table_id, colno0, colno1))
         core.bql_column_mutual_information(bdb, table_id, colno0, colno1)
-        bdb.sql_execute('select bql_column_mutual_information(?, ?, ?)',
+        core.bql_column_mutual_information(bdb, table_id, colno0, colno1, None)
+        core.bql_column_mutual_information(bdb, table_id, colno0, colno1, 1)
+        bdb.sql_execute('select bql_column_mutual_information(?, ?, ?, NULL)',
+            (table_id, colno0, colno1))
+        bdb.sql_execute('select bql_column_mutual_information(?, ?, ?, 1)',
+            (table_id, colno0, colno1))
+        bdb.sql_execute('select bql_column_mutual_information(?, ?, ?, 100)',
             (table_id, colno0, colno1))
 
 @pytest.mark.parametrize('colno,rowid',
@@ -478,3 +486,12 @@ def test_row_column_predictive_probability(btable_name, rowid, colno):
         core.bql_row_column_predictive_probability(bdb, table_id, rowid, colno)
         sql = 'select bql_row_column_predictive_probability(?, ?, ?)'
         bdb.sql_execute(sql, (table_id, rowid, colno))
+
+def test_insert():
+    with test_csv.bayesdb_csv_stream(test_csv.csv_data) as (bdb, f):
+        bayeslite.bayesdb_import_csv(bdb, 't', f)
+        bdb.execute('initialize 2 models for t')
+        bdb.execute('analyze t for 1 iteration wait')
+        table_id = core.bayesdb_table_id(bdb, 't')
+        row = (41, 'F', 96000, 73, 'data science', 2)
+        core.bayesdb_insert(bdb, table_id, row)

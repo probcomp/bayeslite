@@ -20,10 +20,24 @@ import bayeslite.ast as ast
 import bayeslite.grammar as grammar
 import bayeslite.scan as scan
 
+class ParseError(Exception):
+    def __init__(self, errors):
+        assert 0 < len(errors)
+        self.errors = errors
+    def __str__(self):
+        if len(self.errors) == 1:
+            return 'Parse error: ' + self.errors[0]
+        else:
+            out = StringIO.StringIO()
+            out.write('Parse errors:\n')
+            for error in self.errors:
+                out.write('  %s\n' % (error,))
+            return out.getvalue()
+
 def parse_bql_phrases(scanner):
     semantics = BQLSemantics()
     parser = grammar.Parser(semantics)
-    while True:
+    while not semantics.failed:
         token = scanner.read()
         if token[0] == -1:      # error
             semantics.syntax_error(token)
@@ -43,9 +57,10 @@ def parse_bql_phrases(scanner):
                 yield phrase
         if token[0] == 0:       # EOF
             break
-    # XXX It seems to me that lemon should do this for us.
     if 0 < len(semantics.errors):
-        semantics.parse_failed()
+        raise ParseError(semantics.errors)
+    if semantics.failed:
+        raise ParseError(['parse failed mysteriously!'])
 
 def parse_bql_string_pos(string):
     scanner = scan.BQLScanner(StringIO.StringIO(string), '(string)')
@@ -62,16 +77,42 @@ def parse_bql_string_pos_1(string):
 def parse_bql_string(string):
     return (phrase for phrase, _pos in parse_bql_string_pos(string))
 
+def bql_string_complete_p(string):
+    scanner = scan.BQLScanner(StringIO.StringIO(string), '(string)')
+    semantics = BQLSemantics()
+    parser = grammar.Parser(semantics)
+    nonsemi = False
+    while not semantics.failed:
+        token = scanner.read()
+        if token[0] == -1:      # error
+            # Say it's complete so the caller will try to parse it and
+            # choke on the error.
+            return True
+        elif token[0] == 0:
+            # EOF.  Hope we have a complete phrase.
+            break
+        elif token[0] != grammar.T_SEMI:
+            # Got a non-semicolon token.  Clear any previous phrase,
+            # if we had one.
+            nonsemi = True
+            semantics.phrase = None
+        parser.feed(token)
+    if 0 < len(semantics.errors):
+        return True
+    if semantics.failed:
+        return True
+    return (not nonsemi) or (semantics.phrase is not None)
+
 class BQLSemantics(object):
     def __init__(self):
         self.phrase = None
         self.errors = []
+        self.failed = False
 
     def accept(self):
         pass
     def parse_failed(self):
-        # XXX Raise a principled exception here.
-        raise Exception('Parse failed with errors: %s' % (self.errors,))
+        self.failed = True
     def syntax_error(self, (number, text)):
         # XXX Adapt lemonade to help us identify what the allowed
         # subsequent tokens are.
@@ -98,6 +139,12 @@ class BQLSemantics(object):
     def p_phrase_command(self, c):              return c
     def p_phrase_query(self, q):                return q
 
+    def p_command_droptable(self, ifexists, name):
+        return ast.DropTable(ifexists, name)
+    def p_command_createtab_as(self, temp, ifnotexists, name, query):
+        return ast.CreateTableAs(temp, ifnotexists, name, query)
+    def p_command_dropbtable(self, ifexists, name):
+        return ast.DropBtable(ifexists, name)
     def p_command_createbtab_csv(self, ifnotexists, name, file):
         # XXX codebook
         return ast.CreateBtableCSV(ifnotexists, name, file, codebook=None)
@@ -108,10 +155,20 @@ class BQLSemantics(object):
         iterations = anlimit[1] if anlimit[0] == 'iterations' else None
         seconds = anlimit[1] if anlimit[0] == 'seconds' else None
         return ast.AnalyzeModels(btable, models, iterations, seconds, wait)
+    def p_command_drop_models(self, models, btable):
+        return ast.DropModels(btable, models)
+    def p_command_rename_btable(self, oldname, newname):
+        return ast.RenameBtable(oldname, newname)
 
+    def p_opt_temp_none(self):                  return False
+    def p_opt_temp_some(self):                  return True
+    def p_ifexists_none(self):                  return False
+    def p_ifexists_some(self):                  return True
     def p_ifnotexists_none(self):               return False
     def p_ifnotexists_some(self):               return True
 
+    def p_opt_anmodelset_none(self):            return None
+    def p_opt_anmodelset_some(self, m):         return sorted(m)
     def p_opt_modelset_none(self):              return None
     def p_opt_modelset_some(self, m):           return sorted(m)
     def p_modelset_one(self, r):                return r
@@ -297,7 +354,8 @@ class BQLSemantics(object):
     def p_bqlfn_sim_1row(self, row, cols):      return ast.ExpBQLSim(row, cols)
     def p_bqlfn_sim_2row(self, cols):           return ast.ExpBQLSim(None,cols)
     def p_bqlfn_depprob(self, cols):            return ast.ExpBQLDepProb(*cols)
-    def p_bqlfn_mutinf(self, cols):             return ast.ExpBQLMutInf(*cols)
+    def p_bqlfn_mutinf(self, cols, nsamp):
+        return ast.ExpBQLMutInf(cols[0], cols[1], nsamp)
     def p_bqlfn_correl(self, cols):             return ast.ExpBQLCorrel(*cols)
     def p_bqlfn_infer(self, col, cf):           return ast.ExpBQLInfer(col, cf)
     def p_bqlfn_primary(self, p):               return p
@@ -309,6 +367,9 @@ class BQLSemantics(object):
     def p_ofwith_bql_2col(self):                return (None, None)
     def p_ofwith_bql_1col(self, col):           return (col, None)
     def p_ofwith_bql_const(self, col1, col2):   return (col1, col2)
+
+    def p_opt_nsamples_none(self):              return None
+    def p_opt_nsamples_some(self, nsamples):    return nsamples
 
     def p_column_lists_one(self, collist):
         return [collist]
@@ -323,7 +384,9 @@ class BQLSemantics(object):
     def p_primary_literal(self, v):             return ast.ExpLit(v)
     def p_primary_numpar(self, n):              return ast.ExpNumpar(n)
     def p_primary_nampar(self, n):              return ast.ExpNampar(n[0],n[1])
-    def p_primary_apply(self, fn, es):          return ast.ExpApp(fn, es)
+    def p_primary_apply(self, fn, es):          return ast.ExpApp(False,fn,es)
+    def p_primary_apply_distinct(self, fn, es): return ast.ExpApp(True, fn, es)
+    def p_primary_apply_star(self, fn):         return ast.ExpAppStar(fn)
     def p_primary_paren(self, e):               return e
     def p_primary_subquery(self, q):            return ast.ExpSub(q)
     def p_primary_cast(self, e, t):             return ast.ExpCast(e, t)

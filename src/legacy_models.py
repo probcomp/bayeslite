@@ -19,6 +19,7 @@ import pickle
 
 import bayeslite.core as core
 
+from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 
 renamed_column_types = {
@@ -93,7 +94,11 @@ def bayesdb_load_legacy_models(bdb, table_name, pathname, ifnotexists=False,
             # fail.  If there are no existing models, change the schema.
             table_id = core.bayesdb_table_id(bdb, table_name)
             if column_types != bayesdb_column_types(bdb, table_id):
-                if 0 < core.bayesdb_nmodels(bdb, table_id):
+                try:
+                    core.bayesdb_models(bdb, table_id).next()
+                except StopIteration:
+                    pass
+                else:
                     raise ValueError('legacy models mismatch schema: %s' %
                         (table_name,))
                 # XXX Name this operation: DROP BTABLE ...
@@ -104,12 +109,14 @@ def bayesdb_load_legacy_models(bdb, table_name, pathname, ifnotexists=False,
                     (table_id,))
                 core.bayesdb_import_sqlite_table(bdb, table_name,
                     column_types=column_types)
-        else:
-            # Table does not exist as a btable.  Create the btable,
-            # assuming that a SQL table exists.  If no SQL table existed
-            # by this name, tough: caller should have imported it before.
+        elif 0 < len(list(bdb.sql_execute('PRAGMA table_info(%s)' %
+                sqlite3_quote_name(table_name)))):
+            # Table does not exist as a btable but does exist as a SQL
+            # table.  Create the btable.
             core.bayesdb_import_sqlite_table(bdb, table_name,
                 column_types=column_types)
+        else:
+            raise ValueError('No such table: %s' % (table_name,))
 
         # Determine where to start numbering the new models.
         table_id = core.bayesdb_table_id(bdb, table_name)

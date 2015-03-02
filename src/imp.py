@@ -89,26 +89,23 @@ def _bayesdb_import(bdb, table, column_names, rows, column_types):
     nonignored_column_names = [column_names[i] for i in nonignored_indices]
     nonignored_column_types = dict((name, column_types[name])
         for name in column_types if column_types[name] != "ignore")
-    nonignored_column_types_folded = dict((name, column_types_folded[name])
-        for name in column_types_folded
-        if column_types_folded[name] != "ignore")
 
     # Generate the SQL schema.
-    ncols = len(nonignored_column_names)
-    assert ncols == len(nonignored_column_types)
+    ncols = len(column_names)
+    assert ncols == len(column_types)
     qt = sqlite3_quote_name(table)
-    table_def = bayesdb_table_definition(table, nonignored_column_names,
-        nonignored_column_types_folded)
+    table_def = bayesdb_table_definition(table, column_names,
+        column_types_folded)
 
     # Instantiate the SQL schema and import the data.
     with bdb.savepoint():
         bdb.sql_execute(table_def)
-        qcns = ",".join(map(sqlite3_quote_name, nonignored_column_names))
+        qcns = ",".join(map(sqlite3_quote_name, column_names))
         qcps = ",".join("?" * ncols)
         insert_sql = "INSERT INTO %s (%s) VALUES (%s)" % (qt, qcns, qcps)
         for row in rows:
             munged_row = []
-            for i, name in zip(nonignored_indices, nonignored_column_names):
+            for i, name in enumerate(column_names):
                 column_type = column_types_folded[casefold(name)]
                 value = None
                 if column_type in bayesdb_import_mungers:
@@ -206,7 +203,7 @@ def bayesdb_import_column_numerical_p(rows, i, count_cutoff, ratio_cutoff):
     if not bayesdb_import_column_floatable_p(rows, i):
         return False
     ndistinct = len(unique([float(row[i]) for row in rows
-        if not math.isnan(float(row[i]))]))
+        if row[i] != '' and not math.isnan(float(row[i]))]))
     if ndistinct <= count_cutoff:
         return False
     ndata = len(rows)

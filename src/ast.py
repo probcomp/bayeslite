@@ -22,6 +22,23 @@ Parametrized = namedtuple('Parametrized', [
     'nampar_map',               # map from parameter name to number
 ])
 
+# XXX Pass through other SQL DDL and DML commands.
+DropTable = namedtuple('DropTable', [
+    # XXX Database name, &c.
+    'ifexists',
+    'name'
+])
+CreateTableAs = namedtuple('CreateTableAs', [
+    # XXX Database name, &c.
+    'temp',
+    'ifnotexists',
+    'name',
+    'query',
+])
+DropBtable = namedtuple('DropBtable', [
+    'ifexists',
+    'name',
+])
 CreateBtableCSV = namedtuple('CreateBtableCSV', [
     'ifnotexists',
     'name',
@@ -40,6 +57,14 @@ AnalyzeModels = namedtuple('AnalyzeModels', [
     'iterations',
     'seconds',
     'wait',
+])
+DropModels = namedtuple('DropModels', [
+    'btable',
+    'modelnos',
+])
+RenameBtable = namedtuple('RenameBtable',[
+    'oldname',
+    'newname',
 ])
 
 def is_query(phrase):
@@ -123,7 +148,8 @@ ExpCollate = namedtuple('ExpCollate', ['expression', 'collation'])
 ExpIn = namedtuple('ExpIn', ['expression', 'positive', 'query'])
 ExpCast = namedtuple('ExpCast', ['expression', 'type'])
 ExpExists = namedtuple('ExpExists', ['query'])
-ExpApp = namedtuple('ExpApp', ['operator', 'operands'])
+ExpApp = namedtuple('ExpApp', ['distinct', 'operator', 'operands'])
+ExpAppStar = namedtuple('ExpAppStar', ['operator'])
 # Else clause is called `otherwise' because we can't use a Python keyword.
 ExpCase = namedtuple('ExpCase', ['key', 'whens', 'otherwise'])
 ExpOp = namedtuple('ExpOp', ['operator', 'operands'])
@@ -179,7 +205,7 @@ ExpBQLProb = namedtuple('ExpBQLProb', ['column', 'value'])
 ExpBQLTyp = namedtuple('ExpBQLTyp', ['column'])
 ExpBQLSim = namedtuple('ExpBQLSim', ['rowid', 'column_lists'])
 ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
-ExpBQLMutInf = namedtuple('ExpBQLMutInf', ['column0', 'column1'])
+ExpBQLMutInf = namedtuple('ExpBQLMutInf', ['column0', 'column1', 'nsamples'])
 ExpBQLCorrel = namedtuple('ExpBQLCorrel', ['column0', 'column1'])
 ExpBQLInfer = namedtuple('ExpBQLInfer', ['column', 'confidence'])
 

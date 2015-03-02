@@ -50,6 +50,7 @@ bayesdb_type_table = [
     # column type, numerical?, default sqlite, default model type
     ("categorical",     False,  "text",         "symmetric_dirichlet_discrete"),
     ("cyclic",          True,   "real",         "vonmises"),
+    ("ignore",          False,  "text",         None),
     ("key",             False,  "text",         None),
     ("numerical",       True,   "real",         "normal_inverse_gamma"),
 ]
@@ -108,7 +109,7 @@ def bayesdb_install_bql(db, cookie):
     function("bql_column_correlation", 3, bql_column_correlation)
     function("bql_column_dependence_probability", 3,
         bql_column_dependence_probability)
-    function("bql_column_mutual_information", 3, bql_column_mutual_information)
+    function("bql_column_mutual_information", 4, bql_column_mutual_information)
     function("bql_column_typicality", 2, bql_column_typicality)
     function("bql_column_value_probability", 3, bql_column_value_probability)
     function("bql_row_similarity", -1, bql_row_similarity)
@@ -462,7 +463,7 @@ def bayesdb_column_values(bdb, table_id, colno):
 def bayesdb_cell_value(bdb, table_id, rowid, colno):
     qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
     qc = sqlite3_quote_name(bayesdb_column_name(bdb, table_id, colno))
-    sql = "SELECT %s FROM %s WHERE rowid = ?" % (qc, qt)
+    sql = "SELECT %s FROM %s WHERE _rowid_ = ?" % (qc, qt)
     return bayesdb_sql_execute1(bdb, sql, (rowid,))
 
 ### BayesDB model access
@@ -501,15 +502,14 @@ def bayesdb_has_model(bdb, table_id, modelno):
     """
     return 0 < bayesdb_sql_execute1(bdb, sql, (table_id, modelno))
 
-def bayesdb_nmodels(bdb, table_id):
-    sql = """
-        SELECT count(*) FROM bayesdb_model WHERE table_id = ?
-    """
-    return bayesdb_sql_execute1(bdb, sql, (table_id,))
+def bayesdb_modelnos(bdb, table_id):
+    sql = "SELECT modelno FROM bayesdb_model WHERE table_id = ?"
+    return (row[0] for row in bdb.sql_execute(sql, (table_id,)))
 
-def bayesdb_models(bdb, table_id):
-    for modelno in range(bayesdb_nmodels(bdb, table_id)):
-        yield bayesdb_model(bdb, table_id, modelno)
+def bayesdb_models(bdb, table_id, modelnos=None):
+    if modelnos is None:
+        modelnos = bayesdb_modelnos(bdb, table_id)
+    return (bayesdb_model(bdb, table_id, modelno) for modelno in modelnos)
 
 def bayesdb_model(bdb, table_id, modelno):
     if bdb.models_cache is not None:
@@ -542,7 +542,7 @@ def bayesdb_latent_data(bdb, table_id):
 
 ### BayesDB model commands
 
-def bayesdb_models_initialize(bdb, table_id, nmodels, model_config=None,
+def bayesdb_models_initialize(bdb, table_id, modelnos, model_config=None,
         ifnotexists=False):
     if ifnotexists:
         # Find whether all model numbers are filled.  If so, don't
@@ -552,14 +552,14 @@ def bayesdb_models_initialize(bdb, table_id, nmodels, model_config=None,
         # ask the engine to initialize as many models as we don't have
         # and fill in the gaps?
         done = True
-        for modelno in range(nmodels):
+        for modelno in modelnos:
             if not bayesdb_has_model(bdb, table_id, modelno):
                 done = False
                 break
         if done:
             return
     assert model_config is None         # XXX For now.
-    assert 0 < nmodels
+    assert 0 < len(modelnos)
     engine = bayesdb_table_engine(bdb, table_id)
     model_config = {
         "kernel_list": (),
@@ -570,15 +570,15 @@ def bayesdb_models_initialize(bdb, table_id, nmodels, model_config=None,
         M_c=bayesdb_metadata(bdb, table_id),
         M_r=None,            # XXX
         T=list(bayesdb_data(bdb, table_id)),
-        n_chains=nmodels,
+        n_chains=len(modelnos),
         initialization=model_config["initialization"],
         row_initialization=model_config["row_initialization"]
     )
-    if nmodels == 1:            # XXX Ugh.  Fix crosscat so it doesn't do this.
+    if len(modelnos) == 1:      # XXX Ugh.  Fix crosscat so it doesn't do this.
         X_L_list = [X_L_list]
         X_D_list = [X_D_list]
     with bdb.savepoint():
-        for modelno, (X_L, X_D) in enumerate(zip(X_L_list, X_D_list)):
+        for modelno, (X_L, X_D) in zip(modelnos, zip(X_L_list, X_D_list)):
             theta = {
                 "X_L": X_L,
                 "X_D": X_D,
@@ -600,11 +600,7 @@ def bayesdb_models_analyze(bdb, table_id, modelnos=None, iterations=1,
     # map the results from the engine back into the database.  Sort it
     # for consistency.
     if modelnos is None:
-        sql = '''
-            SELECT modelno FROM bayesdb_model WHERE table_id = ?
-                ORDER BY modelno
-        '''
-        modelnos = [row[0] for row in bdb.sql_execute(sql, (table_id,))]
+        modelnos = list(bayesdb_modelnos(bdb, table_id))
     else:
         modelnos = sorted(list(modelnos))
         for modelno in modelnos:
@@ -667,6 +663,19 @@ def bayesdb_models_analyze(bdb, table_id, modelnos=None, iterations=1,
         theta["X_L"] = X_L
         theta["X_D"] = X_D
         bayesdb_set_model(bdb, table_id, modelno, theta)
+
+def bayesdb_models_drop(bdb, table_id, modelnos=None):
+    if modelnos is None:
+        bdb.sql_execute('DELETE FROM bayesdb_model WHERE table_id = ?',
+            (table_id,))
+    else:
+        modelnos = sorted(list(modelnos))
+        for modelno in modelnos:
+            if not bayesdb_has_model(bdb, table_id, modelno):
+                raise ValueError("No such model: %d" % (modelno,))
+        sql = 'DELETE FROM bayesdb_model WHERE table_id = ? AND modelno = ?'
+        for modelno in modelnos:
+            bdb.sql_execute(sql, (table_id, modelno))
 
 ### BayesDB column functions
 
@@ -770,7 +779,9 @@ def bql_column_dependence_probability(bdb, table_id, colno0, colno1):
 
 # Two-column function:  MUTUAL INFORMATION [OF <col0> WITH <col1>]
 def bql_column_mutual_information(bdb, table_id, colno0, colno1,
-        numsamples=100):
+        numsamples=None):
+    if numsamples is None:
+        numsamples = 100
     engine = bayesdb_table_engine(bdb, table_id)
     X_L_list = list(bayesdb_latent_state(bdb, table_id))
     X_D_list = list(bayesdb_latent_data(bdb, table_id))
@@ -822,6 +833,8 @@ def bql_column_value_probability(bdb, table_id, colno, value):
 
 # Row function:  SIMILARITY TO <target_row> [WITH RESPECT TO <columns>]
 def bql_row_similarity(bdb, table_id, rowid, target_rowid, *columns):
+    if len(columns) == 0:
+        columns = bayesdb_column_numbers(bdb, table_id)
     engine = bayesdb_table_engine(bdb, table_id)
     return engine.similarity(
         M_c=bayesdb_metadata(bdb, table_id),
@@ -867,7 +880,7 @@ def bql_infer(bdb, table_id, colno, rowid, value, confidence_threshold,
     column_names = bayesdb_column_names(bdb, table_id)
     qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
     qcns = ",".join(map(sqlite3_quote_name, column_names))
-    select_sql = "SELECT %s FROM %s WHERE rowid = ?" % (qcns, qt)
+    select_sql = "SELECT %s FROM %s WHERE _rowid_ = ?" % (qcns, qt)
     c = bdb.sql_execute(select_sql, (rowid,))
     row = None
     try:
@@ -900,7 +913,8 @@ def bayesdb_simulate(bdb, table_id, constraints, colnos, numpredictions=1):
     engine = bayesdb_table_engine(bdb, table_id)
     M_c = bayesdb_metadata(bdb, table_id)
     qt = sqlite3_quote_name(bayesdb_table_name(bdb, table_id))
-    max_rowid = bayesdb_sql_execute1(bdb, "SELECT max(rowid) FROM %s" % (qt,))
+    max_rowid = bayesdb_sql_execute1(bdb,
+        "SELECT max(_rowid_) FROM %s" % (qt,))
     fake_rowid = max_rowid + 1
     fake_row_id = sqlite3_rowid_to_engine_row_id(fake_rowid)
     # XXX Why special-case empty constraints?
@@ -919,6 +933,58 @@ def bayesdb_simulate(bdb, table_id, constraints, colnos, numpredictions=1):
     return [[bayesdb_code_to_value(M_c, colno, code)
             for (colno, code) in zip(colnos, raw_output)]
         for raw_output in raw_outputs]
+
+# XXX Create a virtual table that automatically does this on insert?
+def bayesdb_insert(bdb, table_id, row):
+    bayesdb_insertmany(bdb, table_id, [row])
+
+def bayesdb_insertmany(bdb, table_id, rows):
+    with bdb.savepoint():
+        # Insert the data into the table.
+        table_name = bayesdb_table_name(bdb, table_id)
+        qt = sqlite3_quote_name(table_name)
+        cursor = bdb.sql_execute("PRAGMA table_info(%s)" % (qt,))
+        sql_column_names = [row[1] for row in cursor]
+        qcns = map(sqlite3_quote_name, sql_column_names)
+        sql = """
+            INSERT INTO %s (%s) VALUES (%s)
+        """ % (qt, ", ".join(qcns), ", ".join("?" for _qcn in qcns))
+        for row in rows:
+            bdb.sql_execute(sql, row)
+
+        # Find the indices of the modelled columns.
+        modelled_column_names = list(bayesdb_column_names(bdb, table_id))
+        remap = []
+        for i, name in enumerate(sql_column_names):
+            colno = len(remap)
+            if len(modelled_column_names) <= colno:
+                break
+            if casefold(name) == casefold(modelled_column_names[colno]):
+                remap.append(i)
+        assert len(remap) == len(modelled_column_names)
+        M_c = bayesdb_metadata(bdb, table_id)
+        modelled_rows = [[bayesdb_value_to_code(M_c, colno, row[i])
+                for colno, i in enumerate(remap)]
+            for row in rows]
+
+        # Update the models.
+        T = list(bayesdb_data(bdb, table_id))
+        engine = bayesdb_table_engine(bdb, table_id)
+        modelnos = bayesdb_modelnos(bdb, table_id)
+        models = list(bayesdb_models(bdb, table_id, modelnos))
+        X_L_list, X_D_list, T = engine.insert(
+            M_c=M_c,
+            T=T,
+            X_L_list=[theta["X_L"] for theta in models],
+            X_D_list=[theta["X_D"] for theta in models],
+            new_rows=modelled_rows,
+        )
+        assert T == list(bayesdb_data(bdb, table_id)) + modelled_rows
+        for (modelno, theta), (X_L, X_D) \
+                in zip(zip(modelnos, models), zip(X_L_list, X_D_list)):
+            theta["X_L"] = X_L
+            theta["X_D"] = X_D
+            bayesdb_set_model(bdb, table_id, modelno, theta)
 
 ### BayesDB utilities
 

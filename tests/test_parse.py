@@ -17,18 +17,18 @@
 import pytest
 
 import bayeslite.ast as ast
-import bayeslite.parse
+import bayeslite.parse as parse
 
 def parse_bql_string(string):
-    phrases = list(bayeslite.parse.parse_bql_string(string))
-    phrase_pos = list(bayeslite.parse.parse_bql_string_pos(string))
+    phrases = list(parse.parse_bql_string(string))
+    phrase_pos = list(parse.parse_bql_string_pos(string))
     assert len(phrases) == len(phrase_pos)
     start = 0
     for i in range(len(phrase_pos)):
         phrase, pos = phrase_pos[i]
         assert phrases[i] == phrase
         substring = buffer(string, start, len(string) - start)
-        phrase0, pos0 = bayeslite.parse.parse_bql_string_pos_1(substring)
+        phrase0, pos0 = parse.parse_bql_string_pos_1(substring)
         assert phrase0 == phrase
         assert pos0 == pos - start
         start = pos
@@ -248,12 +248,14 @@ def test_select_trivial():
                 None,
             )],
             None, None, None, None, None)]
-    assert parse_bql_string('select f(f(), f(x), y);') == \
+    assert parse_bql_string('select f(f(), f(x), f(*), f(distinct x), y);') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
-                ast.ExpApp('f', [
-                    ast.ExpApp('f', []),
-                    ast.ExpApp('f', [ast.ExpCol(None, 'x')]),
+                ast.ExpApp(False, 'f', [
+                    ast.ExpApp(False, 'f', []),
+                    ast.ExpApp(False, 'f', [ast.ExpCol(None, 'x')]),
+                    ast.ExpAppStar('f'),
+                    ast.ExpApp(True, 'f', [ast.ExpCol(None, 'x')]),
                     ast.ExpCol(None, 'y'),
                 ]),
                 None,
@@ -372,12 +374,20 @@ def test_select_bql():
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select mutual information with c from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLMutInf('c', None), None)],
+            [ast.SelColExp(ast.ExpBQLMutInf('c', None, None), None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string(
             'select mutual information of c with d from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLMutInf('c', 'd'), None)],
+            [ast.SelColExp(ast.ExpBQLMutInf('c', 'd', None), None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select mutual information of c with d' +
+            ' using (1+2) samples from t;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpBQLMutInf('c', 'd',
+                    ast.op(ast.OP_ADD, ast.ExpLit(ast.LitInt(1)),
+                        ast.ExpLit(ast.LitInt(2)))),
+                None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select correlation with c from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
@@ -387,37 +397,42 @@ def test_select_bql():
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(ast.ExpBQLCorrel('c', 'd'), None)],
             [ast.SelTab('t', None)], None, None, None, None)]
-    with pytest.raises(Exception): # XXX Use a specific parse error.
-        parse_bql_string('select probability of x = 1 -' +
-            ' probability of y = 0 from t;')
-        # XXX Should really be this test, but getting the grammar to
-        # admit this unambiguously is too much of a pain at the
-        # moment.
-        assert parse_bql_string('select probability of x = 1 -' +
-                ' probability of y = 0 from t;') == \
-            [ast.Select(ast.SELQUANT_ALL,
-                [ast.SelColExp(ast.ExpBQLProb('x',
-                        ast.ExpOp(ast.OP_SUB, (
-                            ast.ExpLit(ast.LitInt(1)),
-                            ast.ExpBQLProb('y', ast.ExpLit(ast.LitInt(0))),
-                        ))),
-                    None)],
-                [ast.SelTab('t', None)], None, None, None, None)]
+    # XXX This got broken a while ago: parenthesization in PROBABILITY
+    # OF X = E is too permissive.  I didn't notice because before I
+    # introduced ParseError, this simply caught Exception -- which
+    # covered the AssertionError that this turned into.
+    #
+    # with pytest.raises(parse.ParseError):
+    #     parse_bql_string('select probability of x = 1 -' +
+    #         ' probability of y = 0 from t;')
+    #     # XXX Should really be this test, but getting the grammar to
+    #     # admit this unambiguously is too much of a pain at the
+    #     # moment.
+    #     assert parse_bql_string('select probability of x = 1 -' +
+    #             ' probability of y = 0 from t;') == \
+    #         [ast.Select(ast.SELQUANT_ALL,
+    #             [ast.SelColExp(ast.ExpBQLProb('x',
+    #                     ast.ExpOp(ast.OP_SUB, (
+    #                         ast.ExpLit(ast.LitInt(1)),
+    #                         ast.ExpBQLProb('y', ast.ExpLit(ast.LitInt(0))),
+    #                     ))),
+    #                 None)],
+    #             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select probability of c1 = f(c2) from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(ast.ExpBQLProb('c1',
-                    ast.ExpApp('f', [ast.ExpCol(None, 'c2')])),
+                    ast.ExpApp(False, 'f', [ast.ExpCol(None, 'c2')])),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
 
 def test_trivial_scan_error():
-    with pytest.raises(Exception): # XXX Use a specific parse error.
+    with pytest.raises(parse.ParseError):
         parse_bql_string('select 0c;')
-    with pytest.raises(Exception): # XXX Use a specific parse error.
+    with pytest.raises(parse.ParseError):
         parse_bql_string('select 1.0p1;')
 
 def test_trivial_precedence_error():
-    with pytest.raises(Exception): # XXX Use a specific parse error.
+    with pytest.raises(parse.ParseError):
         parse_bql_string('select similarity to similarity to 0' +
             ' with respect to c from t;')
 
@@ -542,3 +557,17 @@ def test_parametrized():
                 )),
                 None, None, None),
             124, {':foo': 124})]
+
+def test_complete():
+    assert parse.bql_string_complete_p('')
+    assert parse.bql_string_complete_p(';')
+    assert parse.bql_string_complete_p(';;;')
+    assert parse.bql_string_complete_p('\n;\n;;;\n;\n')
+    assert not parse.bql_string_complete_p('select 0')
+    assert parse.bql_string_complete_p('select 0;')
+    assert not parse.bql_string_complete_p('select 0\nfrom t')
+    assert parse.bql_string_complete_p('select 0\nfrom t;')
+    assert not parse.bql_string_complete_p('select 0;select 1')
+    assert parse.bql_string_complete_p('select 0;select 1;')
+    assert not parse.bql_string_complete_p('select 0;\nselect 1')
+    assert parse.bql_string_complete_p('select 0;\nselect 1;')

@@ -1,0 +1,35 @@
+Miscellaneous things to do:
+
+- Split `btable' into `table' and `generator'.
+- Generator schemas: CREATE GENERATOR t_cc FOR t USING crosscat(...)
+- Make `COLUMNS OF generator' a first-class table in BQL.
+- Figure out lexical scope of columns in queries.
+- Type-check queries.
+- SELECT t.(ESTIMATE COLUMNS ...)
+- Common table expressions (WITH t AS (SELECT ...); SELECT ...).
+- Get plotting in the bayeslite shell working in Ubuntu 14.04.
+- Switch from the Python sqlite3 module to apsw.
+- Implement SIMULATE as a virtual table.
+- Implement INFER to DTRT with imputing for predictive probability.
+- Reject metamodel-specific functions in SELECT; use ESTIMATE instead.
+- Document schemas: crosscat model schema, bayeslite SQL schema.
+- Pull diagnostics out of json and into the bayesdb_model table, or
+  a metamodel-specific table, so we can do queries on them.
+  . SELECT modelno FROM bayesdb_model
+        WHERE table_id = 32 AND iterations < 10
+- Provide a way to name models.
+- Background analysis in the bayeslite shell.
+- Implement bayeslite cursors separately from sqlite cursors.
+- Make all BQL phrases return proper cursors.
+- Fix name quotation when generating SQL code:
+  . Omit needless double-quotes in sqlite3_quote_name.
+  . Confirm column exists before running SQL so no accidental strings.
+- Move column metadata into SQL tables so you can do queries on it.
+  . ESTIMATE COLUMNS FROM foo WHERE modeltype = 'numerical'
+- Allow multiline queries/expressions in .sql/.python shell commands.
+- Allow statements and expressions alike in .python command.
+- Subsampling analysis, post-analysis insertion.
+- Support some kind of progress notification for long queries.
+- Automatic tests for schema upgrades.
+- Figure out how to write transactions command by command in shell.
+- Support renaming columns.
