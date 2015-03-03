@@ -571,3 +571,34 @@ def test_complete():
     assert parse.bql_string_complete_p('select 0;select 1;')
     assert not parse.bql_string_complete_p('select 0;\nselect 1')
     assert parse.bql_string_complete_p('select 0;\nselect 1;')
+
+def test_simulate():
+    with pytest.raises(parse.ParseError):
+        # Need limit.
+        parse_bql_string('create table s as simulate x from t')
+    with pytest.raises(parse.ParseError):
+        # Need limit.
+        parse_bql_string('create table s as simulate x from t given y = 0')
+    assert parse_bql_string('create table s as'
+            ' simulate x from t limit 10') == \
+        [ast.CreateTableSim(False, False, 's',
+            ast.Simulate(['x'], 't', [], ast.ExpLit(ast.LitInt(10))))]
+    assert parse_bql_string('create table if not exists s as'
+            ' simulate x, y from t given z = 0 limit 10') == \
+        [ast.CreateTableSim(False, True, 's',
+            ast.Simulate(['x', 'y'], 't', [('z', ast.ExpLit(ast.LitInt(0)))],
+                ast.ExpLit(ast.LitInt(10))))]
+    assert parse_bql_string('create temp table s as'
+            ' simulate x, y from t given z = 0 limit 10') == \
+        [ast.CreateTableSim(True, False, 's',
+            ast.Simulate(['x', 'y'], 't', [('z', ast.ExpLit(ast.LitInt(0)))],
+                ast.ExpLit(ast.LitInt(10))))]
+    assert parse_bql_string('create temp table if not exists s as'
+            ' simulate x, y from t given z = 0, w = 1 limit 10') == \
+        [ast.CreateTableSim(True, True, 's',
+            ast.Simulate(['x', 'y'], 't',
+                [
+                    ('z', ast.ExpLit(ast.LitInt(0))),
+                    ('w', ast.ExpLit(ast.LitInt(1))),
+                ],
+                ast.ExpLit(ast.LitInt(10))))]

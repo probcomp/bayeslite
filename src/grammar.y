@@ -28,6 +28,9 @@ command(droptable)	::= K_DROP K_TABLE ifexists(ifexists) L_NAME(name).
 command(createtab_as)	::= K_CREATE opt_temp(temp) K_TABLE
 				ifnotexists(ifnotexists)
 				L_NAME(name) K_AS query(query).
+command(createtab_sim)	::= K_CREATE opt_temp(temp) K_TABLE
+				ifnotexists(ifnotexists)
+				L_NAME(name) K_AS simulate(sim).
 command(dropbtable)	::= K_DROP K_BTABLE ifexists(ifexists) L_NAME(name).
 command(createbtab_csv)	::= K_CREATE K_BTABLE ifnotexists(ifnotexists)
 				L_NAME(name) K_FROM L_STRING(file).
@@ -67,13 +70,25 @@ anlimit(seconds)	::= K_FOR L_INTEGER(n) K_SECOND|K_SECONDS.
 opt_wait(none)		::= .
 opt_wait(some)		::= K_WAIT.
 
+simulate(s)		::= K_SIMULATE simulate_columns(cols)
+				K_FROM table_name(btable)
+				given(constraints) limit(lim).
+
+simulate_columns(one)	::= L_NAME(col).
+simulate_columns(many)	::= simulate_columns(cols) T_COMMA L_NAME(col).
+
+given(none)		::= .
+given(some)		::= K_GIVEN constraints(constraints).
+constraints(one)	::= constraint(c).
+constraints(many)	::= constraints(cs) T_COMMA constraint(c).
+constraint(c)		::= L_NAME(col) T_EQ expression(value).
+
 query(select)		::= select(q).
 query(estcols)		::= estcols(q).
 query(estpaircols)	::= estpaircols(q).
 query(estpairrow)	::= estpairrow(q).
 /*
 query(infer)		::= infer(q).
-query(simulate)		::= simulate(q).
 query(estimate_pairwise_row)
 			::= estimate_pairwise_row(q).
 query(create_column_list)
@@ -86,14 +101,15 @@ select(s)		::= K_SELECT select_quant(quant) select_columns(cols)
 				where(cond)
 				group_by(group)
 				order_by(ord)
-				limit(lim).
+				limit_opt(lim).
 
 /*
  * XXX Can we reformulate this elegantly as a SELECT on the columns of
  * the btable?
  */
 estcols(e)		::= K_ESTIMATE K_COLUMNS K_FROM table_name(btable)
-				where(cond) order_by(ord) limit(lim) as(sav).
+				where(cond) order_by(ord) limit_opt(lim)
+				as(sav).
 
 /*
  * XXX This is really just a SELECT on the join of the table's list of
@@ -101,7 +117,8 @@ estcols(e)		::= K_ESTIMATE K_COLUMNS K_FROM table_name(btable)
  */
 estpaircols(e)		::= K_ESTIMATE K_PAIRWISE expression(e)
 				K_FROM table_name(btable)
-				where(cond) order_by(ord) limit(lim) as(sav).
+				where(cond) order_by(ord) limit_opt(lim)
+				as(sav).
 
 /*
  * XXX This is really just a SELECT on the join of the table with
@@ -113,7 +130,8 @@ estpaircols(e)		::= K_ESTIMATE K_PAIRWISE expression(e)
  */
 estpairrow(e)		::= K_ESTIMATE K_PAIRWISE K_ROW expression(e)
 				K_FROM table_name(btable)
-				where(cond) order_by(ord) limit(lim) as(sav).
+				where(cond) order_by(ord) limit_opt(lim)
+				as(sav).
 
 select_quant(distinct)	::= K_DISTINCT.
 select_quant(all)	::= K_ALL.
@@ -156,8 +174,10 @@ order_sense(none)	::= .
 order_sense(asc)	::= K_ASC.
 order_sense(desc)	::= K_DESC.
 
-limit(none)		::= .
-limit(some)		::= K_LIMIT expression(limit).
+limit_opt(none)		::= .
+limit_opt(some)		::= limit(lim).
+
+limit(n)		::= K_LIMIT expression(limit).
 limit(offset)		::= K_LIMIT expression(limit)
 				K_OFFSET expression(offset).
 limit(comma)		::= K_LIMIT expression(offset)
@@ -437,6 +457,7 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 	K_EXISTS
 	K_FOR
 	K_FROM
+	K_GIVEN
 	K_GLOB
 	K_GROUP
 	K_IF
@@ -474,6 +495,7 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 	K_SECONDS
 	K_SELECT
 	K_SIMILARITY
+	K_SIMULATE
 	K_TABLE
 	K_TEMP
 	K_TEMPORARY

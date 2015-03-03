@@ -76,6 +76,61 @@ def execute_phrase(bdb, phrase, bindings=()):
             out.write('CREATE %sTABLE %s%s AS ' % (temp, ifnotexists, qt))
             compile_query(bdb, phrase.query, out)
             return bdb.sql_execute(out.getvalue(), out.getbindings())
+    if isinstance(phrase, ast.CreateTableSim):
+        assert isinstance(phrase.simulation, ast.Simulate)
+        with bdb.savepoint():
+            # XXX Move this somewhere appropriate.
+            qn = sqlite3_quote_name(phrase.name)
+            btable_name = phrase.simulation.btable_name
+            qbtn = sqlite3_quote_name(btable_name)
+            column_names = phrase.simulation.columns
+            qcns = map(sqlite3_quote_name, column_names)
+            columns = list(bdb.sql_execute('PRAGMA table_info(%s)' % (qbtn,)))
+            if len(columns) < 1 or \
+               not core.bayesdb_table_exists(bdb, btable_name):
+                raise ValueError('No such btable: %s' % (btable_name,))
+            table_id = core.bayesdb_table_id(bdb, btable_name)
+            column_types = dict((casefold(n), t)
+                for _i, n, t, _nn, _dv, _pk in columns)
+            for column_name in column_names:
+                if casefold(column_name) not in column_types:
+                    raise ValueError('No such column in btable %s: %s' %
+                        (btable_name, column_name))
+            for column_name, exp in phrase.simulation.constraints:
+                if casefold(column_name) not in column_types:
+                    raise ValueError('No such column in btable %s: %s' %
+                        (btable_name, column_name))
+            out = Output(n_numpar, nampar_map, bindings)
+            nobql = BQLCompiler_None()
+            out.write('SELECT ')
+            with compiling_paren(bdb, out, 'CAST(', ' AS INTEGER)'):
+                compile_expression(bdb, phrase.simulation.nsamples, nobql, out)
+            for _column_name, exp in phrase.simulation.constraints:
+                out.write(', ')
+                compile_expression(bdb, exp, nobql, out)
+            cursor = list(bdb.sql_execute(out.getvalue(), out.getbindings()))
+            assert len(cursor) == 1
+            nsamples = cursor[0][0]
+            assert isinstance(nsamples, int)
+            constraints = \
+                [(core.bayesdb_column_number(bdb, table_id, name), value)
+                    for (name, exp), value in
+                        zip(phrase.simulation.constraints, cursor[0][1:])]
+            colnos = [core.bayesdb_column_number(bdb, table_id, name)
+                for name in column_names]
+            bdb.sql_execute('CREATE %sTABLE %s%s (%s)' %
+                ('TEMP ' if phrase.temp else '',
+                 'IF NOT EXISTS ' if phrase.ifnotexists else '',
+                 qn,
+                 ','.join('%s %s' % (qcn, column_types[column_name])
+                            for qcn, column_name in zip(qcns, column_names))))
+            insert_sql = '''
+                INSERT INTO %s (%s) VALUES (%s)
+            ''' % (qn, ','.join(qcns), ','.join('?' for qcn in qcns))
+            for row in core.bayesdb_simulate(bdb, table_id, constraints,
+                    colnos, numpredictions=nsamples):
+                bdb.sql_execute(insert_sql, row)
+        return []
     if isinstance(phrase, ast.CreateBtableCSV):
         # XXX Codebook?
         import_csv.bayesdb_import_csv_file(bdb, phrase.name, phrase.file,
@@ -495,6 +550,11 @@ def compile_estpairrow(bdb, estpairrow, out):
             out.write(' OFFSET ')
             compile_2row_expression(bdb, estpairrow.limit.offset, estpairrow,
                 rowid0_exp, rowid1_exp, out)
+
+class BQLCompiler_None(object):
+    def compile_bql(self, bdb, bql, out):
+        # XXX Report source location.
+        raise ValueError('Invalid context for BQL!')
 
 class BQLCompiler_1Row(object):
     def __init__(self, ctx):
