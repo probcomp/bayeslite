@@ -545,10 +545,6 @@ class BQLCompiler_1Row(object):
                 raise ValueError('Similarity as 1-row function needs row.')
             out.write('bql_row_similarity(%s, _rowid_, ' % (table_id,))
             compile_expression(bdb, bql.rowid, self, out)
-            import sys
-            print >>sys.stderr, bql.column_lists
-            print >>sys.stderr, len(bql.column_lists) == 1
-            print >>sys.stderr, isinstance(bql.column_lists[0], ast.ColListAll)
             if len(bql.column_lists) == 1 and \
                isinstance(bql.column_lists[0], ast.ColListAll):
                 # We'll likely run up against SQLite's limit on the
