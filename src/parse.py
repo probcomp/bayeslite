@@ -187,13 +187,17 @@ class BQLSemantics(object):
 
     def p_simulate_s(self, cols, btable, constraints, lim):
         return ast.Simulate(cols, btable, constraints, lim.limit)
+    def p_simulate_nolimit(self, cols, btable, constraints):
+        # XXX Report source location.
+        self.errors.append('simulate missing limit')
+        return ast.Simulate(cols, btable, constraints, 0)
     def p_simulate_columns_one(self, col):
         return [col]
     def p_simulate_columns_many(self, cols, col):
         cols.append(col)
         return cols
-    def p_given_none(self):                     return []
-    def p_given_some(self, constraints):        return constraints
+    def p_given_opt_none(self):                 return []
+    def p_given_opt_some(self, constraints):    return constraints
     def p_constraints_one(self, c):             return [c]
     def p_constraints_many(self, cs, c):        cs.append(c); return cs
     def p_constraint_c(self, col, value):       return (col, value)

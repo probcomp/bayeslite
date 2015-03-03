@@ -72,13 +72,16 @@ opt_wait(some)		::= K_WAIT.
 
 simulate(s)		::= K_SIMULATE simulate_columns(cols)
 				K_FROM table_name(btable)
-				given(constraints) limit(lim).
+				given_opt(constraints) limit(lim).
+simulate(nolimit)	::= K_SIMULATE simulate_columns(cols)
+				K_FROM table_name(btable)
+				given_opt(constraints).
 
 simulate_columns(one)	::= L_NAME(col).
 simulate_columns(many)	::= simulate_columns(cols) T_COMMA L_NAME(col).
 
-given(none)		::= .
-given(some)		::= K_GIVEN constraints(constraints).
+given_opt(none)		::= .
+given_opt(some)		::= K_GIVEN constraints(constraints).
 constraints(one)	::= constraint(c).
 constraints(many)	::= constraints(cs) T_COMMA constraint(c).
 constraint(c)		::= L_NAME(col) T_EQ expression(value).
