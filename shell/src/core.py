@@ -332,7 +332,7 @@ class Shell(cmd.Cmd):
             table_name = tokens[1]
             with self._bdb.savepoint():
                 if not core.bayesdb_table_exists(self._bdb, table_name):
-                    self.stdout.write('No such btable: %s\n', table_name)
+                    self.stdout.write('No such btable: %s\n' %s (table_name,))
                     return
                 table_id = core.bayesdb_table_id(self._bdb, table_name)
                 modelnos = None
