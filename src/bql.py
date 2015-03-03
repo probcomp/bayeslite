@@ -58,6 +58,11 @@ def execute_phrase(bdb, phrase, bindings=()):
                 bdb.sql_execute('''
                     DELETE FROM bayesdb_table_column WHERE table_id = ?
                 ''', (table_id,))
+                bdb.sql_execute('''
+                    DELETE FROM bayesdb_value_map WHERE table_id = ?
+                ''', (table_id,))
+                bdb.sql_execute('DELETE FROM bayesdb_model WHERE table_id = ?',
+                    (table_id,))
                 bdb.sql_execute('DELETE FROM bayesdb_table WHERE id = ?',
                     (table_id,))
                 qt = sqlite3_quote_name(phrase.name)

@@ -624,6 +624,7 @@ def test_createtab():
         bdb.execute('drop btable if exists t')
         bdb.execute("create btable t from '%s'" % (fname,))
         bdb.execute("create btable if not exists t from '%s'" % (fname,))
+        bdb.execute('initialize 1 model for t')
         bdb.execute('drop btable t')
         with pytest.raises(ValueError): # XXX More specific error.
             bdb.execute('drop btable t')
