@@ -587,7 +587,7 @@ def test_parametrized():
             'SELECT modelno FROM bayesdb_model WHERE table_id = ?',
         ]
         assert sqltraced_execute('create temp table if not exists sim as'
-                    ' simulate age, rank, division'
+                    ' simulate age, RANK, division'
                     " from t given gender = 'F' limit 4") == [
             'PRAGMA table_info("t")',
             'SELECT COUNT(*) FROM bayesdb_table WHERE name = ?',
@@ -602,7 +602,7 @@ def test_parametrized():
             'SELECT colno FROM bayesdb_table_column'
                 ' WHERE table_id = ? AND name = ?',
             'CREATE TEMP TABLE IF NOT EXISTS "sim"'
-                ' ("age" text,"rank" text,"division" text)',
+                ' ("age" text,"RANK" text,"division" text)',
             'SELECT metamodel_id FROM bayesdb_table WHERE id = ?',
             'SELECT metadata FROM bayesdb_table WHERE id = ?',
             'SELECT name FROM bayesdb_table WHERE id = ?',
@@ -611,10 +611,10 @@ def test_parametrized():
             'SELECT theta FROM bayesdb_model'
                 ' WHERE table_id = ? AND modelno = ?',
             'SELECT modelno FROM bayesdb_model WHERE table_id = ?',
-            'INSERT INTO "sim" ("age","rank","division") VALUES (?,?,?)',
-            'INSERT INTO "sim" ("age","rank","division") VALUES (?,?,?)',
-            'INSERT INTO "sim" ("age","rank","division") VALUES (?,?,?)',
-            'INSERT INTO "sim" ("age","rank","division") VALUES (?,?,?)',
+            'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
+            'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
+            'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
+            'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
         ]
 
 def test_createtab():

@@ -127,7 +127,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                 ('TEMP ' if phrase.temp else '',
                  'IF NOT EXISTS ' if phrase.ifnotexists else '',
                  qn,
-                 ','.join('%s %s' % (qcn, column_types[column_name])
+                 ','.join('%s %s' % (qcn, column_types[casefold(column_name)])
                             for qcn, column_name in zip(qcns, column_names))))
             insert_sql = '''
                 INSERT INTO %s (%s) VALUES (%s)
