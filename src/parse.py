@@ -143,6 +143,8 @@ class BQLSemantics(object):
         return ast.DropTable(ifexists, name)
     def p_command_createtab_as(self, temp, ifnotexists, name, query):
         return ast.CreateTableAs(temp, ifnotexists, name, query)
+    def p_command_createtab_sim(self, temp, ifnotexists, name, sim):
+        return ast.CreateTableSim(temp, ifnotexists, name, sim)
     def p_command_dropbtable(self, ifexists, name):
         return ast.DropBtable(ifexists, name)
     def p_command_createbtab_csv(self, ifnotexists, name, file):
@@ -183,6 +185,23 @@ class BQLSemantics(object):
     def p_opt_wait_none(self):                  return False
     def p_opt_wait_some(self):                  return True
 
+    def p_simulate_s(self, cols, btable, constraints, lim):
+        return ast.Simulate(cols, btable, constraints, lim.limit)
+    def p_simulate_nolimit(self, cols, btable, constraints):
+        # XXX Report source location.
+        self.errors.append('simulate missing limit')
+        return ast.Simulate(cols, btable, constraints, 0)
+    def p_simulate_columns_one(self, col):
+        return [col]
+    def p_simulate_columns_many(self, cols, col):
+        cols.append(col)
+        return cols
+    def p_given_opt_none(self):                 return []
+    def p_given_opt_some(self, constraints):    return constraints
+    def p_constraints_one(self, c):             return [c]
+    def p_constraints_many(self, cs, c):        cs.append(c); return cs
+    def p_constraint_c(self, col, value):       return (col, value)
+
     def p_query_action_none(self):              return None
     def p_query_action_freq(self):              return ast.QACT_FREQ
     def p_query_action_hist(self):              return ast.QACT_HIST
@@ -194,7 +213,6 @@ class BQLSemantics(object):
     def p_query_estpaircols(self, q):           return q
     def p_query_estpairrow(self, q):            return q
     def p_query_infer(self, q):                 return q
-    def p_query_simulate(self, q):              return q
     def p_query_estimate_pairwise_row(self, q): return q
     def p_query_create_column_list(self, q):    return q
 
@@ -249,8 +267,10 @@ class BQLSemantics(object):
     def p_order_sense_asc(self):                return ast.ORD_ASC
     def p_order_sense_desc(self):               return ast.ORD_DESC
 
-    def p_limit_none(self):                     return None
-    def p_limit_some(self, limit):              return ast.Lim(limit, None)
+    def p_limit_opt_none(self):                 return None
+    def p_limit_opt_some(self, lim):            return lim
+
+    def p_limit_n(self, limit):                 return ast.Lim(limit, None)
     def p_limit_offset(self, limit, offset):    return ast.Lim(limit, offset)
     def p_limit_comma(self, offset, limit):     return ast.Lim(limit, offset)
 

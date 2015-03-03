@@ -586,6 +586,36 @@ def test_parametrized():
                 ' WHERE table_id = ? AND modelno = ?',
             'SELECT modelno FROM bayesdb_model WHERE table_id = ?',
         ]
+        assert sqltraced_execute('create temp table if not exists sim as'
+                    ' simulate age, rank, division'
+                    " from t given gender = 'F' limit 4") == [
+            'PRAGMA table_info("t")',
+            'SELECT COUNT(*) FROM bayesdb_table WHERE name = ?',
+            'SELECT id FROM bayesdb_table WHERE name = ?',
+            "SELECT CAST(4 AS INTEGER), 'F'",
+            'SELECT colno FROM bayesdb_table_column'
+                ' WHERE table_id = ? AND name = ?',
+            'SELECT colno FROM bayesdb_table_column'
+                ' WHERE table_id = ? AND name = ?',
+            'SELECT colno FROM bayesdb_table_column'
+                ' WHERE table_id = ? AND name = ?',
+            'SELECT colno FROM bayesdb_table_column'
+                ' WHERE table_id = ? AND name = ?',
+            'CREATE TEMP TABLE IF NOT EXISTS "sim"'
+                ' ("age" text,"rank" text,"division" text)',
+            'SELECT metamodel_id FROM bayesdb_table WHERE id = ?',
+            'SELECT metadata FROM bayesdb_table WHERE id = ?',
+            'SELECT name FROM bayesdb_table WHERE id = ?',
+            'SELECT max(_rowid_) FROM "t"',
+            'SELECT modelno FROM bayesdb_model WHERE table_id = ?',
+            'SELECT theta FROM bayesdb_model'
+                ' WHERE table_id = ? AND modelno = ?',
+            'SELECT modelno FROM bayesdb_model WHERE table_id = ?',
+            'INSERT INTO "sim" ("age","rank","division") VALUES (?,?,?)',
+            'INSERT INTO "sim" ("age","rank","division") VALUES (?,?,?)',
+            'INSERT INTO "sim" ("age","rank","division") VALUES (?,?,?)',
+            'INSERT INTO "sim" ("age","rank","division") VALUES (?,?,?)',
+        ]
 
 def test_createtab():
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
@@ -594,6 +624,7 @@ def test_createtab():
         bdb.execute('drop btable if exists t')
         bdb.execute("create btable t from '%s'" % (fname,))
         bdb.execute("create btable if not exists t from '%s'" % (fname,))
+        bdb.execute('initialize 1 model for t')
         bdb.execute('drop btable t')
         with pytest.raises(ValueError): # XXX More specific error.
             bdb.execute('drop btable t')

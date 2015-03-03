@@ -35,6 +35,13 @@ CreateTableAs = namedtuple('CreateTableAs', [
     'name',
     'query',
 ])
+CreateTableSim = namedtuple('CreateTableSim', [
+    # XXX Database name, &c.
+    'temp',                     # boolean
+    'ifnotexists',              # boolean
+    'name',                     # XXX name
+    'simulation',               # Simulate
+])
 DropBtable = namedtuple('DropBtable', [
     'ifexists',
     'name',
@@ -67,11 +74,20 @@ RenameBtable = namedtuple('RenameBtable',[
     'newname',
 ])
 
+Simulate = namedtuple('Simulate', [
+    'columns',                  # [XXX name]
+    'btable_name',              # XXX name
+    'constraints',              # [(XXX name, Exp*)]
+    'nsamples',                 # Exp* or None
+])
+
 def is_query(phrase):
     if isinstance(phrase, Select):      return True
     if isinstance(phrase, EstCols):     return True
     if isinstance(phrase, EstPairCols): return True
     if isinstance(phrase, EstPairRow):  return True
+    # SIMULATE is *not* a normal query: it can appear only on the
+    # right-hand side of `CREATE TABLE foo AS ...'.
     return False
 
 Select = namedtuple('Select', [
