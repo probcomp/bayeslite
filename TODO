@@ -36,3 +36,4 @@ Miscellaneous things to do:
 - Plotting on Mac OS X is all borked up.
 - Plotting on Ubuntu 14.04 is all borked up.
 - dha NAME column with codebook without models is all borked up.
+- Allow transaction commands in bdb.execute.
