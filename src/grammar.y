@@ -102,7 +102,7 @@ query(create_column_list)
 select(s)		::= K_SELECT select_quant(quant) select_columns(cols)
 				from(tabs)
 				where(cond)
-				group_by(group)
+				group_by(grouping)
 				order_by(ord)
 				limit_opt(lim).
 
@@ -167,6 +167,8 @@ table_name(unqualified)	::= L_NAME(name).
 
 group_by(none)		::= .
 group_by(some)		::= K_GROUP K_BY expressions(keys).
+group_by(having)	::= K_GROUP K_BY expressions(keys)
+				K_HAVING expression(cond).
 
 order_by(none)		::= .
 order_by(some)		::= K_ORDER K_BY order_keys(keys).

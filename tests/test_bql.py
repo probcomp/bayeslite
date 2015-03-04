@@ -98,6 +98,8 @@ def test_select_trivial():
         'SELECT * FROM "t" WHERE "x" GROUP BY "y";'
     assert bql2sql('select * from t where x group by y, z;') == \
         'SELECT * FROM "t" WHERE "x" GROUP BY "y", "z";'
+    assert bql2sql('select * from t where x group by y having sum(z) < 1') == \
+        'SELECT * FROM "t" WHERE "x" GROUP BY "y" HAVING ("sum"("z") < 1);'
     assert bql2sql('select * order by x;') == 'SELECT * ORDER BY "x";'
     assert bql2sql('select * order by x asc;') == 'SELECT * ORDER BY "x";'
     assert bql2sql('select * order by x desc;') == \

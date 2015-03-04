@@ -95,7 +95,7 @@ Select = namedtuple('Select', [
     'columns',                  # [SelCol*]
     'tables',                   # [SelTab] or None (scalar)
     'condition',                # Exp* or None (unconditional)
-    'group',                    # [Exp*] or None (unaggregated)
+    'grouping',                 # Grouping or None
     'order',                    # [Ord] or None (unordered)
     'limit',                    # Lim or None (unlimited)
 ])
@@ -146,6 +146,8 @@ ColListAll = namedtuple('ColListAll', [])
 ColListLit = namedtuple('ColListLit', ['columns'])
 ColListSub = namedtuple('ColListSub', ['query']) # subquery
 ColListSav = namedtuple('ColListSav', ['name']) # saved
+
+Grouping = namedtuple('Grouping', ['keys', 'condition'])
 
 Ord = namedtuple('Ord', ['expression', 'sense'])
 ORD_ASC = True

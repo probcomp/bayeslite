@@ -60,6 +60,7 @@ keywords = {
     "given": grammar.K_GIVEN,
     "glob": grammar.K_GLOB,
     "group": grammar.K_GROUP,
+    "having": grammar.K_HAVING,
     "if": grammar.K_IF,
     "in": grammar.K_IN,
     "infer": grammar.K_INFER,

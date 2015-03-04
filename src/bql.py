@@ -346,16 +346,20 @@ def compile_select(bdb, select, out):
     if select.condition is not None:
         out.write(' WHERE ')
         compile_1row_expression(bdb, select.condition, select, out)
-    if select.group is not None:
-        assert 0 < len(select.group)
+    if select.grouping is not None:
+        assert 0 < len(select.grouping.keys)
         first = True
-        for key in select.group:
+        for key in select.grouping.keys:
             if first:
                 out.write(' GROUP BY ')
                 first = False
             else:
                 out.write(', ')
             compile_1row_expression(bdb, key, select, out)
+        if select.grouping.condition:
+            out.write(' HAVING ')
+            compile_1row_expression(bdb, select.grouping.condition, select,
+                out)
     if select.order is not None:
         assert 0 < len(select.order)
         first = True

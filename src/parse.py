@@ -216,8 +216,8 @@ class BQLSemantics(object):
     def p_query_estimate_pairwise_row(self, q): return q
     def p_query_create_column_list(self, q):    return q
 
-    def p_select_s(self, quant, cols, tabs, cond, group, ord, lim):
-        return ast.Select(quant, cols, tabs, cond, group, ord, lim)
+    def p_select_s(self, quant, cols, tabs, cond, grouping, ord, lim):
+        return ast.Select(quant, cols, tabs, cond, grouping, ord, lim)
 
     def p_estcols_e(self, btable, cond, ord, lim, sav):
         return ast.EstCols(btable, cond, ord, lim, sav)
@@ -256,7 +256,8 @@ class BQLSemantics(object):
     def p_table_name_unqualified(self, name):   return name
 
     def p_group_by_none(self):                  return None
-    def p_group_by_some(self, keys):            return keys
+    def p_group_by_some(self, keys):            return ast.Grouping(keys, None)
+    def p_group_by_having(self, keys, cond):    return ast.Grouping(keys, cond)
 
     def p_order_by_none(self):                  return None
     def p_order_by_some(self, keys):            return keys
