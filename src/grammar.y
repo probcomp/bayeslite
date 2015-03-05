@@ -23,6 +23,10 @@ phrase1(nonempty)	::= phrase(phrase).
 phrase(command)		::= command(c).
 phrase(query)		::= query(q).
 
+command(begin)		::= K_BEGIN.
+command(rollback)	::= K_ROLLBACK.
+command(commit)		::= K_COMMIT.
+
 /* XXX Need database names.  */
 command(droptable)	::= K_DROP K_TABLE ifexists(ifexists) L_NAME(name).
 command(createtab_as)	::= K_CREATE opt_temp(temp) K_TABLE

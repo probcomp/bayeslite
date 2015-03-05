@@ -543,7 +543,8 @@ def test_parametrized():
             def trace(string, _bindings):
                 sql.append(' '.join(string.split()))
             bdb.sql_trace(trace)
-            bdb.execute(query, *args)
+            with bdb.savepoint():
+                bdb.execute(query, *args)
             bdb.sql_untrace(trace)
             return sql
         bdb.execute('initialize 1 model for t;')
@@ -651,3 +652,75 @@ def test_createtab():
         ]
         # XXX Test to make sure TEMP is passed through, and the table
         # doesn't persist on disk.
+
+def test_txn():
+    with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
+        # Make sure rollback and commit fail outside a transaction.
+        with pytest.raises(ValueError):
+            bdb.execute('ROLLBACK')
+        with pytest.raises(ValueError):
+            bdb.execute('COMMIT')
+
+        # Open a transaction which we'll roll back.
+        bdb.execute('BEGIN')
+        # Make sure transactions don't nest.  (Use savepoints.)
+        with pytest.raises(ValueError):
+            bdb.execute('BEGIN')
+        bdb.execute('ROLLBACK')
+
+        # Make sure rollback and commit still fail outside a transaction.
+        with pytest.raises(ValueError):
+            bdb.execute('ROLLBACK')
+        with pytest.raises(ValueError):
+            bdb.execute('COMMIT')
+
+        # Open a transaction which we'll commit.
+        bdb.execute('BEGIN')
+        with pytest.raises(ValueError):
+            bdb.execute('BEGIN')
+        bdb.execute('COMMIT')
+
+        with pytest.raises(ValueError):
+            bdb.execute('ROLLBACK')
+        with pytest.raises(ValueError):
+            bdb.execute('COMMIT')
+
+        # Make sure ROLLBACK undoes the effects of the transaction.
+        bdb.execute('BEGIN')
+        bdb.execute("CREATE BTABLE t FROM '%s'" % (fname,))
+        bdb.execute('SELECT * FROM t')
+        bdb.execute('ROLLBACK')
+        with pytest.raises(sqlite3.OperationalError):
+            bdb.execute('SELECT * FROM t')
+
+        # Make sure CREATE and DROP both work in the transaction.
+        bdb.execute('BEGIN')
+        bdb.execute("CREATE BTABLE t FROM '%s'" % (fname,))
+        bdb.execute('SELECT * FROM t')
+        bdb.execute('DROP BTABLE t')
+        with pytest.raises(sqlite3.OperationalError):
+            bdb.execute('SELECT * FROM t')
+        bdb.execute('ROLLBACK')
+        with pytest.raises(sqlite3.OperationalError):
+            bdb.execute('SELECT * FROM t')
+
+        # Make sure CREATE and DROP work even if we commit.
+        bdb.execute('BEGIN')
+        bdb.execute("CREATE BTABLE t FROM '%s'" % (fname,))
+        bdb.execute('SELECT * FROM t')
+        bdb.execute('DROP BTABLE t')
+        with pytest.raises(sqlite3.OperationalError):
+            bdb.execute('SELECT * FROM t')
+        bdb.execute('COMMIT')
+        with pytest.raises(sqlite3.OperationalError):
+            bdb.execute('SELECT * FROM t')
+
+        # Make sure CREATE persists if we commit.
+        bdb.execute('BEGIN')
+        bdb.execute("CREATE BTABLE t FROM '%s'" % (fname,))
+        bdb.execute('SELECT * FROM t')
+        bdb.execute('COMMIT')
+        bdb.execute('SELECT * FROM t')
+
+        # XXX To do: Make sure other effects (e.g., analysis) get
+        # rolled back by ROLLBACK.

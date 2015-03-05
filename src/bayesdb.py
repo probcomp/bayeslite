@@ -21,8 +21,6 @@ import bayeslite.bql as bql
 import bayeslite.core as core
 import bayeslite.parse as parse
 import bayeslite.schema as schema
-
-from bayeslite.sqlite3_util import sqlite3_savepoint
 
 class BayesDB(core.IBayesDB):
     """Class of Bayesian databases.
@@ -100,23 +98,5 @@ class BayesDB(core.IBayesDB):
         Savepoints may be nested.  Parsed metadata and models are
         cached in Python during a savepoint.
         """
-        # XXX Can't do this simultaneously in multiple threads.  Need
-        # lightweight per-thread state.
-        if self.txn_depth == 0:
-            assert self.metadata_cache is None
-            assert self.models_cache is None
-            self.metadata_cache = {}
-            self.models_cache = {}
-        else:
-            assert self.metadata_cache is not None
-            assert self.models_cache is not None
-        self.txn_depth += 1
-        try:
-            with sqlite3_savepoint(self.sqlite3):
-                yield
-        finally:
-            assert 0 < self.txn_depth
-            self.txn_depth -= 1
-            if self.txn_depth == 0:
-                self.metadata_cache = None
-                self.models_cache = None
+        with core.bayesdb_savepoint(self):
+            yield

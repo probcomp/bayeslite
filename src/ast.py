@@ -22,6 +22,10 @@ Parametrized = namedtuple('Parametrized', [
     'nampar_map',               # map from parameter name to number
 ])
 
+Begin = namedtuple('Begin', [])
+Rollback = namedtuple('Rollback', [])
+Commit = namedtuple('Commit', [])
+
 # XXX Pass through other SQL DDL and DML commands.
 DropTable = namedtuple('DropTable', [
     # XXX Database name, &c.

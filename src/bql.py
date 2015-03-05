@@ -39,14 +39,19 @@ def execute_phrase(bdb, phrase, bindings=()):
         # Compile the query in the transaction in case we need to
         # execute subqueries to determine column lists.  Compiling is
         # a quick tree descent, so this should be fast.
-        #
-        # XXX OOPS!  If we return a lazy iterable from this, iteration
-        # will happen outside the transaction.  Hmm.  Maybe we'll just
-        # require the user to enact another transaction in that case.
+        out = Output(n_numpar, nampar_map, bindings)
         with bdb.savepoint():
-            out = Output(n_numpar, nampar_map, bindings)
             compile_query(bdb, phrase, out)
-            return bdb.sql_execute(out.getvalue(), out.getbindings())
+        return bdb.sql_execute(out.getvalue(), out.getbindings())
+    if isinstance(phrase, ast.Begin):
+        core.bayesdb_begin_transaction(bdb)
+        return []
+    if isinstance(phrase, ast.Rollback):
+        core.bayesdb_rollback_transaction(bdb)
+        return []
+    if isinstance(phrase, ast.Commit):
+        core.bayesdb_commit_transaction(bdb)
+        return []
     if isinstance(phrase, ast.DropTable):
         ifexists = 'IF EXISTS ' if phrase.ifexists else ''
         qt = sqlite3_quote_name(phrase.name)

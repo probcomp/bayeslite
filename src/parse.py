@@ -139,6 +139,10 @@ class BQLSemantics(object):
     def p_phrase_command(self, c):              return c
     def p_phrase_query(self, q):                return q
 
+    def p_command_begin(self):                  return ast.Begin()
+    def p_command_rollback(self):               return ast.Rollback()
+    def p_command_commit(self):                 return ast.Commit()
+
     def p_command_droptable(self, ifexists, name):
         return ast.DropTable(ifexists, name)
     def p_command_createtab_as(self, temp, ifnotexists, name, query):
