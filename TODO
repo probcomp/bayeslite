@@ -42,6 +42,9 @@ Miscellaneous things to do:
 - SELECT t.(ESTIMATE COLUMNS ...)
 - Reject metamodel-specific functions in SELECT; use ESTIMATE instead.
 - Provide a way to name models.
+- SELECT c.name, SIMILARITY OF c TO s
+      FROM city AS c, city AS s
+      WHERE s.name = c.sister
 
 ** Minor tweaks
 
