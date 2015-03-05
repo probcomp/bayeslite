@@ -584,12 +584,12 @@ class BQLCompiler_1Row(object):
         if len(self.ctx.tables) != 1:
             assert 1 < len(self.ctx.tables)
             raise ValueError('BQL row query with >1 table: %s' % (self.ctx,))
-        if not isinstance(self.ctx.tables[0].table, str): # XXX name
+        table_name = self.ctx.tables[0].table
+        if not isinstance(table_name, str): # XXX name
             raise ValueError('Subquery in BQL row query: %s' % (self.ctx,))
-        if not core.bayesdb_table_exists(bdb, self.ctx.tables[0].table):
-            raise ValueError('No such btable: %s' %
-                (self.ctx.tables[0].table,))
-        table_id = core.bayesdb_table_id(bdb, self.ctx.tables[0].table)
+        if not core.bayesdb_table_exists(bdb, table_name):
+            raise ValueError('No such btable: %s' % (table_name,))
+        table_id = core.bayesdb_table_id(bdb, table_name)
         rowid_col = '_rowid_'   # XXX Don't hard-code this.
         if isinstance(bql, ast.ExpBQLPredProb):
             if bql.column is None:
@@ -615,10 +615,13 @@ class BQLCompiler_1Row(object):
                 colno = core.bayesdb_column_number(bdb, table_id, bql.column)
                 out.write('bql_column_typicality(%s, %s)' % (table_id, colno))
         elif isinstance(bql, ast.ExpBQLSim):
-            if bql.rowid is None:
+            if bql.condition is None:
                 raise ValueError('Similarity as 1-row function needs row.')
             out.write('bql_row_similarity(%s, _rowid_, ' % (table_id,))
-            compile_expression(bdb, bql.rowid, self, out)
+            with compiling_paren(bdb, out, '(', ')'):
+                qt = sqlite3_quote_name(table_name)
+                out.write('SELECT _rowid_ FROM %s WHERE ' % (qt,))
+                compile_expression(bdb, bql.condition, self, out)
             if len(bql.column_lists) == 1 and \
                isinstance(bql.column_lists[0], ast.ColListAll):
                 # We'll likely run up against SQLite's limit on the
@@ -675,8 +678,8 @@ class BQLCompiler_2Row(object):
         elif isinstance(bql, ast.ExpBQLTyp):
             raise ValueError('Typicality is 1-row function.')
         elif isinstance(bql, ast.ExpBQLSim):
-            if bql.rowid is not None:
-                raise ValueError('Similarity neds no row id in 2-row context.')
+            if bql.condition is not None:
+                raise ValueError('Similarity needs no row in 2-row context.')
             out.write('bql_row_similarity(%s, %s, %s' %
                 (table_id, self.rowid0_exp, self.rowid1_exp))
             if len(bql.column_lists) == 1 and \

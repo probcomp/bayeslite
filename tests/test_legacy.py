@@ -43,9 +43,7 @@ def test_legacy_models():
     # mistake?
     bayeslite.bayesdb_import_codebook_csv_file(bdb, 'dha', dha_codebook)
     bql = '''
-        SELECT name FROM dha
-            ORDER BY SIMILARITY TO (SELECT rowid FROM dha WHERE name = ?) DESC
-            LIMIT 10
+        SELECT name FROM dha ORDER BY SIMILARITY TO (name = ?) DESC LIMIT 10
     '''
     with bdb.savepoint():
         assert list(bdb.execute(bql, ('Albany NY',))) == [

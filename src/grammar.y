@@ -349,7 +349,9 @@ bqlfn(prob_const)	::= K_PROBABILITY K_OF L_NAME(col) T_EQ primary(e).
 bqlfn(prob_1col)	::= K_PROBABILITY K_OF K_VALUE primary(e).
 bqlfn(typ_1col_or_row)	::= K_TYPICALITY.
 bqlfn(typ_const)	::= K_TYPICALITY K_OF L_NAME(col).
-bqlfn(sim_1row)		::= K_SIMILARITY K_TO primary(row) wrt(cols).
+bqlfn(sim_1row)		::= K_SIMILARITY K_TO
+				T_LROUND expression(cond) T_RROUND
+				wrt(cols).
 bqlfn(sim_2row)		::= K_SIMILARITY wrt(cols).
 bqlfn(depprob)		::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
 bqlfn(mutinf)		::= K_MUTUAL K_INFORMATION ofwith(cols)

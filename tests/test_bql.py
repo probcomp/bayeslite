@@ -209,18 +209,25 @@ def test_select_bql():
         'SELECT bql_row_typicality(1, _rowid_) FROM "t1";'
     assert bql2sql('select typicality of age from t1;') == \
         'SELECT bql_column_typicality(1, 1) FROM "t1";'
-    assert bql2sql('select similarity to 5 from t1;') == \
-        'SELECT bql_row_similarity(1, _rowid_, 5) FROM "t1";'
-    assert bql2sql('select similarity to 5 with respect to age from t1') == \
-        'SELECT bql_row_similarity(1, _rowid_, 5, 1) FROM "t1";'
-    assert bql2sql('select similarity to 5 with respect to (age, weight)' +
-        ' from t1;') == \
-        'SELECT bql_row_similarity(1, _rowid_, 5, 1, 2) FROM "t1";'
-    assert bql2sql('select similarity to 5 with respect to (*) from t1;') == \
-        'SELECT bql_row_similarity(1, _rowid_, 5) FROM "t1";'
-    assert bql2sql('select similarity to 5 with respect to (age, weight)' +
-        ' from t1;') == \
-        'SELECT bql_row_similarity(1, _rowid_, 5, 1, 2) FROM "t1";'
+    assert bql2sql('select similarity to (rowid = 5) from t1;') == \
+        'SELECT bql_row_similarity(1, _rowid_,' \
+        ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5))) FROM "t1";'
+    assert bql2sql('select similarity to (rowid = 5) with respect to age'
+            ' from t1') == \
+        'SELECT bql_row_similarity(1, _rowid_,' \
+        ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)), 1) FROM "t1";'
+    assert bql2sql('select similarity to (rowid = 5)'
+            ' with respect to (age, weight) from t1;') == \
+        'SELECT bql_row_similarity(1, _rowid_,' \
+        ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)), 1, 2) FROM "t1";'
+    assert bql2sql('select similarity to (rowid = 5) with respect to (*)'
+            ' from t1;') == \
+        'SELECT bql_row_similarity(1, _rowid_,' \
+        ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5))) FROM "t1";'
+    assert bql2sql('select similarity to (rowid = 5)'
+            ' with respect to (age, weight) from t1;') == \
+        'SELECT bql_row_similarity(1, _rowid_,' \
+        ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)), 1, 2) FROM "t1";'
     assert bql2sql('select dependence probability of age with weight' +
         ' from t1;') == \
         'SELECT bql_column_dependence_probability(1, 1, 2) FROM "t1";'
@@ -283,7 +290,7 @@ def test_estimate_columns_trivial():
     with pytest.raises(ValueError):
         # SIMILARITY makes no sense without row.
         bql2sql('estimate columns from t1 where' +
-            ' similarity to x with respect to c > 0;')
+            ' similarity to (rowid = x) with respect to c > 0;')
     assert bql2sql('estimate columns from t1 where' +
             ' dependence probability with age > 0.5;') == \
         prefix + ' AND (bql_column_dependence_probability(1, 1, colno) > 0.5);'
@@ -549,8 +556,9 @@ def test_parametrized():
             return sql
         bdb.execute('initialize 1 model for t;')
         bdb.execute('analyze t for 1 iteration wait;')
-        assert sqltraced_execute('select similarity to 1 with respect to' +
-                ' (estimate columns from t limit 1) from t;') == [
+        assert sqltraced_execute('select similarity to (rowid = 1)'
+                ' with respect to (estimate columns from t limit 1)'
+                ' from t;') == [
             'SELECT COUNT(*) FROM bayesdb_table WHERE name = ?',
             'SELECT id FROM bayesdb_table WHERE name = ?',
             'SELECT COUNT(*) FROM bayesdb_table WHERE name = ?',
@@ -561,7 +569,8 @@ def test_parametrized():
             'SELECT colno FROM bayesdb_table_column WHERE table_id = ?' +
                 ' AND name = ?',
             # *** SELECT SIMILARITY TO 1:
-            'SELECT bql_row_similarity(1, _rowid_, 1, 0) FROM "t"',
+            'SELECT bql_row_similarity(1, _rowid_,' \
+                ' (SELECT _rowid_ FROM "t" WHERE ("rowid" = 1)), 0) FROM "t"',
             'SELECT metamodel_id FROM bayesdb_table WHERE id = ?',
             'SELECT metadata FROM bayesdb_table WHERE id = ?',
             'SELECT modelno FROM bayesdb_model WHERE table_id = ?',
@@ -569,8 +578,9 @@ def test_parametrized():
                 ' WHERE table_id = ? AND modelno = ?',
             'SELECT modelno FROM bayesdb_model WHERE table_id = ?',
         ]
-        assert sqltraced_execute('select similarity to 1 with respect to' +
-                ' (estimate columns from t limit ?) from t;', (1,)) == [
+        assert sqltraced_execute('select similarity to (rowid = 1)'
+                ' with respect to (estimate columns from t limit ?) from t;',
+                (1,)) == [
             'SELECT COUNT(*) FROM bayesdb_table WHERE name = ?',
             'SELECT id FROM bayesdb_table WHERE name = ?',
             'SELECT COUNT(*) FROM bayesdb_table WHERE name = ?',
@@ -581,7 +591,8 @@ def test_parametrized():
             'SELECT colno FROM bayesdb_table_column WHERE table_id = ?' +
                 ' AND name = ?',
             # *** SELECT SIMILARITY TO 1:
-            'SELECT bql_row_similarity(1, _rowid_, 1, 0) FROM "t"',
+            'SELECT bql_row_similarity(1, _rowid_,' \
+                ' (SELECT _rowid_ FROM "t" WHERE ("rowid" = 1)), 0) FROM "t"',
             'SELECT metamodel_id FROM bayesdb_table WHERE id = ?',
             'SELECT metadata FROM bayesdb_table WHERE id = ?',
             'SELECT modelno FROM bayesdb_model WHERE table_id = ?',
