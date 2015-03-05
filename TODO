@@ -1,6 +1,8 @@
 Miscellaneous things to do:
 
-- Switch from the Python sqlite3 module to apsw.
+* BayesDB issues
+
+- Subsampling analysis, post-analysis insertion.
 
 * Compiler issues
 
@@ -10,12 +12,13 @@ Miscellaneous things to do:
   . Omit needless double-quotes in sqlite3_quote_name.
   . Confirm column exists before running SQL so no accidental strings.
 
-* BayesDB issues
+* Python API issues
 
 - Implement bayeslite cursors separately from sqlite cursors.
 - Make all BQL phrases return proper cursors.
-- Subsampling analysis, post-analysis insertion.
 - Support some kind of progress notification for long queries.
+- Switch from the Python sqlite3 module to apsw.
+- Formalize exceptions better.
 
 * Schema issues
 
