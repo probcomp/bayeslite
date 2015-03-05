@@ -39,14 +39,19 @@ def execute_phrase(bdb, phrase, bindings=()):
         # Compile the query in the transaction in case we need to
         # execute subqueries to determine column lists.  Compiling is
         # a quick tree descent, so this should be fast.
-        #
-        # XXX OOPS!  If we return a lazy iterable from this, iteration
-        # will happen outside the transaction.  Hmm.  Maybe we'll just
-        # require the user to enact another transaction in that case.
+        out = Output(n_numpar, nampar_map, bindings)
         with bdb.savepoint():
-            out = Output(n_numpar, nampar_map, bindings)
             compile_query(bdb, phrase, out)
-            return bdb.sql_execute(out.getvalue(), out.getbindings())
+        return bdb.sql_execute(out.getvalue(), out.getbindings())
+    if isinstance(phrase, ast.Begin):
+        core.bayesdb_begin_transaction(bdb)
+        return []
+    if isinstance(phrase, ast.Rollback):
+        core.bayesdb_rollback_transaction(bdb)
+        return []
+    if isinstance(phrase, ast.Commit):
+        core.bayesdb_commit_transaction(bdb)
+        return []
     if isinstance(phrase, ast.DropTable):
         ifexists = 'IF EXISTS ' if phrase.ifexists else ''
         qt = sqlite3_quote_name(phrase.name)
@@ -127,7 +132,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                 ('TEMP ' if phrase.temp else '',
                  'IF NOT EXISTS ' if phrase.ifnotexists else '',
                  qn,
-                 ','.join('%s %s' % (qcn, column_types[column_name])
+                 ','.join('%s %s' % (qcn, column_types[casefold(column_name)])
                             for qcn, column_name in zip(qcns, column_names))))
             insert_sql = '''
                 INSERT INTO %s (%s) VALUES (%s)
@@ -346,16 +351,20 @@ def compile_select(bdb, select, out):
     if select.condition is not None:
         out.write(' WHERE ')
         compile_1row_expression(bdb, select.condition, select, out)
-    if select.group is not None:
-        assert 0 < len(select.group)
+    if select.grouping is not None:
+        assert 0 < len(select.grouping.keys)
         first = True
-        for key in select.group:
+        for key in select.grouping.keys:
             if first:
                 out.write(' GROUP BY ')
                 first = False
             else:
                 out.write(', ')
             compile_1row_expression(bdb, key, select, out)
+        if select.grouping.condition:
+            out.write(' HAVING ')
+            compile_1row_expression(bdb, select.grouping.condition, select,
+                out)
     if select.order is not None:
         assert 0 < len(select.order)
         first = True

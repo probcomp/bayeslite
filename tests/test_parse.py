@@ -181,17 +181,19 @@ def test_select_trivial():
             ast.ExpCol(None, 'x'), None, None, None)]
     assert parse_bql_string('select * group by x;') == \
         [ast.Select(ast.SELQUANT_ALL, [ast.SelColAll(None)],
-            None, None, [ast.ExpCol(None, 'x')], None, None)]
+            None, None, ast.Grouping([ast.ExpCol(None, 'x')], None),
+            None, None)]
     assert parse_bql_string('select * from t where x group by y;') == \
         [ast.Select(ast.SELQUANT_ALL, [ast.SelColAll(None)],
             [ast.SelTab('t', None)],
             ast.ExpCol(None, 'x'),
-            [ast.ExpCol(None, 'y')], None, None)]
+            ast.Grouping([ast.ExpCol(None, 'y')], None), None, None)]
     assert parse_bql_string('select * from t where x group by y, z;') == \
         [ast.Select(ast.SELQUANT_ALL, [ast.SelColAll(None)],
             [ast.SelTab('t', None)],
             ast.ExpCol(None, 'x'),
-            [ast.ExpCol(None, 'y'), ast.ExpCol(None, 'z')], None, None)]
+            ast.Grouping([ast.ExpCol(None, 'y'), ast.ExpCol(None, 'z')], None),
+            None, None)]
     assert parse_bql_string('select * order by x;') == \
         [ast.Select(ast.SELQUANT_ALL, [ast.SelColAll(None)],
             None, None, None, [ast.Ord(ast.ExpCol(None, 'x'), ast.ORD_ASC)],

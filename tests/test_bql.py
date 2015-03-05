@@ -98,6 +98,8 @@ def test_select_trivial():
         'SELECT * FROM "t" WHERE "x" GROUP BY "y";'
     assert bql2sql('select * from t where x group by y, z;') == \
         'SELECT * FROM "t" WHERE "x" GROUP BY "y", "z";'
+    assert bql2sql('select * from t where x group by y having sum(z) < 1') == \
+        'SELECT * FROM "t" WHERE "x" GROUP BY "y" HAVING ("sum"("z") < 1);'
     assert bql2sql('select * order by x;') == 'SELECT * ORDER BY "x";'
     assert bql2sql('select * order by x asc;') == 'SELECT * ORDER BY "x";'
     assert bql2sql('select * order by x desc;') == \
@@ -541,7 +543,8 @@ def test_parametrized():
             def trace(string, _bindings):
                 sql.append(' '.join(string.split()))
             bdb.sql_trace(trace)
-            bdb.execute(query, *args)
+            with bdb.savepoint():
+                bdb.execute(query, *args)
             bdb.sql_untrace(trace)
             return sql
         bdb.execute('initialize 1 model for t;')
@@ -587,7 +590,7 @@ def test_parametrized():
             'SELECT modelno FROM bayesdb_model WHERE table_id = ?',
         ]
         assert sqltraced_execute('create temp table if not exists sim as'
-                    ' simulate age, rank, division'
+                    ' simulate age, RANK, division'
                     " from t given gender = 'F' limit 4") == [
             'PRAGMA table_info("t")',
             'SELECT COUNT(*) FROM bayesdb_table WHERE name = ?',
@@ -602,7 +605,7 @@ def test_parametrized():
             'SELECT colno FROM bayesdb_table_column'
                 ' WHERE table_id = ? AND name = ?',
             'CREATE TEMP TABLE IF NOT EXISTS "sim"'
-                ' ("age" text,"rank" text,"division" text)',
+                ' ("age" text,"RANK" text,"division" text)',
             'SELECT metamodel_id FROM bayesdb_table WHERE id = ?',
             'SELECT metadata FROM bayesdb_table WHERE id = ?',
             'SELECT name FROM bayesdb_table WHERE id = ?',
@@ -611,10 +614,10 @@ def test_parametrized():
             'SELECT theta FROM bayesdb_model'
                 ' WHERE table_id = ? AND modelno = ?',
             'SELECT modelno FROM bayesdb_model WHERE table_id = ?',
-            'INSERT INTO "sim" ("age","rank","division") VALUES (?,?,?)',
-            'INSERT INTO "sim" ("age","rank","division") VALUES (?,?,?)',
-            'INSERT INTO "sim" ("age","rank","division") VALUES (?,?,?)',
-            'INSERT INTO "sim" ("age","rank","division") VALUES (?,?,?)',
+            'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
+            'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
+            'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
+            'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
         ]
 
 def test_createtab():
@@ -649,3 +652,75 @@ def test_createtab():
         ]
         # XXX Test to make sure TEMP is passed through, and the table
         # doesn't persist on disk.
+
+def test_txn():
+    with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
+        # Make sure rollback and commit fail outside a transaction.
+        with pytest.raises(ValueError):
+            bdb.execute('ROLLBACK')
+        with pytest.raises(ValueError):
+            bdb.execute('COMMIT')
+
+        # Open a transaction which we'll roll back.
+        bdb.execute('BEGIN')
+        # Make sure transactions don't nest.  (Use savepoints.)
+        with pytest.raises(ValueError):
+            bdb.execute('BEGIN')
+        bdb.execute('ROLLBACK')
+
+        # Make sure rollback and commit still fail outside a transaction.
+        with pytest.raises(ValueError):
+            bdb.execute('ROLLBACK')
+        with pytest.raises(ValueError):
+            bdb.execute('COMMIT')
+
+        # Open a transaction which we'll commit.
+        bdb.execute('BEGIN')
+        with pytest.raises(ValueError):
+            bdb.execute('BEGIN')
+        bdb.execute('COMMIT')
+
+        with pytest.raises(ValueError):
+            bdb.execute('ROLLBACK')
+        with pytest.raises(ValueError):
+            bdb.execute('COMMIT')
+
+        # Make sure ROLLBACK undoes the effects of the transaction.
+        bdb.execute('BEGIN')
+        bdb.execute("CREATE BTABLE t FROM '%s'" % (fname,))
+        bdb.execute('SELECT * FROM t')
+        bdb.execute('ROLLBACK')
+        with pytest.raises(sqlite3.OperationalError):
+            bdb.execute('SELECT * FROM t')
+
+        # Make sure CREATE and DROP both work in the transaction.
+        bdb.execute('BEGIN')
+        bdb.execute("CREATE BTABLE t FROM '%s'" % (fname,))
+        bdb.execute('SELECT * FROM t')
+        bdb.execute('DROP BTABLE t')
+        with pytest.raises(sqlite3.OperationalError):
+            bdb.execute('SELECT * FROM t')
+        bdb.execute('ROLLBACK')
+        with pytest.raises(sqlite3.OperationalError):
+            bdb.execute('SELECT * FROM t')
+
+        # Make sure CREATE and DROP work even if we commit.
+        bdb.execute('BEGIN')
+        bdb.execute("CREATE BTABLE t FROM '%s'" % (fname,))
+        bdb.execute('SELECT * FROM t')
+        bdb.execute('DROP BTABLE t')
+        with pytest.raises(sqlite3.OperationalError):
+            bdb.execute('SELECT * FROM t')
+        bdb.execute('COMMIT')
+        with pytest.raises(sqlite3.OperationalError):
+            bdb.execute('SELECT * FROM t')
+
+        # Make sure CREATE persists if we commit.
+        bdb.execute('BEGIN')
+        bdb.execute("CREATE BTABLE t FROM '%s'" % (fname,))
+        bdb.execute('SELECT * FROM t')
+        bdb.execute('COMMIT')
+        bdb.execute('SELECT * FROM t')
+
+        # XXX To do: Make sure other effects (e.g., analysis) get
+        # rolled back by ROLLBACK.

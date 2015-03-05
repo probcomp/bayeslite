@@ -47,18 +47,19 @@ def test_legacy_models():
             ORDER BY SIMILARITY TO (SELECT rowid FROM dha WHERE name = ?) DESC
             LIMIT 10
     '''
-    assert list(bdb.execute(bql, ('Albany NY',))) == [
-        ('Albany NY',),
-        ('Scranton PA',),
-        ('United States US',),
-        ('Norfolk VA',),
-        ('Reading PA',),
-        ('Salisbury MD',),
-        ('Louisville KY',),
-        ('Cleveland OH',),
-        ('Covington KY',),
-        ('Akron OH',),
-    ]
+    with bdb.savepoint():
+        assert list(bdb.execute(bql, ('Albany NY',))) == [
+            ('Albany NY',),
+            ('Scranton PA',),
+            ('United States US',),
+            ('Norfolk VA',),
+            ('Reading PA',),
+            ('Salisbury MD',),
+            ('Louisville KY',),
+            ('Cleveland OH',),
+            ('Covington KY',),
+            ('Akron OH',),
+        ]
     # Tickles an issue in case-folding of column names.
     bql = '''
         SELECT name
@@ -66,18 +67,19 @@ def test_legacy_models():
             ORDER BY PREDICTIVE PROBABILITY OF mdcr_spnd_amblnc ASC
             LIMIT 10
     '''
-    assert list(bdb.execute(bql)) == [
-        ('McAllen TX',),
-        ('Beaumont TX',),
-        ('Worcester MA',),
-        ('Corpus Christi TX',),
-        ('Temple TX',),
-        ('Kingsport TN',),
-        ('Lebanon NH',),
-        ('Takoma Park MD',),
-        ('Bangor ME',),
-        ('Panama City FL',),
-    ]
+    with bdb.savepoint():
+        assert list(bdb.execute(bql)) == [
+            ('McAllen TX',),
+            ('Beaumont TX',),
+            ('Worcester MA',),
+            ('Corpus Christi TX',),
+            ('Temple TX',),
+            ('Kingsport TN',),
+            ('Lebanon NH',),
+            ('Takoma Park MD',),
+            ('Bangor ME',),
+            ('Panama City FL',),
+        ]
 
 if False:
     bql = '''
