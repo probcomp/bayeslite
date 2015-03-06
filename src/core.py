@@ -472,6 +472,19 @@ def bayesdb_has_model(bdb, table_id, modelno):
     """
     return 0 < bayesdb_sql_execute1(bdb, sql, (table_id, modelno))
 
+def bayesdb_drop_models(bdb, table_id, modelnos=None):
+    if modelnos is None:
+        bdb.sql_execute('DELETE FROM bayesdb_model WHERE table_id = ?',
+            (table_id,))
+    else:
+        modelnos = sorted(list(modelnos))
+        for modelno in modelnos:
+            if not bayesdb_has_model(bdb, table_id, modelno):
+                raise ValueError("No such model: %d" % (modelno,))
+        sql = 'DELETE FROM bayesdb_model WHERE table_id = ? AND modelno = ?'
+        for modelno in modelnos:
+            bdb.sql_execute(sql, (table_id, modelno))
+
 def bayesdb_modelnos(bdb, table_id):
     sql = "SELECT modelno FROM bayesdb_model WHERE table_id = ?"
     return (row[0] for row in bdb.sql_execute(sql, (table_id,)))
@@ -509,21 +522,6 @@ def bayesdb_latent_state(bdb, table_id):
 def bayesdb_latent_data(bdb, table_id):
     for model in bayesdb_models(bdb, table_id):
         yield model["X_D"]
-
-### BayesDB model commands
-
-def bayesdb_models_drop(bdb, table_id, modelnos=None):
-    if modelnos is None:
-        bdb.sql_execute('DELETE FROM bayesdb_model WHERE table_id = ?',
-            (table_id,))
-    else:
-        modelnos = sorted(list(modelnos))
-        for modelno in modelnos:
-            if not bayesdb_has_model(bdb, table_id, modelno):
-                raise ValueError("No such model: %d" % (modelno,))
-        sql = 'DELETE FROM bayesdb_model WHERE table_id = ? AND modelno = ?'
-        for modelno in modelnos:
-            bdb.sql_execute(sql, (table_id, modelno))
 
 ### BayesDB utilities
 

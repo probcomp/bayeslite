@@ -176,7 +176,7 @@ def execute_phrase(bdb, phrase, bindings=()):
             if not core.bayesdb_table_exists(bdb, phrase.btable):
                 raise ValueError('No such btable: %s' % (phrase.btable,))
             table_id = core.bayesdb_table_id(bdb, phrase.btable)
-            core.bayesdb_models_drop(bdb, table_id, phrase.modelnos)
+            core.bayesdb_drop_models(bdb, table_id, phrase.modelnos)
             return empty_cursor(bdb)
     if isinstance(phrase, ast.RenameBtable):
         # XXX Move this to core.py?
