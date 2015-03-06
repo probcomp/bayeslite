@@ -97,8 +97,8 @@ class Shell(cmd.Cmd):
             self.bql = StringIO.StringIO()
             self.prompt = self.def_prompt
             try:
+                cursor = self._bdb.execute(bql)
                 with self._bdb.savepoint():
-                    cursor = self._bdb.execute(bql)
                     pretty.pp_cursor(self.stdout, cursor)
             except Exception:
                 self.stdout.write(traceback.format_exc())
