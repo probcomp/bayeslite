@@ -45,13 +45,13 @@ def execute_phrase(bdb, phrase, bindings=()):
         return bdb.sql_execute(out.getvalue(), out.getbindings())
     if isinstance(phrase, ast.Begin):
         core.bayesdb_begin_transaction(bdb)
-        return []
+        return empty_cursor(bdb)
     if isinstance(phrase, ast.Rollback):
         core.bayesdb_rollback_transaction(bdb)
-        return []
+        return empty_cursor(bdb)
     if isinstance(phrase, ast.Commit):
         core.bayesdb_commit_transaction(bdb)
-        return []
+        return empty_cursor(bdb)
     if isinstance(phrase, ast.DropTable):
         ifexists = 'IF EXISTS ' if phrase.ifexists else ''
         qt = sqlite3_quote_name(phrase.name)
@@ -75,7 +75,7 @@ def execute_phrase(bdb, phrase, bindings=()):
             elif not phrase.ifexists:
                 # XXX More specific exception.
                 raise ValueError('No such btable: %s' % (phrase.name,))
-        return []
+        return empty_cursor(bdb)
     if isinstance(phrase, ast.CreateTableAs):
         assert ast.is_query(phrase.query)
         with bdb.savepoint():
@@ -140,12 +140,12 @@ def execute_phrase(bdb, phrase, bindings=()):
             for row in core.bayesdb_simulate(bdb, table_id, constraints,
                     colnos, numpredictions=nsamples):
                 bdb.sql_execute(insert_sql, row)
-        return []
+        return empty_cursor(bdb)
     if isinstance(phrase, ast.CreateBtableCSV):
         # XXX Codebook?
         import_csv.bayesdb_import_csv_file(bdb, phrase.name, phrase.file,
             ifnotexists=phrase.ifnotexists)
-        return []
+        return empty_cursor(bdb)
     if isinstance(phrase, ast.InitModels):
         if not core.bayesdb_table_exists(bdb, phrase.btable):
             raise ValueError('No such btable: %s' % (phrase.btable,))
@@ -154,7 +154,7 @@ def execute_phrase(bdb, phrase, bindings=()):
         config = phrase.config
         core.bayesdb_models_initialize(bdb, table_id, range(nmodels), config,
             ifnotexists=phrase.ifnotexists)
-        return []
+        return empty_cursor(bdb)
     if isinstance(phrase, ast.AnalyzeModels):
         if not core.bayesdb_table_exists(bdb, phrase.btable):
             raise ValueError('No such btable: %s' % (phrase.btable,))
@@ -168,14 +168,14 @@ def execute_phrase(bdb, phrase, bindings=()):
                 " Please use 'WAIT' keyword.")
         core.bayesdb_models_analyze(bdb, table_id, modelnos=modelnos,
             iterations=iterations, max_seconds=seconds)
-        return []
+        return empty_cursor(bdb)
     if isinstance(phrase, ast.DropModels):
         with bdb.savepoint():
             if not core.bayesdb_table_exists(bdb, phrase.btable):
                 raise ValueError('No such btable: %s' % (phrase.btable,))
             table_id = core.bayesdb_table_id(bdb, phrase.btable)
             core.bayesdb_models_drop(bdb, table_id, phrase.modelnos)
-            return []
+            return empty_cursor(bdb)
     if isinstance(phrase, ast.RenameBtable):
         # XXX Move this to core.py?
         with bdb.savepoint():
@@ -187,8 +187,16 @@ def execute_phrase(bdb, phrase, bindings=()):
             bdb.sql_execute('ALTER TABLE %s RENAME TO %s' % (qto, qtn))
             bdb.sql_execute('UPDATE bayesdb_table SET name = ? WHERE name = ?',
                 (phrase.newname, phrase.oldname))
-            return []
+            return empty_cursor(bdb)
     assert False                # XXX
+
+# XXX Temporary kludge until we get BQL cursors proper, with, e.g.,
+# declared modelled column types in cursor.description.  We go through
+# sqlite3 directly to avoid cluttering the trace.
+def empty_cursor(bdb):
+    cursor = bdb.sqlite3.cursor()
+    cursor.execute('')
+    return cursor
 
 # Output: Compiled SQL output accumulator.  Like StringIO.StringIO()
 # for write with getvalue, but also does bookkeeping for parameters
