@@ -104,6 +104,10 @@ def test_hackmetamodel():
     # XXX Fails with an assert instead.  Fix me!
     # with pytest.raises(ValueError):
     #     bayeslite.bayesdb_import_sqlite_table(bdb, 'u', metamodel='crosscat')
+    bayeslite.bayesdb_set_default_metamodel(bdb, None)
+    with pytest.raises(sqlite3.IntegrityError):
+        bayeslite.bayesdb_import_sqlite_table(bdb, 't', metamodel='dotdog')
+    bayeslite.bayesdb_set_default_metamodel(bdb, 'dotdog')
     bayeslite.bayesdb_import_sqlite_table(bdb, 'u')
     with pytest.raises(sqlite3.IntegrityError):
         bayeslite.bayesdb_import_sqlite_table(bdb, 'u')
