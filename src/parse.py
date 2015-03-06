@@ -226,8 +226,8 @@ class BQLSemantics(object):
     def p_estcols_e(self, btable, cond, ord, lim, sav):
         return ast.EstCols(btable, cond, ord, lim, sav)
 
-    def p_estpaircols_e(self, e, btable, cond, ord, lim, sav):
-        return ast.EstPairCols(e, btable, cond, ord, lim, sav)
+    def p_estpaircols_e(self, e, btable, cols, cond, ord, lim, sav):
+        return ast.EstPairCols(e, btable, cols, cond, ord, lim, sav)
 
     def p_estpairrow_e(self, e, btable, cond, ord, lim, sav):
         return ast.EstPairRow(e, btable, cond, ord, lim, sav)
@@ -253,6 +253,9 @@ class BQLSemantics(object):
     def p_select_tables_many(self, ts, t):      ts.append(t); return ts
     def p_select_table_named(self, table, name): return ast.SelTab(table, name)
     def p_select_table_subquery(self, q, name):  return ast.SelTab(q, name)
+
+    def p_for_none(self):                       return None
+    def p_for_one(self, collist):               return collist
 
     def p_where_unconditional(self):            return None
     def p_where_conditional(self, condition):   return condition

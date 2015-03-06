@@ -131,6 +131,7 @@ EstCols = namedtuple('EstCols', [
 EstPairCols = namedtuple('EstPairCols', [
     'expression',               # Exp*
     'btable',                   # XXX name
+    'columns',                  # ColList* or None
     'condition',                # Exp* or None (unconditional)
     'order',                    # [Ord] or None (unordered)
     'limit',                    # Lim or None (unlimited),

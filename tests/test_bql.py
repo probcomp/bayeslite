@@ -19,6 +19,7 @@ import pytest
 import sqlite3
 import tempfile
 
+import bayeslite
 import bayeslite.ast as ast
 import bayeslite.bql as bql
 import bayeslite.parse as parse
@@ -29,7 +30,7 @@ import test_csv
 def bql2sql(string):
     with test_core.t1() as (bdb, _table_id):
         phrases = parse.parse_bql_string(string)
-        out = StringIO.StringIO()
+        out = bql.Output(0, {}, ())
         for phrase in phrases:
             assert ast.is_query(phrase)
             bql.compile_query(bdb, phrase, out)
@@ -449,6 +450,22 @@ def test_estimate_pairwise_row():
     with pytest.raises(ValueError):
         # INFER is a 1-row function.
         bql2sql('estimate pairwise row infer age conf 0.9 from t1;')
+
+def test_estimate_pairwise_selected_columns():
+    assert bql2sql('estimate pairwise dependence probability from t1'
+            ' for label, age') == \
+        'SELECT 1 AS table_id, c0.name AS name0, c1.name AS name1,' \
+        ' bql_column_dependence_probability(1, c0.colno, c1.colno) AS value' \
+        ' FROM bayesdb_table_column AS c0, bayesdb_table_column AS c1' \
+        ' WHERE c0.table_id = 1 AND c1.table_id = 1' \
+        ' AND c0.colno IN (0, 1) AND c1.colno IN (0, 1);'
+    assert bql2sql('estimate pairwise dependence probability from t1'
+            ' for (ESTIMATE COLUMNS FROM t1 ORDER BY name DESC LIMIT 2)') == \
+        'SELECT 1 AS table_id, c0.name AS name0, c1.name AS name1,' \
+        ' bql_column_dependence_probability(1, c0.colno, c1.colno) AS value' \
+        ' FROM bayesdb_table_column AS c0, bayesdb_table_column AS c1' \
+        ' WHERE c0.table_id = 1 AND c1.table_id = 1' \
+        ' AND c0.colno IN (2, 0) AND c1.colno IN (2, 0);'
 
 def test_trivial_commands():
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):

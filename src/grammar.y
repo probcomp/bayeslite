@@ -123,7 +123,7 @@ estcols(e)		::= K_ESTIMATE K_COLUMNS K_FROM table_name(btable)
  * columns with itself.
  */
 estpaircols(e)		::= K_ESTIMATE K_PAIRWISE expression(e)
-				K_FROM table_name(btable)
+				K_FROM table_name(btable) for(cols)
 				where(cond) order_by(ord) limit_opt(lim)
 				as(sav).
 
@@ -162,6 +162,9 @@ select_tables(many)	::= select_tables(ts) T_COMMA select_table(t).
 
 select_table(named)	::= table_name(table) as(name).
 select_table(subquery)	::= T_LROUND query(q) T_RROUND as(name).
+
+for(none)		::= .
+for(one)		::= K_FOR column_lists(collist).
 
 where(unconditional)	::= .
 where(conditional)	::= K_WHERE expression(condition).

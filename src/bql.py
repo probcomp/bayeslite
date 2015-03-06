@@ -495,6 +495,17 @@ def compile_estpaircols(bdb, estpaircols, out):
     out.write(' FROM bayesdb_table_column AS c0, bayesdb_table_column AS c1')
     out.write(' WHERE c0.table_id = %d AND c1.table_id = %d' %
         (table_id, table_id))
+    if estpaircols.columns is not None:
+        # XXX Would be nice not to duplicate these column lists.
+        bql_compiler = BQLCompiler_2Col(estpaircols, colno0_exp, colno1_exp)
+        out.write(' AND c0.colno IN ')
+        with compiling_paren(bdb, out, '(', ')'):
+            compile_column_lists(bdb, table_id, estpaircols.columns,
+                bql_compiler, out)
+        out.write(' AND c1.colno IN ')
+        with compiling_paren(bdb, out, '(', ')'):
+            compile_column_lists(bdb, table_id, estpaircols.columns,
+                bql_compiler, out)
     if estpaircols.condition is not None:
         out.write(' AND ')
         compile_2col_expression(bdb, estpaircols.condition, estpaircols,
