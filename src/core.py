@@ -39,8 +39,6 @@ import math
 import time
 
 from bayeslite.sqlite3_util import sqlite3_quote_name
-from bayeslite.sqlite3_util import sqlite3_savepoint
-from bayeslite.sqlite3_util import sqlite3_transaction
 
 from bayeslite.util import arithmetic_mean
 from bayeslite.util import casefold
@@ -151,88 +149,6 @@ def bayesdb_set_default_metamodel(bdb, name):
     lookup_sql = "SELECT id FROM bayesdb_metamodel WHERE name = ?"
     metamodel_id = bayesdb_sql_execute1(bdb, lookup_sql, (name,))
     bdb.default_metamodel_id = metamodel_id
-
-### Transactions
-
-# XXX Can't do this simultaneously in multiple threads.  Need
-# lightweight per-thread state.
-
-@contextlib.contextmanager
-def bayesdb_savepoint(bdb):
-    bayesdb_txn_push(bdb)
-    try:
-        with sqlite3_savepoint(bdb.sqlite3):
-            yield
-    finally:
-        bayesdb_txn_pop(bdb)
-
-@contextlib.contextmanager
-def bayesdb_transaction(bdb):
-    if bdb.txn_depth != 0:
-        raise ValueError('Already in a transaction!')
-    bayesdb_txn_init(bdb)
-    bdb.txn_depth = 1
-    try:
-        with sqlite3_transaction(bdb.sqlite3):
-            yield
-    finally:
-        assert bdb.txn_depth == 1
-        bdb.txn_depth = 0
-        bayesdb_txn_fini(bdb)
-
-def bayesdb_begin_transaction(bdb):
-    if bdb.txn_depth != 0:
-        raise ValueError('Already in a transaction!')
-    bayesdb_txn_init(bdb)
-    bdb.txn_depth = 1
-    bdb.sql_execute("BEGIN")
-
-def bayesdb_rollback_transaction(bdb):
-    if bdb.txn_depth == 0:
-        raise ValueError('Not in a transaction!')
-    bdb.sql_execute("ROLLBACK")
-    bdb.txn_depth = 0
-    bayesdb_txn_fini(bdb)
-
-def bayesdb_commit_transaction(bdb):
-    if bdb.txn_depth == 0:
-        raise ValueError('Not in a transaction!')
-    bdb.sql_execute("COMMIT")
-    bdb.txn_depth = 0
-    bayesdb_txn_fini(bdb)
-
-# XXX Maintaining a stack of savepoints in BQL is a little more
-# trouble than it is worth at the moment, since users can rollback to
-# or release any savepoint in the stack, not just the most recent one.
-# (For the bdb.savepoint() context manager that is not an issue.)
-# We'll implement that later.
-
-def bayesdb_txn_push(bdb):
-    if bdb.txn_depth == 0:
-        bayesdb_txn_init(bdb)
-    else:
-        assert bdb.metadata_cache is not None
-        assert bdb.models_cache is not None
-    bdb.txn_depth += 1
-
-def bayesdb_txn_pop(bdb):
-    bdb.txn_depth -= 1
-    if bdb.txn_depth == 0:
-        bayesdb_txn_fini(bdb)
-
-def bayesdb_txn_init(bdb):
-    assert bdb.txn_depth == 0
-    assert bdb.metadata_cache is None
-    assert bdb.models_cache is None
-    bdb.metadata_cache = {}
-    bdb.models_cache = {}
-
-def bayesdb_txn_fini(bdb):
-    assert bdb.txn_depth == 0
-    assert bdb.metadata_cache is not None
-    assert bdb.models_cache is not None
-    bdb.metadata_cache = None
-    bdb.models_cache = None
 
 ### Importing SQLite tables
 

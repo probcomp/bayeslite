@@ -21,6 +21,7 @@ import bayeslite.bql as bql
 import bayeslite.core as core
 import bayeslite.parse as parse
 import bayeslite.schema as schema
+import bayeslite.txn as txn
 
 class BayesDB(core.IBayesDB):
     """Class of Bayesian databases.
@@ -98,5 +99,5 @@ class BayesDB(core.IBayesDB):
         Savepoints may be nested.  Parsed metadata and models are
         cached in Python during a savepoint.
         """
-        with core.bayesdb_savepoint(self):
+        with txn.bayesdb_savepoint(self):
             yield

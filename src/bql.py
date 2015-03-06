@@ -20,6 +20,7 @@ import contextlib
 import bayeslite.ast as ast
 import bayeslite.core as core
 import bayeslite.import_csv as import_csv
+import bayeslite.txn as txn
 
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
@@ -44,13 +45,13 @@ def execute_phrase(bdb, phrase, bindings=()):
             compile_query(bdb, phrase, out)
         return bdb.sql_execute(out.getvalue(), out.getbindings())
     if isinstance(phrase, ast.Begin):
-        core.bayesdb_begin_transaction(bdb)
+        txn.bayesdb_begin_transaction(bdb)
         return empty_cursor(bdb)
     if isinstance(phrase, ast.Rollback):
-        core.bayesdb_rollback_transaction(bdb)
+        txn.bayesdb_rollback_transaction(bdb)
         return empty_cursor(bdb)
     if isinstance(phrase, ast.Commit):
-        core.bayesdb_commit_transaction(bdb)
+        txn.bayesdb_commit_transaction(bdb)
         return empty_cursor(bdb)
     if isinstance(phrase, ast.DropTable):
         ifexists = 'IF EXISTS ' if phrase.ifexists else ''
