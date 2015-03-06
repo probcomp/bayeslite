@@ -22,6 +22,7 @@ import tempfile
 import bayeslite
 import bayeslite.ast as ast
 import bayeslite.bql as bql
+import bayeslite.compiler as compiler
 import bayeslite.parse as parse
 
 import test_core
@@ -30,10 +31,10 @@ import test_csv
 def bql2sql(string):
     with test_core.t1() as (bdb, _table_id):
         phrases = parse.parse_bql_string(string)
-        out = bql.Output(0, {}, ())
+        out = compiler.Output(0, {}, ())
         for phrase in phrases:
             assert ast.is_query(phrase)
-            bql.compile_query(bdb, phrase, out)
+            compiler.compile_query(bdb, phrase, out)
             out.write(';')
         return out.getvalue()
 
@@ -46,12 +47,13 @@ def bql2sqlparam(string):
             out = None
             if isinstance(phrase, ast.Parametrized):
                 bindings = (None,) * phrase.n_numpar
-                out = bql.Output(phrase.n_numpar, phrase.nampar_map, bindings)
+                out = compiler.Output(phrase.n_numpar, phrase.nampar_map,
+                    bindings)
                 phrase = phrase.phrase
             else:
                 out = StringIO.StringIO()
             assert ast.is_query(phrase)
-            bql.compile_query(bdb, phrase, out)
+            compiler.compile_query(bdb, phrase, out)
             # XXX Do something about the parameters.
             out0.write(out.getvalue())
             out0.write(';')
