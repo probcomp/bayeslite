@@ -130,9 +130,9 @@ class BQLSemantics(object):
     def p_phrases_some(self, phrases, phrase):
         pass
 
-    def p_phrase1_empty(self):
+    def p_phrase_opt_none(self):
         pass
-    def p_phrase1_nonempty(self, phrase):
+    def p_phrase_opt_some(self, phrase):
         assert self.phrase is None
         self.phrase = phrase
 
@@ -166,17 +166,17 @@ class BQLSemantics(object):
     def p_command_rename_btable(self, oldname, newname):
         return ast.RenameBtable(oldname, newname)
 
-    def p_opt_temp_none(self):                  return False
-    def p_opt_temp_some(self):                  return True
+    def p_temp_opt_none(self):                  return False
+    def p_temp_opt_some(self):                  return True
     def p_ifexists_none(self):                  return False
     def p_ifexists_some(self):                  return True
     def p_ifnotexists_none(self):               return False
     def p_ifnotexists_some(self):               return True
 
-    def p_opt_anmodelset_none(self):            return None
-    def p_opt_anmodelset_some(self, m):         return sorted(m)
-    def p_opt_modelset_none(self):              return None
-    def p_opt_modelset_some(self, m):           return sorted(m)
+    def p_anmodelset_opt_none(self):            return None
+    def p_anmodelset_opt_some(self, m):         return sorted(m)
+    def p_modelset_opt_none(self):              return None
+    def p_modelset_opt_some(self, m):           return sorted(m)
     def p_modelset_one(self, r):                return r
     def p_modelset_many(self, m, r):            m += r; return m
     def p_modelrange_single(self, modelno):     return [modelno]
@@ -186,8 +186,8 @@ class BQLSemantics(object):
     def p_anlimit_minutes(self, n):             return ('seconds', 60*n)
     def p_anlimit_seconds(self, n):             return ('seconds', n)
 
-    def p_opt_wait_none(self):                  return False
-    def p_opt_wait_some(self):                  return True
+    def p_wait_opt_none(self):                  return False
+    def p_wait_opt_some(self):                  return True
 
     def p_simulate_s(self, cols, btable, constraints, lim):
         return ast.Simulate(cols, btable, constraints, lim.limit)
@@ -282,8 +282,8 @@ class BQLSemantics(object):
     def p_limit_offset(self, limit, offset):    return ast.Lim(limit, offset)
     def p_limit_comma(self, offset, limit):     return ast.Lim(limit, offset)
 
-    def p_opt_expressions_none(self):           return []
-    def p_opt_expressions_some(self, es):       return es
+    def p_expressions_opt_none(self):           return []
+    def p_expressions_opt_some(self, es):       return es
 
     def p_expressions_one(self, e):             return [e]
     def p_expressions_many(self, es, e):        es.append(e); return es
@@ -396,8 +396,8 @@ class BQLSemantics(object):
     def p_ofwith_bql_1col(self, col):           return (col, None)
     def p_ofwith_bql_const(self, col1, col2):   return (col1, col2)
 
-    def p_opt_nsamples_none(self):              return None
-    def p_opt_nsamples_some(self, nsamples):    return nsamples
+    def p_nsamples_opt_none(self):              return None
+    def p_nsamples_opt_some(self, nsamples):    return nsamples
 
     def p_column_lists_one(self, collist):
         return [collist]
@@ -423,12 +423,12 @@ class BQLSemantics(object):
     def p_primary_tabcol(self, tab, col):       return ast.ExpCol(tab, col)
     def p_primary_case(self, k, ws, e):         return ast.ExpCase(k, ws, e)
 
-    def p_opt_case_key_none(self):              return None
-    def p_opt_case_key_some(self, k):           return k
-    def p_opt_case_whens_none(self):            return []
-    def p_opt_case_whens_some(self, ws, w, t):  ws.append((w, t)); return ws
-    def p_opt_case_else_none(self):             return None
-    def p_opt_case_else_some(self, e):          return e
+    def p_case_key_opt_none(self):              return None
+    def p_case_key_opt_some(self, k):           return k
+    def p_case_whens_opt_none(self):            return []
+    def p_case_whens_opt_some(self, ws, w, t):  ws.append((w, t)); return ws
+    def p_case_else_opt_none(self):             return None
+    def p_case_else_opt_some(self, e):          return e
 
     def p_literal_null(self):                   return ast.LitNull(None)
     def p_literal_integer(self, i):             return ast.LitInt(i)
