@@ -24,6 +24,7 @@ import crosscat.LocalEngine
 import crosscat.MultiprocessingEngine
 
 import bayeslite
+import bayeslite.bqlfn as bqlfn
 import bayeslite.core as core
 
 from bayeslite.sqlite3_util import sqlite3_exec_1
@@ -123,8 +124,8 @@ def sqlite_bayesdb_table(mkbdb, name, schema, data, **kwargs):
 @contextlib.contextmanager
 def analyzed_bayesdb_table(mkbdb, nmodels, nsteps, max_seconds=None):
     with mkbdb as (bdb, table_id):
-        core.bayesdb_models_initialize(bdb, table_id, range(nmodels))
-        core.bayesdb_models_analyze(bdb, table_id, iterations=nsteps,
+        bqlfn.bayesdb_models_initialize(bdb, table_id, range(nmodels))
+        bqlfn.bayesdb_models_analyze(bdb, table_id, iterations=nsteps,
             max_seconds=max_seconds)
         yield bdb, table_id
 
@@ -351,7 +352,7 @@ def test_btable_mp_analysis_iter_deadline():
 def test_t1_infer(rowid, colno, confidence):
     with analyzed_bayesdb_table(t1(), 1, 1) as (bdb, table_id):
         if rowid == 0: rowid = bayesdb_maxrowid(bdb, table_id)
-        core.bql_infer(bdb, table_id, colno, rowid, None, confidence,
+        bqlfn.bql_infer(bdb, table_id, colno, rowid, None, confidence,
             numsamples=1)
 
 @pytest.mark.parametrize('colnos,constraints,numpredictions',
@@ -386,7 +387,7 @@ def test_onecolumn(btable_name, colno):
         pytest.xfail("Crosscat can't handle a table with only one column.")
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
-        core.bql_column_typicality(bdb, table_id, colno)
+        bqlfn.bql_column_typicality(bdb, table_id, colno)
         bdb.sql_execute('select bql_column_typicality(?, ?)',
             (table_id, colno))
 
@@ -402,15 +403,15 @@ def test_twocolumn(btable_name, colno0, colno1):
         pytest.skip('Not enough columns in t0.')
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
-        core.bql_column_correlation(bdb, table_id, colno0, colno1)
+        bqlfn.bql_column_correlation(bdb, table_id, colno0, colno1)
         bdb.sql_execute('select bql_column_correlation(?, ?, ?)',
             (table_id, colno0, colno1))
-        core.bql_column_dependence_probability(bdb, table_id, colno0, colno1)
+        bqlfn.bql_column_dependence_probability(bdb, table_id, colno0, colno1)
         bdb.sql_execute('select bql_column_dependence_probability(?, ?, ?)',
             (table_id, colno0, colno1))
-        core.bql_column_mutual_information(bdb, table_id, colno0, colno1)
-        core.bql_column_mutual_information(bdb, table_id, colno0, colno1, None)
-        core.bql_column_mutual_information(bdb, table_id, colno0, colno1, 1)
+        bqlfn.bql_column_mutual_information(bdb, table_id, colno0, colno1)
+        bqlfn.bql_column_mutual_information(bdb, table_id, colno0, colno1, None)
+        bqlfn.bql_column_mutual_information(bdb, table_id, colno0, colno1, 1)
         bdb.sql_execute('select bql_column_mutual_information(?, ?, ?, NULL)',
             (table_id, colno0, colno1))
         bdb.sql_execute('select bql_column_mutual_information(?, ?, ?, 1)',
@@ -426,7 +427,7 @@ def test_t1_column_value_probability(colno, rowid):
     with analyzed_bayesdb_table(t1(), 1, 1) as (bdb, table_id):
         if rowid == 0: rowid = bayesdb_maxrowid(bdb, table_id)
         value = core.bayesdb_cell_value(bdb, table_id, rowid, colno)
-        core.bql_column_value_probability(bdb, table_id, colno, value)
+        bqlfn.bql_column_value_probability(bdb, table_id, colno, value)
         tn = bayeslite.bayesdb_table_name(bdb, table_id)
         cn = bayeslite.bayesdb_column_name(bdb, table_id, colno)
         qt = sqlite3_quote_name(tn)
@@ -450,7 +451,7 @@ def test_row_similarity(btable_name, source, target, colnos):
         pytest.skip('Not enough columns in t0.')
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
-        core.bql_row_similarity(bdb, table_id, source, target, *colnos)
+        bqlfn.bql_row_similarity(bdb, table_id, source, target, *colnos)
         sql = 'select bql_row_similarity(?, ?, ?%s%s)' % \
             ('' if 0 == len(colnos) else ', ', ', '.join(map(str, colnos)))
         bdb.sql_execute(sql, (table_id, source, target))
@@ -467,7 +468,7 @@ def test_row_typicality(btable_name, rowid):
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
         if rowid == 0: rowid = bayesdb_maxrowid(bdb, table_id)
-        core.bql_row_typicality(bdb, table_id, rowid)
+        bqlfn.bql_row_typicality(bdb, table_id, rowid)
         bdb.sql_execute('select bql_row_typicality(?, ?)', (table_id, rowid))
 
 @pytest.mark.parametrize('btable_name,rowid,colno',
@@ -483,7 +484,7 @@ def test_row_column_predictive_probability(btable_name, rowid, colno):
     with analyzed_bayesdb_table(btable_generators[btable_name](), 1, 1) \
             as (bdb, table_id):
         if rowid == 0: rowid = bayesdb_maxrowid(bdb, table_id)
-        core.bql_row_column_predictive_probability(bdb, table_id, rowid, colno)
+        bqlfn.bql_row_column_predictive_probability(bdb, table_id, rowid, colno)
         sql = 'select bql_row_column_predictive_probability(?, ?, ?)'
         bdb.sql_execute(sql, (table_id, rowid, colno))
 
@@ -494,4 +495,4 @@ def test_insert():
         bdb.execute('analyze t for 1 iteration wait')
         table_id = core.bayesdb_table_id(bdb, 't')
         row = (41, 'F', 96000, 73, 'data science', 2)
-        core.bayesdb_insert(bdb, table_id, row)
+        bqlfn.bayesdb_insert(bdb, table_id, row)

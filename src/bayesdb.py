@@ -18,6 +18,7 @@ import contextlib
 import sqlite3
 
 import bayeslite.bql as bql
+import bayeslite.bqlfn as bqlfn
 import bayeslite.core as core
 import bayeslite.parse as parse
 import bayeslite.schema as schema
@@ -42,7 +43,7 @@ class BayesDB(core.IBayesDB):
         self.tracer = None
         self.sql_tracer = None
         schema.bayesdb_install_schema(self.sqlite3)
-        core.bayesdb_install_bql(self.sqlite3, self)
+        bqlfn.bayesdb_install_bql(self.sqlite3, self)
 
     def close(self):
         """Close the database.  Further use is not allowed."""

@@ -18,6 +18,7 @@ import StringIO
 import contextlib
 
 import bayeslite.ast as ast
+import bayeslite.bqlfn as bqlfn
 import bayeslite.core as core
 import bayeslite.import_csv as import_csv
 import bayeslite.txn as txn
@@ -138,7 +139,7 @@ def execute_phrase(bdb, phrase, bindings=()):
             insert_sql = '''
                 INSERT INTO %s (%s) VALUES (%s)
             ''' % (qn, ','.join(qcns), ','.join('?' for qcn in qcns))
-            for row in core.bayesdb_simulate(bdb, table_id, constraints,
+            for row in bqlfn.bayesdb_simulate(bdb, table_id, constraints,
                     colnos, numpredictions=nsamples):
                 bdb.sql_execute(insert_sql, row)
         return empty_cursor(bdb)
@@ -153,7 +154,7 @@ def execute_phrase(bdb, phrase, bindings=()):
         table_id = core.bayesdb_table_id(bdb, phrase.btable)
         nmodels = phrase.nmodels
         config = phrase.config
-        core.bayesdb_models_initialize(bdb, table_id, range(nmodels), config,
+        bqlfn.bayesdb_models_initialize(bdb, table_id, range(nmodels), config,
             ifnotexists=phrase.ifnotexists)
         return empty_cursor(bdb)
     if isinstance(phrase, ast.AnalyzeModels):
@@ -167,7 +168,7 @@ def execute_phrase(bdb, phrase, bindings=()):
         if not wait: # XXX
             raise NotImplementedError("Background ANALYZE not yet supported."
                 " Please use 'WAIT' keyword.")
-        core.bayesdb_models_analyze(bdb, table_id, modelnos=modelnos,
+        bqlfn.bayesdb_models_analyze(bdb, table_id, modelnos=modelnos,
             iterations=iterations, max_seconds=seconds)
         return empty_cursor(bdb)
     if isinstance(phrase, ast.DropModels):

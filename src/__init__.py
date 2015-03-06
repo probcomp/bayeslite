@@ -16,6 +16,7 @@
 
 # Public API.
 from bayeslite.bayesdb import BayesDB
+from bayeslite.bqlfn import bayesdb_simulate
 from bayeslite.codebook import bayesdb_import_codebook_csv_file
 from bayeslite.core import bayesdb_attach_sqlite_file
 from bayeslite.core import bayesdb_column_name
@@ -25,7 +26,6 @@ from bayeslite.core import bayesdb_column_numbers
 from bayeslite.core import bayesdb_import_sqlite_table
 from bayeslite.core import bayesdb_register_metamodel
 from bayeslite.core import bayesdb_set_default_metamodel
-from bayeslite.core import bayesdb_simulate
 from bayeslite.core import bayesdb_table_exists
 from bayeslite.core import bayesdb_table_id
 from bayeslite.core import bayesdb_table_name
