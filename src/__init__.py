@@ -23,10 +23,7 @@ from bayeslite.core import bayesdb_column_name
 from bayeslite.core import bayesdb_column_names
 from bayeslite.core import bayesdb_column_number
 from bayeslite.core import bayesdb_column_numbers
-from bayeslite.core import bayesdb_deregister_metamodel
 from bayeslite.core import bayesdb_import_sqlite_table
-from bayeslite.core import bayesdb_register_metamodel
-from bayeslite.core import bayesdb_set_default_metamodel
 from bayeslite.core import bayesdb_table_exists
 from bayeslite.core import bayesdb_table_id
 from bayeslite.core import bayesdb_table_name
@@ -36,3 +33,6 @@ from bayeslite.imp import bayesdb_import_generated
 from bayeslite.import_csv import bayesdb_import_csv
 from bayeslite.import_csv import bayesdb_import_csv_file
 from bayeslite.import_pandas import bayesdb_import_pandas_df
+from bayeslite.metamodel import bayesdb_deregister_metamodel
+from bayeslite.metamodel import bayesdb_register_metamodel
+from bayeslite.metamodel import bayesdb_set_default_metamodel
