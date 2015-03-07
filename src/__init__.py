@@ -23,6 +23,7 @@ from bayeslite.core import bayesdb_column_name
 from bayeslite.core import bayesdb_column_names
 from bayeslite.core import bayesdb_column_number
 from bayeslite.core import bayesdb_column_numbers
+from bayeslite.core import bayesdb_deregister_metamodel
 from bayeslite.core import bayesdb_import_sqlite_table
 from bayeslite.core import bayesdb_register_metamodel
 from bayeslite.core import bayesdb_set_default_metamodel
