@@ -317,7 +317,7 @@ metadata_generators = {
     "numerical": bayesdb_metadata_numerical,
     "cyclic": bayesdb_metadata_cyclic,
     "ignore": bayesdb_metadata_ignore,   # XXX Why any metadata here?
-    "key": bayesdb_metadata_categorical, # XXX Why any metadata here?
+    "key": bayesdb_metadata_key,         # XXX Why any metadata here?
     "categorical": bayesdb_metadata_categorical,
 }
 
