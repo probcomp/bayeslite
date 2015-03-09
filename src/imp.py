@@ -128,8 +128,13 @@ def bayesdb_table_definition(table, column_names, column_types_folded):
     qt = sqlite3_quote_name(table)
     return ("CREATE TABLE %s (%s)" % (qt, ",".join(column_defs)))
 
-bayesdb_column_type_to_sqlite_type = \
-    dict((ct, sql) for ct, _cont_p, sql, _mt in core.bayesdb_type_table)
+bayesdb_column_type_to_sqlite_type = {
+    "categorical": "text",
+    "cyclic": "real",
+    "key": "text",
+    "ignore": "text",
+    "numerical": "real",
+}
 def bayesdb_column_definition(column_name, column_type):
     qcn = sqlite3_quote_name(column_name)
     sqlite_type = bayesdb_column_type_to_sqlite_type[column_type]
