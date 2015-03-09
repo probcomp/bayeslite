@@ -475,13 +475,16 @@ def bayesdb_code_to_value(M_c, colno, code):
     else:
         raise KeyError
 
-bayesdb_modeltypes_discrete = \
-    set(mt for _ct, cont_p, _sql, mt in bayesdb_type_table if not cont_p)
+bayesdb_modeltypes_discrete = set([
+    "symmetric_dirichlet_discrete",
+])
 def bayesdb_modeltype_discrete_p(modeltype):
     return modeltype in bayesdb_modeltypes_discrete
 
-bayesdb_modeltypes_numerical = \
-    set(mt for _ct, cont_p, _sql, mt in bayesdb_type_table if cont_p)
+bayesdb_modeltypes_numerical = set([
+    "vonmises",
+    "normal_inverse_gamma",
+])
 def bayesdb_modeltype_numerical_p(modeltype):
     return modeltype in bayesdb_modeltypes_numerical
 
