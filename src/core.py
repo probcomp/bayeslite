@@ -40,25 +40,6 @@ import math
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
 from bayeslite.util import casefold
-
-bayesdb_type_table = [
-    # column type, numerical?, default sqlite, default model type
-    ("categorical",     False,  "text",         "symmetric_dirichlet_discrete"),
-    ("cyclic",          True,   "real",         "vonmises"),
-    ("ignore",          False,  "text",         None),
-    ("key",             False,  "text",         None),
-    ("numerical",       True,   "real",         "normal_inverse_gamma"),
-]
-
-# XXX What about other model types from the paper?
-#
-# asymmetric_beta_bernoulli
-# pitmanyor_atom
-# poisson_gamma
-#
-# XXX Upgrade column types:
-#       continuous -> numerical
-#       multinomial -> categorical.
 
 ### BayesDB class interface
 
