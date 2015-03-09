@@ -123,8 +123,6 @@ def bayesdb_import_sqlite_table(bdb, table,
     """
     column_names, column_types = bayesdb_determine_columns(bdb, table,
         column_names, column_types)
-    metadata = bayesdb_create_metadata(bdb, table, column_names, column_types)
-    metadata_json = json.dumps(metadata)
     # XXX Check that rowids are contiguous.
     with bdb.savepoint():
         metamodel_id = None
@@ -136,6 +134,12 @@ def bayesdb_import_sqlite_table(bdb, table,
             metamodel_id = bdb.default_metamodel_id
         else:
             raise ValueError("No metamodel given and no default metamodel!")
+        if metamodel_id not in bdb.metamodels_by_id:
+            raise ValueError("No engine for metamodel: %s", (metamodel,))
+        engine = bdb.metamodels_by_id[metamodel_id]
+        metadata = engine.create_metadata(bdb, table, column_names,
+            column_types)
+        metadata_json = json.dumps(metadata)
         table_sql = """
             INSERT INTO bayesdb_table (name, metamodel_id, metadata)
                 VALUES (?, ?, ?)
@@ -255,71 +259,6 @@ def bayesdb_column_floatable_p(bdb, table, column_desc):
     except ValueError:
         return False
     return True
-
-def bayesdb_create_metadata(bdb, table, column_names, column_types):
-    ncols = len(column_names)
-    assert ncols == len(column_types)
-    # Weird contortions to ignore case distinctions in column_names
-    # and the keys of column_types.
-    column_positions = dict((casefold(name), i)
-        for i, name in enumerate(column_names))
-    column_metadata = [None] * ncols
-    for name in column_types:
-        metadata = metadata_generators[column_types[name]](bdb, table, name)
-        column_metadata[column_positions[casefold(name)]] = metadata
-    assert all(metadata is not None for metadata in column_metadata)
-    return {
-        "name_to_idx": dict(zip(map(casefold, column_names), range(ncols))),
-        "idx_to_name": dict(zip(map(unicode, range(ncols)), column_names)),
-        "column_metadata": column_metadata,
-    }
-
-def bayesdb_metadata_numerical(_bdb, _table, _column_name):
-    return {
-        "modeltype": "normal_inverse_gamma",
-        "value_to_code": {},
-        "code_to_value": {},
-    }
-
-def bayesdb_metadata_cyclic(_bdb, _table, _column_name):
-    return {
-        "modeltype": "vonmises",
-        "value_to_code": {},
-        "code_to_value": {},
-    }
-
-def bayesdb_metadata_ignore(bdb, table, column_name):
-    metadata = bayesdb_metadata_categorical(bdb, table, column_name)
-    metadata["modeltype"] = "ignore"
-    return metadata
-
-def bayesdb_metadata_key(bdb, table, column_name):
-    metadata = bayesdb_metadata_categorical(bdb, table, column_name)
-    metadata["modeltype"] = "key"
-    return metadata
-
-def bayesdb_metadata_categorical(bdb, table, column_name):
-    qcn = sqlite3_quote_name(column_name)
-    qt = sqlite3_quote_name(table)
-    sql = """
-        SELECT DISTINCT %s FROM %s WHERE %s IS NOT NULL ORDER BY %s
-    """ % (qcn, qt, qcn, qcn)
-    cursor = bdb.sql_execute(sql)
-    codes = [row[0] for row in cursor]
-    ncodes = len(codes)
-    return {
-        "modeltype": "symmetric_dirichlet_discrete",
-        "value_to_code": dict(zip(range(ncodes), codes)),
-        "code_to_value": dict(zip(codes, range(ncodes))),
-    }
-
-metadata_generators = {
-    "numerical": bayesdb_metadata_numerical,
-    "cyclic": bayesdb_metadata_cyclic,
-    "ignore": bayesdb_metadata_ignore,   # XXX Why any metadata here?
-    "key": bayesdb_metadata_key,         # XXX Why any metadata here?
-    "categorical": bayesdb_metadata_categorical,
-}
 
 ### BayesDB data/metadata access
 

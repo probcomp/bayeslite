@@ -26,6 +26,7 @@ import crosscat.MultiprocessingEngine
 import bayeslite
 import bayeslite.bqlfn as bqlfn
 import bayeslite.core as core
+import bayeslite.crosscat
 
 from bayeslite.sqlite3_util import sqlite3_exec_1
 from bayeslite.sqlite3_util import sqlite3_quote_name
@@ -38,10 +39,12 @@ def powerset(s):
     return itertools.chain.from_iterable(combinations)
 
 def local_crosscat():
-    return crosscat.LocalEngine.LocalEngine(seed=0)
+    cc = crosscat.LocalEngine.LocalEngine(seed=0)
+    return bayeslite.crosscat.CrosscatEngine(cc)
 
 def multiprocessing_crosscat():
-    return crosscat.MultiprocessingEngine.MultiprocessingEngine(seed=0)
+    cc = crosscat.MultiprocessingEngine.MultiprocessingEngine(seed=0)
+    return bayeslite.crosscat.CrosscatEngine(cc)
 
 @contextlib.contextmanager
 def bayesdb(metamodel=None, engine=None, **kwargs):
