@@ -49,6 +49,12 @@ def parse_bql_phrases(scanner):
         if semantics.phrase is not None:
             phrase = semantics.phrase
             semantics.phrase = None
+            if 0 < len(semantics.errors):
+                # Keep parsing in order to detect more errors, but
+                # don't yield any broken phrases in case the caller
+                # will try to process them before we finish parsing
+                # the whole thing.
+                continue
             if 0 < scanner.n_numpar:
                 n_numpar = scanner.n_numpar
                 nampar_map = scanner.nampar_map
