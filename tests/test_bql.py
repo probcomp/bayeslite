@@ -254,7 +254,7 @@ def test_select_bql():
         bql2sql('select mutual information from t1;')
     with pytest.raises(ValueError):
         # Need both columns fixed.
-        bql2sql('select mutual information using 42 samples with age from t1;')
+        bql2sql('select mutual information with age using 42 samples from t1;')
     with pytest.raises(ValueError):
         # Need both columns fixed.
         bql2sql('select mutual information using 42 samples from t1;')
@@ -398,7 +398,7 @@ def test_estimate_pairwise_trivial():
     with pytest.raises(ValueError):
         # Must omit both columns.
         bql2sql('estimate pairwise dependence probability from t1 where' +
-            ' mutual information of age using 42 samples with weight > 0.5;')
+            ' mutual information of age with weight using 42 samples > 0.5;')
     with pytest.raises(ValueError):
         # Must omit both columns.
         bql2sql('estimate pairwise mutual information from t1 where' +
@@ -436,7 +436,7 @@ def test_estimate_pairwise_trivial():
         ' (bql_column_correlation(1, c0.colno, c1.colno) > 0.5);'
     with pytest.raises(ValueError):
         # Makes no sense.
-        bql2sql('estimate pairwise dependence probability columns from t1' +
+        bql2sql('estimate pairwise dependence probability from t1'
             ' where infer age conf 0.9 > 30;')
 
 def test_estimate_pairwise_row():
