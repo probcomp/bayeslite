@@ -23,30 +23,59 @@ phrase_opt(some)	::= phrase(phrase).
 phrase(command)		::= command(c).
 phrase(query)		::= query(q).
 
+/*
+ * Transactions
+ */
 command(begin)		::= K_BEGIN.
 command(rollback)	::= K_ROLLBACK.
 command(commit)		::= K_COMMIT.
 
 /* XXX Need database names.  */
-command(droptable)	::= K_DROP K_TABLE ifexists(ifexists) L_NAME(name).
+
+/*
+ * SQL Data Definition Language subset
+ */
 command(createtab_as)	::= K_CREATE temp_opt(temp) K_TABLE
 				ifnotexists(ifnotexists)
-				L_NAME(name) K_AS query(query).
+				table_name(name) K_AS query(query).
 command(createtab_sim)	::= K_CREATE temp_opt(temp) K_TABLE
 				ifnotexists(ifnotexists)
-				L_NAME(name) K_AS simulate(sim).
-command(dropbtable)	::= K_DROP K_BTABLE ifexists(ifexists) L_NAME(name).
-command(createbtab_csv)	::= K_CREATE K_BTABLE ifnotexists(ifnotexists)
-				L_NAME(name) K_FROM L_STRING(file).
+				table_name(name) K_AS simulate(sim).
+command(droptable)	::= K_DROP K_TABLE ifexists(ifexists) table_name(name).
+
+/*
+ * BQL Model Definition Language
+ */
+/* XXX Temporary generators?  */
+command(creategen)	::= K_CREATE K_GENERATOR generator_name(name)
+				ifnotexists(ifnotexists)
+				K_FOR table_name(table)
+				K_USING metamodel_name(metamodel)
+				T_LROUND generator_schema(schema) T_RROUND.
+command(dropgen)	::= K_DROP K_GENERATOR ifexists(ifexists)
+				generator_name(name).
+command(renamegen)	::= K_ALTER K_GENERATOR generator_name(oldname)
+				K_RENAME K_TO generator_name(newname).
+
+generator_schema(one)	::= generator_column(col).
+generator_schema(many)	::= generator_schema(cols) T_COMMA
+				generator_column(col).
+generator_column(gc)	::= column_name(name) stattype(stattype).
+
+stattype(s)		::= L_NAME(name).
+
+/*
+ * BQL Model Analysis Language
+ */
+/* XXX No way to initialize individual models after DROP.  */
 command(init_models)	::= K_INITIALIZE L_INTEGER(n) K_MODEL|K_MODELS
 				ifnotexists(ifnotexists)
-				K_FOR table_name(btable).
-command(analyze_models)	::= K_ANALYZE table_name(btable) anmodelset_opt(models)
-				anlimit(anlimit) wait_opt(wait).
-command(drop_models)	::= K_DROP K_MODEL|K_MODELS modelset_opt(models)
-				K_FROM table_name(btable).
-command(rename_btable)	::= K_ALTER K_BTABLE table_name(oldname)
-				K_RENAME K_TO table_name(newname).
+				K_FOR generator_name(generator).
+command(analyze_models)	::= K_ANALYZE generator_name(generator)
+				anmodelset_opt(models) anlimit(anlimit)
+				wait_opt(wait).
+command(drop_models)	::= K_DELETE K_MODEL|K_MODELS modelset_opt(models)
+				K_FROM generator_name(generator).
 
 temp_opt(none)		::= .
 temp_opt(some)		::= K_TEMP|K_TEMPORARY.
@@ -74,23 +103,30 @@ anlimit(seconds)	::= K_FOR L_INTEGER(n) K_SECOND|K_SECONDS.
 wait_opt(none)		::= .
 wait_opt(some)		::= K_WAIT.
 
+/*
+ * SIMULATE: special query only for CREATE TABLE AS, for now.
+ */
 simulate(s)		::= K_SIMULATE simulate_columns(cols)
-				K_FROM table_name(btable)
+				K_FROM generator_name(generator)
 				given_opt(constraints) limit(lim).
 simulate(nolimit)	::= K_SIMULATE simulate_columns(cols)
-				K_FROM table_name(btable)
+				K_FROM generator_name(generator)
 				given_opt(constraints).
 
-simulate_columns(one)	::= L_NAME(col).
-simulate_columns(many)	::= simulate_columns(cols) T_COMMA L_NAME(col).
+simulate_columns(one)	::= column_name(col).
+simulate_columns(many)	::= simulate_columns(cols) T_COMMA column_name(col).
 
 given_opt(none)		::= .
 given_opt(some)		::= K_GIVEN constraints(constraints).
 constraints(one)	::= constraint(c).
 constraints(many)	::= constraints(cs) T_COMMA constraint(c).
-constraint(c)		::= L_NAME(col) T_EQ expression(value).
+constraint(c)		::= column_name(col) T_EQ expression(value).
 
+/*
+ * Queries
+ */
 query(select)		::= select(q).
+query(estimate)		::= estimate(q).
 query(estcols)		::= estcols(q).
 query(estpaircols)	::= estpaircols(q).
 query(estpairrow)	::= estpairrow(q).
@@ -110,20 +146,28 @@ select(s)		::= K_SELECT select_quant(quant) select_columns(cols)
 				order_by(ord)
 				limit_opt(lim).
 
+estimate(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
+				K_FROM generator_name(generator)
+				where(cond)
+				group_by(grouping)
+				order_by(ord)
+				limit_opt(lim).
+
 /*
  * XXX Can we reformulate this elegantly as a SELECT on the columns of
- * the btable?
+ * the generator?
  */
-estcols(e)		::= K_ESTIMATE K_COLUMNS K_FROM table_name(btable)
+estcols(e)		::= K_ESTIMATE K_COLUMNS
+				K_FROM generator_name(generator)
 				where(cond) order_by(ord) limit_opt(lim)
 				as(sav).
 
 /*
- * XXX This is really just a SELECT on the join of the table's list of
- * columns with itself.
+ * XXX This is really just a SELECT on the join of the generator's
+ * list of columns with itself.
  */
 estpaircols(e)		::= K_ESTIMATE K_PAIRWISE expression(e)
-				K_FROM table_name(btable) for(cols)
+				K_FROM generator_name(generator) for(cols)
 				where(cond) order_by(ord) limit_opt(lim)
 				as(sav).
 
@@ -136,7 +180,7 @@ estpaircols(e)		::= K_ESTIMATE K_PAIRWISE expression(e)
  * SIMILARITY.
  */
 estpairrow(e)		::= K_ESTIMATE K_PAIRWISE K_ROW expression(e)
-				K_FROM table_name(btable)
+				K_FROM generator_name(generator)
 				where(cond) order_by(ord) limit_opt(lim)
 				as(sav).
 
@@ -169,7 +213,10 @@ for(one)		::= K_FOR column_lists(collist).
 where(unconditional)	::= .
 where(conditional)	::= K_WHERE expression(condition).
 
-/* XXX Allow database-qualified name.  */
+/* XXX Allow database-qualified names.  */
+column_name(cn)		::= L_NAME(name).
+generator_name(unqualified)	::= L_NAME(name).
+metamodel_name(mn)	::= L_NAME(name).
 table_name(unqualified)	::= L_NAME(name).
 
 group_by(none)		::= .
@@ -347,11 +394,12 @@ bitwise_not(bql)	::= bqlfn(b).
  * rejecting unparenthesized PROBABILITY OF X = V with other
  * operators.
  */
-bqlfn(predprob_row)	::= K_PREDICTIVE K_PROBABILITY K_OF L_NAME(col).
-bqlfn(prob_const)	::= K_PROBABILITY K_OF L_NAME(col) T_EQ primary(e).
+bqlfn(predprob_row)	::= K_PREDICTIVE K_PROBABILITY K_OF column_name(col).
+bqlfn(prob_const)	::= K_PROBABILITY K_OF column_name(col)
+				T_EQ primary(e).
 bqlfn(prob_1col)	::= K_PROBABILITY K_OF K_VALUE primary(e).
 bqlfn(typ_1col_or_row)	::= K_TYPICALITY.
-bqlfn(typ_const)	::= K_TYPICALITY K_OF L_NAME(col).
+bqlfn(typ_const)	::= K_TYPICALITY K_OF column_name(col).
 bqlfn(sim_1row)		::= K_SIMILARITY K_TO
 				T_LROUND expression(cond) T_RROUND
 				wrt(cols).
@@ -360,7 +408,7 @@ bqlfn(depprob)		::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
 bqlfn(mutinf)		::= K_MUTUAL K_INFORMATION ofwith(cols)
 				nsamples_opt(nsamp).
 bqlfn(correl)		::= K_CORRELATION ofwith(cols).
-bqlfn(infer)		::= K_INFER L_NAME(col) K_CONF primary(cf).
+bqlfn(infer)		::= K_INFER column_name(col) K_CONF primary(cf).
 bqlfn(primary)		::= primary(p).
 
 /*
@@ -374,8 +422,8 @@ wrt(some)		::= K_WITH K_RESPECT K_TO
 				T_LROUND column_lists(collists) T_RROUND.
 
 ofwith(bql_2col)	::= .
-ofwith(bql_1col)	::= K_WITH L_NAME(col).
-ofwith(bql_const)	::= K_OF L_NAME(col1) K_WITH L_NAME(col2).
+ofwith(bql_1col)	::= K_WITH column_name(col).
+ofwith(bql_const)	::= K_OF column_name(col1) K_WITH column_name(col2).
 
 nsamples_opt(none)	::= .
 nsamples_opt(some)	::= K_USING primary(nsamples) K_SAMPLES.
@@ -384,7 +432,7 @@ column_lists(one)	::= column_list(collist).
 column_lists(many)	::= column_lists(collists)
 				T_COMMA|K_AND column_list(collist).
 column_list(all)	::= T_STAR.
-column_list(column)	::= L_NAME(col).
+column_list(column)	::= column_name(col).
 /*
  * XXX Should really allow any SELECT on a table of columns.  But
  * until we have that notion, are there any other kinds of subqueries
@@ -405,8 +453,8 @@ primary(subquery)	::= T_LROUND query(q) T_RROUND.
 primary(cast)		::= K_CAST T_LROUND expression(e)
 				K_AS type(t) T_RROUND.
 primary(exists)		::= K_EXISTS T_LROUND query(q) T_RROUND.
-primary(column)		::= L_NAME(col).
-primary(tabcol)		::= table_name(tab) T_DOT L_NAME(col).
+primary(column)		::= column_name(col).
+primary(tabcol)		::= table_name(tab) T_DOT column_name(col).
 primary(case)		::= K_CASE case_key_opt(k) case_whens_opt(ws)
 				case_else_opt(e) K_END.
 /*

@@ -145,32 +145,48 @@ class BQLSemantics(object):
     def p_phrase_command(self, c):              return c
     def p_phrase_query(self, q):                return q
 
+    # Transactions
     def p_command_begin(self):                  return ast.Begin()
     def p_command_rollback(self):               return ast.Rollback()
     def p_command_commit(self):                 return ast.Commit()
 
-    def p_command_droptable(self, ifexists, name):
-        return ast.DropTable(ifexists, name)
+    # SQL Data Definition Language subset
     def p_command_createtab_as(self, temp, ifnotexists, name, query):
         return ast.CreateTableAs(temp, ifnotexists, name, query)
     def p_command_createtab_sim(self, temp, ifnotexists, name, sim):
         return ast.CreateTableSim(temp, ifnotexists, name, sim)
-    def p_command_dropbtable(self, ifexists, name):
-        return ast.DropBtable(ifexists, name)
-    def p_command_createbtab_csv(self, ifnotexists, name, file):
-        # XXX codebook
-        return ast.CreateBtableCSV(ifnotexists, name, file, codebook=None)
-    def p_command_init_models(self, n, ifnotexists, btable):
+    def p_command_droptable(self, ifexists, name):
+        return ast.DropTable(ifexists, name)
+
+    # BQL Model Definition Language
+    def p_command_creategen(self, name, ifnotexists, table, metamodel, schema):
+        return ast.CreateGen(name, ifnotexists, table, metamodel, schema)
+    def p_command_dropgen(self, ifexists, name):
+        return ast.DropGen(ifexists, name)
+    def p_command_renamegen(self, oldname, newname):
+        return ast.RenameGen(oldname, newname)
+
+    def p_generator_schema_one(self, col):
+        return ast.GenSchema([col])
+    def p_generator_schema_many(self, cols, col):
+        cols.columns.append(col)
+        return cols
+    def p_generator_column_gc(self, name, stattype):
+        return ast.GenColumn(name, stattype)
+
+    def p_stattype_s(self, name):
+        return name
+
+    # BQL Model Analysis Language
+    def p_command_init_models(self, n, ifnotexists, generator):
         # XXX model config
-        return ast.InitModels(ifnotexists, btable, n, config=None)
-    def p_command_analyze_models(self, btable, models, anlimit, wait):
+        return ast.InitModels(ifnotexists, generator, n, config=None)
+    def p_command_analyze_models(self, generator, models, anlimit, wait):
         iterations = anlimit[1] if anlimit[0] == 'iterations' else None
         seconds = anlimit[1] if anlimit[0] == 'seconds' else None
-        return ast.AnalyzeModels(btable, models, iterations, seconds, wait)
-    def p_command_drop_models(self, models, btable):
-        return ast.DropModels(btable, models)
-    def p_command_rename_btable(self, oldname, newname):
-        return ast.RenameBtable(oldname, newname)
+        return ast.AnalyzeModels(generator, models, iterations, seconds, wait)
+    def p_command_drop_models(self, models, generator):
+        return ast.DropModels(generator, models)
 
     def p_temp_opt_none(self):                  return False
     def p_temp_opt_some(self):                  return True
@@ -195,12 +211,12 @@ class BQLSemantics(object):
     def p_wait_opt_none(self):                  return False
     def p_wait_opt_some(self):                  return True
 
-    def p_simulate_s(self, cols, btable, constraints, lim):
-        return ast.Simulate(cols, btable, constraints, lim.limit)
-    def p_simulate_nolimit(self, cols, btable, constraints):
+    def p_simulate_s(self, cols, generator, constraints, lim):
+        return ast.Simulate(cols, generator, constraints, lim.limit)
+    def p_simulate_nolimit(self, cols, generator, constraints):
         # XXX Report source location.
         self.errors.append('simulate missing limit')
-        return ast.Simulate(cols, btable, constraints, 0)
+        return ast.Simulate(cols, generator, constraints, 0)
     def p_simulate_columns_one(self, col):
         return [col]
     def p_simulate_columns_many(self, cols, col):
@@ -219,6 +235,7 @@ class BQLSemantics(object):
     def p_query_action_plot(self):              return ast.QACT_PLOT
 
     def p_query_select(self, q):                return q
+    def p_query_estimate(self, q):              return q
     def p_query_estcols(self, q):               return q
     def p_query_estpaircols(self, q):           return q
     def p_query_estpairrow(self, q):            return q
@@ -229,14 +246,17 @@ class BQLSemantics(object):
     def p_select_s(self, quant, cols, tabs, cond, grouping, ord, lim):
         return ast.Select(quant, cols, tabs, cond, grouping, ord, lim)
 
-    def p_estcols_e(self, btable, cond, ord, lim, sav):
-        return ast.EstCols(btable, cond, ord, lim, sav)
+    def p_estimate_e(self, quant, cols, generator, cond, grouping, ord, lim):
+        return ast.Estimate(quant, cols, generator, cond, grouping, ord, lim)
 
-    def p_estpaircols_e(self, e, btable, cols, cond, ord, lim, sav):
-        return ast.EstPairCols(e, btable, cols, cond, ord, lim, sav)
+    def p_estcols_e(self, generator, cond, ord, lim, sav):
+        return ast.EstCols(generator, cond, ord, lim, sav)
 
-    def p_estpairrow_e(self, e, btable, cond, ord, lim, sav):
-        return ast.EstPairRow(e, btable, cond, ord, lim, sav)
+    def p_estpaircols_e(self, e, generator, cols, cond, ord, lim, sav):
+        return ast.EstPairCols(e, generator, cols, cond, ord, lim, sav)
+
+    def p_estpairrow_e(self, e, generator, cond, ord, lim, sav):
+        return ast.EstPairRow(e, generator, cond, ord, lim, sav)
 
     def p_select_quant_distinct(self):          return ast.SELQUANT_DISTINCT
     def p_select_quant_all(self):               return ast.SELQUANT_ALL
@@ -266,6 +286,9 @@ class BQLSemantics(object):
     def p_where_unconditional(self):            return None
     def p_where_conditional(self, condition):   return condition
 
+    def p_column_name_cn(self, name):           return name
+    def p_generator_name_unqualified(self, name): return name
+    def p_metamodel_name_mn(self, name):        return name
     def p_table_name_unqualified(self, name):   return name
 
     def p_group_by_none(self):                  return None
