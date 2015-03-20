@@ -27,7 +27,9 @@ import bayeslite
 import bayeslite.bqlfn as bqlfn
 import bayeslite.core as core
 import bayeslite.crosscat
+import bayeslite.guess as guess
 import bayeslite.metamodel as metamodel
+import bayeslite.read_csv as read_csv
 
 from bayeslite.sqlite3_util import sqlite3_exec_1
 from bayeslite.sqlite3_util import sqlite3_quote_name
@@ -524,10 +526,11 @@ def test_row_column_predictive_probability(exname, rowid, colno):
 
 def test_insert():
     with test_csv.bayesdb_csv_stream(test_csv.csv_data) as (bdb, f):
-        bayeslite.bayesdb_import_csv(bdb, 't', f)
-        bdb.execute('initialize 2 models for t')
-        bdb.execute('analyze t for 1 iteration wait')
-        generator_id = core.bayesdb_generator_id(bdb, 't')
+        read_csv.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
+        guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+        bdb.execute('initialize 2 models for t_cc')
+        bdb.execute('analyze t_cc for 1 iteration wait')
+        generator_id = core.bayesdb_get_generator(bdb, 't_cc')
         row = (41, 'F', 96000, 73, 'data science', 2)
         bqlfn.bayesdb_insert(bdb, generator_id, row)
 

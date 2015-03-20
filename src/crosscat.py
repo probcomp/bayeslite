@@ -159,7 +159,7 @@ class CrosscatMetamodel(metamodel.IMetamodel):
             '''
             bdb.sql_execute(delete_metadata_sql, (generator_id,))
 
-    def initialize(self, bdb, generator_id, modelnos, model_config):
+    def initialize_models(self, bdb, generator_id, modelnos, model_config):
         if model_config is None:
             model_config = {
                 'kernel_list': (),
@@ -196,7 +196,21 @@ class CrosscatMetamodel(metamodel.IMetamodel):
             parameters = (generator_id, modelno, json.dumps(theta))
             bdb.sql_execute(insert_theta_sql, parameters)
 
-    def analyze(self, bdb, generator_id, modelnos=None, iterations=1,
+    def drop_models(self, bdb, generator_id, modelnos=None):
+        if modelnos is None:
+            sql = '''
+                DELETE FROM bayesdb_crosscat_theta WHERE generator_id = ?
+            '''
+            bdb.sql_execute(sql, (generator_id,))
+        else:
+            sql = '''
+                DELETE FROM bayesdb_crosscat_theta
+                    WHERE generator_id = ? AND modelno = ?
+            '''
+            for modelno in modelnos:
+                bdb.sql_execute(sql, (generator_id, modelno))
+
+    def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
             max_seconds=None):
         # XXX What about a schema change or insert in the middle of
         # analysis?
@@ -213,15 +227,15 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                     ORDER BY m.modelno
             '''
         else:
-            theta_sql = '''
-                SELECT theta FROM bayesdb_crosscat_theta
+            theta_json_sql = '''
+                SELECT theta_json FROM bayesdb_crosscat_theta
                     WHERE generator_id = ? AND modelno = ?
             '''
         update_iterations_sql = '''
             UPDATE bayesdb_generator_model SET iterations = iterations + ?
                 WHERE generator_id = ? AND modelno = ?
         '''
-        update_theta_sql = '''
+        update_theta_json_sql = '''
             UPDATE bayesdb_crosscat_theta SET theta_json = ?
                 WHERE generator_id = ? AND modelno = ?
         '''
@@ -240,10 +254,11 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                         update_modelnos.append(row[0])
                         thetas.append(json.loads(row[1]))
                 else:
+                    update_modelnos = modelnos
                     thetas = []
                     for modelno in modelnos:
                         parameters = (generator_id, modelno)
-                        cursor = bdb.sql_execute(theta_sql, parameters)
+                        cursor = bdb.sql_execute(theta_json_sql, parameters)
                         try:
                             row = cursor.next()
                         except StopIteration:
@@ -276,7 +291,7 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                     theta['X_D'] = X_D
                     bdb.sql_execute(update_iterations_sql,
                         (generator_id, modelno, n_steps))
-                    bdb.sql_execute(update_theta_sql,
+                    bdb.sql_execute(update_theta_json_sql,
                         (generator_id, modelno, json.dumps(theta)))
 
     def column_dependence_probability(self, bdb, generator_id, colno0, colno1):
@@ -522,8 +537,9 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                     ORDER BY m.modelno
             '''
             models = list(bdb.sql_execute(models_sql, (generator_id,)))
-            modelnos = [modelno for modelno, _theta in models]
-            thetas = [theta for _modelno, theta in models]
+            modelnos = [modelno for modelno, _theta_json in models]
+            thetas = [json.loads(theta_json)
+                for _modelno, theta_json in models]
             X_L_list, X_D_list, T = self._crosscat.insert(
                 M_c=M_c,
                 T=T,
@@ -537,7 +553,7 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                     WHERE generator_id = ? AND modelno = ?
             '''
             for modelno, theta, X_L, X_D \
-                    in zip(modelnos, models, X_L_list, X_D_list):
+                    in zip(modelnos, thetas, X_L_list, X_D_list):
                 theta['X_L'] = X_L
                 theta['X_D'] = X_D
                 theta_json = json.dumps(theta)

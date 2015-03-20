@@ -23,7 +23,9 @@ import bayeslite
 import bayeslite.ast as ast
 import bayeslite.bql as bql
 import bayeslite.compiler as compiler
+import bayeslite.guess as guess
 import bayeslite.parse as parse
+import bayeslite.read_csv as read_csv
 
 import test_core
 import test_csv
@@ -504,43 +506,57 @@ def test_estimate_pairwise_selected_columns():
 def test_trivial_commands():
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
         # XXX Query parameters!
-        bdb.execute("create btable t from '%s'" % (fname,))
-        bdb.execute("create btable if not exists t from '%s'" % (fname,))
-        bdb.execute('initialize 2 models for t')
-        with pytest.raises(sqlite3.IntegrityError):
-            bdb.execute('initialize 2 models for t')
-        bdb.execute('drop models from t')
-        bdb.execute('drop models from t')
-        bdb.execute('initialize 2 models for t')
-        with pytest.raises(sqlite3.IntegrityError):
-            bdb.execute('initialize 2 models for t')
+        with open(fname, 'rU') as f:
+            read_csv.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
+        with open(fname, 'rU') as f:
+            with pytest.raises(ValueError):
+                read_csv.bayesdb_read_csv(bdb, 't', f, header=True,
+                    create=True)
+        with open(fname, 'rU') as f:
+            read_csv.bayesdb_read_csv(bdb, 't', f, header=True, create=True,
+                ifnotexists=True)
+        guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
         with pytest.raises(ValueError):
-            bdb.execute('drop models 0-2 from t')
-        bdb.execute('drop models 0-1 from t')
+            guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+        guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat',
+            ifnotexists=True)
+        bdb.execute('initialize 2 models for t_cc')
         with pytest.raises(ValueError):
-            bdb.execute('drop models 0-1 from t')
-        bdb.execute('initialize 2 models for t')
-        bdb.execute('initialize 1 model if not exists for t')
-        bdb.execute('initialize 2 models if not exists for t')
-        bdb.execute('alter btable t rename to t0')
-        bdb.execute('select count(*) from t0')
-        with pytest.raises(sqlite3.OperationalError):
-            bdb.execute('select count(*) from t')
-        bdb.execute('alter btable t0 rename to t')
-        bdb.execute('analyze t model 0 for 1 iteration wait')
-        bdb.execute('analyze t models 0-1 for 1 iteration wait')
-        bdb.execute('analyze t models 0,1 for 1 iteration wait')
-        bdb.execute('analyze t for 1 iteration wait')
+            bdb.execute('initialize 2 models for t_cc')
+        bdb.execute('drop models from t_cc')
+        bdb.execute('drop models from t_cc')
+        bdb.execute('initialize 2 models for t_cc')
+        with pytest.raises(ValueError):
+            bdb.execute('initialize 2 models for t_cc')
+        with pytest.raises(ValueError):
+            bdb.execute('drop models 0-2 from t_cc')
+        bdb.execute('drop models 0-1 from t_cc')
+        with pytest.raises(ValueError):
+            bdb.execute('drop models 0-1 from t_cc')
+        bdb.execute('initialize 2 models for t_cc')
+        bdb.execute('initialize 1 model if not exists for t_cc')
+        bdb.execute('initialize 2 models if not exists for t_cc')
+        bdb.execute('alter generator t_cc rename to t0_cc')
+        bdb.execute('estimate count(*) from t0_cc')
+        with pytest.raises(ValueError):
+            bdb.execute('estimate count(*) from t_cc')
+        bdb.execute('alter generator t0_cc rename to t_cc')
+        bdb.execute('analyze t_cc model 0 for 1 iteration wait')
+        bdb.execute('analyze t_cc models 0-1 for 1 iteration wait')
+        bdb.execute('analyze t_cc models 0,1 for 1 iteration wait')
+        bdb.execute('analyze t_cc for 1 iteration wait')
         bdb.execute('select * from t')
         bdb.execute('select * from T')
-        bdb.execute('estimate pairwise row similarity from t')
-        bdb.execute('select value from (estimate pairwise correlation from t)')
-        bdb.execute('select infer age conf 0.9 from t')
-        bdb.execute('select infer AGE conf 0.9 from T')
-        bdb.execute('select infer aGe conf 0.9 from T')
-        with pytest.raises(AssertionError):
-            # XXX Assertion error is a bug here, please fix.
-            bdb.execute('select infer agee conf 0.9 from t')
+        bdb.execute('estimate * from t_cc')
+        bdb.execute('estimate * from T_CC')
+        bdb.execute('estimate pairwise row similarity from t_cc')
+        bdb.execute('select value from'
+            ' (estimate pairwise correlation from t_cc)')
+        bdb.execute('estimate infer age conf 0.9 from t_cc')
+        bdb.execute('estimate infer AGE conf 0.9 from T_cc')
+        bdb.execute('estimate infer aGe conf 0.9 from T_cC')
+        with pytest.raises(ValueError):
+            bdb.execute('estimate infer agee conf 0.9 from t_cc')
 
 def test_trivial_deadline():
     with test_core.t1() as (bdb, _table_id):
@@ -565,7 +581,8 @@ def test_parametrized():
         'SELECT * FROM "t" WHERE' + \
         ' ((("a" = ?1) AND ("b" = ?2)) AND ("c" = ?2));'
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
-        bdb.execute("create btable t from '%s'" % (fname,))
+        with open(fname, 'rU') as f:
+            read_csv.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
         assert bql_execute(bdb, 'select count(*) from t') == [(7,)]
         assert bql_execute(bdb, 'select count(distinct division) from t') == \
             [(6,)]
@@ -605,77 +622,184 @@ def test_parametrized():
                 bdb.execute(query, *args)
             bdb.sql_untrace(trace)
             return sql
-        bdb.execute('initialize 1 model for t;')
-        bdb.execute('analyze t for 1 iteration wait;')
-        assert sqltraced_execute('select similarity to (rowid = 1)'
-                ' with respect to (estimate columns from t limit 1)'
-                ' from t;') == [
-            'SELECT COUNT(*) FROM bayesdb_table WHERE name = ?',
-            'SELECT id FROM bayesdb_table WHERE name = ?',
-            'SELECT COUNT(*) FROM bayesdb_table WHERE name = ?',
-            'SELECT id FROM bayesdb_table WHERE name = ?',
-            # *** ESTIMATE COLUMNS:
-            'SELECT name FROM bayesdb_table_column WHERE table_id = 1' +
+        guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+        bdb.execute('initialize 1 model for t_cc;')
+        bdb.execute('analyze t_cc for 1 iteration wait;')
+        assert sqltraced_execute('estimate similarity to (rowid = 1)'
+                ' with respect to (estimate columns from t_cc limit 1)'
+                ' from t_cc;') == [
+            'SELECT id FROM bayesdb_generator WHERE name = ?',
+            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
+            'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?',
+            'SELECT id FROM bayesdb_generator WHERE name = ?',
+            # ESTIMATE COLUMNS:
+            'SELECT c.name AS name'
+                ' FROM bayesdb_generator AS g,'
+                    ' bayesdb_generator_column AS gc,'
+                    ' bayesdb_column AS c'
+                ' WHERE g.id = 1 AND gc.generator_id = g.id'
+                    ' AND c.tabname = g.tabname AND c.colno = gc.colno'
                 ' LIMIT 1',
-            'SELECT colno FROM bayesdb_table_column WHERE table_id = ?' +
-                ' AND name = ?',
-            # *** SELECT SIMILARITY TO 1:
-            'SELECT bql_row_similarity(1, _rowid_,' \
+            'SELECT c.colno'
+                ' FROM bayesdb_generator AS g,'
+                    ' bayesdb_generator_column as gc,'
+                    ' bayesdb_column AS c'
+                ' WHERE g.id = ? AND c.name = ? AND g.id = gc.generator_id'
+                    ' AND g.tabname = c.tabname AND gc.colno = c.colno',
+            # ESTIMATE SIMILARITY TO (rowid=1):
+            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
+            'SELECT bql_row_similarity(1, _rowid_,'
                 ' (SELECT _rowid_ FROM "t" WHERE ("rowid" = 1)), 0) FROM "t"',
-            'SELECT metamodel_id FROM bayesdb_table WHERE id = ?',
-            'SELECT metadata FROM bayesdb_table WHERE id = ?',
-            'SELECT modelno FROM bayesdb_model WHERE table_id = ?',
-            'SELECT theta FROM bayesdb_model' +
-                ' WHERE table_id = ? AND modelno = ?',
-            'SELECT modelno FROM bayesdb_model WHERE table_id = ?',
+            'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
+            'SELECT metadata_json FROM bayesdb_crosscat_metadata'
+                ' WHERE generator_id = ?',
+            # XXX Should cache theta again.
+            'SELECT theta_json FROM bayesdb_crosscat_theta'
+                ' WHERE generator_id = ?',
+            'SELECT theta_json FROM bayesdb_crosscat_theta'
+                ' WHERE generator_id = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
         ]
-        assert sqltraced_execute('select similarity to (rowid = 1)'
-                ' with respect to (estimate columns from t limit ?) from t;',
+        assert sqltraced_execute('estimate similarity to (rowid = 1)'
+                ' with respect to (estimate columns from t_cc limit ?)'
+                ' from t_cc;',
                 (1,)) == [
-            'SELECT COUNT(*) FROM bayesdb_table WHERE name = ?',
-            'SELECT id FROM bayesdb_table WHERE name = ?',
-            'SELECT COUNT(*) FROM bayesdb_table WHERE name = ?',
-            'SELECT id FROM bayesdb_table WHERE name = ?',
-            # *** ESTIMATE COLUMNS:
-            'SELECT name FROM bayesdb_table_column WHERE table_id = 1' +
+            'SELECT id FROM bayesdb_generator WHERE name = ?',
+            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
+            'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?',
+            'SELECT id FROM bayesdb_generator WHERE name = ?',
+            # ESTIMATE COLUMNS:
+            'SELECT c.name AS name'
+                ' FROM bayesdb_generator AS g,'
+                    ' bayesdb_generator_column AS gc,'
+                    ' bayesdb_column AS c'
+                ' WHERE g.id = 1 AND gc.generator_id = g.id'
+                    ' AND c.tabname = g.tabname AND c.colno = gc.colno'
                 ' LIMIT ?1',
-            'SELECT colno FROM bayesdb_table_column WHERE table_id = ?' +
-                ' AND name = ?',
-            # *** SELECT SIMILARITY TO 1:
-            'SELECT bql_row_similarity(1, _rowid_,' \
+            'SELECT c.colno'
+                ' FROM bayesdb_generator AS g,'
+                    ' bayesdb_generator_column as gc,'
+                    ' bayesdb_column AS c'
+                ' WHERE g.id = ? AND c.name = ? AND g.id = gc.generator_id'
+                    ' AND g.tabname = c.tabname AND gc.colno = c.colno',
+            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
+            # ESTIMATE SIMILARITY TO (rowid=1):
+            'SELECT bql_row_similarity(1, _rowid_,'
                 ' (SELECT _rowid_ FROM "t" WHERE ("rowid" = 1)), 0) FROM "t"',
-            'SELECT metamodel_id FROM bayesdb_table WHERE id = ?',
-            'SELECT metadata FROM bayesdb_table WHERE id = ?',
-            'SELECT modelno FROM bayesdb_model WHERE table_id = ?',
-            'SELECT theta FROM bayesdb_model' +
-                ' WHERE table_id = ? AND modelno = ?',
-            'SELECT modelno FROM bayesdb_model WHERE table_id = ?',
+            'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
+            'SELECT metadata_json FROM bayesdb_crosscat_metadata'
+                ' WHERE generator_id = ?',
+            'SELECT theta_json FROM bayesdb_crosscat_theta'
+                ' WHERE generator_id = ?',
+            'SELECT theta_json FROM bayesdb_crosscat_theta'
+                ' WHERE generator_id = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
         ]
         assert sqltraced_execute('create temp table if not exists sim as'
                     ' simulate age, RANK, division'
-                    " from t given gender = 'F' limit 4") == [
+                    " from t_cc given gender = 'F' limit 4") == [
+            'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?',
+            'PRAGMA table_info("sim")',
+            'SELECT id FROM bayesdb_generator WHERE name = ?',
+            'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
+            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
             'PRAGMA table_info("t")',
-            'SELECT COUNT(*) FROM bayesdb_table WHERE name = ?',
-            'SELECT id FROM bayesdb_table WHERE name = ?',
             "SELECT CAST(4 AS INTEGER), 'F'",
-            'SELECT colno FROM bayesdb_table_column'
-                ' WHERE table_id = ? AND name = ?',
-            'SELECT colno FROM bayesdb_table_column'
-                ' WHERE table_id = ? AND name = ?',
-            'SELECT colno FROM bayesdb_table_column'
-                ' WHERE table_id = ? AND name = ?',
-            'SELECT colno FROM bayesdb_table_column'
-                ' WHERE table_id = ? AND name = ?',
+            'SELECT c.colno'
+                ' FROM bayesdb_generator AS g,'
+                    ' bayesdb_generator_column as gc,'
+                    ' bayesdb_column AS c'
+                ' WHERE g.id = ? AND c.name = ? AND g.id = gc.generator_id'
+                    ' AND g.tabname = c.tabname AND gc.colno = c.colno',
+            'SELECT c.colno'
+                ' FROM bayesdb_generator AS g,'
+                    ' bayesdb_generator_column as gc,'
+                    ' bayesdb_column AS c'
+                ' WHERE g.id = ? AND c.name = ? AND g.id = gc.generator_id'
+                    ' AND g.tabname = c.tabname AND gc.colno = c.colno',
+            'SELECT c.colno'
+                ' FROM bayesdb_generator AS g,'
+                    ' bayesdb_generator_column as gc,'
+                    ' bayesdb_column AS c'
+                ' WHERE g.id = ? AND c.name = ? AND g.id = gc.generator_id'
+                    ' AND g.tabname = c.tabname AND gc.colno = c.colno',
+            'SELECT c.colno'
+                ' FROM bayesdb_generator AS g,'
+                    ' bayesdb_generator_column as gc,'
+                    ' bayesdb_column AS c'
+                ' WHERE g.id = ? AND c.name = ? AND g.id = gc.generator_id'
+                    ' AND g.tabname = c.tabname AND gc.colno = c.colno',
             'CREATE TEMP TABLE IF NOT EXISTS "sim"'
-                ' ("age" text,"RANK" text,"division" text)',
-            'SELECT metamodel_id FROM bayesdb_table WHERE id = ?',
-            'SELECT metadata FROM bayesdb_table WHERE id = ?',
-            'SELECT name FROM bayesdb_table WHERE id = ?',
-            'SELECT max(_rowid_) FROM "t"',
-            'SELECT modelno FROM bayesdb_model WHERE table_id = ?',
-            'SELECT theta FROM bayesdb_model'
-                ' WHERE table_id = ? AND modelno = ?',
-            'SELECT modelno FROM bayesdb_model WHERE table_id = ?',
+                ' ("age" TEXT,"RANK" TEXT,"division" TEXT)',
+            'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
+            'SELECT metadata_json FROM bayesdb_crosscat_metadata'
+                ' WHERE generator_id = ?',
+            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
+            'SELECT MAX(_rowid_) FROM "t"',
+            'SELECT stattype FROM bayesdb_generator_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT theta_json FROM bayesdb_crosscat_theta'
+                ' WHERE generator_id = ?',
+            'SELECT theta_json FROM bayesdb_crosscat_theta'
+                ' WHERE generator_id = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
             'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
             'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
             'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
@@ -684,17 +808,32 @@ def test_parametrized():
 
 def test_createtab():
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
+        with pytest.raises(sqlite3.OperationalError):
+            bdb.execute('drop table t')
+        bdb.execute('drop table if exists t')
         with pytest.raises(ValueError): # XXX More specific error.
-            bdb.execute('drop btable t')
-        bdb.execute('drop btable if exists t')
-        bdb.execute("create btable t from '%s'" % (fname,))
-        bdb.execute("create btable if not exists t from '%s'" % (fname,))
-        bdb.execute('initialize 1 model for t')
-        bdb.execute('drop btable t')
+            bdb.execute('drop generator t_cc')
+        bdb.execute('drop generator if exists t_cc')
+        with open(fname, 'rU') as f:
+            read_csv.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
+        with bdb.savepoint():
+            # Savepoint because we don't actually want the new data to
+            # be inserted.
+            with open(fname, 'rU') as f:
+                read_csv.bayesdb_read_csv(bdb, 't', f, header=True,
+                    create=True, ifnotexists=True)
+        guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+        bdb.execute('initialize 1 model for t_cc')
+        with pytest.raises(ValueError):
+            bdb.execute('drop table t')
+        bdb.execute('drop generator t_cc')
         with pytest.raises(ValueError): # XXX More specific error.
-            bdb.execute('drop btable t')
-        bdb.execute('drop btable if exists t')
-        bdb.execute("create btable t from '%s'" % (fname,))
+            bdb.execute('drop generator t_cc')
+        bdb.execute('drop generator if exists t_cc')
+        bdb.execute('drop table t')
+        with open(fname, 'rU') as f:
+            read_csv.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
+        guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
         bdb.execute("create table u as select * from t where gender = 'F'")
         assert bql_execute(bdb, 'select * from u') == [
             ('23', 'F', '81000', '67', 'data science', '3'),
@@ -754,47 +893,80 @@ def test_txn():
         # Make sure ROLLBACK undoes the effects of the transaction.
         bdb.execute('BEGIN')
         try:
-            bdb.execute("CREATE BTABLE t FROM '%s'" % (fname,))
+            with open(fname, 'rU') as f:
+                read_csv.bayesdb_read_csv(bdb, 't', f, header=True,
+                    create=True)
             bdb.execute('SELECT * FROM t')
+            guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+            bdb.execute('ESTIMATE * FROM t_cc')
         finally:
             bdb.execute('ROLLBACK')
         with pytest.raises(sqlite3.OperationalError):
             bdb.execute('SELECT * FROM t')
+        with pytest.raises(ValueError):
+            bdb.execute('ESTIMATE * FROM t_cc')
 
         # Make sure CREATE and DROP both work in the transaction.
         bdb.execute('BEGIN')
         try:
-            bdb.execute("CREATE BTABLE t FROM '%s'" % (fname,))
+            with open(fname, 'rU') as f:
+                read_csv.bayesdb_read_csv(bdb, 't', f, header=True,
+                    create=True)
             bdb.execute('SELECT * FROM t')
-            bdb.execute('DROP BTABLE t')
+            guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+            bdb.execute('ESTIMATE * FROM t_cc')
+            with pytest.raises(ValueError):
+                bdb.execute('DROP TABLE t')
+            bdb.execute('DROP GENERATOR t_cc')
+            with pytest.raises(ValueError):
+                bdb.execute('ESTIMATE * FROM t_cc')
+            bdb.execute('DROP TABLE t')
             with pytest.raises(sqlite3.OperationalError):
                 bdb.execute('SELECT * FROM t')
         finally:
             bdb.execute('ROLLBACK')
+        with pytest.raises(ValueError):
+            bdb.execute('ESTIMATE * FROM t_cc')
         with pytest.raises(sqlite3.OperationalError):
             bdb.execute('SELECT * FROM t')
 
         # Make sure CREATE and DROP work even if we commit.
         bdb.execute('BEGIN')
         try:
-            bdb.execute("CREATE BTABLE t FROM '%s'" % (fname,))
+            with open(fname, 'rU') as f:
+                read_csv.bayesdb_read_csv(bdb, 't', f, header=True,
+                    create=True)
             bdb.execute('SELECT * FROM t')
-            bdb.execute('DROP BTABLE t')
+            guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+            bdb.execute('ESTIMATE * FROM t_cc')
+            with pytest.raises(ValueError):
+                bdb.execute('DROP TABLE t')
+            bdb.execute('DROP GENERATOR t_cc')
+            with pytest.raises(ValueError):
+                bdb.execute('ESTIMATE * FROM t_cc')
+            bdb.execute('DROP TABLE t')
             with pytest.raises(sqlite3.OperationalError):
                 bdb.execute('SELECT * FROM t')
         finally:
             bdb.execute('COMMIT')
+        with pytest.raises(ValueError):
+            bdb.execute('ESTIMATE * FROM t_cc')
         with pytest.raises(sqlite3.OperationalError):
             bdb.execute('SELECT * FROM t')
 
         # Make sure CREATE persists if we commit.
         bdb.execute('BEGIN')
         try:
-            bdb.execute("CREATE BTABLE t FROM '%s'" % (fname,))
+            with open(fname, 'rU') as f:
+                read_csv.bayesdb_read_csv(bdb, 't', f, header=True,
+                    create=True)
             bdb.execute('SELECT * FROM t')
+            guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+            bdb.execute('ESTIMATE * FROM t_cc')
         finally:
             bdb.execute('COMMIT')
         bdb.execute('SELECT * FROM t')
+        bdb.execute('ESTIMATE * FROM t_cc')
 
         # XXX To do: Make sure other effects (e.g., analysis) get
         # rolled back by ROLLBACK.

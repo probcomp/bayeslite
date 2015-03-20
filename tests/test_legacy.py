@@ -31,9 +31,9 @@ dha_codebook = root + '/dha_codebook.csv'
 def test_legacy_models():
     bdb = bayeslite.BayesDB()
     cc = crosscat.LocalEngine.LocalEngine(seed=0)
-    engine = bayeslite.crosscat.CrosscatEngine(cc)
-    bayeslite.bayesdb_register_metamodel(bdb, 'crosscat', engine)
-    bayeslite.bayesdb_set_default_metamodel(bdb, 'crosscat')
+    metamodel = bayeslite.crosscat.CrosscatMetamodel(cc)
+    bayeslite.bayesdb_register_metamodel(bdb, metamodel)
+    bayeslite.bayesdb_set_default_metamodel(bdb, metamodel)
     with pytest.raises(ValueError):
         bayeslite.bayesdb_load_legacy_models(bdb, 'dha', dha_models)
     bayeslite.bayesdb_import_csv_file(bdb, 'dha', dha_csv)

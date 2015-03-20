@@ -16,11 +16,40 @@
 
 import math
 
+import bayeslite.core as core
+
+from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 from bayeslite.util import unique
 
-def bayesdb_guess_stattypes(column_names, rows, count_cutoff=20,
-        ratio_cutoff=0.02):
+def bayesdb_guess_generator(bdb, generator, table, metamodel,
+        ifnotexists=False, count_cutoff=None, ratio_cutoff=None):
+    with bdb.savepoint():
+        if core.bayesdb_has_generator(bdb, generator):
+            if ifnotexists:
+                return
+            else:
+                raise ValueError('Generator already exists: %s' %
+                    (repr(generator),))
+        qt = sqlite3_quote_name(table)
+        cursor = bdb.sql_execute('SELECT * FROM %s' % (qt,))
+        column_names = [d[0] for d in cursor.description]
+        rows = list(cursor)
+        stattypes = bayesdb_guess_stattypes(column_names, rows)
+        qg = sqlite3_quote_name(generator)
+        qmm = sqlite3_quote_name(metamodel)
+        qcns = map(sqlite3_quote_name, column_names)
+        qsts = map(sqlite3_quote_name, stattypes)
+        qs = ','.join(qcn + ' ' + qst for qcn, qst in zip(qcns, qsts))
+        bdb.execute('CREATE GENERATOR %s FOR %s USING %s(%s)' %
+            (qg, qt, qmm, qs))
+
+def bayesdb_guess_stattypes(column_names, rows, count_cutoff=None,
+        ratio_cutoff=None):
+    if count_cutoff is None:
+        count_cutoff = 20
+    if ratio_cutoff is None:
+        ratio_cutoff = 0.02
     ncols = len(column_names)
     assert ncols == len(unique(map(casefold, column_names)))
     for ri, row in enumerate(rows):

@@ -207,4 +207,4 @@ def bayesdb_insert(bdb, generator_id, row):
 
 def bayesdb_insertmany(bdb, generator_id, rows):
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    metamodel.insert(bdb, generator_id, rows)
+    metamodel.insertmany(bdb, generator_id, rows)

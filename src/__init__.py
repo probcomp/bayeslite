@@ -19,11 +19,6 @@ from bayeslite.bayesdb import BayesDB
 from bayeslite.bqlfn import bayesdb_simulate
 from bayeslite.codebook import bayesdb_import_codebook_csv_file
 from bayeslite.legacy_models import bayesdb_load_legacy_models
-from bayeslite.imp import bayesdb_import
-from bayeslite.imp import bayesdb_import_generated
-from bayeslite.import_csv import bayesdb_import_csv
-from bayeslite.import_csv import bayesdb_import_csv_file
-from bayeslite.import_pandas import bayesdb_import_pandas_df
 from bayeslite.metamodel import bayesdb_deregister_metamodel
 from bayeslite.metamodel import bayesdb_register_metamodel
 from bayeslite.metamodel import bayesdb_set_default_metamodel

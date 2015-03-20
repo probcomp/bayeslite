@@ -74,7 +74,7 @@ command(init_models)	::= K_INITIALIZE L_INTEGER(n) K_MODEL|K_MODELS
 command(analyze_models)	::= K_ANALYZE generator_name(generator)
 				anmodelset_opt(models) anlimit(anlimit)
 				wait_opt(wait).
-command(drop_models)	::= K_DELETE K_MODEL|K_MODELS modelset_opt(models)
+command(drop_models)	::= K_DROP K_MODEL|K_MODELS modelset_opt(models)
 				K_FROM generator_name(generator).
 
 temp_opt(none)		::= .
