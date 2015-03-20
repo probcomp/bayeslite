@@ -94,7 +94,8 @@ def test_read_csv():
         assert bdb.sql_execute('SELECT sql FROM sqlite_master WHERE name = ?',
                 ('t',)).next()[0] == \
             'CREATE TABLE "t"' \
-            '("a","b","c","name","nick","age","muppet","animal")'
+            '("a" TEXT,"b" TEXT,"c" TEXT,"name" TEXT,' \
+            '"nick" TEXT,"age" TEXT,"muppet" TEXT,"animal" TEXT)'
         f = StringIO.StringIO(csv_data)
         bayesdb_read_csv(bdb, 't', f, header=False, create=False,
             ifnotexists=False)
