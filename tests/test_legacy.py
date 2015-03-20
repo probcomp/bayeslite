@@ -21,6 +21,7 @@ import pytest
 
 import bayeslite
 import bayeslite.crosscat
+import bayeslite.read_csv as read_csv
 import crosscat.LocalEngine
 
 root = os.path.dirname(os.path.abspath(__file__))
@@ -35,9 +36,11 @@ def test_legacy_models():
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)
     bayeslite.bayesdb_set_default_metamodel(bdb, metamodel)
     with pytest.raises(ValueError):
-        bayeslite.bayesdb_load_legacy_models(bdb, 'dha', dha_models)
-    bayeslite.bayesdb_import_csv_file(bdb, 'dha', dha_csv)
-    bayeslite.bayesdb_load_legacy_models(bdb, 'dha', dha_models)
+        bayeslite.bayesdb_load_legacy_models(bdb, 'dha_cc', 'dha', dha_models)
+    with open(dha_csv, 'rU') as f:
+        read_csv.bayesdb_read_csv(bdb, 'dha', f, header=True, create=True)
+    bayeslite.bayesdb_load_legacy_models(bdb, 'dha_cc', 'dha', dha_models,
+        ifnotexists=True)
     bayeslite.bayesdb_import_codebook_csv_file(bdb, 'dha', dha_codebook)
     # Need to be able to overwrite existing codebook.
     #
