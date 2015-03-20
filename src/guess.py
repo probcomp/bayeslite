@@ -55,7 +55,7 @@ def integerify(rows, ci):
     try:
         for ri, row in enumerate(rows):
             column[ri] = int(row[ci])
-    except ValueError, TypeError:
+    except (ValueError, TypeError):
         return None
     return column
 
@@ -67,7 +67,7 @@ def floatify(rows, ci):
                 column[ri] = float('NaN')
             else:
                 column[ri] = float(row[ci])
-    except ValueError, TypeError:
+    except (ValueError, TypeError):
         return None
     return column
 

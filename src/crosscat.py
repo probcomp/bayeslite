@@ -685,7 +685,7 @@ def crosscat_value_to_code(bdb, generator_id, M_c, colno, value):
         # represented by NaN.
         try:
             return float(value)
-        except ValueError:
+        except (ValueError, TypeError):
             return float('NaN')
     else:
         raise KeyError
