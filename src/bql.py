@@ -163,7 +163,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                     (repr(phrase.name),))
 
             # Make sure the bayesdb_column table knows all the columns.
-            guarantee_columns(bdb, table)
+            core.bayesdb_table_guarantee_columns(bdb, table)
 
             # Create the generator record.
             generator_sql = '''
@@ -385,21 +385,6 @@ def empty_cursor(bdb):
     cursor = bdb.sqlite3.cursor()
     cursor.execute('')
     return cursor
-
-def guarantee_columns(bdb, table):
-    with bdb.savepoint():
-        qt = sqlite3_quote_name(table)
-        insert_column_sql = '''
-            INSERT OR IGNORE INTO bayesdb_column (tabname, colno, name)
-                VALUES (?, ?, ?)
-        '''
-        nrows = 0
-        for row in bdb.sql_execute('PRAGMA table_info(%s)' % (qt,)):
-            nrows += 1
-            colno, name, _sqltype, _notnull, _default, _primary_key = row
-            bdb.sql_execute(insert_column_sql, (table, colno, name))
-        if nrows == 0:
-            raise ValueError('No such table: %s' % (repr(table),))
 
 @contextlib.contextmanager
 def defer_foreign_keys(bdb):

@@ -33,7 +33,7 @@ def bayesdb_table_column_names(bdb, table):
         SELECT name FROM bayesdb_column WHERE tabname = ?
             ORDER BY colno ASC
     '''
-    return bdb.sql_execute(sql, (table,))
+    return [row[0] for row in bdb.sql_execute(sql, (table,))]
 
 def bayesdb_table_column_name(bdb, table, colno):
     sql = '''
@@ -47,6 +47,26 @@ def bayesdb_table_column_name(bdb, table, colno):
             (table, colno))
     else:
         return row[0]
+
+def bayesdb_table_guarantee_columns(bdb, table):
+    with bdb.savepoint():
+        qt = sqlite3_quote_name(table)
+        insert_column_sql = '''
+            INSERT OR IGNORE INTO bayesdb_column (tabname, colno, name)
+                VALUES (?, ?, ?)
+        '''
+        nrows = 0
+        for row in bdb.sql_execute('PRAGMA table_info(%s)' % (qt,)):
+            nrows += 1
+            colno, name, _sqltype, _notnull, _default, _primary_key = row
+            bdb.sql_execute(insert_column_sql, (table, colno, name))
+        if nrows == 0:
+            raise ValueError('No such table: %s' % (repr(table),))
+
+def bayesdb_table_has_column(bdb, table, name):
+    sql = 'SELECT COUNT(*) FROM bayesdb_column WHERE tabname = ? AND name = ?'
+    cursor = bdb.sql_execute(sql, (table, name))
+    return cursor.next()[0]
 
 def bayesdb_has_generator(bdb, name):
     sql = 'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?'
