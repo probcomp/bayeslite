@@ -674,12 +674,19 @@ def crosscat_value_to_code(bdb, generator_id, M_c, colno, value):
             return float('NaN')         # XXX !?!??!
         cc_colno = crosscat_cc_colno(bdb, generator_id, colno)
         key = unicode(value)
+        code = M_c['column_metadata'][cc_colno]['code_to_value'][key]
         # XXX Crosscat expects floating-point codes.
-        return float(M_c['column_metadata'][cc_colno]['code_to_value'][key])
+        return float(code)
     elif stattype in ('cyclic', 'numerical'):
-        if value is None:
+        # Data may be stored in the SQL table as strings, if imported
+        # from wacky sources like CSV files, in which case both NULL
+        # and non-numerical data -- including the string `nan' which
+        # makes sense, and anything else which doesn't -- will be
+        # represented by NaN.
+        try:
+            return float(value)
+        except ValueError:
             return float('NaN')
-        return float(value)
     else:
         raise KeyError
 
