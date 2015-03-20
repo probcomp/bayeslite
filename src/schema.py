@@ -45,11 +45,11 @@ CREATE TABLE bayesdb_column (
 
 CREATE TABLE bayesdb_column_map (
 	tabname		TEXT COLLATE NOCASE NOT NULL,
-	name		INTEGER NOT NULL,
+	colno		INTEGER NOT NULL,
 	key		TEXT NOT NULL,
 	value		TEXT NOT NULL,
-	PRIMARY KEY(tabname, name, key),
-	FOREIGN KEY(tabname, name) REFERENCES bayesdb_column(tabname, name)
+	PRIMARY KEY(tabname, colno, key),
+	FOREIGN KEY(tabname, colno) REFERENCES bayesdb_column(tabname, colno)
 );
 
 CREATE TABLE bayesdb_generator (

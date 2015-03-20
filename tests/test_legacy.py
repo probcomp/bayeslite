@@ -48,7 +48,9 @@ def test_legacy_models():
     # mistake?
     bayeslite.bayesdb_import_codebook_csv_file(bdb, 'dha', dha_codebook)
     bql = '''
-        SELECT name FROM dha ORDER BY SIMILARITY TO (name = ?) DESC LIMIT 10
+        ESTIMATE name FROM dha_cc
+            ORDER BY SIMILARITY TO (name = ?) DESC
+            LIMIT 10
     '''
     with bdb.savepoint():
         assert list(bdb.execute(bql, ('Albany NY',))) == [
@@ -65,8 +67,8 @@ def test_legacy_models():
         ]
     # Tickles an issue in case-folding of column names.
     bql = '''
-        SELECT name
-            FROM dha
+        ESTIMATE name
+            FROM dha_cc
             ORDER BY PREDICTIVE PROBABILITY OF mdcr_spnd_amblnc ASC
             LIMIT 10
     '''
@@ -86,15 +88,19 @@ def test_legacy_models():
 
 if False:
     bql = '''
-        SELECT c0.name, c0.short_name, c1.name, c1.short_name, e.value
+        SELECT gc0.name, gc0.shortname, gc1.name, gc1.shortname, e.value
             FROM (ESTIMATE PAIRWISE DEPENDENCE PROBABILITY FROM DHA
                     WHERE name0 != \'name\' AND name1 != \'name\'
                     ORDER BY name0 ASC, name1 ASC
                     LIMIT 10) AS e,
-                bayesdb_table_column AS c0,
-                bayesdb_table_column AS c1
-            WHERE c0.table_id = e.table_id AND c0.name = e.name0
-                AND c1.table_id = e.table_id AND c1.name = e.name1
+                bayesdb_generator AS g,
+                (bayesdb_generator_column JOIN bayesdb_column USING (colno))
+                    AS gc0,
+                (bayesdb_generator_column JOIN bayesdb_column USING (colno))
+                    AS gc1
+            WHERE g.id = e.generator_id
+                AND gc0.generator_id = e.generator_id
+                AND gc1.generator_id = e.generator_id
     '''
     assert list(bdb.execute(bql)) == [
         ('AMI_SCORE', 'Myocardial infarction score',

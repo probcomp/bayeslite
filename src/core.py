@@ -44,7 +44,20 @@ def bayesdb_table_column_name(bdb, table, colno):
         row = cursor.next()
     except StopIteration:
         raise ValueError('No such column number in table %s: %d' %
-            (table, colno))
+            (repr(table), colno))
+    else:
+        return row[0]
+
+def bayesdb_table_column_number(bdb, table, name):
+    sql = '''
+        SELECT colno FROM bayesdb_column WHERE tabname = ? AND name = ?
+    '''
+    cursor = bdb.sql_execute(sql, (table, name))
+    try:
+        row = cursor.next()
+    except StopIteration:
+        raise ValueError('No such column in table %s: %s' %
+            (repr(table), repr(name)))
     else:
         return row[0]
 

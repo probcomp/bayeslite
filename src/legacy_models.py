@@ -125,6 +125,9 @@ def bayesdb_load_legacy_models(bdb, generator, table, pathname,
         else:
             raise ValueError('No such generator: %s' % (repr(generator),))
 
+        # XXX Populate bayesdb_crosscat_metadata,
+        # bayesdb_crosscat_column, bayesdb_crosscat_column_codemap.
+
         # Determine where to start numbering the new models.
         generator_id = core.bayesdb_get_generator(bdb, generator)
         modelno_max_sql = '''
