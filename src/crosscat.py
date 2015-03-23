@@ -84,6 +84,115 @@ class CrosscatMetamodel(metamodel.IMetamodel):
     def __init__(self, crosscat):
         self._crosscat = crosscat
 
+    def _crosscat_cache_nocreate(self, bdb):
+        if bdb.cache is None:
+            return None
+        if 'crosscat' not in bdb.cache:
+            return None
+        return self._crosscat_cache(bdb)
+
+    def _crosscat_cache(self, bdb):
+        if bdb.cache is None:
+            return None
+        if 'crosscat' in bdb.cache:
+            return bdb.cache['crosscat']
+        else:
+            cc_cache = CrosscatCache()
+            bdb.cache['crosscat'] = cc_cache
+            return cc_cache
+
+    def _crosscat_metadata(self, bdb, generator_id):
+        cc_cache = self._crosscat_cache(bdb)
+        if cc_cache is not None and generator_id in cc_cache.metadata:
+            return cc_cache.metadata[generator_id]
+        sql = '''
+            SELECT metadata_json FROM bayesdb_crosscat_metadata
+                WHERE generator_id = ?
+        '''
+        cursor = bdb.sql_execute(sql, (generator_id,))
+        try:
+            row = cursor.next()
+        except StopIteration:
+            generator = core.bayesdb_generator_name(bdb, generator_id)
+            raise ValueError('No crosscat metadata for generator: %s' %
+                (generator,))
+        else:
+            metadata = json.loads(row[0])
+            if cc_cache is not None:
+                cc_cache.metadata[generator_id] = metadata
+            return metadata
+
+    def _crosscat_data(self, bdb, generator_id, M_c):
+        table_name = core.bayesdb_generator_table(bdb, generator_id)
+        qt = sqlite3_quote_name(table_name)
+        columns_sql = '''
+            SELECT c.name, c.colno
+                FROM bayesdb_column AS c,
+                    bayesdb_generator AS g,
+                    bayesdb_generator_column AS gc
+                WHERE g.id = ?
+                    AND c.tabname = g.tabname
+                    AND c.colno = gc.colno
+                    AND gc.generator_id = g.id
+                ORDER BY c.colno ASC
+        '''
+        columns = list(bdb.sql_execute(columns_sql, (generator_id,)))
+        colnames = [name for name, _colno in columns]
+        qcns = map(sqlite3_quote_name, colnames)
+        cursor = bdb.sql_execute('SELECT %s FROM %s' % (','.join(qcns), qt))
+        return [[crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
+                for value, (_name, colno) in zip(row, columns)]
+            for row in cursor]
+
+    def _crosscat_thetas(self, bdb, generator_id):
+        sql = '''
+            SELECT modelno FROM bayesdb_crosscat_theta
+                WHERE generator_id = ?
+        '''
+        modelnos = (row[0] for row in bdb.sql_execute(sql, (generator_id,)))
+        return dict((modelno, self._crosscat_theta(bdb, generator_id, modelno))
+            for modelno in modelnos)
+
+    def _crosscat_theta(self, bdb, generator_id, modelno):
+        cc_cache = self._crosscat_cache(bdb)
+        if cc_cache is not None and \
+           generator_id in cc_cache.thetas and \
+           modelno in cc_cache.thetas[generator_id]:
+            return cc_cache.thetas[generator_id][modelno]
+        sql = '''
+            SELECT theta_json FROM bayesdb_crosscat_theta
+                WHERE generator_id = ? AND modelno = ?
+        '''
+        cursor = bdb.sql_execute(sql, (generator_id, modelno))
+        try:
+            row = cursor.next()
+        except StopIteration:
+            generator = core.bayesdb_generator_name(bdb, generator_id)
+            raise ValueError('No such crosscat model for generator %s: %d' %
+                (repr(generator), modelno))
+        else:
+            theta = json.loads(row[0])
+            if cc_cache is not None:
+                if generator_id in cc_cache.thetas:
+                    assert modelno not in cc_cache.thetas[generator_id]
+                    cc_cache.thetas[generator_id][modelno] = theta
+                else:
+                    cc_cache.thetas[generator_id] = {modelno: theta}
+            return theta
+
+    def _crosscat_latent_stata(self, bdb, generator_id):
+        thetas = self._crosscat_thetas(bdb, generator_id)
+        return ((thetas[modelno]['X_L'], thetas[modelno]['X_D'])
+            for modelno in sorted(thetas.iterkeys()))
+
+    def _crosscat_latent_state(self, bdb, generator_id):
+        return [statum[0] for statum
+            in self._crosscat_latent_stata(bdb, generator_id)]
+
+    def _crosscat_latent_data(self, bdb, generator_id):
+        return [statum[1] for statum
+            in self._crosscat_latent_stata(bdb, generator_id)]
+
     def name(self):
         return 'crosscat'
 
@@ -115,6 +224,13 @@ class CrosscatMetamodel(metamodel.IMetamodel):
             metadata_json = json.dumps(metadata)
             bdb.sql_execute(insert_metadata_sql, (generator_id, metadata_json))
 
+            # Cache the metadata json blob -- we'll probably use it
+            # soon.
+            cc_cache = self._crosscat_cache(bdb)
+            if cc_cache is not None:
+                assert generator_id not in cc_cache.metadata
+                cc_cache.metadata[generator_id] = metadata
+
             # Expose the same information relationally.
             insert_column_sql = '''
                 INSERT INTO bayesdb_crosscat_column
@@ -138,6 +254,19 @@ class CrosscatMetamodel(metamodel.IMetamodel):
 
     def drop_generator(self, bdb, generator_id):
         with bdb.savepoint():
+            # Remove the metadata from the cache.
+            cc_cache = self._crosscat_cache_nocreate(bdb)
+            if cc_cache is not None:
+                if generator_id in cc_cache.metadata:
+                    del cc_cache.metadata[generator_id]
+                if generator_id in cc_cache.thetas:
+                    del cc_cache.thetas[generator_id]
+
+            # Delete all the things referring to the generator:
+            # - models
+            # - codemap
+            # - columns
+            # - metadata
             delete_models_sql = '''
                 DELETE FROM bayesdb_crosscat_theta
                     WHERE generator_id = ?
@@ -160,17 +289,21 @@ class CrosscatMetamodel(metamodel.IMetamodel):
             bdb.sql_execute(delete_metadata_sql, (generator_id,))
 
     def initialize_models(self, bdb, generator_id, modelnos, model_config):
+        cc_cache = self._crosscat_cache(bdb)
+        if cc_cache is not None and generator_id in cc_cache.thetas:
+            assert not any(modelno in cc_cache.thetas[generator_id]
+                for modelno in modelnos)
         if model_config is None:
             model_config = {
                 'kernel_list': (),
                 'initialization': 'from_the_prior',
                 'row_initialization': 'from_the_prior',
             }
-        M_c = crosscat_metadata(bdb, generator_id)
+        M_c = self._crosscat_metadata(bdb, generator_id)
         X_L_list, X_D_list = self._crosscat.initialize(
             M_c=M_c,
             M_r=None,           # XXX
-            T=crosscat_data(bdb, generator_id, M_c),
+            T=self._crosscat_data(bdb, generator_id, M_c),
             n_chains=len(modelnos),
             initialization=model_config['initialization'],
             row_initialization=model_config['row_initialization'],
@@ -195,9 +328,19 @@ class CrosscatMetamodel(metamodel.IMetamodel):
             }
             parameters = (generator_id, modelno, json.dumps(theta))
             bdb.sql_execute(insert_theta_sql, parameters)
+            if cc_cache is not None:
+                if generator_id in cc_cache.thetas:
+                    assert modelno not in cc_cache.thetas[generator_id]
+                    cc_cache.thetas[generator_id][modelno] = theta
+                else:
+                    cc_cache.thetas[generator_id] = {modelno: theta}
 
     def drop_models(self, bdb, generator_id, modelnos=None):
+        cc_cache = self._crosscat_cache_nocreate(bdb)
         if modelnos is None:
+            if cc_cache is not None:
+                if generator_id in cc_cache.thetas:
+                    del cc_cache.thetas[generator_id]
             sql = '''
                 DELETE FROM bayesdb_crosscat_theta WHERE generator_id = ?
             '''
@@ -209,28 +352,19 @@ class CrosscatMetamodel(metamodel.IMetamodel):
             '''
             for modelno in modelnos:
                 bdb.sql_execute(sql, (generator_id, modelno))
+            if cc_cache is not None and generator_id in cc_cache.thetas:
+                for modelno in modelnos:
+                    if modelno in thetas:
+                        del cc_cache.thetas[generator_id][modelno]
+                if len(cc_cache.thetas[generator_id]) == 0:
+                    del cc_cache.thetas[generator_id]
 
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
             max_seconds=None):
         # XXX What about a schema change or insert in the middle of
         # analysis?
-        M_c = crosscat_metadata(bdb, generator_id)
-        T = crosscat_data(bdb, generator_id, M_c)
-        if modelnos is None:
-            models_sql = '''
-                SELECT m.modelno, ct.theta_json
-                    FROM bayesdb_generator_model AS m,
-                        bayesdb_crosscat_theta AS ct
-                    WHERE m.generator_id = ?
-                        AND m.generator_id = ct.generator_id
-                        AND m.modelno = ct.modelno
-                    ORDER BY m.modelno
-            '''
-        else:
-            theta_json_sql = '''
-                SELECT theta_json FROM bayesdb_crosscat_theta
-                    WHERE generator_id = ? AND modelno = ?
-            '''
+        M_c = self._crosscat_metadata(bdb, generator_id)
+        T = self._crosscat_data(bdb, generator_id, M_c)
         update_iterations_sql = '''
             UPDATE bayesdb_generator_model SET iterations = iterations + ?
                 WHERE generator_id = ? AND modelno = ?
@@ -248,27 +382,14 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                 n_steps = iterations
             with bdb.savepoint():
                 if modelnos is None:
-                    update_modelnos = []
-                    thetas = []
-                    for row in bdb.sql_execute(models_sql, (generator_id,)):
-                        update_modelnos.append(row[0])
-                        thetas.append(json.loads(row[1]))
+                    numbered_thetas = self._crosscat_thetas(bdb, generator_id)
+                    update_modelnos = sorted(numbered_thetas.iterkeys())
+                    thetas = [numbered_thetas[modelno] for modelno in
+                        update_modelnos]
                 else:
                     update_modelnos = modelnos
-                    thetas = []
-                    for modelno in modelnos:
-                        parameters = (generator_id, modelno)
-                        cursor = bdb.sql_execute(theta_json_sql, parameters)
-                        try:
-                            row = cursor.next()
-                        except StopIteration:
-                            generator = core.bayesdb_generator_name(bdb,
-                                generator_id)
-                            raise ValueError('No such model in generator %s'
-                                ': %d' %
-                                (repr(generator), modelno))
-                        else:
-                            thetas.append(json.loads(row[0]))
+                    thetas = [self._crosscat_theta(bdb, generator_id, modelno)
+                        for modelno in update_modelnos]
                 assert 0 < len(thetas)
                 X_L_list = [theta['X_L'] for theta in thetas]
                 X_D_list = [theta['X_D'] for theta in thetas]
@@ -284,6 +405,7 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                 )
                 if iterations is not None:
                     iterations -= n_steps
+                cc_cache = self._crosscat_cache(bdb)
                 for modelno, theta, X_L, X_D \
                         in zip(update_modelnos, thetas, X_L_list, X_D_list):
                     theta['iterations'] += n_steps
@@ -293,6 +415,11 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                         (generator_id, modelno, n_steps))
                     bdb.sql_execute(update_theta_json_sql,
                         (generator_id, modelno, json.dumps(theta)))
+                    if cc_cache is not None:
+                        if generator_id in cc_cache.thetas:
+                            cc_cache.thetas[generator_id][modelno] = theta
+                        else:
+                            cc_cache.thetas[generator_id] = {modelno: theta}
 
     def column_dependence_probability(self, bdb, generator_id, colno0, colno1):
         if colno0 == colno1:
@@ -301,7 +428,7 @@ class CrosscatMetamodel(metamodel.IMetamodel):
         cc_colno1 = crosscat_cc_colno(bdb, generator_id, colno1)
         count = 0
         nmodels = 0
-        for X_L, X_D in crosscat_latent_stata(bdb, generator_id):
+        for X_L, X_D in self._crosscat_latent_stata(bdb, generator_id):
             nmodels += 1
             assignments = X_L['column_partition']['assignments']
             if assignments[cc_colno0] != assignments[cc_colno1]:
@@ -315,10 +442,10 @@ class CrosscatMetamodel(metamodel.IMetamodel):
             numsamples=None):
         if numsamples is None:
             numsamples = 100
-        X_L_list = list(crosscat_latent_state(bdb, generator_id))
-        X_D_list = list(crosscat_latent_data(bdb, generator_id))
+        X_L_list = self._crosscat_latent_state(bdb, generator_id)
+        X_D_list = self._crosscat_latent_data(bdb, generator_id)
         r = self._crosscat.mutual_information(
-            M_c=crosscat_metadata(bdb, generator_id),
+            M_c=self._crosscat_metadata(bdb, generator_id),
             X_L_list=X_L_list,
             X_D_list=X_D_list,
             Q=[(colno0, colno1)],
@@ -334,18 +461,18 @@ class CrosscatMetamodel(metamodel.IMetamodel):
 
     def column_typicality(self, bdb, generator_id, colno):
         return self._crosscat.column_structural_typicality(
-            X_L_list=list(crosscat_latent_state(bdb, generator_id)),
+            X_L_list=self._crosscat_latent_state(bdb, generator_id),
             col_id=crosscat_cc_colno(bdb, generator_id, colno),
         )
 
     def column_value_probability(self, bdb, generator_id, colno, value):
-        M_c = crosscat_metadata(bdb, generator_id)
+        M_c = self._crosscat_metadata(bdb, generator_id)
         try:
             code = crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
         except KeyError:
             return 0
-        X_L_list = list(crosscat_latent_state(bdb, generator_id))
-        X_D_list = list(crosscat_latent_data(bdb, generator_id))
+        X_L_list = self._crosscat_latent_state(bdb, generator_id)
+        X_D_list = self._crosscat_latent_data(bdb, generator_id)
         # Fabricate a nonexistent (`unobserved') row id.
         fake_row_id = len(X_D_list[0][0])
         cc_colno = crosscat_cc_colno(bdb, generator_id, colno)
@@ -360,9 +487,9 @@ class CrosscatMetamodel(metamodel.IMetamodel):
 
     def row_similarity(self, bdb, generator_id, rowid, target_rowid, colnos):
         return self._crosscat.similarity(
-            M_c=crosscat_metadata(bdb, generator_id),
-            X_L_list=list(crosscat_latent_state(bdb, generator_id)),
-            X_D_list=list(crosscat_latent_data(bdb, generator_id)),
+            M_c=self._crosscat_metadata(bdb, generator_id),
+            X_L_list=self._crosscat_latent_state(bdb, generator_id),
+            X_D_list=self._crosscat_latent_data(bdb, generator_id),
             given_row_id=crosscat_row_id(rowid),
             target_row_id=crosscat_row_id(target_rowid),
             target_columns=[crosscat_cc_colno(bdb, generator_id, colno)
@@ -371,14 +498,14 @@ class CrosscatMetamodel(metamodel.IMetamodel):
 
     def row_typicality(self, bdb, generator_id, rowid):
         return self._crosscat.row_structural_typicality(
-            X_L_list=list(crosscat_latent_state(bdb, generator_id)),
-            X_D_list=list(crosscat_latent_data(bdb, generator_id)),
+            X_L_list=self._crosscat_latent_state(bdb, generator_id),
+            X_D_list=self._crosscat_latent_data(bdb, generator_id),
             row_id=crosscat_row_id(rowid),
         )
 
     def row_column_predictive_probability(self, bdb, generator_id, rowid,
             colno):
-        M_c = crosscat_metadata(bdb, generator_id)
+        M_c = self._crosscat_metadata(bdb, generator_id)
         table_name = core.bayesdb_generator_table(bdb, generator_id)
         colname = core.bayesdb_generator_column_name(bdb, generator_id, colno)
         qt = sqlite3_quote_name(table_name)
@@ -399,8 +526,8 @@ class CrosscatMetamodel(metamodel.IMetamodel):
         cc_colno = crosscat_cc_colno(bdb, generator_id, colno)
         r = self._crosscat.simple_predictive_probability_multistate(
             M_c=M_c,
-            X_L_list=list(crosscat_latent_state(bdb, generator_id)),
-            X_D_list=list(crosscat_latent_data(bdb, generator_id)),
+            X_L_list=self._crosscat_latent_state(bdb, generator_id),
+            X_D_list=self._crosscat_latent_data(bdb, generator_id),
             Y=[],
             Q=[(crosscat_row_id(rowid), cc_colno, code)],
         )
@@ -412,7 +539,7 @@ class CrosscatMetamodel(metamodel.IMetamodel):
             numsamples=1):
         if value is not None:
             return value
-        M_c = crosscat_metadata(bdb, generator_id)
+        M_c = self._crosscat_metadata(bdb, generator_id)
         column_names = core.bayesdb_generator_column_names(bdb, generator_id)
         table_name = core.bayesdb_generator_table(bdb, generator_id)
         qt = sqlite3_quote_name(table_name)
@@ -439,8 +566,8 @@ class CrosscatMetamodel(metamodel.IMetamodel):
         cc_colno = crosscat_cc_colno(bdb, generator_id, colno)
         code, confidence = self._crosscat.impute_and_confidence(
             M_c=M_c,
-            X_L=list(crosscat_latent_state(bdb, generator_id)),
-            X_D=list(crosscat_latent_data(bdb, generator_id)),
+            X_L=self._crosscat_latent_state(bdb, generator_id),
+            X_D=self._crosscat_latent_data(bdb, generator_id),
             Y=[(row_id,
                 crosscat_gen_colno(bdb, generator_id, cc_colno_),
                 crosscat_value_to_code(bdb, generator_id, M_c,
@@ -456,7 +583,7 @@ class CrosscatMetamodel(metamodel.IMetamodel):
 
     def simulate(self, bdb, generator_id, constraints, colnos,
             numpredictions=1):
-        M_c = crosscat_metadata(bdb, generator_id)
+        M_c = self._crosscat_metadata(bdb, generator_id)
         table_name = core.bayesdb_generator_table(bdb, generator_id)
         qt = sqlite3_quote_name(table_name)
         cursor = bdb.sql_execute('SELECT MAX(_rowid_) FROM %s' % (qt,))
@@ -478,8 +605,8 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                  for colno, value in constraints]
         raw_outputs = self._crosscat.simple_predictive_sample(
             M_c=M_c,
-            X_L=list(crosscat_latent_state(bdb, generator_id)),
-            X_D=list(crosscat_latent_data(bdb, generator_id)),
+            X_L=self._crosscat_latent_state(bdb, generator_id),
+            X_D=self._crosscat_latent_data(bdb, generator_id),
             Y=Y,
             Q=[(fake_row_id, crosscat_cc_colno(bdb, generator_id, colno))
                 for colno in colnos],
@@ -519,14 +646,14 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                 if casefold(name) == casefold(modelled_column_names[colno]):
                     remap.append(i)
             assert len(remap) == len(modelled_column_names)
-            M_c = crosscat_metadata(bdb, generator_id)
+            M_c = self._crosscat_metadata(bdb, generator_id)
             modelled_rows = [[crosscat_value_to_code(bdb, generator_id, M_c,
                         colno, row[i])
                     for colno, i in enumerate(remap)]
                 for row in rows]
 
             # Update the models.
-            T = crosscat_data(bdb, generator_id, M_c)
+            T = self._crosscat_data(bdb, generator_id, M_c)
             models_sql = '''
                 SELECT m.modelno, ct.theta_json
                     FROM bayesdb_generator_model AS m,
@@ -547,7 +674,8 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                 X_D_list=[theta['X_D'] for theta in thetas],
                 new_rows=modelled_rows,
             )
-            assert T == crosscat_data(bdb, generator_id, M_c) + modelled_rows
+            assert T == self._crosscat_data(bdb, generator_id, M_c) \
+                + modelled_rows
             update_theta_sql = '''
                 UPDATE bayesdb_crosscat_theta SET theta_json = ?
                     WHERE generator_id = ? AND modelno = ?
@@ -559,6 +687,11 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                 theta_json = json.dumps(theta)
                 parameters = (theta_json, generator_id, modelno)
                 bdb.sql_execute(update_theta_sql, parameters)
+
+class CrosscatCache(object):
+    def __init__(self):
+        self.metadata = {}
+        self.thetas = {}
 
 def create_metadata(bdb, generator_id, column_list):
     ncols = len(column_list)
@@ -621,63 +754,8 @@ metadata_creators = {
     'numerical': create_metadata_numerical,
 }
 
-def crosscat_metadata(bdb, generator_id):
-    sql = '''
-        SELECT metadata_json FROM bayesdb_crosscat_metadata
-            WHERE generator_id = ?
-    '''
-    cursor = bdb.sql_execute(sql, (generator_id,))
-    try:
-        row = cursor.next()
-    except StopIteration:
-        generator = core.bayesdb_generator_name(bdb, generator_id)
-        raise ValueError('No crosscat metadata for generator: %s' %
-            (generator,))
-    else:
-        return json.loads(row[0])
-
-def crosscat_data(bdb, generator_id, M_c):
-    table_name = core.bayesdb_generator_table(bdb, generator_id)
-    qt = sqlite3_quote_name(table_name)
-    columns_sql = '''
-        SELECT c.name, c.colno
-            FROM bayesdb_column AS c,
-                bayesdb_generator AS g,
-                bayesdb_generator_column AS gc
-            WHERE g.id = ?
-                AND c.tabname = g.tabname
-                AND c.colno = gc.colno
-                AND gc.generator_id = g.id
-            ORDER BY c.colno ASC
-    '''
-    columns = list(bdb.sql_execute(columns_sql, (generator_id,)))
-    colnames = [name for name, _colno in columns]
-    qcns = map(sqlite3_quote_name, colnames)
-    cursor = bdb.sql_execute('SELECT %s FROM %s' % (','.join(qcns), qt))
-    return [[crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
-            for value, (_name, colno) in zip(row, columns)]
-        for row in cursor]
-
 def crosscat_row_id(rowid):
     return rowid - 1
-
-def crosscat_thetas(bdb, generator_id):
-    sql = '''
-        SELECT theta_json FROM bayesdb_crosscat_theta
-            WHERE generator_id = ?
-    '''
-    return (json.loads(row[0])
-        for row in bdb.sql_execute(sql, (generator_id,)))
-
-def crosscat_latent_stata(bdb, generator_id):
-    return ((theta['X_L'], theta['X_D'])
-        for theta in crosscat_thetas(bdb, generator_id))
-
-def crosscat_latent_state(bdb, generator_id):
-    return (theta['X_L'] for theta in crosscat_thetas(bdb, generator_id))
-
-def crosscat_latent_data(bdb, generator_id):
-    return (theta['X_D'] for theta in crosscat_thetas(bdb, generator_id))
 
 def crosscat_value_to_code(bdb, generator_id, M_c, colno, value):
     stattype = core.bayesdb_generator_column_stattype(bdb, generator_id, colno)
@@ -739,7 +817,6 @@ def crosscat_cc_colno(bdb, generator_id, colno):
         assert len(row) == 1
         assert isinstance(row[0], int)
         return row[0]
-
 
 def crosscat_gen_colno(bdb, generator_id, cc_colno):
     sql = '''

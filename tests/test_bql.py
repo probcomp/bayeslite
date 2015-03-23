@@ -653,10 +653,11 @@ def test_parametrized():
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
             'SELECT metadata_json FROM bayesdb_crosscat_metadata'
                 ' WHERE generator_id = ?',
-            # XXX Should cache theta again.
-            'SELECT theta_json FROM bayesdb_crosscat_theta'
+            'SELECT modelno FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ?',
             'SELECT theta_json FROM bayesdb_crosscat_theta'
+                ' WHERE generator_id = ? AND modelno = ?',
+            'SELECT modelno FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ?',
             'SELECT cc_colno FROM bayesdb_crosscat_column'
                 ' WHERE generator_id = ? AND colno = ?',
@@ -690,9 +691,11 @@ def test_parametrized():
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
             'SELECT metadata_json FROM bayesdb_crosscat_metadata'
                 ' WHERE generator_id = ?',
-            'SELECT theta_json FROM bayesdb_crosscat_theta'
+            'SELECT modelno FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ?',
             'SELECT theta_json FROM bayesdb_crosscat_theta'
+                ' WHERE generator_id = ? AND modelno = ?',
+            'SELECT modelno FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ?',
             'SELECT cc_colno FROM bayesdb_crosscat_column'
                 ' WHERE generator_id = ? AND colno = ?',
@@ -742,9 +745,11 @@ def test_parametrized():
                 ' WHERE generator_id = ? AND colno = ?',
             'SELECT cc_colno FROM bayesdb_crosscat_column'
                 ' WHERE generator_id = ? AND colno = ?',
-            'SELECT theta_json FROM bayesdb_crosscat_theta'
+            'SELECT modelno FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ?',
             'SELECT theta_json FROM bayesdb_crosscat_theta'
+                ' WHERE generator_id = ? AND modelno = ?',
+            'SELECT modelno FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ?',
             'SELECT cc_colno FROM bayesdb_crosscat_column'
                 ' WHERE generator_id = ? AND colno = ?',

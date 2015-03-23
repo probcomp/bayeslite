@@ -36,12 +36,11 @@ class BayesDB(object):
         # didn't ask it to.
         self.sqlite3 = sqlite3.connect(pathname, isolation_level=None)
         self.txn_depth = 0
-        self.metadata_cache = None
-        self.models_cache = None
         self.metamodels = {}
         self.default_metamodel = None
         self.tracer = None
         self.sql_tracer = None
+        self.cache = None
         schema.bayesdb_install_schema(self.sqlite3)
         bqlfn.bayesdb_install_bql(self.sqlite3, self)
 

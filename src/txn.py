@@ -76,25 +76,22 @@ def bayesdb_txn_push(bdb):
     if bdb.txn_depth == 0:
         bayesdb_txn_init(bdb)
     else:
-        assert bdb.metadata_cache is not None
-        assert bdb.models_cache is not None
+        assert bdb.cache is not None
     bdb.txn_depth += 1
 
 def bayesdb_txn_pop(bdb):
     bdb.txn_depth -= 1
     if bdb.txn_depth == 0:
         bayesdb_txn_fini(bdb)
+    else:
+        assert bdb.cache is not None
 
 def bayesdb_txn_init(bdb):
     assert bdb.txn_depth == 0
-    assert bdb.metadata_cache is None
-    assert bdb.models_cache is None
-    bdb.metadata_cache = {}
-    bdb.models_cache = {}
+    assert bdb.cache is None
+    bdb.cache = {}
 
 def bayesdb_txn_fini(bdb):
     assert bdb.txn_depth == 0
-    assert bdb.metadata_cache is not None
-    assert bdb.models_cache is not None
-    bdb.metadata_cache = None
-    bdb.models_cache = None
+    assert bdb.cache is not None
+    bdb.cache = None
