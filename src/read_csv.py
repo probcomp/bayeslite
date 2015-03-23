@@ -31,12 +31,11 @@ def bayesdb_read_csv(bdb, table, f, database=None, header=False,
         if ifnotexists:
             raise ValueError('Not creating table whether or not exists!')
     with bdb.savepoint():
-        if create:
-            if core.bayesdb_has_table(bdb, table) and not ifnotexists:
+        if core.bayesdb_has_table(bdb, table):
+            if create and not ifnotexists:
                 raise ValueError('Table already exists: %s' % (repr(table),))
-        else:
-            if not core.bayesdb_has_table(bdb, table):
-                raise ValueError('No such table: %s' % (repr(table),))
+        elif not create:
+            raise ValueError('No such table: %s' % (repr(table),))
         reader = csv.reader(f)
         line = 1
         if header:
