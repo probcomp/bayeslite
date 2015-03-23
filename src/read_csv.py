@@ -22,7 +22,7 @@ from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 from bayeslite.util import unique
 
-def bayesdb_read_csv(bdb, table, f, database=None, header=False,
+def bayesdb_read_csv(bdb, table, f, header=False,
         create=False, ifnotexists=False):
     if not header:
         if create:
@@ -51,16 +51,12 @@ def bayesdb_read_csv(bdb, table, f, database=None, header=False,
             if len(unique(map(casefold, column_names))) < len(column_names):
                 raise IOError('Duplicate columns in CSV file.')
             if create and not core.bayesdb_has_table(bdb, table):
-                qdb = ''
-                if database is not None:
-                    qdb += '.'
-                    qdb += sqlite3_quote_name(database)
                 qt = sqlite3_quote_name(table)
                 qcns = map(sqlite3_quote_name, column_names)
                 # XXX Should probably use NUMERIC for sqlite3, to
                 # maximize automagic numberiness.
                 schema = ','.join('%s TEXT' % (qcn,) for qcn in qcns)
-                bdb.sql_execute('CREATE TABLE %s%s(%s)' % (qdb, qt, schema))
+                bdb.sql_execute('CREATE TABLE %s(%s)' % (qt, schema))
                 core.bayesdb_table_guarantee_columns(bdb, table)
             else:
                 core.bayesdb_table_guarantee_columns(bdb, table)
