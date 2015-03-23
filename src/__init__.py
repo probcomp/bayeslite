@@ -22,3 +22,4 @@ from bayeslite.legacy_models import bayesdb_load_legacy_models
 from bayeslite.metamodel import bayesdb_deregister_metamodel
 from bayeslite.metamodel import bayesdb_register_metamodel
 from bayeslite.metamodel import bayesdb_set_default_metamodel
+from bayeslite.read_csv import bayesdb_read_csv

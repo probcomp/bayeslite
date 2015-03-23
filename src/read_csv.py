@@ -19,6 +19,8 @@ import csv
 import bayeslite.core as core
 
 from bayeslite.sqlite3_util import sqlite3_quote_name
+from bayeslite.util import casefold
+from bayeslite.util import unique
 
 def bayesdb_read_csv(bdb, table, f, database=None, header=False,
         create=False, ifnotexists=False):
@@ -45,6 +47,10 @@ def bayesdb_read_csv(bdb, table, f, database=None, header=False,
                 raise IOError('Missing header in CSV file')
             line += 1
             column_names = [unicode(name, 'utf8').strip() for name in row]
+            if len(column_names) == 0:
+                raise IOError('No columns in CSV file!')
+            if len(unique(map(casefold, column_names))) < len(column_names):
+                raise IOError('Duplicate columns in CSV file.')
             if create and not core.bayesdb_has_table(bdb, table):
                 qdb = ''
                 if database is not None:
@@ -79,9 +85,9 @@ def bayesdb_read_csv(bdb, table, f, database=None, header=False,
             (qt, ','.join(qcns), ','.join('?' for _qcn in qcns))
         for row in reader:
             if len(row) < ncols:
-                raise ValueError('Line %d: Too few columns: %d < %d' %
+                raise IOError('Line %d: Too few columns: %d < %d' %
                     (line, len(row), ncols))
             if len(row) > ncols:
-                raise ValueError('Line %d: Too many columns: %d > %d' %
+                raise IOError('Line %d: Too many columns: %d > %d' %
                     (line, len(row), ncols))
             bdb.sql_execute(sql, [unicode(v, 'utf8').strip() for v in row])
