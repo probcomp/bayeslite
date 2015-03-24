@@ -79,9 +79,9 @@ def run(stdin, stdout, stderr, argv):
     else:
         import crosscat.LocalEngine as ccle
         crosscat = ccle.LocalEngine(seed=seed)
-    metamodel = bayeslite.crosscat.CrosscatEngine(crosscat)
-    bayeslite.bayesdb_register_metamodel(bdb, 'crosscat', metamodel)
-    bayeslite.bayesdb_set_default_metamodel(bdb, 'crosscat')
+    metamodel = bayeslite.crosscat.CrosscatMetamodel(crosscat)
+    bayeslite.bayesdb_register_metamodel(bdb, metamodel)
+    bayeslite.bayesdb_set_default_metamodel(bdb, metamodel)
     shell.Shell(bdb).cmdloop()
     return 0
 

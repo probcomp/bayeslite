@@ -16,64 +16,61 @@
 
 import bayeslite.core as core
 
-def bayesdb_register_metamodel(bdb, name, engine):
+def bayesdb_register_metamodel(bdb, metamodel):
+    name = metamodel.name()
+    if name in bdb.metamodels:
+        raise ValueError('Metamodel already registered: %s' % (name,))
     with bdb.savepoint():
-        # Name it in the SQL database.
-        insert_sql = """
-            INSERT OR IGNORE INTO bayesdb_metamodel (name) VALUES (?)
-        """
-        bdb.sql_execute(insert_sql, (name,))
-        # Associate it with the engine by id.
-        #
-        # XXX Can't use lastrowid here because
-        # sqlite3_last_insert_rowid doesn't consider INSERT OR IGNORE
-        # to be successful if it has to ignore the insertion, even
-        # though the obvious sensible thing to do is to return the
-        # existing rowid.
-        lookup_sql = "SELECT id FROM bayesdb_metamodel WHERE name = ?"
-        metamodel_id = core.bayesdb_sql_execute1(bdb, lookup_sql, (name,))
-        assert metamodel_id not in bdb.metamodels_by_id
-        engine.register(bdb, name)
-        bdb.metamodels_by_id[metamodel_id] = engine
+        metamodel.register(bdb)
+        bdb.metamodels[name] = metamodel
 
-def bayesdb_deregister_metamodel(bdb, name):
-    with bdb.savepoint():
-        lookup_sql = "SELECT id FROM bayesdb_metamodel WHERE name = ?"
-        metamodel_id = core.bayesdb_sql_execute1(bdb, lookup_sql, (name,))
-        assert metamodel_id in bdb.metamodels_by_id
-        assert bdb.default_metamodel_id != metamodel_id
-        del bdb.metamodels_by_id[metamodel_id]
+def bayesdb_deregister_metamodel(bdb, metamodel):
+    name = metamodel.name()
+    assert name in bdb.metamodels
+    assert bdb.metamodels[name] == metamodel
+    assert bdb.default_metamodel != metamodel
+    del bdb.metamodels[name]
 
-def bayesdb_set_default_metamodel(bdb, name):
-    if name is None:
-        bdb.default_metamodel_id = None
-    else:
-        lookup_sql = "SELECT id FROM bayesdb_metamodel WHERE name = ?"
-        metamodel_id = core.bayesdb_sql_execute1(bdb, lookup_sql, (name,))
-        bdb.default_metamodel_id = metamodel_id
+def bayesdb_set_default_metamodel(bdb, metamodel):
+    bdb.default_metamodel = metamodel
 
-class IMetamodelEngine(object):
-    def register(self, bdb, name):
+class IMetamodel(object):
+    def name(self):
         raise NotImplementedError
-    def create_metadata(self, bdb, table, column_names, column_types):
+    def register(self, bdb):
         raise NotImplementedError
-    def initialize(self, **kwargs):
+    def create_generator(self, bdb, generator_id, column_list):
         raise NotImplementedError
-    def analyze(self, **kwargs):
+    def drop_generator(self, bdb, generator_id):
         raise NotImplementedError
-    def mutual_information(self, **kwargs):
+    def initialize_models(self, bdb, generator_id, modelnos, model_config):
         raise NotImplementedError
-    def column_structural_typicality(self, **kwargs):
+    def drop_models(self, bdb, generator_id, modelnos=None):
         raise NotImplementedError
-    def simple_predictive_probability_multistate(self, **kwargs):
+    def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
+            max_seconds=None):
         raise NotImplementedError
-    def similarity(self, **kwargs):
+    def column_dependence_probability(self, bdb, generator_id, colno0, colno1):
         raise NotImplementedError
-    def row_structural_typicality(self, **kwargs):
+    def mutual_information(self, bdb, generator_id, colno0, colno1,
+            numsamples=100):
         raise NotImplementedError
-    def impute_and_confidence(self, **kwargs):
+    def column_typicality(self, bdb, generator_id, colno):
         raise NotImplementedError
-    def simple_predictive_sample(self, **kwargs):
+    def column_value_probability(self, bdb, generator_id, colno, value):
         raise NotImplementedError
-    def insert(self, **kwargs):
+    def row_similarity(self, bdb, generator_id, rowid, target_rowid, colnos):
+        raise NotImplementedError
+    def row_typicality(self, bdb, generator_id, rowid):
+        raise NotImplementedError
+    def row_column_predictive_probability(self, bdb, generator_id, rowid,
+            colno):
+        raise NotImplementedError
+    def infer(self, bdb, generator_id, colno, rowid, value, threshold,
+            numsamples=1):
+        raise NotImplementedError
+    def simulate(self, bdb, generator_id, constraints, colnos,
+            numpredictions=1):
+        raise NotImplementedError
+    def insertmany(self, bdb, generator_id, rows):
         raise NotImplementedError

@@ -15,6 +15,7 @@
 #   limitations under the License.
 
 import gzip
+import json
 import pickle
 
 import bayeslite.core as core
@@ -22,12 +23,12 @@ import bayeslite.core as core
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 
-renamed_column_types = {
+renamed_column_stattypes = {
     'continuous': 'numerical',
     'multinomial': 'categorical',
 }
 
-allowed_column_types = {
+allowed_column_stattypes = {
     'categorical',
     'cyclic',
     'ignore',
@@ -35,8 +36,14 @@ allowed_column_types = {
     'numerical',
 }
 
-def bayesdb_load_legacy_models(bdb, table_name, pathname, ifnotexists=False,
-        gzipped=None, metamodel=None):
+# XXX Should explicate that only crosscat models are supported, since
+# there was no tag indicating the metamodel.
+def bayesdb_load_legacy_models(bdb, generator, table, pathname,
+        create=False, ifnotexists=False, gzipped=None, metamodel=None):
+
+    if not create:
+        if ifnotexists:
+            raise ValueError('Not creating generator whether or not exists!')
 
     # Load the pickled file -- gzipped, if gzipped is true or if
     # gzipped is not specified and the file ends in .pkl.gz.
@@ -59,8 +66,8 @@ def bayesdb_load_legacy_models(bdb, table_name, pathname, ifnotexists=False,
     schema = pickled['schema']
     models = pickled['models']
 
-    # Make sure the schema looks sensible.  Map legacy cctypes to
-    # modern cctypes.
+    # Make sure the schema looks sensible.  Map legacy stattypes
+    # (`cctypes') to modern stattypes.
     if not isinstance(schema, dict):
         raise IOError('Invalid legacy model: schema is not a dict')
     for column_name in schema:
@@ -69,76 +76,125 @@ def bayesdb_load_legacy_models(bdb, table_name, pathname, ifnotexists=False,
             raise IOError('Invalid legacy model: column schema is not a dict')
         if not 'cctype' in column_schema:
             raise IOError('Invalid legacy model: column schema missing cctype')
-        if column_schema['cctype'] in renamed_column_types:
+        if column_schema['cctype'] in renamed_column_stattypes:
             column_schema['cctype'] = \
-                renamed_column_types[column_schema['cctype']]
-        if column_schema['cctype'] not in allowed_column_types:
+                renamed_column_stattypes[column_schema['cctype']]
+        if column_schema['cctype'] not in allowed_column_stattypes:
             raise IOError('Invalid legacy model: unknown column type')
 
-    # XXX Check whether the schema resembles a sane btable schema.
+    # XXX Check whether the schema resembles a sane generator schema.
     # XXX Check whether models is a dict mapping integers to thetas.
     # XXX Check whether the thetas look sensible.
     # XXX Check whether the metamodel makes sense of it!
 
-    column_types = dict((casefold(column_name),
-                         casefold(schema[column_name]['cctype']))
+    column_stattypes = dict((casefold(column_name),
+                             casefold(schema[column_name]['cctype']))
         for column_name in schema)
 
     # Ready to update the database.  Do it in a savepoint in case
     # anything goes wrong.
     with bdb.savepoint():
 
-        # Ensure the table exists as a btable.
-        if core.bayesdb_table_exists(bdb, table_name):
-            # Table exists as a btable.  If there are existing models,
-            # fail.  If there are no existing models, change the schema.
-            table_id = core.bayesdb_table_id(bdb, table_name)
-            if column_types != bayesdb_column_types(bdb, table_id):
-                try:
-                    core.bayesdb_models(bdb, table_id).next()
-                except StopIteration:
-                    pass
-                else:
-                    raise ValueError('legacy models mismatch schema: %s' %
-                        (table_name,))
-                # XXX Name this operation: DROP BTABLE ...
-                bdb.sql_execute('''
-                    DELETE FROM bayesdb_table_column WHERE table_id = ?
-                ''', (table_id,))
-                bdb.sql_execute('DELETE FROM bayesdb_table WHERE id = ?',
-                    (table_id,))
-                core.bayesdb_import_sqlite_table(bdb, table_name,
-                    column_types=column_types)
-        elif 0 < len(list(bdb.sql_execute('PRAGMA table_info(%s)' %
-                sqlite3_quote_name(table_name)))):
-            # Table does not exist as a btable but does exist as a SQL
-            # table.  Create the btable.
-            core.bayesdb_import_sqlite_table(bdb, table_name,
-                column_types=column_types)
+        # Ensure the table exists.  Can't do anything if we have no
+        # data.
+        if not core.bayesdb_has_table(bdb, table):
+            raise ValueError('No such table: %s' % (repr(table),))
+
+        # Ensure the generator exists.
+        if core.bayesdb_has_generator(bdb, generator):
+            if create and not ifnotexists:
+                raise ValueError('Generator already exists: %s' %
+                    (repr(generator),))
+            if casefold(table) != \
+               core.bayesdb_generator_table(bdb, generator_id):
+                raise ValueError('Generator %s is not for table: %s' %
+                    (repr(generator), repr(table)))
+            # Generator exists.  If the schema differs and there are
+            # existing models, fail.  If the schema differs and there
+            # are no existing models, change the schema.
+            #
+            # XXX Not clear changing the schema is really appropriate.
+            generator_id = core.bayesdb_get_generator(bdb, generator)
+            if column_types != \
+               bayesdb_generator_column_types(bdb, generator_id):
+                sql = '''
+                    SELECT COUNT(*) FROM bayesdb_generator_model
+                        WHERE generator_id = ?
+                '''
+                cursor = bdb.sql_execute(bdb, (generator_id,))
+                if 0 < cursor.next()[0]:
+                    raise ValueError('Legacy models mismatch schema: %s' %
+                        (repr(generator),))
+                qg = sqlite3_quote_name(generator)
+                bdb.execute('DROP GENERATOR %s' % (qg,))
+                bayesdb_create_legacy_generator(bdb, generator, table,
+                    column_stattypes)
+        elif create:
+            bayesdb_create_legacy_generator(bdb, generator, table,
+                column_stattypes)
         else:
-            raise ValueError('No such table: %s' % (table_name,))
+            raise ValueError('No such generator: %s' % (repr(generator),))
+
+        # XXX Populate bayesdb_crosscat_metadata,
+        # bayesdb_crosscat_column, bayesdb_crosscat_column_codemap.
 
         # Determine where to start numbering the new models.
-        table_id = core.bayesdb_table_id(bdb, table_name)
+        generator_id = core.bayesdb_get_generator(bdb, generator)
         modelno_max_sql = '''
-            SELECT MAX(modelno) FROM bayesdb_model WHERE table_id = ?
+            SELECT MAX(modelno) FROM bayesdb_generator_model
+                WHERE generator_id = ?
         '''
-        modelno_max = core.bayesdb_sql_execute1(bdb, modelno_max_sql,
-            (table_id,))
+        cursor = bdb.sql_execute(modelno_max_sql, (generator_id,))
+        modelno_max = cursor.next()[0]
         modelno_start = 0 if modelno_max is None else modelno_max + 1
 
         # Consistently number the models consecutively in order of the
         # external numbering starting at the smallest nonnegative
         # model number not currently used.  Do not vary based on the
         # ordering of Python dict iteration.
+        insert_model_sql = '''
+            INSERT INTO bayesdb_generator_model
+                (generator_id, modelno, iterations)
+                VALUES (?, ?, ?)
+        '''
+        insert_theta_json_sql = '''
+            INSERT INTO bayesdb_crosscat_theta
+                (generator_id, modelno, theta_json)
+                VALUES (?, ?, ?)
+        '''
         for i, modelno_ext in enumerate(sorted(models.keys())):
             modelno = modelno_start + i
             theta = models[modelno_ext]
-            core.bayesdb_init_model(bdb, table_id, modelno, theta)
+            iterations = 0
+            if 'iterations' in theta and isinstance(theta['iterations'], int):
+                iterations = theta['iterations']
+            parameters = (generator_id, modelno, iterations)
+            bdb.sql_execute(insert_model_sql, parameters)
+            parameters = (generator_id, modelno, json.dumps(theta))
+            bdb.sql_execute(insert_theta_json_sql, parameters)
 
-def bayesdb_column_types(bdb, table_id):
-    M_c = core.bayesdb_metadata(bdb, table_id)
-    metadata = M_c['column_metadata']
-    return dict((casefold(core.bayesdb_column_name(bdb, table_id, colno)),
-                 casefold(metadata[colno]['modeltype']))
-        for colno in core.bayesdb_column_numbers(bdb, table_id))
+def bayesdb_generator_column_stattypes(bdb, generator_id):
+    column_stattypes = {}
+    for name in core.bayesdb_generator_column_names(bdb, generator_id):
+        stattype = core.bayesdb_generator_column_stattype(bdb, generator_id,
+            name)
+        column_stattypes[casefold(name)] = casefold(stattype)
+    return column_stattypes
+
+def bayesdb_create_legacy_generator(bdb, generator, table, column_stattypes):
+    column_names = core.bayesdb_table_column_names(bdb, table)
+    qcns = map(sqlite3_quote_name, column_names)
+    assert all(column_stattypes[name] in allowed_column_stattypes
+        for name in column_stattypes)
+    column_name_set = set(casefold(name) for name in column_names)
+    for name in column_stattypes:
+        if name not in column_name_set:
+            raise IOError('No such column in table %s: %s' %
+                (repr(table), repr(name)))
+    schema = ','.join('%s %s' % (qcn, column_stattypes[casefold(name)])
+        for name, qcn in zip(column_names, qcns))
+    qg = sqlite3_quote_name(generator)
+    qt = sqlite3_quote_name(table)
+    qmm = 'crosscat'
+    bdb.execute('CREATE GENERATOR %s FOR %s USING %s(%s)' %
+        (qg, qt, qmm, schema))

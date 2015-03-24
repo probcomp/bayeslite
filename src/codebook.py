@@ -20,7 +20,7 @@ import math
 
 import bayeslite.core as core
 
-def bayesdb_import_codebook_csv_file(bdb, table_name, pathname):
+def bayesdb_load_codebook_csv_file(bdb, table, pathname):
     codebook = None
     with open(pathname, 'rU') as f:
         reader = csv.reader(f)
@@ -37,41 +37,40 @@ def bayesdb_import_codebook_csv_file(bdb, table_name, pathname):
             if len(row) != 4:
                 raise IOError('Wrong number of columns at line %d: %d' %
                     (line, len(row)))
-            column_name, _short_name, _description, _value_map_json = row
-            table_id = core.bayesdb_table_id(bdb, table_name)
+            column_name, _shortname, _description, _value_map_json = row
             codebook.append(row)
             line += 1
     with bdb.savepoint():
-        table_id = core.bayesdb_table_id(bdb, table_name)
-        for column_name, short_name, description, value_map_json in codebook:
-            if not core.bayesdb_column_exists(bdb, table_id, column_name):
+        for column_name, shortname, description, value_map_json in codebook:
+            if not core.bayesdb_table_has_column(bdb, table, column_name):
                 raise IOError('Column does not exist in table %s: %s' %
-                    (repr(table_name), repr(column_name)))
-            colno = core.bayesdb_column_number(bdb, table_id, column_name)
+                    (repr(table), repr(column_name)))
+            colno = core.bayesdb_table_column_number(bdb, table, column_name)
             value_map = json.loads(value_map_json)
             if isinstance(value_map, float) and math.isnan(value_map):
                 # No value map.
                 pass
             elif isinstance(value_map, dict):
                 sql = '''
-                    DELETE FROM bayesdb_value_map
-                        WHERE table_id = ? AND colno = ?
+                    DELETE FROM bayesdb_column_map
+                        WHERE tabname = ? AND colno = ?
                 '''
-                bdb.sql_execute(sql, (table_id, colno))
+                bdb.sql_execute(sql, (table, colno))
                 sql = '''
-                    INSERT INTO bayesdb_value_map
-                        (table_id, colno, value, extended_value)
+                    INSERT INTO bayesdb_column_map
+                        (tabname, colno, key, value)
                         VALUES (?, ?, ?, ?)
                 '''
-                for v in sorted(value_map.keys()):
-                    bdb.sql_execute(sql, (table_id, colno, v, value_map[v]))
+                for key in sorted(value_map.keys()):
+                    value = value_map[key]
+                    bdb.sql_execute(sql, (table_id, colno, key, value))
             else:
                 # XXX Arbitrary input in error message...
-                raise IOError('Invalid value map for column %s' %
+                raise IOError('Invalid value map for column: %s' %
                     (repr(column_name),))
             sql = '''
-                UPDATE bayesdb_table_column
-                    SET short_name = ?, description = ?
-                    WHERE table_id = ? AND colno = ?
+                UPDATE bayesdb_column
+                    SET shortname = ?, description = ?
+                    WHERE tabname = ? AND colno = ?
             '''
-            bdb.sql_execute(sql, (short_name, description, table_id, colno))
+            bdb.sql_execute(sql, (shortname, description, table, colno))

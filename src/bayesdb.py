@@ -24,7 +24,7 @@ import bayeslite.parse as parse
 import bayeslite.schema as schema
 import bayeslite.txn as txn
 
-class BayesDB(core.IBayesDB):
+class BayesDB(object):
     """Class of Bayesian databases.
 
     Interface is loosely based on PEP-249 DB-API.
@@ -36,12 +36,11 @@ class BayesDB(core.IBayesDB):
         # didn't ask it to.
         self.sqlite3 = sqlite3.connect(pathname, isolation_level=None)
         self.txn_depth = 0
-        self.metadata_cache = None
-        self.models_cache = None
-        self.metamodels_by_id = {}
-        self.default_metamodel_id = None
+        self.metamodels = {}
+        self.default_metamodel = None
         self.tracer = None
         self.sql_tracer = None
+        self.cache = None
         schema.bayesdb_install_schema(self.sqlite3)
         bqlfn.bayesdb_install_bql(self.sqlite3, self)
 

@@ -469,10 +469,23 @@ def test_trivial_precedence_error():
             ' with respect to c from t;')
 
 def test_trivial_commands():
-    assert parse_bql_string("create btable t from 'f.csv';") == \
-        [ast.CreateBtableCSV(False, 't', 'f.csv', None)]
-    assert parse_bql_string("create btable if not exists t from 'f.csv';") == \
-        [ast.CreateBtableCSV(True, 't', 'f.csv', None)]
+    assert parse_bql_string('create generator t_cc for t using crosscat'
+            '(xyz numerical, pqr categorical, lmn cyclic)') == \
+        [ast.CreateGen('t_cc', False, 't', 'crosscat',
+            ast.GenSchema([
+                ast.GenColumn('xyz', 'numerical'),
+                ast.GenColumn('pqr', 'categorical'),
+                ast.GenColumn('lmn', 'cyclic'),
+            ]))]
+    assert parse_bql_string('create generator t_cc if not exists'
+            ' for t using crosscat'
+            '(xyz numerical, pqr categorical, lmn cyclic)') == \
+        [ast.CreateGen('t_cc', True, 't', 'crosscat',
+            ast.GenSchema([
+                ast.GenColumn('xyz', 'numerical'),
+                ast.GenColumn('pqr', 'categorical'),
+                ast.GenColumn('lmn', 'cyclic'),
+            ]))]
     assert parse_bql_string('initialize 1 model for t;') == \
         [ast.InitModels(False, 't', 1, None)]
     assert parse_bql_string('initialize 1 model if not exists for t;') == \

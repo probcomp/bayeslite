@@ -59,6 +59,7 @@ keywords = {
     "exists": grammar.K_EXISTS,
     "for": grammar.K_FOR,
     "from": grammar.K_FROM,
+    "generator": grammar.K_GENERATOR,
     "given": grammar.K_GIVEN,
     "glob": grammar.K_GLOB,
     "group": grammar.K_GROUP,

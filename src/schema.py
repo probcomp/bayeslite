@@ -16,78 +16,94 @@
 
 from bayeslite.sqlite3_util import sqlite3_exec_1
 
-bayesdb_schema_3 = """
-PRAGMA foreign_keys = ON;
-PRAGMA application_id = 1113146434; -- #x42594442, `BYDB'
-PRAGMA user_version = 3;
+bayesdb_schema_5 = '''
+PRAGMA user_version = 5;
 
-BEGIN;
 CREATE TABLE bayesdb_metamodel (
-	id		INTEGER NOT NULL UNIQUE PRIMARY KEY CHECK (id >= 0),
-	name		TEXT COLLATE NOCASE NOT NULL UNIQUE
+	name		TEXT COLLATE NOCASE NOT NULL PRIMARY KEY,
+	version		INTEGER NOT NULL
 );
 
-CREATE TABLE bayesdb_table (
-	id		INTEGER NOT NULL UNIQUE PRIMARY KEY CHECK (id >= 0),
-	name		TEXT COLLATE NOCASE NOT NULL UNIQUE,
-				-- REFERENCES sqlite_master(name)
-	metamodel_id	INTEGER NOT NULL REFERENCES bayesdb_metamodel(id),
-	metadata	BLOB NOT NULL
+-- Statistics type.
+CREATE TABLE bayesdb_stattype (
+	name		TEXT COLLATE NOCASE NOT NULL PRIMARY KEY
 );
 
-CREATE TABLE bayesdb_table_column (
-	id		INTEGER NOT NULL PRIMARY KEY CHECK (id >= 0),
-	table_id	INTEGER NOT NULL REFERENCES bayesdb_table(id),
+INSERT INTO bayesdb_stattype VALUES ('categorical');
+INSERT INTO bayesdb_stattype VALUES ('cyclic');
+INSERT INTO bayesdb_stattype VALUES ('numerical');
+
+CREATE TABLE bayesdb_column (
+	tabname		TEXT COLLATE NOCASE NOT NULL,
+	colno		INTEGER NOT NULL CHECK (0 <= colno),
 	name		TEXT COLLATE NOCASE NOT NULL,
-	colno		INTEGER NOT NULL,
-	UNIQUE (table_id, name),
-	UNIQUE (table_id, colno)
+	shortname	TEXT,
+	description	TEXT,
+	PRIMARY KEY(tabname, colno),
+	UNIQUE(tabname, name)
 );
 
-CREATE TABLE bayesdb_model (
-	table_id	INTEGER NOT NULL REFERENCES bayesdb_table(id),
-	modelno		INTEGER NOT NULL CHECK (modelno >= 0),
-	theta		BLOB NOT NULL,
-	PRIMARY KEY (table_id, modelno)
-);
-COMMIT;
-"""
-
-bayesdb_schema_3to4 = """
-BEGIN;
-PRAGMA user_version = 4;
-
-ALTER TABLE bayesdb_table_column ADD COLUMN short_name TEXT;
-ALTER TABLE bayesdb_table_column ADD COLUMN description TEXT;
-
-CREATE TABLE bayesdb_value_map (
-	table_id	INTEGER NOT NULL REFERENCES bayesdb_table(id),
+CREATE TABLE bayesdb_column_map (
+	tabname		TEXT COLLATE NOCASE NOT NULL,
 	colno		INTEGER NOT NULL,
+	key		TEXT NOT NULL,
 	value		TEXT NOT NULL,
-	extended_value	TEXT NOT NULL,
-	PRIMARY KEY(table_id, colno, value),
-	FOREIGN KEY(table_id, colno)
-		REFERENCES bayesdb_table_column(table_id, colno)
+	PRIMARY KEY(tabname, colno, key),
+	FOREIGN KEY(tabname, colno) REFERENCES bayesdb_column(tabname, colno)
 );
-COMMIT;
-"""
+
+CREATE TABLE bayesdb_generator (
+	-- We use AUTOINCREMENT so that generator id numbers don't get
+	-- reused and are safe to hang onto outside a transaction.
+	id		INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
+				CHECK (0 < id),
+	name		TEXT COLLATE NOCASE NOT NULL UNIQUE,
+	tabname		TEXT COLLATE NOCASE NOT NULL,
+				-- REFERENCES sqlite_master(name)
+	metamodel	INTEGER NOT NULL REFERENCES bayesdb_metamodel(name)
+);
+
+CREATE TABLE bayesdb_generator_column (
+	generator_id	TEXT NOT NULL REFERENCES bayesdb_generator(id),
+	colno		TEXT NOT NULL,
+	stattype	TEXT NOT NULL REFERENCES bayesdb_stattype(name),
+	PRIMARY KEY(generator_id, colno)
+);
+
+CREATE TABLE bayesdb_generator_model (
+	generator_id	TEXT NOT NULL REFERENCES bayesdb_generator(id),
+	modelno		INTEGER NOT NULL,
+	iterations	INTEGER NOT NULL CHECK (0 <= iterations),
+	PRIMARY KEY(generator_id, modelno)
+);
+'''
 
 ### BayesDB SQLite setup
 
 def bayesdb_install_schema(db):
-    # Find the current application id and user version.
+    # Get the application id.
+    cursor = db.execute('PRAGMA application_id')
     application_id = 0
-    application_id_ok = None
-    fixup_application_id = False
-    if db.execute("PRAGMA application_id").fetchall():
-        application_id = sqlite3_exec_1(db, "PRAGMA application_id")
-        application_id_ok = True
+    try:
+        row = cursor.next()
+    except StopIteration:
+        raise EnvironmentError('Missing application_id in sqlite3.')
     else:
-        # raise Warning('SQLite is too old!')
-        application_id_ok = False
-    user_version = sqlite3_exec_1(db, "PRAGMA user_version")
+        application_id = row[0]
+        assert isinstance(application_id, int)
 
-    # Check them.  If zero, install the schema.  If not, maybe fail.
+    # Get the user version.
+    cursor = db.execute('PRAGMA user_version')
+    user_version = 0
+    try:
+        row = cursor.next()
+    except StopIteration:
+        raise EnvironmentError('Missing user_version in sqlite3.')
+    else:
+        user_version = row[0]
+        assert isinstance(user_version, int)
+
+    # Check them.  If zero, install schema.  If mismatch, fail.
     if application_id == 0 and user_version == 0:
         # Assume we just created the database.
         #
@@ -109,30 +125,13 @@ def bayesdb_install_schema(db):
         # transaction active.  Otherwise we make no use of the sqlite3
         # module's automatic transaction handling.
         with db:
-            db.executescript(bayesdb_schema_3)
-            db.executescript(bayesdb_schema_3to4)
-        if application_id_ok:
-            assert sqlite3_exec_1(db, "PRAGMA application_id") == 0x42594442
-        return
-    elif application_id == 0 and \
-         db.execute("PRAGMA table_info(bayesdb_table)").fetchall():
-        # Assume we created it on a system with no application_id
-        # support, and just fix that up if we have it now.
-        if application_id_ok:
-            fixup_application_id = True
+            # XXX Maybe push the foreign keys pragma to caller.
+            db.execute('PRAGMA foreign_keys = ON')
+            db.execute('PRAGMA application_id = %d' % (0x42594442,))
+            db.executescript('BEGIN;' + bayesdb_schema_5 + ';COMMIT')
     elif application_id != 0x42594442:
-        raise IOError("Invalid application_id: 0x%08x" % (application_id,))
-    # Check the schema version and apply upgrades if necessary.
-    if user_version == 3:
-        with db:
-            db.executescript(bayesdb_schema_3to4)
-    elif user_version == 4:
-        pass
-    else:
-        raise IOError("Unknown database version: %d" % (user_version,))
-        pass
-    if fixup_application_id:
-        db.execute("PRAGMA application_id = 1113146434")
-    if application_id_ok:
-        assert sqlite3_exec_1(db, "PRAGMA application_id") == 0x42594442
-    assert sqlite3_exec_1(db, "PRAGMA user_version") == 4
+        raise IOError('Wrong application id: 0x%08x' % (application_id,))
+    elif user_version != 5:
+        raise IOError('Unknown bayeslite format version: %d' % (user_version,))
+    # XXX Consider running PRAGMA integrity_check, foreign_key_check,
+    # and/or quick_check.
