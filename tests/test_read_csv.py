@@ -20,8 +20,6 @@ import pytest
 
 import bayeslite
 
-from bayeslite.read_csv import bayesdb_read_csv
-
 @contextlib.contextmanager
 def bayesdb(*args, **kwargs):
     bdb = bayeslite.BayesDB(*args, **kwargs)
@@ -44,42 +42,42 @@ def test_read_csv():
         f = StringIO.StringIO(csv_data)
         with pytest.raises(ValueError):
             # Table must already exist for create=False.
-            bayesdb_read_csv(bdb, 't', f, header=False, create=False,
+            bayeslite.bayesdb_read_csv(bdb, 't', f, header=False, create=False,
                 ifnotexists=False)
         f = StringIO.StringIO(csv_data)
         with pytest.raises(ValueError):
             # Must pass create=True for ifnotexists=True.
-            bayesdb_read_csv(bdb, 't', f, header=False, create=False,
+            bayeslite.bayesdb_read_csv(bdb, 't', f, header=False, create=False,
                 ifnotexists=True)
         f = StringIO.StringIO(csv_data)
         with pytest.raises(ValueError):
             # Must pass create=False for header=False.
-            bayesdb_read_csv(bdb, 't', f, header=False, create=True,
+            bayeslite.bayesdb_read_csv(bdb, 't', f, header=False, create=True,
                 ifnotexists=False)
         f = StringIO.StringIO(csv_data)
         with pytest.raises(ValueError):
             # Must pass create=False for header=False.
-            bayesdb_read_csv(bdb, 't', f, header=False, create=True,
+            bayeslite.bayesdb_read_csv(bdb, 't', f, header=False, create=True,
                 ifnotexists=True)
         f = StringIO.StringIO(csv_hdrdata)
         with pytest.raises(ValueError):
             # Table must already exist for create=False.
-            bayesdb_read_csv(bdb, 't', f, header=True, create=False,
+            bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=False,
                 ifnotexists=False)
         f = StringIO.StringIO(csv_hdrdata)
         with pytest.raises(ValueError):
             # Must pass create=True for ifnotexists=True.
-            bayesdb_read_csv(bdb, 't', f, header=True, create=False,
+            bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=False,
                 ifnotexists=True)
         f = StringIO.StringIO(csv_hdrdata)
         with pytest.raises(ValueError):
             with bdb.savepoint():
                 # Table must not exist if ifnotexists=False.
                 bdb.sql_execute('CREATE TABLE t(x)')
-                bayesdb_read_csv(bdb, 't', f, header=True, create=True,
-                    ifnotexists=False)
+                bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
+                    create=True, ifnotexists=False)
         f = StringIO.StringIO(csv_hdrdata)
-        bayesdb_read_csv(bdb, 't', f, header=True, create=True,
+        bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True,
             ifnotexists=False)
         data = list(bdb.sql_execute('SELECT * FROM t'))
         assert data == [
@@ -88,7 +86,7 @@ def test_read_csv():
             (u'7',u'8',u'6','zot','mumble',u'87.0',u'zoot',u'caribou'),
         ]
         f = StringIO.StringIO(csv_hdr)
-        bayesdb_read_csv(bdb, 't', f, header=True, create=True,
+        bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True,
             ifnotexists=True)
         assert list(bdb.sql_execute('SELECT * FROM t')) == data
         assert bdb.sql_execute('SELECT sql FROM sqlite_master WHERE name = ?',
@@ -97,10 +95,10 @@ def test_read_csv():
             '("a" TEXT,"b" TEXT,"c" TEXT,"name" TEXT,' \
             '"nick" TEXT,"age" TEXT,"muppet" TEXT,"animal" TEXT)'
         f = StringIO.StringIO(csv_data)
-        bayesdb_read_csv(bdb, 't', f, header=False, create=False,
+        bayeslite.bayesdb_read_csv(bdb, 't', f, header=False, create=False,
             ifnotexists=False)
         assert list(bdb.sql_execute('SELECT * FROM t')) == data + data
         f = StringIO.StringIO(csv_hdrdata)
-        bayesdb_read_csv(bdb, 't', f, header=True, create=False,
+        bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=False,
             ifnotexists=False)
         assert list(bdb.sql_execute('SELECT * FROM t')) == data + data + data
