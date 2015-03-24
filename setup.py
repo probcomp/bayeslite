@@ -55,7 +55,7 @@ for grammar in grammars:
 
 setup(
     name='bayeslite',
-    version='0.0.dev',
+    version='0.1.dev',
     packages=[
         'bayeslite',
         'bayeslite.plex',
