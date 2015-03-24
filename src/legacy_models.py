@@ -36,10 +36,11 @@ allowed_column_stattypes = {
     'numerical',
 }
 
-# XXX Should explicate that only crosscat models are supported, since
-# there was no tag indicating the metamodel.
-def bayesdb_load_legacy_models(bdb, generator, table, pathname,
-        create=False, ifnotexists=False, gzipped=None, metamodel=None):
+def bayesdb_load_legacy_models(bdb, generator, table, metamodel, pathname,
+        create=False, ifnotexists=False, gzipped=None):
+
+    if metamodel != 'crosscat':
+        raise ValueError('Only crosscat legacy models are supported.')
 
     if not create:
         if ifnotexists:
