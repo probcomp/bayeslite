@@ -25,14 +25,6 @@ import bayeslite.shell.pretty as pretty
 
 from bayeslite.util import casefold
 
-class MockCursor(object):
-    def __init__(self, description, rows):
-        self.description = description
-        self.rows = rows
-
-    def __iter__(self):
-        return iter(self.rows)
-
 class Shell(cmd.Cmd):
     def_prompt          = 'bayeslite> '
     bql_prompt          = '   bql...> '
