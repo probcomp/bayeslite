@@ -127,6 +127,7 @@ def bayesdb_install_schema(db):
         with db:
             # XXX Maybe push the foreign keys pragma to caller.
             db.execute('PRAGMA foreign_keys = ON')
+            db.execute('PRAGMA application_id = %d' % (0x42594442,))
             db.executescript('BEGIN;' + bayesdb_schema_5 + ';COMMIT')
     elif application_id != 0x42594442:
         raise IOError('Wrong application id: 0x%08x' % (application_id,))
