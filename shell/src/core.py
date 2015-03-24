@@ -206,26 +206,28 @@ class Shell(cmd.Cmd):
 
     def dot_csv(self, line):
         '''create table from CSV file
-        <btable> </path/to/data.csv>
+        <table> </path/to/data.csv>
 
-        Create a BayesDB table named <btable> from the data in
-        </path/to/data.csv>, heuristically guessing column types.
+        Create a SQL table named <table> from the data in
+        </path/to/data.csv>.
         '''
         # XXX Lousy, lousy tokenizer.
         tokens = line.split()
         if len(tokens) != 2:
-            self.stdout.write('Usage: .csv <btable> </path/to/data.csv>\n')
+            self.stdout.write('Usage: .csv <table> </path/to/data.csv>\n')
             return
         table = tokens[0]
         pathname = tokens[1]
         try:
-            bayeslite.bayesdb_import_csv_file(self._bdb, table, pathname)
+            with open(pathname, 'rU') as f:
+                bayeslite.bayesdb_read_csv(self._bdb, table, f,
+                    header=True, create=True, ifnotexists=False)
         except Exception:
             self.stdout.write(traceback.format_exc())
 
     def dot_codebook(self, line):
         '''load codebook for table
-        <btable> </path/to/codebook.csv>
+        <table> </path/to/codebook.csv>
 
         Load a codebook -- short names, descriptions, and value
         descriptions for the columns of a table -- from a CSV file.
@@ -234,40 +236,42 @@ class Shell(cmd.Cmd):
         tokens = line.split()
         if len(tokens) != 2:
             self.stdout.write('Usage:'
-                ' .codebook <btable> </path/to/codebook.csv>\n')
+                ' .codebook <table> </path/to/codebook.csv>\n')
             return
         table = tokens[0]
         pathname = tokens[1]
         try:
-            bayeslite.bayesdb_import_codebook_csv_file(self._bdb, table,
+            bayeslite.bayesdb_load_codebook_csv_file(self._bdb, table,
                 pathname)
         except Exception:
             self.stdout.write(traceback.format_exc())
 
     def dot_loadmodels(self, line):
         '''load legacy models
-        <btable> </path/to/models.pkl.gz>
+        <generator> <table> </path/to/models.pkl.gz>
 
-        Load legacy BayesDB models for <btable>.  Must be compatible
-        with <btable>'s existing schema, or there must be no existing
-        models for <btable>.
+        Create a Crosscat generator named <generator> for the table
+        <table> from the legacy models stored in
+        </path/to/models.pkl.gz>.
         '''
         # XXX Lousy, lousy tokenizer.
         tokens = line.split()
-        if len(tokens) != 2:
+        if len(tokens) != 3:
             self.stdout.write('Usage:'
-                ' .loadmodels <btable> </path/to/models.pkl.gz>\n')
+                ' .loadmodels <generator> <table> </path/to/models.pkl.gz>\n')
             return
-        table = tokens[0]
-        pathname = tokens[1]
+        generator = tokens[0]
+        table = tokens[1]
+        pathname = tokens[2]
         try:
-            bayeslite.bayesdb_load_legacy_models(self._bdb, table, pathname)
+            bayeslite.bayesdb_load_legacy_models(self._bdb, generator, table,
+                pathname, create=True)
         except Exception:
             self.stdout.write(traceback.format_exc())
 
     def dot_describe(self, line):
         '''describe BayesDB entities
-        [btable|btables|columns|models] [<btable>]
+        [table(s)|generator(s)|columns|model(s)] [<name>...]
 
         Print a human-readable description of the specified BayesDB
         entities.
@@ -277,8 +281,8 @@ class Shell(cmd.Cmd):
         if len(tokens) == 0:
             self.stdout.write('Describe what, pray tell?\n')
             return
-        if casefold(tokens[0]) == 'btable' or \
-           casefold(tokens[0]) == 'btables':
+        if casefold(tokens[0]) == 'table' or \
+           casefold(tokens[0]) == 'tables':
             params = None
             qualifier = None
             if len(tokens) == 1:
@@ -287,62 +291,87 @@ class Shell(cmd.Cmd):
             else:
                 params = tokens[1:]
                 qualifier = \
-                    '(' + ' OR '.join(['t.name = ?' for _p in params]) + ')'
+                    '(' + ' OR '.join(['tabname = ?' for _p in params]) + ')'
+                ok = True
+                for table in params:
+                    if not core.bayesdb_has_table(self._bdb, table):
+                        self.stdout.write('No such table: %s\n' %
+                            (repr(table),))
+                        ok = False
+                if not ok:
+                    return
+                for table in params:
+                    core.bayesdb_table_guarantee_columns(self._bdb, table)
             sql = '''
-                SELECT t.id, t.name, m.name AS metamodel
-                    FROM bayesdb_table AS t, bayesdb_metamodel AS m
-                    WHERE %s AND t.metamodel_id = m.id
+                SELECT tabname, colno, name, shortname
+                    FROM bayesdb_column
+                    WHERE %s
+                    ORDER BY tabname ASC, colno ASC
+            ''' % (qualifier,)
+            with self._bdb.savepoint():
+                pretty.pp_cursor(self.stdout, self._bdb.execute(sql, params))
+        elif casefold(tokens[0]) == 'generator' or \
+           casefold(tokens[0]) == 'generators':
+            params = None
+            qualifier = None
+            if len(tokens) == 1:
+                params = ()
+                qualifier = '1'
+            else:
+                params = tokens[1:]
+                qualifier = \
+                    '(' + ' OR '.join(['name = ?' for _p in params]) + ')'
+                ok = True
+                for generator in params:
+                    if not core.bayesdb_has_generator(self._bdb, generator):
+                        self.stdout.write('No such generator: %s\n' %
+                            (repr(generator),))
+                        ok = False
+                if not ok:
+                    return
+            sql = '''
+                SELECT id, name, tabname, metamodel
+                    FROM bayesdb_generator
+                    WHERE %s
             ''' % (qualifier,)
             with self._bdb.savepoint():
                 pretty.pp_cursor(self.stdout, self._bdb.execute(sql, params))
         elif casefold(tokens[0]) == 'columns':
             if len(tokens) != 2:
-                self.stdout.write('Describe columns of what btable?\n')
+                self.stdout.write('Describe columns of what generator?\n')
                 return
-            table_name = tokens[1]
+            generator = tokens[1]
             with self._bdb.savepoint():
-                if not core.bayesdb_table_exists(self._bdb, table_name):
-                    self.stdout.write('No such btable: %s\n' % (table_name,))
+                if not core.bayesdb_has_generator(self._bdb, generator):
+                    self.stdout.write('No such generator: %s\n' % (generator,))
                     return
-                table_id = core.bayesdb_table_id(self._bdb, table_name)
-                M_c = core.bayesdb_metadata(self._bdb, table_id)
+                generator_id = core.bayesdb_get_generator(self._bdb, generator)
                 sql = '''
-                    SELECT c.colno, c.name, c.short_name
-                        FROM bayesdb_table AS t, bayesdb_table_column AS c
-                        WHERE t.id = ? AND c.table_id = t.id
+                    SELECT c.colno AS colno, c.name AS name,
+                            gc.stattype AS stattype, c.shortname AS shortname
+                        FROM bayesdb_generator AS g,
+                            (bayesdb_column AS c LEFT OUTER JOIN
+                                bayesdb_generator_column AS gc
+                                USING (colno))
+                        WHERE g.id = ? AND g.id = gc.generator_id
                 '''
-                params = (table_id,)
-                cursor0 = self._bdb.sql_execute(sql, params)
-                description = (
-                    ('colno',),
-                    ('name',),
-                    ('model type',),
-                    ('short name',),
-                )
-                rows = ((colno, name,
-                         M_c['column_metadata'][colno]['modeltype'],
-                         short_name)
-                    for colno, name, short_name in cursor0)
-                cursor1 = MockCursor(description, rows)
-                pretty.pp_cursor(self.stdout, cursor1)
+                cursor = self._bdb.sql_execute(sql, (generator_id,))
+                pretty.pp_cursor(self.stdout, cursor)
         elif casefold(tokens[0]) == 'models':
             if len(tokens) < 2:
-                self.stdout.write('Describe models of what btable?\n')
+                self.stdout.write('Describe models of what generator?\n')
                 return
-            table_name = tokens[1]
+            generator = tokens[1]
             with self._bdb.savepoint():
-                if not core.bayesdb_table_exists(self._bdb, table_name):
-                    self.stdout.write('No such btable: %s\n' %s (table_name,))
+                if not core.bayesdb_has_generator(self._bdb, generator):
+                    self.stdout.write('No such generator: %s\n' % (generator,))
                     return
-                table_id = core.bayesdb_table_id(self._bdb, table_name)
-                modelnos = None
+                generator_id = core.bayesdb_get_generator(self._bdb, generator)
+                qualifier = None
                 if len(tokens) == 2:
-                    sql = '''
-                        SELECT modelno FROM bayesdb_model WHERE table_id = ?
-                    '''
-                    cursor = self._bdb.sql_execute(sql, (table_id,))
-                    modelnos = (row[0] for row in cursor)
+                    qualifier = '1'
                 else:
+                    modelnos = []
                     for token in tokens[2:]:
                         try:
                             modelno = int(token)
@@ -351,18 +380,19 @@ class Shell(cmd.Cmd):
                                 (token,))
                             return
                         else:
-                            if not core.bayesdb_has_model(self._bdb, table_id,
-                                    modelno):
+                            if not core.bayesdb_generator_has_model(self._bdb,
+                                    generator_id, modelno):
                                 self.stdout.write('No such model: %d\n' %
                                     (modelno,))
                                 return
-                    modelnos = map(int, tokens[2:])
-                models = ((modelno, core.bayesdb_model(self._bdb, table_id,
-                        modelno))
-                    for modelno in modelnos)
-                cursor = MockCursor([('modelno',), ('iterations',)],
-                    [(modelno, theta['iterations'])
-                        for modelno, theta in models])
+                            modelnos.append(modelno)
+                    qualifier = 'modelno IN (%s)' % \
+                        (','.join(map(str, modelnos),))
+                sql = '''
+                    SELECT modelno, iterations FROM bayesdb_generator_model
+                        WHERE generator_id = ? AND %s
+                ''' % (qualifier,)
+                cursor = self._bdb.sql_execute(sql, (generator_id,))
                 pretty.pp_cursor(self.stdout, cursor)
         else:
             self.stdout.write('I don\'t know what a %s is.\n' %
