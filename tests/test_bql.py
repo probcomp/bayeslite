@@ -25,7 +25,6 @@ import bayeslite.bql as bql
 import bayeslite.compiler as compiler
 import bayeslite.guess as guess
 import bayeslite.parse as parse
-import bayeslite.read_csv as read_csv
 
 import test_core
 import test_csv
@@ -507,13 +506,13 @@ def test_trivial_commands():
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
         # XXX Query parameters!
         with open(fname, 'rU') as f:
-            read_csv.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
+            bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
         with open(fname, 'rU') as f:
             with pytest.raises(ValueError):
-                read_csv.bayesdb_read_csv(bdb, 't', f, header=True,
+                bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True)
         with open(fname, 'rU') as f:
-            read_csv.bayesdb_read_csv(bdb, 't', f, header=True, create=True,
+            bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True,
                 ifnotexists=True)
         guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
         with pytest.raises(ValueError):
@@ -582,7 +581,7 @@ def test_parametrized():
         ' ((("a" = ?1) AND ("b" = ?2)) AND ("c" = ?2));'
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
         with open(fname, 'rU') as f:
-            read_csv.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
+            bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
         assert bql_execute(bdb, 'select count(*) from t') == [(7,)]
         assert bql_execute(bdb, 'select count(distinct division) from t') == \
             [(6,)]
@@ -820,12 +819,12 @@ def test_createtab():
             bdb.execute('drop generator t_cc')
         bdb.execute('drop generator if exists t_cc')
         with open(fname, 'rU') as f:
-            read_csv.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
+            bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
         with bdb.savepoint():
             # Savepoint because we don't actually want the new data to
             # be inserted.
             with open(fname, 'rU') as f:
-                read_csv.bayesdb_read_csv(bdb, 't', f, header=True,
+                bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True, ifnotexists=True)
         guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
         bdb.execute('initialize 1 model for t_cc')
@@ -837,7 +836,7 @@ def test_createtab():
         bdb.execute('drop generator if exists t_cc')
         bdb.execute('drop table t')
         with open(fname, 'rU') as f:
-            read_csv.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
+            bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
         guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
         bdb.execute("create table u as select * from t where gender = 'F'")
         assert bql_execute(bdb, 'select * from u') == [
@@ -899,7 +898,7 @@ def test_txn():
         bdb.execute('BEGIN')
         try:
             with open(fname, 'rU') as f:
-                read_csv.bayesdb_read_csv(bdb, 't', f, header=True,
+                bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True)
             bdb.execute('SELECT * FROM t')
             guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
@@ -915,7 +914,7 @@ def test_txn():
         bdb.execute('BEGIN')
         try:
             with open(fname, 'rU') as f:
-                read_csv.bayesdb_read_csv(bdb, 't', f, header=True,
+                bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True)
             bdb.execute('SELECT * FROM t')
             guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
@@ -939,7 +938,7 @@ def test_txn():
         bdb.execute('BEGIN')
         try:
             with open(fname, 'rU') as f:
-                read_csv.bayesdb_read_csv(bdb, 't', f, header=True,
+                bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True)
             bdb.execute('SELECT * FROM t')
             guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
@@ -963,7 +962,7 @@ def test_txn():
         bdb.execute('BEGIN')
         try:
             with open(fname, 'rU') as f:
-                read_csv.bayesdb_read_csv(bdb, 't', f, header=True,
+                bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True)
             bdb.execute('SELECT * FROM t')
             guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
