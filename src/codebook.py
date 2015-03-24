@@ -20,7 +20,7 @@ import math
 
 import bayeslite.core as core
 
-def bayesdb_import_codebook_csv_file(bdb, table, pathname):
+def bayesdb_load_codebook_csv_file(bdb, table, pathname):
     codebook = None
     with open(pathname, 'rU') as f:
         reader = csv.reader(f)

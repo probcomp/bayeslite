@@ -17,7 +17,7 @@
 # Public API.
 from bayeslite.bayesdb import BayesDB
 from bayeslite.bqlfn import bayesdb_simulate
-from bayeslite.codebook import bayesdb_import_codebook_csv_file
+from bayeslite.codebook import bayesdb_load_codebook_csv_file
 from bayeslite.legacy_models import bayesdb_load_legacy_models
 from bayeslite.metamodel import bayesdb_deregister_metamodel
 from bayeslite.metamodel import bayesdb_register_metamodel

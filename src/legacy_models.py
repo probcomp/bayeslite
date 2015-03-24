@@ -39,7 +39,11 @@ allowed_column_stattypes = {
 # XXX Should explicate that only crosscat models are supported, since
 # there was no tag indicating the metamodel.
 def bayesdb_load_legacy_models(bdb, generator, table, pathname,
-        ifnotexists=False, gzipped=None, metamodel=None):
+        create=False, ifnotexists=False, gzipped=None, metamodel=None):
+
+    if not create:
+        if ifnotexists:
+            raise ValueError('Not creating generator whether or not exists!')
 
     # Load the pickled file -- gzipped, if gzipped is true or if
     # gzipped is not specified and the file ends in .pkl.gz.
@@ -98,12 +102,18 @@ def bayesdb_load_legacy_models(bdb, generator, table, pathname,
 
         # Ensure the generator exists.
         if core.bayesdb_has_generator(bdb, generator):
+            if create and not ifnotexists:
+                raise ValueError('Generator already exists: %s' %
+                    (repr(generator),))
             if casefold(table) != \
                core.bayesdb_generator_table(bdb, generator_id):
                 raise ValueError('Generator %s is not for table: %s' %
                     (repr(generator), repr(table)))
-            # Generator exists.  If there are existing models, fail.
-            # If there are no existing models, change the schema.
+            # Generator exists.  If the schema differs and there are
+            # existing models, fail.  If the schema differs and there
+            # are no existing models, change the schema.
+            #
+            # XXX Not clear changing the schema is really appropriate.
             generator_id = core.bayesdb_get_generator(bdb, generator)
             if column_types != \
                bayesdb_generator_column_types(bdb, generator_id):
@@ -119,7 +129,7 @@ def bayesdb_load_legacy_models(bdb, generator, table, pathname,
                 bdb.execute('DROP GENERATOR %s' % (qg,))
                 bayesdb_create_legacy_generator(bdb, generator, table,
                     column_stattypes)
-        elif ifnotexists:
+        elif create:
             bayesdb_create_legacy_generator(bdb, generator, table,
                 column_stattypes)
         else:
