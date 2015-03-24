@@ -35,7 +35,7 @@ def bayesdb_read_pandas_df(bdb, table, df, create=False, ifnotexists=False):
         elif create:
             column_names = [idxcol] + list(df.columns)
             qcns = map(sqlite3_quote_name, column_names)
-            schema = ','.join('%s TEXT' % (qcn,) for qcn in qcns)
+            schema = ','.join('%s NUMERIC' % (qcn,) for qcn in qcns)
             bdb.sql_execute('CREATE TABLE %s(%s)' % (qt, schema))
             core.bayesdb_table_guarantee_columns(bdb, table)
         else:

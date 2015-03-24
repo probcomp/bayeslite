@@ -53,9 +53,7 @@ def bayesdb_read_csv(bdb, table, f, header=False,
             if create and not core.bayesdb_has_table(bdb, table):
                 qt = sqlite3_quote_name(table)
                 qcns = map(sqlite3_quote_name, column_names)
-                # XXX Should probably use NUMERIC for sqlite3, to
-                # maximize automagic numberiness.
-                schema = ','.join('%s TEXT' % (qcn,) for qcn in qcns)
+                schema = ','.join('%s NUMERIC' % (qcn,) for qcn in qcns)
                 bdb.sql_execute('CREATE TABLE %s(%s)' % (qt, schema))
                 core.bayesdb_table_guarantee_columns(bdb, table)
             else:

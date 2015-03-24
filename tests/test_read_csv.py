@@ -81,9 +81,11 @@ def test_read_csv():
             ifnotexists=False)
         data = list(bdb.sql_execute('SELECT * FROM t'))
         assert data == [
-            (u'1',u'2',u'3','foo','bar',u'nan',u'',u'quagga'),
-            (u'4',u'5',u'6','baz','quux',u'42.0',u'',u'eland'),
-            (u'7',u'8',u'6','zot','mumble',u'87.0',u'zoot',u'caribou'),
+            # XXX Would be nice if the NaN could actually be that, or
+            # at least None/NULL.
+            (1,2,3,'foo','bar',u'nan',u'',u'quagga'),
+            (4,5,6,'baz','quux',42.0,u'',u'eland'),
+            (7,8,6,'zot','mumble',87.0,u'zoot',u'caribou'),
         ]
         f = StringIO.StringIO(csv_hdr)
         bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True,
@@ -92,8 +94,8 @@ def test_read_csv():
         assert bdb.sql_execute('SELECT sql FROM sqlite_master WHERE name = ?',
                 ('t',)).next()[0] == \
             'CREATE TABLE "t"' \
-            '("a" TEXT,"b" TEXT,"c" TEXT,"name" TEXT,' \
-            '"nick" TEXT,"age" TEXT,"muppet" TEXT,"animal" TEXT)'
+            '("a" NUMERIC,"b" NUMERIC,"c" NUMERIC,"name" NUMERIC,' \
+            '"nick" NUMERIC,"age" NUMERIC,"muppet" NUMERIC,"animal" NUMERIC)'
         f = StringIO.StringIO(csv_data)
         bayeslite.bayesdb_read_csv(bdb, 't', f, header=False, create=False,
             ifnotexists=False)

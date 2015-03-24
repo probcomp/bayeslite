@@ -587,20 +587,20 @@ def test_parametrized():
             [(6,)]
         assert bql_execute(bdb, 'select * from t where height > ?', (70,)) == \
             [
-                ('41', 'M', '65600', '72', 'marketing', '4'),
-                ('30', 'M', '70000', '73', 'sales', '4'),
-                ('30', 'F', '81000', '73', 'engineering', '3'),
+                (41, 'M', 65600, 72, 'marketing', 4),
+                (30, 'M', 70000, 73, 'sales', 4),
+                (30, 'F', 81000, 73, 'engineering', 3),
             ]
         assert bql_execute(bdb, 'select * from t where height > ?123',
                 (0,)*122 + (70,)) == \
             [
-                ('41', 'M', '65600', '72', 'marketing', '4'),
-                ('30', 'M', '70000', '73', 'sales', '4'),
-                ('30', 'F', '81000', '73', 'engineering', '3'),
+                (41, 'M', 65600, 72, 'marketing', 4),
+                (30, 'M', 70000, 73, 'sales', 4),
+                (30, 'F', 81000, 73, 'engineering', 3),
             ]
         assert bql_execute(bdb, 'select age from t where division = :division',
                 {':division': 'sales'}) == \
-            [('34',), ('30',)]
+            [(34,), (30,)]
         assert bql_execute(bdb, 'select division from t' +
                     ' where age < @age and rank > ?;',
                 (40, 4)) == \
@@ -734,7 +734,7 @@ def test_parametrized():
                 ' WHERE g.id = ? AND c.name = ? AND g.id = gc.generator_id'
                     ' AND g.tabname = c.tabname AND gc.colno = c.colno',
             'CREATE TEMP TABLE IF NOT EXISTS "sim"'
-                ' ("age" TEXT,"RANK" TEXT,"division" TEXT)',
+                ' ("age" NUMERIC,"RANK" NUMERIC,"division" NUMERIC)',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
             'SELECT metadata_json FROM bayesdb_crosscat_metadata'
                 ' WHERE generator_id = ?',
@@ -840,9 +840,9 @@ def test_createtab():
         guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
         bdb.execute("create table u as select * from t where gender = 'F'")
         assert bql_execute(bdb, 'select * from u') == [
-            ('23', 'F', '81000', '67', 'data science', '3'),
-            ('36', 'F', '96000', '70', 'management', '2'),
-            ('30', 'F', '81000', '73', 'engineering', '3'),
+            (23, 'F', 81000, 67, 'data science', 3),
+            (36, 'F', 96000, 70, 'management', 2),
+            (30, 'F', 81000, 73, 'engineering', 3),
         ]
         with pytest.raises(sqlite3.OperationalError):
             bdb.execute("create table u as select * from t where gender = 'F'")
@@ -851,9 +851,9 @@ def test_createtab():
             bql_execute(bdb, 'select * from u')
         bdb.execute("create temp table u as select * from t where gender = 'F'")
         assert bql_execute(bdb, 'select * from u') == [
-            ('23', 'F', '81000', '67', 'data science', '3'),
-            ('36', 'F', '96000', '70', 'management', '2'),
-            ('30', 'F', '81000', '73', 'engineering', '3'),
+            (23, 'F', 81000, 67, 'data science', 3),
+            (36, 'F', 96000, 70, 'management', 2),
+            (30, 'F', 81000, 73, 'engineering', 3),
         ]
         # XXX Test to make sure TEMP is passed through, and the table
         # doesn't persist on disk.
