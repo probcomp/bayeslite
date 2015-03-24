@@ -20,6 +20,8 @@ import os
 import pytest
 
 import bayeslite
+import bayeslite.crosscat
+import bayeslite.read_csv as read_csv
 import crosscat.LocalEngine
 
 root = os.path.dirname(os.path.abspath(__file__))
@@ -29,22 +31,26 @@ dha_codebook = root + '/dha_codebook.csv'
 
 def test_legacy_models():
     bdb = bayeslite.BayesDB()
-    engine = crosscat.LocalEngine.LocalEngine(seed=0)
-    bayeslite.bayesdb_register_metamodel(bdb, 'crosscat', engine)
-    bayeslite.bayesdb_set_default_metamodel(bdb, 'crosscat')
+    cc = crosscat.LocalEngine.LocalEngine(seed=0)
+    metamodel = bayeslite.crosscat.CrosscatMetamodel(cc)
+    bayeslite.bayesdb_register_metamodel(bdb, metamodel)
+    bayeslite.bayesdb_set_default_metamodel(bdb, metamodel)
     with pytest.raises(ValueError):
-        bayeslite.bayesdb_load_legacy_models(bdb, 'dha', dha_models)
-    bayeslite.bayesdb_import_csv_file(bdb, 'dha', dha_csv)
-    bayeslite.bayesdb_load_legacy_models(bdb, 'dha', dha_models)
-    bayeslite.bayesdb_import_codebook_csv_file(bdb, 'dha', dha_codebook)
+        bayeslite.bayesdb_load_legacy_models(bdb, 'dha_cc', 'dha', dha_models,
+            create=True)
+    with open(dha_csv, 'rU') as f:
+        read_csv.bayesdb_read_csv(bdb, 'dha', f, header=True, create=True)
+    bayeslite.bayesdb_load_legacy_models(bdb, 'dha_cc', 'dha', dha_models,
+        create=True)
+    bayeslite.bayesdb_load_codebook_csv_file(bdb, 'dha', dha_codebook)
     # Need to be able to overwrite existing codebook.
     #
     # XXX Not sure this is the right API.  What if overwrite is a
     # mistake?
-    bayeslite.bayesdb_import_codebook_csv_file(bdb, 'dha', dha_codebook)
+    bayeslite.bayesdb_load_codebook_csv_file(bdb, 'dha', dha_codebook)
     bql = '''
-        SELECT name FROM dha
-            ORDER BY SIMILARITY TO (SELECT rowid FROM dha WHERE name = ?) DESC
+        ESTIMATE name FROM dha_cc
+            ORDER BY SIMILARITY TO (name = ?) DESC
             LIMIT 10
     '''
     with bdb.savepoint():
@@ -62,8 +68,8 @@ def test_legacy_models():
         ]
     # Tickles an issue in case-folding of column names.
     bql = '''
-        SELECT name
-            FROM dha
+        ESTIMATE name
+            FROM dha_cc
             ORDER BY PREDICTIVE PROBABILITY OF mdcr_spnd_amblnc ASC
             LIMIT 10
     '''
@@ -83,15 +89,19 @@ def test_legacy_models():
 
 if False:
     bql = '''
-        SELECT c0.name, c0.short_name, c1.name, c1.short_name, e.value
+        SELECT gc0.name, gc0.shortname, gc1.name, gc1.shortname, e.value
             FROM (ESTIMATE PAIRWISE DEPENDENCE PROBABILITY FROM DHA
                     WHERE name0 != \'name\' AND name1 != \'name\'
                     ORDER BY name0 ASC, name1 ASC
                     LIMIT 10) AS e,
-                bayesdb_table_column AS c0,
-                bayesdb_table_column AS c1
-            WHERE c0.table_id = e.table_id AND c0.name = e.name0
-                AND c1.table_id = e.table_id AND c1.name = e.name1
+                bayesdb_generator AS g,
+                (bayesdb_generator_column JOIN bayesdb_column USING (colno))
+                    AS gc0,
+                (bayesdb_generator_column JOIN bayesdb_column USING (colno))
+                    AS gc1
+            WHERE g.id = e.generator_id
+                AND gc0.generator_id = e.generator_id
+                AND gc1.generator_id = e.generator_id
     '''
     assert list(bdb.execute(bql)) == [
         ('AMI_SCORE', 'Myocardial infarction score',

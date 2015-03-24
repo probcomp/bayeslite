@@ -1,3 +1,4 @@
-bayeslite/grammar.out
-bayeslite/grammar.py
 build
+external/lemonade/dist/lemonade/*.pyc
+src/grammar.out
+src/grammar.py

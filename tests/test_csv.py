@@ -21,6 +21,9 @@ import sqlite3
 import tempfile
 
 import bayeslite
+import bayeslite.guess
+
+from bayeslite.sqlite3_util import sqlite3_quote_name
 
 import test_core
 
@@ -40,41 +43,46 @@ def bayesdb_csv_file(csv):
 def test_csv_import_empty():
     with bayesdb_csv_stream('') as (bdb, f):
         with pytest.raises(IOError):
-            bayeslite.bayesdb_import_csv(bdb, 'empty', f)
+            bayeslite.bayesdb_read_csv(bdb, 'empty', f, header=True,
+                create=True)
 
 def test_csv_import_nocols():
     with bayesdb_csv_stream('\n') as (bdb, f):
         # CSV import rejects no columns.
         with pytest.raises(IOError):
-            bayeslite.bayesdb_import_csv(bdb, 'nocols', f)
+            bayeslite.bayesdb_read_csv(bdb, 'nocols', f, header=True,
+                create=True)
 
 def test_csv_import_onecol_key():
     with bayesdb_csv_stream('foo\n0\none\n2\n') as (bdb, f):
         # foo will be a key column, hence no columns to model.
+        bayeslite.bayesdb_read_csv(bdb, 'onecol_key', f, header=True,
+            create=True)
         with pytest.raises(ValueError):
-            bayeslite.bayesdb_import_csv(bdb, 'onecol_key', f)
+            bayeslite.guess.bayesdb_guess_generator(bdb, 'onecol_key_cc',
+                'onecol_key', 'crosscat')
 
 def test_csv_import_onecol():
     with bayesdb_csv_stream('foo\n0\none\n2\n0\n') as (bdb, f):
-        bayeslite.bayesdb_import_csv(bdb, 'onecol', f)
+        bayeslite.bayesdb_read_csv(bdb, 'onecol', f, header=True, create=True)
 
 def test_csv_import_toofewcols():
     with bayesdb_csv_stream('foo,bar\n0,1\n0\n') as (bdb, f):
         with pytest.raises(IOError):
-            bayeslite.bayesdb_import_csv(bdb, 'bad', f)
+            bayeslite.bayesdb_read_csv(bdb, 'bad', f, header=True, create=True)
 
 def test_csv_import_toomanycols():
     with bayesdb_csv_stream('foo,bar\n0,1\n0,1,2\n') as (bdb, f):
         with pytest.raises(IOError):
-            bayeslite.bayesdb_import_csv(bdb, 'bad', f)
+            bayeslite.bayesdb_read_csv(bdb, 'bad', f, header=True, create=True)
 
 def test_csv_import_dupcols():
     with bayesdb_csv_stream('foo,foo\n0,1\n') as (bdb, f):
         with pytest.raises(IOError):
-            bayeslite.bayesdb_import_csv(bdb, 'bad', f)
+            bayeslite.bayesdb_read_csv(bdb, 'bad', f, header=True, create=True)
     with bayesdb_csv_stream('foo,FOO\n0,1\n') as (bdb, f):
         with pytest.raises(IOError):
-            bayeslite.bayesdb_import_csv(bdb, 'bad', f)
+            bayeslite.bayesdb_read_csv(bdb, 'bad', f, header=True, create=True)
 
 # Where did I get these data?  The gender balance needs work, as does
 # representation of nonbinaries.
@@ -90,67 +98,94 @@ csv_data = '''age, gender, salary, height, division, rank
 
 def test_csv_import():
     with bayesdb_csv_stream(csv_data) as (bdb, f):
-        bayeslite.bayesdb_import_csv(bdb, 'employees', f)
-
-def test_csv_import_file():
-    with bayesdb_csv_file(csv_data) as (bdb, fname):
-        bayeslite.bayesdb_import_csv_file(bdb, 'employees', fname)
+        bayeslite.bayesdb_read_csv(bdb, 'employees', f, header=True,
+            create=True)
 
 def test_csv_import_schema():
     with bayesdb_csv_stream(csv_data) as (bdb, f):
-        bayeslite.bayesdb_import_csv(bdb, 'employees', f,
-            column_types={
-                'age': 'numerical',
-                'gender': 'categorical',
-                'salary': 'cyclic',
-                'height': 'ignore',
-                'division': 'categorical',
-                'rank': 'categorical',
-            })
+        bdb.sql_execute('''
+            CREATE TABLE employees(
+                age INTEGER,
+                gender TEXT,
+                salary REAL,
+                height INTEGER,
+                division TEXT,
+                rank INTEGER
+            )
+        ''')
+        bayeslite.bayesdb_read_csv(bdb, 'employees', f, header=True,
+            create=False)
+        bdb.execute('select height from employees')
         # XXX Currently this test fails because we compile the query
         # into `SELECT "idontexist" FROM "employees"', and for
         # compatibility with MySQL idiocy or something, SQLite treats
         # double-quotes as single-quotes if the alternative would be
         # an error.
-        #
-        # with pytest.raises(sqlite3.OperationalError):
-        #     bdb.execute('select idontexist from employees')
-        bdb.execute('select height from employees')
+        with pytest.raises(sqlite3.OperationalError):
+            bdb.execute('select idontexist from employees')
+            raise sqlite3.OperationalError('BQL compiler is broken;'
+                ' a.k.a. sqlite3 is stupid.')
+        bdb.execute('''
+            CREATE GENERATOR employees_cc FOR employees USING crosscat(
+                age NUMERICAL,
+                gender CATEGORICAL,
+                salary CYCLIC,
+                division CATEGORICAL,
+                rank CATEGORICAL
+            )
+        ''')
+        bdb.execute('estimate height from employees_cc')
+        with pytest.raises(ValueError):
+            bdb.execute('estimate infer height conf 0.9 from employees_cc')
 
 def test_csv_import_schema_case():
     with bayesdb_csv_stream(csv_data) as (bdb, f):
-        bayeslite.bayesdb_import_csv(bdb, 'employees', f,
-            column_types={
-                'age': 'numerical',
-                'GENDER': 'categorical',
-                'salary': 'cyclic',
-                'HEIght': 'ignore',
-                'division': 'categorical',
-                'RANK': 'categorical',
-            })
+        bdb.sql_execute('''
+            CREATE TABLE emPloyEES(
+                AGE INTeger,
+                geNder Text,
+                saLAry REal,
+                heighT inteGER,
+                DIVision TEXt,
+                rank INTEGER
+            )
+        ''')
+        bayeslite.bayesdb_read_csv(bdb, 'employees', f, header=True,
+            create=False)
+        bayeslite.guess.bayesdb_guess_generator(bdb, 'employees_cc',
+            'employees', 'crosscat')
 
 def test_csv_import_badschema0():
     with bayesdb_csv_stream(csv_data) as (bdb, f):
+        bdb.sql_execute('''
+            CREATE TABLE emPloyEES(
+                AGE INTeger,
+                geNder Text,
+                -- saLAry REal,
+                heighT inteGER,
+                DIVision TEXt,
+                rank INTEGER
+            )
+        ''')
         with pytest.raises(IOError):
-            bayeslite.bayesdb_import_csv(bdb, 'employees', f,
-                column_types={
-                    'age': 'numerical',
-                    'division': 'categorical',
-                    'rank': 'categorical',
-                })
+            bayeslite.bayesdb_read_csv(bdb, 'employees', f, header=True,
+                create=False)
 
 def test_csv_import_badschema1():
     with bayesdb_csv_stream(csv_data) as (bdb, f):
+        bdb.sql_execute('''
+            CREATE TABLE employees(
+                age INTEGER,
+                zorblaxianism TEXT,
+                salary INTEGER,
+                height INTEGER NOT NULL PRIMARY KEY,
+                division TEXT,
+                rank CATEGORICAL
+            )
+        ''')
         with pytest.raises(IOError):
-            bayeslite.bayesdb_import_csv(bdb, 'employees', f,
-                column_types={
-                    'age': 'numerical',
-                    'zorblaxianism': 'categorical',
-                    'salary': 'cyclic',
-                    'height': 'key',
-                    'division': 'categorical',
-                    'rank': 'categorical',
-                })
+            bayeslite.bayesdb_read_csv(bdb, 'employees', f, header=True,
+                create=False)
 
 csv_data_missing = '''a,b,c
 1,2,3
@@ -162,13 +197,16 @@ csv_data_missing = '''a,b,c
 def test_csv_missing():
     with bayesdb_csv_stream(csv_data_missing) as (bdb, f):
         # XXX Test the automatic column type guessing too.
-        bayeslite.bayesdb_import_csv(bdb, 't', f,
-            column_types={
-                'a': 'numerical',
-                'b': 'numerical',
-                'c': 'numerical',
-            })
-        # XXX These should be proper NaNs, not None.
+        bdb.sql_execute('CREATE TABLE t(a REAL, b REAL, c REAL)')
+        bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=False)
+        def clean(column_name):
+            qcn = sqlite3_quote_name(column_name)
+            sql = "UPDATE t SET %s = NULL WHERE %s = '' OR %s LIKE 'NaN'" % \
+                (qcn, qcn, qcn)
+            bdb.sql_execute(sql)
+        clean('a')
+        clean('b')
+        clean('c')
         assert list(bdb.execute('select * from t')) == [
             (1.0, 2.0, 3.0),
             (10.0, None, 30.0),

@@ -1,65 +1,87 @@
-Miscellaneous things to do:
+Miscellaneous things to do.
+
+Legend:
+
+- E asy
+- M edium
+- H ard
+
+- U Needed for basic usability.
+- S Needed to support bayeslite databases and models long-term.
+- Q Needed to support BQL queries long-term.
+- * Not on the radar for alpha release.
+
+- V ery consequential (within bayeslite)
+- C onsequential
+- I nconsequential
 
 * BayesDB issues
 
-- Subsampling analysis, post-analysis insertion.
+[MUC] Subsampling analysis, post-analysis insertion.
 
 * Compiler issues
 
-- Figure out lexical scope of columns in queries.
-- Type-check queries.
-- Fix name quotation when generating SQL code:
-  . Omit needless double-quotes in sqlite3_quote_name.
+[H*I] Figure out lexical scope of columns in queries.
   . Confirm column exists before running SQL so no accidental strings.
+[H*I] Type-check queries.
+[EUI] Fix name quotation when generating SQL code:
+  . Omit needless double-quotes in sqlite3_quote_name.
 
 * Python API issues
 
-- Implement bayeslite cursors separately from sqlite cursors.
-- Make all BQL phrases return proper cursors.
-- Support some kind of progress notification for long queries.
-- Switch from the Python sqlite3 module to apsw.
-- Formalize exceptions better.
+[M*C] Implement bayeslite cursors separately from sqlite cursors.
+[EUC] Make all BQL phrases return proper cursors.
+[EUI] Support some kind of progress notification for long queries.
+  . Call progress notifier in each BQL function.
+[H*V] Switch from the Python sqlite3 module to apsw.
+[MUC] Formalize exceptions better.
 
 * Schema issues
 
-- Document schemas: crosscat model schema, bayeslite SQL schema.
-- Pull diagnostics out of json and into the bayesdb_model table, or
+[M*I] Document schemas: crosscat model schema, bayeslite SQL schema.
+[MUI] Pull diagnostics out of json and into the bayesdb_model table, or
   a metamodel-specific table, so we can do queries on them.
   . SELECT modelno FROM bayesdb_model
         WHERE table_id = 32 AND iterations < 10
-- Move column metadata into SQL tables so you can do queries on it.
+  . Just iterations for now, not other diagnostics.
+[MUC] Move column metadata into SQL tables so you can do queries on it.
   . ESTIMATE COLUMNS FROM foo WHERE modeltype = 'numerical'
-- Automatic tests for schema upgrades.
-- dha NAME column with codebook without models is all borked up.
+[HSI] Automatic tests for schema upgrades.
+[MUC] dha NAME column with codebook without models is all borked up.
+  . Add column modelled_colno to bayesdb_table_column.
+  . Adapt all modelling to use modelled_colno, not colno.
 
 * Language issues
 
 ** Major design changes
 
-- Split `btable' into `table' and `generator'.
-- Generator schemas: CREATE GENERATOR t_cc FOR t USING crosscat(...)
-- Make `COLUMNS OF generator' a first-class table in BQL.
-- SELECT t.(ESTIMATE COLUMNS ...)
-- Reject metamodel-specific functions in SELECT; use ESTIMATE instead.
-- Provide a way to name models.
+[MQV] Split `btable' into `table' and `generator'.
+[MQV] Generator schemas: CREATE GENERATOR t_cc FOR t USING crosscat(...)
+[HQV] Make `COLUMNS OF generator' a first-class table in BQL.
+[MQV] SELECT t.(ESTIMATE COLUMNS ...)
+[MQC] Reject metamodel-specific functions in SELECT; use ESTIMATE instead.
+[MQI] Provide a way to name models.
+[MQI] SELECT c.name, SIMILARITY OF c TO s
+      FROM city AS c, city AS s
+      WHERE s.name = c.sister
 
 ** Minor tweaks
 
-- Common table expressions (WITH t AS (SELECT ...); SELECT ...).
+[M*I] Common table expressions (WITH t AS (SELECT ...); SELECT ...).
   (Requires upgrading sqlite3 past what's in Ubuntu 14.04.)
-- Implement INFER to DTRT with imputing for predictive probability.
-- Implement SIMULATE as a virtual table.
-- Support renaming columns.
+[MQI] Implement INFER to DTRT with imputing for predictive probability.
+[H*C] Implement SIMULATE as a virtual table.
+[MQI] Support renaming columns.
 
 * Shell
 
-- Background analysis in the bayeslite shell.
-- Allow multiline queries/expressions in .sql/.python shell commands.
-- Allow statements and expressions alike in .python command.
-- Figure out how to write transactions command by command in shell.
+[HUI] Background analysis in the bayeslite shell.
+[MUI] Allow multiline queries/expressions in .sql/.python shell commands.
+[HUI] Allow statements and expressions alike in .python command.
+[MUI] Figure out how to write transactions command by command in shell.
 
 ** Plotting
 
-- Get plotting in the bayeslite shell working in Ubuntu 14.04.
-- Plotting on Mac OS X is all borked up.
-- Plotting on Ubuntu 14.04 is all borked up.
+[MUI] Get plotting in the bayeslite shell working in Ubuntu 14.04.
+[MUI] Plotting on Mac OS X is all borked up.
+[MUI] Plotting on Ubuntu 14.04 is all borked up.

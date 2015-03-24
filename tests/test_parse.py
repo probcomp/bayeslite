@@ -310,9 +310,14 @@ def test_select_bql():
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(ast.ExpBQLSim(None, [ast.ColListAll()]), None)],
             [ast.SelTab('t', None)], None, None, None, None)]
-    assert parse_bql_string('select similarity to 8 from t;') == \
+    assert parse_bql_string('select similarity to (rowid=8) from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLSim(ast.ExpLit(ast.LitInt(8)),
+            [ast.SelColExp(
+                ast.ExpBQLSim(
+                    ast.ExpOp(ast.OP_EQ, (
+                        ast.ExpCol(None, 'rowid'),
+                        ast.ExpLit(ast.LitInt(8))
+                    )),
                     [ast.ColListAll()]),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
@@ -322,41 +327,66 @@ def test_select_bql():
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string(
-            'select similarity to 8 with respect to c from t;') == \
+            'select similarity to (rowid=8) with respect to c from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLSim(ast.ExpLit(ast.LitInt(8)),
+            [ast.SelColExp(
+                ast.ExpBQLSim(
+                    ast.ExpOp(ast.OP_EQ, (
+                        ast.ExpCol(None, 'rowid'),
+                        ast.ExpLit(ast.LitInt(8)),
+                    )),
                     [ast.ColListLit(['c'])]),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string(
-            'select similarity to 5 with respect to age from t1;') == \
+            'select similarity to (rowid=5) with respect to age from t1;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLSim(ast.ExpLit(ast.LitInt(5)),
+            [ast.SelColExp(
+                ast.ExpBQLSim(
+                    ast.ExpOp(ast.OP_EQ, (
+                        ast.ExpCol(None, 'rowid'),
+                        ast.ExpLit(ast.LitInt(5)),
+                    )),
                     [ast.ColListLit(['age'])]),
                 None)],
             [ast.SelTab('t1', None)], None, None, None, None)]
     assert parse_bql_string(
-            'select similarity to 8 with respect to c, d from t;') == \
+            'select similarity to (rowid=8) with respect to c, d from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [
-                ast.SelColExp(ast.ExpBQLSim(ast.ExpLit(ast.LitInt(8)),
+                ast.SelColExp(
+                    ast.ExpBQLSim(
+                        ast.ExpOp(ast.OP_EQ, (
+                            ast.ExpCol(None, 'rowid'),
+                            ast.ExpLit(ast.LitInt(8)),
+                        )),
                         [ast.ColListLit(['c'])]),
                     None),
                 ast.SelColExp(ast.ExpCol(None, 'd'), None),
             ],
             [ast.SelTab('t', None)], None, None, None, None)]
-    assert parse_bql_string(
-            'select similarity to 8 with respect to (c, d) from t;') == \
+    assert parse_bql_string('select similarity to (rowid=8)'
+            ' with respect to (c, d) from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLSim(ast.ExpLit(ast.LitInt(8)),
+            [ast.SelColExp(
+                ast.ExpBQLSim(
+                    ast.ExpOp(ast.OP_EQ, (
+                        ast.ExpCol(None, 'rowid'),
+                        ast.ExpLit(ast.LitInt(8)),
+                    )),
                     [ast.ColListLit(['c']), ast.ColListLit(['d'])]),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
-    assert parse_bql_string('select similarity to 8 with respect to' +
+    assert parse_bql_string('select similarity to (rowid=8) with respect to' +
             ' (estimate columns from t order by typicality limit 1)' +
             ' from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLSim(ast.ExpLit(ast.LitInt(8)),
+            [ast.SelColExp(
+                ast.ExpBQLSim(
+                    ast.ExpOp(ast.OP_EQ, (
+                        ast.ExpCol(None, 'rowid'),
+                        ast.ExpLit(ast.LitInt(8)),
+                    )),
                     [ast.ColListSub(
                         ast.EstCols('t', None,
                             [ast.Ord(ast.ExpBQLTyp(None), ast.ORD_ASC)],
@@ -439,10 +469,23 @@ def test_trivial_precedence_error():
             ' with respect to c from t;')
 
 def test_trivial_commands():
-    assert parse_bql_string("create btable t from 'f.csv';") == \
-        [ast.CreateBtableCSV(False, 't', 'f.csv', None)]
-    assert parse_bql_string("create btable if not exists t from 'f.csv';") == \
-        [ast.CreateBtableCSV(True, 't', 'f.csv', None)]
+    assert parse_bql_string('create generator t_cc for t using crosscat'
+            '(xyz numerical, pqr categorical, lmn cyclic)') == \
+        [ast.CreateGen('t_cc', False, 't', 'crosscat',
+            ast.GenSchema([
+                ast.GenColumn('xyz', 'numerical'),
+                ast.GenColumn('pqr', 'categorical'),
+                ast.GenColumn('lmn', 'cyclic'),
+            ]))]
+    assert parse_bql_string('create generator t_cc if not exists'
+            ' for t using crosscat'
+            '(xyz numerical, pqr categorical, lmn cyclic)') == \
+        [ast.CreateGen('t_cc', True, 't', 'crosscat',
+            ast.GenSchema([
+                ast.GenColumn('xyz', 'numerical'),
+                ast.GenColumn('pqr', 'categorical'),
+                ast.GenColumn('lmn', 'cyclic'),
+            ]))]
     assert parse_bql_string('initialize 1 model for t;') == \
         [ast.InitModels(False, 't', 1, None)]
     assert parse_bql_string('initialize 1 model if not exists for t;') == \

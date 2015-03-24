@@ -49,6 +49,12 @@ def parse_bql_phrases(scanner):
         if semantics.phrase is not None:
             phrase = semantics.phrase
             semantics.phrase = None
+            if 0 < len(semantics.errors):
+                # Keep parsing in order to detect more errors, but
+                # don't yield any broken phrases in case the caller
+                # will try to process them before we finish parsing
+                # the whole thing.
+                continue
             if 0 < scanner.n_numpar:
                 n_numpar = scanner.n_numpar
                 nampar_map = scanner.nampar_map
@@ -130,53 +136,69 @@ class BQLSemantics(object):
     def p_phrases_some(self, phrases, phrase):
         pass
 
-    def p_phrase1_empty(self):
+    def p_phrase_opt_none(self):
         pass
-    def p_phrase1_nonempty(self, phrase):
+    def p_phrase_opt_some(self, phrase):
         assert self.phrase is None
         self.phrase = phrase
 
     def p_phrase_command(self, c):              return c
     def p_phrase_query(self, q):                return q
 
+    # Transactions
     def p_command_begin(self):                  return ast.Begin()
     def p_command_rollback(self):               return ast.Rollback()
     def p_command_commit(self):                 return ast.Commit()
 
-    def p_command_droptable(self, ifexists, name):
-        return ast.DropTable(ifexists, name)
+    # SQL Data Definition Language subset
     def p_command_createtab_as(self, temp, ifnotexists, name, query):
         return ast.CreateTableAs(temp, ifnotexists, name, query)
     def p_command_createtab_sim(self, temp, ifnotexists, name, sim):
         return ast.CreateTableSim(temp, ifnotexists, name, sim)
-    def p_command_dropbtable(self, ifexists, name):
-        return ast.DropBtable(ifexists, name)
-    def p_command_createbtab_csv(self, ifnotexists, name, file):
-        # XXX codebook
-        return ast.CreateBtableCSV(ifnotexists, name, file, codebook=None)
-    def p_command_init_models(self, n, ifnotexists, btable):
+    def p_command_droptable(self, ifexists, name):
+        return ast.DropTable(ifexists, name)
+
+    # BQL Model Definition Language
+    def p_command_creategen(self, name, ifnotexists, table, metamodel, schema):
+        return ast.CreateGen(name, ifnotexists, table, metamodel, schema)
+    def p_command_dropgen(self, ifexists, name):
+        return ast.DropGen(ifexists, name)
+    def p_command_renamegen(self, oldname, newname):
+        return ast.RenameGen(oldname, newname)
+
+    def p_generator_schema_one(self, col):
+        return ast.GenSchema([col])
+    def p_generator_schema_many(self, cols, col):
+        cols.columns.append(col)
+        return cols
+    def p_generator_column_gc(self, name, stattype):
+        return ast.GenColumn(name, stattype)
+
+    def p_stattype_s(self, name):
+        return name
+
+    # BQL Model Analysis Language
+    def p_command_init_models(self, n, ifnotexists, generator):
         # XXX model config
-        return ast.InitModels(ifnotexists, btable, n, config=None)
-    def p_command_analyze_models(self, btable, models, anlimit, wait):
+        return ast.InitModels(ifnotexists, generator, n, config=None)
+    def p_command_analyze_models(self, generator, models, anlimit, wait):
         iterations = anlimit[1] if anlimit[0] == 'iterations' else None
         seconds = anlimit[1] if anlimit[0] == 'seconds' else None
-        return ast.AnalyzeModels(btable, models, iterations, seconds, wait)
-    def p_command_drop_models(self, models, btable):
-        return ast.DropModels(btable, models)
-    def p_command_rename_btable(self, oldname, newname):
-        return ast.RenameBtable(oldname, newname)
+        return ast.AnalyzeModels(generator, models, iterations, seconds, wait)
+    def p_command_drop_models(self, models, generator):
+        return ast.DropModels(generator, models)
 
-    def p_opt_temp_none(self):                  return False
-    def p_opt_temp_some(self):                  return True
+    def p_temp_opt_none(self):                  return False
+    def p_temp_opt_some(self):                  return True
     def p_ifexists_none(self):                  return False
     def p_ifexists_some(self):                  return True
     def p_ifnotexists_none(self):               return False
     def p_ifnotexists_some(self):               return True
 
-    def p_opt_anmodelset_none(self):            return None
-    def p_opt_anmodelset_some(self, m):         return sorted(m)
-    def p_opt_modelset_none(self):              return None
-    def p_opt_modelset_some(self, m):           return sorted(m)
+    def p_anmodelset_opt_none(self):            return None
+    def p_anmodelset_opt_some(self, m):         return sorted(m)
+    def p_modelset_opt_none(self):              return None
+    def p_modelset_opt_some(self, m):           return sorted(m)
     def p_modelset_one(self, r):                return r
     def p_modelset_many(self, m, r):            m += r; return m
     def p_modelrange_single(self, modelno):     return [modelno]
@@ -186,15 +208,15 @@ class BQLSemantics(object):
     def p_anlimit_minutes(self, n):             return ('seconds', 60*n)
     def p_anlimit_seconds(self, n):             return ('seconds', n)
 
-    def p_opt_wait_none(self):                  return False
-    def p_opt_wait_some(self):                  return True
+    def p_wait_opt_none(self):                  return False
+    def p_wait_opt_some(self):                  return True
 
-    def p_simulate_s(self, cols, btable, constraints, lim):
-        return ast.Simulate(cols, btable, constraints, lim.limit)
-    def p_simulate_nolimit(self, cols, btable, constraints):
+    def p_simulate_s(self, cols, generator, constraints, lim):
+        return ast.Simulate(cols, generator, constraints, lim.limit)
+    def p_simulate_nolimit(self, cols, generator, constraints):
         # XXX Report source location.
         self.errors.append('simulate missing limit')
-        return ast.Simulate(cols, btable, constraints, 0)
+        return ast.Simulate(cols, generator, constraints, 0)
     def p_simulate_columns_one(self, col):
         return [col]
     def p_simulate_columns_many(self, cols, col):
@@ -213,6 +235,7 @@ class BQLSemantics(object):
     def p_query_action_plot(self):              return ast.QACT_PLOT
 
     def p_query_select(self, q):                return q
+    def p_query_estimate(self, q):              return q
     def p_query_estcols(self, q):               return q
     def p_query_estpaircols(self, q):           return q
     def p_query_estpairrow(self, q):            return q
@@ -223,14 +246,17 @@ class BQLSemantics(object):
     def p_select_s(self, quant, cols, tabs, cond, grouping, ord, lim):
         return ast.Select(quant, cols, tabs, cond, grouping, ord, lim)
 
-    def p_estcols_e(self, btable, cond, ord, lim, sav):
-        return ast.EstCols(btable, cond, ord, lim, sav)
+    def p_estimate_e(self, quant, cols, generator, cond, grouping, ord, lim):
+        return ast.Estimate(quant, cols, generator, cond, grouping, ord, lim)
 
-    def p_estpaircols_e(self, e, btable, cond, ord, lim, sav):
-        return ast.EstPairCols(e, btable, cond, ord, lim, sav)
+    def p_estcols_e(self, generator, cond, ord, lim, sav):
+        return ast.EstCols(generator, cond, ord, lim, sav)
 
-    def p_estpairrow_e(self, e, btable, cond, ord, lim, sav):
-        return ast.EstPairRow(e, btable, cond, ord, lim, sav)
+    def p_estpaircols_e(self, e, generator, cols, cond, ord, lim, sav):
+        return ast.EstPairCols(e, generator, cols, cond, ord, lim, sav)
+
+    def p_estpairrow_e(self, e, generator, cond, ord, lim, sav):
+        return ast.EstPairRow(e, generator, cond, ord, lim, sav)
 
     def p_select_quant_distinct(self):          return ast.SELQUANT_DISTINCT
     def p_select_quant_all(self):               return ast.SELQUANT_ALL
@@ -254,9 +280,15 @@ class BQLSemantics(object):
     def p_select_table_named(self, table, name): return ast.SelTab(table, name)
     def p_select_table_subquery(self, q, name):  return ast.SelTab(q, name)
 
+    def p_for_none(self):                       return None
+    def p_for_one(self, collist):               return collist
+
     def p_where_unconditional(self):            return None
     def p_where_conditional(self, condition):   return condition
 
+    def p_column_name_cn(self, name):           return name
+    def p_generator_name_unqualified(self, name): return name
+    def p_metamodel_name_mn(self, name):        return name
     def p_table_name_unqualified(self, name):   return name
 
     def p_group_by_none(self):                  return None
@@ -279,8 +311,8 @@ class BQLSemantics(object):
     def p_limit_offset(self, limit, offset):    return ast.Lim(limit, offset)
     def p_limit_comma(self, offset, limit):     return ast.Lim(limit, offset)
 
-    def p_opt_expressions_none(self):           return []
-    def p_opt_expressions_some(self, es):       return es
+    def p_expressions_opt_none(self):           return []
+    def p_expressions_opt_some(self, es):       return es
 
     def p_expressions_one(self, e):             return [e]
     def p_expressions_many(self, es, e):        es.append(e); return es
@@ -376,7 +408,7 @@ class BQLSemantics(object):
     def p_bqlfn_prob_1col(self, e):             return ast.ExpBQLProb(None, e)
     def p_bqlfn_typ_1col_or_row(self):          return ast.ExpBQLTyp(None)
     def p_bqlfn_typ_const(self, col):           return ast.ExpBQLTyp(col)
-    def p_bqlfn_sim_1row(self, row, cols):      return ast.ExpBQLSim(row, cols)
+    def p_bqlfn_sim_1row(self, cond, cols):     return ast.ExpBQLSim(cond,cols)
     def p_bqlfn_sim_2row(self, cols):           return ast.ExpBQLSim(None,cols)
     def p_bqlfn_depprob(self, cols):            return ast.ExpBQLDepProb(*cols)
     def p_bqlfn_mutinf(self, cols, nsamp):
@@ -393,8 +425,8 @@ class BQLSemantics(object):
     def p_ofwith_bql_1col(self, col):           return (col, None)
     def p_ofwith_bql_const(self, col1, col2):   return (col1, col2)
 
-    def p_opt_nsamples_none(self):              return None
-    def p_opt_nsamples_some(self, nsamples):    return nsamples
+    def p_nsamples_opt_none(self):              return None
+    def p_nsamples_opt_some(self, nsamples):    return nsamples
 
     def p_column_lists_one(self, collist):
         return [collist]
@@ -420,12 +452,12 @@ class BQLSemantics(object):
     def p_primary_tabcol(self, tab, col):       return ast.ExpCol(tab, col)
     def p_primary_case(self, k, ws, e):         return ast.ExpCase(k, ws, e)
 
-    def p_opt_case_key_none(self):              return None
-    def p_opt_case_key_some(self, k):           return k
-    def p_opt_case_whens_none(self):            return []
-    def p_opt_case_whens_some(self, ws, w, t):  ws.append((w, t)); return ws
-    def p_opt_case_else_none(self):             return None
-    def p_opt_case_else_some(self, e):          return e
+    def p_case_key_opt_none(self):              return None
+    def p_case_key_opt_some(self, k):           return k
+    def p_case_whens_opt_none(self):            return []
+    def p_case_whens_opt_some(self, ws, w, t):  ws.append((w, t)); return ws
+    def p_case_else_opt_none(self):             return None
+    def p_case_else_opt_some(self, e):          return e
 
     def p_literal_null(self):                   return ast.LitNull(None)
     def p_literal_integer(self, i):             return ast.LitInt(i)

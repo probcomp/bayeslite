@@ -17,6 +17,7 @@
 import getopt
 
 import bayeslite
+import bayeslite.crosscat
 import bayeslite.shell.core as shell
 
 def usage(stderr, argv):
@@ -78,8 +79,9 @@ def run(stdin, stdout, stderr, argv):
     else:
         import crosscat.LocalEngine as ccle
         crosscat = ccle.LocalEngine(seed=seed)
-    bayeslite.bayesdb_register_metamodel(bdb, 'crosscat', crosscat)
-    bayeslite.bayesdb_set_default_metamodel(bdb, 'crosscat')
+    metamodel = bayeslite.crosscat.CrosscatMetamodel(crosscat)
+    bayeslite.bayesdb_register_metamodel(bdb, metamodel)
+    bayeslite.bayesdb_set_default_metamodel(bdb, metamodel)
     shell.Shell(bdb).cmdloop()
     return 0
 

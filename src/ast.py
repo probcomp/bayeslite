@@ -22,22 +22,22 @@ Parametrized = namedtuple('Parametrized', [
     'nampar_map',               # map from parameter name to number
 ])
 
+### Transactions
+
 Begin = namedtuple('Begin', [])
 Rollback = namedtuple('Rollback', [])
 Commit = namedtuple('Commit', [])
 
+### SQL Data Definition Language subset
+
 # XXX Pass through other SQL DDL and DML commands.
-DropTable = namedtuple('DropTable', [
-    # XXX Database name, &c.
-    'ifexists',
-    'name'
-])
+
 CreateTableAs = namedtuple('CreateTableAs', [
     # XXX Database name, &c.
-    'temp',
-    'ifnotexists',
-    'name',
-    'query',
+    'temp',                     # boolean
+    'ifnotexists',              # boolean
+    'name',                     # XXX name
+    'query',                    # query
 ])
 CreateTableSim = namedtuple('CreateTableSim', [
     # XXX Database name, &c.
@@ -46,47 +46,68 @@ CreateTableSim = namedtuple('CreateTableSim', [
     'name',                     # XXX name
     'simulation',               # Simulate
 ])
-DropBtable = namedtuple('DropBtable', [
+DropTable = namedtuple('DropTable', [
+    # XXX Database name, &c.
     'ifexists',
-    'name',
+    'name'
 ])
-CreateBtableCSV = namedtuple('CreateBtableCSV', [
-    'ifnotexists',
-    'name',
-    'file',
-    'codebook',
+
+### BQL Model Definition Language
+
+CreateGen = namedtuple('CreateGen', [
+    'name',                     # XXX name
+    'ifnotexists',              # boolean
+    'table',                    # XXX name
+    'metamodel',                # XXX name
+    'schema',                   # GenSchema
 ])
+DropGen = namedtuple('DropGen', [
+    'ifexists',                 # boolean
+    'name',                     # XXX name
+])
+RenameGen = namedtuple('RenameGen', [
+    'oldname',                  # XXX name
+    'newname',                  # XXX name
+])
+
+GenSchema = namedtuple('GenSchema', [
+    'columns'                   # [GenColumn]
+])
+GenColumn = namedtuple('GenColumn', [
+    'name',                     # XXX name
+    'stattype',                 # XXX name
+])
+
+### BQL Model Analysis Language
+
 InitModels = namedtuple('InitModels', [
     'ifnotexists',
-    'btable',
+    'generator',
     'nmodels',
     'config',
 ])
 AnalyzeModels = namedtuple('AnalyzeModels', [
-    'btable',
+    'generator',
     'modelnos',
     'iterations',
     'seconds',
     'wait',
 ])
 DropModels = namedtuple('DropModels', [
-    'btable',
+    'generator',
     'modelnos',
-])
-RenameBtable = namedtuple('RenameBtable',[
-    'oldname',
-    'newname',
 ])
 
 Simulate = namedtuple('Simulate', [
     'columns',                  # [XXX name]
-    'btable_name',              # XXX name
+    'generator',                # XXX name
     'constraints',              # [(XXX name, Exp*)]
     'nsamples',                 # Exp* or None
 ])
 
 def is_query(phrase):
     if isinstance(phrase, Select):      return True
+    if isinstance(phrase, Estimate):    return True
     if isinstance(phrase, EstCols):     return True
     if isinstance(phrase, EstPairCols): return True
     if isinstance(phrase, EstPairRow):  return True
@@ -98,6 +119,16 @@ Select = namedtuple('Select', [
     'quantifier',               # SELQUANT_*
     'columns',                  # [SelCol*]
     'tables',                   # [SelTab] or None (scalar)
+    'condition',                # Exp* or None (unconditional)
+    'grouping',                 # Grouping or None
+    'order',                    # [Ord] or None (unordered)
+    'limit',                    # Lim or None (unlimited)
+])
+
+Estimate = namedtuple('Estimate', [
+    'quantifier',               # SELQUANT_*
+    'columns',                  # [SelCol*]
+    'generator',                # XXX name
     'condition',                # Exp* or None (unconditional)
     'grouping',                 # Grouping or None
     'order',                    # [Ord] or None (unordered)
@@ -121,7 +152,7 @@ SelTab = namedtuple('SelTab', [
 ])
 
 EstCols = namedtuple('EstCols', [
-    'btable',                   # XXX name
+    'generator',                # XXX name
     'condition',                # Exp* or None (unconditional)
     'order',                    # [Ord] or None (unordered)
     'limit',                    # Lim or None (unlimited),
@@ -130,7 +161,8 @@ EstCols = namedtuple('EstCols', [
 
 EstPairCols = namedtuple('EstPairCols', [
     'expression',               # Exp*
-    'btable',                   # XXX name
+    'generator',                # XXX name
+    'columns',                  # ColList* or None
     'condition',                # Exp* or None (unconditional)
     'order',                    # [Ord] or None (unordered)
     'limit',                    # Lim or None (unlimited),
@@ -139,7 +171,7 @@ EstPairCols = namedtuple('EstPairCols', [
 
 EstPairRow = namedtuple('EstPairRow', [
     'expression',               # Exp*
-    'btable',                   # XXX name
+    'generator',                # XXX name
     'condition',                # Exp* or None (unconditional)
     'order',                    # [Ord] or None (unordered)
     'limit',                    # Lim or None (unlimited),
@@ -225,7 +257,7 @@ OP_BITNOT = 'BITNOT'
 ExpBQLPredProb = namedtuple('ExpBQLPredProb', ['column'])
 ExpBQLProb = namedtuple('ExpBQLProb', ['column', 'value'])
 ExpBQLTyp = namedtuple('ExpBQLTyp', ['column'])
-ExpBQLSim = namedtuple('ExpBQLSim', ['rowid', 'column_lists'])
+ExpBQLSim = namedtuple('ExpBQLSim', ['condition', 'column_lists'])
 ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
 ExpBQLMutInf = namedtuple('ExpBQLMutInf', ['column0', 'column1', 'nsamples'])
 ExpBQLCorrel = namedtuple('ExpBQLCorrel', ['column0', 'column1'])
