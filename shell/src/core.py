@@ -20,6 +20,8 @@ import traceback
 
 import bayeslite
 import bayeslite.core as core
+import bayeslite.crosscat
+import bayeslite.guess as guess
 import bayeslite.parse as parse
 import bayeslite.shell.pretty as pretty
 
@@ -31,13 +33,14 @@ class Shell(cmd.Cmd):
     sql_prompt          = '   sql...> '
     python_prompt       = 'python...> '
 
-    def __init__(self, bdb):
+    def __init__(self, bdb, metamodel):
         self.prompt = self.def_prompt
         self.bql = StringIO.StringIO()
         self.identchars += '.'
         cmd.Cmd.__init__(self, 'Tab')
 
         self._bdb = bdb
+        self._metamodel = metamodel
         self._cmds = set([])
         self._traced = False
         self._sql_traced = False
@@ -49,6 +52,7 @@ class Shell(cmd.Cmd):
         self._installcmd('codebook', self.dot_codebook)
         self._installcmd('csv', self.dot_csv)
         self._installcmd('describe', self.dot_describe)
+        self._installcmd('guess', self.dot_guess)
         self._installcmd('help', self.dot_help)
         self._installcmd('loadmodels', self.dot_loadmodels)
         self._installcmd('python', self.dot_python)
@@ -238,6 +242,26 @@ class Shell(cmd.Cmd):
         except Exception:
             self.stdout.write(traceback.format_exc())
 
+    def dot_guess(self, line):
+        '''guess data generator
+        <generator> <table>
+
+        Create a generator named <generator> for the table <table>,
+        guessing the statistical types of the columns in <table>.
+        '''
+        # XXX Lousy, lousy tokenizer.
+        tokens = line.split()
+        if len(tokens) != 2:
+            self.stdout.write('Usage:'
+                ' .guess <generator> <table>\n')
+        generator = tokens[0]
+        table = tokens[1]
+        try:
+            guess.bayesdb_guess_generator(self._bdb, generator, table,
+                self._metamodel)
+        except Exception:
+            self.stdout.write(traceback.format_exc())
+
     def dot_loadmodels(self, line):
         '''load legacy models
         <generator> <table> </path/to/models.pkl.gz>
@@ -257,7 +281,7 @@ class Shell(cmd.Cmd):
         pathname = tokens[2]
         try:
             bayeslite.bayesdb_load_legacy_models(self._bdb, generator, table,
-                pathname, create=True)
+                self._metamodel, pathname, create=True)
         except Exception:
             self.stdout.write(traceback.format_exc())
 
