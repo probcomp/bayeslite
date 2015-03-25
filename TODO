@@ -59,6 +59,8 @@ Legend:
 [MQI] Implement INFER to DTRT with imputing for predictive probability.
 [H*C] Implement SIMULATE as a virtual table.
 [MQI] Support renaming columns.
+[EQC] INSERT in BQL.
+[MQC] UPDATE in BQL.
 
 * Shell
 
