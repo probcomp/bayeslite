@@ -1,4 +1,5 @@
-build
+/build/
+__pycache__/
 external/lemonade/dist/lemonade/*.pyc
 src/grammar.out
 src/grammar.py
