@@ -63,7 +63,7 @@ def bayesdb_load_codebook_csv_file(bdb, table, pathname):
                 '''
                 for key in sorted(value_map.keys()):
                     value = value_map[key]
-                    bdb.sql_execute(sql, (table_id, colno, key, value))
+                    bdb.sql_execute(sql, (table, colno, key, value))
             else:
                 # XXX Arbitrary input in error message...
                 raise IOError('Invalid value map for column: %s' %

@@ -22,6 +22,12 @@ from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 from bayeslite.util import unique
 
+def bayesdb_read_csv_file(bdb, table, pathname, header=False, create=False,
+        ifnotexists=False):
+    with open(pathname, 'rU') as f:
+        bayesdb_read_csv(bdb, table, f, header=header, create=create,
+            ifnotexists=ifnotexists)
+
 def bayesdb_read_csv(bdb, table, f, header=False,
         create=False, ifnotexists=False):
     if not header:

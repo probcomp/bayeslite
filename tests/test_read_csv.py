@@ -17,6 +17,7 @@
 import StringIO
 import contextlib
 import pytest
+import tempfile
 
 import bayeslite
 
@@ -104,3 +105,10 @@ def test_read_csv():
         bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=False,
             ifnotexists=False)
         assert list(bdb.sql_execute('SELECT * FROM t')) == data + data + data
+        with tempfile.NamedTemporaryFile(prefix='bayeslite') as temp:
+            with open(temp.name, 'w') as f:
+                f.write(csv_hdrdata)
+            bayeslite.bayesdb_read_csv_file(bdb, 't', temp.name, header=True,
+                create=False, ifnotexists=False)
+        assert list(bdb.sql_execute('SELECT * FROM t')) == \
+            data + data + data + data
