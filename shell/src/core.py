@@ -54,7 +54,7 @@ class Shell(cmd.Cmd):
         self._installcmd('describe', self.dot_describe)
         self._installcmd('guess', self.dot_guess)
         self._installcmd('help', self.dot_help)
-        self._installcmd('loadmodels', self.dot_loadmodels)
+        self._installcmd('legacymodels', self.dot_legacymodels)
         self._installcmd('python', self.dot_python)
         self._installcmd('sql', self.dot_sql)
         self._installcmd('trace', self.dot_trace)
@@ -262,7 +262,7 @@ class Shell(cmd.Cmd):
         except Exception:
             self.stdout.write(traceback.format_exc())
 
-    def dot_loadmodels(self, line):
+    def dot_legacymodels(self, line):
         '''load legacy models
         <generator> <table> </path/to/models.pkl.gz>
 
@@ -274,7 +274,8 @@ class Shell(cmd.Cmd):
         tokens = line.split()
         if len(tokens) != 3:
             self.stdout.write('Usage:'
-                ' .loadmodels <generator> <table> </path/to/models.pkl.gz>\n')
+                ' .legacymodels <generator> <table>'
+                ' </path/to/models.pkl.gz>\n')
             return
         generator = tokens[0]
         table = tokens[1]
