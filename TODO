@@ -17,7 +17,7 @@ Legend:
 
 * BayesDB issues
 
-[MUC] Subsampling analysis, post-analysis insertion.
+[MUC] Subsampling analysis.
 
 * Compiler issues
 
@@ -39,27 +39,14 @@ Legend:
 * Schema issues
 
 [M*I] Document schemas: crosscat model schema, bayeslite SQL schema.
-[MUI] Pull diagnostics out of json and into the bayesdb_model table, or
-  a metamodel-specific table, so we can do queries on them.
-  . SELECT modelno FROM bayesdb_model
-        WHERE table_id = 32 AND iterations < 10
-  . Just iterations for now, not other diagnostics.
-[MUC] Move column metadata into SQL tables so you can do queries on it.
-  . ESTIMATE COLUMNS FROM foo WHERE modeltype = 'numerical'
 [HSI] Automatic tests for schema upgrades.
-[MUC] dha NAME column with codebook without models is all borked up.
-  . Add column modelled_colno to bayesdb_table_column.
-  . Adapt all modelling to use modelled_colno, not colno.
 
 * Language issues
 
 ** Major design changes
 
-[MQV] Split `btable' into `table' and `generator'.
-[MQV] Generator schemas: CREATE GENERATOR t_cc FOR t USING crosscat(...)
 [HQV] Make `COLUMNS OF generator' a first-class table in BQL.
 [MQV] SELECT t.(ESTIMATE COLUMNS ...)
-[MQC] Reject metamodel-specific functions in SELECT; use ESTIMATE instead.
 [MQI] Provide a way to name models.
 [MQI] SELECT c.name, SIMILARITY OF c TO s
       FROM city AS c, city AS s
@@ -78,7 +65,6 @@ Legend:
 [HUI] Background analysis in the bayeslite shell.
 [MUI] Allow multiline queries/expressions in .sql/.python shell commands.
 [HUI] Allow statements and expressions alike in .python command.
-[MUI] Figure out how to write transactions command by command in shell.
 
 ** Plotting
 
