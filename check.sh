@@ -10,7 +10,7 @@ platform=`"${PYTHON}" -c 'import distutils.util as u; print u.get_platform()'`
 version=`"${PYTHON}" -c 'import sys; print sys.version[0:3]'`
 
 bayeslite="${root}/build/lib.${platform}-${version}"
-export PYTHONPATH="${PYTHONPATH:+${PYTHONPATH}:}${bayeslite}"
+export PYTHONPATH="${bayeslite}${PYTHONPATH:+:${PYTHONPATH}}"
 
 (
     set -Ceu
