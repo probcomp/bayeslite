@@ -125,13 +125,16 @@ def bayesdb_install_schema(db):
         # transaction active.  Otherwise we make no use of the sqlite3
         # module's automatic transaction handling.
         with db:
-            # XXX Maybe push the foreign keys pragma to caller.
-            db.execute('PRAGMA foreign_keys = ON')
-            db.execute('PRAGMA application_id = %d' % (0x42594442,))
-            db.executescript('BEGIN;' + bayesdb_schema_5 + ';COMMIT')
+            db.executescript('''
+                BEGIN;
+                PRAGMA application_id = %d;
+                %s;
+                COMMIT;
+            ''' % (0x42594442, bayesdb_schema_5))
     elif application_id != 0x42594442:
         raise IOError('Wrong application id: 0x%08x' % (application_id,))
     elif user_version != 5:
         raise IOError('Unknown bayeslite format version: %d' % (user_version,))
-    # XXX Consider running PRAGMA integrity_check, foreign_key_check,
-    # and/or quick_check.
+    db.execute('PRAGMA foreign_keys = ON')
+    db.execute('PRAGMA integrity_check')
+    db.execute('PRAGMA foreign_key_check')
