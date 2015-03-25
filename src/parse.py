@@ -152,19 +152,33 @@ class BQLSemantics(object):
 
     # SQL Data Definition Language subset
     def p_command_createtab_as(self, temp, ifnotexists, name, query):
-        return ast.CreateTableAs(temp, ifnotexists, name, query)
+        return ast.CreateTabAs(temp, ifnotexists, name, query)
     def p_command_createtab_sim(self, temp, ifnotexists, name, sim):
-        return ast.CreateTableSim(temp, ifnotexists, name, sim)
-    def p_command_droptable(self, ifexists, name):
-        return ast.DropTable(ifexists, name)
+        return ast.CreateTabSim(temp, ifnotexists, name, sim)
+    def p_command_droptab(self, ifexists, name):
+        return ast.DropTab(ifexists, name)
+    def p_command_altertab(self, table, cmds):
+        return ast.AlterTab(table, cmds)
+
+    def p_altertab_cmds_one(self, cmd):         return [cmd]
+    def p_altertab_cmds_many(self, cmds, cmd):  cmds.append(cmd); return cmds
+    def p_altertab_cmd_renametab(self, name):
+        return ast.AlterTabRenameTab(name)
+    def p_altertab_cmd_renamecol(self, old, new):
+        return ast.AlterTabRenameCol(old, new)
 
     # BQL Model Definition Language
     def p_command_creategen(self, name, ifnotexists, table, metamodel, schema):
         return ast.CreateGen(name, ifnotexists, table, metamodel, schema)
     def p_command_dropgen(self, ifexists, name):
         return ast.DropGen(ifexists, name)
-    def p_command_renamegen(self, oldname, newname):
-        return ast.RenameGen(oldname, newname)
+    def p_command_altergen(self, generator, cmds):
+        return ast.AlterGen(generator, cmds)
+
+    def p_altergen_cmds_one(self, cmd):         return [cmd]
+    def p_altergen_cmds_many(self, cmds, cmd):  cmds.append(cmd); return cmds
+    def p_altergen_cmd_renamegen(self, name):
+        return ast.AlterGenRenameGen(name)
 
     def p_generator_schema_one(self, col):
         return ast.GenSchema([col])

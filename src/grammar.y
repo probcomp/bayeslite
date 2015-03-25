@@ -41,7 +41,19 @@ command(createtab_as)	::= K_CREATE temp_opt(temp) K_TABLE
 command(createtab_sim)	::= K_CREATE temp_opt(temp) K_TABLE
 				ifnotexists(ifnotexists)
 				table_name(name) K_AS simulate(sim).
-command(droptable)	::= K_DROP K_TABLE ifexists(ifexists) table_name(name).
+command(droptab)	::= K_DROP K_TABLE ifexists(ifexists) table_name(name).
+command(altertab)	::= K_ALTER K_TABLE table_name(table)
+				altertab_cmds(cmds).
+
+altertab_cmds(one)	::= altertab_cmd(cmd).
+altertab_cmds(many)	::= altertab_cmds(cmds) T_COMMA altertab_cmd(cmd).
+
+altertab_cmd(renametab)	::= K_RENAME K_TO table_name(name).
+altertab_cmd(renamecol)	::= K_RENAME k_column_opt column_name(old)
+				K_TO column_name(new).
+
+k_column_opt		::= .
+k_column_opt		::= K_COLUMN.
 
 /*
  * BQL Model Definition Language
@@ -54,8 +66,13 @@ command(creategen)	::= K_CREATE K_GENERATOR generator_name(name)
 				T_LROUND generator_schema(schema) T_RROUND.
 command(dropgen)	::= K_DROP K_GENERATOR ifexists(ifexists)
 				generator_name(name).
-command(renamegen)	::= K_ALTER K_GENERATOR generator_name(oldname)
-				K_RENAME K_TO generator_name(newname).
+command(altergen)	::= K_ALTER K_GENERATOR generator_name(generator)
+				altergen_cmds(cmds).
+
+altergen_cmds(one)	::= altergen_cmd(cmd).
+altergen_cmds(many)	::= altergen_cmds(cmds) T_COMMA altergen_cmd(cmd).
+
+altergen_cmd(renamegen)	::= K_RENAME K_TO generator_name(name).
 
 generator_schema(one)	::= generator_column(col).
 generator_schema(many)	::= generator_schema(cols) T_COMMA

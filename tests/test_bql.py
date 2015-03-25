@@ -23,6 +23,7 @@ import bayeslite
 import bayeslite.ast as ast
 import bayeslite.bql as bql
 import bayeslite.compiler as compiler
+import bayeslite.core as core
 import bayeslite.guess as guess
 import bayeslite.parse as parse
 
@@ -559,17 +560,62 @@ def test_trivial_commands():
         bdb.execute('initialize 2 models for t_cc')
         bdb.execute('initialize 1 model if not exists for t_cc')
         bdb.execute('initialize 2 models if not exists for t_cc')
+        generator_id = core.bayesdb_get_generator(bdb, 't_cc')
+        assert core.bayesdb_generator_table(bdb, generator_id) == 't'
+        bdb.execute('alter table t rename to t')
+        assert core.bayesdb_generator_table(bdb, generator_id) == 't'
+        bdb.execute('alter table t rename to T')
+        assert core.bayesdb_generator_table(bdb, generator_id) == 'T'
+        bdb.execute('estimate count(*) from t_cc')
+        bdb.execute('alter table t rename to t')
+        assert core.bayesdb_generator_table(bdb, generator_id) == 't'
         bdb.execute('alter generator t_cc rename to t0_cc')
+        assert core.bayesdb_generator_name(bdb, generator_id) == 't0_cc'
+        bdb.execute('alter generator t0_cc rename to zot, rename to T0_CC')
+        assert core.bayesdb_generator_name(bdb, generator_id) == 'T0_CC'
+        bdb.execute('alter generator T0_cc rename to T0_cc')
+        assert core.bayesdb_generator_name(bdb, generator_id) == 'T0_cc'
+        bdb.execute('alter generator t0_CC rename to t0_cc')
+        assert core.bayesdb_generator_name(bdb, generator_id) == 't0_cc'
         bdb.execute('estimate count(*) from t0_cc')
         with pytest.raises(ValueError):
             bdb.execute('estimate count(*) from t_cc')
-        bdb.execute('alter generator t0_cc rename to t_cc')
+        bdb.execute('alter generator t0_cc rename to T0_cc')
+        bdb.execute('analyze t0_cc for 1 iteration wait')
+        colno = core.bayesdb_generator_column_number(bdb, generator_id,
+            'gender')
+        with pytest.raises(parse.ParseError):
+            # Rename the table's columns, not the generator's columns.
+            bdb.execute('alter generator t0_cc rename gender to sex')
+        with pytest.raises(NotImplementedError): # XXX
+            bdb.execute('alter table t rename to t0, rename gender to sex')
+            assert core.bayesdb_generator_column_number(bdb, generator_id,
+                    'sex') \
+                == colno
+            bdb.execute('analyze t0_cc model 0 for 1 iteration wait')
+            bdb.execute('alter generator t0_cc rename to t_cc')
+            assert core.bayesdb_generator_column_number(bdb, generator_id,
+                    'sex') \
+                == colno
+            bdb.execute('select sex from t0')
+            with pytest.raises(AssertionError): # XXX
+                bdb.execute('select gender from t0')
+                assert False, 'Need to fix quoting of unknown columns!'
+            bdb.execute('estimate infer sex conf 0.9 from t_cc')
+            with pytest.raises(ValueError):
+                bdb.execute('estimate infer gender conf 0.9 from t_cc')
+            bdb.execute('alter table t0 rename sex to gender')
+            assert core.bayesdb_generator_column_number(bdb, generator_id,
+                    'gender') \
+                == colno
+        bdb.execute('alter generator t0_cc rename to t_cc')     # XXX
+        bdb.execute('alter table t rename to t0')               # XXX
         bdb.execute('analyze t_cc model 0 for 1 iteration wait')
         bdb.execute('analyze t_cc models 0-1 for 1 iteration wait')
         bdb.execute('analyze t_cc models 0,1 for 1 iteration wait')
         bdb.execute('analyze t_cc for 1 iteration wait')
-        bdb.execute('select * from t')
-        bdb.execute('select * from T')
+        bdb.execute('select * from t0')
+        bdb.execute('select * from T0')
         bdb.execute('estimate * from t_cc')
         bdb.execute('estimate * from T_CC')
         bdb.execute('estimate pairwise row similarity from t_cc')

@@ -32,24 +32,36 @@ Commit = namedtuple('Commit', [])
 
 # XXX Pass through other SQL DDL and DML commands.
 
-CreateTableAs = namedtuple('CreateTableAs', [
+CreateTabAs = namedtuple('CreateTabAs', [
     # XXX Database name, &c.
     'temp',                     # boolean
     'ifnotexists',              # boolean
     'name',                     # XXX name
     'query',                    # query
 ])
-CreateTableSim = namedtuple('CreateTableSim', [
+CreateTabSim = namedtuple('CreateTabSim', [
     # XXX Database name, &c.
     'temp',                     # boolean
     'ifnotexists',              # boolean
     'name',                     # XXX name
     'simulation',               # Simulate
 ])
-DropTable = namedtuple('DropTable', [
+DropTab = namedtuple('DropTab', [
     # XXX Database name, &c.
     'ifexists',
     'name'
+])
+AlterTab = namedtuple('AlterTab', [
+    # XXX Database name, &c.
+    'table',                    # XXX name
+    'commands',                 # AlterTab*
+])
+AlterTabRenameTab = namedtuple('AlterTabRenameTab', [
+    'name',                     # XXX name
+])
+AlterTabRenameCol = namedtuple('AlterTabRenameCol', [
+    'old',                      # XXX name
+    'new',                      # XXX name
 ])
 
 ### BQL Model Definition Language
@@ -65,9 +77,12 @@ DropGen = namedtuple('DropGen', [
     'ifexists',                 # boolean
     'name',                     # XXX name
 ])
-RenameGen = namedtuple('RenameGen', [
-    'oldname',                  # XXX name
-    'newname',                  # XXX name
+AlterGen = namedtuple('AlterGen', [
+    'generator',                # XXX name
+    'commands',                 # AlterGen*
+])
+AlterGenRenameGen = namedtuple('AlterGenRenameGen', [
+    'name',                     # XXX name
 ])
 
 GenSchema = namedtuple('GenSchema', [

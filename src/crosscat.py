@@ -215,13 +215,13 @@ class CrosscatMetamodel(metamodel.IMetamodel):
     def create_generator(self, bdb, generator_id, column_list):
         with bdb.savepoint():
             # Install the metadata json blob.
-            metadata = create_metadata(bdb, generator_id, column_list)
+            M_c = create_metadata(bdb, generator_id, column_list)
             insert_metadata_sql = '''
                 INSERT INTO bayesdb_crosscat_metadata
                     (generator_id, metadata_json)
                     VALUES (?, ?)
             '''
-            metadata_json = json.dumps(metadata)
+            metadata_json = json.dumps(M_c)
             bdb.sql_execute(insert_metadata_sql, (generator_id, metadata_json))
 
             # Cache the metadata json blob -- we'll probably use it
@@ -229,7 +229,7 @@ class CrosscatMetamodel(metamodel.IMetamodel):
             cc_cache = self._crosscat_cache(bdb)
             if cc_cache is not None:
                 assert generator_id not in cc_cache.metadata
-                cc_cache.metadata[generator_id] = metadata
+                cc_cache.metadata[generator_id] = M_c
 
             # Expose the same information relationally.
             insert_column_sql = '''
@@ -243,7 +243,7 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                     VALUES (?, ?, ?, ?)
             '''
             for cc_colno, (colno, name, _stattype) in enumerate(column_list):
-                column_metadata = metadata['column_metadata'][cc_colno]
+                column_metadata = M_c['column_metadata'][cc_colno]
                 disttype = column_metadata['modeltype']
                 parameters = (generator_id, colno, cc_colno, disttype)
                 bdb.sql_execute(insert_column_sql, parameters)
@@ -287,6 +287,26 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                     WHERE generator_id = ?
             '''
             bdb.sql_execute(delete_metadata_sql, (generator_id,))
+
+    def rename_column(self, bdb, generator_id, oldname, newname):
+        assert oldname != newname
+        M_c = self._crosscat_metadata(bdb, generator_id)
+        assert oldname in M_c['name_to_idx']
+        assert newname not in M_c['name_to_idx']
+        idx = M_c['name_to_idx'][oldname]
+        assert M_c['idx_to_name'][unicode(idx)] == oldname
+        del M_c['name_to_idx'][oldname]
+        M_c['name_to_idx'][newname] = idx
+        M_c['idx_to_name'][unicode(idx)] = newname
+        sql = '''
+            UPDATE bayesdb_crosscat_metadata SET metadata_json = ?
+                WHERE generator_id = ?
+        '''
+        metadata_json = json.dumps(M_c)
+        bdb.sql_execute(sql, (metadata_json, generator_id))
+        cc_cache = self._crosscat_cache_nocreate(bdb)
+        if cc_cache is not None:
+            cc_cache.metadata[generator_id] = M_c
 
     def initialize_models(self, bdb, generator_id, modelnos, model_config):
         cc_cache = self._crosscat_cache(bdb)

@@ -43,6 +43,8 @@ class IMetamodel(object):
         raise NotImplementedError
     def drop_generator(self, bdb, generator_id):
         raise NotImplementedError
+    def rename_column(self, bdb, generator_id, oldname, newname):
+        raise NotImplementedError
     def initialize_models(self, bdb, generator_id, modelnos, model_config):
         raise NotImplementedError
     def drop_models(self, bdb, generator_id, modelnos=None):

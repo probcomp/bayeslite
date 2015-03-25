@@ -58,7 +58,7 @@ def execute_phrase(bdb, phrase, bindings=()):
         txn.bayesdb_commit_transaction(bdb)
         return empty_cursor(bdb)
 
-    if isinstance(phrase, ast.CreateTableAs):
+    if isinstance(phrase, ast.CreateTabAs):
         assert ast.is_query(phrase.query)
         with bdb.savepoint():
             out = compiler.Output(n_numpar, nampar_map, bindings)
@@ -69,7 +69,7 @@ def execute_phrase(bdb, phrase, bindings=()):
             compiler.compile_query(bdb, phrase.query, out)
             return bdb.sql_execute(out.getvalue(), out.getbindings())
 
-    if isinstance(phrase, ast.CreateTableSim):
+    if isinstance(phrase, ast.CreateTabSim):
         assert isinstance(phrase.simulation, ast.Simulate)
         with bdb.savepoint():
             if core.bayesdb_has_generator(bdb, phrase.name):
@@ -143,7 +143,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                 bdb.sql_execute(insert_sql, row)
         return empty_cursor(bdb)
 
-    if isinstance(phrase, ast.DropTable):
+    if isinstance(phrase, ast.DropTab):
         with bdb.savepoint():
             sql = 'SELECT COUNT(*) FROM bayesdb_generator WHERE tabname = ?'
             cursor = bdb.sql_execute(sql, (phrase.name,))
@@ -158,6 +158,87 @@ def execute_phrase(bdb, phrase, bindings=()):
             ifexists = 'IF EXISTS ' if phrase.ifexists else ''
             qt = sqlite3_quote_name(phrase.name)
             return bdb.sql_execute('DROP TABLE %s%s' % (ifexists, qt))
+
+    if isinstance(phrase, ast.AlterTab):
+        with bdb.savepoint():
+            table = phrase.table
+            if not core.bayesdb_has_table(bdb, table):
+                raise ValueError('No such table: %s' % (repr(table,)))
+            for cmd in phrase.commands:
+                if isinstance(cmd, ast.AlterTabRenameTab):
+                    # If the names differ only in case, we have to do
+                    # some extra work because SQLite will reject the
+                    # table rename.  Note that we may even have table
+                    # == cmd.name here, but if the stored table name
+                    # differs in case from cmd.name, we want to update
+                    # it anyway.
+                    if casefold(table) == casefold(cmd.name):
+                        # Go via a temporary table.
+                        temp = table + '_temp'
+                        while core.bayesdb_has_table(bdb, temp) or \
+                              core.bayesdb_has_generator(bdb, temp):
+                            temp += '_temp'
+                        rename_table(bdb, table, temp)
+                        rename_table(bdb, temp, cmd.name)
+                    else:
+                        # Make sure nothing else has this name and
+                        # rename it.
+                        if core.bayesdb_has_table(bdb, cmd.name):
+                            raise ValueError('Name already defined as table'
+                                ': %s' %
+                                (repr(cmd.name),))
+                        if core.bayesdb_has_generator(bdb, cmd.name):
+                            raise ValueError('Name already defined as generator'
+                                ': %s' %
+                                (repr(cmd.name),))
+                        rename_table(bdb, table, cmd.name)
+                    # Remember the new name for subsequent commands.
+                    table = cmd.name
+                elif isinstance(cmd, ast.AlterTabRenameCol):
+                    # XXX Need to deal with this in the compiler.
+                    raise NotImplementedError('Renaming columns'
+                        ' not yet implemented.')
+                    # Make sure the old name exist and the new name does not.
+                    old_folded = casefold(cmd.old)
+                    new_folded = casefold(cmd.new)
+                    if old_folded != new_folded:
+                        if not core.bayesdb_table_has_column(bdb, table,
+                                cmd.old):
+                            raise ValueError('No such column in table %s'
+                                ': %s' %
+                                (repr(table), repr(cmd.old)))
+                        if core.bayesdb_table_has_column(bdb, table, cmd.new):
+                            raise ValueError('Column already exists'
+                                ' in table %s: %s' %
+                                (repr(table), repr(cmd.new)))
+                    # Update bayesdb_column.  Everything else refers
+                    # to columns by (tabname, colno) pairs rather than
+                    # by names.
+                    update_column_sql = '''
+                        UPDATE bayesdb_column SET name = ?
+                            WHERE tabname = ? AND name = ?
+                    '''
+                    before = bdb.sqlite3.total_changes
+                    bdb.sql_execute(update_column_sql,
+                        (cmd.new, table, cmd.old))
+                    after = bdb.sqlite3.total_changes
+                    assert after - before == 1
+                    # ...except metamodels may have the (case-folded)
+                    # name cached.
+                    if old_folded != new_folded:
+                        generators_sql = '''
+                            SELECT id FROM bayesdb_generator WHERE tabname = ?
+                        '''
+                        cursor = bdb.sql_execute(generators_sql, (table,))
+                        for (generator_id,) in cursor:
+                            metamodel = core.bayesdb_generator_metamodel(bdb,
+                                generator_id)
+                            metamodel.rename_column(bdb, generator_id,
+                                old_folded, new_folded)
+                else:
+                    assert False, 'Invalid alter table command: %s' % \
+                        (cmd,)
+        return empty_cursor(bdb)
 
     if isinstance(phrase, ast.CreateGen):
         assert isinstance(phrase.schema, ast.GenSchema)
@@ -280,24 +361,39 @@ def execute_phrase(bdb, phrase, bindings=()):
             bdb.sql_execute(drop_generator_sql, (generator_id,))
         return empty_cursor(bdb)
 
-    if isinstance(phrase, ast.RenameGen):
+    if isinstance(phrase, ast.AlterGen):
         with bdb.savepoint():
-            # Ensure the old name exists and the new one doesn't.
-            # XXX What about `RENAME X TO X'?
-            if not core.bayesdb_has_generator(bdb, phrase.oldname):
-                raise ValueError('No such generator: %s' %
-                    (repr(phrase.oldname),))
-            if core.bayesdb_has_generator(bdb, phrase.newname):
-                raise ValueError('Name already defined as generator: %s' %
-                    (repr(phrase.newname),))
-            if core.bayesdb_has_table(bdb, phrase.newname):
-                raise ValueError('Name already defined as generator: %s' %
-                    (repr(phrase.newname),))
-
-            # Rename by changing the `name' column of the generator.
-            # Everything else refers to generators by id.
-            rename_sql = 'UPDATE bayesdb_generator SET name = ? WHERE name = ?'
-            bdb.sql_execute(rename_sql, (phrase.newname, phrase.oldname))
+            generator = phrase.generator
+            if not core.bayesdb_has_generator(bdb, generator):
+                raise ValueError('No such generator: %s' % (repr(generator),))
+            generator_id = core.bayesdb_get_generator(bdb, generator)
+            for cmd in phrase.commands:
+                if isinstance(cmd, ast.AlterGenRenameGen):
+                    # Make sure nothing else has this name.
+                    if casefold(generator) != casefold(cmd.name):
+                        if core.bayesdb_has_table(bdb, cmd.name):
+                            raise ValueError('Name already defined as table'
+                                ': %s' %
+                                (repr(cmd.name),))
+                        if core.bayesdb_has_generator(bdb, cmd.name):
+                            raise ValueError('Name already defined as generator'
+                                ': %s' %
+                                (repr(cmd.name),))
+                    # Update bayesdb_generator.  Everything else
+                    # refers to it by id.
+                    before = bdb.sqlite3.total_changes
+                    update_generator_sql = '''
+                        UPDATE bayesdb_generator SET name = ? WHERE id = ?
+                    '''
+                    bdb.sql_execute(update_generator_sql,
+                        (cmd.name, generator_id))
+                    after = bdb.sqlite3.total_changes
+                    assert after - before == 1
+                    # Remember the new name for subsequent commands.
+                    generator = cmd.name
+                else:
+                    assert False, 'Invalid ALTER GENERATOR command: %s' % \
+                        (repr(cmd),)
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.InitModels):
@@ -395,6 +491,33 @@ def execute_phrase(bdb, phrase, bindings=()):
         return empty_cursor(bdb)
 
     assert False                # XXX
+
+def rename_table(bdb, old, new):
+    assert core.bayesdb_has_table(bdb, old)
+    assert not core.bayesdb_has_generator(bdb, old)
+    assert not core.bayesdb_has_table(bdb, new)
+    assert not core.bayesdb_has_generator(bdb, new)
+    # Rename the SQL table.
+    qo = sqlite3_quote_name(old)
+    qn = sqlite3_quote_name(new)
+    rename_sql = 'ALTER TABLE %s RENAME TO %s' % (qo, qn)
+    bdb.sql_execute(rename_sql)
+    # Update bayesdb_column to use the new name.
+    update_columns_sql = '''
+        UPDATE bayesdb_column SET tabname = ? WHERE tabname = ?
+    '''
+    bdb.sql_execute(update_columns_sql, (new, old))
+    # Update bayesdb_column_map to use the new name.
+    update_column_maps_sql = '''
+        UPDATE bayesdb_column_map SET tabname = ? WHERE tabname = ?
+    '''
+    bdb.sql_execute(update_column_maps_sql, (new, old))
+    # Update bayesdb_generator to use the new name.
+    update_generators_sql = '''
+        UPDATE bayesdb_generator SET tabname = ?
+            WHERE tabname = ?
+    '''
+    bdb.sql_execute(update_generators_sql, (new, old))
 
 # XXX Temporary kludge until we get BQL cursors proper, with, e.g.,
 # declared modelled column types in cursor.description.  We go through
