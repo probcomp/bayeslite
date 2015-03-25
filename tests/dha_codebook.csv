@@ -1,4 +1,4 @@
-"column_label","shortname","description","value_map"
+"name","shortname","description","value_map"
 "NAME","Hospital","Name of hospital","NaN"
 "N_DEATH_ILL","Number of deaths","Number of deaths among chronically ill patients assigned to hospital","NaN"
 "TTL_MDCR_SPND","Medicare spdg","Total Medicare spending","NaN"

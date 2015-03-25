@@ -29,7 +29,7 @@ def bayesdb_load_codebook_csv_file(bdb, table, pathname):
         except StopIteration:
             raise IOError('Empty codebook file')
         header = [unicode(h, 'utf8').strip() for h in header]
-        if header != ['column_label','shortname','description','value_map']:
+        if header != ['name','shortname','description','value_map']:
             raise IOError('Wrong CSV header for codebook')
         codebook = []
         line = 1
