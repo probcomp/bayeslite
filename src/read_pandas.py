@@ -14,7 +14,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from bayeslite import core
+import bayeslite.core as core
+
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
 def bayesdb_read_pandas_df(bdb, table, df, create=False, ifnotexists=False):
