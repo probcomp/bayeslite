@@ -335,15 +335,20 @@ def compile_estcols(bdb, estcols, out):
     if not core.bayesdb_has_generator(bdb, estcols.generator):
         raise ValueError('No such generator: %s' % (estcols.generator,))
     generator_id = core.bayesdb_get_generator(bdb, estcols.generator)
-    out.write('SELECT c.name AS name'
-        ' FROM bayesdb_generator AS g,'
+    colno_exp = 'colno'         # XXX
+    out.write('SELECT c.name AS name')
+    for exp, name in estcols.columns:
+        out.write(', ')
+        compile_1col_expression(bdb, exp, generator_id, colno_exp, out)
+        if name is not None:
+            out.write(' AS %s' % (sqlite3_quote_name(name),))
+    out.write(' FROM bayesdb_generator AS g,'
         ' bayesdb_generator_column AS gc,'
         ' bayesdb_column AS c'
         ' WHERE g.id = %(generator_id)d'
         ' AND gc.generator_id = g.id'
         ' AND c.tabname = g.tabname AND c.colno = gc.colno' %
             {'generator_id': generator_id})
-    colno_exp = 'colno'         # XXX
     if estcols.condition is not None:
         out.write(' AND ')
         compile_1col_expression(bdb, estcols.condition, generator_id,
@@ -382,12 +387,23 @@ def compile_estpaircols(bdb, estpaircols, out):
         raise ValueError('No such generator: %s' % (estpaircols.generator,))
     generator_id = core.bayesdb_get_generator(bdb, estpaircols.generator)
     out.write('SELECT'
-        ' %d AS generator_id, c0.name AS name0, c1.name AS name1, ' %
+        ' %d AS generator_id, c0.name AS name0, c1.name AS name1' %
         (generator_id,))
-    compile_2col_expression(bdb, estpaircols.expression, generator_id,
-        colno0_exp, colno1_exp, out)
-    out.write(' AS value'
-        ' FROM'
+    if len(estpaircols.columns) == 1 and estpaircols.columns[0][1] is None:
+        # XXX Compatibility with existing queries.
+        expression = estpaircols.columns[0][0]
+        out.write(', ')
+        compile_2col_expression(bdb, expression, generator_id, colno0_exp,
+            colno1_exp, out)
+        out.write(' AS value')
+    else:
+        for exp, name in estpaircols.columns:
+            out.write(', ')
+            compile_2col_expression(bdb, exp, generator_id, colno0_exp,
+                colno1_exp, out)
+            if name is not None:
+                out.write(' AS %s' % (sqlite3_quote_name(name),))
+    out.write(' FROM'
         ' bayesdb_generator AS g,'
         ' bayesdb_generator_column AS gc0, bayesdb_column AS c0,'
         ' bayesdb_generator_column AS gc1, bayesdb_column AS c1'
@@ -396,16 +412,16 @@ def compile_estpaircols(bdb, estpaircols, out):
         ' AND c0.tabname = g.tabname AND c0.colno = gc0.colno'
         ' AND c1.tabname = g.tabname AND c1.colno = gc1.colno' %
               {'generator_id': generator_id})
-    if estpaircols.columns is not None:
+    if estpaircols.subcolumns is not None:
         # XXX Would be nice not to duplicate these column lists.
         bql_compiler = BQLCompiler_2Col(generator_id, colno0_exp, colno1_exp)
         out.write(' AND c0.colno IN ')
         with compiling_paren(bdb, out, '(', ')'):
-            compile_column_lists(bdb, generator_id, estpaircols.columns,
+            compile_column_lists(bdb, generator_id, estpaircols.subcolumns,
                 bql_compiler, out)
         out.write(' AND c1.colno IN ')
         with compiling_paren(bdb, out, '(', ')'):
-            compile_column_lists(bdb, generator_id, estpaircols.columns,
+            compile_column_lists(bdb, generator_id, estpaircols.subcolumns,
                 bql_compiler, out)
     if estpaircols.condition is not None:
         out.write(' AND ')

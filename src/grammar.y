@@ -156,20 +156,39 @@ estimate(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
 /*
  * XXX Can we reformulate this elegantly as a SELECT on the columns of
  * the generator?
+ *
+ * XXX There are two rules for estcols, rather than an auxiliary
+ * nonterminal estcols_columns_opt, to work around what appears to be
+ * a bug in lemonade.  *@!&#^$!@&*
  */
-estcols(e)		::= K_ESTIMATE K_COLUMNS
+estcols(nocols)		::= K_ESTIMATE K_COLUMNS
 				K_FROM generator_name(generator)
 				where(cond) order_by(ord) limit_opt(lim)
 				as(sav).
+estcols(cols)		::= K_ESTIMATE K_COLUMNS estcols_columns(cols)
+				K_FROM generator_name(generator)
+				where(cond) order_by(ord) limit_opt(lim)
+				as(sav).
+
+estcols_columns(one)	::= estcols_column(col).
+estcols_columns(many)	::= estcols_columns(cols) T_COMMA estcols_column(col).
+
+estcols_column(ec)	::= expression(e) as(name).
 
 /*
  * XXX This is really just a SELECT on the join of the generator's
  * list of columns with itself.
  */
-estpaircols(e)		::= K_ESTIMATE K_PAIRWISE expression(e)
-				K_FROM generator_name(generator) for(cols)
+estpaircols(e)		::= K_ESTIMATE K_PAIRWISE estpaircols_columns(cols)
+				K_FROM generator_name(generator) for(subcols)
 				where(cond) order_by(ord) limit_opt(lim)
 				as(sav).
+
+estpaircols_columns(one)	::= estpaircols_column(col).
+estpaircols_columns(many)	::= estpaircols_columns(cols) T_COMMA
+					estpaircols_column(col).
+
+estpaircols_column(epc)	::= expression(e) as(name).
 
 /*
  * XXX This is really just a SELECT on the join of the table with

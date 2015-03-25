@@ -280,10 +280,12 @@ def test_estimate_bql():
         'SELECT bql_infer(1, 2, _rowid_, "age", 0.9) FROM "t1";'
 
 def test_estimate_columns_trivial():
-    prefix = 'SELECT c.name AS name FROM bayesdb_generator AS g,' \
+    prefix0 = 'SELECT c.name AS name'
+    prefix1 = ' FROM bayesdb_generator AS g,' \
         ' bayesdb_generator_column AS gc, bayesdb_column AS c' \
         ' WHERE g.id = 1 AND gc.generator_id = g.id' \
         ' AND c.tabname = g.tabname AND c.colno = gc.colno'
+    prefix = prefix0 + prefix1
     assert bql2sql('estimate columns from t1_cc;') == \
         prefix + ';'
     assert bql2sql('estimate columns from t1_cc where' +
@@ -353,17 +355,28 @@ def test_estimate_columns_trivial():
     with pytest.raises(ValueError):
         # Makes no sense.
         bql2sql('estimate columns from t1_cc where infer age conf 0.9 > 30;')
+    assert bql2sql('estimate columns'
+            ' dependence probability with weight as depprob,'
+            ' mutual information with weight as mutinf'
+            ' from t1_cc where depprob > 0.5 order by mutinf desc') == \
+        prefix0 + \
+        ', bql_column_dependence_probability(1, 3, colno) AS "depprob"' \
+        ', bql_column_mutual_information(1, 3, colno, NULL) AS "mutinf"' + \
+        prefix1 + \
+        ' AND ("depprob" > 0.5)' \
+        ' ORDER BY "mutinf" DESC;'
 
 def test_estimate_pairwise_trivial():
     prefix = 'SELECT 1 AS generator_id, c0.name AS name0, c1.name AS name1, '
     infix = ' AS value'
-    infix += ' FROM bayesdb_generator AS g,'
-    infix += ' bayesdb_generator_column AS gc0, bayesdb_column AS c0,'
-    infix += ' bayesdb_generator_column AS gc1, bayesdb_column AS c1'
-    infix += ' WHERE g.id = 1'
-    infix += ' AND gc0.generator_id = g.id AND gc1.generator_id = g.id'
-    infix += ' AND c0.tabname = g.tabname AND c0.colno = gc0.colno'
-    infix += ' AND c1.tabname = g.tabname AND c1.colno = gc1.colno'
+    infix0 = ' FROM bayesdb_generator AS g,'
+    infix0 += ' bayesdb_generator_column AS gc0, bayesdb_column AS c0,'
+    infix0 += ' bayesdb_generator_column AS gc1, bayesdb_column AS c1'
+    infix0 += ' WHERE g.id = 1'
+    infix0 += ' AND gc0.generator_id = g.id AND gc1.generator_id = g.id'
+    infix0 += ' AND c0.tabname = g.tabname AND c0.colno = gc0.colno'
+    infix0 += ' AND c1.tabname = g.tabname AND c1.colno = gc1.colno'
+    infix += infix0
     assert bql2sql('estimate pairwise dependence probability from t1_cc;') == \
         prefix + 'bql_column_dependence_probability(1, c0.colno, c1.colno)' + \
         infix + ';'
@@ -460,6 +473,17 @@ def test_estimate_pairwise_trivial():
         # Makes no sense.
         bql2sql('estimate pairwise dependence probability from t1_cc'
             ' where infer age conf 0.9 > 30;')
+    assert bql2sql('estimate pairwise dependence probability as depprob,' \
+            ' mutual information as mutinf' \
+            ' from t1_cc where depprob > 0.5 order by mutinf desc') == \
+        prefix + \
+        'bql_column_dependence_probability(1, c0.colno, c1.colno)' \
+        ' AS "depprob",' \
+        ' bql_column_mutual_information(1, c0.colno, c1.colno, NULL)' \
+        ' AS "mutinf"' + \
+        infix0 + \
+        ' AND ("depprob" > 0.5)' \
+        ' ORDER BY "mutinf" DESC;'
 
 def test_estimate_pairwise_row():
     prefix = 'SELECT r0._rowid_ AS rowid0, r1._rowid_ AS rowid1'

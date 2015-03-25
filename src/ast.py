@@ -152,6 +152,7 @@ SelTab = namedtuple('SelTab', [
 ])
 
 EstCols = namedtuple('EstCols', [
+    'columns',                  # [(Exp*, XXX name)]
     'generator',                # XXX name
     'condition',                # Exp* or None (unconditional)
     'order',                    # [Ord] or None (unordered)
@@ -160,9 +161,9 @@ EstCols = namedtuple('EstCols', [
 ])
 
 EstPairCols = namedtuple('EstPairCols', [
-    'expression',               # Exp*
+    'columns',                  # Exp*
     'generator',                # XXX name
-    'columns',                  # ColList* or None
+    'subcolumns',               # ColList* or None
     'condition',                # Exp* or None (unconditional)
     'order',                    # [Ord] or None (unordered)
     'limit',                    # Lim or None (unlimited),

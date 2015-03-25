@@ -249,11 +249,26 @@ class BQLSemantics(object):
     def p_estimate_e(self, quant, cols, generator, cond, grouping, ord, lim):
         return ast.Estimate(quant, cols, generator, cond, grouping, ord, lim)
 
-    def p_estcols_e(self, generator, cond, ord, lim, sav):
-        return ast.EstCols(generator, cond, ord, lim, sav)
+    def p_estcols_nocols(self, generator, cond, ord, lim, sav):
+        return ast.EstCols([], generator, cond, ord, lim, sav)
+    def p_estcols_cols(self, cols, generator, cond, ord, lim, sav):
+        return ast.EstCols(cols, generator, cond, ord, lim, sav)
 
-    def p_estpaircols_e(self, e, generator, cols, cond, ord, lim, sav):
-        return ast.EstPairCols(e, generator, cols, cond, ord, lim, sav)
+    def p_estcols_columns_opt_none(self):       return []
+    def p_estcols_columns_opt_some(self, cols): return cols
+    def p_estcols_columns_one(self, col):       return [col]
+    def p_estcols_columns_many(self, cols, col): cols.append(col); return cols
+    def p_estcols_column_ec(self, e, name):     return (e, name)
+
+    def p_estpaircols_e(self, cols, generator, subcols, cond, ord, lim, sav):
+        return ast.EstPairCols(cols, generator, subcols, cond, ord, lim, sav)
+
+    def p_estpaircols_columns_one(self, col):
+        return [col]
+    def p_estpaircols_columns_many(self, cols, col):
+        cols.append(col); return cols
+    def p_estpaircols_column_epc(self, e, name):
+        return (e, name)
 
     def p_estpairrow_e(self, e, generator, cond, ord, lim, sav):
         return ast.EstPairRow(e, generator, cond, ord, lim, sav)
