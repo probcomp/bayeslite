@@ -64,14 +64,14 @@ CREATE TABLE bayesdb_generator (
 );
 
 CREATE TABLE bayesdb_generator_column (
-	generator_id	TEXT NOT NULL REFERENCES bayesdb_generator(id),
-	colno		TEXT NOT NULL,
+	generator_id	INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+	colno		INTEGER NOT NULL,
 	stattype	TEXT NOT NULL REFERENCES bayesdb_stattype(name),
 	PRIMARY KEY(generator_id, colno)
 );
 
 CREATE TABLE bayesdb_generator_model (
-	generator_id	TEXT NOT NULL REFERENCES bayesdb_generator(id),
+	generator_id	INTEGER NOT NULL REFERENCES bayesdb_generator(id),
 	modelno		INTEGER NOT NULL,
 	iterations	INTEGER NOT NULL CHECK (0 <= iterations),
 	PRIMARY KEY(generator_id, modelno)
