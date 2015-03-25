@@ -163,12 +163,10 @@ estimate(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
  */
 estcols(nocols)		::= K_ESTIMATE K_COLUMNS
 				K_FROM generator_name(generator)
-				where(cond) order_by(ord) limit_opt(lim)
-				as(sav).
+				where(cond) order_by(ord) limit_opt(lim).
 estcols(cols)		::= K_ESTIMATE K_COLUMNS estcols_columns(cols)
 				K_FROM generator_name(generator)
-				where(cond) order_by(ord) limit_opt(lim)
-				as(sav).
+				where(cond) order_by(ord) limit_opt(lim).
 
 estcols_columns(one)	::= estcols_column(col).
 estcols_columns(many)	::= estcols_columns(cols) T_COMMA estcols_column(col).
@@ -181,8 +179,7 @@ estcols_column(ec)	::= expression(e) as(name).
  */
 estpaircols(e)		::= K_ESTIMATE K_PAIRWISE estpaircols_columns(cols)
 				K_FROM generator_name(generator) for(subcols)
-				where(cond) order_by(ord) limit_opt(lim)
-				as(sav).
+				where(cond) order_by(ord) limit_opt(lim).
 
 estpaircols_columns(one)	::= estpaircols_column(col).
 estpaircols_columns(many)	::= estpaircols_columns(cols) T_COMMA
@@ -200,8 +197,7 @@ estpaircols_column(epc)	::= expression(e) as(name).
  */
 estpairrow(e)		::= K_ESTIMATE K_PAIRWISE K_ROW expression(e)
 				K_FROM generator_name(generator)
-				where(cond) order_by(ord) limit_opt(lim)
-				as(sav).
+				where(cond) order_by(ord) limit_opt(lim).
 
 select_quant(distinct)	::= K_DISTINCT.
 select_quant(all)	::= K_ALL.
@@ -458,7 +454,6 @@ column_list(column)	::= column_name(col).
  * that make sense here?
  */
 column_list(subquery)	::= T_LROUND estcols(q) T_RROUND.
-/* XXX Saved lists.  */
 
 primary(literal)	::= literal(v).
 primary(numpar)		::= L_NUMPAR(n).

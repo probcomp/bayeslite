@@ -390,8 +390,7 @@ def test_select_bql():
                     [ast.ColListSub(
                         ast.EstCols([], 't', None,
                             [ast.Ord(ast.ExpBQLTyp(None), ast.ORD_ASC)],
-                            ast.Lim(ast.ExpLit(ast.LitInt(1)), None),
-                            None)
+                            ast.Lim(ast.ExpLit(ast.LitInt(1)), None))
                     )]),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]

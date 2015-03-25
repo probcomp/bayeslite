@@ -157,7 +157,6 @@ EstCols = namedtuple('EstCols', [
     'condition',                # Exp* or None (unconditional)
     'order',                    # [Ord] or None (unordered)
     'limit',                    # Lim or None (unlimited),
-    'save_name',                # XXX name or None (don't save)
 ])
 
 EstPairCols = namedtuple('EstPairCols', [
@@ -167,7 +166,6 @@ EstPairCols = namedtuple('EstPairCols', [
     'condition',                # Exp* or None (unconditional)
     'order',                    # [Ord] or None (unordered)
     'limit',                    # Lim or None (unlimited),
-    'save_name',                # XXX name or None (don't save)
 ])
 
 EstPairRow = namedtuple('EstPairRow', [
@@ -176,13 +174,11 @@ EstPairRow = namedtuple('EstPairRow', [
     'condition',                # Exp* or None (unconditional)
     'order',                    # [Ord] or None (unordered)
     'limit',                    # Lim or None (unlimited),
-    'save_name',                # XXX name or None (don't save)
 ])
 
 ColListAll = namedtuple('ColListAll', [])
 ColListLit = namedtuple('ColListLit', ['columns'])
 ColListSub = namedtuple('ColListSub', ['query']) # subquery
-ColListSav = namedtuple('ColListSav', ['name']) # saved
 
 Grouping = namedtuple('Grouping', ['keys', 'condition'])
 
