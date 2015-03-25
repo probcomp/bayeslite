@@ -36,6 +36,12 @@ def bayesdb_guess_generator(bdb, generator, table, metamodel,
         column_names = [d[0] for d in cursor.description]
         rows = list(cursor)
         stattypes = bayesdb_guess_stattypes(column_names, rows)
+        # Skip the key column.
+        column_names, stattypes = \
+            unzip([(cn, st) for cn, st in zip(column_names, stattypes)
+                if st != 'key'])
+        if len(column_names) == 0:
+            raise ValueError('Table has only key column: %s' % (repr(table),))
         qg = sqlite3_quote_name(generator)
         qmm = sqlite3_quote_name(metamodel)
         qcns = map(sqlite3_quote_name, column_names)
@@ -43,6 +49,14 @@ def bayesdb_guess_generator(bdb, generator, table, metamodel,
         qs = ','.join(qcn + ' ' + qst for qcn, qst in zip(qcns, qsts))
         bdb.execute('CREATE GENERATOR %s FOR %s USING %s(%s)' %
             (qg, qt, qmm, qs))
+
+def unzip(l):                   # ???
+    xs = []
+    ys = []
+    for x, y in l:
+        xs.append(x)
+        ys.append(y)
+    return xs, ys
 
 def bayesdb_guess_stattypes(column_names, rows, count_cutoff=None,
         ratio_cutoff=None):
@@ -83,6 +97,8 @@ def integerify(rows, ci):
     column = [0] * len(rows)
     try:
         for ri, row in enumerate(rows):
+            if isinstance(row[ci], float):
+                return None
             column[ri] = int(row[ci])
     except (ValueError, TypeError):
         return None

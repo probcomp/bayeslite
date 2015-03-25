@@ -15,21 +15,29 @@
 #   limitations under the License.
 
 import itertools
+import math
 
+import bayeslite
+import bayeslite.crosscat
 from bayeslite.guess import bayesdb_guess_stattypes
+from bayeslite.guess import bayesdb_guess_generator
+
+import crosscat.LocalEngine
 
 def test_guess_stattypes():
     n = ['a', 'b']
     a_z = range(ord('a'), ord('z') + 1)
-    rows = [[chr(c), 0] for c in a_z]
+    rows = [[chr(c), c % 2] for c in a_z]
     assert bayesdb_guess_stattypes(n, rows) == ['key', 'categorical']
-    rows = [[chr(c), 0] for c in a_z] + [['q', 0]]
+    rows = [[chr(c), c % 2] for c in a_z] + [['q', ord('q') % 2]]
     assert bayesdb_guess_stattypes(n, rows) == ['categorical', 'categorical']
-    rows = [[0, chr(c)] for c in a_z]
+    rows = [[c % 2, chr(c)] for c in a_z]
     assert bayesdb_guess_stattypes(n, rows) == ['categorical', 'key']
-    rows = [[0, chr(c)] for c in a_z] + [[0, 'k']]
+    rows = [[c % 2, chr(c)] for c in a_z] + [[0, 'k']]
     assert bayesdb_guess_stattypes(n, rows) == ['categorical', 'categorical']
     rows = [[chr(c), i] for i, c in enumerate(a_z)]
+    assert bayesdb_guess_stattypes(n, rows) == ['key', 'numerical']
+    rows = [[chr(c), math.sqrt(i)] for i, c in enumerate(a_z)]
     assert bayesdb_guess_stattypes(n, rows) == ['key', 'numerical']
     rows = [[chr(c) + chr(d), isqrt(i)] for i, (c, d)
         in enumerate(itertools.product(a_z, a_z))]
@@ -45,6 +53,23 @@ def test_guess_stattypes():
     rows = [[isqrt(i), chr(c) + chr(d) + chr(e)] for i, (c, d, e)
         in enumerate(itertools.product(a_z, a_z, a_z))]
     assert bayesdb_guess_stattypes(n, rows) == ['categorical', 'key']
+
+def test_guess_generator():
+    bdb = bayeslite.BayesDB()
+    bdb.sql_execute('CREATE TABLE t(x NUMERIC, y NUMERIC, z NUMERIC)')
+    a_z = range(ord('a'), ord('z') + 1)
+    aa_zz = ((c, d) for c in a_z for d in a_z)
+    data = ((chr(c) + chr(d), (c + d) % 2, math.sqrt(c + d)) for c, d in aa_zz)
+    for row in data:
+        bdb.sql_execute('INSERT INTO t (x, y, z) VALUES (?, ?, ?)', row)
+    cc = crosscat.LocalEngine.LocalEngine(seed=0)
+    metamodel = bayeslite.crosscat.CrosscatMetamodel(cc)
+    bayeslite.bayesdb_register_metamodel(bdb, metamodel)
+    bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+    assert list(bdb.sql_execute('SELECT * FROM bayesdb_generator_column')) == [
+        (1, 1, 'categorical'),
+        (1, 2, 'numerical'),
+    ]
 
 def isqrt(n):
     x = n
