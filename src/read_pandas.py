@@ -14,6 +14,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from bayeslite import core
+from bayeslite.sqlite3_util import sqlite3_quote_name
+
 def bayesdb_read_pandas_df(bdb, table, df, create=False, ifnotexists=False):
     if not create:
         if ifnotexists:
@@ -36,6 +39,7 @@ def bayesdb_read_pandas_df(bdb, table, df, create=False, ifnotexists=False):
             column_names = [idxcol] + list(df.columns)
             qcns = map(sqlite3_quote_name, column_names)
             schema = ','.join('%s NUMERIC' % (qcn,) for qcn in qcns)
+            qt = sqlite3_quote_name(table)
             bdb.sql_execute('CREATE TABLE %s(%s)' % (qt, schema))
             core.bayesdb_table_guarantee_columns(bdb, table)
         else:
@@ -43,6 +47,6 @@ def bayesdb_read_pandas_df(bdb, table, df, create=False, ifnotexists=False):
         qt = sqlite3_quote_name(table)
         qcns = map(sqlite3_quote_name, column_names)
         sql = 'INSERT INTO %s (%s) VALUES (%s)' % \
-            (qt, ','.join(qcns), ','.join('?' for _qcn in qcns)))
+            (qt, ','.join(qcns), ','.join('?' for _qcn in qcns))
         for row in df.to_records():
             bdb.sql_execute(sql, row)
