@@ -164,7 +164,7 @@ def compile_query(bdb, query, out):
     elif isinstance(query, ast.EstPairRow):
         compile_estpairrow(bdb, query, out)
     else:
-        assert False        # XXX
+        assert False, 'Invalid query: %s' % (repr(query),)
 
 def compile_subquery(bdb, query, _bql_compiler, out):
     # XXX Do something with the BQL compiler so we can refer to
@@ -214,7 +214,7 @@ def compile_select(bdb, select, out):
             elif order.sense == ast.ORD_DESC:
                 out.write(' DESC')
             else:
-                assert False    # XXX
+                assert False, 'Invalid order sense: %s' % (repr(order.sense),)
     if select.limit is not None:
         out.write(' LIMIT ')
         compile_nobql_expression(bdb, select.limit.limit, out)
@@ -267,7 +267,7 @@ def compile_estimate(bdb, estimate, out):
             elif order.sense == ast.ORD_DESC:
                 out.write(' DESC')
             else:
-                assert False    # XXX
+                assert False, 'Invalid order sense: %s' % (repr(order.sense),)
     if estimate.limit is not None:
         out.write(' LIMIT ')
         compile_1row_expression(bdb, estimate.limit.limit, generator_id, out)
@@ -298,7 +298,7 @@ def compile_select_column(bdb, selcol, bql_compiler, out):
             out.write(' AS ')
             compile_name(bdb, selcol.name, out)
     else:
-        assert False            # XXX
+        assert False, 'Invalid select column: %s' % (repr(selcol),)
 
 def compile_select_tables(bdb, select, out):
     first = True
@@ -320,7 +320,7 @@ def compile_select_table(bdb, table, out):
     elif isinstance(table, str): # XXX name
         compile_table_name(bdb, table, out)
     else:
-        assert False            # XXX
+        assert False, 'Invalid select table: %s' % (repr(table),)
 
 # XXX Use context to determine whether to yield column names or
 # numbers, so that top-level queries yield names, but, e.g.,
@@ -369,7 +369,7 @@ def compile_estcols(bdb, estcols, out):
             elif order.sense == ast.ORD_DESC:
                 out.write(' DESC')
             else:
-                assert False    # XXX
+                assert False, 'Invalid order sense: %s' % (repr(order.sense),)
     if estcols.limit is not None:
         out.write(' LIMIT ')
         compile_1col_expression(bdb, estcols.limit.limit, generator_id,
@@ -443,7 +443,7 @@ def compile_estpaircols(bdb, estpaircols, out):
             elif order.sense == ast.ORD_DESC:
                 out.write(' DESC')
             else:
-                assert False    # XXX
+                assert False, 'Invalid order sense: %s' % (repr(order.sense),)
     if estpaircols.limit is not None:
         out.write(' LIMIT ')
         compile_2col_expression(bdb, estpaircols.limit.limit, generator_id,
@@ -487,7 +487,7 @@ def compile_estpairrow(bdb, estpairrow, out):
             elif order.sense == ast.ORD_DESC:
                 out.write(' DESC')
             else:
-                assert False    # XXX
+                assert False, 'Invalid order sense: %s' % (repr(order.sense),)
     if estpairrow.limit is not None:
         out.write(' LIMIT ')
         compile_2row_expression(bdb, estpairrow.limit.limit, generator_id,
@@ -581,7 +581,7 @@ class BQLCompiler_1Row(object):
             compile_expression(bdb, bql.confidence, self, out)
             out.write(')')
         else:
-            assert False        # XXX
+            assert False, 'Invalid BQL function: %s' % (repr(bql),)
 
 class BQLCompiler_2Row(object):
     def __init__(self, generator_id, rowid0_exp, rowid1_exp):
@@ -626,7 +626,7 @@ class BQLCompiler_2Row(object):
         elif isinstance(bql, ast.ExpBQLInfer):
             raise ValueError('Infer is a 1-row function.')
         else:
-            assert False        # XXX
+            assert False, 'Invalid BQL function: %s' % (repr(bql),)
 
 class BQLCompiler_1Col(object):
     def __init__(self, generator_id, colno_exp):
@@ -671,7 +671,7 @@ class BQLCompiler_1Col(object):
         elif isinstance(bql, ast.ExpBQLInfer):
             raise ValueError('Infer is a 1-row function.')
         else:
-            assert False        # XXX
+            assert False, 'Invalid BQL function: %s' % (repr(bql),)
 
 class BQLCompiler_2Col(object):
     def __init__(self, generator_id, colno0_exp, colno1_exp):
@@ -714,7 +714,7 @@ class BQLCompiler_2Col(object):
         elif isinstance(bql, ast.ExpBQLInfer):
             raise ValueError('Infer is a 1-row function.')
         else:
-            assert False        # XXX
+            assert False, 'Invalid BQL function: %s' % (repr(bql),)
 
 def compile_column_lists(bdb, generator_id, column_lists, _bql_compiler, out):
     first = True
@@ -758,7 +758,7 @@ def compile_column_lists(bdb, generator_id, column_lists, _bql_compiler, out):
         elif isinstance(collist, ast.ColListSav):
             raise NotImplementedError('saved column lists')
         else:
-            assert False        # XXX
+            assert False, 'Invalid column list: %s' % (repr(collist),)
 
 def compile_bql_2col_2(bdb, generator_id, bqlfn, desc, extra, bql,
         bql_compiler, out):
@@ -918,7 +918,7 @@ def compile_op(bdb, op, bql_compiler, out):
             compile_expression(bdb, op.operands[r], bql_compiler, out)
             r += 1
         else:
-            assert False        # XXX
+            assert False, 'Invalid directive: %s' % (repr(d),)
         i = j
     assert r == len(op.operands)
 
@@ -977,7 +977,7 @@ def compile_literal(bdb, lit, out):
     elif isinstance(lit, ast.LitString):
         compile_string(bdb, lit.value, out)
     else:
-        assert False            # XXX
+        assert False, 'Invalid literal: %s' % (repr(lit),)
 
 def compile_string(bdb, string, out):
     with compiling_paren(bdb, out, "'", "'"):
