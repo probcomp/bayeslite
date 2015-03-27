@@ -512,8 +512,7 @@ def rename_table(bdb, old, new):
     bdb.sql_execute(update_column_maps_sql, (new, old))
     # Update bayesdb_generator to use the new name.
     update_generators_sql = '''
-        UPDATE bayesdb_generator SET tabname = ?
-            WHERE tabname = ?
+        UPDATE bayesdb_generator SET tabname = ? WHERE tabname = ?
     '''
     bdb.sql_execute(update_generators_sql, (new, old))
 
