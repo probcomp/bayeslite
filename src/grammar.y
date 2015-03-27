@@ -233,6 +233,7 @@ as(some)		::= K_AS L_NAME(name).
 from(empty)		::= .
 from(nonempty)		::= K_FROM select_tables(tables).
 
+/* XXX Allow all kinds of joins.  */
 select_tables(one)	::= select_table(t).
 select_tables(many)	::= select_tables(ts) T_COMMA select_table(t).
 
