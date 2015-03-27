@@ -158,9 +158,14 @@ def bayesdb_generator_column_stattype(bdb, generator_id, colno):
         sql = '''
             SELECT COUNT(*)
                 FROM bayesdb_generator AS g, bayesdb_column AS c
-                WHERE g.id = ? AND g.tabname = c.tabname AND c.colno = ?
+                WHERE g.id = :generator_id
+                    AND g.tabname = c.tabname
+                    AND c.colno = :colno
         '''
-        cursor = bdb.sql_execute(sql, (generator_id, colno))
+        cursor = bdb.sql_execute(sql, {
+            'generator_id': generator_id,
+            'colno': colno,
+        })
         if cursor.next()[0] == 0:
             raise ValueError('No such column in generator %s: %d' %
                 (generator, colno))
@@ -177,13 +182,16 @@ def bayesdb_generator_column_name(bdb, generator_id, colno):
             FROM bayesdb_generator AS g,
                 bayesdb_generator_column AS gc,
                 bayesdb_column AS c
-            WHERE g.id = ?
-                AND gc.colno = ?
+            WHERE g.id = :generator_id
+                AND gc.colno = :colno
                 AND g.id = gc.generator_id
                 AND g.tabname = c.tabname
                 AND gc.colno = c.colno
     '''
-    cursor = bdb.sql_execute(sql, (generator_id, colno))
+    cursor = bdb.sql_execute(sql, {
+        'generator_id': generator_id,
+        'colno': colno,
+    })
     try:
         row = cursor.next()
     except StopIteration:
@@ -200,12 +208,15 @@ def bayesdb_generator_column_number(bdb, generator_id, column_name):
             FROM bayesdb_generator AS g,
                 bayesdb_generator_column as gc,
                 bayesdb_column AS c
-            WHERE g.id = ? AND c.name = ?
+            WHERE g.id = :generator_id AND c.name = :column_name
                 AND g.id = gc.generator_id
                 AND g.tabname = c.tabname
                 AND gc.colno = c.colno
     '''
-    cursor = bdb.sql_execute(sql, (generator_id, column_name))
+    cursor = bdb.sql_execute(sql, {
+        'generator_id': generator_id,
+        'column_name': column_name,
+    })
     try:
         row = cursor.next()
     except StopIteration:

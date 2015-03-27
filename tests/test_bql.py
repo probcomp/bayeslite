@@ -719,7 +719,8 @@ def test_parametrized():
                 ' FROM bayesdb_generator AS g,'
                     ' bayesdb_generator_column as gc,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = ? AND c.name = ? AND g.id = gc.generator_id'
+                ' WHERE g.id = :generator_id AND c.name = :column_name'
+                    ' AND g.id = gc.generator_id'
                     ' AND g.tabname = c.tabname AND gc.colno = c.colno',
             # ESTIMATE SIMILARITY TO (rowid=1):
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
@@ -757,7 +758,8 @@ def test_parametrized():
                 ' FROM bayesdb_generator AS g,'
                     ' bayesdb_generator_column as gc,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = ? AND c.name = ? AND g.id = gc.generator_id'
+                ' WHERE g.id = :generator_id AND c.name = :column_name'
+                    ' AND g.id = gc.generator_id'
                     ' AND g.tabname = c.tabname AND gc.colno = c.colno',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
             # ESTIMATE SIMILARITY TO (rowid=1):
@@ -789,25 +791,29 @@ def test_parametrized():
                 ' FROM bayesdb_generator AS g,'
                     ' bayesdb_generator_column as gc,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = ? AND c.name = ? AND g.id = gc.generator_id'
+                ' WHERE g.id = :generator_id AND c.name = :column_name'
+                    ' AND g.id = gc.generator_id'
                     ' AND g.tabname = c.tabname AND gc.colno = c.colno',
             'SELECT c.colno'
                 ' FROM bayesdb_generator AS g,'
                     ' bayesdb_generator_column as gc,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = ? AND c.name = ? AND g.id = gc.generator_id'
+                ' WHERE g.id = :generator_id AND c.name = :column_name'
+                    ' AND g.id = gc.generator_id'
                     ' AND g.tabname = c.tabname AND gc.colno = c.colno',
             'SELECT c.colno'
                 ' FROM bayesdb_generator AS g,'
                     ' bayesdb_generator_column as gc,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = ? AND c.name = ? AND g.id = gc.generator_id'
+                ' WHERE g.id = :generator_id AND c.name = :column_name'
+                    ' AND g.id = gc.generator_id'
                     ' AND g.tabname = c.tabname AND gc.colno = c.colno',
             'SELECT c.colno'
                 ' FROM bayesdb_generator AS g,'
                     ' bayesdb_generator_column as gc,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = ? AND c.name = ? AND g.id = gc.generator_id'
+                ' WHERE g.id = :generator_id AND c.name = :column_name'
+                    ' AND g.id = gc.generator_id'
                     ' AND g.tabname = c.tabname AND gc.colno = c.colno',
             'CREATE TEMP TABLE IF NOT EXISTS "sim"'
                 ' ("age" NUMERIC,"RANK" NUMERIC,"division" NUMERIC)',

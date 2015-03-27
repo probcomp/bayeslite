@@ -156,12 +156,12 @@ def bayesdb_load_legacy_models(bdb, generator, table, metamodel, pathname,
         insert_model_sql = '''
             INSERT INTO bayesdb_generator_model
                 (generator_id, modelno, iterations)
-                VALUES (?, ?, ?)
+                VALUES (:generator_id, :modelno, :iterations)
         '''
         insert_theta_json_sql = '''
             INSERT INTO bayesdb_crosscat_theta
                 (generator_id, modelno, theta_json)
-                VALUES (?, ?, ?)
+                VALUES (:generator_id, :modelno, :theta_json)
         '''
         for i, modelno_ext in enumerate(sorted(models.keys())):
             modelno = modelno_start + i
@@ -169,10 +169,16 @@ def bayesdb_load_legacy_models(bdb, generator, table, metamodel, pathname,
             iterations = 0
             if 'iterations' in theta and isinstance(theta['iterations'], int):
                 iterations = theta['iterations']
-            parameters = (generator_id, modelno, iterations)
-            bdb.sql_execute(insert_model_sql, parameters)
-            parameters = (generator_id, modelno, json.dumps(theta))
-            bdb.sql_execute(insert_theta_json_sql, parameters)
+            bdb.sql_execute(insert_model_sql, {
+                'generator_id': generator_id,
+                'modelno': modelno,
+                'iterations': iterations,
+            })
+            bdb.sql_execute(insert_theta_json_sql, {
+                'generator_id': generator_id,
+                'modelno': modelno,
+                'theta_json': json.dumps(theta),
+            })
 
 def bayesdb_generator_column_stattypes(bdb, generator_id):
     column_stattypes = {}
