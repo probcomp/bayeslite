@@ -303,7 +303,9 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                 WHERE generator_id = ?
         '''
         metadata_json = json.dumps(M_c)
+        total_changes = bdb.sqlite3.total_changes
         bdb.sql_execute(sql, (metadata_json, generator_id))
+        assert bdb.sqlite3.total_changes - total_changes == 1
         cc_cache = self._crosscat_cache_nocreate(bdb)
         if cc_cache is not None:
             cc_cache.metadata[generator_id] = M_c
@@ -386,12 +388,13 @@ class CrosscatMetamodel(metamodel.IMetamodel):
         M_c = self._crosscat_metadata(bdb, generator_id)
         T = self._crosscat_data(bdb, generator_id, M_c)
         update_iterations_sql = '''
-            UPDATE bayesdb_generator_model SET iterations = iterations + ?
-                WHERE generator_id = ? AND modelno = ?
+            UPDATE bayesdb_generator_model
+                SET iterations = iterations + :iterations
+                WHERE generator_id = :generator_id AND modelno = :modelno
         '''
         update_theta_json_sql = '''
-            UPDATE bayesdb_crosscat_theta SET theta_json = ?
-                WHERE generator_id = ? AND modelno = ?
+            UPDATE bayesdb_crosscat_theta SET theta_json = :theta_json
+                WHERE generator_id = :generator_id AND modelno = :modelno
         '''
         if max_seconds is not None:
             deadline = time.time() + max_seconds
@@ -431,10 +434,20 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                     theta['iterations'] += n_steps
                     theta['X_L'] = X_L
                     theta['X_D'] = X_D
-                    bdb.sql_execute(update_iterations_sql,
-                        (generator_id, modelno, n_steps))
-                    bdb.sql_execute(update_theta_json_sql,
-                        (generator_id, modelno, json.dumps(theta)))
+                    total_changes = bdb.sqlite3.total_changes
+                    bdb.sql_execute(update_iterations_sql, {
+                        'generator_id': generator_id,
+                        'modelno': modelno,
+                        'iterations': n_steps,
+                    })
+                    assert bdb.sqlite3.total_changes - total_changes == 1
+                    total_changes = bdb.sqlite3.total_changes
+                    bdb.sql_execute(update_theta_json_sql, {
+                        'generator_id': generator_id,
+                        'modelno': modelno,
+                        'theta_json': json.dumps(theta),
+                    })
+                    assert bdb.sqlite3.total_changes - total_changes == 1
                     if cc_cache is not None:
                         if generator_id in cc_cache.thetas:
                             cc_cache.thetas[generator_id][modelno] = theta
@@ -706,7 +719,9 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                 theta['X_D'] = X_D
                 theta_json = json.dumps(theta)
                 parameters = (theta_json, generator_id, modelno)
+                total_changes = bdb.sqlite3.total_changes
                 bdb.sql_execute(update_theta_sql, parameters)
+                assert bdb.sqlite3.total_changes - total_changes == 1
 
 class CrosscatCache(object):
     def __init__(self):

@@ -693,7 +693,13 @@ def test_parametrized():
             return sql
         guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
         bdb.execute('initialize 1 model for t_cc;')
+        iters0 = list(bdb.sql_execute('select * from bayesdb_generator_model'))
+        thetas0 = list(bdb.sql_execute('select * from bayesdb_crosscat_theta'))
         bdb.execute('analyze t_cc for 1 iteration wait;')
+        iters1 = list(bdb.sql_execute('select * from bayesdb_generator_model'))
+        thetas1 = list(bdb.sql_execute('select * from bayesdb_crosscat_theta'))
+        assert iters0 != iters1
+        assert thetas0 != thetas1
         assert sqltraced_execute('estimate similarity to (rowid = 1)'
                 ' with respect to (estimate columns from t_cc limit 1)'
                 ' from t_cc;') == [

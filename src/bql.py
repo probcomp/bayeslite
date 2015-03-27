@@ -218,11 +218,10 @@ def execute_phrase(bdb, phrase, bindings=()):
                         UPDATE bayesdb_column SET name = ?
                             WHERE tabname = ? AND name = ?
                     '''
-                    before = bdb.sqlite3.total_changes
+                    total_changes = bdb.sqlite3.total_changes
                     bdb.sql_execute(update_column_sql,
                         (cmd.new, table, cmd.old))
-                    after = bdb.sqlite3.total_changes
-                    assert after - before == 1
+                    assert bdb.sqlite3.total_changes - total_changes == 1
                     # ...except metamodels may have the (case-folded)
                     # name cached.
                     if old_folded != new_folded:
@@ -381,14 +380,13 @@ def execute_phrase(bdb, phrase, bindings=()):
                                 (repr(cmd.name),))
                     # Update bayesdb_generator.  Everything else
                     # refers to it by id.
-                    before = bdb.sqlite3.total_changes
                     update_generator_sql = '''
                         UPDATE bayesdb_generator SET name = ? WHERE id = ?
                     '''
+                    total_changes = bdb.sqlite3.total_changes
                     bdb.sql_execute(update_generator_sql,
                         (cmd.name, generator_id))
-                    after = bdb.sqlite3.total_changes
-                    assert after - before == 1
+                    assert bdb.sqlite3.total_changes - total_changes == 1
                     # Remember the new name for subsequent commands.
                     generator = cmd.name
                 else:

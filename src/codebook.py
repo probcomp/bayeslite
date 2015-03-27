@@ -73,4 +73,6 @@ def bayesdb_load_codebook_csv_file(bdb, table, pathname):
                     SET shortname = ?, description = ?
                     WHERE tabname = ? AND colno = ?
             '''
+            total_changes = bdb.sqlite3.total_changes
             bdb.sql_execute(sql, (shortname, description, table, colno))
+            assert bdb.sqlite3.total_changes - total_changes == 1
