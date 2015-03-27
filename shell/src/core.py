@@ -59,6 +59,7 @@ class Shell(cmd.Cmd):
         self._installcmd('sql', self.dot_sql)
         self._installcmd('trace', self.dot_trace)
         self._installcmd('untrace', self.dot_untrace)
+        self._installcmd('hook', self.dot_hook)
 
     def _installcmd(self, name, method):
         assert not hasattr(self, 'do_.%s' % (name,))
@@ -127,6 +128,33 @@ class Shell(cmd.Cmd):
                 doc = [line.strip() for line in method.__doc__.splitlines()]
                 assert 1 < len(doc)
                 self.stdout.write('.%s %s' % (cmd, '\n'.join(doc[1:])))
+
+    def dot_hook(self, path):
+        '''add custom commands from a python source file
+        <path_to_source.py>
+        '''
+        import imp
+        import inspect
+        import types
+
+        try:
+            user_hooks = imp.load_source('bayeslite_shell_hooks', path)
+        except IOError:
+            self.stdout.write("No such file or directory %s\n" % path)
+            return
+        except SyntaxError:
+            self.stdout.write("%s is an invalid python file.\n" % path)
+            return
+        except Exception as err:
+            self.stdout.write("%s\n" % repr(err))
+            return
+
+        for member in inspect.getmembers(user_hooks, inspect.isfunction):
+            if member[0][:3] == 'do_':
+                # must use types.MethodType so the user can access 'self'
+                setattr(self, member[0], types.MethodType(member[1], self, type(self)))
+                self._installcmd(member[0][3:], getattr(self, member[0]))
+                print 'added command ".%s"' % (member[0][3:],)
 
     def dot_sql(self, line):
         '''execute a SQL query
