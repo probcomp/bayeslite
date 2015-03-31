@@ -19,6 +19,8 @@ import getopt
 import bayeslite
 import bayeslite.crosscat
 import bayeslite.shell.core as shell
+import bayeslite.shell.hook as hook
+
 
 def usage(stderr, argv):
     progname = argv[0]
@@ -27,6 +29,7 @@ def usage(stderr, argv):
     stderr.write('Usage: %s [-j <njob>] [-s <seed>] [<file.bdb>]\n'
         % (progname,))
     return 1
+
 
 def run(stdin, stdout, stderr, argv):
     njob = None
@@ -81,8 +84,11 @@ def run(stdin, stdout, stderr, argv):
         crosscat = ccle.LocalEngine(seed=seed)
     metamodel = bayeslite.crosscat.CrosscatMetamodel(crosscat)
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)
-    shell.Shell(bdb, 'crosscat').cmdloop()
+    bdbshell = shell.Shell(bdb, 'crosscat')
+    with hook.set_current_shell(bdbshell):
+        bdbshell.cmdloop()
     return 0
+
 
 def main():
     import sys

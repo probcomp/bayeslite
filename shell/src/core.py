@@ -138,27 +138,51 @@ class Shell(cmd.Cmd):
                 assert 1 < len(doc)
                 self.stdout.write('.%s %s' % (cmd, '\n'.join(doc[1:])))
 
+    def _hook(self, cmdname, func, autorehook=False):
+        import types
+
+        if cmdname in self._cmds:
+            affirmative = ['yes', 'y']
+            negative = ['no', 'n']
+            if not autorehook:
+                self.stdout.write("Do you want to rehook the %s command?\n" % cmdname)
+                yesno = raw_input('y/n? ').lower()
+                while yesno not in affirmative+negative:
+                    self.stdout.write("Invalid response to yes or no question.\n")
+                    yesno = raw_input('y/n? ').lower()
+            else:
+                yesno = 'yes'
+
+            if yesno in affirmative:
+                try:
+                    self._uninstallcmd(cmdname)
+                except ValueError as err:
+                    self.stdout.write('{}'.format(err))
+                    return
+            else:
+                self.stdout.write('skipping "%s".\n' % cmdname)
+                return
+
+        setattr(self, cmdname, types.MethodType(func, self, type(self)))
+        self._installcmd(cmdname, getattr(self, cmdname))
+        self.stdout.write('added command ".%s"\n' % (cmdname,))
+
     def dot_hook(self, path):
         '''add custom commands from a python source file
         <path_to_source.py>
         '''
         import imp
-        import inspect
-        import types
 
-        rehook = False
         if path in self._hooked_filenames:
             self.stdout.write("The file %s has already been hooked. Do you want to rehook?\n" % (path,))
             yesno = raw_input('y/n? ')
-            affirmative = ['yes', 'y', 'yeah', 'yep', 'word to your mother']
-            negative = ['no', 'n', 'nope', 'nah']
+            affirmative = ['yes', 'y']
+            negative = ['no', 'n']
             while yesno.lower() not in affirmative+negative:
                 self.stdout.write("Invalid response to yes or no question.\n")
                 yesno = raw_input('y/n? ')
 
-            if yesno in affirmative:
-                rehook = True
-            elif yesno in negative:
+            if yesno in negative:
                 self.stdout.write("Abondoning hook of %s\n" % (path,))
                 return
 
@@ -175,34 +199,6 @@ class Shell(cmd.Cmd):
             return
         else:
             self._hooked_filenames.add(path)
-
-        hook_prefix = "hook_"
-        prefix_length = len(hook_prefix)
-
-        new_command_count = 0
-        for member in inspect.getmembers(user_hooks, inspect.isfunction):
-            if member[0][:prefix_length] == hook_prefix:
-                funcname = member[0][prefix_length:]
-                if funcname in self._cmds:
-                    if rehook:
-                        try:
-                            self._uninstallcmd(funcname)
-                        except ValueError as err:
-                            self.stdout.write('{}'.format(err))
-                            continue
-                    else:
-                        print "Name conflict. There is already a .%s command." % funcname
-                        continue
-
-                # must use types.MethodType so the user can access 'self'
-                setattr(self, member[0], types.MethodType(member[1], self, type(self)))
-                self._installcmd(funcname, getattr(self, member[0]))
-                self.stdout.write('added command ".%s"\n' % (funcname,))
-                new_command_count += 1
-
-        if new_command_count == 0:
-            print "No new commands added. Ensure that the functions you want to hook" +\
-                " are prefixed with 'hook_'."
 
     def dot_sql(self, line):
         '''execute a SQL query
