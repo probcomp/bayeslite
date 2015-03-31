@@ -72,8 +72,7 @@ class Shell(cmd.Cmd):
 
     def _uninstallcmd(self, name):
         if name in self._core_commands:
-            self.stdout.write("Cannot uninstall core command, %s\n" % name)
-            return
+            raise ValueError("Cannot uninstall core command, '%s'\n" % name)
         delattr(self, 'do_.%s' % (name,))
         self._cmds.remove(name)
 
@@ -149,8 +148,7 @@ class Shell(cmd.Cmd):
 
         rehook = False
         if path in self._hooked_filenames:
-            self.stdout.write("The file %s has already been hooked. Do you want "
-                              "to rehook?\n" (path,))
+            self.stdout.write("The file %s has already been hooked. Do you want to rehook?\n" % (path,))
             yesno = raw_input('y/n? ')
             affirmative = ['yes', 'y', 'yeah', 'yep', 'word to your mother']
             negative = ['no', 'n', 'nope', 'nah']
@@ -187,7 +185,11 @@ class Shell(cmd.Cmd):
                 funcname = member[0][prefix_length:]
                 if funcname in self._cmds:
                     if rehook:
-                        self._uninstallcmd(funcname)
+                        try:
+                            self._uninstallcmd(funcname)
+                        except ValueError as err:
+                            self.stdout.write('{}'.format(err))
+                            continue
                     else:
                         print "Name conflict. There is already a .%s command." % funcname
                         continue
