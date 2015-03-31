@@ -44,6 +44,7 @@ class Shell(cmd.Cmd):
         self._cmds = set([])
         self._traced = False
         self._sql_traced = False
+        self._hooked_filenames = set([])
 
         # Awful kludge to make commands begin with `.'.
         #
@@ -61,11 +62,20 @@ class Shell(cmd.Cmd):
         self._installcmd('untrace', self.dot_untrace)
         self._installcmd('hook', self.dot_hook)
 
+        self._core_commands = set(self._cmds)
+
     def _installcmd(self, name, method):
         assert not hasattr(self, 'do_.%s' % (name,))
         assert name not in self._cmds
         setattr(self, 'do_.%s' % (name,), method)
         self._cmds.add(name)
+
+    def _uninstallcmd(self, name):
+        if name in self._core_commands:
+            self.stdout.write("Cannot uninstall core command, %s\n" % name)
+            return
+        delattr(self, 'do_.%s' % (name,))
+        self._cmds.remove(name)
 
     def cmdloop(self, *args, **kwargs):
         self.stdout.write('Welcome to the Bayeslite shell.\n')
@@ -137,6 +147,23 @@ class Shell(cmd.Cmd):
         import inspect
         import types
 
+        rehook = False
+        if path in self._hooked_filenames:
+            self.stdout.write("The file %s has already been hooked. Do you want "
+                              "to rehook?\n" (path,))
+            yesno = raw_input('y/n? ')
+            affirmative = ['yes', 'y', 'yeah', 'yep', 'word to your mother']
+            negative = ['no', 'n', 'nope', 'nah']
+            while yesno.lower() not in affirmative+negative:
+                self.stdout.write("Invalid response to yes or no question.\n")
+                yesno = raw_input('y/n? ')
+
+            if yesno in affirmative:
+                rehook = True
+            elif yesno in negative:
+                self.stdout.write("Abondoning hook of %s\n" % (path,))
+                return
+
         try:
             user_hooks = imp.load_source('bayeslite_shell_hooks', path)
         except IOError:
@@ -148,13 +175,32 @@ class Shell(cmd.Cmd):
         except Exception as err:
             self.stdout.write("%s\n" % repr(err))
             return
+        else:
+            self._hooked_filenames.add(path)
 
+        hook_prefix = "hook_"
+        prefix_length = len(hook_prefix)
+
+        new_command_count = 0
         for member in inspect.getmembers(user_hooks, inspect.isfunction):
-            if member[0][:3] == 'do_':
+            if member[0][:prefix_length] == hook_prefix:
+                funcname = member[0][prefix_length:]
+                if funcname in self._cmds:
+                    if rehook:
+                        self._uninstallcmd(funcname)
+                    else:
+                        print "Name conflict. There is already a .%s command." % funcname
+                        continue
+
                 # must use types.MethodType so the user can access 'self'
                 setattr(self, member[0], types.MethodType(member[1], self, type(self)))
-                self._installcmd(member[0][3:], getattr(self, member[0]))
-                print 'added command ".%s"' % (member[0][3:],)
+                self._installcmd(funcname, getattr(self, member[0]))
+                self.stdout.write('added command ".%s"\n' % (funcname,))
+                new_command_count += 1
+
+        if new_command_count == 0:
+            print "No new commands added. Ensure that the functions you want to hook" +\
+                " are prefixed with 'hook_'."
 
     def dot_sql(self, line):
         '''execute a SQL query
