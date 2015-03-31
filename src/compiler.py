@@ -152,40 +152,44 @@ class Output(object):
         assert self.nampar_map[name] == n
         self.write_numpar(n)
 
-def compile_query(bdb, query, out):
+def compile_query(bdb, query, env, out):
     if isinstance(query, ast.Select):
-        compile_select(bdb, query, out)
+        return compile_select(bdb, query, env, out)
     elif isinstance(query, ast.Estimate):
-        compile_estimate(bdb, query, out)
+        return compile_estimate(bdb, query, env, out)
     elif isinstance(query, ast.EstCols):
-        compile_estcols(bdb, query, out)
+        return compile_estcols(bdb, query, env, out)
     elif isinstance(query, ast.EstPairCols):
-        compile_estpaircols(bdb, query, out)
+        return compile_estpaircols(bdb, query, env, out)
     elif isinstance(query, ast.EstPairRow):
-        compile_estpairrow(bdb, query, out)
+        return compile_estpairrow(bdb, query, env, out)
     else:
         assert False, 'Invalid query: %s' % (repr(query),)
 
-def compile_subquery(bdb, query, _bql_compiler, out):
+def compile_subquery(bdb, query, _bql_compiler, env, out):
     # XXX Do something with the BQL compiler so we can refer to
     # BQL-related quantities in the subquery?
     with compiling_paren(bdb, out, '(', ')'):
-        compile_query(bdb, query, out)
+        return compile_query(bdb, query, env, out)
 
-def compile_select(bdb, select, out):
+def compile_select(bdb, select, env, out):
     assert isinstance(select, ast.Select)
+    senv = env_extend_select(env, select)
     out.write('SELECT')
     if select.quantifier == ast.SELQUANT_DISTINCT:
         out.write(' DISTINCT')
     else:
         assert select.quantifier == ast.SELQUANT_ALL
-    compile_select_columns(bdb, select.columns, BQLCompiler_None(), out)
+    compile_select_columns(bdb, select.columns, BQLCompiler_None(), senv, out)
     if select.tables is not None:
         assert 0 < len(select.tables)
-        compile_select_tables(bdb, select, out)
+        # We pass the enclosing environment env, not the interior
+        # environment senv, because it is the tables that determine
+        # the interior environment.
+        compile_select_tables(bdb, select, env, out)
     if select.condition is not None:
         out.write(' WHERE ')
-        compile_nobql_expression(bdb, select.condition, out)
+        compile_nobql_expression(bdb, select.condition, senv, out)
     if select.grouping is not None:
         assert 0 < len(select.grouping.keys)
         first = True
@@ -195,10 +199,10 @@ def compile_select(bdb, select, out):
                 first = False
             else:
                 out.write(', ')
-            compile_nobql_expression(bdb, key, out)
+            compile_nobql_expression(bdb, key, senv, out)
         if select.grouping.condition:
             out.write(' HAVING ')
-            compile_nobql_expression(bdb, select.grouping.condition, out)
+            compile_nobql_expression(bdb, select.grouping.condition, senv, out)
     if select.order is not None:
         assert 0 < len(select.order)
         first = True
@@ -208,7 +212,7 @@ def compile_select(bdb, select, out):
                 first = False
             else:
                 out.write(', ')
-            compile_nobql_expression(bdb, order.expression, out)
+            compile_nobql_expression(bdb, order.expression, senv, out)
             if order.sense == ast.ORD_ASC:
                 pass
             elif order.sense == ast.ORD_DESC:
@@ -217,27 +221,29 @@ def compile_select(bdb, select, out):
                 assert False, 'Invalid order sense: %s' % (repr(order.sense),)
     if select.limit is not None:
         out.write(' LIMIT ')
-        compile_nobql_expression(bdb, select.limit.limit, out)
+        compile_nobql_expression(bdb, select.limit.limit, senv, out)
         if select.limit.offset is not None:
             out.write(' OFFSET ')
-            compile_nobql_expression(bdb, select.limit.offset, out)
+            compile_nobql_expression(bdb, select.limit.offset, senv, out)
 
-def compile_estimate(bdb, estimate, out):
+def compile_estimate(bdb, estimate, env, out):
     assert isinstance(estimate, ast.Estimate)
+    senv = env_extend_estimate(env, estimate)
     out.write('SELECT')
     if estimate.quantifier == ast.SELQUANT_DISTINCT:
         out.write(' DISTINCT')
     else:
         assert estimate.quantifier == ast.SELQUANT_ALL
     generator_id = core.bayesdb_get_generator(bdb, estimate.generator)
-    bql_compiler = BQLCompiler_1Row(generator_id)
-    compile_select_columns(bdb, estimate.columns, bql_compiler, out)
-    table_name = core.bayesdb_generator_table(bdb, generator_id)
+    bql_compiler = BQLCompiler_1Row(generator_id, senv)
+    compile_select_columns(bdb, estimate.columns, bql_compiler, senv, out)
+    table_name = core.bayesdb_generator_table(bdb, generator_id, senv)
     qt = sqlite3_quote_name(table_name)
     out.write(' FROM %s' % (qt,))
     if estimate.condition is not None:
         out.write(' WHERE ')
-        compile_1row_expression(bdb, estimate.condition, generator_id, out)
+        compile_1row_expression(bdb, estimate.condition, generator_id, senv,
+            out)
     if estimate.grouping is not None:
         assert 0 < len(estimate.grouping.keys)
         first = True
@@ -247,11 +253,11 @@ def compile_estimate(bdb, estimate, out):
                 first = False
             else:
                 out.write(', ')
-            compile_1row_expression(bdb, key, generator_id, out)
+            compile_1row_expression(bdb, key, generator_id, senv, out)
         if estimate.grouping.condition:
             out.write(' HAVING ')
             compile_1row_expression(bdb, estimate.grouping.condition,
-                generator_id, out)
+                generator_id, senv, out)
     if estimate.order is not None:
         assert 0 < len(estimate.order)
         first = True
@@ -261,7 +267,8 @@ def compile_estimate(bdb, estimate, out):
                 first = False
             else:
                 out.write(', ')
-            compile_1row_expression(bdb, order.expression, generator_id, out)
+            compile_1row_expression(bdb, order.expression, generator_id, senv,
+                out)
             if order.sense == ast.ORD_ASC:
                 pass
             elif order.sense == ast.ORD_DESC:
@@ -270,13 +277,14 @@ def compile_estimate(bdb, estimate, out):
                 assert False, 'Invalid order sense: %s' % (repr(order.sense),)
     if estimate.limit is not None:
         out.write(' LIMIT ')
-        compile_1row_expression(bdb, estimate.limit.limit, generator_id, out)
+        compile_1row_expression(bdb, estimate.limit.limit, generator_id, senv,
+            out)
         if estimate.limit.offset is not None:
             out.write(' OFFSET ')
             compile_1row_expression(bdb, estimate.limit.offset, generator_id,
-                out)
+                senv, out)
 
-def compile_select_columns(bdb, columns, bql_compiler, out):
+def compile_select_columns(bdb, columns, bql_compiler, senv, out):
     first = True
     for selcol in columns:
         if first:
@@ -284,23 +292,23 @@ def compile_select_columns(bdb, columns, bql_compiler, out):
             first = False
         else:
             out.write(', ')
-        compile_select_column(bdb, selcol, bql_compiler, out)
+        compile_select_column(bdb, selcol, bql_compiler, senv, out)
 
-def compile_select_column(bdb, selcol, bql_compiler, out):
+def compile_select_column(bdb, selcol, bql_compiler, senv, out):
     if isinstance(selcol, ast.SelColAll):
         if selcol.table is not None:
-            compile_table_name(bdb, selcol.table, out)
+            compile_table_name(bdb, selcol.table, senv, out)
             out.write('.')
         out.write('*')
     elif isinstance(selcol, ast.SelColExp):
-        compile_expression(bdb, selcol.expression, bql_compiler, out)
+        compile_expression(bdb, selcol.expression, bql_compiler, senv, out)
         if selcol.name is not None:
             out.write(' AS ')
-            compile_name(bdb, selcol.name, out)
+            compile_name(bdb, selcol.name, senv, out)
     else:
         assert False, 'Invalid select column: %s' % (repr(selcol),)
 
-def compile_select_tables(bdb, select, out):
+def compile_select_tables(bdb, select, senv, out):
     first = True
     for seltab in select.tables:
         if first:
@@ -308,17 +316,17 @@ def compile_select_tables(bdb, select, out):
             first = False
         else:
             out.write(', ')
-        compile_select_table(bdb, seltab.table, out)
+        compile_select_table(bdb, seltab.table, senv, out)
         if seltab.name is not None:
             out.write(' AS ')
-            compile_name(bdb, seltab.name, out)
+            compile_name(bdb, seltab.name, senv, out)
 
-def compile_select_table(bdb, table, out):
+def compile_select_table(bdb, table, senv, out):
     if ast.is_query(table):
         bql_compiler = None     # XXX
-        compile_subquery(bdb, table, bql_compiler, out)
+        compile_subquery(bdb, table, bql_compiler, senv, out)
     elif isinstance(table, str): # XXX name
-        compile_table_name(bdb, table, out)
+        compile_table_name(bdb, table, senv, out)
     else:
         assert False, 'Invalid select table: %s' % (repr(table),)
 
@@ -328,18 +336,19 @@ def compile_select_table(bdb, table, out):
 # since that's what bql_row_similarity wants.
 #
 # XXX Use query parameters, not quotation.
-def compile_estcols(bdb, estcols, out):
+def compile_estcols(bdb, estcols, env, out):
     assert isinstance(estcols, ast.EstCols)
+    senv = env_extend_estcols(env, estcols)
     # XXX UH OH!  This will have the effect of shadowing names.  We
     # need an alpha-renaming pass.
     if not core.bayesdb_has_generator(bdb, estcols.generator):
         raise ValueError('No such generator: %s' % (estcols.generator,))
     generator_id = core.bayesdb_get_generator(bdb, estcols.generator)
-    colno_exp = 'colno'         # XXX
+    colno_exp = 'colno'         # XXX Use senv to rename.
     out.write('SELECT c.name AS name')
     for exp, name in estcols.columns:
         out.write(', ')
-        compile_1col_expression(bdb, exp, generator_id, colno_exp, out)
+        compile_1col_expression(bdb, exp, generator_id, colno_exp, senv, out)
         if name is not None:
             out.write(' AS %s' % (sqlite3_quote_name(name),))
     out.write(' FROM bayesdb_generator AS g,'
