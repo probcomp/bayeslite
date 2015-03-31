@@ -229,7 +229,9 @@ def compile_estimate(bdb, estimate, out):
         out.write(' DISTINCT')
     else:
         assert estimate.quantifier == ast.SELQUANT_ALL
-    generator_id = core.bayesdb_get_generator(bdb, estimate.generator)
+    if not core.bayesdb_has_generator_default(bdb, estimate.generator):
+        raise ValueError('No such generator: %s' % (estimate.generator,))
+    generator_id = core.bayesdb_get_generator_default(bdb, estimate.generator)
     bql_compiler = BQLCompiler_1Row(generator_id)
     compile_select_columns(bdb, estimate.columns, bql_compiler, out)
     table_name = core.bayesdb_generator_table(bdb, generator_id)
@@ -332,9 +334,9 @@ def compile_estcols(bdb, estcols, out):
     assert isinstance(estcols, ast.EstCols)
     # XXX UH OH!  This will have the effect of shadowing names.  We
     # need an alpha-renaming pass.
-    if not core.bayesdb_has_generator(bdb, estcols.generator):
+    if not core.bayesdb_has_generator_default(bdb, estcols.generator):
         raise ValueError('No such generator: %s' % (estcols.generator,))
-    generator_id = core.bayesdb_get_generator(bdb, estcols.generator)
+    generator_id = core.bayesdb_get_generator_default(bdb, estcols.generator)
     colno_exp = 'colno'         # XXX
     out.write('SELECT c.name AS name')
     for exp, name in estcols.columns:
@@ -383,9 +385,10 @@ def compile_estpaircols(bdb, estpaircols, out):
     assert isinstance(estpaircols, ast.EstPairCols)
     colno0_exp = 'c0.colno'     # XXX
     colno1_exp = 'c1.colno'     # XXX
-    if not core.bayesdb_has_generator(bdb, estpaircols.generator):
+    if not core.bayesdb_has_generator_default(bdb, estpaircols.generator):
         raise ValueError('No such generator: %s' % (estpaircols.generator,))
-    generator_id = core.bayesdb_get_generator(bdb, estpaircols.generator)
+    generator_id = core.bayesdb_get_generator_default(bdb,
+        estpaircols.generator)
     out.write('SELECT'
         ' %d AS generator_id, c0.name AS name0, c1.name AS name1' %
         (generator_id,))
@@ -455,9 +458,10 @@ def compile_estpaircols(bdb, estpaircols, out):
 
 def compile_estpairrow(bdb, estpairrow, out):
     assert isinstance(estpairrow, ast.EstPairRow)
-    if not core.bayesdb_has_generator(bdb, estpairrow.generator):
+    if not core.bayesdb_has_generator_default(bdb, estpairrow.generator):
         raise ValueError('No such generator: %s' % (estpairrow.generator,))
-    generator_id = core.bayesdb_get_generator(bdb, estpairrow.generator)
+    generator_id = core.bayesdb_get_generator_default(bdb,
+        estpairrow.generator)
     rowid0_exp = 'r0._rowid_'
     rowid1_exp = 'r1._rowid_'
     out.write('SELECT %s AS rowid0, %s AS rowid1, ' % (rowid0_exp, rowid1_exp))

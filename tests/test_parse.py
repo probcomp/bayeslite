@@ -470,7 +470,15 @@ def test_trivial_precedence_error():
 def test_trivial_commands():
     assert parse_bql_string('create generator t_cc for t using crosscat'
             '(xyz numerical, pqr categorical, lmn cyclic)') == \
-        [ast.CreateGen('t_cc', False, 't', 'crosscat',
+        [ast.CreateGen(False, 't_cc', False, 't', 'crosscat',
+            ast.GenSchema([
+                ast.GenColumn('xyz', 'numerical'),
+                ast.GenColumn('pqr', 'categorical'),
+                ast.GenColumn('lmn', 'cyclic'),
+            ]))]
+    assert parse_bql_string('create default generator t_cc for t using crosscat'
+            '(xyz numerical, pqr categorical, lmn cyclic)') == \
+        [ast.CreateGen(True, 't_cc', False, 't', 'crosscat',
             ast.GenSchema([
                 ast.GenColumn('xyz', 'numerical'),
                 ast.GenColumn('pqr', 'categorical'),
@@ -479,7 +487,7 @@ def test_trivial_commands():
     assert parse_bql_string('create generator t_cc if not exists'
             ' for t using crosscat'
             '(xyz numerical, pqr categorical, lmn cyclic)') == \
-        [ast.CreateGen('t_cc', True, 't', 'crosscat',
+        [ast.CreateGen(False, 't_cc', True, 't', 'crosscat',
             ast.GenSchema([
                 ast.GenColumn('xyz', 'numerical'),
                 ast.GenColumn('pqr', 'categorical'),

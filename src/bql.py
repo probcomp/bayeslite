@@ -78,7 +78,11 @@ def execute_phrase(bdb, phrase, bindings=()):
             if core.bayesdb_has_table(bdb, phrase.name):
                 raise ValueError('Name already defined as table: %s' %
                     (repr(phrase.name),))
-            generator_id = core.bayesdb_get_generator(bdb,
+            if not core.bayesdb_has_generator_default(bdb,
+                    phrase.simulation.generator):
+                raise ValueError('No such generator: %s' %
+                    (phrase.simulation.generator,))
+            generator_id = core.bayesdb_get_generator_default(bdb,
                 phrase.simulation.generator)
             metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
             table = core.bayesdb_generator_table(bdb, generator_id)
@@ -237,6 +241,33 @@ def execute_phrase(bdb, phrase, bindings=()):
                                 generator_id)
                             metamodel.rename_column(bdb, generator_id,
                                 old_folded, new_folded)
+                elif isinstance(cmd, ast.AlterTabSetDefGen):
+                    if not core.bayesdb_has_generator(bdb, cmd.generator):
+                        raise ValueError('No such generator: %s' %
+                            (repr(cmd.generator),))
+                    generator_id = core.bayesdb_get_generator(bdb,
+                        cmd.generator)
+                    unset_default_sql = '''
+                        UPDATE bayesdb_generator SET defaultp = 0
+                            WHERE tabname = ? AND defaultp
+                    '''
+                    total_changes = bdb.sqlite3.total_changes
+                    bdb.sql_execute(unset_default_sql, (table,))
+                    assert bdb.sqlite3.total_changes - total_changes in (0, 1)
+                    set_default_sql = '''
+                        UPDATE bayesdb_generator SET defaultp = 1 WHERE id = ?
+                    '''
+                    total_changes = bdb.sqlite3.total_changes
+                    bdb.sql_execute(set_default_sql, (generator_id,))
+                    assert bdb.sqlite3.total_changes - total_changes == 1
+                elif isinstance(cmd, ast.AlterTabUnsetDefGen):
+                    unset_default_sql = '''
+                        UPDATE bayesdb_generator SET defaultp = 0
+                            WHERE tabname = ? AND defaultp
+                    '''
+                    total_changes = bdb.sqlite3.total_changes
+                    bdb.sql_execute(unset_default_sql, (table,))
+                    assert bdb.sqlite3.total_changes - total_changes in (0, 1)
                 else:
                     assert False, 'Invalid alter table command: %s' % \
                         (cmd,)
@@ -262,13 +293,15 @@ def execute_phrase(bdb, phrase, bindings=()):
 
             # Create the generator record.
             generator_sql = '''
-                INSERT%s INTO bayesdb_generator (name, tabname, metamodel)
-                    VALUES (:name, :table, :metamodel)
+                INSERT%s INTO bayesdb_generator
+                    (name, tabname, metamodel, defaultp)
+                    VALUES (:name, :table, :metamodel, :defaultp)
             ''' % (' OR IGNORE' if phrase.ifnotexists else '')
             cursor = bdb.sql_execute(generator_sql, {
                 'name': name,
                 'table': table,
                 'metamodel': metamodel.name(),
+                'defaultp': phrase.default,
             })
             generator_id = cursor.lastrowid
             assert generator_id
@@ -413,7 +446,8 @@ def execute_phrase(bdb, phrase, bindings=()):
     if isinstance(phrase, ast.InitModels):
         with bdb.savepoint():
             # Grab the arguments.
-            generator_id = core.bayesdb_get_generator(bdb, phrase.generator)
+            generator_id = core.bayesdb_get_generator_default(bdb,
+                phrase.generator)
             modelnos = range(phrase.nmodels)
             model_config = None         # XXX For now.
 
@@ -468,7 +502,8 @@ def execute_phrase(bdb, phrase, bindings=()):
         # progress in case of ^C in the middle.
         #
         # XXX Put these warning somewhere more appropriate.
-        generator_id = core.bayesdb_get_generator(bdb, phrase.generator)
+        generator_id = core.bayesdb_get_generator_default(bdb,
+            phrase.generator)
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
         metamodel.analyze_models(bdb, generator_id,
             modelnos=phrase.modelnos,
@@ -478,7 +513,8 @@ def execute_phrase(bdb, phrase, bindings=()):
 
     if isinstance(phrase, ast.DropModels):
         with bdb.savepoint():
-            generator_id = core.bayesdb_get_generator(bdb, phrase.generator)
+            generator_id = core.bayesdb_get_generator_default(bdb,
+                phrase.generator)
             metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
             modelnos = None
             if phrase.modelnos is not None:

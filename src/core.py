@@ -86,9 +86,31 @@ def bayesdb_has_generator(bdb, name):
     cursor = bdb.sql_execute(sql, (name,))
     return cursor.next()[0] != 0
 
+def bayesdb_has_generator_default(bdb, name):
+    sql = '''
+        SELECT COUNT(*) FROM bayesdb_generator
+            WHERE name = :name OR (defaultp AND tabname = :name)
+    '''
+    cursor = bdb.sql_execute(sql, {'name': name})
+    return cursor.next()[0] != 0
+
 def bayesdb_get_generator(bdb, name):
     sql = 'SELECT id FROM bayesdb_generator WHERE name = ?'
     cursor = bdb.sql_execute(sql, (name,))
+    try:
+        row = cursor.next()
+    except StopIteration:
+        raise ValueError('No such generator: %s' % (repr(name),))
+    else:
+        assert isinstance(row[0], int)
+        return row[0]
+
+def bayesdb_get_generator_default(bdb, name):
+    sql = '''
+        SELECT id FROM bayesdb_generator
+            WHERE name = :name OR (defaultp AND tabname = :name)
+    '''
+    cursor = bdb.sql_execute(sql, {'name': name})
     try:
         row = cursor.next()
     except StopIteration:

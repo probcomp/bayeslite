@@ -51,6 +51,9 @@ altertab_cmds(many)	::= altertab_cmds(cmds) T_COMMA altertab_cmd(cmd).
 altertab_cmd(renametab)	::= K_RENAME K_TO table_name(name).
 altertab_cmd(renamecol)	::= K_RENAME k_column_opt column_name(old)
 				K_TO column_name(new).
+altertab_cmd(setdefgen)	::= K_SET K_DEFAULT K_GENERATOR K_TO
+				generator_name(generator).
+altertab_cmd(unsetdefgen)	::= K_UNSET K_DEFAULT K_GENERATOR.
 
 k_column_opt		::= .
 k_column_opt		::= K_COLUMN.
@@ -59,7 +62,8 @@ k_column_opt		::= K_COLUMN.
  * BQL Model Definition Language
  */
 /* XXX Temporary generators?  */
-command(creategen)	::= K_CREATE K_GENERATOR generator_name(name)
+command(creategen)	::= K_CREATE default_opt(defaultp)
+				K_GENERATOR generator_name(name)
 				ifnotexists(ifnotexists)
 				K_FOR table_name(table)
 				K_USING metamodel_name(metamodel)
@@ -68,6 +72,9 @@ command(dropgen)	::= K_DROP K_GENERATOR ifexists(ifexists)
 				generator_name(name).
 command(altergen)	::= K_ALTER K_GENERATOR generator_name(generator)
 				altergen_cmds(cmds).
+
+default_opt(none)	::= .
+default_opt(some)	::= K_DEFAULT.
 
 altergen_cmds(one)	::= altergen_cmd(cmd).
 altergen_cmds(many)	::= altergen_cmds(cmds) T_COMMA altergen_cmd(cmd).

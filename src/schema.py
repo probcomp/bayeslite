@@ -77,6 +77,36 @@ CREATE TABLE bayesdb_generator_model (
 	PRIMARY KEY(generator_id, modelno)
 );
 '''
+
+bayesdb_schema_5to6 = '''
+PRAGMA user_version = 6;
+
+-- Can't add a constraint with ALTER TABLE, so create a new table.
+ALTER TABLE bayesdb_generator RENAME TO bayesdb_generator_v5;
+
+CREATE TABLE bayesdb_generator (
+	-- We use AUTOINCREMENT so that generator id numbers don't get
+	-- reused and are safe to hang onto outside a transaction.
+	id		INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
+				CHECK (0 < id),
+	name		TEXT COLLATE NOCASE NOT NULL UNIQUE,
+	tabname		TEXT COLLATE NOCASE NOT NULL,
+				-- REFERENCES sqlite_master(name)
+	metamodel	INTEGER NOT NULL REFERENCES bayesdb_metamodel(name),
+	-- v6: New column.
+	defaultp	BOOLEAN DEFAULT 0,
+	-- v6: New constraint.
+	CHECK (name != tabname)
+);
+
+CREATE UNIQUE INDEX bayesdb_generator_i_default ON bayesdb_generator (tabname)
+    WHERE defaultp;
+
+INSERT INTO bayesdb_generator (id, name, tabname, metamodel)
+    SELECT * FROM bayesdb_generator_v5;
+
+DROP TABLE bayesdb_generator_v5;
+'''
 
 ### BayesDB SQLite setup
 
@@ -131,9 +161,16 @@ def bayesdb_install_schema(db):
                 %s;
                 COMMIT;
             ''' % (0x42594442, bayesdb_schema_5))
+            user_version = 5
     elif application_id != 0x42594442:
         raise IOError('Wrong application id: 0x%08x' % (application_id,))
-    elif user_version != 5:
+    if user_version == 5:
+        # XXX One of these days, we'll have to consider making the
+        # upgrade something to be explicitly requested by the user
+        # when old versions persist.
+        db.executescript('BEGIN; %s; COMMIT;' % (bayesdb_schema_5to6,))
+        user_version = 6
+    if user_version != 6:
         raise IOError('Unknown bayeslite format version: %d' % (user_version,))
     db.execute('PRAGMA foreign_keys = ON')
     db.execute('PRAGMA integrity_check')
