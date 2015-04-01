@@ -9,15 +9,17 @@ probabilistic BQL queries.
 After you have installed
 [CrossCat](https://github.com/mit-probabilistic-computing-project/crosscat):
 
-```
-$ python setup.py build
-$ python setup.py install
-```
-
 To check that everything is working:
 
 ```
 $ ./check.sh
+```
+
+To install system-wide, or into the current virtual environment:
+
+```
+$ python setup.py build
+$ python setup.py install
 ```
 
 Bayeslite is tested on Ubuntu 14.04.  It should also run on other
