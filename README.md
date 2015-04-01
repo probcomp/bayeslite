@@ -1,8 +1,7 @@
 # Bayeslite
 
-Bayeslite is a prototype reimplementation of BayesDB on SQLite3, to
-enable the use of relational SQL queries on databases in addition to
-probabilistic BQL queries.
+Bayeslite is a BQL database built on SQLite3.  BQL is an extension to
+SQL that supports queries about the probable implications of data.
 
 ## Install
 
