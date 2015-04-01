@@ -22,5 +22,12 @@ def current_shell():
 
 def bayesdb_shell_cmd(name, autorehook=False):
     def wrapper(func):
-        current_shell()._hook(name, func, autorehook=autorehook)
+        # because the cmd loop doesn't handle errors and just kicks people out
+        def excepection_handling_func(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except Exception as err:
+                print err
+
+        current_shell()._hook(name, excepection_handling_func, autorehook=autorehook)
     return wrapper
