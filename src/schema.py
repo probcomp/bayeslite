@@ -81,31 +81,11 @@ CREATE TABLE bayesdb_generator_model (
 bayesdb_schema_5to6 = '''
 PRAGMA user_version = 6;
 
--- Can't add a constraint with ALTER TABLE, so create a new table.
-ALTER TABLE bayesdb_generator RENAME TO bayesdb_generator_v5;
-
-CREATE TABLE bayesdb_generator (
-	-- We use AUTOINCREMENT so that generator id numbers don't get
-	-- reused and are safe to hang onto outside a transaction.
-	id		INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
-				CHECK (0 < id),
-	name		TEXT COLLATE NOCASE NOT NULL UNIQUE,
-	tabname		TEXT COLLATE NOCASE NOT NULL,
-				-- REFERENCES sqlite_master(name)
-	metamodel	INTEGER NOT NULL REFERENCES bayesdb_metamodel(name),
-	-- v6: New column.
-	defaultp	BOOLEAN DEFAULT 0,
-	-- v6: New constraint.
-	CHECK (name != tabname)
-);
+ALTER TABLE bayesdb_generator
+    ADD COLUMN defaultp BOOLEAN DEFAULT 0;
 
 CREATE UNIQUE INDEX bayesdb_generator_i_default ON bayesdb_generator (tabname)
     WHERE defaultp;
-
-INSERT INTO bayesdb_generator (id, name, tabname, metamodel)
-    SELECT * FROM bayesdb_generator_v5;
-
-DROP TABLE bayesdb_generator_v5;
 '''
 
 ### BayesDB SQLite setup
