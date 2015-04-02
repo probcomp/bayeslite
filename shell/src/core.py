@@ -16,6 +16,7 @@
 
 import StringIO
 import cmd
+import os
 import traceback
 
 import bayeslite
@@ -26,6 +27,7 @@ import bayeslite.parse as parse
 import bayeslite.shell.pretty as pretty
 
 from bayeslite.util import casefold
+
 
 class Shell(cmd.Cmd):
     def_prompt          = 'bayeslite> '
@@ -60,6 +62,7 @@ class Shell(cmd.Cmd):
         self._installcmd('sql', self.dot_sql)
         self._installcmd('trace', self.dot_trace)
         self._installcmd('untrace', self.dot_untrace)
+        self._installcmd('read', self.dot_read)
         self._installcmd('hook', self.dot_hook)
 
         self._core_commands = set(self._cmds)
@@ -138,8 +141,28 @@ class Shell(cmd.Cmd):
                 assert 1 < len(doc)
                 self.stdout.write('.%s %s' % (cmd, '\n'.join(doc[1:])))
 
-    def _hook(self, cmdname, func, autorehook=False):
+    def dot_read(self, path):
+        """
+        <path/to/file>
+        adds a set of dot commands from the file at path to the cmdqueue.
+        """
+        if not os.path.isfile(path):
+            self.stdout.write("%s is not a file" % path)
+            return
+
+        with open(path) as f:
+            for command in f:
+                self.cmdqueue.append(command)
+
+    def _hook(self, cmdname, func, autorehook=False, yes=False, silent=False):
         import types
+        if yes:
+            autorehook = True
+
+        if silent:
+            do_print = lambda *s: None
+        else:
+            do_print = self.stdout.write
 
         if cmdname in self._cmds:
             affirmative = ['yes', 'y']
@@ -160,12 +183,12 @@ class Shell(cmd.Cmd):
                     self.stdout.write('{}'.format(err))
                     return
             else:
-                self.stdout.write('skipping "%s".\n' % cmdname)
+                do_print('skipping "%s".\n' % cmdname)
                 return
 
         setattr(self, cmdname, types.MethodType(func, self, type(self)))
         self._installcmd(cmdname, getattr(self, cmdname))
-        self.stdout.write('added command ".%s"\n' % (cmdname,))
+        do_print('added command ".%s"\n' % (cmdname,))
 
     def dot_hook(self, path):
         '''add custom commands from a python source file
