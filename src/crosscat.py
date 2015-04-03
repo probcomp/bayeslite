@@ -580,12 +580,9 @@ class CrosscatMetamodel(metamodel.IMetamodel):
         )
         return math.exp(r)
 
-    # XXX Rename this impute, ignore the existing value, return
-    # imputed value and confidence?
+    # XXX Rename this `impute', return imputed value and confidence?
     def infer(self, bdb, generator_id, colno, rowid, value, threshold,
             numsamples=1):
-        if value is not None:
-            return value
         M_c = self._crosscat_metadata(bdb, generator_id)
         column_names = core.bayesdb_generator_column_names(bdb, generator_id)
         table_name = core.bayesdb_generator_table(bdb, generator_id)
@@ -619,7 +616,9 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                 crosscat_gen_colno(bdb, generator_id, cc_colno_),
                 crosscat_value_to_code(bdb, generator_id, M_c,
                     crosscat_gen_colno(bdb, generator_id, cc_colno_), value))
-               for cc_colno_, value in enumerate(row) if value is not None],
+               for cc_colno_, value in enumerate(row)
+               if value is not None
+               if cc_colno_ != cc_colno],
             Q=[(row_id, cc_colno)],
             n=numsamples,
         )
