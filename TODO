@@ -53,6 +53,11 @@ Legend:
 
 ** Minor tweaks
 
+[MQI] CREATE TABLE foo AS ESTIMATE key, x, INFER x AS xi CONFIDENCE xc, ...
+  -> key is primary key
+  -> x is stored value
+  -> xi is imputed value ignoring stored value
+  -> xc is imputation confidence
 [M*I] Common table expressions (WITH t AS (SELECT ...); SELECT ...).
   (Requires upgrading sqlite3 past what's in Ubuntu 14.04.)
 [MQI] Implement INFER to DTRT with imputing for predictive probability.
