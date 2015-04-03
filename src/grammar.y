@@ -425,7 +425,7 @@ bitwise_not(bql)	::= bqlfn(b).
  *
  * However, changing primary(e) to expression(e) on the right-hand
  * side of the bqlfn(prob) rule makes the grammar ambiguous, and the
- * surgery necessary to restore the ambiguity is too much trouble.  So
+ * surgery necessary to resolve the ambiguity is too much trouble.  So
  * instead we'll reject unparenthesized PROBABILITY OF X = V with
  * other operators altogether and require explicit parentheses until
  * someone wants to do that surgery.
