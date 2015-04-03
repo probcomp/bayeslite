@@ -126,7 +126,10 @@ class Shell(cmd.Cmd):
             pad = max(1 + len(cmd) for cmd in self._cmds)
             for cmd in sorted(self._cmds):
                 method = getattr(self, 'do_.%s' % (cmd,))
-                doc = [line.strip() for line in method.__doc__.splitlines()]
+                if method.__doc__ is not None:
+                    doc = [line.strip() for line in method.__doc__.splitlines()]
+                else:
+                    doc = ['', '']
                 assert 1 < len(doc)
                 self.stdout.write(' %*s    %s\n' % (pad, '.' + cmd, doc[0]))
             self.stdout.write('Type `.help <cmd>\''
@@ -137,15 +140,20 @@ class Shell(cmd.Cmd):
                     self.stdout.write('No such command %s.\n' % (repr(cmd),))
                     return
                 method = getattr(self, 'do_.%s' % (cmd,))
-                doc = [line.strip() for line in method.__doc__.splitlines()]
+                if method.__doc__ is not None:
+                    doc = [line.strip() for line in method.__doc__.splitlines()]
+                else:
+                    self.stdout.write('No help for %s.\n' % (repr(cmd),))
+                    continue
                 assert 1 < len(doc)
                 self.stdout.write('.%s %s' % (cmd, '\n'.join(doc[1:])))
 
     def dot_read(self, path):
-        """
+        '''read a file of shell commands
         <path/to/file>
-        adds a set of dot commands from the file at path to the cmdqueue.
-        """
+
+        Adds a set of dot commands from the file at path to the cmdqueue.
+        '''
         if not os.path.isfile(path):
             self.stdout.write("%s is not a file" % path)
             return
@@ -186,8 +194,7 @@ class Shell(cmd.Cmd):
                 do_print('skipping "%s".\n' % cmdname)
                 return
 
-        setattr(self, cmdname, types.MethodType(func, self, type(self)))
-        self._installcmd(cmdname, getattr(self, cmdname))
+        self._installcmd(cmdname, types.MethodType(func, self, type(self)))
         do_print('added command ".%s"\n' % (cmdname,))
 
     def dot_hook(self, path):
