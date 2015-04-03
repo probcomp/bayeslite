@@ -448,7 +448,8 @@ bqlfn(depprob)		::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
 bqlfn(mutinf)		::= K_MUTUAL K_INFORMATION ofwith(cols)
 				nsamples_opt(nsamp).
 bqlfn(correl)		::= K_CORRELATION ofwith(cols).
-bqlfn(infer)		::= K_INFER column_name(col) K_CONF primary(cf).
+bqlfn(infer)		::= K_INFER column_name(col)
+				K_WITH K_CONFIDENCE primary(cf).
 bqlfn(primary)		::= primary(p).
 
 /*

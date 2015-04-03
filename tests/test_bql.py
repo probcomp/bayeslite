@@ -277,7 +277,7 @@ def test_estimate_bql():
     with pytest.raises(ValueError):
         # Need both columns fixed.
         bql2sql('estimate correlation from t1_cc;')
-    assert bql2sql('estimate infer age conf 0.9 from t1_cc;') == \
+    assert bql2sql('estimate infer age with confidence 0.9 from t1_cc;') == \
         'SELECT bql_infer(1, 2, _rowid_, "age", 0.9) FROM "t1";'
 
 def test_estimate_columns_trivial():
@@ -355,7 +355,8 @@ def test_estimate_columns_trivial():
         bql2sql('estimate columns from t1_cc where correlation > 0.5;')
     with pytest.raises(ValueError):
         # Makes no sense.
-        bql2sql('estimate columns from t1_cc where infer age conf 0.9 > 30;')
+        bql2sql('estimate columns from t1_cc'
+            ' where infer age with confidence 0.9 > 30;')
     assert bql2sql('estimate columns'
             ' dependence probability with weight as depprob,'
             ' mutual information with weight as mutinf'
@@ -473,7 +474,7 @@ def test_estimate_pairwise_trivial():
     with pytest.raises(ValueError):
         # Makes no sense.
         bql2sql('estimate pairwise dependence probability from t1_cc'
-            ' where infer age conf 0.9 > 30;')
+            ' where infer age with confidence 0.9 > 30;')
     assert bql2sql('estimate pairwise dependence probability as depprob,' \
             ' mutual information as mutinf' \
             ' from t1_cc where depprob > 0.5 order by mutinf desc') == \
@@ -498,7 +499,7 @@ def test_estimate_pairwise_row():
         infix + ';'
     with pytest.raises(ValueError):
         # INFER is a 1-row function.
-        bql2sql('estimate pairwise row infer age conf 0.9 from t1;')
+        bql2sql('estimate pairwise row infer age with confidence 0.9 from t1;')
 
 def test_estimate_pairwise_selected_columns():
     assert bql2sql('estimate pairwise dependence probability from t1_cc'
@@ -601,9 +602,10 @@ def test_trivial_commands():
             with pytest.raises(AssertionError): # XXX
                 bdb.execute('select gender from t0')
                 assert False, 'Need to fix quoting of unknown columns!'
-            bdb.execute('estimate infer sex conf 0.9 from t_cc')
+            bdb.execute('estimate infer sex with confidence 0.9 from t_cc')
             with pytest.raises(ValueError):
-                bdb.execute('estimate infer gender conf 0.9 from t_cc')
+                bdb.execute('estimate infer gender with confidence 0.9'
+                    ' from t_cc')
             bdb.execute('alter table t0 rename sex to gender')
             assert core.bayesdb_generator_column_number(bdb, generator_id,
                     'gender') \
@@ -621,11 +623,11 @@ def test_trivial_commands():
         bdb.execute('estimate pairwise row similarity from t_cc')
         bdb.execute('select value from'
             ' (estimate pairwise correlation from t_cc)')
-        bdb.execute('estimate infer age conf 0.9 from t_cc')
-        bdb.execute('estimate infer AGE conf 0.9 from T_cc')
-        bdb.execute('estimate infer aGe conf 0.9 from T_cC')
+        bdb.execute('estimate infer age with confidence 0.9 from t_cc')
+        bdb.execute('estimate infer AGE with confidence 0.9 from T_cc')
+        bdb.execute('estimate infer aGe with confidence 0.9 from T_cC')
         with pytest.raises(ValueError):
-            bdb.execute('estimate infer agee conf 0.9 from t_cc')
+            bdb.execute('estimate infer agee with confidence 0.9 from t_cc')
         # Make sure it works with the table too if we create a default
         # generator.
         with pytest.raises(ValueError):

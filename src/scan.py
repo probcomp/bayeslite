@@ -45,7 +45,7 @@ keywords = {
     "collate": grammar.K_COLLATE,
     "columns": grammar.K_COLUMNS,
     "commit": grammar.K_COMMIT,
-    "conf": grammar.K_CONF,
+    "confidence": grammar.K_CONFIDENCE,
     "correlation": grammar.K_CORRELATION,
     "create": grammar.K_CREATE,
     "default": grammar.K_DEFAULT,
