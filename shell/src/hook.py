@@ -20,14 +20,22 @@ def current_shell():
     return the_current_shell.value
 
 
+# make sure that the function that is hooked by the shell has the same
+# __doc__
+class bayesdb_shellhookexp(object):
+    def __init__(self, func):
+        self.func = func
+        self.__doc__ = func.__doc__
+
+    def __call__(self, *args):
+        try:
+            return self.func(*args)
+        except Exception as err:
+            print err
+
+
 def bayesdb_shell_cmd(name, autorehook=False):
     def wrapper(func):
         # because the cmd loop doesn't handle errors and just kicks people out
-        def excepection_handling_func(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except Exception as err:
-                print err
-
-        current_shell()._hook(name, excepection_handling_func, autorehook=autorehook)
+        current_shell()._hook(name, bayesdb_shellhookexp(func), autorehook=autorehook)
     return wrapper
