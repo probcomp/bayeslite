@@ -15,6 +15,7 @@
 #   limitations under the License.
 
 import StringIO
+import pytest
 
 import bayeslite.shell.pretty as pretty
 
@@ -31,12 +32,35 @@ def test_pretty():
         ['Spot', 3, 'kibble'],
         ['Skruffles', 2, 'kibble'],
         ['Zorb', 2, 'zorblaxian kibble'],
+        [u'Zörb', 87, u'zørblaχian ﻛبﻞ'],
     ])
     out = StringIO.StringIO()
     pretty.pp_cursor(out, cursor)
     assert out.getvalue() == \
-        '     name | age |    favourite food\n' \
-        '----------+-----+------------------\n' \
-        '     Spot |   3 |            kibble\n' \
-        'Skruffles |   2 |            kibble\n' \
-        '     Zorb |   2 | zorblaxian kibble\n'
+        u'     name | age |    favourite food\n' \
+        u'----------+-----+------------------\n' \
+        u'     Spot |   3 |            kibble\n' \
+        u'Skruffles |   2 |            kibble\n' \
+        u'     Zorb |   2 | zorblaxian kibble\n' \
+        u'     Zörb |  87 |    zørblaχian ﻛبﻞ\n'
+
+def test_pretty_unicomb():
+    pytest.xfail('pp_cursor counts code points, not grapheme clusters.')
+    cursor = MockCursor([['name'], ['age'], ['favourite food']], [
+        ['Spot', 3, 'kibble'],
+        ['Skruffles', 2, 'kibble'],
+        ['Zorb', 2, 'zorblaxian kibble'],
+        ['Zörb', 87, 'zørblaχian ﻛبﻞ'],
+        [u'Zörb', 42, u'zörblǎxïǎn kïbble'],
+        ['Zörb', 87, 'zørblaχian ﻛِبّﻞ'],
+    ])
+    out = StringIO.StringIO()
+    pretty.pp_cursor(out, cursor)
+    assert out.getvalue() == \
+        u'     name | age |    favourite food\n' \
+        u'----------+-----+------------------\n' \
+        u'     Spot |   3 |            kibble\n' \
+        u'Skruffles |   2 |            kibble\n' \
+        u'     Zorb |   2 | zorblaxian kibble\n' \
+        u'     Zörb |  42 | zörblǎxïǎn kïbble\n' \
+        u'     Zörb |  87 |    zørblaxian ﻛِبّﻞ\n'
