@@ -57,7 +57,7 @@ from bayeslite.shell.hook import bayelite_shell_cmd
 @bayeslite_shell_cmd("hello")
 def say_hello_to_name(self, args):
     """ Says hello """
-    self.stdout.write("Hello, %s.\n % (args,))
+    self.stdout.write("Hello, %s.\n" % (args,))
 
 
 @bayelite_shell_cmd("byebye", autorehook=True)
