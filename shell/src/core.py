@@ -128,6 +128,30 @@ class Shell(cmd.Cmd):
                 assert 1 < len(doc)
                 self.stdout.write('.%s %s' % (cmd, '\n'.join(doc[1:])))
 
+    def dot_background(self, line):
+        '''run BQL in the background
+        <phrase>
+
+        Execute a BQL phrase in the background.
+        '''
+        
+
+    def dot_jobs(self, line):
+        '''list jobs
+
+
+        List background jobs.
+        '''
+        
+
+    def dot_kill(self, line):
+        '''kill background jobs
+        [<job> ...]
+
+        Kill the numbered background jobs.
+        '''
+        
+
     def dot_sql(self, line):
         '''execute a SQL query
         <query>
