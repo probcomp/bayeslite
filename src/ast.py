@@ -166,6 +166,12 @@ SelColExp = namedtuple('SelColExp', [
     'name',                     # XXX name
 ])
 
+InfCol = namedtuple('InfCol', [
+    'column',                   # XXX name
+    'name',                     # XXX name
+    'confname',                 # XXX name
+])
+
 SelTab = namedtuple('SelTab', [
     'table',                    # XXX subquery or XXX name
     'name',                     # XXX name
@@ -279,6 +285,7 @@ ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
 ExpBQLMutInf = namedtuple('ExpBQLMutInf', ['column0', 'column1', 'nsamples'])
 ExpBQLCorrel = namedtuple('ExpBQLCorrel', ['column0', 'column1'])
 ExpBQLInfer = namedtuple('ExpBQLInfer', ['column', 'confidence'])
+ExpBQLInferConf = namedtuple('ExpBQLInferConf', ['column'])
 
 def is_bql(exp):
     if isinstance(exp, ExpBQLPredProb): return True
@@ -289,6 +296,7 @@ def is_bql(exp):
     if isinstance(exp, ExpBQLMutInf):   return True
     if isinstance(exp, ExpBQLCorrel):   return True
     if isinstance(exp, ExpBQLInfer):    return True
+    if isinstance(exp, ExpBQLInferConf): return True
     return False
 
 LitNull = namedtuple('LitNull', ['value'])

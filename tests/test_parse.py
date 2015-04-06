@@ -527,6 +527,16 @@ def test_trivial_commands():
         [ast.AnalyzeModels('t', [1,2,3], 1, None, False)]
     assert parse_bql_string('analyze t models 1-3,5 for 1 iteration;') == \
         [ast.AnalyzeModels('t', [1,2,3,5], 1, None, False)]
+    assert parse_bql_string('create temporary table tx as'
+            ' estimate x, infer x as xi confidence xc from t_cc') == \
+        [ast.CreateTabAs(True, False, 'tx',
+            ast.Estimate(ast.SELQUANT_ALL,
+                [
+                    ast.SelColExp(ast.ExpCol(None, 'x'), None),
+                    ast.InfCol('x', 'xi', 'xc'),
+                ],
+                't_cc', None, None, None, None,
+            ))]
 
 def test_parametrized():
     assert parse_bql_string('select * from t where id = ?;') == \

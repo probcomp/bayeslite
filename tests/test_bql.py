@@ -278,7 +278,15 @@ def test_estimate_bql():
         # Need both columns fixed.
         bql2sql('estimate correlation from t1_cc;')
     assert bql2sql('estimate infer age with confidence 0.9 from t1_cc;') == \
-        'SELECT bql_infer(1, 2, _rowid_, "age", 0.9) FROM "t1";'
+        'SELECT bql_infer(1, 2, _rowid_, 0.9) FROM "t1";'
+    assert bql2sql('estimate rowid, age,'
+            ' infer age as age_inf confidence age_conf from t1_cc') == \
+        'SELECT c0 AS "rowid", c1 AS "age",' \
+            ' bql_json_get(c2, \'value\') AS "age_inf",' \
+            ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
+            ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
+                ' bql_infer_confidence(1, 2, _rowid_) AS c2' \
+                ' FROM "t1");'
 
 def test_estimate_columns_trivial():
     prefix0 = 'SELECT c.name AS name'
