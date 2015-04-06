@@ -68,8 +68,15 @@ class IMetamodel(object):
     def row_column_predictive_probability(self, bdb, generator_id, rowid,
             colno):
         raise NotImplementedError
-    def infer(self, bdb, generator_id, colno, rowid, value, threshold,
-            numsamples=1):
+    def infer(self, bdb, generator_id, colno, rowid, threshold,
+            numsamples=None):
+        value, confidence = self.infer_confidence(bdb, generator_id, colno,
+            rowid, numsamples=numsamples)
+        if confidence < threshold:
+            return None
+        return value
+    def infer_confidence(self, bdb, generator_id, colno, rowid,
+            numsamples=None):
         raise NotImplementedError
     def simulate(self, bdb, generator_id, constraints, colnos,
             numpredictions=1):

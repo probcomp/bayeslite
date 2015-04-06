@@ -580,9 +580,10 @@ class CrosscatMetamodel(metamodel.IMetamodel):
         )
         return math.exp(r)
 
-    # XXX Rename this `impute', return imputed value and confidence?
-    def infer(self, bdb, generator_id, colno, rowid, value, threshold,
-            numsamples=1):
+    def infer_confidence(self, bdb, generator_id, colno, rowid,
+            numsamples=None):
+        if numsamples is None:
+            numsamples = 1
         M_c = self._crosscat_metadata(bdb, generator_id)
         column_names = core.bayesdb_generator_column_names(bdb, generator_id)
         table_name = core.bayesdb_generator_table(bdb, generator_id)
@@ -622,10 +623,8 @@ class CrosscatMetamodel(metamodel.IMetamodel):
             Q=[(row_id, cc_colno)],
             n=numsamples,
         )
-        if confidence >= threshold:
-            return crosscat_code_to_value(bdb, generator_id, M_c, colno, code)
-        else:
-            return None
+        value = crosscat_code_to_value(bdb, generator_id, M_c, colno, code)
+        return value, confidence
 
     def simulate(self, bdb, generator_id, constraints, colnos,
             numpredictions=1):

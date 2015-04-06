@@ -40,7 +40,7 @@ command(createtab_as)	::= K_CREATE temp_opt(temp) K_TABLE
 				table_name(name) K_AS query(query).
 command(createtab_sim)	::= K_CREATE temp_opt(temp) K_TABLE
 				ifnotexists(ifnotexists)
-				table_name(name) K_AS simulate(sim).
+				table_name(name) K_AS simulate(query).
 command(droptab)	::= K_DROP K_TABLE ifexists(ifexists) table_name(name).
 command(altertab)	::= K_ALTER K_TABLE table_name(table)
 				altertab_cmds(cmds).
@@ -170,12 +170,19 @@ select(s)		::= K_SELECT select_quant(quant) select_columns(cols)
 				order_by(ord)
 				limit_opt(lim).
 
-estimate(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
+estimate(e)		::= K_ESTIMATE select_quant(quant)
+				estimate_columns(cols)
 				K_FROM generator_name(generator)
 				where(cond)
 				group_by(grouping)
 				order_by(ord)
 				limit_opt(lim).
+
+estimate_columns(one)	::= estimate_column(c).
+estimate_columns(many)	::= estimate_columns(cs) T_COMMA estimate_column(c).
+estimate_column(sel)	::= select_column(c).
+estimate_column(inf)	::= K_INFER column_name(col) K_AS column_name(name)
+				K_CONFIDENCE column_name(confname).
 
 /*
  * XXX Can we reformulate this elegantly as a SELECT on the columns of

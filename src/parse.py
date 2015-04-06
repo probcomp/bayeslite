@@ -153,8 +153,8 @@ class BQLSemantics(object):
     # SQL Data Definition Language subset
     def p_command_createtab_as(self, temp, ifnotexists, name, query):
         return ast.CreateTabAs(temp, ifnotexists, name, query)
-    def p_command_createtab_sim(self, temp, ifnotexists, name, sim):
-        return ast.CreateTabSim(temp, ifnotexists, name, sim)
+    def p_command_createtab_sim(self, temp, ifnotexists, name, query):
+        return ast.CreateTabSim(temp, ifnotexists, name, query)
     def p_command_droptab(self, ifexists, name):
         return ast.DropTab(ifexists, name)
     def p_command_altertab(self, table, cmds):
@@ -271,6 +271,12 @@ class BQLSemantics(object):
 
     def p_estimate_e(self, quant, cols, generator, cond, grouping, ord, lim):
         return ast.Estimate(quant, cols, generator, cond, grouping, ord, lim)
+
+    def p_estimate_columns_one(self, c):        return [c]
+    def p_estimate_columns_many(self, cs, c):   cs.append(c); return cs
+    def p_estimate_column_sel(self, c):         return c
+    def p_estimate_column_inf(self, col, name, confname):
+        return ast.InfCol(col, name, confname)
 
     def p_estcols_nocols(self, generator, cond, ord, lim):
         return ast.EstCols([], generator, cond, ord, lim)

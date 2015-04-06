@@ -156,7 +156,11 @@ def compile_query(bdb, query, out):
     if isinstance(query, ast.Select):
         compile_select(bdb, query, out)
     elif isinstance(query, ast.Estimate):
-        compile_estimate(bdb, query, out)
+        if any(isinstance(c, ast.InfCol) for c in query.columns):
+            compile_estimate_infer(bdb, query, out)
+        else:
+            named = True
+            compile_estimate(bdb, query, named, out)
     elif isinstance(query, ast.EstCols):
         compile_estcols(bdb, query, out)
     elif isinstance(query, ast.EstPairCols):
@@ -179,7 +183,8 @@ def compile_select(bdb, select, out):
         out.write(' DISTINCT')
     else:
         assert select.quantifier == ast.SELQUANT_ALL
-    compile_select_columns(bdb, select.columns, BQLCompiler_None(), out)
+    named = True
+    compile_select_columns(bdb, select.columns, named, BQLCompiler_None(), out)
     if select.tables is not None:
         assert 0 < len(select.tables)
         compile_select_tables(bdb, select, out)
@@ -222,7 +227,43 @@ def compile_select(bdb, select, out):
             out.write(' OFFSET ')
             compile_nobql_expression(bdb, select.limit.offset, out)
 
-def compile_estimate(bdb, estimate, out):
+def compile_estimate_infer(bdb, estimate, out):
+    out.write('SELECT')
+    first = True
+    for i, col in enumerate(estimate.columns):
+        if first:
+            first = False
+        else:
+            out.write(',')
+        out.write(' ')
+        if isinstance(col, ast.InfCol):
+            qvcn = sqlite3_quote_name(col.name)
+            out.write("bql_json_get(c%u, 'value') AS %s" % (i, qvcn))
+            out.write(', ')
+            qccn = sqlite3_quote_name(col.confname)
+            out.write("bql_json_get(c%u, 'confidence') AS %s" % (i, qccn))
+        elif isinstance(col, ast.SelColExp):
+            out.write('c%u' % (i,))
+            if col.name is not None:
+                qcn = sqlite3_quote_name(col.name)
+                out.write(' AS %s' % (qcn,))
+            elif isinstance(col.expression, ast.ExpCol):
+                qcn = sqlite3_quote_name(col.expression.column)
+                out.write(' AS %s' % (qcn,))
+            else:
+                # XXX Preserve the expression as a column name...?
+                pass
+        elif isinstance(col, ast.SelColAll):
+            raise NotImplementedError('You have no business'
+                ' mixing * with INFER!')
+        else:
+            assert False, 'Invalid ESTIMATE column: %s' % (repr(col),)
+    out.write(' FROM ')
+    with compiling_paren(bdb, out, '(', ')'):
+        named = False
+        compile_estimate(bdb, estimate, named, out)
+
+def compile_estimate(bdb, estimate, named, out):
     assert isinstance(estimate, ast.Estimate)
     out.write('SELECT')
     if estimate.quantifier == ast.SELQUANT_DISTINCT:
@@ -233,7 +274,7 @@ def compile_estimate(bdb, estimate, out):
         raise ValueError('No such generator: %s' % (estimate.generator,))
     generator_id = core.bayesdb_get_generator_default(bdb, estimate.generator)
     bql_compiler = BQLCompiler_1Row(generator_id)
-    compile_select_columns(bdb, estimate.columns, bql_compiler, out)
+    compile_select_columns(bdb, estimate.columns, named, bql_compiler, out)
     table_name = core.bayesdb_generator_table(bdb, generator_id)
     qt = sqlite3_quote_name(table_name)
     out.write(' FROM %s' % (qt,))
@@ -278,27 +319,35 @@ def compile_estimate(bdb, estimate, out):
             compile_1row_expression(bdb, estimate.limit.offset, generator_id,
                 out)
 
-def compile_select_columns(bdb, columns, bql_compiler, out):
+def compile_select_columns(bdb, columns, named, bql_compiler, out):
     first = True
-    for selcol in columns:
+    for i, selcol in enumerate(columns):
         if first:
             out.write(' ')
             first = False
         else:
             out.write(', ')
-        compile_select_column(bdb, selcol, bql_compiler, out)
+        compile_select_column(bdb, selcol, i, named, bql_compiler, out)
 
-def compile_select_column(bdb, selcol, bql_compiler, out):
+def compile_select_column(bdb, selcol, i, named, bql_compiler, out):
     if isinstance(selcol, ast.SelColAll):
+        if not named:
+            raise NotImplementedError('Don\'t mix * with INFER!')
         if selcol.table is not None:
             compile_table_name(bdb, selcol.table, out)
             out.write('.')
         out.write('*')
     elif isinstance(selcol, ast.SelColExp):
         compile_expression(bdb, selcol.expression, bql_compiler, out)
-        if selcol.name is not None:
+        if not named:
+            out.write(' AS c%u' % (i,))
+        elif selcol.name is not None:
             out.write(' AS ')
             compile_name(bdb, selcol.name, out)
+    elif isinstance(selcol, ast.InfCol):
+        bql = ast.ExpBQLInferConf(selcol.column)
+        bql_compiler.compile_bql(bdb, bql, out)
+        out.write(' AS c%u' % (i,))
     else:
         assert False, 'Invalid select column: %s' % (repr(selcol),)
 
@@ -580,10 +629,15 @@ class BQLCompiler_1Row(object):
             colno = core.bayesdb_generator_column_number(bdb, generator_id,
                 bql.column)
             out.write('bql_infer(%d, %d, _rowid_, ' % (generator_id, colno))
-            compile_column_name(bdb, table_name, bql.column, out)
-            out.write(', ')
             compile_expression(bdb, bql.confidence, self, out)
             out.write(')')
+        elif isinstance(bql, ast.ExpBQLInferConf):
+            assert bql.column is not None
+            table_name = core.bayesdb_generator_table(bdb, generator_id)
+            colno = core.bayesdb_generator_column_number(bdb, generator_id,
+                bql.column)
+            out.write('bql_infer_confidence(%d, %d, _rowid_)' %
+                (generator_id, colno))
         else:
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
 
@@ -628,6 +682,8 @@ class BQLCompiler_2Row(object):
         elif isinstance(bql, ast.ExpBQLCorrel):
             raise ValueError('Column correlation is 0-row function.')
         elif isinstance(bql, ast.ExpBQLInfer):
+            raise ValueError('Infer is a 1-row function.')
+        elif isinstance(bql, ast.ExpBQLInferConf):
             raise ValueError('Infer is a 1-row function.')
         else:
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
@@ -674,6 +730,8 @@ class BQLCompiler_1Col(object):
                 'Column correlation', None, bql, self.colno_exp, self, out)
         elif isinstance(bql, ast.ExpBQLInfer):
             raise ValueError('Infer is a 1-row function.')
+        elif isinstance(bql, ast.ExpBQLInferConf):
+            raise ValueError('Infer is a 1-row function.')
         else:
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
 
@@ -716,6 +774,8 @@ class BQLCompiler_2Col(object):
                 None,
                 bql, self.colno0_exp, self.colno1_exp, self, out)
         elif isinstance(bql, ast.ExpBQLInfer):
+            raise ValueError('Infer is a 1-row function.')
+        elif isinstance(bql, ast.ExpBQLInferConf):
             raise ValueError('Infer is a 1-row function.')
         else:
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
