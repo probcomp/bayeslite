@@ -381,7 +381,8 @@ def execute_phrase(bdb, phrase, bindings=()):
         # Let the metamodel parse the schema itself and call
         # instantiate with the modelled columns.
         with bdb.savepoint():
-            metamodel.create_generator(bdb, phrase.schema, instantiate)
+            metamodel.create_generator(bdb, phrase.table, phrase.schema,
+                instantiate)
 
         # All done.  Nothing to return.
         return empty_cursor(bdb)

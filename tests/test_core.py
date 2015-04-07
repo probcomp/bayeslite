@@ -92,7 +92,7 @@ class DotdogMetamodel(metamodel.IMetamodel):
                 VALUES ('dotdog', 42)
         '''
         bdb.sql_execute(sql)
-    def create_generator(self, bdb, schema, instantiate):
+    def create_generator(self, bdb, table, schema, instantiate):
         instantiate(schema)
 
 def test_hackmetamodel():

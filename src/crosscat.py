@@ -212,7 +212,7 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                     raise ValueError('Crosscat already installed'
                         ' with unknown schema version: %d' % (version,))
 
-    def create_generator(self, bdb, schema, instantiate):
+    def create_generator(self, bdb, table, schema, instantiate):
         columns = []
         for directive in schema:
             if not (isinstance(directive, list) and
