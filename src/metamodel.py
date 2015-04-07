@@ -39,7 +39,7 @@ class IMetamodel(object):
         raise NotImplementedError
     def register(self, bdb):
         raise NotImplementedError
-    def create_generator(self, bdb, generator_id, column_list):
+    def create_generator(self, bdb, schema, instantiate):
         raise NotImplementedError
     def drop_generator(self, bdb, generator_id):
         raise NotImplementedError

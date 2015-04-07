@@ -274,22 +274,23 @@ def execute_phrase(bdb, phrase, bindings=()):
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.CreateGen):
-        assert isinstance(phrase.schema, ast.GenSchema)
-        name = phrase.name
-        table = phrase.table
+        # Find the metamodel.
         if phrase.metamodel not in bdb.metamodels:
             raise ValueError('No such metamodel: %s' %
                 (repr(phrase.metamodel),))
         metamodel = bdb.metamodels[phrase.metamodel]
-        # XXX The metamodel should have responsibility for supplying
-        # the actual columns, after munching up an arbitrary schema.
-        with bdb.savepoint():
+
+        def instantiate(columns):
+            # Make sure there is no table by this name.  We'll deal
+            # with a generator by this name later, by doing `INSERT OR
+            # IGNORE' instead of `INSERT' if the user specified `IF
+            # NOT EXISTS'.
             if core.bayesdb_has_table(bdb, phrase.name):
                 raise ValueError('Name already defined as table: %s' %
                     (repr(phrase.name),))
 
             # Make sure the bayesdb_column table knows all the columns.
-            core.bayesdb_table_guarantee_columns(bdb, table)
+            core.bayesdb_table_guarantee_columns(bdb, phrase.table)
 
             # Create the generator record.
             generator_sql = '''
@@ -298,8 +299,8 @@ def execute_phrase(bdb, phrase, bindings=()):
                     VALUES (:name, :table, :metamodel, :defaultp)
             ''' % (' OR IGNORE' if phrase.ifnotexists else '')
             cursor = bdb.sql_execute(generator_sql, {
-                'name': name,
-                'table': table,
+                'name': phrase.name,
+                'table': phrase.table,
                 'metamodel': metamodel.name(),
                 'defaultp': phrase.default,
             })
@@ -307,11 +308,11 @@ def execute_phrase(bdb, phrase, bindings=()):
             assert generator_id
             assert 0 < generator_id
 
-            # Get a map from column name to (colno, stattype).  Check
+            # Get a map from column name to colno.  Check
             # - for duplicates,
             # - for nonexistent columns,
             # - for invalid statistical types.
-            columns = {}
+            column_map = {}
             duplicates = set()
             missing = set()
             invalid = set()
@@ -322,35 +323,34 @@ def execute_phrase(bdb, phrase, bindings=()):
             stattype_sql = '''
                 SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype
             '''
-            for column in phrase.schema.columns:
-                column_name = casefold(column.name)
-                if column_name in columns:
-                    duplicates.add(column_name)
+            for name, stattype in columns:
+                name_folded = casefold(name)
+                if name_folded in column_map:
+                    duplicates.add(name)
                     continue
                 cursor = bdb.sql_execute(colno_sql, {
-                    'table': table,
-                    'column_name': column_name,
+                    'table': phrase.table,
+                    'column_name': name,
                 })
                 try:
                     row = cursor.next()
                 except StopIteration:
-                    missing.add(column_name)
+                    missing.add(name)
                     continue
                 else:
                     colno = row[0]
                     assert isinstance(colno, int)
-                    stattype = column.stattype
                     cursor = bdb.sql_execute(stattype_sql, {
                         'stattype': stattype,
                     })
                     if cursor.next()[0] == 0:
                         invalid.add(stattype)
                         continue
-                    columns[column_name] = (colno, stattype)
+                    column_map[casefold(name)] = colno
             # XXX Would be nice to report these simultaneously.
             if missing:
                 raise ValueError('No such columns in table %s: %s' %
-                    (repr(table), repr(list(missing))))
+                    (repr(phrase.table), repr(list(missing))))
             if duplicates:
                 raise ValueError('Duplicate column names: %s' %
                     (repr(list(duplicates)),))
@@ -364,8 +364,8 @@ def execute_phrase(bdb, phrase, bindings=()):
                     (generator_id, colno, stattype)
                     VALUES (:generator_id, :colno, :stattype)
             '''
-            for column in phrase.schema.columns:
-                colno, stattype = columns[casefold(column.name)]
+            for name, stattype in columns:
+                colno = column_map[casefold(name)]
                 stattype = casefold(stattype)
                 bdb.sql_execute(column_sql, {
                     'generator_id': generator_id,
@@ -373,10 +373,15 @@ def execute_phrase(bdb, phrase, bindings=()):
                     'stattype': stattype,
                 })
 
-            # Metamodel-specific construction.
-            column_list = sorted((colno, name, stattype)
-                for name, (colno, stattype) in columns.iteritems())
-            metamodel.create_generator(bdb, generator_id, column_list)
+            column_list = sorted((column_map[casefold(name)], casefold(name),
+                                  stattype)
+                for name, stattype in columns)
+            return generator_id, column_list
+
+        # Let the metamodel parse the schema itself and call
+        # instantiate with the modelled columns.
+        with bdb.savepoint():
+            metamodel.create_generator(bdb, phrase.schema, instantiate)
 
         # All done.  Nothing to return.
         return empty_cursor(bdb)

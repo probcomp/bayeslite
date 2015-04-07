@@ -470,29 +470,26 @@ def test_trivial_precedence_error():
 def test_trivial_commands():
     assert parse_bql_string('create generator t_cc for t using crosscat'
             '(xyz numerical, pqr categorical, lmn cyclic)') == \
-        [ast.CreateGen(False, 't_cc', False, 't', 'crosscat',
-            ast.GenSchema([
-                ast.GenColumn('xyz', 'numerical'),
-                ast.GenColumn('pqr', 'categorical'),
-                ast.GenColumn('lmn', 'cyclic'),
-            ]))]
+        [ast.CreateGen(False, 't_cc', False, 't', 'crosscat', [
+            ['xyz', 'numerical'],
+            ['pqr', 'categorical'],
+            ['lmn', 'cyclic'],
+        ])]
     assert parse_bql_string('create default generator t_cc for t using crosscat'
             '(xyz numerical, pqr categorical, lmn cyclic)') == \
-        [ast.CreateGen(True, 't_cc', False, 't', 'crosscat',
-            ast.GenSchema([
-                ast.GenColumn('xyz', 'numerical'),
-                ast.GenColumn('pqr', 'categorical'),
-                ast.GenColumn('lmn', 'cyclic'),
-            ]))]
+        [ast.CreateGen(True, 't_cc', False, 't', 'crosscat', [
+            ['xyz', 'numerical'],
+            ['pqr', 'categorical'],
+            ['lmn', 'cyclic'],
+        ])]
     assert parse_bql_string('create generator t_cc if not exists'
             ' for t using crosscat'
             '(xyz numerical, pqr categorical, lmn cyclic)') == \
-        [ast.CreateGen(False, 't_cc', True, 't', 'crosscat',
-            ast.GenSchema([
-                ast.GenColumn('xyz', 'numerical'),
-                ast.GenColumn('pqr', 'categorical'),
-                ast.GenColumn('lmn', 'cyclic'),
-            ]))]
+        [ast.CreateGen(False, 't_cc', True, 't', 'crosscat', [
+            ['xyz', 'numerical'],
+            ['pqr', 'categorical'],
+            ['lmn', 'cyclic'],
+        ])]
     assert parse_bql_string('initialize 1 model for t;') == \
         [ast.InitModels(False, 't', 1, None)]
     assert parse_bql_string('initialize 1 model if not exists for t;') == \

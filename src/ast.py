@@ -76,7 +76,7 @@ CreateGen = namedtuple('CreateGen', [
     'ifnotexists',              # boolean
     'table',                    # XXX name
     'metamodel',                # XXX name
-    'schema',                   # GenSchema
+    'schema',                   # nested list of tokens
 ])
 DropGen = namedtuple('DropGen', [
     'ifexists',                 # boolean
@@ -88,14 +88,6 @@ AlterGen = namedtuple('AlterGen', [
 ])
 AlterGenRenameGen = namedtuple('AlterGenRenameGen', [
     'name',                     # XXX name
-])
-
-GenSchema = namedtuple('GenSchema', [
-    'columns'                   # [GenColumn]
-])
-GenColumn = namedtuple('GenColumn', [
-    'name',                     # XXX name
-    'stattype',                 # XXX name
 ])
 
 ### BQL Model Analysis Language

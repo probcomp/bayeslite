@@ -212,8 +212,27 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                     raise ValueError('Crosscat already installed'
                         ' with unknown schema version: %d' % (version,))
 
-    def create_generator(self, bdb, generator_id, column_list):
+    def create_generator(self, bdb, schema, instantiate):
+        columns = []
+        for directive in schema:
+            if not (isinstance(directive, list) and
+                    len(directive) == 2 and
+                    isinstance(directive[0], (str, unicode)) and
+                    isinstance(directive[1], (str, unicode))):
+                raise ValueError('Invalid crosscat column model: %s' %
+                    (repr(directive),))
+            columns.append((directive[0], directive[1]))
+
         with bdb.savepoint():
+            # Create the metamodel-independent records and assign a
+            # generator id.
+            import sys
+            for c in columns:
+                print >>sys.stderr, 'c %s' % (repr(c),)
+            generator_id, column_list = instantiate(columns)
+            for c in column_list:
+                print >>sys.stderr, 'cl %s' % (repr(c),)
+
             # Install the metadata json blob.
             M_c = create_metadata(bdb, generator_id, column_list)
             insert_metadata_sql = '''

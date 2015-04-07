@@ -189,13 +189,12 @@ class BQLSemantics(object):
     def p_altergen_cmd_renamegen(self, name):
         return ast.AlterGenRenameGen(name)
 
-    def p_generator_schema_one(self, col):
-        return ast.GenSchema([col])
-    def p_generator_schema_many(self, cols, col):
-        cols.columns.append(col)
-        return cols
-    def p_generator_column_gc(self, name, stattype):
-        return ast.GenColumn(name, stattype)
+    def p_generator_schema_one(self, s):        return [s]
+    def p_generator_schema_many(self, ss, s):   ss.append(s); return ss
+    def p_generator_schemum_empty(self):        return []
+    def p_generator_schemum_nonempty(self, s, t): s.append(t); return s
+    def p_gs_token_prim(self, t):               return t
+    def p_gs_token_comp(self, s):               return s
 
     def p_stattype_s(self, name):
         return name

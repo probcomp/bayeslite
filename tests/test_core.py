@@ -92,8 +92,8 @@ class DotdogMetamodel(metamodel.IMetamodel):
                 VALUES ('dotdog', 42)
         '''
         bdb.sql_execute(sql)
-    def create_generator(self, bdb, generator_id, column_list):
-        pass
+    def create_generator(self, bdb, schema, instantiate):
+        instantiate(schema)
 
 def test_hackmetamodel():
     bdb = bayeslite.BayesDB()

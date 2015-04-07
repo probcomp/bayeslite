@@ -81,12 +81,13 @@ altergen_cmds(many)	::= altergen_cmds(cmds) T_COMMA altergen_cmd(cmd).
 
 altergen_cmd(renamegen)	::= K_RENAME K_TO generator_name(name).
 
-generator_schema(one)	::= generator_column(col).
-generator_schema(many)	::= generator_schema(cols) T_COMMA
-				generator_column(col).
-generator_column(gc)	::= column_name(name) stattype(stattype).
+generator_schema(one)	::= generator_schemum(s).
+generator_schema(many)	::= generator_schema(ss) T_COMMA generator_schemum(s).
 
-stattype(s)		::= L_NAME(name).
+generator_schemum(empty)	::= .
+generator_schemum(nonempty)	::= generator_schemum(s) gs_token(t).
+gs_token(comp)			::= T_LROUND generator_schemum(s) T_RROUND.
+gs_token(prim)			::= ANY(t).
 
 /*
  * BQL Model Analysis Language
@@ -618,3 +619,8 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 	K_WHERE
 	K_WITH
 	.
+
+/*
+ * Wildcard token, matches anything else.
+ */
+%wildcard ANY.
