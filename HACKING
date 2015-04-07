@@ -18,3 +18,42 @@ run a subset of tests, and stop at the first failure, with
 
 However, please double-check that every commit you have made passes
 all tests before publishing the commits.
+
+* SQL/BQL parameters
+
+Use SQL/BQL parameters to pass strings and other values into SQL/BQL.
+DO NOT use format strings.
+
+DO:     db.execute('UPDATE foo SET x = ? WHERE id = ?', (x, id))
+DON'T:  db.execute("UPDATE foo SET x = '%s' WHERE id = %d" % (x, id))
+DON'T:  db.execute("UPDATE foo SET x = '{}' WHERE id = {}".format(x, id))
+
+DO:     db.execute('SELECT x, y FROM t WHERE z = ?', (z,))
+DON'T:  db.execute('SELECT x, y FROM t WHERE z = ?', z)
+DON'T:  db.execute('SELECT x, y FROM t WHERE z = {}'.format(z))
+
+Prefer named parameters if the query has more than one parameter and
+covers multiple lines:
+
+        cursor = db.execute('''
+            SELECT COUNT(*)
+                FROM bayesdb_generator AS g, bayesdb_column AS c
+                WHERE g.id = :generator_id
+                    AND g.tabname = c.tabname
+                    AND c.colno = :colno
+        ''', {
+            'generator_id': generator_id,
+            'colno': colno,
+        })
+
+If the tables and columns in the query are determined dynamically,
+then use sqlite3_quote_name and format strings to assemble SQL/BQL
+queries.  But prefer to avoid this by writing different queries or
+reusing subroutines that already do it, such as in bayeslite.core.
+
+DO:     qt = sqlite3_quote_name(table)
+        qc = sqlite3_quote_name(column)
+        db.execute('SELECT %s FROM %s WHERE x = ?' % (qc, qt), (x,))
+
+DON'T:  db.execute('SELECT %s FROM %s WHERE x = ?' % (column, table), (x,))
+DON'T:  db.execute('SELECT %s FROM %s WHERE x = %d' % (qc, qt, x))
