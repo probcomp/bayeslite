@@ -45,13 +45,14 @@ def bayesdb_install_bql(db, cookie):
     function("bql_json_get", 3, bql_json_get)
 
 # XXX XXX XXX Temporary debugging kludge!
+import sys
 import traceback
 
 def bayesdb_bql(fn, cookie, *args):
     try:
         return fn(cookie, *args)
     except Exception as e:
-        print traceback.format_exc()
+        print >>sys.stderr, traceback.format_exc()
         raise e
 
 ### BayesDB column functions
