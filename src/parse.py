@@ -203,10 +203,12 @@ class BQLSemantics(object):
     def p_command_init_models(self, n, ifnotexists, generator):
         # XXX model config
         return ast.InitModels(ifnotexists, generator, n, config=None)
-    def p_command_analyze_models(self, generator, models, anlimit, wait):
+    def p_command_analyze_models(self, generator, models, anlimit, anckpt,
+            wait):
         iterations = anlimit[1] if anlimit[0] == 'iterations' else None
         seconds = anlimit[1] if anlimit[0] == 'seconds' else None
-        return ast.AnalyzeModels(generator, models, iterations, seconds, wait)
+        return ast.AnalyzeModels(generator, models, iterations, seconds,
+            anckpt, wait)
     def p_command_drop_models(self, models, generator):
         return ast.DropModels(generator, models)
 
@@ -229,6 +231,9 @@ class BQLSemantics(object):
     def p_anlimit_iterations(self, n):          return ('iterations', n)
     def p_anlimit_minutes(self, n):             return ('seconds', 60*n)
     def p_anlimit_seconds(self, n):             return ('seconds', n)
+
+    def p_anckpt_none(self):                    return None
+    def p_anckpt_niters(self, n):               return n
 
     def p_wait_opt_none(self):                  return False
     def p_wait_opt_some(self):                  return True

@@ -50,7 +50,7 @@ class IMetamodel(object):
     def drop_models(self, bdb, generator_id, modelnos=None):
         raise NotImplementedError
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
-            max_seconds=None):
+            max_seconds=None, iterations_per_checkpoint=None):
         raise NotImplementedError
     def column_dependence_probability(self, bdb, generator_id, colno0, colno1):
         raise NotImplementedError

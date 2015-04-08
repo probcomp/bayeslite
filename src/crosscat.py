@@ -415,7 +415,7 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                     del cc_cache.thetas[generator_id]
 
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
-            max_seconds=None):
+            max_seconds=None, iterations_per_checkpoint=None):
         # XXX What about a schema change or insert in the middle of
         # analysis?
         M_c = self._crosscat_metadata(bdb, generator_id)
@@ -434,7 +434,10 @@ class CrosscatMetamodel(metamodel.IMetamodel):
         while (iterations is None or 0 < iterations) and \
               (max_seconds is None or time.time() < deadline):
             n_steps = 1
-            if iterations is not None and max_seconds is None:
+            if iterations_per_checkpoint is not None:
+                assert 0 < iterations_per_checkpoint
+                n_steps = iterations_per_checkpoint
+            elif iterations is not None and max_seconds is None:
                 n_steps = iterations
             with bdb.savepoint():
                 if modelnos is None:

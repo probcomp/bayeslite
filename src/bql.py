@@ -514,7 +514,8 @@ def execute_phrase(bdb, phrase, bindings=()):
         metamodel.analyze_models(bdb, generator_id,
             modelnos=phrase.modelnos,
             iterations=phrase.iterations,
-            max_seconds=phrase.seconds)
+            max_seconds=phrase.seconds,
+            iterations_per_checkpoint=phrase.iterations_per_checkpoint)
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.DropModels):

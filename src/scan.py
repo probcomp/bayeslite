@@ -42,6 +42,7 @@ keywords = {
     "by": grammar.K_BY,
     "case": grammar.K_CASE,
     "cast": grammar.K_CAST,
+    "checkpoint": grammar.K_CHECKPOINT,
     "collate": grammar.K_COLLATE,
     "columns": grammar.K_COLUMNS,
     "commit": grammar.K_COMMIT,
