@@ -226,12 +226,7 @@ class CrosscatMetamodel(metamodel.IMetamodel):
         with bdb.savepoint():
             # Create the metamodel-independent records and assign a
             # generator id.
-            import sys
-            for c in columns:
-                print >>sys.stderr, 'c %s' % (repr(c),)
             generator_id, column_list = instantiate(columns)
-            for c in column_list:
-                print >>sys.stderr, 'cl %s' % (repr(c),)
 
             # Install the metadata json blob.
             M_c = create_metadata(bdb, generator_id, column_list)
