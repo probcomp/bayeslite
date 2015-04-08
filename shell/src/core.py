@@ -94,11 +94,17 @@ class Shell(cmd.Cmd):
             self.bql = StringIO.StringIO()
             self.prompt = self.def_prompt
             try:
+                first = True
                 for phrase in parse.parse_bql_string(string):
                     cursor = bql.execute_phrase(self._bdb, phrase)
                     # Savepoint outside the execute so the execute can
                     # begin/rollback/commit transactions.
                     with self._bdb.savepoint():
+                        # Separate the output tables by a blank line.
+                        if first:
+                            first = False
+                        else:
+                            self.stdout.write('\n')
                         pretty.pp_cursor(self.stdout, cursor)
             except Exception:
                 self.stdout.write(traceback.format_exc())
