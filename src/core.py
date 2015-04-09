@@ -33,7 +33,8 @@ def bayesdb_table_column_names(bdb, table):
         SELECT name FROM bayesdb_column WHERE tabname = ?
             ORDER BY colno ASC
     '''
-    return [row[0] for row in bdb.sql_execute(sql, (table,))]
+    # str because column names can't contain Unicode in sqlite3.
+    return [str(row[0]) for row in bdb.sql_execute(sql, (table,))]
 
 def bayesdb_table_column_name(bdb, table, colno):
     sql = '''
@@ -165,7 +166,8 @@ def bayesdb_generator_column_names(bdb, generator_id):
                 AND c.colno = gc.colno
             ORDER BY c.colno ASC
     '''
-    return [row[0] for row in bdb.sql_execute(sql, (generator_id,))]
+    # str because column names can't contain Unicode in sqlite3.
+    return [str(row[0]) for row in bdb.sql_execute(sql, (generator_id,))]
 
 def bayesdb_generator_column_stattype(bdb, generator_id, colno):
     sql = '''
