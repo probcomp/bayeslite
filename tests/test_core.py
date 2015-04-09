@@ -113,7 +113,7 @@ def test_hackmetamodel():
     with pytest.raises(ValueError):
         bdb.execute('CREATE GENERATOR t_cc FOR t USING crosscat(a NUMERICAL)')
     bdb.execute('CREATE GENERATOR t_dd FOR t USING dotdog(a NUMERICAL)')
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(ValueError):
         bdb.execute('CREATE GENERATOR t_dd FOR t USING dotdog(a NUMERICAL)')
     bayeslite.bayesdb_set_default_metamodel(bdb, dotdog_metamodel)
     with pytest.raises(AssertionError):
@@ -121,13 +121,13 @@ def test_hackmetamodel():
     with pytest.raises(ValueError):
         bdb.execute('CREATE GENERATOR t_cc FOR t USING crosscat(a NUMERICAL)')
     bayeslite.bayesdb_set_default_metamodel(bdb, None)
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(ValueError):
         bdb.execute('CREATE GENERATOR t_dd FOR t USING dotdog(a NUMERICAL)')
     # XXX Rest of test originally exercised default metamodel, but
     # syntax doesn't support that now.  Not clear that's wrong either.
     bayeslite.bayesdb_set_default_metamodel(bdb, dotdog_metamodel)
     bdb.execute('CREATE GENERATOR u_dd FOR u USING dotdog(a NUMERICAL)')
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(ValueError):
         bdb.execute('CREATE GENERATOR u_dd FOR u USING dotdog(a NUMERICAL)')
 
 @contextlib.contextmanager

@@ -281,12 +281,16 @@ def execute_phrase(bdb, phrase, bindings=()):
         metamodel = bdb.metamodels[phrase.metamodel]
 
         def instantiate(columns):
-            # Make sure there is no table by this name.  We'll deal
-            # with a generator by this name later, by doing `INSERT OR
-            # IGNORE' instead of `INSERT' if the user specified `IF
-            # NOT EXISTS'.
+            # Make sure there is no table by this name.
             if core.bayesdb_has_table(bdb, phrase.name):
                 raise ValueError('Name already defined as table: %s' %
+                    (repr(phrase.name),))
+
+            # Make sure there's no generator by this name unless we
+            # were asked to redefine it in that case.
+            if not phrase.ifnotexists and \
+               core.bayesdb_has_generator(bdb, phrase.name):
+                raise ValueError('Name already defined as generator: %s' %
                     (repr(phrase.name),))
 
             # Make sure the bayesdb_column table knows all the columns.
