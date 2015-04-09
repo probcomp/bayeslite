@@ -775,7 +775,7 @@ def test_parametrized():
                 bdb.execute(query, *args)
             bdb.sql_untrace(trace)
             return sql
-        guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+        bdb.execute('create generator t_cc for t using crosscat(guess(*))')
         bdb.execute('initialize 1 model for t_cc;')
         iters0 = list(bdb.sql_execute('select * from bayesdb_generator_model'))
         thetas0 = list(bdb.sql_execute('select * from bayesdb_crosscat_theta'))
@@ -1005,7 +1005,16 @@ def test_createtab():
             with open(fname, 'rU') as f:
                 bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True, ifnotexists=True)
-        guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+        bdb.execute('''
+            create generator t_cc for t using crosscat (
+                guess(*),
+                age numerical
+            )
+        ''')
+        generator_id = core.bayesdb_get_generator(bdb, 't_cc')
+        colno = core.bayesdb_generator_column_number(bdb, generator_id, 'age')
+        assert core.bayesdb_generator_column_stattype(bdb, generator_id,
+                colno) == 'numerical'
         bdb.execute('initialize 1 model for t_cc')
         with pytest.raises(ValueError):
             bdb.execute('drop table t')

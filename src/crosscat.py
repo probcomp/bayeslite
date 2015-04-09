@@ -19,6 +19,7 @@ import math
 import time
 
 import bayeslite.core as core
+import bayeslite.guess as guess
 import bayeslite.metamodel as metamodel
 
 from bayeslite.sqlite3_util import sqlite3_quote_name
@@ -213,17 +214,45 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                         ' with unknown schema version: %d' % (version,))
 
     def create_generator(self, bdb, table, schema, instantiate):
+        do_guess = False
         columns = []
         for directive in schema:
-            if not (isinstance(directive, list) and
-                    len(directive) == 2 and
-                    isinstance(directive[0], (str, unicode)) and
-                    isinstance(directive[1], (str, unicode))):
-                raise ValueError('Invalid crosscat column model: %s' %
-                    (repr(directive),))
-            columns.append((directive[0], directive[1]))
+            if isinstance(directive, list) and \
+               len(directive) == 2 and \
+               isinstance(directive[0], (str, unicode)) and \
+               casefold(directive[0]) == 'guess' and \
+               directive[1] == ['*']:
+                do_guess = True
+                continue
+            if isinstance(directive, list) and \
+               len(directive) == 2 and \
+               isinstance(directive[0], (str, unicode)) and \
+               casefold(directive[0]) != 'guess' and \
+               isinstance(directive[1], (str, unicode)) and \
+               casefold(directive[1]) != 'guess':
+                columns.append((directive[0], directive[1]))
+                continue
+            raise ValueError('Invalid crosscat column model: %s' %
+                (repr(directive),))
 
         with bdb.savepoint():
+            # If necessary, guess the column statistical types.
+            #
+            # XXX Allow passing count/ratio cutoffs, and other
+            # parameters.
+            if do_guess:
+                column_names = core.bayesdb_table_column_names(bdb, table)
+                qt = sqlite3_quote_name(table)
+                rows = list(bdb.sql_execute('SELECT * FROM %s' % (qt,)))
+                stattypes = guess.bayesdb_guess_stattypes(column_names, rows,
+                    overrides=columns)
+                columns = zip(column_names, stattypes)
+                columns = [(name, stattype) for name, stattype in columns
+                    if name not in ('key', 'ignore')]
+
+            import sys
+            print >>sys.stderr, 'columns %s' % (repr(columns),)
+
             # Create the metamodel-independent records and assign a
             # generator id.
             generator_id, column_list = instantiate(columns)
