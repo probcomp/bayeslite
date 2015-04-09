@@ -373,8 +373,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                     'stattype': stattype,
                 })
 
-            column_list = sorted((column_map[casefold(name)], casefold(name),
-                                  stattype)
+            column_list = sorted((column_map[casefold(name)], name, stattype)
                 for name, stattype in columns)
             return generator_id, column_list
 
