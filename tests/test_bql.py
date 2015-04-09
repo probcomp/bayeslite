@@ -299,7 +299,7 @@ def test_estimate_columns_trivial():
         prefix + ';'
     assert bql2sql('estimate columns from t1_cc where' +
             ' (probability of value 42) > 0.5') == \
-        prefix + ' AND (bql_column_value_probability(1, colno, 42) > 0.5);'
+        prefix + ' AND (bql_column_value_probability(1, c.colno, 42) > 0.5);'
     # XXX ESTIMATE COLUMNS FROM T1 WHERE PROBABILITY OF 1 > 0.5
     with pytest.raises(ValueError):
         # Must omit column.
@@ -311,7 +311,7 @@ def test_estimate_columns_trivial():
         bql2sql('estimate columns from t1_cc where' +
             ' predictive probability of x > 0;')
     assert bql2sql('estimate columns from t1_cc where typicality > 0.5;') == \
-        prefix + ' AND (bql_column_typicality(1, colno) > 0.5);'
+        prefix + ' AND (bql_column_typicality(1, c.colno) > 0.5);'
     with pytest.raises(ValueError):
         # Must omit column.
         bql2sql('estimate columns from t1_cc where typicality of c > 0.5;')
@@ -321,7 +321,8 @@ def test_estimate_columns_trivial():
             ' similarity to (rowid = x) with respect to c > 0;')
     assert bql2sql('estimate columns from t1_cc where' +
             ' dependence probability with age > 0.5;') == \
-        prefix + ' AND (bql_column_dependence_probability(1, 2, colno) > 0.5);'
+        prefix + \
+        ' AND (bql_column_dependence_probability(1, 2, c.colno) > 0.5);'
     with pytest.raises(ValueError):
         # Must omit exactly one column.
         bql2sql('estimate columns from t1_cc where' +
@@ -332,10 +333,11 @@ def test_estimate_columns_trivial():
             ' where dependence probability > 0.5;')
     assert bql2sql('estimate columns from t1_cc order by' +
             ' mutual information with age;') == \
-        prefix + ' ORDER BY bql_column_mutual_information(1, 2, colno, NULL);'
+        prefix + \
+        ' ORDER BY bql_column_mutual_information(1, 2, c.colno, NULL);'
     assert bql2sql('estimate columns from t1_cc order by' +
             ' mutual information with age using 42 samples;') == \
-        prefix + ' ORDER BY bql_column_mutual_information(1, 2, colno, 42);'
+        prefix + ' ORDER BY bql_column_mutual_information(1, 2, c.colno, 42);'
     with pytest.raises(ValueError):
         # Must omit exactly one column.
         bql2sql('estimate columns from t1_cc order by' +
@@ -353,7 +355,7 @@ def test_estimate_columns_trivial():
             ' mutual information using 42 samples > 0.5;')
     assert bql2sql('estimate columns from t1_cc order by' +
             ' correlation with age desc;') == \
-        prefix + ' ORDER BY bql_column_correlation(1, 2, colno) DESC;'
+        prefix + ' ORDER BY bql_column_correlation(1, 2, c.colno) DESC;'
     with pytest.raises(ValueError):
         # Must omit exactly one column.
         bql2sql('estimate columns from t1_cc order by' +
@@ -370,8 +372,8 @@ def test_estimate_columns_trivial():
             ' mutual information with weight as mutinf'
             ' from t1_cc where depprob > 0.5 order by mutinf desc') == \
         prefix0 + \
-        ', bql_column_dependence_probability(1, 3, colno) AS "depprob"' \
-        ', bql_column_mutual_information(1, 3, colno, NULL) AS "mutinf"' + \
+        ', bql_column_dependence_probability(1, 3, c.colno) AS "depprob"' \
+        ', bql_column_mutual_information(1, 3, c.colno, NULL) AS "mutinf"' + \
         prefix1 + \
         ' AND ("depprob" > 0.5)' \
         ' ORDER BY "mutinf" DESC;'
@@ -658,6 +660,8 @@ def test_trivial_commands():
         bdb.execute('analyze t0 for 1 iteration wait')
         bdb.execute('estimate * from t0')
         bdb.execute('estimate columns from t0')
+        bdb.execute('estimate columns from t0'
+            ' order by dependence probability with age')
         bdb.execute('estimate pairwise correlation from t0')
         bdb.execute('estimate pairwise row similarity from t0')
         # XXX Distinguish the two generators somehow.

@@ -386,7 +386,7 @@ def compile_estcols(bdb, estcols, out):
     if not core.bayesdb_has_generator_default(bdb, estcols.generator):
         raise ValueError('No such generator: %s' % (estcols.generator,))
     generator_id = core.bayesdb_get_generator_default(bdb, estcols.generator)
-    colno_exp = 'colno'         # XXX
+    colno_exp = 'c.colno'       # XXX
     out.write('SELECT c.name AS name')
     for exp, name in estcols.columns:
         out.write(', ')
