@@ -237,7 +237,33 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                 for stmt in crosscat_schema_1to2.split(';'):
                     bdb.sql_execute(stmt)
                 # We never recorded diagnostics in the past, so we
-                # can't fill the table in with historical data.
+                # can't fill the table in with historical data.  But
+                # we did create stub entries in the theta dicts which
+                # serve no purpose now, so nuke them.
+                sql = '''
+                    SELECT generator_id, modelno, theta_json
+                        FROM bayesdb_crosscat_theta
+                '''
+                update_sql = '''
+                    UPDATE bayesdb_crosscat_theta SET theta_json = :theta_json
+                        WHERE generator_id = :generator_id
+                            AND modelno = :modelno
+                '''
+                for generator_id, modelno, theta_json in bdb.sql_execute(sql):
+                    theta = json.loads(theta_json)
+                    if len(theta['logscore']) != 0 or \
+                       len(theta['num_views']) != 0 or \
+                       len(theta['column_crp_alphas']) != 0:
+                        raise IOError('Non-stub diagnostics!')
+                    del theta['logscore']
+                    del theta['num_views']
+                    del theta['column_crp_alphas']
+                    theta_json = json.dumps(theta)
+                    bdb.sql_execute(update_sql, {
+                        'generator_id': generator_id,
+                        'modelno': modelno,
+                        'theta_json': theta_json,
+                    })
                 version = 2
             if version != 2:
                     raise ValueError('Crosscat already installed'
