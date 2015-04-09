@@ -23,10 +23,14 @@ from bayeslite.util import casefold
 from bayeslite.util import unique
 
 def bayesdb_guess_generator(bdb, generator, table, metamodel,
-        ifnotexists=False, count_cutoff=None, ratio_cutoff=None,
-        default=None):
+        ifnotexists=None, count_cutoff=None, ratio_cutoff=None,
+        default=None, overrides=None):
+    # Fill in default arguments.
+    if ifnotexists is None:
+        ifnotexists = False
     if default is None:
         default = False
+
     with bdb.savepoint():
         if core.bayesdb_has_generator(bdb, generator):
             if ifnotexists:
@@ -38,13 +42,16 @@ def bayesdb_guess_generator(bdb, generator, table, metamodel,
         cursor = bdb.sql_execute('SELECT * FROM %s' % (qt,))
         column_names = [d[0] for d in cursor.description]
         rows = list(cursor)
-        stattypes = bayesdb_guess_stattypes(column_names, rows)
+        stattypes = bayesdb_guess_stattypes(column_names, rows,
+            count_cutoff=count_cutoff, ratio_cutoff=ratio_cutoff,
+            overrides=overrides)
         # Skip the key column.
         column_names, stattypes = \
             unzip([(cn, st) for cn, st in zip(column_names, stattypes)
-                if st != 'key'])
+                if st != 'key' and st != 'ignore'])
         if len(column_names) == 0:
-            raise ValueError('Table has only key column: %s' % (repr(table),))
+            raise ValueError('Table has no modelled columns: %s' %
+                (repr(table),))
         qg = sqlite3_quote_name(generator)
         qmm = sqlite3_quote_name(metamodel)
         qcns = map(sqlite3_quote_name, column_names)
@@ -61,12 +68,50 @@ def unzip(l):                   # ???
         ys.append(y)
     return xs, ys
 
-def bayesdb_guess_stattypes(column_names, rows, count_cutoff=None,
-        ratio_cutoff=None):
+def bayesdb_guess_stattypes(column_names, rows,
+        count_cutoff=None, ratio_cutoff=None, overrides=None):
+    # Fill in default arguments.
     if count_cutoff is None:
         count_cutoff = 20
     if ratio_cutoff is None:
         ratio_cutoff = 0.02
+    if overrides is None:
+        overrides = []
+
+    # Build a set of the column names.
+    column_name_set = set()
+    duplicates = set()
+    for name in column_names:
+        if casefold(name) in column_name_set:
+            duplicates.add(name)
+        column_name_set.add(casefold(name))
+    if 0 < len(duplicates):
+        raise ValueError('Duplicate column names: %s' %
+            (repr(list(duplicates),)))
+
+    # Build a map for the overrides.
+    #
+    # XXX Support more than just stattype: allow arbitrary column
+    # descriptions.
+    override_map = {}
+    unknown = set()
+    duplicates = set()
+    for name, stattype in overrides:
+        if casefold(name) not in column_name_set:
+            unknown.add(name)
+            continue
+        if casefold(name) in override_map:
+            duplicates.add(name)
+            continue
+        override_map[casefold(name)] = casefold(stattype)
+    if 0 < len(unknown):
+        raise ValueError('Unknown columns overridden: %s' %
+            (repr(list(unknown)),))
+    if 0 < len(duplicates):
+        raise ValueError('Duplicate columns overridden: %s' %
+            (repr(list(duplicates)),))
+
+    # Sanity-check the inputs.
     ncols = len(column_names)
     assert ncols == len(unique(map(casefold, column_names)))
     for ri, row in enumerate(rows):
@@ -76,23 +121,49 @@ def bayesdb_guess_stattypes(column_names, rows, count_cutoff=None,
         if len(row) > ncols:
             raise ValueError('Row %d: Too many columns: %d > %d' %
                 (ri, len(row), ncols))
+
+    # Find a key first, if it has been specified as an override.
     key = None
+    duplicate_keys = set()
+    for ci, column_name in enumerate(column_names):
+        if casefold(column_name) in override_map:
+            if override_map[casefold(column_name)] == 'key':
+                if key is not None:
+                    duplicate_keys.add(column_name)
+                    continue
+                column = integerify(rows, ci)
+                if not column:
+                    column = [row[ci] for row in rows]
+                if not keyable_p(column):
+                    raise ValueError('Column non-unique but specified as key'
+                        ': %s' % (repr(column_name),))
+                key = column_name
+    if 0 < len(duplicate_keys):
+        raise ValueError('Multiple columns overridden as keys: %s' %
+            (repr(list(duplicate_keys)),))
+
+    # Now go through and guess the other column stattypes or use the
+    # override.
     stattypes = []
     for ci, column_name in enumerate(column_names):
-        numericable = True
-        column = integerify(rows, ci)
-        if not column:
-            column = floatify(rows, ci)
-            if not column:
-                column = [row[ci] for row in rows]
-                numericable = False
-        if key is None and keyable_p(column):
-            stattype = 'key'
-            key = column_name
-        elif numericable and numerical_p(column, count_cutoff, ratio_cutoff):
-            stattype = 'numerical'
+        if casefold(column_name) in override_map:
+            stattype = override_map[casefold(column_name)]
         else:
-            stattype = 'categorical'
+            numericable = True
+            column = integerify(rows, ci)
+            if not column:
+                column = floatify(rows, ci)
+                if not column:
+                    column = [row[ci] for row in rows]
+                    numericable = False
+            if key is None and keyable_p(column):
+                stattype = 'key'
+                key = column_name
+            elif numericable and \
+                 numerical_p(column, count_cutoff, ratio_cutoff):
+                stattype = 'numerical'
+            else:
+                stattype = 'categorical'
         stattypes.append(stattype)
     return stattypes
 
