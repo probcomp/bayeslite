@@ -248,7 +248,7 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                     overrides=columns)
                 columns = zip(column_names, stattypes)
                 columns = [(name, stattype) for name, stattype in columns
-                    if name not in ('key', 'ignore')]
+                    if stattype not in ('key', 'ignore')]
 
             # Create the metamodel-independent records and assign a
             # generator id.

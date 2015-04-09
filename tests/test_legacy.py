@@ -42,6 +42,8 @@ def test_legacy_models():
         read_csv.bayesdb_read_csv(bdb, 'dha', f, header=True, create=True)
     bayeslite.bayesdb_load_legacy_models(bdb, 'dha_cc', 'dha', 'crosscat',
         dha_models, create=True)
+    # Make sure guessing also works.
+    bdb.execute('create generator dha_cc0 for dha using crosscat(guess(*))')
     bayeslite.bayesdb_load_codebook_csv_file(bdb, 'dha', dha_codebook)
     # Need to be able to overwrite existing codebook.
     #

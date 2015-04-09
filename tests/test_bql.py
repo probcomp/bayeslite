@@ -1011,6 +1011,24 @@ def test_createtab():
                 age numerical
             )
         ''')
+        with pytest.raises(ValueError):
+            # Redefining generator.
+            bdb.execute('''
+                create generator t_cc for t using crosscat (
+                    guess(*),
+                    age ignore
+                )
+            ''')
+        # Make sure ignore columns work.
+        #
+        # XXX Also check key columns.
+        bdb.execute('''
+            create generator t_cc0 for t using crosscat (
+                guess(*),
+                age ignore
+            )
+        ''')
+        bdb.execute('drop generator t_cc0')
         generator_id = core.bayesdb_get_generator(bdb, 't_cc')
         colno = core.bayesdb_generator_column_number(bdb, generator_id, 'age')
         assert core.bayesdb_generator_column_stattype(bdb, generator_id,
