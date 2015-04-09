@@ -250,9 +250,6 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                 columns = [(name, stattype) for name, stattype in columns
                     if name not in ('key', 'ignore')]
 
-            import sys
-            print >>sys.stderr, 'columns %s' % (repr(columns),)
-
             # Create the metamodel-independent records and assign a
             # generator id.
             generator_id, column_list = instantiate(columns)
