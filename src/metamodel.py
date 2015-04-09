@@ -39,7 +39,7 @@ class IMetamodel(object):
         raise NotImplementedError
     def register(self, bdb):
         raise NotImplementedError
-    def create_generator(self, bdb, generator_id, column_list):
+    def create_generator(self, bdb, table, schema, instantiate):
         raise NotImplementedError
     def drop_generator(self, bdb, generator_id):
         raise NotImplementedError
@@ -50,7 +50,7 @@ class IMetamodel(object):
     def drop_models(self, bdb, generator_id, modelnos=None):
         raise NotImplementedError
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
-            max_seconds=None):
+            max_seconds=None, iterations_per_checkpoint=None):
         raise NotImplementedError
     def column_dependence_probability(self, bdb, generator_id, colno0, colno1):
         raise NotImplementedError
@@ -68,8 +68,15 @@ class IMetamodel(object):
     def row_column_predictive_probability(self, bdb, generator_id, rowid,
             colno):
         raise NotImplementedError
-    def infer(self, bdb, generator_id, colno, rowid, value, threshold,
-            numsamples=1):
+    def infer(self, bdb, generator_id, colno, rowid, threshold,
+            numsamples=None):
+        value, confidence = self.infer_confidence(bdb, generator_id, colno,
+            rowid, numsamples=numsamples)
+        if confidence < threshold:
+            return None
+        return value
+    def infer_confidence(self, bdb, generator_id, colno, rowid,
+            numsamples=None):
         raise NotImplementedError
     def simulate(self, bdb, generator_id, constraints, colnos,
             numpredictions=1):

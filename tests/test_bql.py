@@ -277,8 +277,16 @@ def test_estimate_bql():
     with pytest.raises(ValueError):
         # Need both columns fixed.
         bql2sql('estimate correlation from t1_cc;')
-    assert bql2sql('estimate infer age conf 0.9 from t1_cc;') == \
-        'SELECT bql_infer(1, 2, _rowid_, "age", 0.9) FROM "t1";'
+    assert bql2sql('estimate infer age with confidence 0.9 from t1_cc;') == \
+        'SELECT bql_infer(1, 2, _rowid_, 0.9) FROM "t1";'
+    assert bql2sql('estimate rowid, age,'
+            ' infer age as age_inf confidence age_conf from t1_cc') == \
+        'SELECT c0 AS "rowid", c1 AS "age",' \
+            ' bql_json_get(c2, \'value\') AS "age_inf",' \
+            ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
+            ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
+                ' bql_infer_confidence(1, 2, _rowid_) AS c2' \
+                ' FROM "t1");'
 
 def test_estimate_columns_trivial():
     prefix0 = 'SELECT c.name AS name'
@@ -355,7 +363,8 @@ def test_estimate_columns_trivial():
         bql2sql('estimate columns from t1_cc where correlation > 0.5;')
     with pytest.raises(ValueError):
         # Makes no sense.
-        bql2sql('estimate columns from t1_cc where infer age conf 0.9 > 30;')
+        bql2sql('estimate columns from t1_cc'
+            ' where infer age with confidence 0.9 > 30;')
     assert bql2sql('estimate columns'
             ' dependence probability with weight as depprob,'
             ' mutual information with weight as mutinf'
@@ -473,7 +482,7 @@ def test_estimate_pairwise_trivial():
     with pytest.raises(ValueError):
         # Makes no sense.
         bql2sql('estimate pairwise dependence probability from t1_cc'
-            ' where infer age conf 0.9 > 30;')
+            ' where infer age with confidence 0.9 > 30;')
     assert bql2sql('estimate pairwise dependence probability as depprob,' \
             ' mutual information as mutinf' \
             ' from t1_cc where depprob > 0.5 order by mutinf desc') == \
@@ -498,7 +507,7 @@ def test_estimate_pairwise_row():
         infix + ';'
     with pytest.raises(ValueError):
         # INFER is a 1-row function.
-        bql2sql('estimate pairwise row infer age conf 0.9 from t1;')
+        bql2sql('estimate pairwise row infer age with confidence 0.9 from t1;')
 
 def test_estimate_pairwise_selected_columns():
     assert bql2sql('estimate pairwise dependence probability from t1_cc'
@@ -601,9 +610,10 @@ def test_trivial_commands():
             with pytest.raises(AssertionError): # XXX
                 bdb.execute('select gender from t0')
                 assert False, 'Need to fix quoting of unknown columns!'
-            bdb.execute('estimate infer sex conf 0.9 from t_cc')
+            bdb.execute('estimate infer sex with confidence 0.9 from t_cc')
             with pytest.raises(ValueError):
-                bdb.execute('estimate infer gender conf 0.9 from t_cc')
+                bdb.execute('estimate infer gender with confidence 0.9'
+                    ' from t_cc')
             bdb.execute('alter table t0 rename sex to gender')
             assert core.bayesdb_generator_column_number(bdb, generator_id,
                     'gender') \
@@ -621,11 +631,81 @@ def test_trivial_commands():
         bdb.execute('estimate pairwise row similarity from t_cc')
         bdb.execute('select value from'
             ' (estimate pairwise correlation from t_cc)')
-        bdb.execute('estimate infer age conf 0.9 from t_cc')
-        bdb.execute('estimate infer AGE conf 0.9 from T_cc')
-        bdb.execute('estimate infer aGe conf 0.9 from T_cC')
+        bdb.execute('estimate infer age with confidence 0.9 from t_cc')
+        bdb.execute('estimate infer AGE with confidence 0.9 from T_cc')
+        bdb.execute('estimate infer aGe with confidence 0.9 from T_cC')
         with pytest.raises(ValueError):
-            bdb.execute('estimate infer agee conf 0.9 from t_cc')
+            bdb.execute('estimate infer agee with confidence 0.9 from t_cc')
+        # Make sure it works with the table too if we create a default
+        # generator.
+        with pytest.raises(ValueError):
+            bdb.execute('estimate * from t0')
+        with pytest.raises(ValueError):
+            bdb.execute('estimate columns from t0')
+        with pytest.raises(ValueError):
+            bdb.execute('estimate pairwise correlation from t0')
+        with pytest.raises(ValueError):
+            bdb.execute('estimate pairwise row similarity from t0')
+        bdb.execute('''
+            create default generator t_ccd for t0 using crosscat(
+                age numerical,
+                rank categorical
+            )
+        ''')
+        bdb.execute('initialize 1 model if not exists for t_ccd')
+        bdb.execute('analyze t_ccd for 1 iteration wait')
+        bdb.execute('initialize 2 models if not exists for t0')
+        bdb.execute('analyze t0 for 1 iteration wait')
+        bdb.execute('estimate * from t0')
+        bdb.execute('estimate columns from t0')
+        bdb.execute('estimate pairwise correlation from t0')
+        bdb.execute('estimate pairwise row similarity from t0')
+        # XXX Distinguish the two generators somehow.
+        bdb.execute('alter table t0 set default generator to t_cc')
+        bdb.execute('estimate * from t0')
+        bdb.execute('estimate columns from t0')
+        bdb.execute('estimate pairwise correlation from t0')
+        bdb.execute('estimate pairwise row similarity from t0')
+        bdb.execute('alter table t0 rename to t')
+        bdb.execute('alter table t set default generator to t_ccd')
+        bdb.execute('estimate * from t')
+        bdb.execute('estimate columns from t')
+        bdb.execute('estimate pairwise correlation from t')
+        bdb.execute('estimate pairwise row similarity from t')
+        bdb.execute('drop generator t_ccd')
+        with pytest.raises(ValueError):
+            bdb.execute('initialize 3 models if not exists for t_ccd')
+        with pytest.raises(ValueError):
+            bdb.execute('initialize 4 models if not exists for t')
+        with pytest.raises(ValueError):
+            bdb.execute('analyze t_ccd for 1 iteration wait')
+        with pytest.raises(ValueError):
+            bdb.execute('analyze t0 for 1 iteration wait')
+        with pytest.raises(ValueError):
+            bdb.execute('estimate * from t_ccd')
+        with pytest.raises(ValueError):
+            bdb.execute('estimate columns from t_ccd')
+        with pytest.raises(ValueError):
+            bdb.execute('estimate pairwise correlation from t_ccd')
+        with pytest.raises(ValueError):
+            bdb.execute('estimate pairwise row similarity from t_ccd')
+        with pytest.raises(ValueError):
+            bdb.execute('estimate * from t')
+        with pytest.raises(ValueError):
+            bdb.execute('estimate columns from t')
+        with pytest.raises(ValueError):
+            bdb.execute('estimate pairwise correlation from t')
+        with pytest.raises(ValueError):
+            bdb.execute('estimate pairwise row similarity from t')
+        bdb.execute('alter table t set default generator to t_cc')
+        bdb.execute('initialize 6 models if not exists for t_cc')
+        bdb.execute('initialize 7 models if not exists for t')
+        bdb.execute('analyze t_cc for 1 iteration wait')
+        bdb.execute('analyze t for 1 iteration wait')
+        bdb.execute('estimate * from t')
+        bdb.execute('estimate columns from t')
+        bdb.execute('estimate pairwise correlation from t')
+        bdb.execute('estimate pairwise row similarity from t')
 
 def test_trivial_deadline():
     with test_core.t1() as (bdb, _table_id):
@@ -703,10 +783,15 @@ def test_parametrized():
         assert sqltraced_execute('estimate similarity to (rowid = 1)'
                 ' with respect to (estimate columns from t_cc limit 1)'
                 ' from t_cc;') == [
-            'SELECT id FROM bayesdb_generator WHERE name = ?',
+            'SELECT COUNT(*) FROM bayesdb_generator'
+                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+            'SELECT id FROM bayesdb_generator'
+                ' WHERE name = :name OR (defaultp AND tabname = :name)',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
-            'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?',
-            'SELECT id FROM bayesdb_generator WHERE name = ?',
+            'SELECT COUNT(*) FROM bayesdb_generator'
+                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+            'SELECT id FROM bayesdb_generator'
+                ' WHERE name = :name OR (defaultp AND tabname = :name)',
             # ESTIMATE COLUMNS:
             'SELECT c.name AS name'
                 ' FROM bayesdb_generator AS g,'
@@ -719,7 +804,8 @@ def test_parametrized():
                 ' FROM bayesdb_generator AS g,'
                     ' bayesdb_generator_column as gc,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = ? AND c.name = ? AND g.id = gc.generator_id'
+                ' WHERE g.id = :generator_id AND c.name = :column_name'
+                    ' AND g.id = gc.generator_id'
                     ' AND g.tabname = c.tabname AND gc.colno = c.colno',
             # ESTIMATE SIMILARITY TO (rowid=1):
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
@@ -741,10 +827,15 @@ def test_parametrized():
                 ' with respect to (estimate columns from t_cc limit ?)'
                 ' from t_cc;',
                 (1,)) == [
-            'SELECT id FROM bayesdb_generator WHERE name = ?',
+            'SELECT COUNT(*) FROM bayesdb_generator'
+                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+            'SELECT id FROM bayesdb_generator'
+                ' WHERE name = :name OR (defaultp AND tabname = :name)',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
-            'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?',
-            'SELECT id FROM bayesdb_generator WHERE name = ?',
+            'SELECT COUNT(*) FROM bayesdb_generator'
+                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+            'SELECT id FROM bayesdb_generator'
+                ' WHERE name = :name OR (defaultp AND tabname = :name)',
             # ESTIMATE COLUMNS:
             'SELECT c.name AS name'
                 ' FROM bayesdb_generator AS g,'
@@ -757,7 +848,8 @@ def test_parametrized():
                 ' FROM bayesdb_generator AS g,'
                     ' bayesdb_generator_column as gc,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = ? AND c.name = ? AND g.id = gc.generator_id'
+                ' WHERE g.id = :generator_id AND c.name = :column_name'
+                    ' AND g.id = gc.generator_id'
                     ' AND g.tabname = c.tabname AND gc.colno = c.colno',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
             # ESTIMATE SIMILARITY TO (rowid=1):
@@ -780,7 +872,10 @@ def test_parametrized():
                     " from t_cc given gender = 'F' limit 4") == [
             'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?',
             'PRAGMA table_info("sim")',
-            'SELECT id FROM bayesdb_generator WHERE name = ?',
+            'SELECT COUNT(*) FROM bayesdb_generator'
+                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+            'SELECT id FROM bayesdb_generator'
+                ' WHERE name = :name OR (defaultp AND tabname = :name)',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
             'PRAGMA table_info("t")',
@@ -789,25 +884,29 @@ def test_parametrized():
                 ' FROM bayesdb_generator AS g,'
                     ' bayesdb_generator_column as gc,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = ? AND c.name = ? AND g.id = gc.generator_id'
+                ' WHERE g.id = :generator_id AND c.name = :column_name'
+                    ' AND g.id = gc.generator_id'
                     ' AND g.tabname = c.tabname AND gc.colno = c.colno',
             'SELECT c.colno'
                 ' FROM bayesdb_generator AS g,'
                     ' bayesdb_generator_column as gc,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = ? AND c.name = ? AND g.id = gc.generator_id'
+                ' WHERE g.id = :generator_id AND c.name = :column_name'
+                    ' AND g.id = gc.generator_id'
                     ' AND g.tabname = c.tabname AND gc.colno = c.colno',
             'SELECT c.colno'
                 ' FROM bayesdb_generator AS g,'
                     ' bayesdb_generator_column as gc,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = ? AND c.name = ? AND g.id = gc.generator_id'
+                ' WHERE g.id = :generator_id AND c.name = :column_name'
+                    ' AND g.id = gc.generator_id'
                     ' AND g.tabname = c.tabname AND gc.colno = c.colno',
             'SELECT c.colno'
                 ' FROM bayesdb_generator AS g,'
                     ' bayesdb_generator_column as gc,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = ? AND c.name = ? AND g.id = gc.generator_id'
+                ' WHERE g.id = :generator_id AND c.name = :column_name'
+                    ' AND g.id = gc.generator_id'
                     ' AND g.tabname = c.tabname AND gc.colno = c.colno',
             'CREATE TEMP TABLE IF NOT EXISTS "sim"'
                 ' ("age" NUMERIC,"RANK" NUMERIC,"division" NUMERIC)',

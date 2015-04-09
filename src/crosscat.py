@@ -212,8 +212,22 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                     raise ValueError('Crosscat already installed'
                         ' with unknown schema version: %d' % (version,))
 
-    def create_generator(self, bdb, generator_id, column_list):
+    def create_generator(self, bdb, table, schema, instantiate):
+        columns = []
+        for directive in schema:
+            if not (isinstance(directive, list) and
+                    len(directive) == 2 and
+                    isinstance(directive[0], (str, unicode)) and
+                    isinstance(directive[1], (str, unicode))):
+                raise ValueError('Invalid crosscat column model: %s' %
+                    (repr(directive),))
+            columns.append((directive[0], directive[1]))
+
         with bdb.savepoint():
+            # Create the metamodel-independent records and assign a
+            # generator id.
+            generator_id, column_list = instantiate(columns)
+
             # Install the metadata json blob.
             M_c = create_metadata(bdb, generator_id, column_list)
             insert_metadata_sql = '''
@@ -235,22 +249,30 @@ class CrosscatMetamodel(metamodel.IMetamodel):
             insert_column_sql = '''
                 INSERT INTO bayesdb_crosscat_column
                     (generator_id, colno, cc_colno, disttype)
-                    VALUES (?, ?, ?, ?)
+                    VALUES (:generator_id, :colno, :cc_colno, :disttype)
             '''
             insert_codemap_sql = '''
                 INSERT INTO bayesdb_crosscat_column_codemap
                     (generator_id, cc_colno, code, value)
-                    VALUES (?, ?, ?, ?)
+                    VALUES (:generator_id, :cc_colno, :code, :value)
             '''
             for cc_colno, (colno, name, _stattype) in enumerate(column_list):
                 column_metadata = M_c['column_metadata'][cc_colno]
                 disttype = column_metadata['modeltype']
-                parameters = (generator_id, colno, cc_colno, disttype)
-                bdb.sql_execute(insert_column_sql, parameters)
+                bdb.sql_execute(insert_column_sql, {
+                    'generator_id': generator_id,
+                    'colno': colno,
+                    'cc_colno': cc_colno,
+                    'disttype': disttype,
+                })
                 codemap = column_metadata['value_to_code']
                 for code in codemap:
-                    parameters = (generator_id, cc_colno, code, codemap[code])
-                    bdb.sql_execute(insert_codemap_sql, parameters)
+                    bdb.sql_execute(insert_codemap_sql, {
+                        'generator_id': generator_id,
+                        'cc_colno': cc_colno,
+                        'code': code,
+                        'value': codemap[code],
+                    })
 
     def drop_generator(self, bdb, generator_id):
         with bdb.savepoint():
@@ -299,12 +321,15 @@ class CrosscatMetamodel(metamodel.IMetamodel):
         M_c['name_to_idx'][newname] = idx
         M_c['idx_to_name'][unicode(idx)] = newname
         sql = '''
-            UPDATE bayesdb_crosscat_metadata SET metadata_json = ?
-                WHERE generator_id = ?
+            UPDATE bayesdb_crosscat_metadata SET metadata_json = :metadata_json
+                WHERE generator_id = :generator_id
         '''
         metadata_json = json.dumps(M_c)
         total_changes = bdb.sqlite3.total_changes
-        bdb.sql_execute(sql, (metadata_json, generator_id))
+        bdb.sql_execute(sql, {
+            'generator_id': generator_id,
+            'metadata_json': metadata_json,
+        })
         assert bdb.sqlite3.total_changes - total_changes == 1
         cc_cache = self._crosscat_cache_nocreate(bdb)
         if cc_cache is not None:
@@ -336,7 +361,7 @@ class CrosscatMetamodel(metamodel.IMetamodel):
         insert_theta_sql = '''
             INSERT INTO bayesdb_crosscat_theta
                 (generator_id, modelno, theta_json)
-                VALUES (?, ?, ?)
+                VALUES (:generator_id, :modelno, :theta_json)
         '''
         for modelno, (X_L, X_D) in zip(modelnos, zip(X_L_list, X_D_list)):
             theta = {
@@ -348,8 +373,11 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                 'num_views': [],
                 'model_config': model_config,
             }
-            parameters = (generator_id, modelno, json.dumps(theta))
-            bdb.sql_execute(insert_theta_sql, parameters)
+            bdb.sql_execute(insert_theta_sql, {
+                'generator_id': generator_id,
+                'modelno': modelno,
+                'theta_json': json.dumps(theta),
+            })
             if cc_cache is not None:
                 if generator_id in cc_cache.thetas:
                     assert modelno not in cc_cache.thetas[generator_id]
@@ -382,7 +410,7 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                     del cc_cache.thetas[generator_id]
 
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
-            max_seconds=None):
+            max_seconds=None, iterations_per_checkpoint=None):
         # XXX What about a schema change or insert in the middle of
         # analysis?
         M_c = self._crosscat_metadata(bdb, generator_id)
@@ -401,7 +429,10 @@ class CrosscatMetamodel(metamodel.IMetamodel):
         while (iterations is None or 0 < iterations) and \
               (max_seconds is None or time.time() < deadline):
             n_steps = 1
-            if iterations is not None and max_seconds is None:
+            if iterations_per_checkpoint is not None:
+                assert 0 < iterations_per_checkpoint
+                n_steps = iterations_per_checkpoint
+            elif iterations is not None and max_seconds is None:
                 n_steps = iterations
             with bdb.savepoint():
                 if modelnos is None:
@@ -566,12 +597,10 @@ class CrosscatMetamodel(metamodel.IMetamodel):
         )
         return math.exp(r)
 
-    # XXX Rename this impute, ignore the existing value, return
-    # imputed value and confidence?
-    def infer(self, bdb, generator_id, colno, rowid, value, threshold,
-            numsamples=1):
-        if value is not None:
-            return value
+    def infer_confidence(self, bdb, generator_id, colno, rowid,
+            numsamples=None):
+        if numsamples is None:
+            numsamples = 1
         M_c = self._crosscat_metadata(bdb, generator_id)
         column_names = core.bayesdb_generator_column_names(bdb, generator_id)
         table_name = core.bayesdb_generator_table(bdb, generator_id)
@@ -605,14 +634,14 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                 crosscat_gen_colno(bdb, generator_id, cc_colno_),
                 crosscat_value_to_code(bdb, generator_id, M_c,
                     crosscat_gen_colno(bdb, generator_id, cc_colno_), value))
-               for cc_colno_, value in enumerate(row) if value is not None],
+               for cc_colno_, value in enumerate(row)
+               if value is not None
+               if cc_colno_ != cc_colno],
             Q=[(row_id, cc_colno)],
             n=numsamples,
         )
-        if confidence >= threshold:
-            return crosscat_code_to_value(bdb, generator_id, M_c, colno, code)
-        else:
-            return None
+        value = crosscat_code_to_value(bdb, generator_id, M_c, colno, code)
+        return value, confidence
 
     def simulate(self, bdb, generator_id, constraints, colnos,
             numpredictions=1):
@@ -710,17 +739,19 @@ class CrosscatMetamodel(metamodel.IMetamodel):
             assert T == self._crosscat_data(bdb, generator_id, M_c) \
                 + modelled_rows
             update_theta_sql = '''
-                UPDATE bayesdb_crosscat_theta SET theta_json = ?
-                    WHERE generator_id = ? AND modelno = ?
+                UPDATE bayesdb_crosscat_theta SET theta_json = :theta_json
+                    WHERE generator_id = :generator_id AND modelno = :modelno
             '''
             for modelno, theta, X_L, X_D \
                     in zip(modelnos, thetas, X_L_list, X_D_list):
                 theta['X_L'] = X_L
                 theta['X_D'] = X_D
-                theta_json = json.dumps(theta)
-                parameters = (theta_json, generator_id, modelno)
                 total_changes = bdb.sqlite3.total_changes
-                bdb.sql_execute(update_theta_sql, parameters)
+                bdb.sql_execute(update_theta_sql, {
+                    'generator_id': generator_id,
+                    'modelno': modelno,
+                    'theta_json': json.dumps(theta),
+                })
                 assert bdb.sqlite3.total_changes - total_changes == 1
 
 class CrosscatCache(object):

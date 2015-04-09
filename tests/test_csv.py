@@ -136,7 +136,8 @@ def test_csv_import_schema():
         ''')
         bdb.execute('estimate height from employees_cc')
         with pytest.raises(ValueError):
-            bdb.execute('estimate infer height conf 0.9 from employees_cc')
+            bdb.execute('estimate infer height with confidence 0.9'
+                ' from employees_cc')
 
 def test_csv_import_schema_case():
     with bayesdb_csv_stream(csv_data) as (bdb, f):

@@ -24,7 +24,8 @@ def pp_cursor(out, cursor):
     for row in table:
         for colno, v in enumerate(row):
             # XXX Consider quotation/escapes.
-            colwidths[colno] = max(colwidths[colno], len(str(v)))
+            # XXX Combining characters?
+            colwidths[colno] = max(colwidths[colno], len(unicode(v)))
     first = True
     for colno, label in enumerate(labels):
         if first:
@@ -51,5 +52,5 @@ def pp_cursor(out, cursor):
             else:
                 out.write(' | ')
             # XXX Quote/escape.
-            out.write('%*s' % (colwidths[colno], str(v)))
+            out.write('%*s' % (colwidths[colno], unicode(v)))
         out.write('\n')

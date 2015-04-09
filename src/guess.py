@@ -23,7 +23,10 @@ from bayeslite.util import casefold
 from bayeslite.util import unique
 
 def bayesdb_guess_generator(bdb, generator, table, metamodel,
-        ifnotexists=False, count_cutoff=None, ratio_cutoff=None):
+        ifnotexists=False, count_cutoff=None, ratio_cutoff=None,
+        default=None):
+    if default is None:
+        default = False
     with bdb.savepoint():
         if core.bayesdb_has_generator(bdb, generator):
             if ifnotexists:
@@ -47,8 +50,8 @@ def bayesdb_guess_generator(bdb, generator, table, metamodel,
         qcns = map(sqlite3_quote_name, column_names)
         qsts = map(sqlite3_quote_name, stattypes)
         qs = ','.join(qcn + ' ' + qst for qcn, qst in zip(qcns, qsts))
-        bdb.execute('CREATE GENERATOR %s FOR %s USING %s(%s)' %
-            (qg, qt, qmm, qs))
+        bdb.execute('CREATE %sGENERATOR %s FOR %s USING %s(%s)' %
+            ('DEFAULT ' if default else '', qg, qt, qmm, qs))
 
 def unzip(l):                   # ???
     xs = []

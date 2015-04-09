@@ -153,8 +153,8 @@ class BQLSemantics(object):
     # SQL Data Definition Language subset
     def p_command_createtab_as(self, temp, ifnotexists, name, query):
         return ast.CreateTabAs(temp, ifnotexists, name, query)
-    def p_command_createtab_sim(self, temp, ifnotexists, name, sim):
-        return ast.CreateTabSim(temp, ifnotexists, name, sim)
+    def p_command_createtab_sim(self, temp, ifnotexists, name, query):
+        return ast.CreateTabSim(temp, ifnotexists, name, query)
     def p_command_droptab(self, ifexists, name):
         return ast.DropTab(ifexists, name)
     def p_command_altertab(self, table, cmds):
@@ -166,27 +166,35 @@ class BQLSemantics(object):
         return ast.AlterTabRenameTab(name)
     def p_altertab_cmd_renamecol(self, old, new):
         return ast.AlterTabRenameCol(old, new)
+    def p_altertab_cmd_setdefgen(self, generator):
+        return ast.AlterTabSetDefGen(generator)
+    def p_altertab_cmd_unsetdefgen(self):
+        return ast.AlterTabSetDefGen()
 
     # BQL Model Definition Language
-    def p_command_creategen(self, name, ifnotexists, table, metamodel, schema):
-        return ast.CreateGen(name, ifnotexists, table, metamodel, schema)
+    def p_command_creategen(self, defaultp, name, ifnotexists, table,
+            metamodel, schema):
+        return ast.CreateGen(defaultp, name, ifnotexists, table,
+            metamodel, schema)
     def p_command_dropgen(self, ifexists, name):
         return ast.DropGen(ifexists, name)
     def p_command_altergen(self, generator, cmds):
         return ast.AlterGen(generator, cmds)
+
+    def p_default_opt_none(self):               return False
+    def p_default_opt_some(self):               return True
 
     def p_altergen_cmds_one(self, cmd):         return [cmd]
     def p_altergen_cmds_many(self, cmds, cmd):  cmds.append(cmd); return cmds
     def p_altergen_cmd_renamegen(self, name):
         return ast.AlterGenRenameGen(name)
 
-    def p_generator_schema_one(self, col):
-        return ast.GenSchema([col])
-    def p_generator_schema_many(self, cols, col):
-        cols.columns.append(col)
-        return cols
-    def p_generator_column_gc(self, name, stattype):
-        return ast.GenColumn(name, stattype)
+    def p_generator_schema_one(self, s):        return [s]
+    def p_generator_schema_many(self, ss, s):   ss.append(s); return ss
+    def p_generator_schemum_empty(self):        return []
+    def p_generator_schemum_nonempty(self, s, t): s.append(t); return s
+    def p_gs_token_prim(self, t):               return t
+    def p_gs_token_comp(self, s):               return s
 
     def p_stattype_s(self, name):
         return name
@@ -195,10 +203,12 @@ class BQLSemantics(object):
     def p_command_init_models(self, n, ifnotexists, generator):
         # XXX model config
         return ast.InitModels(ifnotexists, generator, n, config=None)
-    def p_command_analyze_models(self, generator, models, anlimit, wait):
+    def p_command_analyze_models(self, generator, models, anlimit, anckpt,
+            wait):
         iterations = anlimit[1] if anlimit[0] == 'iterations' else None
         seconds = anlimit[1] if anlimit[0] == 'seconds' else None
-        return ast.AnalyzeModels(generator, models, iterations, seconds, wait)
+        return ast.AnalyzeModels(generator, models, iterations, seconds,
+            anckpt, wait)
     def p_command_drop_models(self, models, generator):
         return ast.DropModels(generator, models)
 
@@ -221,6 +231,9 @@ class BQLSemantics(object):
     def p_anlimit_iterations(self, n):          return ('iterations', n)
     def p_anlimit_minutes(self, n):             return ('seconds', 60*n)
     def p_anlimit_seconds(self, n):             return ('seconds', n)
+
+    def p_anckpt_none(self):                    return None
+    def p_anckpt_niters(self, n):               return n
 
     def p_wait_opt_none(self):                  return False
     def p_wait_opt_some(self):                  return True
@@ -262,6 +275,12 @@ class BQLSemantics(object):
 
     def p_estimate_e(self, quant, cols, generator, cond, grouping, ord, lim):
         return ast.Estimate(quant, cols, generator, cond, grouping, ord, lim)
+
+    def p_estimate_columns_one(self, c):        return [c]
+    def p_estimate_columns_many(self, cs, c):   cs.append(c); return cs
+    def p_estimate_column_sel(self, c):         return c
+    def p_estimate_column_inf(self, col, name, confname):
+        return ast.InfCol(col, name, confname)
 
     def p_estcols_nocols(self, generator, cond, ord, lim):
         return ast.EstCols([], generator, cond, ord, lim)

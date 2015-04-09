@@ -1,23 +1,24 @@
 # Bayeslite
 
-Bayeslite is a prototype reimplementation of BayesDB on SQLite3, to
-enable the use of relational SQL queries on databases in addition to
-probabilistic BQL queries.
+Bayeslite is a BQL database built on SQLite3.  BQL is an extension to
+SQL that supports queries about the probable implications of data.
 
 ## Install
 
 After you have installed
 [CrossCat](https://github.com/mit-probabilistic-computing-project/crosscat):
 
-```
-$ python setup.py build
-$ python setup.py install
-```
-
 To check that everything is working:
 
 ```
 $ ./check.sh
+```
+
+To install system-wide, or into the current virtual environment:
+
+```
+$ python setup.py build
+$ python setup.py install
 ```
 
 Bayeslite is tested on Ubuntu 14.04.  It should also run on other

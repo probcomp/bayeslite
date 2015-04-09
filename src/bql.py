@@ -78,7 +78,11 @@ def execute_phrase(bdb, phrase, bindings=()):
             if core.bayesdb_has_table(bdb, phrase.name):
                 raise ValueError('Name already defined as table: %s' %
                     (repr(phrase.name),))
-            generator_id = core.bayesdb_get_generator(bdb,
+            if not core.bayesdb_has_generator_default(bdb,
+                    phrase.simulation.generator):
+                raise ValueError('No such generator: %s' %
+                    (phrase.simulation.generator,))
+            generator_id = core.bayesdb_get_generator_default(bdb,
                 phrase.simulation.generator)
             metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
             table = core.bayesdb_generator_table(bdb, generator_id)
@@ -215,12 +219,15 @@ def execute_phrase(bdb, phrase, bindings=()):
                     # to columns by (tabname, colno) pairs rather than
                     # by names.
                     update_column_sql = '''
-                        UPDATE bayesdb_column SET name = ?
-                            WHERE tabname = ? AND name = ?
+                        UPDATE bayesdb_column SET name = :new
+                            WHERE tabname = :table AND name = :old
                     '''
                     total_changes = bdb.sqlite3.total_changes
-                    bdb.sql_execute(update_column_sql,
-                        (cmd.new, table, cmd.old))
+                    bdb.sql_execute(update_column_sql, {
+                        'table': table,
+                        'old': cmd.old,
+                        'new': cmd.new,
+                    })
                     assert bdb.sqlite3.total_changes - total_changes == 1
                     # ...except metamodels may have the (case-folded)
                     # name cached.
@@ -234,78 +241,116 @@ def execute_phrase(bdb, phrase, bindings=()):
                                 generator_id)
                             metamodel.rename_column(bdb, generator_id,
                                 old_folded, new_folded)
+                elif isinstance(cmd, ast.AlterTabSetDefGen):
+                    if not core.bayesdb_has_generator(bdb, cmd.generator):
+                        raise ValueError('No such generator: %s' %
+                            (repr(cmd.generator),))
+                    generator_id = core.bayesdb_get_generator(bdb,
+                        cmd.generator)
+                    unset_default_sql = '''
+                        UPDATE bayesdb_generator SET defaultp = 0
+                            WHERE tabname = ? AND defaultp
+                    '''
+                    total_changes = bdb.sqlite3.total_changes
+                    bdb.sql_execute(unset_default_sql, (table,))
+                    assert bdb.sqlite3.total_changes - total_changes in (0, 1)
+                    set_default_sql = '''
+                        UPDATE bayesdb_generator SET defaultp = 1 WHERE id = ?
+                    '''
+                    total_changes = bdb.sqlite3.total_changes
+                    bdb.sql_execute(set_default_sql, (generator_id,))
+                    assert bdb.sqlite3.total_changes - total_changes == 1
+                elif isinstance(cmd, ast.AlterTabUnsetDefGen):
+                    unset_default_sql = '''
+                        UPDATE bayesdb_generator SET defaultp = 0
+                            WHERE tabname = ? AND defaultp
+                    '''
+                    total_changes = bdb.sqlite3.total_changes
+                    bdb.sql_execute(unset_default_sql, (table,))
+                    assert bdb.sqlite3.total_changes - total_changes in (0, 1)
                 else:
                     assert False, 'Invalid alter table command: %s' % \
                         (cmd,)
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.CreateGen):
-        assert isinstance(phrase.schema, ast.GenSchema)
-        name = phrase.name
-        table = phrase.table
+        # Find the metamodel.
         if phrase.metamodel not in bdb.metamodels:
             raise ValueError('No such metamodel: %s' %
                 (repr(phrase.metamodel),))
         metamodel = bdb.metamodels[phrase.metamodel]
-        # XXX The metamodel should have responsibility for supplying
-        # the actual columns, after munching up an arbitrary schema.
-        with bdb.savepoint():
+
+        def instantiate(columns):
+            # Make sure there is no table by this name.  We'll deal
+            # with a generator by this name later, by doing `INSERT OR
+            # IGNORE' instead of `INSERT' if the user specified `IF
+            # NOT EXISTS'.
             if core.bayesdb_has_table(bdb, phrase.name):
                 raise ValueError('Name already defined as table: %s' %
                     (repr(phrase.name),))
 
             # Make sure the bayesdb_column table knows all the columns.
-            core.bayesdb_table_guarantee_columns(bdb, table)
+            core.bayesdb_table_guarantee_columns(bdb, phrase.table)
 
             # Create the generator record.
             generator_sql = '''
-                INSERT%s INTO bayesdb_generator (name, tabname, metamodel)
-                    VALUES (?, ?, ?)
+                INSERT%s INTO bayesdb_generator
+                    (name, tabname, metamodel, defaultp)
+                    VALUES (:name, :table, :metamodel, :defaultp)
             ''' % (' OR IGNORE' if phrase.ifnotexists else '')
-            parameters = (name, table, metamodel.name())
-            cursor = bdb.sql_execute(generator_sql, parameters)
+            cursor = bdb.sql_execute(generator_sql, {
+                'name': phrase.name,
+                'table': phrase.table,
+                'metamodel': metamodel.name(),
+                'defaultp': phrase.default,
+            })
             generator_id = cursor.lastrowid
             assert generator_id
             assert 0 < generator_id
 
-            # Get a map from column name to (colno, stattype).  Check
+            # Get a map from column name to colno.  Check
             # - for duplicates,
             # - for nonexistent columns,
             # - for invalid statistical types.
-            columns = {}
+            column_map = {}
             duplicates = set()
             missing = set()
             invalid = set()
             colno_sql = '''
-                SELECT colno FROM bayesdb_column WHERE tabname = ? AND name = ?
+                SELECT colno FROM bayesdb_column
+                    WHERE tabname = :table AND name = :column_name
             '''
             stattype_sql = '''
-                SELECT COUNT(*) FROM bayesdb_stattype WHERE name = ?
+                SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype
             '''
-            for column in phrase.schema.columns:
-                column_name = casefold(column.name)
-                if column_name in columns:
-                    duplicates.add(column_name)
+            for name, stattype in columns:
+                name_folded = casefold(name)
+                if name_folded in column_map:
+                    duplicates.add(name)
                     continue
-                cursor = bdb.sql_execute(colno_sql, (table, column_name))
+                cursor = bdb.sql_execute(colno_sql, {
+                    'table': phrase.table,
+                    'column_name': name,
+                })
                 try:
                     row = cursor.next()
                 except StopIteration:
-                    missing.add(column_name)
+                    missing.add(name)
                     continue
                 else:
                     colno = row[0]
                     assert isinstance(colno, int)
-                    stattype = column.stattype
-                    cursor = bdb.sql_execute(stattype_sql, (stattype,))
+                    cursor = bdb.sql_execute(stattype_sql, {
+                        'stattype': stattype,
+                    })
                     if cursor.next()[0] == 0:
                         invalid.add(stattype)
                         continue
-                    columns[column_name] = (colno, stattype)
+                    column_map[casefold(name)] = colno
             # XXX Would be nice to report these simultaneously.
             if missing:
                 raise ValueError('No such columns in table %s: %s' %
-                    (repr(table), repr(list(missing))))
+                    (repr(phrase.table), repr(list(missing))))
             if duplicates:
                 raise ValueError('Duplicate column names: %s' %
                     (repr(list(duplicates)),))
@@ -317,17 +362,27 @@ def execute_phrase(bdb, phrase, bindings=()):
             column_sql = '''
                 INSERT INTO bayesdb_generator_column
                     (generator_id, colno, stattype)
-                    VALUES (?, ?, ?)
+                    VALUES (:generator_id, :colno, :stattype)
             '''
-            for column in phrase.schema.columns:
-                colno, stattype = columns[casefold(column.name)]
+            for name, stattype in columns:
+                colno = column_map[casefold(name)]
                 stattype = casefold(stattype)
-                bdb.sql_execute(column_sql, (generator_id, colno, stattype))
+                bdb.sql_execute(column_sql, {
+                    'generator_id': generator_id,
+                    'colno': colno,
+                    'stattype': stattype,
+                })
 
-            # Metamodel-specific construction.
-            column_list = sorted((colno, name, stattype)
-                for name, (colno, stattype) in columns.iteritems())
-            metamodel.create_generator(bdb, generator_id, column_list)
+            column_list = sorted((column_map[casefold(name)], casefold(name),
+                                  stattype)
+                for name, stattype in columns)
+            return generator_id, column_list
+
+        # Let the metamodel parse the schema itself and call
+        # instantiate with the modelled columns.
+        with bdb.savepoint():
+            metamodel.create_generator(bdb, phrase.table, phrase.schema,
+                instantiate)
 
         # All done.  Nothing to return.
         return empty_cursor(bdb)
@@ -397,7 +452,8 @@ def execute_phrase(bdb, phrase, bindings=()):
     if isinstance(phrase, ast.InitModels):
         with bdb.savepoint():
             # Grab the arguments.
-            generator_id = core.bayesdb_get_generator(bdb, phrase.generator)
+            generator_id = core.bayesdb_get_generator_default(bdb,
+                phrase.generator)
             modelnos = range(phrase.nmodels)
             model_config = None         # XXX For now.
 
@@ -424,10 +480,14 @@ def execute_phrase(bdb, phrase, bindings=()):
             insert_model_sql = '''
                 INSERT INTO bayesdb_generator_model
                     (generator_id, modelno, iterations)
-                    VALUES (?, ?, 0)
+                    VALUES (:generator_id, :modelno, :iterations)
             '''
             for modelno in modelnos:
-                bdb.sql_execute(insert_model_sql, (generator_id, modelno))
+                bdb.sql_execute(insert_model_sql, {
+                    'generator_id': generator_id,
+                    'modelno': modelno,
+                    'iterations': 0,
+                })
 
             # Do metamodel-specific initialization.
             metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
@@ -448,28 +508,34 @@ def execute_phrase(bdb, phrase, bindings=()):
         # progress in case of ^C in the middle.
         #
         # XXX Put these warning somewhere more appropriate.
-        generator_id = core.bayesdb_get_generator(bdb, phrase.generator)
+        generator_id = core.bayesdb_get_generator_default(bdb,
+            phrase.generator)
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
         metamodel.analyze_models(bdb, generator_id,
             modelnos=phrase.modelnos,
             iterations=phrase.iterations,
-            max_seconds=phrase.seconds)
+            max_seconds=phrase.seconds,
+            iterations_per_checkpoint=phrase.iterations_per_checkpoint)
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.DropModels):
         with bdb.savepoint():
-            generator_id = core.bayesdb_get_generator(bdb, phrase.generator)
+            generator_id = core.bayesdb_get_generator_default(bdb,
+                phrase.generator)
             metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
             modelnos = None
             if phrase.modelnos is not None:
                 lookup_model_sql = '''
                     SELECT COUNT(*) FROM bayesdb_generator_model
-                        WHERE generator_id = ? AND modelno = ?
+                        WHERE generator_id = :generator_id
+                        AND modelno = :modelno
                 '''
                 modelnos = sorted(list(phrase.modelnos))
                 for modelno in modelnos:
-                    parameters = (generator_id, modelno)
-                    cursor = bdb.sql_execute(lookup_model_sql, parameters)
+                    cursor = bdb.sql_execute(lookup_model_sql, {
+                        'generator_id': generator_id,
+                        'modelno': modelno,
+                    })
                     if cursor.next()[0] == 0:
                         raise ValueError('No such model in generator %s: %s' %
                             (repr(phrase.generator), repr(modelno)))
@@ -482,10 +548,14 @@ def execute_phrase(bdb, phrase, bindings=()):
             else:
                 drop_model_sql = '''
                     DELETE FROM bayesdb_generator_model
-                        WHERE generator_id = ? AND modelno = ?
+                        WHERE generator_id = :generator_id
+                        AND modelno = :modelno
                 '''
                 for modelno in modelnos:
-                    bdb.sql_execute(drop_model_sql, (generator_id, modelno))
+                    bdb.sql_execute(drop_model_sql, {
+                        'generator_id': generator_id,
+                        'modelno': modelno,
+                    })
         return empty_cursor(bdb)
 
     assert False                # XXX
@@ -512,8 +582,7 @@ def rename_table(bdb, old, new):
     bdb.sql_execute(update_column_maps_sql, (new, old))
     # Update bayesdb_generator to use the new name.
     update_generators_sql = '''
-        UPDATE bayesdb_generator SET tabname = ?
-            WHERE tabname = ?
+        UPDATE bayesdb_generator SET tabname = ? WHERE tabname = ?
     '''
     bdb.sql_execute(update_generators_sql, (new, old))
 

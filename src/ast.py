@@ -63,15 +63,20 @@ AlterTabRenameCol = namedtuple('AlterTabRenameCol', [
     'old',                      # XXX name
     'new',                      # XXX name
 ])
+AlterTabSetDefGen = namedtuple('AlterTabSetDefGen', [
+    'generator',                # XXX name
+])
+AlterTabUnsetDefGen = namedtuple('AlterTabUnsetDefGen', [])
 
 ### BQL Model Definition Language
 
 CreateGen = namedtuple('CreateGen', [
+    'default',                  # boolean
     'name',                     # XXX name
     'ifnotexists',              # boolean
     'table',                    # XXX name
     'metamodel',                # XXX name
-    'schema',                   # GenSchema
+    'schema',                   # nested list of tokens
 ])
 DropGen = namedtuple('DropGen', [
     'ifexists',                 # boolean
@@ -83,14 +88,6 @@ AlterGen = namedtuple('AlterGen', [
 ])
 AlterGenRenameGen = namedtuple('AlterGenRenameGen', [
     'name',                     # XXX name
-])
-
-GenSchema = namedtuple('GenSchema', [
-    'columns'                   # [GenColumn]
-])
-GenColumn = namedtuple('GenColumn', [
-    'name',                     # XXX name
-    'stattype',                 # XXX name
 ])
 
 ### BQL Model Analysis Language
@@ -106,6 +103,7 @@ AnalyzeModels = namedtuple('AnalyzeModels', [
     'modelnos',
     'iterations',
     'seconds',
+    'iterations_per_checkpoint',
     'wait',
 ])
 DropModels = namedtuple('DropModels', [
@@ -159,6 +157,12 @@ SelColAll = namedtuple('SelColAll', [
 SelColExp = namedtuple('SelColExp', [
     'expression',               # Exp*
     'name',                     # XXX name
+])
+
+InfCol = namedtuple('InfCol', [
+    'column',                   # XXX name
+    'name',                     # XXX name
+    'confname',                 # XXX name
 ])
 
 SelTab = namedtuple('SelTab', [
@@ -274,6 +278,7 @@ ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
 ExpBQLMutInf = namedtuple('ExpBQLMutInf', ['column0', 'column1', 'nsamples'])
 ExpBQLCorrel = namedtuple('ExpBQLCorrel', ['column0', 'column1'])
 ExpBQLInfer = namedtuple('ExpBQLInfer', ['column', 'confidence'])
+ExpBQLInferConf = namedtuple('ExpBQLInferConf', ['column'])
 
 def is_bql(exp):
     if isinstance(exp, ExpBQLPredProb): return True
@@ -284,6 +289,7 @@ def is_bql(exp):
     if isinstance(exp, ExpBQLMutInf):   return True
     if isinstance(exp, ExpBQLCorrel):   return True
     if isinstance(exp, ExpBQLInfer):    return True
+    if isinstance(exp, ExpBQLInferConf): return True
     return False
 
 LitNull = namedtuple('LitNull', ['value'])

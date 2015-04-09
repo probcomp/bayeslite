@@ -40,7 +40,7 @@ command(createtab_as)	::= K_CREATE temp_opt(temp) K_TABLE
 				table_name(name) K_AS query(query).
 command(createtab_sim)	::= K_CREATE temp_opt(temp) K_TABLE
 				ifnotexists(ifnotexists)
-				table_name(name) K_AS simulate(sim).
+				table_name(name) K_AS simulate(query).
 command(droptab)	::= K_DROP K_TABLE ifexists(ifexists) table_name(name).
 command(altertab)	::= K_ALTER K_TABLE table_name(table)
 				altertab_cmds(cmds).
@@ -51,6 +51,9 @@ altertab_cmds(many)	::= altertab_cmds(cmds) T_COMMA altertab_cmd(cmd).
 altertab_cmd(renametab)	::= K_RENAME K_TO table_name(name).
 altertab_cmd(renamecol)	::= K_RENAME k_column_opt column_name(old)
 				K_TO column_name(new).
+altertab_cmd(setdefgen)	::= K_SET K_DEFAULT K_GENERATOR K_TO
+				generator_name(generator).
+altertab_cmd(unsetdefgen)	::= K_UNSET K_DEFAULT K_GENERATOR.
 
 k_column_opt		::= .
 k_column_opt		::= K_COLUMN.
@@ -59,7 +62,8 @@ k_column_opt		::= K_COLUMN.
  * BQL Model Definition Language
  */
 /* XXX Temporary generators?  */
-command(creategen)	::= K_CREATE K_GENERATOR generator_name(name)
+command(creategen)	::= K_CREATE default_opt(defaultp)
+				K_GENERATOR generator_name(name)
 				ifnotexists(ifnotexists)
 				K_FOR table_name(table)
 				K_USING metamodel_name(metamodel)
@@ -69,17 +73,21 @@ command(dropgen)	::= K_DROP K_GENERATOR ifexists(ifexists)
 command(altergen)	::= K_ALTER K_GENERATOR generator_name(generator)
 				altergen_cmds(cmds).
 
+default_opt(none)	::= .
+default_opt(some)	::= K_DEFAULT.
+
 altergen_cmds(one)	::= altergen_cmd(cmd).
 altergen_cmds(many)	::= altergen_cmds(cmds) T_COMMA altergen_cmd(cmd).
 
 altergen_cmd(renamegen)	::= K_RENAME K_TO generator_name(name).
 
-generator_schema(one)	::= generator_column(col).
-generator_schema(many)	::= generator_schema(cols) T_COMMA
-				generator_column(col).
-generator_column(gc)	::= column_name(name) stattype(stattype).
+generator_schema(one)	::= generator_schemum(s).
+generator_schema(many)	::= generator_schema(ss) T_COMMA generator_schemum(s).
 
-stattype(s)		::= L_NAME(name).
+generator_schemum(empty)	::= .
+generator_schemum(nonempty)	::= generator_schemum(s) gs_token(t).
+gs_token(comp)			::= T_LROUND generator_schemum(s) T_RROUND.
+gs_token(prim)			::= ANY(t).
 
 /*
  * BQL Model Analysis Language
@@ -90,6 +98,7 @@ command(init_models)	::= K_INITIALIZE L_INTEGER(n) K_MODEL|K_MODELS
 				K_FOR generator_name(generator).
 command(analyze_models)	::= K_ANALYZE generator_name(generator)
 				anmodelset_opt(models) anlimit(anlimit)
+				anckpt(anckpt)
 				wait_opt(wait).
 command(drop_models)	::= K_DROP K_MODEL|K_MODELS modelset_opt(models)
 				K_FROM generator_name(generator).
@@ -116,6 +125,9 @@ modelrange(multi)	::= L_INTEGER(minno) T_MINUS L_INTEGER(maxno).
 anlimit(iterations)	::= K_FOR L_INTEGER(n) K_ITERATION|K_ITERATIONS.
 anlimit(minutes)	::= K_FOR L_INTEGER(n) K_MINUTE|K_MINUTES.
 anlimit(seconds)	::= K_FOR L_INTEGER(n) K_SECOND|K_SECONDS.
+
+anckpt(none)		::= .
+anckpt(niters)		::= K_CHECKPOINT L_INTEGER(n) K_ITERATION|K_ITERATIONS.
 
 wait_opt(none)		::= .
 wait_opt(some)		::= K_WAIT.
@@ -163,12 +175,19 @@ select(s)		::= K_SELECT select_quant(quant) select_columns(cols)
 				order_by(ord)
 				limit_opt(lim).
 
-estimate(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
+estimate(e)		::= K_ESTIMATE select_quant(quant)
+				estimate_columns(cols)
 				K_FROM generator_name(generator)
 				where(cond)
 				group_by(grouping)
 				order_by(ord)
 				limit_opt(lim).
+
+estimate_columns(one)	::= estimate_column(c).
+estimate_columns(many)	::= estimate_columns(cs) T_COMMA estimate_column(c).
+estimate_column(sel)	::= select_column(c).
+estimate_column(inf)	::= K_INFER column_name(col) K_AS column_name(name)
+				K_CONFIDENCE column_name(confname).
 
 /*
  * XXX Can we reformulate this elegantly as a SELECT on the columns of
@@ -233,6 +252,7 @@ as(some)		::= K_AS L_NAME(name).
 from(empty)		::= .
 from(nonempty)		::= K_FROM select_tables(tables).
 
+/* XXX Allow all kinds of joins.  */
 select_tables(one)	::= select_table(t).
 select_tables(many)	::= select_tables(ts) T_COMMA select_table(t).
 
@@ -417,7 +437,7 @@ bitwise_not(bql)	::= bqlfn(b).
  *
  * However, changing primary(e) to expression(e) on the right-hand
  * side of the bqlfn(prob) rule makes the grammar ambiguous, and the
- * surgery necessary to restore the ambiguity is too much trouble.  So
+ * surgery necessary to resolve the ambiguity is too much trouble.  So
  * instead we'll reject unparenthesized PROBABILITY OF X = V with
  * other operators altogether and require explicit parentheses until
  * someone wants to do that surgery.
@@ -440,7 +460,8 @@ bqlfn(depprob)		::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
 bqlfn(mutinf)		::= K_MUTUAL K_INFORMATION ofwith(cols)
 				nsamples_opt(nsamp).
 bqlfn(correl)		::= K_CORRELATION ofwith(cols).
-bqlfn(infer)		::= K_INFER column_name(col) K_CONF primary(cf).
+bqlfn(infer)		::= K_INFER column_name(col)
+				K_WITH K_CONFIDENCE primary(cf).
 bqlfn(primary)		::= primary(p).
 
 /*
@@ -602,3 +623,8 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 	K_WHERE
 	K_WITH
 	.
+
+/*
+ * Wildcard token, matches anything else.
+ */
+%wildcard ANY.

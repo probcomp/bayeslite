@@ -20,6 +20,7 @@ import os
 import traceback
 
 import bayeslite
+import bayeslite.bql as bql
 import bayeslite.core as core
 import bayeslite.crosscat
 import bayeslite.guess as guess
@@ -100,15 +101,24 @@ class Shell(cmd.Cmd):
         # Add a line and check whether it finishes a BQL phrase.
         self.bql.write(line)
         self.bql.write('\n')
-        bql = self.bql.getvalue()
-        if parse.bql_string_complete_p(bql):
+        string = self.bql.getvalue()
+        if parse.bql_string_complete_p(string):
             # Reset the BQL input.
             self.bql = StringIO.StringIO()
             self.prompt = self.def_prompt
             try:
-                cursor = self._bdb.execute(bql)
-                with self._bdb.savepoint():
-                    pretty.pp_cursor(self.stdout, cursor)
+                first = True
+                for phrase in parse.parse_bql_string(string):
+                    cursor = bql.execute_phrase(self._bdb, phrase)
+                    # Savepoint outside the execute so the execute can
+                    # begin/rollback/commit transactions.
+                    with self._bdb.savepoint():
+                        # Separate the output tables by a blank line.
+                        if first:
+                            first = False
+                        else:
+                            self.stdout.write('\n')
+                        pretty.pp_cursor(self.stdout, cursor)
             except Exception:
                 self.stdout.write(traceback.format_exc())
         else:

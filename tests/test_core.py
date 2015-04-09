@@ -92,8 +92,8 @@ class DotdogMetamodel(metamodel.IMetamodel):
                 VALUES ('dotdog', 42)
         '''
         bdb.sql_execute(sql)
-    def create_generator(self, bdb, generator_id, column_list):
-        pass
+    def create_generator(self, bdb, table, schema, instantiate):
+        instantiate(schema)
 
 def test_hackmetamodel():
     bdb = bayeslite.BayesDB()
@@ -374,8 +374,7 @@ def test_t1_analysis_iter_deadline():
 def test_t1_infer(rowid, colno, confidence):
     with analyzed_bayesdb_generator(t1(), 1, 1) as (bdb, generator_id):
         if rowid == 0: rowid = bayesdb_maxrowid(bdb, generator_id)
-        bqlfn.bql_infer(bdb, generator_id, colno, rowid, None, confidence,
-            numsamples=1)
+        bqlfn.bql_infer(bdb, generator_id, colno, rowid, confidence)
 
 @pytest.mark.parametrize('colnos,constraints,numpredictions',
     [(colnos, constraints, numpred)
