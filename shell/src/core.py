@@ -170,19 +170,25 @@ class Shell(cmd.Cmd):
         if len(args) > 1:
             if args[1] == '-s':
                 sequential = 'True'
+            else:
+                print 'Invalid argument %s' % (args[1],)
 
         if not os.path.isfile(path):
             self.stdout.write("%s is not a file" % path)
             return
 
         with open(path) as f:
-            for command in f:
-                if sequential:
+            commands = []
+            for i, command in enumerate(f):
+                commands.append(command)
+
+            if sequential:
+                for command in commands:
                     print 'bayeslite> ' + command
                     self.onecmd(command)
                     raw_input('Press any key to continue.')
-                else:
-                    self.cmdqueue.append(command)
+            else:
+                self.cmdqueue.extend(commands)
 
     def _hook(self, cmdname, func, autorehook=False, yes=False, silent=False):
         import types
