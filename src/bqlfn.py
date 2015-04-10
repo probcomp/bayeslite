@@ -81,18 +81,8 @@ def bql_column_correlation(bdb, generator_id, colno0, colno1):
 
 def correlation_pearsonr2(data0, data1):
     import scipy.stats
-    map0 = {}
-    for datum in data0:
-        if datum not in map0:
-            map0[datum] = len(map0)
-    map1 = {}
-    for datum in data1:
-        if datum not in map1:
-            map1[datum] = len(map1)
-    mapped0 = [map0[datum] for datum in data0]
-    mapped1 = [map1[datum] for datum in data1]
-    sqrt_correlation, _p_value = scipy.stats.pearsonr(mapped0, mapped1)
-    correlation = sqrt_correlation ** 2
+    sqrt_correlation, _p_value = scipy.stats.pearsonr(data0, data1)
+    return sqrt_correlation ** 2
 
 def correlation_cramerphi(data0, data1):
     import scipy.stats
