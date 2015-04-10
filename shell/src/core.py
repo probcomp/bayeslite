@@ -158,19 +158,31 @@ class Shell(cmd.Cmd):
                 assert 1 < len(doc)
                 self.stdout.write('.%s %s' % (cmd, '\n'.join(doc[1:])))
 
-    def dot_read(self, path):
+    def dot_read(self, argsin):
         '''read a file of shell commands
         <path/to/file>
 
         Adds a set of dot commands from the file at path to the cmdqueue.
         '''
+        args = argsin.split()
+        path = args[0]
+        sequential = False
+        if len(args) > 1:
+            if args[1] == '-s':
+                sequential = 'True'
+
         if not os.path.isfile(path):
             self.stdout.write("%s is not a file" % path)
             return
 
         with open(path) as f:
             for command in f:
-                self.cmdqueue.append(command)
+                if sequential:
+                    print 'bayeslite> ' + command
+                    self.onecmd(command)
+                    raw_input('Press any key to continue.')
+                else:
+                    self.cmdqueue.append(command)
 
     def _hook(self, cmdname, func, autorehook=False, yes=False, silent=False):
         import types
