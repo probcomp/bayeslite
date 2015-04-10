@@ -16,6 +16,7 @@
 
 import itertools
 import math
+import pytest
 
 import bayeslite
 import bayeslite.crosscat
@@ -28,6 +29,15 @@ def test_guess_stattypes():
     n = ['a', 'b']
     a_z = range(ord('a'), ord('z') + 1)
     rows = [[chr(c), c % 2] for c in a_z]
+    with pytest.raises(ValueError):
+        # Duplicate column names.
+        bayesdb_guess_stattypes(['a', 'a'], rows)
+    with pytest.raises(ValueError):
+        # Too many columns in data.
+        bayesdb_guess_stattypes(['a'], rows)
+    with pytest.raises(ValueError):
+        # Too few columns in data.
+        bayesdb_guess_stattypes(['a', 'b', 'c'], rows)
     assert bayesdb_guess_stattypes(n, rows) == ['key', 'categorical']
     rows = [[chr(c), c % 2] for c in a_z] + [['q', ord('q') % 2]]
     assert bayesdb_guess_stattypes(n, rows) == ['categorical', 'categorical']
@@ -53,6 +63,30 @@ def test_guess_stattypes():
     rows = [[isqrt(i), chr(c) + chr(d) + chr(e)] for i, (c, d, e)
         in enumerate(itertools.product(a_z, a_z, a_z))]
     assert bayesdb_guess_stattypes(n, rows) == ['categorical', 'key']
+    with pytest.raises(ValueError):
+        # Nonunique key.
+        bayesdb_guess_stattypes(n, rows, overrides=[('a', 'key')])
+    with pytest.raises(ValueError):
+        # Two keys.
+        bayesdb_guess_stattypes(n, rows,
+            overrides=[('a', 'key'), ('b', 'key')])
+    with pytest.raises(ValueError):
+        # No such column.
+        bayesdb_guess_stattypes(n, rows, overrides=[('c', 'numerical')])
+    with pytest.raises(ValueError):
+        # Column overridden twice.
+        bayesdb_guess_stattypes(n, rows,
+            overrides=[('a', 'key'), ('a', 'ignore')])
+    with pytest.raises(ValueError):
+        # Column overridden twice, even to the same stattype.
+        bayesdb_guess_stattypes(n, rows,
+            overrides=[('a', 'key'), ('a', 'key')])
+    assert bayesdb_guess_stattypes(n, rows, overrides=[('b', 'key')]) == \
+        ['categorical', 'key']
+    assert bayesdb_guess_stattypes(n, rows, overrides=[('b', 'ignore')]) == \
+        ['categorical', 'ignore']
+    assert bayesdb_guess_stattypes(n, rows, overrides=[('a', 'numerical')]) ==\
+        ['numerical', 'key']
 
 def test_guess_generator():
     bdb = bayeslite.BayesDB()
@@ -65,7 +99,14 @@ def test_guess_generator():
     cc = crosscat.LocalEngine.LocalEngine(seed=0)
     metamodel = bayeslite.crosscat.CrosscatMetamodel(cc)
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)
+    with pytest.raises(ValueError):
+        # No modelled columns.  (x is key.)
+        bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat',
+            overrides=[('y', 'ignore'), ('z', 'ignore')])
     bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+    with pytest.raises(ValueError):
+        # Generator already exists.
+        bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
     assert list(bdb.sql_execute('SELECT * FROM bayesdb_generator_column')) == [
         (1, 1, 'categorical'),
         (1, 2, 'numerical'),

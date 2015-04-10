@@ -136,8 +136,37 @@ def bayesdb_load_legacy_models(bdb, generator, table, metamodel, pathname,
         else:
             raise ValueError('No such generator: %s' % (repr(generator),))
 
-        # XXX Populate bayesdb_crosscat_metadata,
-        # bayesdb_crosscat_column, bayesdb_crosscat_column_codemap.
+        # Map the case of the column names in the models.
+        #
+        # XXX Check more than just the column names.
+        for modelno in models:      # dictionary
+            theta = models[modelno]
+            if 'X_L' not in theta:
+                raise IOError('Invalid legacy model: no X_L in theta[%u]' %
+                    (modelno,))
+            X_L = theta['X_L']
+            if 'view_state' not in X_L:
+                raise IOError('Invalid legacy model'
+                    ': no view_state in X_L[%u]' %
+                    (modelno,))
+            for viewno, view_state in enumerate(X_L['view_state']):
+                if 'column_names' not in view_state:
+                    raise IOError('Invalid legacy model: no column names'
+                        ' in view state %u of X_L[%u]' % (viewno, modelno))
+                view_column_names = view_state['column_names']
+                if not isinstance(view_column_names, list):
+                    raise IOError('Invalid legacy model'
+                        ': non-list for view %u columns in X_L[%u]'
+                        % (viewno, modelno))
+                for i in range(len(view_column_names)):
+                    name = view_column_names[i]
+                    if not core.bayesdb_table_has_column(bdb, table, name):
+                        raise IOError('No such column in table %s: %s' %
+                            (repr(table), repr(name)))
+                    # Canonicalize the case.
+                    colno = core.bayesdb_table_column_number(bdb, table, name)
+                    name = core.bayesdb_table_column_name(bdb, table, colno)
+                    view_column_names[i] = name
 
         # Determine where to start numbering the new models.
         generator_id = core.bayesdb_get_generator(bdb, generator)
