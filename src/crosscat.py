@@ -253,11 +253,11 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                     theta = json.loads(theta_json)
                     if len(theta['logscore']) != 0 or \
                        len(theta['num_views']) != 0 or \
-                       len(theta['column_crp_alphas']) != 0:
+                       len(theta['column_crp_alpha']) != 0:
                         raise IOError('Non-stub diagnostics!')
                     del theta['logscore']
                     del theta['num_views']
-                    del theta['column_crp_alphas']
+                    del theta['column_crp_alpha']
                     theta_json = json.dumps(theta)
                     bdb.sql_execute(update_sql, {
                         'generator_id': generator_id,
