@@ -96,6 +96,8 @@ def correlation_pearsonr2(data0, data1):
 
 def correlation_cramerphi(data0, data1):
     import scipy.stats
+    n = len(data0)
+    assert n == len(data1)
     unique0 = unique_indices(data0)
     unique1 = unique_indices(data1)
     min_levels = min(len(unique0), len(unique1))
@@ -145,7 +147,7 @@ def define_correlation(stattype0, stattype1, method):
     assert (stattype0, stattype1) not in correlation_methods
     correlation_methods[stattype0, stattype1] = method
 
-define_correlation('categorical', 'categorical', correlation_pearsonr2)
+define_correlation('categorical', 'categorical', correlation_cramerphi)
 define_correlation('categorical', 'numerical', correlation_anovar2_dc)
 define_correlation('numerical', 'categorical', correlation_anovar2_cd)
 define_correlation('numerical', 'numerical', correlation_pearsonr2)
