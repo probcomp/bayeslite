@@ -657,6 +657,16 @@ def test_trivial_commands():
         ''')
         bdb.execute('initialize 1 model if not exists for t_ccd')
         bdb.execute('analyze t_ccd for 1 iteration wait')
+        bdb.execute('''
+            create generator t_cce for t0 using crosscat(
+                guess(*),
+                age numerical,
+                rank numerical
+            )
+        ''')
+        bdb.execute('initialize 1 model if not exists for t_cce')
+        bdb.execute('analyze t_cce for 1 iteration wait')
+        list(bdb.execute('estimate pairwise correlation from t_cce'))
         bdb.execute('initialize 2 models if not exists for t0')
         bdb.execute('analyze t0 for 1 iteration wait')
         list(bdb.execute('estimate * from t0'))
