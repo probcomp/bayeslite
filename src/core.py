@@ -139,6 +139,7 @@ def bayesdb_generator_metamodel(bdb, id):
         raise ValueError('No such generator: %s' % (repr(id),))
     else:
         if row[0] not in bdb.metamodels:
+            name = bayesdb_generator_name(bdb, id)
             raise ValueError('Metamodel of generator %s not registered: %s' %
                 (repr(name), repr(row[0])))
         return bdb.metamodels[row[0]]
