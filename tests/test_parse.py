@@ -455,6 +455,20 @@ def test_select_bql():
                     ast.ExpApp(False, 'f', [ast.ExpCol(None, 'c2')])),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select key, t.(estimate columns from t'
+            ' order by dependence probability with c desc limit 4)'
+            ' from t order by key asc') == \
+        [ast.Select(ast.SELQUANT_ALL, [
+                ast.SelColExp(ast.ExpCol(None, 'key'), None),
+                ast.SelColSub('t',
+                    ast.EstCols([], 't', None,
+                        [ast.Ord(ast.ExpBQLDepProb('c', None), ast.ORD_DESC)],
+                        ast.Lim(ast.ExpLit(ast.LitInt(4)), None)))
+            ],
+            [ast.SelTab('t', None)],
+            None, None,
+            [ast.Ord(ast.ExpCol(None, 'key'), ast.ORD_ASC)],
+            None)]
 
 def test_trivial_scan_error():
     with pytest.raises(parse.ParseError):

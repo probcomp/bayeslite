@@ -154,6 +154,10 @@ SELQUANT_ALL = 'all'
 SelColAll = namedtuple('SelColAll', [
     'table',                    # XXX name
 ])
+SelColSub = namedtuple('SelColSub', [
+    'table',                    # XXX name
+    'query',                    # XXX subquery
+])
 SelColExp = namedtuple('SelColExp', [
     'expression',               # Exp*
     'name',                     # XXX name
