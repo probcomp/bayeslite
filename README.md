@@ -78,10 +78,10 @@ def get_cust_order_data_name(self, args):
     query = '''
     SELECT Orders.OrderID, Orders.OrderDate, Customers.CustomerName
         FROM Customers, Orders
-        WHERE Customers.CustomerName="{}" 
-            AND Customers.CustomerID=Orders.CustomerID;
-    '''.format(args)
-    cursor = self.bql.execute_phrase(self._bdb, query)
+        WHERE Customers.CustomerName = ? 
+            AND Customers.CustomerID = Orders.CustomerID;
+    '''
+    cursor = self._bdb.execute(query, (args,))
     pretty.pp_cursor(self.stdout, cursor)
 
 ```
