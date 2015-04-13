@@ -81,21 +81,13 @@ def bql_column_correlation(bdb, generator_id, colno0, colno1):
 
 def correlation_pearsonr2(data0, data1):
     import scipy.stats
-    map0 = {}
-    for datum in data0:
-        if datum not in map0:
-            map0[datum] = len(map0)
-    map1 = {}
-    for datum in data1:
-        if datum not in map1:
-            map1[datum] = len(map1)
-    mapped0 = [map0[datum] for datum in data0]
-    mapped1 = [map1[datum] for datum in data1]
-    sqrt_correlation, _p_value = scipy.stats.pearsonr(mapped0, mapped1)
-    correlation = sqrt_correlation ** 2
+    sqrt_correlation, _p_value = scipy.stats.pearsonr(data0, data1)
+    return sqrt_correlation ** 2
 
 def correlation_cramerphi(data0, data1):
     import scipy.stats
+    n = len(data0)
+    assert n == len(data1)
     unique0 = unique_indices(data0)
     unique1 = unique_indices(data1)
     min_levels = min(len(unique0), len(unique1))
@@ -116,6 +108,8 @@ def correlation_cramerphi(data0, data1):
 
 def correlation_anovar2(data_group, data_y):
     import scipy.stats
+    n = len(data_group)
+    assert n == len(data_y)
     group_values = unique(data_group)
     n_groups = len(group_values)
     if n_groups == len(data_group):
@@ -143,7 +137,7 @@ def define_correlation(stattype0, stattype1, method):
     assert (stattype0, stattype1) not in correlation_methods
     correlation_methods[stattype0, stattype1] = method
 
-define_correlation('categorical', 'categorical', correlation_pearsonr2)
+define_correlation('categorical', 'categorical', correlation_cramerphi)
 define_correlation('categorical', 'numerical', correlation_anovar2_dc)
 define_correlation('numerical', 'categorical', correlation_anovar2_cd)
 define_correlation('numerical', 'numerical', correlation_pearsonr2)

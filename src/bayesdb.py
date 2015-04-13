@@ -19,7 +19,6 @@ import sqlite3
 
 import bayeslite.bql as bql
 import bayeslite.bqlfn as bqlfn
-import bayeslite.core as core
 import bayeslite.parse as parse
 import bayeslite.schema as schema
 import bayeslite.txn as txn

@@ -577,7 +577,7 @@ def test_trivial_commands():
         assert core.bayesdb_generator_table(bdb, generator_id) == 't'
         bdb.execute('alter table t rename to T')
         assert core.bayesdb_generator_table(bdb, generator_id) == 'T'
-        bdb.execute('estimate count(*) from t_cc')
+        list(bdb.execute('estimate count(*) from t_cc'))
         bdb.execute('alter table t rename to t')
         assert core.bayesdb_generator_table(bdb, generator_id) == 't'
         bdb.execute('alter generator t_cc rename to t0_cc')
@@ -588,7 +588,7 @@ def test_trivial_commands():
         assert core.bayesdb_generator_name(bdb, generator_id) == 'T0_cc'
         bdb.execute('alter generator t0_CC rename to t0_cc')
         assert core.bayesdb_generator_name(bdb, generator_id) == 't0_cc'
-        bdb.execute('estimate count(*) from t0_cc')
+        list(bdb.execute('estimate count(*) from t0_cc'))
         with pytest.raises(ValueError):
             bdb.execute('estimate count(*) from t_cc')
         bdb.execute('alter generator t0_cc rename to T0_cc')
@@ -608,11 +608,12 @@ def test_trivial_commands():
             assert core.bayesdb_generator_column_number(bdb, generator_id,
                     'sex') \
                 == colno
-            bdb.execute('select sex from t0')
+            list(bdb.execute('select sex from t0'))
             with pytest.raises(AssertionError): # XXX
                 bdb.execute('select gender from t0')
                 assert False, 'Need to fix quoting of unknown columns!'
-            bdb.execute('estimate infer sex with confidence 0.9 from t_cc')
+            list(bdb.execute('estimate infer sex with confidence 0.9'
+                ' from t_cc'))
             with pytest.raises(ValueError):
                 bdb.execute('estimate infer gender with confidence 0.9'
                     ' from t_cc')
@@ -626,16 +627,16 @@ def test_trivial_commands():
         bdb.execute('analyze t_cc models 0-1 for 1 iteration wait')
         bdb.execute('analyze t_cc models 0,1 for 1 iteration wait')
         bdb.execute('analyze t_cc for 1 iteration wait')
-        bdb.execute('select * from t0')
-        bdb.execute('select * from T0')
-        bdb.execute('estimate * from t_cc')
-        bdb.execute('estimate * from T_CC')
-        bdb.execute('estimate pairwise row similarity from t_cc')
-        bdb.execute('select value from'
-            ' (estimate pairwise correlation from t_cc)')
-        bdb.execute('estimate infer age with confidence 0.9 from t_cc')
-        bdb.execute('estimate infer AGE with confidence 0.9 from T_cc')
-        bdb.execute('estimate infer aGe with confidence 0.9 from T_cC')
+        list(bdb.execute('select * from t0'))
+        list(bdb.execute('select * from T0'))
+        list(bdb.execute('estimate * from t_cc'))
+        list(bdb.execute('estimate * from T_CC'))
+        list(bdb.execute('estimate pairwise row similarity from t_cc'))
+        list(bdb.execute('select value from'
+            ' (estimate pairwise correlation from t_cc)'))
+        list(bdb.execute('estimate infer age with confidence 0.9 from t_cc'))
+        list(bdb.execute('estimate infer AGE with confidence 0.9 from T_cc'))
+        list(bdb.execute('estimate infer aGe with confidence 0.9 from T_cC'))
         with pytest.raises(ValueError):
             bdb.execute('estimate infer agee with confidence 0.9 from t_cc')
         # Make sure it works with the table too if we create a default
@@ -656,26 +657,36 @@ def test_trivial_commands():
         ''')
         bdb.execute('initialize 1 model if not exists for t_ccd')
         bdb.execute('analyze t_ccd for 1 iteration wait')
+        bdb.execute('''
+            create generator t_cce for t0 using crosscat(
+                guess(*),
+                age numerical,
+                rank numerical
+            )
+        ''')
+        bdb.execute('initialize 1 model if not exists for t_cce')
+        bdb.execute('analyze t_cce for 1 iteration wait')
+        list(bdb.execute('estimate pairwise correlation from t_cce'))
         bdb.execute('initialize 2 models if not exists for t0')
         bdb.execute('analyze t0 for 1 iteration wait')
-        bdb.execute('estimate * from t0')
-        bdb.execute('estimate columns from t0')
-        bdb.execute('estimate columns from t0'
-            ' order by dependence probability with age')
-        bdb.execute('estimate pairwise correlation from t0')
-        bdb.execute('estimate pairwise row similarity from t0')
+        list(bdb.execute('estimate * from t0'))
+        list(bdb.execute('estimate columns from t0'))
+        list(bdb.execute('estimate columns from t0'
+            ' order by dependence probability with age'))
+        list(bdb.execute('estimate pairwise correlation from t0'))
+        list(bdb.execute('estimate pairwise row similarity from t0'))
         # XXX Distinguish the two generators somehow.
         bdb.execute('alter table t0 set default generator to t_cc')
-        bdb.execute('estimate * from t0')
-        bdb.execute('estimate columns from t0')
-        bdb.execute('estimate pairwise correlation from t0')
-        bdb.execute('estimate pairwise row similarity from t0')
+        list(bdb.execute('estimate * from t0'))
+        list(bdb.execute('estimate columns from t0'))
+        list(bdb.execute('estimate pairwise correlation from t0'))
+        list(bdb.execute('estimate pairwise row similarity from t0'))
         bdb.execute('alter table t0 rename to t')
         bdb.execute('alter table t set default generator to t_ccd')
-        bdb.execute('estimate * from t')
-        bdb.execute('estimate columns from t')
-        bdb.execute('estimate pairwise correlation from t')
-        bdb.execute('estimate pairwise row similarity from t')
+        list(bdb.execute('estimate * from t'))
+        list(bdb.execute('estimate columns from t'))
+        list(bdb.execute('estimate pairwise correlation from t'))
+        list(bdb.execute('estimate pairwise row similarity from t'))
         bdb.execute('drop generator t_ccd')
         with pytest.raises(ValueError):
             bdb.execute('initialize 3 models if not exists for t_ccd')
@@ -706,10 +717,10 @@ def test_trivial_commands():
         bdb.execute('initialize 7 models if not exists for t')
         bdb.execute('analyze t_cc for 1 iteration wait')
         bdb.execute('analyze t for 1 iteration wait')
-        bdb.execute('estimate * from t')
-        bdb.execute('estimate columns from t')
-        bdb.execute('estimate pairwise correlation from t')
-        bdb.execute('estimate pairwise row similarity from t')
+        list(bdb.execute('estimate * from t'))
+        list(bdb.execute('estimate columns from t'))
+        list(bdb.execute('estimate pairwise correlation from t'))
+        list(bdb.execute('estimate pairwise row similarity from t'))
 
 def test_trivial_deadline():
     with test_core.t1() as (bdb, _table_id):
@@ -1106,9 +1117,9 @@ def test_txn():
             with open(fname, 'rU') as f:
                 bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True)
-            bdb.execute('SELECT * FROM t')
+            list(bdb.execute('SELECT * FROM t'))
             guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
-            bdb.execute('ESTIMATE * FROM t_cc')
+            list(bdb.execute('ESTIMATE * FROM t_cc'))
         finally:
             bdb.execute('ROLLBACK')
         with pytest.raises(sqlite3.OperationalError):
@@ -1122,9 +1133,9 @@ def test_txn():
             with open(fname, 'rU') as f:
                 bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True)
-            bdb.execute('SELECT * FROM t')
+            list(bdb.execute('SELECT * FROM t'))
             guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
-            bdb.execute('ESTIMATE * FROM t_cc')
+            list(bdb.execute('ESTIMATE * FROM t_cc'))
             with pytest.raises(ValueError):
                 bdb.execute('DROP TABLE t')
             bdb.execute('DROP GENERATOR t_cc')
@@ -1146,9 +1157,9 @@ def test_txn():
             with open(fname, 'rU') as f:
                 bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True)
-            bdb.execute('SELECT * FROM t')
+            list(bdb.execute('SELECT * FROM t'))
             guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
-            bdb.execute('ESTIMATE * FROM t_cc')
+            list(bdb.execute('ESTIMATE * FROM t_cc'))
             with pytest.raises(ValueError):
                 bdb.execute('DROP TABLE t')
             bdb.execute('DROP GENERATOR t_cc')
@@ -1170,13 +1181,13 @@ def test_txn():
             with open(fname, 'rU') as f:
                 bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True)
-            bdb.execute('SELECT * FROM t')
+            list(bdb.execute('SELECT * FROM t'))
             guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
-            bdb.execute('ESTIMATE * FROM t_cc')
+            list(bdb.execute('ESTIMATE * FROM t_cc'))
         finally:
             bdb.execute('COMMIT')
-        bdb.execute('SELECT * FROM t')
-        bdb.execute('ESTIMATE * FROM t_cc')
+        list(bdb.execute('SELECT * FROM t'))
+        list(bdb.execute('ESTIMATE * FROM t_cc'))
 
         # XXX To do: Make sure other effects (e.g., analysis) get
         # rolled back by ROLLBACK.
