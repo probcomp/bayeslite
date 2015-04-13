@@ -264,6 +264,7 @@ class Shell(cmd.Cmd):
         if len(tokens) != 2:
             self.stdout.write('Usage:'
                 ' .guess <generator> <table>\n')
+            return
         generator = tokens[0]
         table = tokens[1]
         try:
