@@ -160,31 +160,51 @@ class Shell(cmd.Cmd):
 
     def dot_read(self, argsin):
         '''read a file of shell commands
-        <path/to/file>
+        <path/to/file> [options]
 
         Adds a set of dot commands from the file at path to the cmdqueue.
+        Options:
+        -s : Sequential. Wait for keypress after each command has completed
+        -c : Do not add comments to the command queue.
         '''
         args = argsin.split()
         path = args[0]
         sequential = False
+        hide_comments = False
         if len(args) > 1:
-            if args[1] == '-s':
-                sequential = 'True'
-            else:
-                print 'Invalid argument %s' % (args[1],)
+            for arg in set(args[1:]):
+                if arg not in ['-s', '-c']:
+                    print 'Invalid argument %s\n' % (arg,)
+                    return
+                if arg == '-s':
+                    sequential = True
+
+                if arg == '-c':
+                    hide_comments = True
 
         if not os.path.isfile(path):
-            self.stdout.write("%s is not a file" % path)
+            self.stdout.write("%s is not a file\n" % path)
             return
+
+        is_comment = lambda s: s.strip()[:2] == '--'
+        is_continuation = lambda s: s.startswith(('\t', '  ', '    ',))
 
         with open(path) as f:
             commands = []
-            for i, command in enumerate(f):
-                commands.append(command)
+            command = []
+            for i, line in enumerate(f):
+                if (hide_comments and is_comment(line)) or line.isspace():
+                    continue
+                if len(command) == 0 or is_continuation(line):
+                    command.append(line.strip())
+                else:
+                    commands.append(' '.join(command) + '\n')
+                    command = [line.strip()]
+            commands.append(' '.join(command) + '\n')
 
             if sequential:
                 for command in commands:
-                    print 'bayeslite> ' + command
+                    self.stdout.write('bayeslite> ' + command)
                     self.onecmd(command)
                     raw_input('Press any key to continue.')
             else:
@@ -280,6 +300,10 @@ class Shell(cmd.Cmd):
         `bdb' is bound to the BayesDB instance.
         '''
         try:
+            # XXX: Is there any reason to use exec and give the users a limited
+            # set of globals and locals? I'm not sure whether security is an issue
+            # because eval is plenty dangerous---it just takes slightly more
+            # effort to be malicious with eval than with exec.
             globals = {'bayeslite': bayeslite}
             locals = {'bdb': self._bdb}
             value = eval(line, globals, locals)
