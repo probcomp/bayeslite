@@ -3,7 +3,7 @@
 set -Ceu
 
 : ${PYTHON:=python}
-: ${PY_TEST:=py.test}
+: ${PY_TEST:=`which py.test`}
 
 root=`cd -- "$(dirname -- "$0")" && pwd`
 platform=`"${PYTHON}" -c 'import distutils.util as u; print u.get_platform()'`
@@ -18,8 +18,8 @@ export PYTHONPATH="${bayeslite}${PYTHONPATH:+:${PYTHONPATH}}"
     rm -rf build
     "$PYTHON" setup.py build
     if [ $# -eq 0 ]; then
-        "$PY_TEST" tests shell/tests
+        "$PYTHON" "$PY_TEST" tests shell/tests
     else
-        "$PY_TEST" "$@"
+        "$PYTHON" "$PY_TEST" "$@"
     fi
 )
