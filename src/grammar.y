@@ -244,6 +244,7 @@ select_columns(many)	::= select_columns(cs) T_COMMA select_column(c).
 
 select_column(star)	::= T_STAR.
 select_column(qstar)	::= table_name(table) T_DOT T_STAR.
+select_column(qsub)	::= table_name(table) T_DOT T_LROUND query(q) T_RROUND.
 select_column(exp)	::= expression(e) as(name).
 
 as(none)		::= .

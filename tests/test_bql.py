@@ -538,6 +538,11 @@ def test_estimate_pairwise_selected_columns():
         ' AND c1.tabname = g.tabname AND c1.colno = gc1.colno' \
         ' AND c0.colno IN (3, 1) AND c1.colno IN (3, 1);'
 
+def test_select_columns_subquery():
+    assert bql2sql('select id, t1.(estimate columns from t1_cc'
+            ' order by name asc limit 2) from t1') == \
+        'SELECT "id", "t1"."age", "t1"."label" FROM "t1";'
+
 def test_trivial_commands():
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
         # XXX Query parameters!

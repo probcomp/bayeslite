@@ -256,6 +256,9 @@ def compile_estimate_infer(bdb, estimate, out):
         elif isinstance(col, ast.SelColAll):
             raise NotImplementedError('You have no business'
                 ' mixing * with INFER!')
+        elif isinstance(col, ast.SelColSub):
+            raise NotImplementedError('You have no business'
+                ' mixing subquery-chosen columns with INFER!')
         else:
             assert False, 'Invalid ESTIMATE column: %s' % (repr(col),)
     out.write(' FROM ')
@@ -337,6 +340,30 @@ def compile_select_column(bdb, selcol, i, named, bql_compiler, out):
             compile_table_name(bdb, selcol.table, out)
             out.write('.')
         out.write('*')
+    elif isinstance(selcol, ast.SelColSub):
+        if not named:
+            raise NotImplementedError('Don\'t mix <tab>.(<query>) with INFER!')
+        # XXX We need some kind of type checking to guarantee that
+        # what we get out of this will be a list of columns in the
+        # named table.
+        subout = out.subquery()
+        with compiling_paren(bdb, subout,
+                'SELECT CAST(name AS TEXT) FROM (', ')'):
+            compile_query(bdb, selcol.query, subout)
+        subquery = subout.getvalue()
+        subbindings = subout.getbindings()
+        qt = sqlite3_quote_name(selcol.table)
+        subfirst = True
+        for row in bdb.sql_execute(subquery, subbindings):
+            assert len(row) == 1
+            assert isinstance(row[0], unicode)
+            assert str(row[0])
+            if subfirst:
+                subfirst = False
+            else:
+                out.write(', ')
+            qc = sqlite3_quote_name(str(row[0]))
+            out.write('%s.%s' % (qt, qc))
     elif isinstance(selcol, ast.SelColExp):
         compile_expression(bdb, selcol.expression, bql_compiler, out)
         if not named:

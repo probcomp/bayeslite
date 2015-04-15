@@ -315,6 +315,7 @@ class BQLSemantics(object):
 
     def p_select_column_star(self):             return ast.SelColAll(None)
     def p_select_column_qstar(self, table):     return ast.SelColAll(table)
+    def p_select_column_qsub(self, table, q):   return ast.SelColSub(table, q)
     def p_select_column_exp(self, e, name):     return ast.SelColExp(e, name)
 
     def p_as_none(self):                        return None
