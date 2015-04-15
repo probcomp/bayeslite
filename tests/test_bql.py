@@ -629,6 +629,7 @@ def test_trivial_commands():
         bdb.execute('alter generator t0_cc rename to t_cc')     # XXX
         bdb.execute('alter table t rename to t0')               # XXX
         bdb.execute('analyze t_cc model 0 for 1 iteration wait')
+        bdb.execute('analyze t_cc model 1 for 1 iteration wait')
         bdb.execute('analyze t_cc models 0-1 for 1 iteration wait')
         bdb.execute('analyze t_cc models 0,1 for 1 iteration wait')
         bdb.execute('analyze t_cc for 1 iteration wait')

@@ -554,8 +554,9 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                 if iterations is not None:
                     iterations -= n_steps
                 cc_cache = self._crosscat_cache(bdb)
-                for modelno, theta, X_L, X_D \
-                        in zip(update_modelnos, thetas, X_L_list, X_D_list):
+                for i, (modelno, theta, X_L, X_D) \
+                        in enumerate(
+                            zip(update_modelnos, thetas, X_L_list, X_D_list)):
                     theta['iterations'] += n_steps
                     theta['X_L'] = X_L
                     theta['X_D'] = X_D
@@ -594,10 +595,10 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                         'generator_id': generator_id,
                         'modelno': modelno,
                         'checkpoint': checkpoint,
-                        'logscore': diagnostics['logscore'][-1][modelno],
-                        'num_views': diagnostics['num_views'][-1][modelno],
+                        'logscore': diagnostics['logscore'][-1][i],
+                        'num_views': diagnostics['num_views'][-1][i],
                         'column_crp_alpha':
-                            diagnostics['column_crp_alpha'][-1][modelno],
+                            diagnostics['column_crp_alpha'][-1][i],
                         'iterations': theta['iterations'],
                     })
                     if cc_cache is not None:
