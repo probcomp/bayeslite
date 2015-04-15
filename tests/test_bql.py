@@ -669,6 +669,9 @@ def test_trivial_commands():
                 rank numerical
             )
         ''')
+        with pytest.raises(ValueError):
+            # No models to analyze.
+            bdb.execute('analyze t_cce for 1 iteration wait')
         bdb.execute('initialize 1 model if not exists for t_cce')
         bdb.execute('analyze t_cce for 1 iteration wait')
         list(bdb.execute('estimate pairwise correlation from t_cce'))

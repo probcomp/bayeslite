@@ -536,7 +536,9 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                     update_modelnos = modelnos
                     thetas = [self._crosscat_theta(bdb, generator_id, modelno)
                         for modelno in update_modelnos]
-                assert 0 < len(thetas)
+                if len(thetas) == 0:
+                    raise ValueError('No models to analyze for generator: %s' %
+                        (core.bayesdb_generator_name(bdb, generator_id),))
                 X_L_list = [theta['X_L'] for theta in thetas]
                 X_D_list = [theta['X_D'] for theta in thetas]
                 X_L_list, X_D_list, diagnostics = self._crosscat.analyze(
