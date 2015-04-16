@@ -630,11 +630,13 @@ class CrosscatMetamodel(metamodel.IMetamodel):
             numsamples = 100
         X_L_list = self._crosscat_latent_state(bdb, generator_id)
         X_D_list = self._crosscat_latent_data(bdb, generator_id)
+        cc_colno0 = crosscat_cc_colno(bdb, generator_id, colno0)
+        cc_colno1 = crosscat_cc_colno(bdb, generator_id, colno1)
         r = self._crosscat.mutual_information(
             M_c=self._crosscat_metadata(bdb, generator_id),
             X_L_list=X_L_list,
             X_D_list=X_D_list,
-            Q=[(colno0, colno1)],
+            Q=[(cc_colno0, cc_colno1)],
             n_samples=int(math.ceil(float(numsamples) / len(X_L_list)))
         )
         # r has one answer per element of Q, so take the first one.
