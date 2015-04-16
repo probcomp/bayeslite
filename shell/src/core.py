@@ -85,6 +85,15 @@ class Shell(cmd.Cmd):
         if line == 'EOF':
             self.stdout.write('\nMoriturus te querio.\n')
             return True
+        if self.prompt == self.def_prompt:
+            if line.startswith('.'):
+                cmd = line
+                for i, c in enumerate(line):
+                    if c in (' ', '\t'):
+                        cmd = line[:i]
+                        break
+                self.stdout.write('Unknown command: %s\n' % (cmd,))
+                return False
         # Add a line and check whether it finishes a BQL phrase.
         self.bql.write(line)
         self.bql.write('\n')
