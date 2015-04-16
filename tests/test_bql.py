@@ -629,6 +629,7 @@ def test_trivial_commands():
         bdb.execute('alter generator t0_cc rename to t_cc')     # XXX
         bdb.execute('alter table t rename to t0')               # XXX
         bdb.execute('analyze t_cc model 0 for 1 iteration wait')
+        bdb.execute('analyze t_cc model 1 for 1 iteration wait')
         bdb.execute('analyze t_cc models 0-1 for 1 iteration wait')
         bdb.execute('analyze t_cc models 0,1 for 1 iteration wait')
         bdb.execute('analyze t_cc for 1 iteration wait')
@@ -669,6 +670,9 @@ def test_trivial_commands():
                 rank numerical
             )
         ''')
+        with pytest.raises(ValueError):
+            # No models to analyze.
+            bdb.execute('analyze t_cce for 1 iteration wait')
         bdb.execute('initialize 1 model if not exists for t_cce')
         bdb.execute('analyze t_cce for 1 iteration wait')
         list(bdb.execute('estimate pairwise correlation from t_cce'))

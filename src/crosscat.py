@@ -536,7 +536,9 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                     update_modelnos = modelnos
                     thetas = [self._crosscat_theta(bdb, generator_id, modelno)
                         for modelno in update_modelnos]
-                assert 0 < len(thetas)
+                if len(thetas) == 0:
+                    raise ValueError('No models to analyze for generator: %s' %
+                        (core.bayesdb_generator_name(bdb, generator_id),))
                 X_L_list = [theta['X_L'] for theta in thetas]
                 X_D_list = [theta['X_D'] for theta in thetas]
                 X_L_list, X_D_list, diagnostics = self._crosscat.analyze(
@@ -552,8 +554,9 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                 if iterations is not None:
                     iterations -= n_steps
                 cc_cache = self._crosscat_cache(bdb)
-                for modelno, theta, X_L, X_D \
-                        in zip(update_modelnos, thetas, X_L_list, X_D_list):
+                for i, (modelno, theta, X_L, X_D) \
+                        in enumerate(
+                            zip(update_modelnos, thetas, X_L_list, X_D_list)):
                     theta['iterations'] += n_steps
                     theta['X_L'] = X_L
                     theta['X_D'] = X_D
@@ -592,10 +595,10 @@ class CrosscatMetamodel(metamodel.IMetamodel):
                         'generator_id': generator_id,
                         'modelno': modelno,
                         'checkpoint': checkpoint,
-                        'logscore': diagnostics['logscore'][-1][modelno],
-                        'num_views': diagnostics['num_views'][-1][modelno],
+                        'logscore': diagnostics['logscore'][-1][i],
+                        'num_views': diagnostics['num_views'][-1][i],
                         'column_crp_alpha':
-                            diagnostics['column_crp_alpha'][-1][modelno],
+                            diagnostics['column_crp_alpha'][-1][i],
                         'iterations': theta['iterations'],
                     })
                     if cc_cache is not None:
@@ -627,11 +630,13 @@ class CrosscatMetamodel(metamodel.IMetamodel):
             numsamples = 100
         X_L_list = self._crosscat_latent_state(bdb, generator_id)
         X_D_list = self._crosscat_latent_data(bdb, generator_id)
+        cc_colno0 = crosscat_cc_colno(bdb, generator_id, colno0)
+        cc_colno1 = crosscat_cc_colno(bdb, generator_id, colno1)
         r = self._crosscat.mutual_information(
             M_c=self._crosscat_metadata(bdb, generator_id),
             X_L_list=X_L_list,
             X_D_list=X_D_list,
-            Q=[(colno0, colno1)],
+            Q=[(cc_colno0, cc_colno1)],
             n_samples=int(math.ceil(float(numsamples) / len(X_L_list)))
         )
         # r has one answer per element of Q, so take the first one.
