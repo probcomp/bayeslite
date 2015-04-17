@@ -100,3 +100,7 @@ class BayesDB(object):
         """
         with txn.bayesdb_savepoint(self):
             yield
+
+    def set_progress_handler(self, handler, n):
+        """Call HANDLER periodically during query execution."""
+        self.sqlite3.set_progress_handler(handler, n)
