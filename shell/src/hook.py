@@ -1,5 +1,6 @@
 import threading
 import contextlib
+import traceback
 
 the_current_shell = threading.local()
 the_current_shell.value = None
@@ -31,6 +32,7 @@ class bayesdb_shellhookexp(object):
         try:
             return self.func(*args)
         except Exception as err:
+            print traceback.format_exc()
             print err
 
 
