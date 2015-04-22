@@ -18,10 +18,10 @@ import math
 import time
 
 import bayeslite.core as core
+import bayeslite.stats as stats
 
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
-from bayeslite.stats import arithmetic_mean
 from bayeslite.util import casefold
 from bayeslite.util import unique
 from bayeslite.util import unique_indices
@@ -59,7 +59,6 @@ def bayesdb_bql(fn, cookie, *args):
 
 # Two-column function:  CORRELATION [OF <col0> WITH <col1>]
 def bql_column_correlation(bdb, generator_id, colno0, colno1):
-    import scipy.stats          # pearsonr, chi2_contingency, f_oneway
     st0 = core.bayesdb_generator_column_stattype(bdb, generator_id, colno0)
     st1 = core.bayesdb_generator_column_stattype(bdb, generator_id, colno1)
     if (st0, st1) not in correlation_methods:
@@ -80,12 +79,9 @@ def bql_column_correlation(bdb, generator_id, colno0, colno1):
     return correlation_methods[st0, st1](data0, data1)
 
 def correlation_pearsonr2(data0, data1):
-    import scipy.stats
-    sqrt_correlation, _p_value = scipy.stats.pearsonr(data0, data1)
-    return sqrt_correlation ** 2
+    return stats.pearsonr(data0, data1)**2
 
 def correlation_cramerphi(data0, data1):
-    import scipy.stats
     n = len(data0)
     assert n == len(data1)
     unique0 = unique_indices(data0)
@@ -102,12 +98,10 @@ def correlation_cramerphi(data0, data1):
                 if data0[i] == data0[j0] and data1[i] == data1[j1]:
                     c += 1
             ct[i0][i1] = c
-    chisq, _p, _dof, _expected = scipy.stats.chi2_contingency(ct,
-        correction=False)
+    chisq = stats.chi2_contingency(ct, correction=False)
     return math.sqrt(chisq / (n * (min_levels - 1)))
 
 def correlation_anovar2(data_group, data_y):
-    import scipy.stats
     n = len(data_group)
     assert n == len(data_y)
     group_values = unique(data_group)
@@ -121,7 +115,7 @@ def correlation_anovar2(data_group, data_y):
             if data_group[i] == v:
                 sample.append(data_y[i])
         samples.append(sample)
-    F, _p = scipy.stats.f_oneway(*samples)
+    F = stats.f_oneway(samples)
     return 1 - 1/(1 + F*((n_groups - 1) / (n - n_groups)))
 
 def correlation_anovar2_dc(discrete_data, continuous_data):
