@@ -14,11 +14,14 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import os
 import pytest
 import pexpect
 
 TIMEOUT = 2
-TEST_CSV_FILENAME = 'dha.csv'
+ROOT = os.path.dirname(os.path.abspath(__file__))
+DHA_CSV = os.path.join(ROOT, 'dha.csv')
+THOOKS_PY = os.path.join(ROOT, 'thooks.py')
 
 
 @pytest.fixture
@@ -32,7 +35,7 @@ def spawntable():
     c.expect('bayeslite>', timeout=TIMEOUT)
     assert not an_error_probably_happened(c.before)
 
-    c.sendline('.csv dha dha.csv')
+    c.sendline('.csv dha %s' % (DHA_CSV,))
     c.expect('bayeslite>', timeout=TIMEOUT)
     assert not an_error_probably_happened(c.before)
     return 'dha', c
@@ -44,7 +47,7 @@ def spawngen():
     c.expect('bayeslite>', timeout=TIMEOUT)
     assert not an_error_probably_happened(c.before)
 
-    c.sendline('.csv dha dha.csv')
+    c.sendline('.csv dha %s' % (DHA_CSV,))
     c.expect('bayeslite>', timeout=TIMEOUT)
     assert not an_error_probably_happened(c.before)
 
@@ -98,10 +101,12 @@ def test_help_returns_list_of_commands(spawnbdb):
 def test_dot_csv(spawnbdb):
     c = spawnbdb
     c.expect('bayeslite> ', timeout=TIMEOUT)
-    cmd = '.csv dha %s' % (TEST_CSV_FILENAME,)
+    cmd = '.csv dha %s' % (DHA_CSV)
     c.sendline(cmd)
     c.expect('bayeslite> ', timeout=TIMEOUT)
-    assert len(c.before) == len(cmd) + 2
+    assert not an_error_probably_happened(c.before)
+    assert c.before.strip().decode('unicode_escape').replace(' \x08', '') \
+        == cmd.strip()
 
 
 def test_describe_columns_without_generator(spawntable):
@@ -184,7 +189,7 @@ def test_describe_column_with_gnerator(spawngen):
 def test_hook(spawnbdb):
     c = spawnbdb
     c.expect('bayeslite>', timeout=TIMEOUT)
-    c.sendline('.hook thooks.py')
+    c.sendline('.hook %s' % (THOOKS_PY,))
     c.expect('bayeslite>', timeout=TIMEOUT)
 
     assert not an_error_probably_happened(c.before)
