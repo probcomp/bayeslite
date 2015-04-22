@@ -20,7 +20,7 @@ import pexpect
 
 TIMEOUT = 2
 ROOT = os.path.dirname(os.path.abspath(__file__))
-DHA_CSV = os.path.join(ROOT, 'dha.csv')
+DHA_CSV = os.path.join(ROOT, '..', '..', 'tests', 'dha.csv')
 THOOKS_PY = os.path.join(ROOT, 'thooks.py')
 
 
