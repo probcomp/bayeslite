@@ -16,7 +16,6 @@
 
 import StringIO
 import cmd
-import os
 import traceback
 
 import bayeslite
@@ -31,10 +30,10 @@ from bayeslite.util import casefold
 
 
 class Shell(cmd.Cmd):
-    def_prompt          = 'bayeslite> '
-    bql_prompt          = '   bql...> '
-    sql_prompt          = '   sql...> '
-    python_prompt       = 'python...> '
+    def_prompt    = 'bayeslite> '
+    bql_prompt    = '   bql...> '
+    sql_prompt    = '   sql...> '
+    python_prompt = 'python...> '
 
     def __init__(self, bdb, metamodel):
         self.prompt = self.def_prompt
@@ -134,29 +133,29 @@ class Shell(cmd.Cmd):
         tokens = line.split()
         if len(tokens) == 0:
             pad = max(1 + len(cmd) for cmd in self._cmds)
-            for cmd in sorted(self._cmds):
-                method = getattr(self, 'do_.%s' % (cmd,))
+            for cmnd in sorted(self._cmds):
+                method = getattr(self, 'do_.%s' % (cmnd,))
                 if method.__doc__ is not None:
-                    doc = [line.strip() for line in method.__doc__.splitlines()]
+                    doc = [l.strip() for l in method.__doc__.splitlines()]
                 else:
                     doc = ['', '']
                 assert 1 < len(doc)
-                self.stdout.write(' %*s    %s\n' % (pad, '.' + cmd, doc[0]))
+                self.stdout.write(' %*s    %s\n' % (pad, '.' + cmnd, doc[0]))
             self.stdout.write('Type `.help <cmd>\''
-                ' for help on the command <cmd>.\n')
+                              ' for help on the command <cmd>.\n')
         else:
-            for cmd in tokens:
-                if not hasattr(self, 'do_.%s' % (cmd,)):
-                    self.stdout.write('No such command %s.\n' % (repr(cmd),))
+            for cmnd in tokens:
+                if not hasattr(self, 'do_.%s' % (cmnd,)):
+                    self.stdout.write('No such command %s.\n' % (repr(cmnd),))
                     return
-                method = getattr(self, 'do_.%s' % (cmd,))
+                method = getattr(self, 'do_.%s' % (cmnd,))
                 if method.__doc__ is not None:
-                    doc = [line.strip() for line in method.__doc__.splitlines()]
+                    doc = [l.strip() for l in method.__doc__.splitlines()]
                 else:
-                    self.stdout.write('No help for %s.\n' % (repr(cmd),))
+                    self.stdout.write('No help for %s.\n' % (repr(cmnd),))
                     continue
                 assert 1 < len(doc)
-                self.stdout.write('.%s %s' % (cmd, '\n'.join(doc[1:])))
+                self.stdout.write('.%s %s' % (cmnd, '\n'.join(doc[1:])))
 
     def dot_read(self, argsin):
         '''read a file of shell commands
@@ -166,49 +165,68 @@ class Shell(cmd.Cmd):
         Options:
         -s : Sequential. Wait for keypress after each command has completed
         -c : Do not add comments to the command queue.
+        -v : Verbose
         '''
         args = argsin.split()
         path = args[0]
         sequential = False
         hide_comments = False
+        verbose = False
         if len(args) > 1:
             for arg in set(args[1:]):
-                if arg not in ['-s', '-c']:
+                if arg not in ['-s', '-c', '-v']:
                     print 'Invalid argument %s\n' % (arg,)
                     return
                 if arg == '-s':
                     sequential = True
+                    verbose = True
 
                 if arg == '-c':
                     hide_comments = True
 
-        if not os.path.isfile(path):
-            self.stdout.write("%s is not a file\n" % path)
-            return
+                if arg == '-v':
+                    verbose = True
 
         is_comment = lambda s: s.strip()[:2] == '--'
         is_continuation = lambda s: s.startswith(('\t', '  ', '    ',))
 
-        with open(path) as f:
-            commands = []
-            command = []
-            for i, line in enumerate(f):
-                if (hide_comments and is_comment(line)) or line.isspace():
-                    continue
-                if len(command) == 0 or is_continuation(line):
-                    command.append(line.strip())
-                else:
-                    commands.append(' '.join(command) + '\n')
-                    command = [line.strip()]
-            commands.append(' '.join(command) + '\n')
+        try:
+            with open(path, 'rU') as f:
+                padding = ' '*11
+                cmds_exec = []
+                cmds_disp = []
+                cmd_exec = []
+                cmd_disp = []
+                for i, line in enumerate(f):
+                    if (hide_comments and is_comment(line)) or line.isspace():
+                        continue
 
-            if sequential:
-                for command in commands:
-                    self.stdout.write('bayeslite> ' + command)
-                    self.onecmd(command)
-                    raw_input('Press any key to continue.')
-            else:
-                self.cmdqueue.extend(commands)
+                    if len(cmd_exec) == 0:
+                        cmd_exec.append(line.strip())
+                        cmd_disp.append(line)
+                    elif is_continuation(line):
+                        cmd_exec.append(line.strip())
+                        cmd_disp.append(padding + line)
+                    else:
+                        cmds_exec.append(' '.join(cmd_exec) + '\n')
+                        cmd_exec = [line.strip()]
+                        cmds_disp.append(''.join(cmd_disp))
+                        cmd_disp = [line]
+                cmds_exec.append(' '.join(cmd_exec) + '\n')
+                cmds_disp.append('\n'.join(cmd_disp))
+
+                for cmd_disp, cmd_exec in zip(cmds_disp, cmds_exec):
+                    if verbose:
+                        self.stdout.write('bayeslite> ' + cmd_disp)
+                    self.onecmd(cmd_exec)
+                    if sequential:
+                        raw_input('Press any key to continue.')
+        except IOError:
+            self.stdout.write('%s not found.\n' % (path,))
+            return
+        except Exception as err:
+            self.stdout.write('Unexpected exception: {}.\n'.format(err))
+            return
 
     def _hook(self, cmdname, func, autorehook=False, yes=False, silent=False):
         import types
@@ -224,10 +242,11 @@ class Shell(cmd.Cmd):
             affirmative = ['yes', 'y']
             negative = ['no', 'n']
             if not autorehook:
-                self.stdout.write("Do you want to rehook the %s command?\n" % cmdname)
+                self.stdout.write("Do you want to rehook the %s command?\n"
+                                  % cmdname)
                 yesno = raw_input('y/n? ').lower()
                 while yesno not in affirmative+negative:
-                    self.stdout.write("Invalid response to yes or no question.\n")
+                    self.stdout.write("Invalid response to yes/no question.\n")
                     yesno = raw_input('y/n? ').lower()
             else:
                 yesno = 'yes'
@@ -252,12 +271,13 @@ class Shell(cmd.Cmd):
         import imp
 
         if path in self._hooked_filenames:
-            self.stdout.write("The file %s has already been hooked. Do you want to rehook?\n" % (path,))
+            self.stdout.write("The file %s has already been hooked. Do you "
+                              "want to rehook?\n" % (path,))
             yesno = raw_input('y/n? ')
             affirmative = ['yes', 'y']
             negative = ['no', 'n']
             while yesno.lower() not in affirmative+negative:
-                self.stdout.write("Invalid response to yes or no question.\n")
+                self.stdout.write("Invalid response to yes/no question.\n")
                 yesno = raw_input('y/n? ')
 
             if yesno in negative:
@@ -265,7 +285,7 @@ class Shell(cmd.Cmd):
                 return
 
         try:
-            user_hooks = imp.load_source('bayeslite_shell_hooks', path)
+            imp.load_source('bayeslite_shell_hooks', path)
         except IOError:
             self.stdout.write("No such file or directory %s\n" % path)
             return
@@ -300,10 +320,6 @@ class Shell(cmd.Cmd):
         `bdb' is bound to the BayesDB instance.
         '''
         try:
-            # XXX: Is there any reason to use exec and give the users a limited
-            # set of globals and locals? I'm not sure whether security is an issue
-            # because eval is plenty dangerous---it just takes slightly more
-            # effort to be malicious with eval than with exec.
             globals = {'bayeslite': bayeslite}
             locals = {'bdb': self._bdb}
             value = eval(line, globals, locals)
@@ -370,8 +386,8 @@ class Shell(cmd.Cmd):
         pathname = tokens[1]
         try:
             with open(pathname, 'rU') as f:
-                bayeslite.bayesdb_read_csv(self._bdb, table, f,
-                    header=True, create=True, ifnotexists=False)
+                bayeslite.bayesdb_read_csv(self._bdb, table, f, header=True,
+                                           create=True, ifnotexists=False)
         except Exception:
             self.stdout.write(traceback.format_exc())
 
@@ -385,14 +401,14 @@ class Shell(cmd.Cmd):
         # XXX Lousy, lousy tokenizer.
         tokens = line.split()
         if len(tokens) != 2:
-            self.stdout.write('Usage:'
-                ' .codebook <table> </path/to/codebook.csv>\n')
+            self.stdout.write('Usage: .codebook <table> '
+                              '</path/to/codebook.csv>\n')
             return
         table = tokens[0]
         pathname = tokens[1]
         try:
             bayeslite.bayesdb_load_codebook_csv_file(self._bdb, table,
-                pathname)
+                                                     pathname)
         except Exception:
             self.stdout.write(traceback.format_exc())
 
@@ -406,14 +422,14 @@ class Shell(cmd.Cmd):
         # XXX Lousy, lousy tokenizer.
         tokens = line.split()
         if len(tokens) != 2:
-            self.stdout.write('Usage:'
-                ' .guess <generator> <table>\n')
+            self.stdout.write('Usage: '
+                              '.guess <generator> <table>\n')
             return
         generator = tokens[0]
         table = tokens[1]
         try:
             guess.bayesdb_guess_generator(self._bdb, generator, table,
-                self._metamodel)
+                                          self._metamodel)
         except Exception:
             self.stdout.write(traceback.format_exc())
 
@@ -429,15 +445,16 @@ class Shell(cmd.Cmd):
         tokens = line.split()
         if len(tokens) != 3:
             self.stdout.write('Usage:'
-                ' .legacymodels <generator> <table>'
-                ' </path/to/models.pkl.gz>\n')
+                              ' .legacymodels <generator> <table>'
+                              ' </path/to/models.pkl.gz>\n')
             return
         generator = tokens[0]
         table = tokens[1]
         pathname = tokens[2]
         try:
             bayeslite.bayesdb_load_legacy_models(self._bdb, generator, table,
-                self._metamodel, pathname, create=True)
+                                                 self._metamodel, pathname,
+                                                 create=True)
         except Exception:
             self.stdout.write(traceback.format_exc())
 
@@ -468,7 +485,7 @@ class Shell(cmd.Cmd):
                 for table in params:
                     if not core.bayesdb_has_table(self._bdb, table):
                         self.stdout.write('No such table: %s\n' %
-                            (repr(table),))
+                                          (repr(table),))
                         ok = False
                 if not ok:
                     return
@@ -483,7 +500,7 @@ class Shell(cmd.Cmd):
             with self._bdb.savepoint():
                 pretty.pp_cursor(self.stdout, self._bdb.execute(sql, params))
         elif casefold(tokens[0]) == 'generator' or \
-           casefold(tokens[0]) == 'generators':
+                casefold(tokens[0]) == 'generators':
             params = None
             qualifier = None
             if len(tokens) == 1:
@@ -497,7 +514,7 @@ class Shell(cmd.Cmd):
                 for generator in params:
                     if not core.bayesdb_has_generator(self._bdb, generator):
                         self.stdout.write('No such generator: %s\n' %
-                            (repr(generator),))
+                                          (repr(generator),))
                         ok = False
                 if not ok:
                     return
@@ -549,13 +566,13 @@ class Shell(cmd.Cmd):
                             modelno = int(token)
                         except ValueError:
                             self.stdout.write('Invalid model number: %s\n' %
-                                (token,))
+                                              (token,))
                             return
                         else:
-                            if not core.bayesdb_generator_has_model(self._bdb,
-                                    generator_id, modelno):
+                            if not core.bayesdb_generator_has_model(
+                                    self._bdb, generator_id, modelno):
                                 self.stdout.write('No such model: %d\n' %
-                                    (modelno,))
+                                                  (modelno,))
                                 return
                             modelnos.append(modelno)
                     qualifier = 'modelno IN (%s)' % \
@@ -568,4 +585,4 @@ class Shell(cmd.Cmd):
                 pretty.pp_cursor(self.stdout, cursor)
         else:
             self.stdout.write('I don\'t know what a %s is.\n' %
-                (repr(tokens[0]),))
+                              (repr(tokens[0]),))
