@@ -54,14 +54,14 @@ def unique_indices(array):
             array_unique.append(i)
     return sorted(array_unique)
 
-def float_sum(array):
-    """Return the sum of elements of ARRAY in floating-point.
+def float_sum(iterable):
+    """Return the sum of elements of ITERABLE in floating-point.
 
     This implementation uses Kahan-Babuška summation.
     """
     s = 0
     c = 0
-    for x in array:
+    for x in iterable:
         xf = float(x)
         s1 = s + xf
         if abs(x) < abs(s):
