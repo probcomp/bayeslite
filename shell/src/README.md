@@ -41,20 +41,20 @@ bayeslite> .zmatrix ESTIMATE PAIRWISE DEPENDENCE PROBABILITY FROM mytable_cc -f 
 ```python
 # my_contrib.py
 from bayeslite.shell import pretty
-from bayeslite.shell.hook import bayelite_shell_cmd
+from bayeslite.shell.hook import bayeslite_shell_cmd
 
 @bayeslite_shell_cmd("hello")
 def say_hello_to_name(self, args):
     """ Says hello """
     self.stdout.write("Hello, %s.\n" % (args,))
 
-@bayelite_shell_cmd("byebye", autorehook=True)
+@bayeslite_shell_cmd("byebye", autorehook=True)
 def say_hello_to_name(self, args):
     """ Says bye-bye """
     self.stdout.write("Bye-bye.\n")
 
 # Alias a long query you use a lot 
-@bayelite_shell_cmd("mycmd", autorehook=True):
+@bayeslite_shell_cmd("mycmd", autorehook=True):
 def get_cust_order_data_name(self, args):
     '''Get order id, order date, and cutomer name, by customer name 
     <customer_name>
