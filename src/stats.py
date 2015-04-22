@@ -40,3 +40,38 @@ assert pearsonr([1,2,3], [2,4,6]) == +1.0
 assert pearsonr([1,2,3], [-2,-4,-6]) == -1.0
 assert pearsonr([1,2,3], [6,4,2]) == -1.0
 assert pearsonr([1,2,3], [+1,-1,+1]) == 0.0
+
+def signum(x):
+    if x < 0:
+        return -1
+    elif 0 < x:
+        return +1
+    else:
+        return 0
+
+def relerr(expected, actual):
+    assert abs((actual - expected)/expected)
+
+def chi2_contingency(contingency, correction=None):
+    if correction is None:
+        correction is True
+    assert 0 < len(contingency)
+    assert all(all(isinstance(v, int) for v in row) for row in contingency)
+    n = float(sum(sum(row) for row in contingency))
+    n0 = len(contingency)
+    n1 = len(contingency[0])
+    assert all(n1 == len(row) for row in contingency)
+    p0 = [float_sum(contingency[i0][i1]/n for i1 in range(n1))
+        for i0 in range(n0)]
+    p1 = [float_sum(contingency[i0][i1]/n for i0 in range(n0))
+        for i1 in range(n1)]
+    def q(i0, i1):
+        O = contingency[i0][i1]
+        E = n*p0[i0]*p1[i1]
+        if correction:
+            O += 0.5*signum(E - O)
+        return ((O - E)**2)/E
+    return float_sum(q(i0, i1) for i0 in range(n0) for i1 in range(n1))
+
+assert relerr(7.66, chi2_contingency([[4,2,3],[3,16,2]], correction=False)) \
+    < 0.01
