@@ -28,9 +28,9 @@ def pearsonr(a0, a1):
     m0 = arithmetic_mean(a0)
     m1 = arithmetic_mean(a1)
     num = float_sum((x0 - m0)*(x1 - m1) for x0, x1 in zip(a0, a1))
-    den0_root = float_sum((x0 - m0)**2 for x0 in a0)
-    den1_root = float_sum((x1 - m1)**2 for x1 in a1)
-    r = (num / math.sqrt(den0_root*den1_root))
+    den0_sq = float_sum((x0 - m0)**2 for x0 in a0)
+    den1_sq = float_sum((x1 - m1)**2 for x1 in a1)
+    r = (num / math.sqrt(den0_sq*den1_sq))
     # Clamp r in [-1, +1] in case of floating-point error.
     r = min(r, +1.0)
     r = max(r, -1.0)
