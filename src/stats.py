@@ -23,6 +23,10 @@ def arithmetic_mean(array):
     return float_sum(array) / len(array)
 
 def pearsonr(a0, a1):
+    """Pearson r: correlation coefficient for a sample.
+
+    https://en.wikipedia.org/wiki/Pearson_product-moment_correlation_coefficient
+    """
     n = len(a0)
     assert n == len(a1)
     m0 = arithmetic_mean(a0)
