@@ -74,3 +74,17 @@ def chi2_contingency(contingency, correction=None):
     return float_sum(q(i0, i1) for i0 in range(n0) for i1 in range(n1))
 
 assert relerr(7.66, chi2_contingency([[4,2,3],[3,16,2]])) < 0.01
+
+def f_oneway(groups):
+    K = len(groups)
+    N = sum(len(group) for group in groups)
+    means = [arithmetic_mean(group) for group in groups]
+    overall_mean = float_sum(x for x in group for group in groups) / N
+    bgv = float_sum(len(group) * (mean - overall_mean)**2 / (K - 1)
+        for group, mean in zip(groups, means))
+    wgv = float_sum((x - mean)**2/(N - K) for x in group
+        for group, mean in zip(groups, means))
+    return bgv / wgv
+
+assert relerr(9.3,
+        f_oneway([[6,8,4,5,3,4],[8,12,9,11,6,8],[13,9,11,8,7,12]])) < 0.01
