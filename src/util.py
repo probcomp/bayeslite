@@ -54,10 +54,6 @@ def unique_indices(array):
             array_unique.append(i)
     return sorted(array_unique)
 
-def arithmetic_mean(array):
-    """Return the arithmetic mean of elements of ARRAY in floating-point."""
-    return float_sum(array) / len(array)
-
 def float_sum(array):
     """Return the sum of elements of ARRAY in floating-point.
 

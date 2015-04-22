@@ -21,7 +21,7 @@ import bayeslite.core as core
 
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
-from bayeslite.util import arithmetic_mean
+from bayeslite.stats import arithmetic_mean
 from bayeslite.util import casefold
 from bayeslite.util import unique
 from bayeslite.util import unique_indices
