@@ -89,6 +89,10 @@ def chi2_contingency(contingency, correction=None):
 assert relerr(7.66, chi2_contingency([[4,2,3],[3,16,2]])) < 0.01
 
 def f_oneway(groups):
+    """F-test in one-way analysis of variance (ANOVA).
+
+    https://en.wikipedia.org/wiki/F-test#Multiple-comparison_ANOVA_problems
+    """
     K = len(groups)
     N = sum(len(group) for group in groups)
     means = [arithmetic_mean(group) for group in groups]
