@@ -73,5 +73,4 @@ def chi2_contingency(contingency, correction=None):
         return ((O - E)**2)/E
     return float_sum(q(i0, i1) for i0 in range(n0) for i1 in range(n1))
 
-assert relerr(7.66, chi2_contingency([[4,2,3],[3,16,2]], correction=False)) \
-    < 0.01
+assert relerr(7.66, chi2_contingency([[4,2,3],[3,16,2]])) < 0.01
