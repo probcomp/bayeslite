@@ -46,6 +46,7 @@ assert pearsonr([1,2,3], [6,4,2]) == -1.0
 assert pearsonr([1,2,3], [+1,-1,+1]) == 0.0
 
 def signum(x):
+    """Sign of x: -1 if x<0, 0 if x=0, +1 if x>0."""
     if x < 0:
         return -1
     elif 0 < x:
