@@ -59,6 +59,13 @@ def relerr(expected, actual):
     assert abs((actual - expected)/expected)
 
 def chi2_contingency(contingency, correction=None):
+    """Pearson chi^2 test of independence on contingency table.
+
+    If correction=True, move each observation count in the direction
+    of the expectation by 1/2.
+
+    https://en.wikipedia.org/wiki/Pearson%27s_chi-squared_test#Test_of_independence
+    """
     if correction is None:
         correction is True
     assert 0 < len(contingency)
