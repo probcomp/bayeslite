@@ -14,75 +14,68 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import getopt
+import os
+import argparse
 
 import bayeslite
 import bayeslite.crosscat
 import bayeslite.shell.core as shell
+import bayeslite.shell.hook as hook
 
-def usage(stderr, argv):
-    progname = argv[0]
-    if progname.rfind('/'):
-        progname = progname[progname.rfind('/') + 1:]
-    stderr.write('Usage: %s [-j <njob>] [-s <seed>] [<file.bdb>]\n'
-        % (progname,))
-    return 1
+
+def parse_args(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('bdbpath', type=str, nargs='?', default=':memory:',
+                        help="bayesbd database file")
+    parser.add_argument('-j', '--njob', type=int, default=None,
+                        help="Max number of jobs (processes) useable.")
+    parser.add_argument('-s', '--seed', type=int, default=None,
+                        help="Random seed for the default generator.")
+    parser.add_argument('-f', '--file', type=str, nargs="+", default=None,
+                        help="Path to commands file. May be used to specify a "
+                        "project-specific init file.")
+    parser.add_argument('--batch', action='store_true',
+                        help="Exit after executing file specified with -f.")
+    parser.add_argument('--debug', action='store_true', help="For unit tests.")
+    parser.add_argument('--no-init-file', action='store_true',
+                        help="Do not load ~/.bayesliterc")
+
+    args = parser.parse_args(argv)
+    return args
+
 
 def run(stdin, stdout, stderr, argv):
-    njob = None
-    seed = None
-    try:
-        opts, args = getopt.getopt(argv[1:], '?hj:s:', [])
-    except getopt.GetoptError as e:
-        stderr.write('%s\n' % (str(e),))
-        return usage(stderr, argv)
-    for o, a in opts:
-        if o in ('-h', '-?'):
-            return usage(stderr, argv)
-        elif o == '-j':
-            try:
-                njob = int(a)
-                if njob < 0:
-                    raise ValueError
-            except ValueError:
-                stderr.write('%s: bad number of jobs\n' % (argv[0],))
-                return 1
-        elif o == '-s':
-            try:
-                seed = int(a)
-            except ValueError:
-                stderr.write('%s: bad seed\n' % (argv[0],))
-                return 1
-        else:
-            assert False, 'bad option %s' % (o,)
-    pathname = None
-    if len(args) == 0:
-        pathname = ':memory:'
-    elif len(args) == 1:
-        pathname = args[0]
-    else:
-        return usage(stderr, argv)
-    # if seed is None:
-    #     import os
-    #     seedbuf = os.urandom(32)
-    #     seed = 0
-    #     for b in seedbuf:
-    #         seed <<= 8
-    #         seed |= ord(b)
-    bdb = bayeslite.BayesDB(pathname=pathname)
-    crosscat = None
-    if njob:
+    args = parse_args(argv[1:])
+    bdb = bayeslite.BayesDB(pathname=args.bdbpath)
+
+    # People shouldn't have to ask to go fast, they should have to ask to
+    # slow down.
+    if args.njob not in [0, 1]:
         import crosscat.MultiprocessingEngine as ccme
-        if njob == 0:
-            njob = None
-        crosscat = ccme.MultiprocessingEngine(seed=seed, cpu_count=njob)
+        crosscat = ccme.MultiprocessingEngine(seed=args.seed,
+                                              cpu_count=args.njob)
     else:
         import crosscat.LocalEngine as ccle
-        crosscat = ccle.LocalEngine(seed=seed)
+        crosscat = ccle.LocalEngine(seed=args.seed)
     metamodel = bayeslite.crosscat.CrosscatMetamodel(crosscat)
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)
-    shell.Shell(bdb, 'crosscat').cmdloop()
+    bdbshell = shell.Shell(bdb, 'crosscat', debug=args.debug)
+    with hook.set_current_shell(bdbshell):
+        if not args.no_init_file:
+            init_file = os.path.join(os.path.expanduser('~/.bayesliterc'))
+            if os.path.isfile(init_file):
+                bdbshell.dot_read(init_file)
+
+        if args.file is not None:
+            for path in args.file:
+                if os.path.isfile(path):
+                    bdbshell.dot_read(path)
+                else:
+                    bdbshell.stdout.write('%s is not a file. Aborting.\n' % str(path))
+                    break
+        bdbshell.cmdloop()
     return 0
+
 
 def main():
     import sys
