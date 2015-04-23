@@ -36,7 +36,9 @@ def parse_args(argv):
                         "project-specific init file.")
     parser.add_argument('--batch', action='store_true',
                         help="Exit after executing file specified with -f.")
-    parser.add_argument('--no-init-file', action='store_true', help="Do not load ~/.bayesliterc")
+    parser.add_argument('--debug', action='store_true', help="For unit tests.")
+    parser.add_argument('--no-init-file', action='store_true',
+                        help="Do not load ~/.bayesliterc")
 
     args = parser.parse_args(argv)
     return args
@@ -46,16 +48,18 @@ def run(stdin, stdout, stderr, argv):
     args = parse_args(argv[1:])
     bdb = bayeslite.BayesDB(pathname=args.bdbpath)
 
-    # People shouldn't have to ask  to go fast, they should have to ask to slow down.
+    # People shouldn't have to ask to go fast, they should have to ask to
+    # slow down.
     if args.njob not in [0, 1]:
         import crosscat.MultiprocessingEngine as ccme
-        crosscat = ccme.MultiprocessingEngine(seed=args.seed, cpu_count=args.njob)
+        crosscat = ccme.MultiprocessingEngine(seed=args.seed,
+                                              cpu_count=args.njob)
     else:
         import crosscat.LocalEngine as ccle
         crosscat = ccle.LocalEngine(seed=args.seed)
     metamodel = bayeslite.crosscat.CrosscatMetamodel(crosscat)
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)
-    bdbshell = shell.Shell(bdb, 'crosscat')
+    bdbshell = shell.Shell(bdb, 'crosscat', debug=args.debug)
     with hook.set_current_shell(bdbshell):
         if not args.no_init_file:
             init_file = os.path.join(os.path.expanduser('~/.bayesliterc'))
