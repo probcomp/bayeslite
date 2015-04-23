@@ -18,62 +18,98 @@ import os
 import pytest
 import pexpect
 
+
 TIMEOUT = 2
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DHA_CSV = os.path.join(ROOT, '..', '..', 'tests', 'dha.csv')
 THOOKS_PY = os.path.join(ROOT, 'thooks.py')
 
+READ_DATA = '''
+-- do something that fails (should not kick us out)
+.csv dha
+
+-- create a table properly
+.csv dha {0}
+
+-- single line BQL
+SELECT name FROM dha LIMIT 2;
+
+-- mulitline BQL. 2nd line is space indented; 3rd line is tabbed.
+SELECT name FROM dha
+    ORDER BY name ASC
+    LIMIT 5;
+'''.format(DHA_CSV)
+
+
+class spawnjr(pexpect.spawn):
+    def expectprompt(self):
+        return self.expect('bayeslite> ', timeout=TIMEOUT)
+
+
+@pytest.fixture
+def read_data(request):
+    bql_filename = 'read_test.bql'
+    with open(bql_filename, 'w') as f:
+        f.write(READ_DATA)
+
+    def fin():
+        os.remove(bql_filename)
+
+    request.addfinalizer(fin)
+    return bql_filename
+
 
 @pytest.fixture
 def spawnbdb():
-    return pexpect.spawn('bayeslite')
+    return spawnjr('bayeslite --no-init-file --debug')
 
 
 @pytest.fixture
 def spawntable():
-    c = pexpect.spawn('bayeslite')
-    c.expect('bayeslite>', timeout=TIMEOUT)
+    c = spawnjr('bayeslite')
+    c.expectprompt()
     assert not an_error_probably_happened(c.before)
 
     c.sendline('.csv dha %s' % (DHA_CSV,))
-    c.expect('bayeslite>', timeout=TIMEOUT)
+    c.expectprompt()
     assert not an_error_probably_happened(c.before)
     return 'dha', c
 
 
 @pytest.fixture
 def spawngen():
-    c = pexpect.spawn('bayeslite')
-    c.expect('bayeslite>', timeout=TIMEOUT)
+    c = spawnjr('bayeslite')
+    c.expectprompt()
     assert not an_error_probably_happened(c.before)
 
     c.sendline('.csv dha %s' % (DHA_CSV,))
-    c.expect('bayeslite>', timeout=TIMEOUT)
+    c.expectprompt()
     assert not an_error_probably_happened(c.before)
 
     c.sendline('.guess dha_cc dha')
-    c.expect('bayeslite>', timeout=TIMEOUT)
+    c.expectprompt()
     assert not an_error_probably_happened(c.before)
     return 'dha_cc', c
 
 
 def an_error_probably_happened(string):
-    error_clues = ['Error', 'Traceback']
-    return any([x in string for x in error_clues])
+    error_clues = ['error', 'traceback', 'exception']
+    stringlower = string.lower()
+    return any([x in stringlower for x in error_clues])
 
 
 # Tests begin
 # ````````````````````````````````````````````````````````````````````````````
 def test_shell_loads(spawnbdb):
     c = spawnbdb
-    c.expect('bayeslite>', timeout=TIMEOUT)
+    c.expectprompt()
 
 
 def test_python_expression(spawnbdb):
     c = spawnbdb
-    c.expect('bayeslite>', timeout=TIMEOUT)
+    c.expectprompt()
     c.sendline('.python 2 * 3')
-    c.expect('bayeslite>', timeout=TIMEOUT)
+    c.expectprompt()
 
     assert not an_error_probably_happened(c.before)
     assert '6' in c.before
@@ -81,9 +117,9 @@ def test_python_expression(spawnbdb):
 
 def test_help_returns_list_of_commands(spawnbdb):
     c = spawnbdb
-    c.expect('bayeslite>', timeout=TIMEOUT)
+    c.expectprompt()
     c.sendline('.help')
-    c.expect('bayeslite>', timeout=TIMEOUT)
+    c.expectprompt()
 
     assert '.codebook' in c.before
     assert '.csv' in c.before
@@ -100,10 +136,10 @@ def test_help_returns_list_of_commands(spawnbdb):
 
 def test_dot_csv(spawnbdb):
     c = spawnbdb
-    c.expect('bayeslite> ', timeout=TIMEOUT)
+    c.expectprompt()
     cmd = '.csv dha %s' % (DHA_CSV)
     c.sendline(cmd)
-    c.expect('bayeslite> ', timeout=TIMEOUT)
+    c.expectprompt()
     assert not an_error_probably_happened(c.before)
     assert c.before.strip().decode('unicode_escape').replace(' \x08', '') \
         == cmd.strip()
@@ -125,7 +161,7 @@ def test_bql_select(spawntable):
                "Alameda County CA\r\n" +\
                "        Albany GA\r\n" +\
                "        Albany NY\r\n"
-    c.expect('bayeslite> ', timeout=TIMEOUT)
+    c.expectprompt()
     assert not an_error_probably_happened(c.before)
     assert checkstr in c.before
 
@@ -134,19 +170,17 @@ def test_guess(spawntable):
     table, c = spawntable
     cmd = '.guess dha_cc dha'
     c.sendline(cmd)
-    c.expect('bayeslite> ', timeout=TIMEOUT)
+    c.expectprompt()
 
-    # add 3 to length of cmd because \r\n is tacked on the end and a space is
-    # tacked onto the front
     assert not an_error_probably_happened(c.before)
-    assert len(c.before) == len(cmd) + 3
+    assert len(c.before.strip()) == len(cmd)
 
 
 def test_sql(spawntable):
     table, c = spawntable
     cmd = '.sql pragma table_info(bayesdb_column)'
     c.sendline(cmd)
-    c.expect('bayeslite> ', timeout=TIMEOUT)
+    c.expectprompt()
 
     assert not an_error_probably_happened(c.before)
 
@@ -164,13 +198,13 @@ def test_sql(spawntable):
 def test_describe_column_with_gnerator(spawngen):
     gen, c = spawngen
     c.sendline('.describe models %s' % (gen,))
-    c.expect('bayeslite> ', timeout=TIMEOUT)
+    c.expectprompt()
 
     checkstr = "modelno | iterations\r\n--------+-----------\r\n"
     assert checkstr in c.before
 
     c.sendline('.describe columns %s' % (gen,))
-    c.expect('bayeslite> ', timeout=TIMEOUT)
+    c.expectprompt()
     assert not an_error_probably_happened(c.before)
 
     splitres = c.before.split('\n')
@@ -188,27 +222,62 @@ def test_describe_column_with_gnerator(spawngen):
 
 def test_hook(spawnbdb):
     c = spawnbdb
-    c.expect('bayeslite>', timeout=TIMEOUT)
+    c.expectprompt()
     c.sendline('.hook %s' % (THOOKS_PY,))
-    c.expect('bayeslite>', timeout=TIMEOUT)
+    c.expectprompt()
 
     assert not an_error_probably_happened(c.before)
     assert 'added command ".myhook"' in c.before
 
     c.sendline('.help')
-    c.expect('bayeslite>', timeout=TIMEOUT)
+    c.expectprompt()
 
     assert not an_error_probably_happened(c.before)
     assert 'myhook help string' in c.before
 
     c.sendline('.help myhook')
-    c.expect('bayeslite>', timeout=TIMEOUT)
+    c.expectprompt()
 
     assert not an_error_probably_happened(c.before)
     assert '.myhook <string>' in c.before
 
     c.sendline('.myhook zoidberg')
-    c.expect('bayeslite>', timeout=TIMEOUT)
+    c.expectprompt()
 
     assert not an_error_probably_happened(c.before)
     assert 'john zoidberg' in c.before
+
+
+def test_read_nonsequential(spawnbdb, read_data):
+    c = spawnbdb
+    c.expectprompt()
+
+    c.sendline('.read %s' % (read_data,))
+    c.expect('--DEBUG: .read complete', timeout=2)
+    res = c.before
+
+    assert not an_error_probably_happened(res)
+
+    assert res.count(' .csv') == 1
+    assert res.count('SELECT') == 0
+
+    # should print SELECT output
+    assert res.count('NAME') == 2
+
+
+def test_read_nonsequential_verbose(spawnbdb, read_data):
+    c = spawnbdb
+    c.expectprompt()
+
+    c.sendline('.read %s -v' % (read_data,))
+    c.expect('--DEBUG: .read complete', timeout=2)
+    res = c.before
+
+    assert not an_error_probably_happened(res)
+
+    # should output help on first failure
+    assert res.count(' .csv') == 3
+    assert res.count('SELECT') == 2
+
+    # should print SELECT output
+    assert res.count('NAME') == 2
