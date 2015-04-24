@@ -167,7 +167,7 @@ def execute_phrase(bdb, phrase, bindings=()):
         with bdb.savepoint():
             table = phrase.table
             if not core.bayesdb_has_table(bdb, table):
-                raise ValueError('No such table: %s' % (repr(table,)))
+                raise ValueError('No such table: %s' % (repr(table),))
             for cmd in phrase.commands:
                 if isinstance(cmd, ast.AlterTabRenameTab):
                     # If the names differ only in case, we have to do
@@ -301,7 +301,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                 INSERT%s INTO bayesdb_generator
                     (name, tabname, metamodel, defaultp)
                     VALUES (:name, :table, :metamodel, :defaultp)
-            ''' % (' OR IGNORE' if phrase.ifnotexists else '')
+            ''' % (' OR IGNORE' if phrase.ifnotexists else '',)
             cursor = bdb.sql_execute(generator_sql, {
                 'name': phrase.name,
                 'table': phrase.table,
