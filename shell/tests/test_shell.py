@@ -14,9 +14,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import contextlib
 import os
 import pexpect
 import pytest
+import tempfile
 
 
 TIMEOUT = 2
@@ -46,17 +48,12 @@ class spawnjr(pexpect.spawn):
         return self.expect('bayeslite> ', timeout=TIMEOUT)
 
 
-@pytest.fixture
-def read_data(request):
-    bql_filename = 'read_test.bql'
-    with open(bql_filename, 'w') as f:
-        f.write(READ_DATA)
-
-    def fin():
-        os.remove(bql_filename)
-
-    request.addfinalizer(fin)
-    return bql_filename
+@contextlib.contextmanager
+def read_data():
+    with tempfile.NamedTemporaryFile(prefix='bayeslite-shell') as temp:
+        with open(temp.name, 'w') as f:
+            f.write(READ_DATA)
+        yield temp.name
 
 
 @pytest.fixture
@@ -246,12 +243,13 @@ def test_hook(spawnbdb):
     assert 'john zoidberg' in c.before
 
 
-def test_read_nonsequential(spawnbdb, read_data):
+def test_read_nonsequential(spawnbdb):
     c = spawnbdb
     c.expectprompt()
 
-    c.sendline('.read %s' % (read_data,))
-    c.expect('--DEBUG: .read complete', timeout=2)
+    with read_data() as fname:
+        c.sendline('.read %s' % (fname,))
+        c.expect('--DEBUG: .read complete', timeout=2)
     res = c.before
 
     assert not an_error_probably_happened(res)
@@ -263,12 +261,13 @@ def test_read_nonsequential(spawnbdb, read_data):
     assert res.count('NAME') == 2
 
 
-def test_read_nonsequential_verbose(spawnbdb, read_data):
+def test_read_nonsequential_verbose(spawnbdb):
     c = spawnbdb
     c.expectprompt()
 
-    c.sendline('.read %s -v' % (read_data,))
-    c.expect('--DEBUG: .read complete', timeout=2)
+    with read_data() as fname:
+        c.sendline('.read %s -v' % (fname,))
+        c.expect('--DEBUG: .read complete', timeout=2)
     res = c.before
 
     assert not an_error_probably_happened(res)
