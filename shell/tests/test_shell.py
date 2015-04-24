@@ -94,7 +94,7 @@ def spawngen():
 def an_error_probably_happened(string):
     error_clues = ['error', 'traceback', 'exception']
     stringlower = string.lower()
-    return any([x in stringlower for x in error_clues])
+    return any(x in stringlower for x in error_clues)
 
 
 # Tests begin
