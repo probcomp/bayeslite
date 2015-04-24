@@ -141,8 +141,6 @@ def test_dot_csv(spawnbdb):
     c.sendline(cmd)
     c.expectprompt()
     assert not an_error_probably_happened(c.before)
-    assert c.before.strip().decode('unicode_escape').replace(' \x08', '') \
-        == cmd.strip()
 
 
 def test_describe_columns_without_generator(spawntable):
