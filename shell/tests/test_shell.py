@@ -15,8 +15,8 @@
 #   limitations under the License.
 
 import os
-import pytest
 import pexpect
+import pytest
 
 
 TIMEOUT = 2
