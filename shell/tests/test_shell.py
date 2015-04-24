@@ -14,9 +14,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import contextlib
 import os
-import pytest
 import pexpect
+import pytest
+import tempfile
 
 
 TIMEOUT = 2
@@ -42,26 +44,28 @@ SELECT name FROM dha
 
 
 class spawnjr(pexpect.spawn):
+    def __init__(self, *args, **kwargs):
+        if 'timeout' not in kwargs:
+            kwargs['timeout'] = TIMEOUT
+        super(spawnjr, self).__init__(*args, **kwargs)
     def expectprompt(self):
-        return self.expect('bayeslite> ', timeout=TIMEOUT)
+        return self.expect('bayeslite> ')
 
 
-@pytest.fixture
-def read_data(request):
-    bql_filename = 'read_test.bql'
-    with open(bql_filename, 'w') as f:
-        f.write(READ_DATA)
-
-    def fin():
-        os.remove(bql_filename)
-
-    request.addfinalizer(fin)
-    return bql_filename
+@contextlib.contextmanager
+def read_data():
+    with tempfile.NamedTemporaryFile(prefix='bayeslite-shell') as temp:
+        with open(temp.name, 'w') as f:
+            f.write(READ_DATA)
+        yield temp.name
 
 
 @pytest.fixture
 def spawnbdb():
-    return spawnjr('bayeslite --no-init-file --debug')
+    c = spawnjr('bayeslite --no-init-file --debug')
+    c.delaybeforesend = 0
+    c.expectprompt()
+    return c
 
 
 @pytest.fixture
@@ -95,19 +99,17 @@ def spawngen():
 def an_error_probably_happened(string):
     error_clues = ['error', 'traceback', 'exception']
     stringlower = string.lower()
-    return any([x in stringlower for x in error_clues])
+    return any(x in stringlower for x in error_clues)
 
 
 # Tests begin
 # ````````````````````````````````````````````````````````````````````````````
 def test_shell_loads(spawnbdb):
     c = spawnbdb
-    c.expectprompt()
 
 
 def test_python_expression(spawnbdb):
     c = spawnbdb
-    c.expectprompt()
     c.sendline('.python 2 * 3')
     c.expectprompt()
 
@@ -117,7 +119,6 @@ def test_python_expression(spawnbdb):
 
 def test_help_returns_list_of_commands(spawnbdb):
     c = spawnbdb
-    c.expectprompt()
     c.sendline('.help')
     c.expectprompt()
 
@@ -136,19 +137,16 @@ def test_help_returns_list_of_commands(spawnbdb):
 
 def test_dot_csv(spawnbdb):
     c = spawnbdb
-    c.expectprompt()
-    cmd = '.csv dha %s' % (DHA_CSV)
+    cmd = '.csv dha %s' % (DHA_CSV,)
     c.sendline(cmd)
     c.expectprompt()
     assert not an_error_probably_happened(c.before)
-    assert c.before.strip().decode('unicode_escape').replace(' \x08', '') \
-        == cmd.strip()
 
 
 def test_describe_columns_without_generator(spawntable):
     table, c = spawntable
     c.sendline('.describe columns %s' % (table,))
-    c.expect('No such generator: %s' % (table,), timeout=TIMEOUT)
+    c.expect('No such generator: %s' % (table,))
 
 
 def test_bql_select(spawntable):
@@ -222,7 +220,6 @@ def test_describe_column_with_gnerator(spawngen):
 
 def test_hook(spawnbdb):
     c = spawnbdb
-    c.expectprompt()
     c.sendline('.hook %s' % (THOOKS_PY,))
     c.expectprompt()
 
@@ -248,12 +245,12 @@ def test_hook(spawnbdb):
     assert 'john zoidberg' in c.before
 
 
-def test_read_nonsequential(spawnbdb, read_data):
+def test_read_nonsequential(spawnbdb):
     c = spawnbdb
-    c.expectprompt()
 
-    c.sendline('.read %s' % (read_data,))
-    c.expect('--DEBUG: .read complete', timeout=2)
+    with read_data() as fname:
+        c.sendline('.read %s' % (fname,))
+        c.expect('--DEBUG: .read complete')
     res = c.before
 
     assert not an_error_probably_happened(res)
@@ -265,12 +262,12 @@ def test_read_nonsequential(spawnbdb, read_data):
     assert res.count('NAME') == 2
 
 
-def test_read_nonsequential_verbose(spawnbdb, read_data):
+def test_read_nonsequential_verbose(spawnbdb):
     c = spawnbdb
-    c.expectprompt()
 
-    c.sendline('.read %s -v' % (read_data,))
-    c.expect('--DEBUG: .read complete', timeout=2)
+    with read_data() as fname:
+        c.sendline('.read %s -v' % (fname,))
+        c.expect('--DEBUG: .read complete')
     res = c.before
 
     assert not an_error_probably_happened(res)
