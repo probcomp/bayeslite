@@ -58,7 +58,9 @@ def read_data():
 
 @pytest.fixture
 def spawnbdb():
-    return spawnjr('bayeslite --no-init-file --debug')
+    c = spawnjr('bayeslite --no-init-file --debug')
+    c.delaybeforesend = 0
+    return c
 
 
 @pytest.fixture
