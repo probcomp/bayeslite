@@ -44,8 +44,12 @@ SELECT name FROM dha
 
 
 class spawnjr(pexpect.spawn):
+    def __init__(self, *args, **kwargs):
+        if 'timeout' not in kwargs:
+            kwargs['timeout'] = TIMEOUT
+        super(spawnjr, self).__init__(*args, **kwargs)
     def expectprompt(self):
-        return self.expect('bayeslite> ', timeout=TIMEOUT)
+        return self.expect('bayeslite> ')
 
 
 @contextlib.contextmanager
@@ -142,7 +146,7 @@ def test_dot_csv(spawnbdb):
 def test_describe_columns_without_generator(spawntable):
     table, c = spawntable
     c.sendline('.describe columns %s' % (table,))
-    c.expect('No such generator: %s' % (table,), timeout=TIMEOUT)
+    c.expect('No such generator: %s' % (table,))
 
 
 def test_bql_select(spawntable):
@@ -246,7 +250,7 @@ def test_read_nonsequential(spawnbdb):
 
     with read_data() as fname:
         c.sendline('.read %s' % (fname,))
-        c.expect('--DEBUG: .read complete', timeout=2)
+        c.expect('--DEBUG: .read complete')
     res = c.before
 
     assert not an_error_probably_happened(res)
@@ -263,7 +267,7 @@ def test_read_nonsequential_verbose(spawnbdb):
 
     with read_data() as fname:
         c.sendline('.read %s -v' % (fname,))
-        c.expect('--DEBUG: .read complete', timeout=2)
+        c.expect('--DEBUG: .read complete')
     res = c.before
 
     assert not an_error_probably_happened(res)
