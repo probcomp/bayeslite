@@ -60,6 +60,7 @@ def read_data():
 def spawnbdb():
     c = spawnjr('bayeslite --no-init-file --debug')
     c.delaybeforesend = 0
+    c.expectprompt()
     return c
 
 
@@ -101,12 +102,10 @@ def an_error_probably_happened(string):
 # ````````````````````````````````````````````````````````````````````````````
 def test_shell_loads(spawnbdb):
     c = spawnbdb
-    c.expectprompt()
 
 
 def test_python_expression(spawnbdb):
     c = spawnbdb
-    c.expectprompt()
     c.sendline('.python 2 * 3')
     c.expectprompt()
 
@@ -116,7 +115,6 @@ def test_python_expression(spawnbdb):
 
 def test_help_returns_list_of_commands(spawnbdb):
     c = spawnbdb
-    c.expectprompt()
     c.sendline('.help')
     c.expectprompt()
 
@@ -135,7 +133,6 @@ def test_help_returns_list_of_commands(spawnbdb):
 
 def test_dot_csv(spawnbdb):
     c = spawnbdb
-    c.expectprompt()
     cmd = '.csv dha %s' % (DHA_CSV,)
     c.sendline(cmd)
     c.expectprompt()
@@ -219,7 +216,6 @@ def test_describe_column_with_gnerator(spawngen):
 
 def test_hook(spawnbdb):
     c = spawnbdb
-    c.expectprompt()
     c.sendline('.hook %s' % (THOOKS_PY,))
     c.expectprompt()
 
@@ -247,7 +243,6 @@ def test_hook(spawnbdb):
 
 def test_read_nonsequential(spawnbdb):
     c = spawnbdb
-    c.expectprompt()
 
     with read_data() as fname:
         c.sendline('.read %s' % (fname,))
@@ -265,7 +260,6 @@ def test_read_nonsequential(spawnbdb):
 
 def test_read_nonsequential_verbose(spawnbdb):
     c = spawnbdb
-    c.expectprompt()
 
     with read_data() as fname:
         c.sendline('.read %s -v' % (fname,))
