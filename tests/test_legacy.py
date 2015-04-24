@@ -25,9 +25,9 @@ import bayeslite.read_csv as read_csv
 import crosscat.LocalEngine
 
 root = os.path.dirname(os.path.abspath(__file__))
-dha_csv = root + '/dha.csv'
-dha_models = root + '/dha_models.pkl.gz'
-dha_codebook = root + '/dha_codebook.csv'
+dha_csv = os.path.join(root, 'dha.csv')
+dha_models = os.path.join(root, 'dha_models.pkl.gz')
+dha_codebook = os.path.join(root, 'dha_codebook.csv')
 
 def test_legacy_models():
     bdb = bayeslite.BayesDB()
