@@ -27,7 +27,9 @@ class BayesDB(object):
     """Class of Bayesian databases.
     """
 
-    def __init__(self, pathname=":memory:"):
+    def __init__(self, pathname=None):
+        if pathname is None:
+            pathname = ":memory:"
         # isolation_level=None actually means that the sqlite3 module
         # will not randomly begin and commit transactions where we
         # didn't ask it to.
