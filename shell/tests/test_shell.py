@@ -36,7 +36,7 @@ READ_DATA = '''
 -- single line BQL
 SELECT name FROM dha LIMIT 2;
 
--- mulitline BQL. 2nd line is space indented; 3rd line is tabbed.
+-- multiline BQL. 2nd line is space indented; 3rd line is tabbed.
 SELECT name FROM dha
     ORDER BY name ASC
     LIMIT 5;
@@ -335,7 +335,7 @@ def test_read_nonsequential_verbose(spawnbdb):
             '----------',
             'Abilene TX',
             '  Akron OH',
-            'bayeslite> -- mulitline BQL.'
+            'bayeslite> -- multiline BQL.'
                 ' 2nd line is space indented; 3rd line is tabbed.',
             'bayeslite> SELECT name FROM dha',
             '',
