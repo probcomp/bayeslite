@@ -25,8 +25,6 @@ import bayeslite.txn as txn
 
 class BayesDB(object):
     """Class of Bayesian databases.
-
-    Interface is loosely based on PEP-249 DB-API.
     """
 
     def __init__(self, pathname=":memory:"):
@@ -50,23 +48,57 @@ class BayesDB(object):
         self.sqlite3 = None
 
     def trace(self, tracer):
+        """Call `tracer` for each BQL query executed.
+
+        `tracer` will be called with two arguments: the query to be
+        executed, as a string; and the sequence or dictionary of
+        bindings.
+
+        Only one tracer can be established at a time.  To remove it,
+        use `untrace`.
+        """
         assert self.tracer is None
         self.tracer = tracer
 
     def untrace(self, tracer):
+        """Stop calling `tracer` for each BQL query executed.
+
+        `tracer` must have been previously established with `trace`.
+        """
         assert self.tracer == tracer
         self.tracer = None
 
     def sql_trace(self, tracer):
+        """Call `tracer` for each SQL query executed.
+
+        `tracer` will be called with two arguments: the query to be
+        executed, as a string; and the sequence or dictionary of
+        bindings.
+
+        Only one tracer can be established at a time.  To remove it,
+        use `sql_untrace`.
+        """
         assert self.sql_tracer is None
         self.sql_tracer = tracer
 
     def sql_untrace(self, tracer):
+        """Stop calling `tracer` for each SQL query executed.
+
+        `tracer` must have been previously established with `sql_trace`.
+        """
         assert self.sql_tracer == tracer
         self.sql_tracer = None
 
     def execute(self, string, bindings=()):
-        """Execute a BQL query and return a cursor for its results."""
+        """Execute a BQL query and return a cursor for its results.
+
+        The argument `string` is a string parsed into a single BQL
+        query.  It must contain exactly one BQL phrase, optionally
+        terminated by a semicolon.
+
+        The argument `bindings` is a sequence or dictionary of
+        bindings for parameters in the query.
+        """
         if self.tracer:
             self.tracer(string, bindings)
         phrases = parse.parse_bql_string(string)
@@ -86,7 +118,15 @@ class BayesDB(object):
         return bql.execute_phrase(self, phrase, bindings)
 
     def sql_execute(self, string, bindings=()):
-        """Execute a SQL query on the underlying SQLite database."""
+        """Execute a SQL query on the underlying SQLite database.
+
+        The argument `string` is a string parsed into a single BQL
+        query.  It must contain exactly one BQL phrase, optionally
+        terminated by a semicolon.
+
+        The argument `bindings` is a sequence or dictionary of
+        bindings for parameters in the query.
+        """
         if self.sql_tracer:
             self.sql_tracer(string, bindings)
         return self.sqlite3.execute(string, bindings)
