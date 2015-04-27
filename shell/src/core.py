@@ -77,7 +77,7 @@ class Shell(cmd.Cmd):
 
     def _uninstallcmd(self, name):
         if name in self._core_commands:
-            raise ValueError("Cannot uninstall core command, '%s'\n" % name)
+            raise ValueError('Cannot uninstall core command: %s\n' % (name,))
         delattr(self, 'do_.%s' % (name,))
         self._cmds.remove(name)
 
