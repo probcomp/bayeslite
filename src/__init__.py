@@ -25,3 +25,4 @@ from bayeslite.metamodel import bayesdb_register_metamodel
 from bayeslite.metamodel import bayesdb_set_default_metamodel
 from bayeslite.read_csv import bayesdb_read_csv
 from bayeslite.read_csv import bayesdb_read_csv_file
+from bayeslite.txn import BayesDBTxnError

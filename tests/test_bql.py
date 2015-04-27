@@ -1087,37 +1087,37 @@ def test_createtab():
 def test_txn():
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
         # Make sure rollback and commit fail outside a transaction.
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BayesDBTxnError):
             bdb.execute('ROLLBACK')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BayesDBTxnError):
             bdb.execute('COMMIT')
 
         # Open a transaction which we'll roll back.
         bdb.execute('BEGIN')
         try:
             # Make sure transactions don't nest.  (Use savepoints.)
-            with pytest.raises(ValueError):
+            with pytest.raises(bayeslite.BayesDBTxnError):
                 bdb.execute('BEGIN')
         finally:
             bdb.execute('ROLLBACK')
 
         # Make sure rollback and commit still fail outside a transaction.
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BayesDBTxnError):
             bdb.execute('ROLLBACK')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BayesDBTxnError):
             bdb.execute('COMMIT')
 
         # Open a transaction which we'll commit.
         bdb.execute('BEGIN')
         try:
-            with pytest.raises(ValueError):
+            with pytest.raises(bayeslite.BayesDBTxnError):
                 bdb.execute('BEGIN')
         finally:
             bdb.execute('COMMIT')
 
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BayesDBTxnError):
             bdb.execute('ROLLBACK')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BayesDBTxnError):
             bdb.execute('COMMIT')
 
         # Make sure ROLLBACK undoes the effects of the transaction.
