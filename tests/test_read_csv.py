@@ -23,7 +23,7 @@ import bayeslite
 
 @contextlib.contextmanager
 def bayesdb(*args, **kwargs):
-    bdb = bayeslite.BayesDB(*args, **kwargs)
+    bdb = bayeslite.bayesdb_open(*args, **kwargs)
     try:
         yield bdb
     finally:

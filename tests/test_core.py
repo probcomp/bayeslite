@@ -51,7 +51,7 @@ def bayesdb(metamodel=None, **kwargs):
     if metamodel is None:
         crosscat = local_crosscat()
         metamodel = bayeslite.crosscat.CrosscatMetamodel(crosscat)
-    bdb = bayeslite.BayesDB(**kwargs)
+    bdb = bayeslite.bayesdb_open(**kwargs)
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)
     bayeslite.bayesdb_set_default_metamodel(bdb, metamodel)
     try:
@@ -96,7 +96,7 @@ class DotdogMetamodel(metamodel.IMetamodel):
         instantiate(schema)
 
 def test_hackmetamodel():
-    bdb = bayeslite.BayesDB()
+    bdb = bayeslite.bayesdb_open()
     bdb.sql_execute('CREATE TABLE t(a INTEGER, b TEXT)')
     bdb.sql_execute("INSERT INTO t (a, b) VALUES (42, 'fnord')")
     bdb.sql_execute('CREATE TABLE u AS SELECT * FROM t')

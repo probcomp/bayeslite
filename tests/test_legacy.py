@@ -30,7 +30,7 @@ dha_models = os.path.join(root, 'dha_models.pkl.gz')
 dha_codebook = os.path.join(root, 'dha_codebook.csv')
 
 def test_legacy_models():
-    bdb = bayeslite.BayesDB()
+    bdb = bayeslite.bayesdb_open()
     cc = crosscat.LocalEngine.LocalEngine(seed=0)
     metamodel = bayeslite.crosscat.CrosscatMetamodel(cc)
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)

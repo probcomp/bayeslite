@@ -23,6 +23,15 @@ import bayeslite.parse as parse
 import bayeslite.schema as schema
 import bayeslite.txn as txn
 
+def bayesdb_open(pathname=None):
+    """Open the BayesDB in the file at `pathname`.
+
+    If there is no file at `pathname`, it is automatically created.
+    If `pathname` is unspecified or None, a temporary in-memory
+    BayesDB instance is created.
+    """
+    return BayesDB(pathname=pathname)
+
 class BayesDB(object):
     """Class of Bayesian databases.
     """

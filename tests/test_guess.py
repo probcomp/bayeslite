@@ -89,7 +89,7 @@ def test_guess_stattypes():
         ['numerical', 'key']
 
 def test_guess_generator():
-    bdb = bayeslite.BayesDB()
+    bdb = bayeslite.bayesdb_open()
     bdb.sql_execute('CREATE TABLE t(x NUMERIC, y NUMERIC, z NUMERIC)')
     a_z = range(ord('a'), ord('z') + 1)
     aa_zz = ((c, d) for c in a_z for d in a_z)
