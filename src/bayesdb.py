@@ -52,6 +52,11 @@ class BayesDB(object):
         schema.bayesdb_install_schema(self.sqlite3)
         bqlfn.bayesdb_install_bql(self.sqlite3, self)
 
+    def __enter__(self):
+        return self
+    def __exit__(self, *_exc_info):
+        self.close()
+
     def close(self):
         """Close the database.  Further use is not allowed."""
         assert self.txn_depth == 0, "pending BayesDB transactions"
