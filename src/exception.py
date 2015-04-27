@@ -14,14 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-# Public API.
-from bayeslite.bayesdb import bayesdb_open
-from bayeslite.bqlfn import bayesdb_simulate
-from bayeslite.codebook import bayesdb_load_codebook_csv_file
-from bayeslite.exception import BayesDBException
-from bayeslite.legacy_models import bayesdb_load_legacy_models
-from bayeslite.metamodel import bayesdb_deregister_metamodel
-from bayeslite.metamodel import bayesdb_register_metamodel
-from bayeslite.metamodel import bayesdb_set_default_metamodel
-from bayeslite.read_csv import bayesdb_read_csv
-from bayeslite.read_csv import bayesdb_read_csv_file
+class BayesDBException(Exception):
+    def __init__(self, bayesdb, *args, **kwargs):
+        self.bayesdb = bayesdb
+        super(BayesDBException, self).__init__(*args, **kwargs)
