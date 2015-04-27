@@ -199,16 +199,16 @@ def test_estimate_bql():
             ' from t1_cc;') == \
         'SELECT (bql_row_column_predictive_probability(1, _rowid_, 3) + 1)' \
         + ' FROM "t1";'
-    with pytest.raises(parse.ParseError):
+    with pytest.raises(parse.BQLParseError):
         # Need a table.
         bql2sql('estimate predictive probability of weight;')
-    with pytest.raises(parse.ParseError):
+    with pytest.raises(parse.BQLParseError):
         # Need at most one generator.
         bql2sql('estimate predictive probability of weight from t1_cc, t1_cc;')
-    with pytest.raises(parse.ParseError):
+    with pytest.raises(parse.BQLParseError):
         # Need a generator name, not a subquery.
         bql2sql('estimate predictive probability of weight from (select 0);')
-    with pytest.raises(parse.ParseError):
+    with pytest.raises(parse.BQLParseError):
         # Need a column.
         bql2sql('estimate predictive probability from t1_cc;')
     assert bql2sql('estimate probability of weight = 20 from t1_cc;') == \
@@ -600,7 +600,7 @@ def test_trivial_commands():
         bdb.execute('analyze t0_cc for 1 iteration wait')
         colno = core.bayesdb_generator_column_number(bdb, generator_id,
             'gender')
-        with pytest.raises(parse.ParseError):
+        with pytest.raises(parse.BQLParseError):
             # Rename the table's columns, not the generator's columns.
             bdb.execute('alter generator t0_cc rename gender to sex')
         with pytest.raises(NotImplementedError): # XXX

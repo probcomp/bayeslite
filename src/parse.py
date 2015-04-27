@@ -20,7 +20,7 @@ import bayeslite.ast as ast
 import bayeslite.grammar as grammar
 import bayeslite.scan as scan
 
-class ParseError(Exception):
+class BQLParseError(Exception):
     def __init__(self, errors):
         assert 0 < len(errors)
         self.errors = errors
@@ -64,9 +64,9 @@ def parse_bql_phrases(scanner):
         if token[0] == 0:       # EOF
             break
     if 0 < len(semantics.errors):
-        raise ParseError(semantics.errors)
+        raise BQLParseError(semantics.errors)
     if semantics.failed:
-        raise ParseError(['parse failed mysteriously!'])
+        raise BQLParseError(['parse failed mysteriously!'])
 
 def parse_bql_string_pos(string):
     scanner = scan.BQLScanner(StringIO.StringIO(string), '(string)')
