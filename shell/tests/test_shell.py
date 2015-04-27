@@ -104,12 +104,6 @@ def spawngen(spawntable):
     return 'dha_cc', c
 
 
-def an_error_probably_happened(string):
-    error_clues = ['error', 'traceback', 'exception']
-    stringlower = string.lower()
-    return any(x in stringlower for x in error_clues)
-
-
 # Tests begin
 # ````````````````````````````````````````````````````````````````````````````
 def test_shell_loads(spawnbdb):
