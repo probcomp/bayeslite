@@ -43,6 +43,14 @@ import sys
 def pprint(cursor):
     return pp_cursor(sys.stdout, cursor)
 
+
+def do_query(bdb, bql, bindings=None):
+    if bindings is None:
+        bindings = ()
+    print '--> ' + bql.lstrip()
+    return bdb.execute(bql, bindings)
+
+
 btable = 'satellites'
 generator = 'satellites_cc'
 csv_filename = os.path.join('data', 'satellites.csv')
@@ -54,7 +62,7 @@ codebook_filename = os.path.join('data', 'satellites_codebook.csv')
 # this case, we will not supply a filename to `bayeslite.BayesDB` so that the
 # database is created in memory and no files are written to disk.
 
-bdb = bayeslite.BayesDB()
+bdb = bayeslite.bayesdb_open()
 
 # LOADING IN DATA
 # ---------------
@@ -104,7 +112,7 @@ CREATE GENERATOR satellites_cc FOR satellites
         Inclination_radians CYCLIC
     );
 '''
-c = bdb.execute(bql)
+c = do_query(bdb, bql)
 
 # We've created a generator called `satellites_cc` for the btable `satellites`
 # using the crosscat metamodel we specified earlier. We've told BayesDB to
@@ -170,8 +178,8 @@ pprint(c)
 #   For purposes of expedience, we'll analyze a small number of models for a
 # short amount of time.
 
-c = bdb.execute('INITIALIZE 8 MODELS FOR satellites_cc;')
-c = bdb.execute('ANALYZE satellites_cc FOR 2 MINUTES WAIT;')
+c = do_query(bdb, 'INITIALIZE 8 MODELS FOR satellites_cc;')
+c = do_query(bdb, 'ANALYZE satellites_cc FOR 2 MINUTES WAIT;')
 
 # We have asked BayesDB for initalize 8 models and to run the sampling
 # algorithm for 2 minutes. The WAIT keyword tells BayesDB "we are not
@@ -186,7 +194,7 @@ SELECT modelno, iterations FROM bayesdb_generator_model
     WHERE generator_id = ?
     ORDER BY modelno ASC;
 '''
-c = bdb.execute(bql, (generator_id,))
+c = do_query(bdb, bql, (generator_id,))
 pprint(c)
 
 # modelno | iterations
@@ -221,7 +229,7 @@ CREATE TEMP TABLE predprob_life AS
          Class_of_Orbit
     FROM satellites_cc;
 '''
-c = bdb.execute(bql)
+c = do_query(bdb, bql)
 
 bql = '''
 SELECT substr(Name, 1, 27) as Name, Class_of_Orbit, Expected_Lifetime,
@@ -230,7 +238,7 @@ SELECT substr(Name, 1, 27) as Name, Class_of_Orbit, Expected_Lifetime,
     ORDER BY p_lifetime ASC
     LIMIT 20;
 '''
-c = bdb.execute(bql)
+c = do_query(bdb, bql)
 pprint(c)
 
 #                        Name | Class_of_Orbit | Expected_Lifetime |        p_lifetime
@@ -274,7 +282,7 @@ CREATE TEMP TABLE predprob_period AS
         PREDICTIVE PROBABILITY OF Period_minutes AS p_period
     FROM satellites_cc;
 '''
-c = bdb.execute(bql)
+c = do_query(bdb, bql)
 
 bql = '''
 SELECT substr(Name, 1, 23) as Name, Class_of_Orbit, Period_minutes, p_period
@@ -282,7 +290,7 @@ SELECT substr(Name, 1, 23) as Name, Class_of_Orbit, Period_minutes, p_period
     ORDER BY p_period ASC
     LIMIT 10;
 '''
-c = bdb.execute(bql)
+c = do_query(bdb, bql)
 pprint(c)
 
 #                        Name | Class_of_Orbit | Period_minutes |          p_period
@@ -315,7 +323,7 @@ ESTIMATE COLUMNS DEPENDENCE PROBABILITY WITH Period_minutes as depprob_period
     FROM satellites_cc
     ORDER BY depprob_period DESC LIMIT 10;
 '''
-c = bdb.execute(bql)
+c = do_query(bdb, bql)
 pprint(c)
 
 #                         name | depprob_period
@@ -345,7 +353,7 @@ CREATE TEMP TABLE simusers20 AS
     SIMULATE users FROM satellites_cc GIVEN expected_lifetime = 20
     LIMIT 100;
 '''
-c = bdb.execute(bql)
+c = do_query(bdb, bql)
 
 bql = '''
 SELECT users, COUNT(*) AS total
@@ -353,7 +361,7 @@ SELECT users, COUNT(*) AS total
     GROUP BY users
     ORDER BY TOTAL DESC;
 '''
-c = bdb.execute(bql)
+c = do_query(bdb, bql)
 pprint(c)
 
 #                 users | total
