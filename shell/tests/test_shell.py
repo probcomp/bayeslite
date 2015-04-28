@@ -51,6 +51,9 @@ class spawnjr(pexpect.spawn):
     def sendexpectcmd(self, cmd):
         self.sendline(cmd)
         self.expect_exact('\r\n')
+        # XXX Kludge to skip pty-introduced control characters on line
+        # wraps which vary from system to system (e.g., Mac OS X
+        # inserts SPC BS at end of line, whereas Linux inserts SPC CR).
         def remove_control(s):
             return s.translate(None, ''.join(map(chr, range(32 + 1) + [127])))
         assert remove_control(self.before) == remove_control(cmd)
