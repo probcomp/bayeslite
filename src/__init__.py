@@ -21,6 +21,7 @@ from bayeslite.bqlfn import bayesdb_simulate
 from bayeslite.codebook import bayesdb_load_codebook_csv_file
 from bayeslite.exception import BayesDBException
 from bayeslite.legacy_models import bayesdb_load_legacy_models
+from bayeslite.metamodel import IMetamodel
 from bayeslite.metamodel import bayesdb_deregister_metamodel
 from bayeslite.metamodel import bayesdb_register_metamodel
 from bayeslite.parse import BQLParseError
