@@ -23,6 +23,8 @@ import bayeslite.parse as parse
 import bayeslite.schema as schema
 import bayeslite.txn as txn
 
+bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
+
 def bayesdb_open(pathname=None):
     """Open the BayesDB in the file at `pathname`.
 
@@ -30,13 +32,15 @@ def bayesdb_open(pathname=None):
     If `pathname` is unspecified or None, a temporary in-memory
     BayesDB instance is created.
     """
-    return BayesDB(pathname=pathname)
+    return BayesDB(bayesdb_open_cookie, pathname=pathname)
 
 class BayesDB(object):
     """Class of Bayesian databases.
     """
 
-    def __init__(self, pathname=None):
+    def __init__(self, cookie, pathname=None):
+        if cookie != bayesdb_open_cookie:
+            raise ValueError('Do not construct BayesDB objects directly!')
         if pathname is None:
             pathname = ":memory:"
         # isolation_level=None actually means that the sqlite3 module
