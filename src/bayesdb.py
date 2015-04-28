@@ -105,7 +105,7 @@ class BayesDB(object):
         assert self.sql_tracer == tracer
         self.sql_tracer = None
 
-    def execute(self, string, bindings=()):
+    def execute(self, string, bindings=None):
         """Execute a BQL query and return a cursor for its results.
 
         The argument `string` is a string parsed into a single BQL
@@ -113,8 +113,11 @@ class BayesDB(object):
         terminated by a semicolon.
 
         The argument `bindings` is a sequence or dictionary of
-        bindings for parameters in the query.
+        bindings for parameters in the query, or None to supply no
+        bindings.
         """
+        if bindings is None:
+            bindings = ()
         if self.tracer:
             self.tracer(string, bindings)
         phrases = parse.parse_bql_string(string)
@@ -133,7 +136,7 @@ class BayesDB(object):
             raise ValueError('>1 phrase in string')
         return bql.execute_phrase(self, phrase, bindings)
 
-    def sql_execute(self, string, bindings=()):
+    def sql_execute(self, string, bindings=None):
         """Execute a SQL query on the underlying SQLite database.
 
         The argument `string` is a string parsed into a single BQL
@@ -141,8 +144,11 @@ class BayesDB(object):
         terminated by a semicolon.
 
         The argument `bindings` is a sequence or dictionary of
-        bindings for parameters in the query.
+        bindings for parameters in the query, or None to supply no
+        bindings.
         """
+        if bindings is None:
+            bindings = ()
         if self.sql_tracer:
             self.sql_tracer(string, bindings)
         return self.sqlite3.execute(string, bindings)
