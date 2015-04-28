@@ -15,7 +15,7 @@
 #   limitations under the License.
 
 # Public API.
-from bayeslite.bayesdb import BayesDB
+from bayeslite.bayesdb import bayesdb_open
 from bayeslite.bqlfn import bayesdb_simulate
 from bayeslite.codebook import bayesdb_load_codebook_csv_file
 from bayeslite.legacy_models import bayesdb_load_legacy_models

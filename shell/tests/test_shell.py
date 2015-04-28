@@ -36,7 +36,7 @@ READ_DATA = '''
 -- single line BQL
 SELECT name FROM dha LIMIT 2;
 
--- mulitline BQL. 2nd line is space indented; 3rd line is tabbed.
+-- multiline BQL. 2nd line is space indented; 3rd line is tabbed.
 SELECT name FROM dha
     ORDER BY name ASC
     LIMIT 5;
@@ -48,8 +48,17 @@ class spawnjr(pexpect.spawn):
         if 'timeout' not in kwargs:
             kwargs['timeout'] = TIMEOUT
         super(spawnjr, self).__init__(*args, **kwargs)
-    def expectprompt(self):
-        return self.expect('bayeslite> ')
+    def sendexpectcmd(self, cmd):
+        self.sendline(cmd)
+        self.expect_exact(cmd + '\r\n')
+        assert self.before == ''
+    def expect_lines(self, lines):
+        for line in lines:
+            self.expect_exact(line + '\r\n')
+            assert self.before == ''
+    def expect_prompt(self):
+        self.expect_exact('bayeslite> ')
+        assert self.before == ''
 
 
 @contextlib.contextmanager
@@ -64,42 +73,35 @@ def read_data():
 def spawnbdb():
     c = spawnjr('bayeslite --no-init-file --debug')
     c.delaybeforesend = 0
-    c.expectprompt()
+    c.expect_lines([
+        'Welcome to the Bayeslite shell.',
+        "Type `.help' for help.",
+    ])
+    c.expect_prompt()
     return c
 
 
 @pytest.fixture
 def spawntable():
-    c = spawnjr('bayeslite')
-    c.expectprompt()
-    assert not an_error_probably_happened(c.before)
-
-    c.sendline('.csv dha %s' % (DHA_CSV,))
-    c.expectprompt()
-    assert not an_error_probably_happened(c.before)
+    c = spawnbdb()
+    cmd = '.csv dha %s' % (DHA_CSV,)
+    c.sendline(cmd)
+    c.expect_exact('bayeslite> ')
+    # XXX Kludge to strip control characters introduced by the pty
+    # when the line wraps, which vary from system to system (some use
+    # backspace; some use carriage return; some insert spaces).
+    def remove_control(s):
+        return s.translate(None, ''.join(map(chr, range(32 + 1) + [127])))
+    assert remove_control(c.before) == remove_control(cmd)
     return 'dha', c
 
 
 @pytest.fixture
-def spawngen():
-    c = spawnjr('bayeslite')
-    c.expectprompt()
-    assert not an_error_probably_happened(c.before)
-
-    c.sendline('.csv dha %s' % (DHA_CSV,))
-    c.expectprompt()
-    assert not an_error_probably_happened(c.before)
-
-    c.sendline('.guess dha_cc dha')
-    c.expectprompt()
-    assert not an_error_probably_happened(c.before)
+def spawngen(spawntable):
+    table, c = spawntable
+    c.sendexpectcmd('.guess dha_cc %s' % (table,))
+    c.expect_prompt()
     return 'dha_cc', c
-
-
-def an_error_probably_happened(string):
-    error_clues = ['error', 'traceback', 'exception']
-    stringlower = string.lower()
-    return any(x in stringlower for x in error_clues)
 
 
 # Tests begin
@@ -110,171 +112,244 @@ def test_shell_loads(spawnbdb):
 
 def test_python_expression(spawnbdb):
     c = spawnbdb
-    c.sendline('.python 2 * 3')
-    c.expectprompt()
-
-    assert not an_error_probably_happened(c.before)
-    assert '6' in c.before
+    c.sendexpectcmd('.python 2 * 3')
+    c.expect_lines(['6'])
+    c.expect_prompt()
 
 
 def test_help_returns_list_of_commands(spawnbdb):
     c = spawnbdb
-    c.sendline('.help')
-    c.expectprompt()
+    c.sendexpectcmd('.help')
+    c.expect_lines([
+        '     .codebook    load codebook for table',
+        '          .csv    create table from CSV file',
+        '     .describe    describe BayesDB entities',
+        '        .guess    guess data generator',
+        '         .help    show help for commands',
+        '         .hook    add custom commands from a python source file',
+        ' .legacymodels    load legacy models',
+        '       .python    evaluate a Python expression',
+        '         .read    read a file of shell commands',
+        '          .sql    execute a SQL query',
+        '        .trace    trace queries',
+        '      .untrace    untrace queries',
+        "Type `.help <cmd>' for help on the command <cmd>.",
+    ])
+    c.expect_prompt()
 
-    assert '.codebook' in c.before
-    assert '.csv' in c.before
-    assert '.describe' in c.before
-    assert '.guess' in c.before
-    assert '.help' in c.before
-    assert '.hook' in c.before
-    assert '.python' in c.before
-    assert '.read' in c.before
-    assert '.sql' in c.before
-    assert '.trace' in c.before
-    assert '.untrace' in c.before
 
-
-def test_dot_csv(spawnbdb):
-    c = spawnbdb
-    cmd = '.csv dha %s' % (DHA_CSV,)
-    c.sendline(cmd)
-    c.expectprompt()
-    assert not an_error_probably_happened(c.before)
+def test_dot_csv(spawntable):
+    _table, _c = spawntable
 
 
 def test_describe_columns_without_generator(spawntable):
     table, c = spawntable
-    c.sendline('.describe columns %s' % (table,))
-    c.expect('No such generator: %s' % (table,))
+    c.sendexpectcmd('.describe columns %s' % (table,))
+    c.expect_lines(['No such generator: %s' % (table,)])
+    c.expect_prompt()
 
 
 def test_bql_select(spawntable):
     table, c = spawntable
-    c.sendline('SELECT name FROM %s ORDER BY name ASC LIMIT 5;' % (table,))
-    checkstr = "             NAME\r\n" +\
-               "-----------------\r\n" +\
-               "       Abilene TX\r\n" +\
-               "         Akron OH\r\n" +\
-               "Alameda County CA\r\n" +\
-               "        Albany GA\r\n" +\
-               "        Albany NY\r\n"
-    c.expectprompt()
-    assert not an_error_probably_happened(c.before)
-    assert checkstr in c.before
+    c.sendexpectcmd('SELECT name FROM %s ORDER BY name ASC LIMIT 5;' %
+        (table,))
+    c.expect_lines([
+        '             NAME',
+        '-----------------',
+        '       Abilene TX',
+        '         Akron OH',
+        'Alameda County CA',
+        '        Albany GA',
+        '        Albany NY',
+    ])
+    c.expect_prompt()
 
 
 def test_guess(spawntable):
     table, c = spawntable
-    cmd = '.guess dha_cc dha'
-    c.sendline(cmd)
-    c.expectprompt()
-
-    assert not an_error_probably_happened(c.before)
-    assert len(c.before.strip()) == len(cmd)
+    c.sendexpectcmd('.guess dha_cc %s' % (table,))
+    c.expect_prompt()
 
 
 def test_sql(spawntable):
     table, c = spawntable
-    cmd = '.sql pragma table_info(bayesdb_column)'
-    c.sendline(cmd)
-    c.expectprompt()
-
-    assert not an_error_probably_happened(c.before)
-
-    splitres = c.before.split('\n')
-
-    # remove the previous command column and the header underline
-    del splitres[0]
-    del splitres[1]
-
-    splitstr = [s.strip().replace(' ', '').split('|') for s in splitres]
-    assert len(splitstr[0]) == 6
-    assert splitstr[0] == ['cid', 'name', 'type', 'notnull', 'dflt_value', 'pk']
+    c.sendexpectcmd('.sql pragma table_info(bayesdb_column)')
+    c.expect_lines([
+        'cid |        name |    type | notnull | dflt_value | pk',
+        '----+-------------+---------+---------+------------+---',
+        '  0 |     tabname |    TEXT |       1 |       None |  1',
+        '  1 |       colno | INTEGER |       1 |       None |  2',
+        '  2 |        name |    TEXT |       1 |       None |  0',
+        '  3 |   shortname |    TEXT |       0 |       None |  0',
+        '  4 | description |    TEXT |       0 |       None |  0',
+    ])
+    c.expect_prompt()
 
 
-def test_describe_column_with_gnerator(spawngen):
+def test_describe_column_with_generator(spawngen):
     gen, c = spawngen
-    c.sendline('.describe models %s' % (gen,))
-    c.expectprompt()
-
-    checkstr = "modelno | iterations\r\n--------+-----------\r\n"
-    assert checkstr in c.before
-
-    c.sendline('.describe columns %s' % (gen,))
-    c.expectprompt()
-    assert not an_error_probably_happened(c.before)
-
-    splitres = c.before.split('\n')
-    splitstr = [s.strip().replace(' ', '') for s in splitres[1:]]
-
-    assert splitstr[0] == 'colno|name|stattype|shortname'
-    assert len(splitstr) == 66
-    for row in splitstr[2:-1]:
-        srow = row.split('|')
-
-        assert len(srow) == 4
-        assert srow[3] == 'None'
-        assert srow[2] == 'numerical'
+    c.sendexpectcmd('.describe models %s' % (gen,))
+    c.expect_lines([
+        'modelno | iterations',
+        '--------+-----------',
+    ])
+    c.expect_prompt()
+    c.sendexpectcmd('.describe columns %s' % (gen,))
+    c.expect_lines([
+        'colno |                name |  stattype | shortname',
+        '------+---------------------+-----------+----------',
+        '    1 |         N_DEATH_ILL | numerical |      None',
+        '    2 |       TTL_MDCR_SPND | numerical |      None',
+        '    3 |       MDCR_SPND_INP | numerical |      None',
+        '    4 |      MDCR_SPND_OUTP | numerical |      None',
+        '    5 |       MDCR_SPND_LTC | numerical |      None',
+        '    6 |      MDCR_SPND_HOME | numerical |      None',
+        '    7 |      MDCR_SPND_HSPC | numerical |      None',
+        '    8 |    MDCR_SPND_AMBLNC | numerical |      None',
+        '    9 |       MDCR_SPND_EQP | numerical |      None',
+        '   10 |     MDCR_SPND_OTHER | numerical |      None',
+        '   11 |           TTL_PARTB | numerical |      None',
+        '   12 |     PARTB_EVAL_MGMT | numerical |      None',
+        '   13 |         PARTB_PROCS | numerical |      None',
+        '   14 |          PARTB_IMAG | numerical |      None',
+        '   15 |         PARTB_TESTS | numerical |      None',
+        '   16 |         PARTB_OTHER | numerical |      None',
+        '   17 |    HOSP_REIMB_P_DCD | numerical |      None',
+        '   18 |     HOSP_DAYS_P_DCD | numerical |      None',
+        '   19 |    REIMB_P_PTNT_DAY | numerical |      None',
+        '   20 |    HOSP_REIMB_RATIO | numerical |      None',
+        '   21 |      HOSP_DAY_RATIO | numerical |      None',
+        '   22 |   REIMB_P_DAY_RATIO | numerical |      None',
+        '   23 |       MD_PYMT_P_DCD | numerical |      None',
+        '   24 |      MD_VISIT_P_DCD | numerical |      None',
+        '   25 |     PYMT_P_MD_VISIT | numerical |      None',
+        '   26 | MD_VISIT_PYMT_RATIO | numerical |      None',
+        '   27 |      MD_VISIT_RATIO | numerical |      None',
+        '   28 |  PYMT_P_VISIT_RATIO | numerical |      None',
+        '   29 |           HOSP_BEDS | numerical |      None',
+        '   30 |         TTL_IC_BEDS | numerical |      None',
+        '   31 |          HI_IC_BEDS | numerical |      None',
+        '   32 |         INT_IC_BEDS | numerical |      None',
+        '   33 |       MED_SURG_BEDS | numerical |      None',
+        '   34 |            SNF_BEDS | numerical |      None',
+        '   35 |           TOTAL_FTE | numerical |      None',
+        '   36 |              MS_FTE | numerical |      None',
+        '   37 |              PC_FTE | numerical |      None',
+        '   38 |         MS_PC_RATIO | numerical |      None',
+        '   39 |             RNS_REQ | numerical |      None',
+        '   40 |    HOSP_DAYS_P_DCD2 | numerical |      None',
+        '   41 |   TTL_IC_DAYS_P_DCD | numerical |      None',
+        '   42 |    HI_IC_DAYS_P_DCD | numerical |      None',
+        '   43 |   INT_IC_DAYS_P_DCD | numerical |      None',
+        '   44 | MED_SURG_DAYS_P_DCD | numerical |      None',
+        '   45 |      SNF_DAYS_P_DCD | numerical |      None',
+        '   46 |  TTL_MD_VISIT_P_DCD | numerical |      None',
+        '   47 |      MS_VISIT_P_DCD | numerical |      None',
+        '   48 |      PC_VISIT_P_DCD | numerical |      None',
+        '   49 |   MS_PC_RATIO_P_DCD | numerical |      None',
+        '   50 |     HHA_VISIT_P_DCD | numerical |      None',
+        '   51 |       PCT_DTHS_HOSP | numerical |      None',
+        '   52 |      PCT_DTHS_W_ICU | numerical |      None',
+        '   53 |       PCT_DTHS_HSPC | numerical |      None',
+        '   54 |     HSPC_DAYS_P_DCD | numerical |      None',
+        '   55 |      PCT_PTNT_10_MD | numerical |      None',
+        '   56 |          N_MD_P_DCD | numerical |      None',
+        '   57 |     TTL_COPAY_P_DCD | numerical |      None',
+        '   58 |      MD_COPAY_P_DCD | numerical |      None',
+        '   59 |     EQP_COPAY_P_DCD | numerical |      None',
+        '   60 |          QUAL_SCORE | numerical |      None',
+        '   61 |           AMI_SCORE | numerical |      None',
+        '   62 |           CHF_SCORE | numerical |      None',
+        '   63 |         PNEUM_SCORE | numerical |      None',
+    ])
+    c.expect_prompt()
 
 
 def test_hook(spawnbdb):
     c = spawnbdb
-    c.sendline('.hook %s' % (THOOKS_PY,))
-    c.expectprompt()
-
-    assert not an_error_probably_happened(c.before)
-    assert 'added command ".myhook"' in c.before
-
-    c.sendline('.help')
-    c.expectprompt()
-
-    assert not an_error_probably_happened(c.before)
-    assert 'myhook help string' in c.before
-
-    c.sendline('.help myhook')
-    c.expectprompt()
-
-    assert not an_error_probably_happened(c.before)
-    assert '.myhook <string>' in c.before
-
-    c.sendline('.myhook zoidberg')
-    c.expectprompt()
-
-    assert not an_error_probably_happened(c.before)
-    assert 'john zoidberg' in c.before
+    c.sendexpectcmd('.hook %s' % (THOOKS_PY,))
+    c.expect_lines(['added command ".myhook"'])
+    c.expect_prompt()
+    c.sendexpectcmd('.help')
+    c.expect_lines([
+        '     .codebook    load codebook for table',
+        '          .csv    create table from CSV file',
+        '     .describe    describe BayesDB entities',
+        '        .guess    guess data generator',
+        '         .help    show help for commands',
+        '         .hook    add custom commands from a python source file',
+        ' .legacymodels    load legacy models',
+        '       .myhook    myhook help string',
+        '       .python    evaluate a Python expression',
+        '         .read    read a file of shell commands',
+        '          .sql    execute a SQL query',
+        '        .trace    trace queries',
+        '      .untrace    untrace queries',
+        "Type `.help <cmd>' for help on the command <cmd>."
+    ])
+    c.expect_prompt()
+    c.sendexpectcmd('.help myhook')
+    c.expect_lines(['.myhook <string>'])
+    c.expect_prompt()
+    c.sendexpectcmd('.myhook zoidberg')
+    c.expect_lines(['john zoidberg'])
+    c.expect_prompt()
 
 
 def test_read_nonsequential(spawnbdb):
     c = spawnbdb
-
     with read_data() as fname:
-        c.sendline('.read %s' % (fname,))
-        c.expect('--DEBUG: .read complete')
-    res = c.before
-
-    assert not an_error_probably_happened(res)
-
-    assert res.count(' .csv') == 1
-    assert res.count('SELECT') == 0
-
-    # should print SELECT output
-    assert res.count('NAME') == 2
+        c.sendexpectcmd('.read %s' % (fname,))
+        c.expect_lines([
+            'Usage: .csv <table> </path/to/data.csv>',
+            '      NAME',
+            '----------',
+            'Abilene TX',
+            '  Akron OH',
+            '             NAME',
+            '-----------------',
+            '       Abilene TX',
+            '         Akron OH',
+            'Alameda County CA',
+            '        Albany GA',
+            '        Albany NY',
+            '--DEBUG: .read complete',
+        ])
+    c.expect_prompt()
 
 
 def test_read_nonsequential_verbose(spawnbdb):
     c = spawnbdb
-
     with read_data() as fname:
-        c.sendline('.read %s -v' % (fname,))
-        c.expect('--DEBUG: .read complete')
-    res = c.before
-
-    assert not an_error_probably_happened(res)
-
-    # should output help on first failure
-    assert res.count(' .csv') == 3
-    assert res.count('SELECT') == 2
-
-    # should print SELECT output
-    assert res.count('NAME') == 2
+        c.sendexpectcmd('.read %s -v' % (fname,))
+        c.expect_lines([
+            'bayeslite> '
+                '-- do something that fails (should not kick us out)',
+            'bayeslite> .csv dha',
+            'Usage: .csv <table> </path/to/data.csv>',
+            'bayeslite> -- create a table properly',
+            'bayeslite> .csv dha %s' % (DHA_CSV,),
+            'bayeslite> -- single line BQL',
+            'bayeslite> SELECT name FROM dha LIMIT 2;',
+            '      NAME',
+            '----------',
+            'Abilene TX',
+            '  Akron OH',
+            'bayeslite> -- multiline BQL.'
+                ' 2nd line is space indented; 3rd line is tabbed.',
+            'bayeslite> SELECT name FROM dha',
+            '',
+            '               ORDER BY name ASC'
+            '',
+            '',
+            '               LIMIT 5;',
+            '             NAME',
+            '-----------------',
+            '       Abilene TX',
+            '         Akron OH',
+            'Alameda County CA',
+            '        Albany GA',
+            '        Albany NY',
+            '--DEBUG: .read complete',
+        ])
+        c.expect_prompt()

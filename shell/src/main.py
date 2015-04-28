@@ -46,7 +46,7 @@ def parse_args(argv):
 
 def run(stdin, stdout, stderr, argv):
     args = parse_args(argv[1:])
-    bdb = bayeslite.BayesDB(pathname=args.bdbpath)
+    bdb = bayeslite.bayesdb_open(pathname=args.bdbpath)
 
     # People shouldn't have to ask to go fast, they should have to ask to
     # slow down.

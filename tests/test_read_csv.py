@@ -21,14 +21,6 @@ import tempfile
 
 import bayeslite
 
-@contextlib.contextmanager
-def bayesdb(*args, **kwargs):
-    bdb = bayeslite.BayesDB(*args, **kwargs)
-    try:
-        yield bdb
-    finally:
-        bdb.close()
-
 csv_data = '''1,2,3,foo,bar,nan,"",quagga
 4,5,6,baz,quux,42.0,"",eland
 7,8,6,zot,mumble,87.0,"zoot",caribou
@@ -39,7 +31,7 @@ csv_hdr = 'a,b,c,name,nick,age,muppet,animal\n'
 csv_hdrdata = csv_hdr + csv_data
 
 def test_read_csv():
-    with bayesdb() as bdb:
+    with bayeslite.bayesdb_open() as bdb:
         f = StringIO.StringIO(csv_data)
         with pytest.raises(ValueError):
             # Table must already exist for create=False.

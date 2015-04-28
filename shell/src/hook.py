@@ -14,10 +14,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import threading
 import contextlib
-import traceback
 import sys
+import threading
+import traceback
 
 the_current_shell = threading.local()
 the_current_shell.value = None
