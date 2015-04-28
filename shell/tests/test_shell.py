@@ -267,8 +267,15 @@ def test_describe_column_with_generator(spawngen):
 
 def test_hook(spawnbdb):
     c = spawnbdb
-    c.sendexpectcmd('.hook %s' % (THOOKS_PY,))
-    c.expect_lines(['added command ".myhook"'])
+    cmd = '.hook %s' % (THOOKS_PY,)
+    c.sendline(cmd)
+    c.expect_exact('added command ".myhook"\r\n')
+    # XXX Kludge to strip control characters introduced by the pty
+    # when the line wraps, which vary from system to system (some use
+    # backspace; some use carriage return; some insert spaces).
+    def remove_control(s):
+        return s.translate(None, ''.join(map(chr, range(32 + 1) + [127])))
+    assert remove_control(c.before) == remove_control(cmd)
     c.expect_prompt()
     c.sendexpectcmd('.help')
     c.expect_lines([
