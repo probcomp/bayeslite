@@ -6,20 +6,14 @@ set -Ceu
 : ${PY_TEST:=`which py.test`}
 
 root=`cd -- "$(dirname -- "$0")" && pwd`
-platform=`"${PYTHON}" -c 'import distutils.util as u; print u.get_platform()'`
-version=`"${PYTHON}" -c 'import sys; print sys.version[0:3]'`
-
-bayeslite="${root}/build/lib.${platform}-${version}"
-export PYTHONPATH="${bayeslite}${PYTHONPATH:+:${PYTHONPATH}}"
 
 (
     set -Ceu
     cd -- "${root}"
-    rm -rf build
-    "$PYTHON" setup.py build
+    ./pythenv.sh "$PYTHON" setup.py build
     if [ $# -eq 0 ]; then
-        "$PYTHON" "$PY_TEST" tests shell/tests
+        ./pythenv.sh "$PYTHON" "$PY_TEST" tests shell/tests
     else
-        "$PYTHON" "$PY_TEST" "$@"
+        ./pythenv.sh "$PYTHON" "$PY_TEST" "$@"
     fi
 )
