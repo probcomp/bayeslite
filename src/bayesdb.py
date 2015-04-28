@@ -49,7 +49,6 @@ class BayesDB(object):
         self.sqlite3 = sqlite3.connect(pathname, isolation_level=None)
         self.txn_depth = 0
         self.metamodels = {}
-        self.default_metamodel = None
         self.tracer = None
         self.sql_tracer = None
         self.cache = None

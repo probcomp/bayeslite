@@ -34,7 +34,6 @@ def test_legacy_models():
     cc = crosscat.LocalEngine.LocalEngine(seed=0)
     metamodel = bayeslite.crosscat.CrosscatMetamodel(cc)
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)
-    bayeslite.bayesdb_set_default_metamodel(bdb, metamodel)
     with pytest.raises(ValueError):
         bayeslite.bayesdb_load_legacy_models(bdb, 'dha_cc', 'dha', 'crosscat',
             dha_models, create=True)

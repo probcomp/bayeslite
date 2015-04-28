@@ -28,11 +28,7 @@ def bayesdb_deregister_metamodel(bdb, metamodel):
     name = metamodel.name()
     assert name in bdb.metamodels
     assert bdb.metamodels[name] == metamodel
-    assert bdb.default_metamodel != metamodel
     del bdb.metamodels[name]
-
-def bayesdb_set_default_metamodel(bdb, metamodel):
-    bdb.default_metamodel = metamodel
 
 class IMetamodel(object):
     def name(self):
