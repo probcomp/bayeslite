@@ -50,8 +50,10 @@ class spawnjr(pexpect.spawn):
         super(spawnjr, self).__init__(*args, **kwargs)
     def sendexpectcmd(self, cmd):
         self.sendline(cmd)
-        self.expect_exact(cmd + '\r\n')
-        assert self.before == ''
+        self.expect_exact('\r\n')
+        def remove_control(s):
+            return s.translate(None, ''.join(map(chr, range(32 + 1) + [127])))
+        assert remove_control(self.before) == remove_control(cmd)
     def expect_lines(self, lines):
         for line in lines:
             self.expect_exact(line + '\r\n')
@@ -84,15 +86,8 @@ def spawnbdb():
 @pytest.fixture
 def spawntable():
     c = spawnbdb()
-    cmd = '.csv dha %s' % (DHA_CSV,)
-    c.sendline(cmd)
-    c.expect_exact('bayeslite> ')
-    # XXX Kludge to strip control characters introduced by the pty
-    # when the line wraps, which vary from system to system (some use
-    # backspace; some use carriage return; some insert spaces).
-    def remove_control(s):
-        return s.translate(None, ''.join(map(chr, range(32 + 1) + [127])))
-    assert remove_control(c.before) == remove_control(cmd)
+    c.sendexpectcmd('.csv dha %s' % (DHA_CSV,))
+    c.expect_prompt()
     return 'dha', c
 
 
@@ -267,15 +262,8 @@ def test_describe_column_with_generator(spawngen):
 
 def test_hook(spawnbdb):
     c = spawnbdb
-    cmd = '.hook %s' % (THOOKS_PY,)
-    c.sendline(cmd)
-    c.expect_exact('added command ".myhook"\r\n')
-    # XXX Kludge to strip control characters introduced by the pty
-    # when the line wraps, which vary from system to system (some use
-    # backspace; some use carriage return; some insert spaces).
-    def remove_control(s):
-        return s.translate(None, ''.join(map(chr, range(32 + 1) + [127])))
-    assert remove_control(c.before) == remove_control(cmd)
+    c.sendexpectcmd('.hook %s' % (THOOKS_PY,))
+    c.expect_lines(['added command ".myhook"'])
     c.expect_prompt()
     c.sendexpectcmd('.help')
     c.expect_lines([
