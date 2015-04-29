@@ -46,3 +46,8 @@ $(SPHINX_DOCS): pythenv.sh build
 .PHONY: check
 check: check.sh
 	./check.sh
+
+# clean: Remove build products.
+.PHONY: clean
+clean:
+	-rm -rf build
