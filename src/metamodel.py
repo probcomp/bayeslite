@@ -129,24 +129,24 @@ class IBayesDBMetamodel(object):
         raise NotImplementedError
 
     def column_dependence_probability(self, bdb, generator_id, colno0, colno1):
-        """Compute ``DEPENDENCE PROBABILITY OF `colno0` WITH `colno1` ``."""
+        """Compute ``DEPENDENCE PROBABILITY OF <col0> WITH <col1>``."""
         raise NotImplementedError
 
     def mutual_information(self, bdb, generator_id, colno0, colno1,
             numsamples=100):
-        """Compute ``MUTUAL INFORMATION OF `colno0` WITH `colno1` ``."""
+        """Compute ``MUTUAL INFORMATION OF <col0> WITH <col1>``."""
         raise NotImplementedError
 
     def column_typicality(self, bdb, generator_id, colno):
-        """Compute ``TYPICALITY OF `colno` ``."""
+        """Compute ``TYPICALITY OF <col>``."""
         raise NotImplementedError
 
     def column_value_probability(self, bdb, generator_id, colno, value):
-        """Compute ``PROBABILITY OF `colno` = `value` ``."""
+        """Compute ``PROBABILITY OF <col> = <value>``."""
         raise NotImplementedError
 
     def row_similarity(self, bdb, generator_id, rowid, target_rowid, colnos):
-        """Compute ``SIMILARITY TO `target_rowid` `` for given `rowid`."""
+        """Compute ``SIMILARITY TO <target_row>`` for given `rowid`."""
         raise NotImplementedError
 
     def row_typicality(self, bdb, generator_id, rowid):
@@ -155,7 +155,7 @@ class IBayesDBMetamodel(object):
 
     def row_column_predictive_probability(self, bdb, generator_id, rowid,
             colno):
-        """Compute ``PREDICTIVE PROBABILITY OF `colno` `` for given `rowid`."""
+        """Compute ``PREDICTIVE PROBABILITY OF <col>`` for given `rowid`."""
         raise NotImplementedError
 
     def infer(self, bdb, generator_id, colno, rowid, threshold,
