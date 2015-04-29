@@ -14,6 +14,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+"""BQL parser front end."""
+
 import StringIO
 
 import bayeslite.ast as ast
@@ -77,6 +79,11 @@ def parse_bql_phrases(scanner):
         raise BQLParseError(['parse failed mysteriously!'])
 
 def parse_bql_string_pos(string):
+    """Yield ``(`phrase`, `pos`)`` for each BQL phrase in `string`.
+
+    `phrase` is the parsed AST.  `pos` is zero-based index of the code
+    point at which `phrase` starts.
+    """
     scanner = scan.BQLScanner(StringIO.StringIO(string), '(string)')
     phrases = parse_bql_phrases(scanner)
     # XXX Don't dig out internals of scanner: fix plex to have a
@@ -84,14 +91,23 @@ def parse_bql_string_pos(string):
     return ((phrase, scanner.cur_pos) for phrase in phrases)
 
 def parse_bql_string_pos_1(string):
+    """Return ``(`phrase`, `pos`)`` for the first BQL phrase in `string`.
+
+    May not report parse errors afterward.
+    """
     for phrase, pos in parse_bql_string_pos(string):
         return (phrase, pos)
     return None
 
 def parse_bql_string(string):
+    """Yield each parsed BQL phrase AST in `string`."""
     return (phrase for phrase, _pos in parse_bql_string_pos(string))
 
 def bql_string_complete_p(string):
+    """True if `string` has at least one complete BQL phrase or error.
+
+    False if empty or if the last BQL phrase is incomplete.
+    """
     scanner = scan.BQLScanner(StringIO.StringIO(string), '(string)')
     semantics = BQLSemantics()
     parser = grammar.Parser(semantics)
