@@ -100,6 +100,14 @@ CREATE TABLE bayesdb_crosscat_diagnostics (
 '''
 
 class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
+    """Crosscat metamodel for BayesDB.
+
+    :param crosscat: Crosscat engine.
+
+    The Crosscat metamodel adds SQL tables to the database with names
+    that begin ``crosscat_``.
+    """
+
     def __init__(self, crosscat):
         self._crosscat = crosscat
 
