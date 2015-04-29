@@ -14,6 +14,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+"""Heuristic guessing of statistical types based on data.
+
+The heuristics implemented here are ad-hoc, and do not implement any
+sort of Bayesian model selection.  They are based on crude attempts to
+parse data as numbers, and on fixed parameters for distinguishing
+categorical and numerical data.  No columns are ever guessed to be
+cyclic.
+"""
+
 import math
 
 import bayeslite.core as core
@@ -25,6 +34,27 @@ from bayeslite.util import unique
 def bayesdb_guess_generator(bdb, generator, table, metamodel,
         ifnotexists=None, count_cutoff=None, ratio_cutoff=None,
         default=None, overrides=None):
+    """Heuristically guess a generator for `table` using `metamodel`.
+
+    Based on the data in `table`, create a generator named `generator`
+    using `metamodel` for it.
+
+    :param bool ifnotexists: if true or ``None`` and `generator`
+        already exists, do nothing.
+    :param int count_cutoff: number of distinct values below which
+        columns whose values can all be parsed as numbers will be
+        considered categorical anyway
+    :param real ratio_cutoff: ratio of distinct values to total values
+        below which columns whose values can all be parsed as numbers
+        will be considered categorical anyway
+    :param list overrides: list of ``(name, stattype)``, overriding
+        any guessed statistical type for columns by those names
+
+    In addition to statistical types, the overrides may specify
+    ``key`` or ``ignore``, in which case those columns will not be
+    modelled at all.
+    """
+
     # Fill in default arguments.
     if ifnotexists is None:
         ifnotexists = False
@@ -70,6 +100,24 @@ def unzip(l):                   # ???
 
 def bayesdb_guess_stattypes(column_names, rows,
         count_cutoff=None, ratio_cutoff=None, overrides=None):
+    """Heuristically guess statistical types for the data in `rows`.
+
+    Return a list of statistical types corresponding to the columns
+    named in the list `column_names`.
+
+    :param int count_cutoff: number of distinct values below which
+        columns whose values can all be parsed as numbers will be
+        considered categorical anyway
+    :param real ratio_cutoff: ratio of distinct values to total values
+        below which columns whose values can all be parsed as numbers
+        will be considered categorical anyway
+    :param list overrides: list of ``(name, stattype)``, overriding
+        any guessed statistical type for columns by those names
+
+    In addition to statistical types, the overrides may specify
+    ``key`` or ``ignore``.
+    """
+
     # Fill in default arguments.
     if count_cutoff is None:
         count_cutoff = 20
