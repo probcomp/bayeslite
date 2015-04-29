@@ -10,6 +10,7 @@ generative models for data in a table.
    :maxdepth: 2
 
    api
+   internals
 
 Indices and tables
 ==================
