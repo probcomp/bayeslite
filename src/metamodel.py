@@ -17,6 +17,9 @@
 import bayeslite.core as core
 
 def bayesdb_register_metamodel(bdb, metamodel):
+    """Register `metamodel` in `bdb`, creating any necessary tables.
+
+    `metamodel` must not already be registered in any BayesDB."""
     name = metamodel.name()
     if name in bdb.metamodels:
         raise ValueError('Metamodel already registered: %s' % (name,))
@@ -32,6 +35,15 @@ def bayesdb_deregister_metamodel(bdb, metamodel):
     del bdb.metamodels[name]
 
 class IBayesDBMetamodel(object):
+    """BayesDB metamodel interface.
+
+    Subclasses of :class:`IMetamodel` implement the functionality
+    needed by probabilistic BQL queries to sample from and inquire
+    about the posterior distribution of a generative model conditioned
+    on data in a table.  Instances of `IMetamodel` contain any
+    in-memory state associated with the metamodel in the database.
+    """
+
     def name(self):
         raise NotImplementedError
     def register(self, bdb):
