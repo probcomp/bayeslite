@@ -7,13 +7,16 @@ default-target: build
 # List of documentation formats to generate.
 DOCS = \
 	$(SPHINX_DOCS) \
+	pdf \
 	# end of DOCS
 
 # Commands to run in the build process.
+PDFLATEX = pdflatex
 PYTHON = python
 SPHINX_BUILD = sphinx-build
 
 # Options for above commands.
+PDFLATEXOPTS =
 SPHINXOPTS =
 PYTHONOPTS =
 SETUPPYOPTS =
@@ -31,6 +34,7 @@ build: setup.py
 # reasonable output.
 SPHINX_DOCS = \
 	html \
+	latex \
 	# end of SPHINX_DOCS
 
 # doc: Build the bayeslite documentation.
@@ -42,6 +46,23 @@ $(SPHINX_DOCS): pythenv.sh build
 	rm -rf build/doc/$@ && \
 	rm -rf build/doc/$@.tmp && \
 	./pythenv.sh $(SPHINX_BUILD) -b $@ doc build/doc/$@.tmp && \
+	mv -f build/doc/$@.tmp build/doc/$@
+
+.PHONY: pdf
+pdf: latex
+	rm -rf build/doc/$@ && \
+	rm -rf build/doc/$@.tmp && \
+	mkdir build/doc/$@.tmp && \
+	{ tar -C build/doc/latex -c -f - . \
+	  | tar -C build/doc/$@.tmp -x -f -; } && \
+	(cd build/doc/$@.tmp && \
+	  $(PDFLATEX) $(PDFLATEXOPTS) \\nonstopmode\\input bayeslite && \
+	  $(PDFLATEX) $(PDFLATEXOPTS) \\nonstopmode\\input bayeslite && \
+	  $(PDFLATEX) $(PDFLATEXOPTS) \\nonstopmode\\input bayeslite && \
+	  $(MAKEINDEX) -s python.ist bayeslite.idx; \
+	  $(PDFLATEX) $(PDFLATEXOPTS) \\nonstopmode\\input bayeslite && \
+	  $(PDFLATEX) $(PDFLATEXOPTS) \\nonstopmode\\input bayeslite && \
+	  :) && \
 	mv -f build/doc/$@.tmp build/doc/$@
 
 # check: (Build bayeslite and) run the tests.
