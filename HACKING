@@ -73,5 +73,5 @@ Additional guidelines:
 - General names should begin with the lexeme `bayesdb' or `bql'.
 - Prefer greppable descriptive global functions over methods.
   => Legibility is more important than extensibility.
-- Prefer single-quoted strings.
+- Prefer single-quoted strings, except use """ for docstrings.
 - unicode for user data; str for SQL/BQL text.
