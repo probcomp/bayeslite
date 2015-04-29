@@ -38,6 +38,22 @@ allowed_column_stattypes = {
 
 def bayesdb_load_legacy_models(bdb, generator, table, metamodel, pathname,
         create=False, ifnotexists=False, gzipped=None):
+    """Load legacy BayesDB models from a file.
+
+    Legacy models are from the previous incarnation of BayesDB, before
+    bayeslite.  If you did not use the previous incarnation of
+    BayesDB, you need not worry about this.
+
+    :param bayeslite.BayesDB bdb: BayesDB instance
+    :param str generator: name of generator
+    :param str table: name of table
+    :param str metamodel: name of metamodel, must be ``crosscat``
+    :param str pathname: pathname of legacy models file
+    :param bool create: if true and `generator` does not exist, create it
+    :param bool ifnotexists: if true and `generator` exists, do it anyway
+    :param bool gzipped: if true, or if ``None`` and `pathname`
+        ends in ``.pkl.gz``, decompress with gzip first
+    """
 
     if metamodel != 'crosscat':
         raise ValueError('Only crosscat legacy models are supported.')
