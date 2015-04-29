@@ -14,10 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""Bayeslite is a probabilistic database built on `SQLite 3
-<https://www.sqlite.org/>`__.  In addition to SQL queries on
-conventional SQL tables, it supports probabilistic BQL queries on
-generative models for data in a table.
+"""Main bayeslite API.
 
 The focus of the bayeslite API is the *BayesDB*, a handle for a
 database in memory or on disk.  To obtain a BayesDB handle, either
