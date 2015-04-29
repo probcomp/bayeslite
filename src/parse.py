@@ -79,7 +79,7 @@ def parse_bql_phrases(scanner):
         raise BQLParseError(['parse failed mysteriously!'])
 
 def parse_bql_string_pos(string):
-    """Yield ``(`phrase`, `pos`)`` for each BQL phrase in `string`.
+    """Yield ``(phrase, pos)`` for each BQL phrase in `string`.
 
     `phrase` is the parsed AST.  `pos` is zero-based index of the code
     point at which `phrase` starts.
@@ -91,7 +91,7 @@ def parse_bql_string_pos(string):
     return ((phrase, scanner.cur_pos) for phrase in phrases)
 
 def parse_bql_string_pos_1(string):
-    """Return ``(`phrase`, `pos`)`` for the first BQL phrase in `string`.
+    """Return ``(phrase, pos)`` for the first BQL phrase in `string`.
 
     May not report parse errors afterward.
     """

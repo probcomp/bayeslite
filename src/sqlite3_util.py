@@ -22,7 +22,7 @@ import os
 
 @contextlib.contextmanager
 def sqlite3_transaction(db):
-    """Run a transaction.  On return, commit.  On exception, roll back.
+    """Transaction context manager.  On return, commit; on exception, rollback.
 
     Transactions may not be nested.  Use savepoints if you want a
     nestable analogue to transactions.
@@ -39,7 +39,7 @@ def sqlite3_transaction(db):
 
 @contextlib.contextmanager
 def sqlite3_savepoint(db):
-    """Run a savepoint.  On return, commit; on exception, roll back.
+    """Savepoint context manager.  On return, commit; on exception, rollback.
 
     Savepoints are like transactions, but they may be nested in
     transactions or in other savepoints.
