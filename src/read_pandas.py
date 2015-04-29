@@ -14,11 +14,22 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+"""Reading data from pandas dataframes."""
+
 import bayeslite.core as core
 
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
 def bayesdb_read_pandas_df(bdb, table, df, create=False, ifnotexists=False):
+    """Read data from a pandas dataframe into a table.
+
+    :param bayeslite.BayesDB bdb: BayesDB instance
+    :param str table: name of table
+    :param pandas.DataFrame df: pandas dataframe
+    :param bool create: if true and `table` does not exist, create it
+    :param bool ifnotexists: if true, and `create` is true` and `table`
+        exists, read data into it anyway
+    """
     if not create:
         if ifnotexists:
             raise ValueError('Not creating table whether or not exists!')
