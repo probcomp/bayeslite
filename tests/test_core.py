@@ -82,7 +82,7 @@ def test_bad_db_user_version():
             with bayesdb(pathname=f.name):
                 pass
 
-class DotdogMetamodel(metamodel.IMetamodel):
+class DotdogMetamodel(metamodel.IBayesDBMetamodel):
     def name(self):
         return 'dotdog'
     def register(self, bdb):

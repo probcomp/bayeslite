@@ -25,12 +25,13 @@ def bayesdb_register_metamodel(bdb, metamodel):
         bdb.metamodels[name] = metamodel
 
 def bayesdb_deregister_metamodel(bdb, metamodel):
+    """Deregister `metamodel`, which must have been registered in `bdb`."""
     name = metamodel.name()
     assert name in bdb.metamodels
     assert bdb.metamodels[name] == metamodel
     del bdb.metamodels[name]
 
-class IMetamodel(object):
+class IBayesDBMetamodel(object):
     def name(self):
         raise NotImplementedError
     def register(self, bdb):

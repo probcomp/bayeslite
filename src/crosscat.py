@@ -99,7 +99,7 @@ CREATE TABLE bayesdb_crosscat_diagnostics (
 );
 '''
 
-class CrosscatMetamodel(metamodel.IMetamodel):
+class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
     def __init__(self, crosscat):
         self._crosscat = crosscat
 
