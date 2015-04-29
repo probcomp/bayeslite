@@ -21,6 +21,14 @@ import bayeslite.grammar as grammar
 import bayeslite.scan as scan
 
 class BQLParseError(Exception):
+    """Errors in parsing BQL.
+
+    As many parse errors as can be reasonably detected are listed
+    together.
+
+    :ivar list errors: list of strings describing parse errors
+    """
+
     def __init__(self, errors):
         assert 0 < len(errors)
         self.errors = errors
