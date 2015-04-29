@@ -15,6 +15,11 @@
 #   limitations under the License.
 
 class BayesDBException(Exception):
+    """Exceptions associated with a BayesDB instance.
+
+    :ivar bayeslite.BayesDB bayesdb: associated BayesDB instance
+    """
+
     def __init__(self, bayesdb, *args, **kwargs):
         self.bayesdb = bayesdb
         super(BayesDBException, self).__init__(*args, **kwargs)
