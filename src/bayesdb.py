@@ -29,13 +29,15 @@ def bayesdb_open(pathname=None):
     """Open the BayesDB in the file at `pathname`.
 
     If there is no file at `pathname`, it is automatically created.
-    If `pathname` is unspecified or None, a temporary in-memory
+    If `pathname` is unspecified or ``None``, a temporary in-memory
     BayesDB instance is created.
     """
     return BayesDB(bayesdb_open_cookie, pathname=pathname)
 
 class BayesDB(object):
-    """Class of Bayesian databases.
+    """A handle for a Bayesian database in memory or on disk.
+
+    Do not create BayesDB instances directly; use :func:`bayesdb_open` instead.
     """
 
     def __init__(self, cookie, pathname=None):
@@ -74,7 +76,7 @@ class BayesDB(object):
         bindings.
 
         Only one tracer can be established at a time.  To remove it,
-        use `untrace`.
+        use :meth:`~BayesDB.untrace`.
         """
         assert self.tracer is None
         self.tracer = tracer
@@ -82,7 +84,8 @@ class BayesDB(object):
     def untrace(self, tracer):
         """Stop calling `tracer` for each BQL query executed.
 
-        `tracer` must have been previously established with `trace`.
+        `tracer` must have been previously established with
+        :meth:`~BayesDB.trace`.
         """
         assert self.tracer == tracer
         self.tracer = None
@@ -95,7 +98,7 @@ class BayesDB(object):
         bindings.
 
         Only one tracer can be established at a time.  To remove it,
-        use `sql_untrace`.
+        use :meth:`~BayesDB.sql_untrace`.
         """
         assert self.sql_tracer is None
         self.sql_tracer = tracer
@@ -103,7 +106,8 @@ class BayesDB(object):
     def sql_untrace(self, tracer):
         """Stop calling `tracer` for each SQL query executed.
 
-        `tracer` must have been previously established with `sql_trace`.
+        `tracer` must have been previously established with
+        :meth:`~BayesDB.sql_trace`.
         """
         assert self.sql_tracer == tracer
         self.sql_tracer = None
@@ -116,7 +120,7 @@ class BayesDB(object):
         terminated by a semicolon.
 
         The argument `bindings` is a sequence or dictionary of
-        bindings for parameters in the query, or None to supply no
+        bindings for parameters in the query, or ``None`` to supply no
         bindings.
         """
         if bindings is None:
@@ -147,7 +151,7 @@ class BayesDB(object):
         terminated by a semicolon.
 
         The argument `bindings` is a sequence or dictionary of
-        bindings for parameters in the query, or None to supply no
+        bindings for parameters in the query, or ``None`` to supply no
         bindings.
         """
         if bindings is None:
@@ -167,5 +171,5 @@ class BayesDB(object):
             yield
 
     def set_progress_handler(self, handler, n):
-        """Call HANDLER periodically during query execution."""
+        """Call `handler` periodically during query execution."""
         self.sqlite3.set_progress_handler(handler, n)
