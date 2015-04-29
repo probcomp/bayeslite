@@ -14,6 +14,18 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+"""BQL->SQL compiler.
+
+To compile a parsed BQL query:
+
+1. Determine the number, names, and values of the parameters.
+2. Create an output accumulator, `Output`.
+3. Pass the query and accumulator to `compile_query`.
+4. Use :meth:`Output.getvalue` to get the compiled SQL text.
+5. Use :meth:`Output.getbindings` to get bindings for parameters that
+   were actually used in the query.
+"""
+
 import StringIO
 import contextlib
 
@@ -23,10 +35,13 @@ import bayeslite.core as core
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 
-# Output: Compiled SQL output accumulator.  Like StringIO.StringIO()
-# for write with getvalue, but also does bookkeeping for parameters
-# and subqueries.
 class Output(object):
+    """Compiled SQL output accumulator.
+
+    Like a write-only StringIO.StringIO(), but also does bookkeeping
+    for parameters and subqueries.
+    """
+
     def __init__(self, n_numpar, nampar_map, bindings):
         self.stringio = StringIO.StringIO()
         # Below, `number' means 1-based, and `index' means 0-based.  n
@@ -40,19 +55,19 @@ class Output(object):
         self.select = []                # map of output index -> input index
 
     def subquery(self):
-        '''Return an output accumulator for a subquery.'''
+        """Return an output accumulator for a subquery."""
         return Output(self.n_numpar, self.nampar_map, self.bindings)
 
     def getvalue(self):
-        '''Return the accumulated output.'''
+        """Return the accumulated output."""
         return self.stringio.getvalue()
 
     def getbindings(self):
-        '''Return a selection of bindings fit for the accumulated output.
+        """Return a selection of bindings fit for the accumulated output.
 
         If there were subqueries, or if this is accumulating output
         for a subquery, this may not use all bindings.
-        '''
+        """
         if isinstance(self.bindings, dict):
             # User supplied named bindings.
             # - Grow a set of parameters we don't expect (unknown).
@@ -118,11 +133,11 @@ class Output(object):
             raise TypeError('Invalid query bindings: %s' % (self.bindings,))
 
     def write(self, text):
-        '''Accumulate TEXT in the output of getvalue().'''
+        """Accumulate `text` in the output of :meth:`getvalue`."""
         self.stringio.write(text)
 
     def write_numpar(self, n):
-        '''Accumulate a reference to the parameter numbered N.'''
+        """Accumulate a reference to the parameter numbered `n`."""
         assert 0 < n
         assert n <= self.n_numpar
         # The input index i is the input number n minus one.
@@ -144,7 +159,7 @@ class Output(object):
         self.write('?%d' % (m,))
 
     def write_nampar(self, name, n):
-        '''Accumulate a reference to the parameter named NAME, numbered N.'''
+        """Accumulate a reference to the parameter `name` numbered `n`."""
         assert 0 < n
         assert n <= self.n_numpar
         # Just treat it as if it were a numbered parameter; it is the
@@ -153,6 +168,12 @@ class Output(object):
         self.write_numpar(n)
 
 def compile_query(bdb, query, out):
+    """Compile `query`, writing output to `output`.
+
+    :param bdb: database in which to interpret `query`
+    :param query: abstract syntax tree of a query
+    :param Output out: output accumulator
+    """
     if isinstance(query, ast.Select):
         compile_select(bdb, query, out)
     elif isinstance(query, ast.Estimate):
