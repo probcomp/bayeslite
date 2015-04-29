@@ -37,11 +37,12 @@ def bayesdb_deregister_metamodel(bdb, metamodel):
 class IBayesDBMetamodel(object):
     """BayesDB metamodel interface.
 
-    Subclasses of :class:`IMetamodel` implement the functionality
-    needed by probabilistic BQL queries to sample from and inquire
-    about the posterior distribution of a generative model conditioned
-    on data in a table.  Instances of `IMetamodel` contain any
-    in-memory state associated with the metamodel in the database.
+    Subclasses of :class:`IBayesDBMetamodel` implement the
+    functionality needed by probabilistic BQL queries to sample from
+    and inquire about the posterior distribution of a generative model
+    conditioned on data in a table.  Instances of subclasses of
+    `IBayesDBMetamodel` contain any in-memory state associated with
+    the metamodel in the database.
     """
 
     def name(self):
