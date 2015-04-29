@@ -64,3 +64,19 @@ from bayeslite.parse import BQLParseError
 from bayeslite.read_csv import bayesdb_read_csv
 from bayeslite.read_csv import bayesdb_read_csv_file
 from bayeslite.txn import BayesDBTxnError
+
+__all__ = [
+    'BQLParseError',
+    'BayesDB',
+    'BayesDBException',
+    'BayesDBTxnError',
+    'bayesdb_deregister_metamodel',
+    'bayesdb_load_codebook_csv_file',
+    'bayesdb_load_legacy_models',
+    'bayesdb_open',
+    'bayesdb_read_csv',
+    'bayesdb_read_csv_file',
+    'bayesdb_register_metamodel',
+    'bayesdb_simulate',
+    'IBayesDBMetamodel',
+]
