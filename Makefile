@@ -40,7 +40,9 @@ doc: $(DOCS)
 .PHONY: $(SPHINX_DOCS)
 $(SPHINX_DOCS): pythenv.sh build
 	rm -rf build/doc/$@ && \
-	./pythenv.sh $(SPHINX_BUILD) -b $@ doc build/doc/$@
+	rm -rf build/doc/$@.tmp && \
+	./pythenv.sh $(SPHINX_BUILD) -b $@ doc build/doc/$@.tmp && \
+	mv -f build/doc/$@.tmp build/doc/$@
 
 # check: (Build bayeslite and) run the tests.
 .PHONY: check
@@ -51,3 +53,4 @@ check: check.sh
 .PHONY: clean
 clean:
 	-rm -rf build
+	-rm -rf build/doc/*.tmp
