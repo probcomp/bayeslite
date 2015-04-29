@@ -14,6 +14,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+"""Support for legacy models from the previous incarnation of BayesDB."""
+
 import gzip
 import json
 import pickle
