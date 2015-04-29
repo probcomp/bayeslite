@@ -54,7 +54,7 @@ def bayesdb_bql(fn, cookie, *args):
     except Exception as e:
         print >>sys.stderr, traceback.format_exc()
         raise e
-
+
 ### BayesDB column functions
 
 # Two-column function:  CORRELATION [OF <col0> WITH <col1>]
@@ -211,8 +211,10 @@ def bayesdb_simulate(bdb, generator_id, constraints, colnos, numpredictions=1):
         numpredictions=numpredictions)
 
 def bayesdb_insert(bdb, generator_id, row):
+    """Notify a generator that a row has been inserted into its table."""
     bayesdb_insertmany(bdb, generator_id, [row])
 
 def bayesdb_insertmany(bdb, generator_id, rows):
+    """Notify a generator that rows have been inserted into its table."""
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
     metamodel.insertmany(bdb, generator_id, rows)
