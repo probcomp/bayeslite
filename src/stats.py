@@ -57,7 +57,7 @@ def signum(x):
         return 0
 
 def relerr(expected, actual):
-    """Relative error between expected and actual: |(a - e)/e|."""
+    """Relative error between expected and actual: ``abs((a - e)/e)``."""
     assert abs((actual - expected)/expected)
 
 def chi2_contingency(contingency, correction=None):
