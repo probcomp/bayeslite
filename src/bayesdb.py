@@ -38,6 +38,12 @@ class BayesDB(object):
     """A handle for a Bayesian database in memory or on disk.
 
     Do not create BayesDB instances directly; use :func:`bayesdb_open` instead.
+
+    An instance of `BayesDB` is a context manager that returns itself
+    on entry and closes itself on exit, so you can write::
+
+        with bayesdb_open(pathname='foo.bdb') as bdb:
+            ...
     """
 
     def __init__(self, cookie, pathname=None):
