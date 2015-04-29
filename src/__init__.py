@@ -14,9 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""Probabilistic database built on SQLite 3.
-
-Bayeslite is a probabilistic database built on `SQLite 3
+"""Bayeslite is a probabilistic database built on `SQLite 3
 <https://www.sqlite.org/>`__.  In addition to SQL queries on
 conventional SQL tables, it supports probabilistic BQL queries on
 generative models for data in a table.
@@ -38,17 +36,34 @@ When done, close it with the :meth:`~BayesDB.close` method::
 
 The contents of ``memdb`` will be forgotten when it is closed or when
 the Python process exists.  The contents of ``filedb`` will be stored
-durably on disk in ``foo.bdb``.  The BayesDB object acts as a context
-manager that returns itself on entry and closes itself on exit, so you
-can write::
+durably on disk in ``foo.bdb``.
 
-   with bayeslite.bayesdb_open(pathname='foo.bdb') as bdb:
-       ...
-
-Given a BayesDB handle ``bdb``, execute BQL queries on it with the
+You can execute BQL on a BayesDB handle `bdb` with the
 :meth:`~BayesDB.execute` method::
 
    bdb.execute('create table t(x int, y text, z real)')
+   bdb.execute("insert into t values(1, 'xyz', 42.5)")
+   bdb.execute("insert into t values(1, 'pqr', 83.7)")
+   bdb.execute("insert into t values(2, 'xyz', 1000)")
+
+However, before you can use BQL modelling for your data, you must use
+register a metamodel, such as the Crosscat metamodel::
+
+   import crosscat.LocalEngine
+   import bayeslite.crosscat
+
+   cc = crosscat.LocalEngine.LocalEngine(seed=0)
+   ccmm = bayeslite.crosscat.CrosscatMetamodel(cc)
+   bayeslite.bayesdb_register_metamodel(bdb, ccmm)
+
+Then you can model a table with Crosscat and query the probable
+implications of the data in the table::
+
+   bdb.execute('create generator t_cc for t using crosscat(guess(*))')
+   bdb.execute('initialize 10 models for t_cc')
+   bdb.execute('analyze t_cc for 10 iterations wait')
+   for x in bdb.execute('estimate pairwise dependence probablity from t_cc'):
+       print x
 """
 
 from bayeslite.bayesdb import BayesDB
