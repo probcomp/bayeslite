@@ -14,6 +14,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+"""SQLite3 utilities."""
+
 import binascii
 import contextlib
 import os
@@ -72,7 +74,7 @@ def sqlite3_exec_1(db, query, *args):
     return row[0]
 
 def sqlite3_quote_name(name):
-    """Quote NAME as a SQL identifier, e.g. a table or column name.
+    """Quote `name` as a SQL identifier, e.g. a table or column name.
 
     Do NOT use this for strings, e.g. inserting data into a table.
     Use query parameters instead.
@@ -83,6 +85,7 @@ def sqlite3_quote_name(name):
 # From <https://www.sqlite.org/datatype3.html#affname>.  Doesn't seem
 # to be a built-in SQLite library routine to compute this.
 def sqlite3_column_affinity(column_type):
+    """Return the sqlite3 column affinity corresponding to a type string."""
     ct = column_type.lower()
     if "int" in ct:
         return "INTEGER"
