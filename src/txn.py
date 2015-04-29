@@ -98,4 +98,6 @@ def bayesdb_txn_fini(bdb):
     bdb.cache = None
 
 class BayesDBTxnError(BayesDBException):
+    """Transaction errors in a BayesDB."""
+
     pass
