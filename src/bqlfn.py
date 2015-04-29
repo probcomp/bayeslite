@@ -199,6 +199,13 @@ def bql_json_get(bdb, json, key):
     return json.loads(json)[key]
 
 def bayesdb_simulate(bdb, generator_id, constraints, colnos, numpredictions=1):
+    """Simulate rows from a generative model, subject to constraints.
+
+    Returns a list of `numpredictions` tuples, with a value for each
+    column specified in the list `colnos`, conditioned on the
+    constraints in the list `constraints` of tuples ``(colno,
+    value)``.
+    """
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
     return metamodel.simulate(bdb, generator_id, constraints, colnos,
         numpredictions=numpredictions)
