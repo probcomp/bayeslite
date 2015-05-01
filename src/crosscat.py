@@ -30,6 +30,7 @@ import bayeslite.core as core
 import bayeslite.guess as guess
 import bayeslite.metamodel as metamodel
 
+from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.stats import arithmetic_mean
 from bayeslite.util import casefold
@@ -153,7 +154,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             row = cursor.next()
         except StopIteration:
             generator = core.bayesdb_generator_name(bdb, generator_id)
-            raise ValueError('No crosscat metadata for generator: %s' %
+            raise BQLError(bdb, 'No crosscat metadata for generator: %s' %
                 (generator,))
         else:
             metadata = json.loads(row[0])
@@ -207,7 +208,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             row = cursor.next()
         except StopIteration:
             generator = core.bayesdb_generator_name(bdb, generator_id)
-            raise ValueError('No such crosscat model for generator %s: %d' %
+            raise BQLError(bdb, 'No such crosscat model for generator %s: %d' %
                 (repr(generator), modelno))
         else:
             theta = json.loads(row[0])
@@ -286,8 +287,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     })
                 version = 2
             if version != 2:
-                    raise ValueError('Crosscat already installed'
-                        ' with unknown schema version: %d' % (version,))
+                raise BQLError(bdb, 'Crosscat already installed'
+                    ' with unknown schema version: %d' % (version,))
 
     def create_generator(self, bdb, table, schema, instantiate):
         do_guess = False
@@ -308,7 +309,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                casefold(directive[1]) != 'guess':
                 columns.append((directive[0], directive[1]))
                 continue
-            raise ValueError('Invalid crosscat column model: %s' %
+            raise BQLError(bdb, 'Invalid crosscat column model: %s' %
                 (repr(directive),))
 
         with bdb.savepoint():
@@ -557,7 +558,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     thetas = [self._crosscat_theta(bdb, generator_id, modelno)
                         for modelno in update_modelnos]
                 if len(thetas) == 0:
-                    raise ValueError('No models to analyze for generator: %s' %
+                    raise BQLError(bdb, 'No models to analyze'
+                        ' for generator: %s' %
                         (core.bayesdb_generator_name(bdb, generator_id),))
                 X_L_list = [theta['X_L'] for theta in thetas]
                 X_D_list = [theta['X_D'] for theta in thetas]
@@ -725,7 +727,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             row = value_cursor.next()
         except StopIteration:
             generator = core.bayesdb_generator_name(bdb, generator_id)
-            raise ValueError('No such row in %s: %d' %
+            raise BQLError(bdb, 'No such row in %s: %d' %
                 (repr(generator), rowid))
         else:
             assert len(row) == 1
@@ -757,7 +759,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             row = cursor.next()
         except StopIteration:
             generator = core.bayesdb_generator_table(bdb, generator_id)
-            raise ValueError('No such row in table %s for generator %d: %d' %
+            raise BQLError(bdb, 'No such row in table %s'
+                ' for generator %d: %d' %
                 (repr(table_name), repr(generator), repr(rowid)))
         try:
             cursor.next()
@@ -765,7 +768,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             pass
         else:
             generator = core.bayesdb_generator_table(bdb, generator_id)
-            raise ValueError('More than one such row'
+            raise BQLError(bdb, 'More than one such row'
                 ' in table %s for generator %s: %d' %
                 (repr(table_name), repr(generator), repr(rowid)))
         row_id = crosscat_row_id(rowid)
@@ -834,7 +837,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             ''' % (qt, ', '.join(qcns), ', '.join('?' for _qcn in qcns))
             for row in rows:
                 if len(row) != len(sql_column_names):
-                    raise ValueError('Wrong row length'
+                    raise BQLError(bdb, 'Wrong row length'
                         ': expected %d, got %d'
                         (len(sql_column_names), len(row)))
                 bdb.sql_execute(sql, row)
@@ -1021,7 +1024,7 @@ def crosscat_cc_colno(bdb, generator_id, colno):
     except StopIteration:
         generator = core.bayesdb_generator_name(bdb, generator_id)
         colname = core.bayesdb_generator_column_name(bdb, generator_id, colno)
-        raise ValueError('Column not modelled in generator %s: %s' %
+        raise BQLError(bdb, 'Column not modelled in generator %s: %s' %
             (repr(generator), repr(colname)))
     else:
         assert len(row) == 1
@@ -1039,8 +1042,8 @@ def crosscat_gen_colno(bdb, generator_id, cc_colno):
     except StopIteration:
         generator = core.bayesdb_generator_name(bdb, generator_id)
         colname = core.bayesdb_generator_column_name(bdb, generator_id, colno)
-        raise ValueError('Column not Crosscat-modelled in generator %s: %s' %
-            (repr(generator), repr(colname)))
+        raise BQLError(bdb, 'Column not Crosscat-modelled'
+            ' in generator %s: %s' % (repr(generator), repr(colname)))
     else:
         assert len(row) == 1
         assert isinstance(row[0], int)

@@ -292,6 +292,24 @@ def bayesdb_generator_column_stattype(bdb, generator_id, colno):
         assert len(row) == 1
         return row[0]
 
+def bayesdb_generator_has_column(bdb, generator_id, column_name):
+    """True if `generator_id` models a column named `name`."""
+    sql = '''
+        SELECT COUNT(*)
+            FROM bayesdb_generator AS g,
+                bayesdb_generator_column as gc,
+                bayesdb_column AS c
+            WHERE g.id = :generator_id AND c.name = :column_name
+                AND g.id = gc.generator_id
+                AND g.tabname = c.tabname
+                AND gc.colno = c.colno
+    '''
+    cursor = bdb.sql_execute(sql, {
+        'generator_id': generator_id,
+        'column_name': column_name,
+    })
+    return cursor.next()[0]
+
 def bayesdb_generator_column_name(bdb, generator_id, colno):
     """Return the name of the column numbered `colno` in `generator_id`."""
     sql = '''

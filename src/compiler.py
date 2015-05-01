@@ -32,6 +32,7 @@ import contextlib
 import bayeslite.ast as ast
 import bayeslite.core as core
 
+from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 
@@ -295,7 +296,7 @@ def compile_estimate(bdb, estimate, named, out):
     else:
         assert estimate.quantifier == ast.SELQUANT_ALL
     if not core.bayesdb_has_generator_default(bdb, estimate.generator):
-        raise ValueError('No such generator: %s' % (estimate.generator,))
+        raise BQLError(bdb, 'No such generator: %s' % (estimate.generator,))
     generator_id = core.bayesdb_get_generator_default(bdb, estimate.generator)
     bql_compiler = BQLCompiler_1Row(generator_id)
     compile_select_columns(bdb, estimate.columns, named, bql_compiler, out)
@@ -432,7 +433,7 @@ def compile_estcols(bdb, estcols, out):
     # XXX UH OH!  This will have the effect of shadowing names.  We
     # need an alpha-renaming pass.
     if not core.bayesdb_has_generator_default(bdb, estcols.generator):
-        raise ValueError('No such generator: %s' % (estcols.generator,))
+        raise BQLError(bdb, 'No such generator: %s' % (estcols.generator,))
     generator_id = core.bayesdb_get_generator_default(bdb, estcols.generator)
     colno_exp = 'c.colno'       # XXX
     out.write('SELECT c.name AS name')
@@ -483,7 +484,7 @@ def compile_estpaircols(bdb, estpaircols, out):
     colno0_exp = 'c0.colno'     # XXX
     colno1_exp = 'c1.colno'     # XXX
     if not core.bayesdb_has_generator_default(bdb, estpaircols.generator):
-        raise ValueError('No such generator: %s' % (estpaircols.generator,))
+        raise BQLError(bdb, 'No such generator: %s' % (estpaircols.generator,))
     generator_id = core.bayesdb_get_generator_default(bdb,
         estpaircols.generator)
     out.write('SELECT'
@@ -556,7 +557,7 @@ def compile_estpaircols(bdb, estpaircols, out):
 def compile_estpairrow(bdb, estpairrow, out):
     assert isinstance(estpairrow, ast.EstPairRow)
     if not core.bayesdb_has_generator_default(bdb, estpairrow.generator):
-        raise ValueError('No such generator: %s' % (estpairrow.generator,))
+        raise BQLError(bdb, 'No such generator: %s' % (estpairrow.generator,))
     generator_id = core.bayesdb_get_generator_default(bdb,
         estpairrow.generator)
     rowid0_exp = 'r0._rowid_'
@@ -601,7 +602,7 @@ def compile_estpairrow(bdb, estpairrow, out):
 class BQLCompiler_None(object):
     def compile_bql(self, bdb, bql, out):
         # XXX Report source location.
-        raise ValueError('Invalid context for BQL!')
+        raise BQLError(bdb, 'Invalid context for BQL!')
 
 class BQLCompiler_1Row(object):
     def __init__(self, generator_id):
@@ -614,7 +615,8 @@ class BQLCompiler_1Row(object):
         rowid_col = '_rowid_'   # XXX Don't hard-code this.
         if isinstance(bql, ast.ExpBQLPredProb):
             if bql.column is None:
-                raise ValueError('Predictive probability at row needs column.')
+                raise BQLError(bdb, 'Predictive probability at row'
+                    ' needs column.')
             colno = core.bayesdb_generator_column_number(bdb, generator_id,
                 bql.column)
             out.write('bql_row_column_predictive_probability(%s, %s, %s)' %
@@ -624,7 +626,8 @@ class BQLCompiler_1Row(object):
             # condition on the values of the row?  Maybe need another
             # notation; PROBABILITY OF X = V GIVEN ...?
             if bql.column is None:
-                raise ValueError('Probability of value at row needs column.')
+                raise BQLError(bdb, 'Probability of value at row'
+                    ' needs column.')
             colno = core.bayesdb_generator_column_number(bdb, generator_id,
                 bql.column)
             out.write('bql_column_value_probability(%s, %s, ' %
@@ -641,7 +644,7 @@ class BQLCompiler_1Row(object):
                     (generator_id, colno))
         elif isinstance(bql, ast.ExpBQLSim):
             if bql.condition is None:
-                raise ValueError('Similarity as 1-row function needs row.')
+                raise BQLError(bdb, 'Similarity as 1-row function needs row.')
             out.write('bql_row_similarity(%s, _rowid_, ' % (generator_id,))
             with compiling_paren(bdb, out, '(', ')'):
                 table_name = core.bayesdb_generator_table(bdb, generator_id)
@@ -674,6 +677,11 @@ class BQLCompiler_1Row(object):
         elif isinstance(bql, ast.ExpBQLInfer):
             assert bql.column is not None
             table_name = core.bayesdb_generator_table(bdb, generator_id)
+            if not core.bayesdb_generator_has_column(bdb, generator_id,
+                    bql.column):
+                generator = core.bayesdb_generator_name(bdb, generator_id)
+                raise BQLError(bdb, 'No such column in generator %s: %s' %
+                    (generator, bql.column))
             colno = core.bayesdb_generator_column_number(bdb, generator_id,
                 bql.column)
             out.write('bql_infer(%d, %d, _rowid_, ' % (generator_id, colno))
@@ -702,14 +710,15 @@ class BQLCompiler_2Row(object):
         assert ast.is_bql(bql)
         generator_id = self.generator_id
         if isinstance(bql, ast.ExpBQLProb):
-            raise ValueError('Probability of value is 1-row function.')
+            raise BQLError(bdb, 'Probability of value is 1-row function.')
         elif isinstance(bql, ast.ExpBQLPredProb):
-            raise ValueError('Predictive probability is 1-row function.')
+            raise BQLError(bdb, 'Predictive probability is 1-row function.')
         elif isinstance(bql, ast.ExpBQLTyp):
-            raise ValueError('Typicality is 1-row function.')
+            raise BQLError(bdb, 'Typicality is 1-row function.')
         elif isinstance(bql, ast.ExpBQLSim):
             if bql.condition is not None:
-                raise ValueError('Similarity needs no row in 2-row context.')
+                raise BQLError(bdb, 'Similarity needs no row'
+                    ' in 2-row context.')
             out.write('bql_row_similarity(%s, %s, %s' %
                 (generator_id, self.rowid0_exp, self.rowid1_exp))
             if len(bql.column_lists) == 1 and \
@@ -724,15 +733,15 @@ class BQLCompiler_2Row(object):
                     out)
             out.write(')')
         elif isinstance(bql, ast.ExpBQLDepProb):
-            raise ValueError('Dependence probability is 0-row function.')
+            raise BQLError(bdb, 'Dependence probability is 0-row function.')
         elif isinstance(bql, ast.ExpBQLMutInf):
-            raise ValueError('Mutual information is 0-row function.')
+            raise BQLError(bdb, 'Mutual information is 0-row function.')
         elif isinstance(bql, ast.ExpBQLCorrel):
-            raise ValueError('Column correlation is 0-row function.')
+            raise BQLError(bdb, 'Column correlation is 0-row function.')
         elif isinstance(bql, ast.ExpBQLInfer):
-            raise ValueError('Infer is a 1-row function.')
+            raise BQLError(bdb, 'Infer is a 1-row function.')
         elif isinstance(bql, ast.ExpBQLInferConf):
-            raise ValueError('Infer is a 1-row function.')
+            raise BQLError(bdb, 'Infer is a 1-row function.')
         else:
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
 
@@ -748,21 +757,22 @@ class BQLCompiler_1Col(object):
         generator_id = self.generator_id
         if isinstance(bql, ast.ExpBQLProb):
             if bql.column is not None:
-                raise ValueError('Probability of value needs no column.')
+                raise BQLError(bdb, 'Probability of value needs no column.')
             out.write('bql_column_value_probability(%d, %s, ' %
                 (generator_id, self.colno_exp))
             compile_expression(bdb, bql.value, self, out)
             out.write(')')
         elif isinstance(bql, ast.ExpBQLPredProb):
             # XXX Is this true?
-            raise ValueError('Predictive probability makes sense only at row.')
+            raise BQLError(bdb, 'Predictive probability makes sense'
+                ' only at row.')
         elif isinstance(bql, ast.ExpBQLTyp):
             if bql.column is not None:
-                raise ValueError('Typicality of column needs no column.')
+                raise BQLError(bdb, 'Typicality of column needs no column.')
             out.write('bql_column_typicality(%d, %s)' %
                 (generator_id, self.colno_exp))
         elif isinstance(bql, ast.ExpBQLSim):
-            raise ValueError('Similarity to row makes sense only at row.')
+            raise BQLError(bdb, 'Similarity to row makes sense only at row.')
         elif isinstance(bql, ast.ExpBQLDepProb):
             compile_bql_2col_1(bdb, generator_id,
                 'bql_column_dependence_probability',
@@ -777,9 +787,9 @@ class BQLCompiler_1Col(object):
                 'bql_column_correlation',
                 'Column correlation', None, bql, self.colno_exp, self, out)
         elif isinstance(bql, ast.ExpBQLInfer):
-            raise ValueError('Infer is a 1-row function.')
+            raise BQLError(bdb, 'Infer is a 1-row function.')
         elif isinstance(bql, ast.ExpBQLInferConf):
-            raise ValueError('Infer is a 1-row function.')
+            raise BQLError(bdb, 'Infer is a 1-row function.')
         else:
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
 
@@ -796,13 +806,14 @@ class BQLCompiler_2Col(object):
         assert ast.is_bql(bql)
         generator_id = self.generator_id
         if isinstance(bql, ast.ExpBQLProb):
-            raise ValueError('Probability of value is one-column function.')
+            raise BQLError(bdb, 'Probability of value is one-column function.')
         elif isinstance(bql, ast.ExpBQLPredProb):
-            raise ValueError('Predictive probability is one-column function.')
+            raise BQLError(bdb, 'Predictive probability'
+                ' is one-column function.')
         elif isinstance(bql, ast.ExpBQLTyp):
-            raise ValueError('Typicality is one-column function.')
+            raise BQLError(bdb, 'Typicality is one-column function.')
         elif isinstance(bql, ast.ExpBQLSim):
-            raise ValueError('Similarity to row makes sense only at row.')
+            raise BQLError(bdb, 'Similarity to row makes sense only at row.')
         elif isinstance(bql, ast.ExpBQLDepProb):
             compile_bql_2col_0(bdb, generator_id,
                 'bql_column_dependence_probability',
@@ -822,9 +833,9 @@ class BQLCompiler_2Col(object):
                 None,
                 bql, self.colno0_exp, self.colno1_exp, self, out)
         elif isinstance(bql, ast.ExpBQLInfer):
-            raise ValueError('Infer is a 1-row function.')
+            raise BQLError(bdb, 'Infer is a 1-row function.')
         elif isinstance(bql, ast.ExpBQLInferConf):
-            raise ValueError('Infer is a 1-row function.')
+            raise BQLError(bdb, 'Infer is a 1-row function.')
         else:
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
 
@@ -859,10 +870,10 @@ def compile_column_lists(bdb, generator_id, column_lists, _bql_compiler, out):
                 else:
                     out.write(', ')
                 if len(column) != 1:
-                    raise ValueError('ESTIMATE COLUMNS subquery returned' +
+                    raise BQLError(bdb, 'ESTIMATE COLUMNS subquery returned' +
                         ' multi-cell rows.')
                 if not isinstance(column[0], unicode):
-                    raise TypeError('ESTIMATE COLUMNS subquery returned' +
+                    raise BQLError(bdb, 'ESTIMATE COLUMNS subquery returned' +
                         ' non-string.')
                 colno = core.bayesdb_generator_column_number(bdb, generator_id,
                     column[0])
@@ -875,9 +886,9 @@ def compile_column_lists(bdb, generator_id, column_lists, _bql_compiler, out):
 def compile_bql_2col_2(bdb, generator_id, bqlfn, desc, extra, bql,
         bql_compiler, out):
     if bql.column0 is None:
-        raise ValueError(desc + ' needs exactly two columns.')
+        raise BQLError(bdb, desc + ' needs exactly two columns.')
     if bql.column1 is None:
-        raise ValueError(desc + ' needs exactly two columns.')
+        raise BQLError(bdb, desc + ' needs exactly two columns.')
     colno0 = core.bayesdb_generator_column_number(bdb, generator_id,
         bql.column0)
     colno1 = core.bayesdb_generator_column_number(bdb, generator_id,
@@ -890,9 +901,9 @@ def compile_bql_2col_2(bdb, generator_id, bqlfn, desc, extra, bql,
 def compile_bql_2col_1(bdb, generator_id, bqlfn, desc, extra, bql, colno1_exp,
         bql_compiler, out):
     if bql.column0 is None:
-        raise ValueError(desc + ' needs at least one column.')
+        raise BQLError(bdb, desc + ' needs at least one column.')
     if bql.column1 is not None:
-        raise ValueError(desc + ' needs at most one column.')
+        raise BQLError(bdb, desc + ' needs at most one column.')
     colno0 = core.bayesdb_generator_column_number(bdb, generator_id,
         bql.column0)
     out.write('%s(%d, %s, %s' % (bqlfn, generator_id, colno0, colno1_exp))
@@ -903,9 +914,9 @@ def compile_bql_2col_1(bdb, generator_id, bqlfn, desc, extra, bql, colno1_exp,
 def compile_bql_2col_0(bdb, generator_id, bqlfn, desc, extra, bql,
         colno0_exp, colno1_exp, bql_compiler, out):
     if bql.column0 is not None:
-        raise ValueError(desc + ' needs no columns.')
+        raise BQLError(bdb, desc + ' needs no columns.')
     if bql.column1 is not None:
-        raise ValueError(desc + ' needs no columns.')
+        raise BQLError(bdb, desc + ' needs no columns.')
     out.write('%s(%d, %s, %s' % (bqlfn, generator_id, colno0_exp, colno1_exp))
     if extra:
         extra(bdb, generator_id, bql, bql_compiler, out)

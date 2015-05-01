@@ -243,10 +243,10 @@ def test_estimate_bql():
     assert bql2sql('estimate dependence probability of age with weight' +
         ' from t1_cc;') == \
         'SELECT bql_column_dependence_probability(1, 2, 3) FROM "t1";'
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
         bql2sql('estimate dependence probability with age from t1_cc;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
         bql2sql('estimate dependence probability from t1_cc;')
     assert bql2sql('estimate mutual information of age with weight' +
@@ -255,26 +255,26 @@ def test_estimate_bql():
     assert bql2sql('estimate mutual information of age with weight' +
         ' using 42 samples from t1_cc;') == \
         'SELECT bql_column_mutual_information(1, 2, 3, 42) FROM "t1";'
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
         bql2sql('estimate mutual information with age from t1_cc;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
         bql2sql('estimate mutual information from t1_cc;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
         bql2sql('estimate mutual information with age using 42 samples'
             ' from t1_cc;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
         bql2sql('estimate mutual information using 42 samples from t1_cc;')
     # XXX Should be SELECT, not ESTIMATE, here?
     assert bql2sql('estimate correlation of age with weight from t1_cc;') == \
         'SELECT bql_column_correlation(1, 2, 3) FROM "t1";'
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
         bql2sql('estimate correlation with age from t1_cc;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
         bql2sql('estimate correlation from t1_cc;')
     assert bql2sql('estimate infer age with confidence 0.9 from t1_cc;') == \
@@ -301,21 +301,21 @@ def test_estimate_columns_trivial():
             ' (probability of value 42) > 0.5') == \
         prefix + ' AND (bql_column_value_probability(1, c.colno, 42) > 0.5);'
     # XXX ESTIMATE COLUMNS FROM T1 WHERE PROBABILITY OF 1 > 0.5
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit column.
         bql2sql('estimate columns from t1_cc where (probability of x = 0)'
             ' > 0.5;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit column.  PREDICTIVE PROBABILITY makes no sense
         # without row.
         bql2sql('estimate columns from t1_cc where' +
             ' predictive probability of x > 0;')
     assert bql2sql('estimate columns from t1_cc where typicality > 0.5;') == \
         prefix + ' AND (bql_column_typicality(1, c.colno) > 0.5);'
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit column.
         bql2sql('estimate columns from t1_cc where typicality of c > 0.5;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # SIMILARITY makes no sense without row.
         bql2sql('estimate columns from t1_cc where' +
             ' similarity to (rowid = x) with respect to c > 0;')
@@ -323,11 +323,11 @@ def test_estimate_columns_trivial():
             ' dependence probability with age > 0.5;') == \
         prefix + \
         ' AND (bql_column_dependence_probability(1, 2, c.colno) > 0.5);'
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
         bql2sql('estimate columns from t1_cc where' +
             ' dependence probability of age with weight > 0.5;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
         bql2sql('estimate columns from t1_cc'
             ' where dependence probability > 0.5;')
@@ -338,32 +338,32 @@ def test_estimate_columns_trivial():
     assert bql2sql('estimate columns from t1_cc order by' +
             ' mutual information with age using 42 samples;') == \
         prefix + ' ORDER BY bql_column_mutual_information(1, 2, c.colno, 42);'
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
         bql2sql('estimate columns from t1_cc order by' +
             ' mutual information of age with weight;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
         bql2sql('estimate columns from t1_cc where mutual information > 0.5;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
         bql2sql('estimate columns from t1_cc order by' +
             ' mutual information of age with weight using 42 samples;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
         bql2sql('estimate columns from t1_cc where' +
             ' mutual information using 42 samples > 0.5;')
     assert bql2sql('estimate columns from t1_cc order by' +
             ' correlation with age desc;') == \
         prefix + ' ORDER BY bql_column_correlation(1, 2, c.colno) DESC;'
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
         bql2sql('estimate columns from t1_cc order by' +
             ' correlation of age with weight;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
         bql2sql('estimate columns from t1_cc where correlation > 0.5;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Makes no sense.
         bql2sql('estimate columns from t1_cc'
             ' where infer age with confidence 0.9 > 30;')
@@ -392,43 +392,43 @@ def test_estimate_pairwise_trivial():
     assert bql2sql('estimate pairwise dependence probability from t1_cc;') == \
         prefix + 'bql_column_dependence_probability(1, c0.colno, c1.colno)' + \
         infix + ';'
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # PROBABILITY OF = is a row function.
         bql2sql('estimate pairwise mutual information from t1_cc where'
             ' (probability of x = 0) > 0.5;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # PROBABILITY OF = is a row function.
         bql2sql('estimate pairwise mutual information using 42 samples'
             ' from t1_cc where (probability of x = 0) > 0.5;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # PROBABILITY OF VALUE is 1-column.
         bql2sql('estimate pairwise correlation from t1_cc where' +
             ' (probability of value 0) > 0.5;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # PREDICTIVE PROBABILITY OF is a row function.
         bql2sql('estimate pairwise dependence probability from t1_cc where' +
             ' predictive probability of x > 0.5;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # TYPICALITY OF is a row function.
         bql2sql('estimate pairwise mutual information from t1_cc' +
             ' where typicality of x > 0.5;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # TYPICALITY OF is a row function.
         bql2sql('estimate pairwise mutual information using 42 samples'
             ' from t1_cc where typicality of x > 0.5;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # TYPICALITY is 1-column.
         bql2sql('estimate pairwise correlation from t1_cc'
             ' where typicality > 0.5;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
         bql2sql('estimate pairwise dependence probability from t1_cc where' +
             ' dependence probability of age with weight > 0.5;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
         bql2sql('estimate pairwise mutual information from t1_cc where' +
             ' dependence probability with weight > 0.5;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
         bql2sql('estimate pairwise mutual information using 42 samples'
             ' from t1_cc where dependence probability with weight > 0.5;')
@@ -437,19 +437,19 @@ def test_estimate_pairwise_trivial():
         prefix + 'bql_column_correlation(1, c0.colno, c1.colno)' + \
         infix + ' AND' + \
         ' (bql_column_dependence_probability(1, c0.colno, c1.colno) > 0.5);'
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
         bql2sql('estimate pairwise dependence probability from t1_cc where' +
             ' mutual information of age with weight > 0.5;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
         bql2sql('estimate pairwise dependence probability from t1_cc where' +
             ' mutual information of age with weight using 42 samples > 0.5;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
         bql2sql('estimate pairwise mutual information from t1_cc where' +
             ' mutual information with weight > 0.5;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
         bql2sql('estimate pairwise mutual information using 42 samples'
             ' from t1_cc'
@@ -464,15 +464,15 @@ def test_estimate_pairwise_trivial():
         prefix + 'bql_column_correlation(1, c0.colno, c1.colno)' + \
         infix + ' AND' + \
         ' (bql_column_mutual_information(1, c0.colno, c1.colno, 42) > 0.5);'
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
         bql2sql('estimate pairwise dependence probability from t1_cc where' +
             ' correlation of age with weight > 0.5;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
         bql2sql('estimate pairwise mutual information from t1_cc where' +
             ' correlation with weight > 0.5;')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
         bql2sql('estimate pairwise mutual information using 42 samples'
             ' from t1_cc where correlation with weight > 0.5;')
@@ -481,7 +481,7 @@ def test_estimate_pairwise_trivial():
         prefix + 'bql_column_correlation(1, c0.colno, c1.colno)' + \
         infix + ' AND' + \
         ' (bql_column_correlation(1, c0.colno, c1.colno) > 0.5);'
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # Makes no sense.
         bql2sql('estimate pairwise dependence probability from t1_cc'
             ' where infer age with confidence 0.9 > 30;')
@@ -507,7 +507,7 @@ def test_estimate_pairwise_row():
             ' from t1_cc;') == \
         prefix + ', bql_row_similarity(1, r0._rowid_, r1._rowid_, 2)' + \
         infix + ';'
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         # INFER is a 1-row function.
         bql2sql('estimate pairwise row infer age with confidence 0.9 from t1;')
 
@@ -561,17 +561,17 @@ def test_trivial_commands():
         guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat',
             ifnotexists=True)
         bdb.execute('initialize 2 models for t_cc')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('initialize 2 models for t_cc')
         bdb.execute('drop models from t_cc')
         bdb.execute('drop models from t_cc')
         bdb.execute('initialize 2 models for t_cc')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('initialize 2 models for t_cc')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('drop models 0-2 from t_cc')
         bdb.execute('drop models 0-1 from t_cc')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('drop models 0-1 from t_cc')
         bdb.execute('initialize 2 models for t_cc')
         bdb.execute('initialize 1 model if not exists for t_cc')
@@ -594,7 +594,7 @@ def test_trivial_commands():
         bdb.execute('alter generator t0_CC rename to t0_cc')
         assert core.bayesdb_generator_name(bdb, generator_id) == 't0_cc'
         list(bdb.execute('estimate count(*) from t0_cc'))
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate count(*) from t_cc')
         bdb.execute('alter generator t0_cc rename to T0_cc')
         bdb.execute('analyze t0_cc for 1 iteration wait')
@@ -619,7 +619,7 @@ def test_trivial_commands():
                 assert False, 'Need to fix quoting of unknown columns!'
             list(bdb.execute('estimate infer sex with confidence 0.9'
                 ' from t_cc'))
-            with pytest.raises(ValueError):
+            with pytest.raises(bayeslite.BQLError):
                 bdb.execute('estimate infer gender with confidence 0.9'
                     ' from t_cc')
             bdb.execute('alter table t0 rename sex to gender')
@@ -643,17 +643,17 @@ def test_trivial_commands():
         list(bdb.execute('estimate infer age with confidence 0.9 from t_cc'))
         list(bdb.execute('estimate infer AGE with confidence 0.9 from T_cc'))
         list(bdb.execute('estimate infer aGe with confidence 0.9 from T_cC'))
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate infer agee with confidence 0.9 from t_cc')
         # Make sure it works with the table too if we create a default
         # generator.
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate * from t0')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate columns from t0')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate pairwise correlation from t0')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate pairwise row similarity from t0')
         bdb.execute('''
             create default generator t_ccd for t0 using crosscat(
@@ -670,7 +670,7 @@ def test_trivial_commands():
                 rank numerical
             )
         ''')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             # No models to analyze.
             bdb.execute('analyze t_cce for 1 iteration wait')
         bdb.execute('initialize 1 model if not exists for t_cce')
@@ -697,29 +697,29 @@ def test_trivial_commands():
         list(bdb.execute('estimate pairwise correlation from t'))
         list(bdb.execute('estimate pairwise row similarity from t'))
         bdb.execute('drop generator t_ccd')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('initialize 3 models if not exists for t_ccd')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('initialize 4 models if not exists for t')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('analyze t_ccd for 1 iteration wait')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('analyze t0 for 1 iteration wait')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate * from t_ccd')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate columns from t_ccd')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate pairwise correlation from t_ccd')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate pairwise row similarity from t_ccd')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate * from t')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate columns from t')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate pairwise correlation from t')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate pairwise row similarity from t')
         bdb.execute('alter table t set default generator to t_cc')
         bdb.execute('initialize 6 models if not exists for t_cc')
@@ -1014,7 +1014,7 @@ def test_createtab():
         with pytest.raises(sqlite3.OperationalError):
             bdb.execute('drop table t')
         bdb.execute('drop table if exists t')
-        with pytest.raises(ValueError): # XXX More specific error.
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('drop generator t_cc')
         bdb.execute('drop generator if exists t_cc')
         with open(fname, 'rU') as f:
@@ -1031,7 +1031,7 @@ def test_createtab():
                 age numerical
             )
         ''')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             # Redefining generator.
             bdb.execute('''
                 create generator t_cc for t using crosscat (
@@ -1054,10 +1054,10 @@ def test_createtab():
         assert core.bayesdb_generator_column_stattype(bdb, generator_id,
                 colno) == 'numerical'
         bdb.execute('initialize 1 model for t_cc')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('drop table t')
         bdb.execute('drop generator t_cc')
-        with pytest.raises(ValueError): # XXX More specific error.
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('drop generator t_cc')
         bdb.execute('drop generator if exists t_cc')
         bdb.execute('drop table t')
@@ -1133,7 +1133,7 @@ def test_txn():
             bdb.execute('ROLLBACK')
         with pytest.raises(sqlite3.OperationalError):
             bdb.execute('SELECT * FROM t')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('ESTIMATE * FROM t_cc')
 
         # Make sure CREATE and DROP both work in the transaction.
@@ -1145,17 +1145,17 @@ def test_txn():
             list(bdb.execute('SELECT * FROM t'))
             guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
             list(bdb.execute('ESTIMATE * FROM t_cc'))
-            with pytest.raises(ValueError):
+            with pytest.raises(bayeslite.BQLError):
                 bdb.execute('DROP TABLE t')
             bdb.execute('DROP GENERATOR t_cc')
-            with pytest.raises(ValueError):
+            with pytest.raises(bayeslite.BQLError):
                 bdb.execute('ESTIMATE * FROM t_cc')
             bdb.execute('DROP TABLE t')
             with pytest.raises(sqlite3.OperationalError):
                 bdb.execute('SELECT * FROM t')
         finally:
             bdb.execute('ROLLBACK')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('ESTIMATE * FROM t_cc')
         with pytest.raises(sqlite3.OperationalError):
             bdb.execute('SELECT * FROM t')
@@ -1169,17 +1169,17 @@ def test_txn():
             list(bdb.execute('SELECT * FROM t'))
             guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
             list(bdb.execute('ESTIMATE * FROM t_cc'))
-            with pytest.raises(ValueError):
+            with pytest.raises(bayeslite.BQLError):
                 bdb.execute('DROP TABLE t')
             bdb.execute('DROP GENERATOR t_cc')
-            with pytest.raises(ValueError):
+            with pytest.raises(bayeslite.BQLError):
                 bdb.execute('ESTIMATE * FROM t_cc')
             bdb.execute('DROP TABLE t')
             with pytest.raises(sqlite3.OperationalError):
                 bdb.execute('SELECT * FROM t')
         finally:
             bdb.execute('COMMIT')
-        with pytest.raises(ValueError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('ESTIMATE * FROM t_cc')
         with pytest.raises(sqlite3.OperationalError):
             bdb.execute('SELECT * FROM t')
