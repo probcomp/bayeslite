@@ -24,12 +24,30 @@ from bayeslite.util import unique
 
 def bayesdb_read_csv_file(bdb, table, pathname, header=False, create=False,
         ifnotexists=False):
+    """Read CSV data from a file into a table.
+
+    :param bayeslite.BayesDB bdb: BayesDB instance
+    :param str table: name of table
+    :param str pathname: pathname of CSV file
+    :param bool header: if true, first line specifies column names
+    :param bool create: if true and `table` does not exist, create it
+    :param bool ifnotexists: if true and `table` exists, do it anyway
+    """
     with open(pathname, 'rU') as f:
         bayesdb_read_csv(bdb, table, f, header=header, create=create,
             ifnotexists=ifnotexists)
 
 def bayesdb_read_csv(bdb, table, f, header=False,
         create=False, ifnotexists=False):
+    """Read CSV data from a line iterator into a table.
+
+    :param bayeslite.BayesDB bdb: BayesDB instance
+    :param str table: name of table
+    :param iterable f: iterator returning lines as :class:`str`
+    :param bool header: if true, first line specifies column names
+    :param bool create: if true and `table` does not exist, create it
+    :param bool ifnotexists: if true and `table` exists, do it anyway
+    """
     if not header:
         if create:
             raise ValueError('Can\'t create table from headerless CSV!')

@@ -53,7 +53,6 @@ def bayesdb(metamodel=None, **kwargs):
         metamodel = bayeslite.crosscat.CrosscatMetamodel(crosscat)
     bdb = bayeslite.bayesdb_open(**kwargs)
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)
-    bayeslite.bayesdb_set_default_metamodel(bdb, metamodel)
     try:
         yield bdb
     finally:
@@ -83,7 +82,7 @@ def test_bad_db_user_version():
             with bayesdb(pathname=f.name):
                 pass
 
-class DotdogMetamodel(metamodel.IMetamodel):
+class DotdogMetamodel(metamodel.IBayesDBMetamodel):
     def name(self):
         return 'dotdog'
     def register(self, bdb):
@@ -115,17 +114,12 @@ def test_hackmetamodel():
     bdb.execute('CREATE GENERATOR t_dd FOR t USING dotdog(a NUMERICAL)')
     with pytest.raises(ValueError):
         bdb.execute('CREATE GENERATOR t_dd FOR t USING dotdog(a NUMERICAL)')
-    bayeslite.bayesdb_set_default_metamodel(bdb, dotdog_metamodel)
-    with pytest.raises(AssertionError):
-        bayeslite.bayesdb_deregister_metamodel(bdb, dotdog_metamodel)
     with pytest.raises(ValueError):
         bdb.execute('CREATE GENERATOR t_cc FOR t USING crosscat(a NUMERICAL)')
-    bayeslite.bayesdb_set_default_metamodel(bdb, None)
     with pytest.raises(ValueError):
         bdb.execute('CREATE GENERATOR t_dd FOR t USING dotdog(a NUMERICAL)')
     # XXX Rest of test originally exercised default metamodel, but
     # syntax doesn't support that now.  Not clear that's wrong either.
-    bayeslite.bayesdb_set_default_metamodel(bdb, dotdog_metamodel)
     bdb.execute('CREATE GENERATOR u_dd FOR u USING dotdog(a NUMERICAL)')
     with pytest.raises(ValueError):
         bdb.execute('CREATE GENERATOR u_dd FOR u USING dotdog(a NUMERICAL)')

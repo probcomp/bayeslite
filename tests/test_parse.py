@@ -430,10 +430,10 @@ def test_select_bql():
             [ast.SelTab('t', None)], None, None, None, None)]
     # XXX This got broken a while ago: parenthesization in PROBABILITY
     # OF X = E is too permissive.  I didn't notice because before I
-    # introduced ParseError, this simply caught Exception -- which
+    # introduced BQLParseError, this simply caught Exception -- which
     # covered the AssertionError that this turned into.
     #
-    # with pytest.raises(parse.ParseError):
+    # with pytest.raises(parse.BQLParseError):
     #     parse_bql_string('select probability of x = 1 -' +
     #         ' probability of y = 0 from t;')
     #     # XXX Should really be this test, but getting the grammar to
@@ -471,13 +471,13 @@ def test_select_bql():
             None)]
 
 def test_trivial_scan_error():
-    with pytest.raises(parse.ParseError):
+    with pytest.raises(parse.BQLParseError):
         parse_bql_string('select 0c;')
-    with pytest.raises(parse.ParseError):
+    with pytest.raises(parse.BQLParseError):
         parse_bql_string('select 1.0p1;')
 
 def test_trivial_precedence_error():
-    with pytest.raises(parse.ParseError):
+    with pytest.raises(parse.BQLParseError):
         parse_bql_string('select similarity to similarity to 0' +
             ' with respect to c from t;')
 
@@ -649,10 +649,10 @@ def test_complete():
     assert parse.bql_string_complete_p('select 0;\nselect 1;')
 
 def test_simulate():
-    with pytest.raises(parse.ParseError):
+    with pytest.raises(parse.BQLParseError):
         # Need limit.
         parse_bql_string('create table s as simulate x from t')
-    with pytest.raises(parse.ParseError):
+    with pytest.raises(parse.BQLParseError):
         # Need limit.
         parse_bql_string('create table s as simulate x from t given y = 0')
     assert parse_bql_string('create table s as'

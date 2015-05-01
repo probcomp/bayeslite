@@ -23,20 +23,32 @@ import bayeslite.parse as parse
 import bayeslite.schema as schema
 import bayeslite.txn as txn
 
+bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
+
 def bayesdb_open(pathname=None):
     """Open the BayesDB in the file at `pathname`.
 
     If there is no file at `pathname`, it is automatically created.
-    If `pathname` is unspecified or None, a temporary in-memory
+    If `pathname` is unspecified or ``None``, a temporary in-memory
     BayesDB instance is created.
     """
-    return BayesDB(pathname=pathname)
+    return BayesDB(bayesdb_open_cookie, pathname=pathname)
 
 class BayesDB(object):
-    """Class of Bayesian databases.
+    """A handle for a Bayesian database in memory or on disk.
+
+    Do not create BayesDB instances directly; use :func:`bayesdb_open` instead.
+
+    An instance of `BayesDB` is a context manager that returns itself
+    on entry and closes itself on exit, so you can write::
+
+        with bayesdb_open(pathname='foo.bdb') as bdb:
+            ...
     """
 
-    def __init__(self, pathname=None):
+    def __init__(self, cookie, pathname=None):
+        if cookie != bayesdb_open_cookie:
+            raise ValueError('Do not construct BayesDB objects directly!')
         if pathname is None:
             pathname = ":memory:"
         # isolation_level=None actually means that the sqlite3 module
@@ -45,7 +57,6 @@ class BayesDB(object):
         self.sqlite3 = sqlite3.connect(pathname, isolation_level=None)
         self.txn_depth = 0
         self.metamodels = {}
-        self.default_metamodel = None
         self.tracer = None
         self.sql_tracer = None
         self.cache = None
@@ -71,7 +82,7 @@ class BayesDB(object):
         bindings.
 
         Only one tracer can be established at a time.  To remove it,
-        use `untrace`.
+        use :meth:`~BayesDB.untrace`.
         """
         assert self.tracer is None
         self.tracer = tracer
@@ -79,7 +90,8 @@ class BayesDB(object):
     def untrace(self, tracer):
         """Stop calling `tracer` for each BQL query executed.
 
-        `tracer` must have been previously established with `trace`.
+        `tracer` must have been previously established with
+        :meth:`~BayesDB.trace`.
         """
         assert self.tracer == tracer
         self.tracer = None
@@ -92,7 +104,7 @@ class BayesDB(object):
         bindings.
 
         Only one tracer can be established at a time.  To remove it,
-        use `sql_untrace`.
+        use :meth:`~BayesDB.sql_untrace`.
         """
         assert self.sql_tracer is None
         self.sql_tracer = tracer
@@ -100,12 +112,13 @@ class BayesDB(object):
     def sql_untrace(self, tracer):
         """Stop calling `tracer` for each SQL query executed.
 
-        `tracer` must have been previously established with `sql_trace`.
+        `tracer` must have been previously established with
+        :meth:`~BayesDB.sql_trace`.
         """
         assert self.sql_tracer == tracer
         self.sql_tracer = None
 
-    def execute(self, string, bindings=()):
+    def execute(self, string, bindings=None):
         """Execute a BQL query and return a cursor for its results.
 
         The argument `string` is a string parsed into a single BQL
@@ -113,8 +126,11 @@ class BayesDB(object):
         terminated by a semicolon.
 
         The argument `bindings` is a sequence or dictionary of
-        bindings for parameters in the query.
+        bindings for parameters in the query, or ``None`` to supply no
+        bindings.
         """
+        if bindings is None:
+            bindings = ()
         if self.tracer:
             self.tracer(string, bindings)
         phrases = parse.parse_bql_string(string)
@@ -133,7 +149,7 @@ class BayesDB(object):
             raise ValueError('>1 phrase in string')
         return bql.execute_phrase(self, phrase, bindings)
 
-    def sql_execute(self, string, bindings=()):
+    def sql_execute(self, string, bindings=None):
         """Execute a SQL query on the underlying SQLite database.
 
         The argument `string` is a string parsed into a single BQL
@@ -141,8 +157,11 @@ class BayesDB(object):
         terminated by a semicolon.
 
         The argument `bindings` is a sequence or dictionary of
-        bindings for parameters in the query.
+        bindings for parameters in the query, or ``None`` to supply no
+        bindings.
         """
+        if bindings is None:
+            bindings = ()
         if self.sql_tracer:
             self.sql_tracer(string, bindings)
         return self.sqlite3.execute(string, bindings)
@@ -158,5 +177,5 @@ class BayesDB(object):
             yield
 
     def set_progress_handler(self, handler, n):
-        """Call HANDLER periodically during query execution."""
+        """Call `handler` periodically during query execution."""
         self.sqlite3.set_progress_handler(handler, n)

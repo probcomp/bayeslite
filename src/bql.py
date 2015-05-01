@@ -14,6 +14,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+"""BQL execution.
+
+This module implements the main dispatcher for executing different
+kinds of BQL phrases.  Queries, as in ``SELECT``, ``ESTIMATE``, and so
+on, are compiled into SQL; commands, as in ``CREATE TABLE``,
+``INSERT``, and the rest of the DDL/DML (Data Definition/Modelling
+language) are executed directly.
+"""
+
 import contextlib
 
 import bayeslite.ast as ast
@@ -26,7 +35,7 @@ from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 
 def execute_phrase(bdb, phrase, bindings=()):
-    '''Execute the BQL AST phrase PHRASE and return a cursor of results.'''
+    """Execute the BQL AST phrase `phrase` and return a cursor of results."""
     if isinstance(phrase, ast.Parametrized):
         n_numpar = phrase.n_numpar
         nampar_map = phrase.nampar_map

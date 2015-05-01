@@ -14,6 +14,14 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+"""Crosscat is a fully Bayesian nonparametric method for analyzing
+heterogeneous, high-dimensional data, described at
+`<http://probcomp.csail.mit.edu/crosscat/>`__.
+
+This module implements the :class:`bayeslite.IBayesDBMetamodel`
+interface for Crosscat.
+"""
+
 import json
 import math
 import time
@@ -99,7 +107,19 @@ CREATE TABLE bayesdb_crosscat_diagnostics (
 );
 '''
 
-class CrosscatMetamodel(metamodel.IMetamodel):
+class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
+    """Crosscat metamodel for BayesDB.
+
+    :param crosscat: Crosscat engine.
+
+    The metamodel is named ``crosscat`` in BQL::
+
+        CREATE GENERATOR t_cc FOR t USING crosscat(...)
+
+    Internally, the Crosscat metamodel adds SQL tables to the database
+    with names that begin ``crosscat_``.
+    """
+
     def __init__(self, crosscat):
         self._crosscat = crosscat
 

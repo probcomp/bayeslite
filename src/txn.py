@@ -16,6 +16,7 @@
 
 import contextlib
 
+from bayeslite.exception import BayesDBException
 from bayeslite.sqlite3_util import sqlite3_savepoint
 from bayeslite.sqlite3_util import sqlite3_transaction
 
@@ -34,7 +35,7 @@ def bayesdb_savepoint(bdb):
 @contextlib.contextmanager
 def bayesdb_transaction(bdb):
     if bdb.txn_depth != 0:
-        raise ValueError('Already in a transaction!')
+        raise BayesDBTxnError(bdb, 'Already in a transaction!')
     bayesdb_txn_init(bdb)
     bdb.txn_depth = 1
     try:
@@ -47,21 +48,21 @@ def bayesdb_transaction(bdb):
 
 def bayesdb_begin_transaction(bdb):
     if bdb.txn_depth != 0:
-        raise ValueError('Already in a transaction!')
+        raise BayesDBTxnError(bdb, 'Already in a transaction!')
     bayesdb_txn_init(bdb)
     bdb.txn_depth = 1
     bdb.sql_execute("BEGIN")
 
 def bayesdb_rollback_transaction(bdb):
     if bdb.txn_depth == 0:
-        raise ValueError('Not in a transaction!')
+        raise BayesDBTxnError(bdb, 'Not in a transaction!')
     bdb.sql_execute("ROLLBACK")
     bdb.txn_depth = 0
     bayesdb_txn_fini(bdb)
 
 def bayesdb_commit_transaction(bdb):
     if bdb.txn_depth == 0:
-        raise ValueError('Not in a transaction!')
+        raise BayesDBTxnError(bdb, 'Not in a transaction!')
     bdb.sql_execute("COMMIT")
     bdb.txn_depth = 0
     bayesdb_txn_fini(bdb)
@@ -95,3 +96,8 @@ def bayesdb_txn_fini(bdb):
     assert bdb.txn_depth == 0
     assert bdb.cache is not None
     bdb.cache = None
+
+class BayesDBTxnError(BayesDBException):
+    """Transaction errors in a BayesDB."""
+
+    pass

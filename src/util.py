@@ -14,10 +14,12 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+"""Miscellaneous utilities."""
+
 import math
 
 def unique(array):
-    """Return a sorted array of the unique elements in ARRAY.
+    """Return a sorted array of the unique elements in `array`.
 
     No element may be a floating-point NaN.  If your data set includes
     NaNs, omit them before passing them here.
@@ -35,7 +37,7 @@ def unique(array):
     return array_unique
 
 def unique_indices(array):
-    """Return an array of the indices of the unique elements in ARRAY.
+    """Return an array of the indices of the unique elements in `array`.
 
     No element may be a floating-point NaN.  If your data set includes
     NaNs, omit them before passing them here.
@@ -55,7 +57,7 @@ def unique_indices(array):
     return sorted(array_unique)
 
 def float_sum(iterable):
-    """Return the sum of elements of ITERABLE in floating-point.
+    """Return the sum of elements of `iterable` in floating-point.
 
     This implementation uses Kahan-Babuška summation.
     """

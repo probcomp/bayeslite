@@ -21,6 +21,7 @@ import math
 import bayeslite.core as core
 
 def bayesdb_load_codebook_csv_file(bdb, table, pathname):
+    """Load a codebook for `table` from the CSV file at `pathname`."""
     codebook = None
     with open(pathname, 'rU') as f:
         reader = csv.reader(f)

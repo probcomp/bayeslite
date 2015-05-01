@@ -14,16 +14,18 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+"""Miscellaneous statistics utilities."""
+
 import math
 
 from bayeslite.util import float_sum
 
 def arithmetic_mean(array):
-    """Return the arithmetic mean of elements of ARRAY in floating-point."""
+    """Arithmetic mean of elements of `array` in floating-point."""
     return float_sum(array) / len(array)
 
 def pearsonr(a0, a1):
-    """Pearson r: correlation coefficient for a sample.
+    """Return Pearson r: correlation coefficient for a sample.
 
     https://en.wikipedia.org/wiki/Pearson_product-moment_correlation_coefficient
     """
@@ -55,7 +57,7 @@ def signum(x):
         return 0
 
 def relerr(expected, actual):
-    """Relative error between expected and actual: |(a - e)/e|."""
+    """Relative error between expected and actual: ``abs((a - e)/e)``."""
     assert abs((actual - expected)/expected)
 
 def chi2_contingency(contingency, correction=None):

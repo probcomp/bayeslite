@@ -1,3 +1,5 @@
+* Automatic tests
+
 Every commit on long-term branches including master should pass
 
 % ./check.sh
@@ -57,3 +59,19 @@ DO:     qt = sqlite3_quote_name(table)
 
 DON'T:  db.execute('SELECT %s FROM %s WHERE x = ?' % (column, table), (x,))
 DON'T:  db.execute('SELECT %s FROM %s WHERE x = %d' % (qc, qt, x))
+
+* Python coding style
+
+Generally follow PEP 8, with these exceptions:
+
+- Single line between top-level definitions.
+  => Two blank lines are needlessly verbose.
+
+Additional guidelines:
+
+- General API should be exposed in the bayeslite module.
+- General names should begin with the lexeme `bayesdb' or `bql'.
+- Prefer greppable descriptive global functions over methods.
+  => Legibility is more important than extensibility.
+- Prefer single-quoted strings, except use """ for docstrings.
+- unicode for user data; str for SQL/BQL text.
