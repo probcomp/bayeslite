@@ -557,6 +557,8 @@ class Shell(cmd.Cmd):
                                 bayesdb_generator_column AS gc
                                 USING (colno))
                         WHERE g.id = ? AND g.id = gc.generator_id
+                            AND g.tabname = c.tabname
+                        ORDER BY colno
                 '''
                 cursor = self._bdb.sql_execute(sql, (generator_id,))
                 pretty.pp_cursor(self.stdout, cursor)
