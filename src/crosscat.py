@@ -732,6 +732,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         else:
             assert len(row) == 1
             value = row[0]
+        if value is None:
+            return None
         code = crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
         cc_colno = crosscat_cc_colno(bdb, generator_id, colno)
         r = self._crosscat.simple_predictive_probability_multistate(

@@ -1201,3 +1201,43 @@ def test_txn():
 
         # XXX To do: Make sure other effects (e.g., analysis) get
         # rolled back by ROLLBACK.
+
+def test_predprob_null():
+    with test_core.bayesdb() as bdb:
+        bdb.sql_execute('''
+            create table foo (
+                id integer primary key not null,
+                x numeric,
+                y numeric
+            )
+        ''')
+        bdb.sql_execute("insert into foo values (1, 1, 'strange')")
+        bdb.sql_execute("insert into foo values (2, 1.2, 'strange')")
+        bdb.sql_execute("insert into foo values (3, 0.8, 'strange')")
+        bdb.sql_execute("insert into foo values (4, NULL, 'strange')")
+        bdb.sql_execute("insert into foo values (5, 73, 'up')")
+        bdb.sql_execute("insert into foo values (6, 80, 'up')")
+        bdb.sql_execute("insert into foo values (7, 60, 'up')")
+        bdb.sql_execute("insert into foo values (8, 67, NULL)")
+        bdb.sql_execute("insert into foo values (9, 3.1415926, 'down')")
+        bdb.sql_execute("insert into foo values (10, 1.4142135, 'down')")
+        bdb.sql_execute("insert into foo values (11, 2.7182818, 'down')")
+        bdb.sql_execute("insert into foo values (12, NULL, 'down')")
+        bdb.execute('''
+            create generator foo_cc for foo using crosscat (
+                x numerical,
+                y categorical
+            )
+        ''')
+        bdb.execute('initialize 1 model for foo_cc')
+        bdb.execute('analyze foo_cc for 1 iteration wait')
+        # Null value => null predictive probability.
+        assert list(bdb.execute('estimate predictive probability of x'
+                ' from foo_cc where id = 4;')) == \
+            [(None,)]
+        # Nonnull value => nonnull predictive probability.
+        x = list(bdb.execute('estimate predictive probability of x'
+            ' from foo_cc where id = 5'))
+        assert len(x) == 1
+        assert len(x[0]) == 1
+        assert isinstance(x[0][0], (int, float))

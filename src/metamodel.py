@@ -155,7 +155,11 @@ class IBayesDBMetamodel(object):
 
     def row_column_predictive_probability(self, bdb, generator_id, rowid,
             colno):
-        """Compute ``PREDICTIVE PROBABILITY OF <col>`` for given `rowid`."""
+        """Compute ``PREDICTIVE PROBABILITY OF <col>`` for given `rowid`.
+
+        If the row's value for that column is null, the result should
+        be null (i.e., Python `None`).
+        """
         raise NotImplementedError
 
     def predict(self, bdb, generator_id, colno, rowid, threshold,
