@@ -178,8 +178,8 @@ def compile_query(bdb, query, out):
     if isinstance(query, ast.Select):
         compile_select(bdb, query, out)
     elif isinstance(query, ast.Estimate):
-        if any(isinstance(c, ast.InfCol) for c in query.columns):
-            compile_estimate_infer(bdb, query, out)
+        if any(isinstance(c, ast.PredCol) for c in query.columns):
+            compile_estimate_predict(bdb, query, out)
         else:
             named = True
             compile_estimate(bdb, query, named, out)
@@ -249,7 +249,7 @@ def compile_select(bdb, select, out):
             out.write(' OFFSET ')
             compile_nobql_expression(bdb, select.limit.offset, out)
 
-def compile_estimate_infer(bdb, estimate, out):
+def compile_estimate_predict(bdb, estimate, out):
     out.write('SELECT')
     first = True
     for i, col in enumerate(estimate.columns):
@@ -258,7 +258,7 @@ def compile_estimate_infer(bdb, estimate, out):
         else:
             out.write(',')
         out.write(' ')
-        if isinstance(col, ast.InfCol):
+        if isinstance(col, ast.PredCol):
             qvcn = sqlite3_quote_name(col.name)
             out.write("bql_json_get(c%u, 'value') AS %s" % (i, qvcn))
             out.write(', ')
@@ -277,10 +277,10 @@ def compile_estimate_infer(bdb, estimate, out):
                 pass
         elif isinstance(col, ast.SelColAll):
             raise NotImplementedError('You have no business'
-                ' mixing * with INFER!')
+                ' mixing * with PREDICT!')
         elif isinstance(col, ast.SelColSub):
             raise NotImplementedError('You have no business'
-                ' mixing subquery-chosen columns with INFER!')
+                ' mixing subquery-chosen columns with PREDICT!')
         else:
             assert False, 'Invalid ESTIMATE column: %s' % (repr(col),)
     out.write(' FROM ')
@@ -357,14 +357,15 @@ def compile_select_columns(bdb, columns, named, bql_compiler, out):
 def compile_select_column(bdb, selcol, i, named, bql_compiler, out):
     if isinstance(selcol, ast.SelColAll):
         if not named:
-            raise NotImplementedError('Don\'t mix * with INFER!')
+            raise NotImplementedError('Don\'t mix * with PREDICT!')
         if selcol.table is not None:
             compile_table_name(bdb, selcol.table, out)
             out.write('.')
         out.write('*')
     elif isinstance(selcol, ast.SelColSub):
         if not named:
-            raise NotImplementedError('Don\'t mix <tab>.(<query>) with INFER!')
+            raise NotImplementedError('Don\'t mix <tab>.(<query>)'
+                ' with PREDICT!')
         # XXX We need some kind of type checking to guarantee that
         # what we get out of this will be a list of columns in the
         # named table.
@@ -393,8 +394,8 @@ def compile_select_column(bdb, selcol, i, named, bql_compiler, out):
         elif selcol.name is not None:
             out.write(' AS ')
             compile_name(bdb, selcol.name, out)
-    elif isinstance(selcol, ast.InfCol):
-        bql = ast.ExpBQLInferConf(selcol.column)
+    elif isinstance(selcol, ast.PredCol):
+        bql = ast.ExpBQLPredictConf(selcol.column)
         bql_compiler.compile_bql(bdb, bql, out)
         out.write(' AS c%u' % (i,))
     else:
@@ -674,7 +675,7 @@ class BQLCompiler_1Row(object):
             compile_bql_2col_2(bdb, generator_id,
                 'bql_column_correlation',
                 'Column correlation', None, bql, self, out)
-        elif isinstance(bql, ast.ExpBQLInfer):
+        elif isinstance(bql, ast.ExpBQLPredict):
             assert bql.column is not None
             table_name = core.bayesdb_generator_table(bdb, generator_id)
             if not core.bayesdb_generator_has_column(bdb, generator_id,
@@ -684,15 +685,15 @@ class BQLCompiler_1Row(object):
                     (generator, bql.column))
             colno = core.bayesdb_generator_column_number(bdb, generator_id,
                 bql.column)
-            out.write('bql_infer(%d, %d, _rowid_, ' % (generator_id, colno))
+            out.write('bql_predict(%d, %d, _rowid_, ' % (generator_id, colno))
             compile_expression(bdb, bql.confidence, self, out)
             out.write(')')
-        elif isinstance(bql, ast.ExpBQLInferConf):
+        elif isinstance(bql, ast.ExpBQLPredictConf):
             assert bql.column is not None
             table_name = core.bayesdb_generator_table(bdb, generator_id)
             colno = core.bayesdb_generator_column_number(bdb, generator_id,
                 bql.column)
-            out.write('bql_infer_confidence(%d, %d, _rowid_)' %
+            out.write('bql_predict_confidence(%d, %d, _rowid_)' %
                 (generator_id, colno))
         else:
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
@@ -738,10 +739,10 @@ class BQLCompiler_2Row(object):
             raise BQLError(bdb, 'Mutual information is 0-row function.')
         elif isinstance(bql, ast.ExpBQLCorrel):
             raise BQLError(bdb, 'Column correlation is 0-row function.')
-        elif isinstance(bql, ast.ExpBQLInfer):
-            raise BQLError(bdb, 'Infer is a 1-row function.')
-        elif isinstance(bql, ast.ExpBQLInferConf):
-            raise BQLError(bdb, 'Infer is a 1-row function.')
+        elif isinstance(bql, ast.ExpBQLPredict):
+            raise BQLError(bdb, 'Predict is a 1-row function.')
+        elif isinstance(bql, ast.ExpBQLPredictConf):
+            raise BQLError(bdb, 'Predict is a 1-row function.')
         else:
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
 
@@ -786,10 +787,10 @@ class BQLCompiler_1Col(object):
             compile_bql_2col_1(bdb, generator_id,
                 'bql_column_correlation',
                 'Column correlation', None, bql, self.colno_exp, self, out)
-        elif isinstance(bql, ast.ExpBQLInfer):
-            raise BQLError(bdb, 'Infer is a 1-row function.')
-        elif isinstance(bql, ast.ExpBQLInferConf):
-            raise BQLError(bdb, 'Infer is a 1-row function.')
+        elif isinstance(bql, ast.ExpBQLPredict):
+            raise BQLError(bdb, 'Predict is a 1-row function.')
+        elif isinstance(bql, ast.ExpBQLPredictConf):
+            raise BQLError(bdb, 'Predict is a 1-row function.')
         else:
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
 
@@ -832,10 +833,10 @@ class BQLCompiler_2Col(object):
                 'Correlation',
                 None,
                 bql, self.colno0_exp, self.colno1_exp, self, out)
-        elif isinstance(bql, ast.ExpBQLInfer):
-            raise BQLError(bdb, 'Infer is a 1-row function.')
-        elif isinstance(bql, ast.ExpBQLInferConf):
-            raise BQLError(bdb, 'Infer is a 1-row function.')
+        elif isinstance(bql, ast.ExpBQLPredict):
+            raise BQLError(bdb, 'Predict is a 1-row function.')
+        elif isinstance(bql, ast.ExpBQLPredictConf):
+            raise BQLError(bdb, 'Predict is a 1-row function.')
         else:
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
 

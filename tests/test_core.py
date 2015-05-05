@@ -365,10 +365,10 @@ def test_t1_analysis_iter_deadline():
         for i in range(min(5, len(t1_rows)))
         for j in range(1,3)
         for conf in [0.01, 0.5, 0.99]])
-def test_t1_infer(rowid, colno, confidence):
+def test_t1_predict(rowid, colno, confidence):
     with analyzed_bayesdb_generator(t1(), 1, 1) as (bdb, generator_id):
         if rowid == 0: rowid = bayesdb_maxrowid(bdb, generator_id)
-        bqlfn.bql_infer(bdb, generator_id, colno, rowid, confidence)
+        bqlfn.bql_predict(bdb, generator_id, colno, rowid, confidence)
 
 @pytest.mark.parametrize('colnos,constraints,numpredictions',
     [(colnos, constraints, numpred)

@@ -743,7 +743,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         )
         return math.exp(r)
 
-    def infer_confidence(self, bdb, generator_id, colno, rowid,
+    def predict_confidence(self, bdb, generator_id, colno, rowid,
             numsamples=None):
         if numsamples is None:
             numsamples = 1

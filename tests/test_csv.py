@@ -136,7 +136,7 @@ def test_csv_import_schema():
         ''')
         list(bdb.execute('estimate height from employees_cc'))
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate infer height with confidence 0.9'
+            bdb.execute('estimate predict height with confidence 0.9'
                 ' from employees_cc')
 
 def test_csv_import_schema_case():

@@ -163,7 +163,7 @@ SelColExp = namedtuple('SelColExp', [
     'name',                     # XXX name
 ])
 
-InfCol = namedtuple('InfCol', [
+PredCol = namedtuple('PredCol', [
     'column',                   # XXX name
     'name',                     # XXX name
     'confname',                 # XXX name
@@ -281,8 +281,8 @@ ExpBQLSim = namedtuple('ExpBQLSim', ['condition', 'column_lists'])
 ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
 ExpBQLMutInf = namedtuple('ExpBQLMutInf', ['column0', 'column1', 'nsamples'])
 ExpBQLCorrel = namedtuple('ExpBQLCorrel', ['column0', 'column1'])
-ExpBQLInfer = namedtuple('ExpBQLInfer', ['column', 'confidence'])
-ExpBQLInferConf = namedtuple('ExpBQLInferConf', ['column'])
+ExpBQLPredict = namedtuple('ExpBQLPredict', ['column', 'confidence'])
+ExpBQLPredictConf = namedtuple('ExpBQLPredictConf', ['column'])
 
 def is_bql(exp):
     if isinstance(exp, ExpBQLPredProb): return True
@@ -292,8 +292,8 @@ def is_bql(exp):
     if isinstance(exp, ExpBQLDepProb):  return True
     if isinstance(exp, ExpBQLMutInf):   return True
     if isinstance(exp, ExpBQLCorrel):   return True
-    if isinstance(exp, ExpBQLInfer):    return True
-    if isinstance(exp, ExpBQLInferConf): return True
+    if isinstance(exp, ExpBQLPredict):  return True
+    if isinstance(exp, ExpBQLPredictConf): return True
     return False
 
 LitNull = namedtuple('LitNull', ['value'])

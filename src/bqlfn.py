@@ -40,8 +40,8 @@ def bayesdb_install_bql(db, cookie):
     function("bql_row_typicality", 2, bql_row_typicality)
     function("bql_row_column_predictive_probability", 3,
         bql_row_column_predictive_probability)
-    function("bql_infer", 4, bql_infer)
-    function("bql_infer_confidence", 3, bql_infer_confidence)
+    function("bql_predict", 4, bql_predict)
+    function("bql_predict_confidence", 3, bql_predict_confidence)
     function("bql_json_get", 3, bql_json_get)
 
 # XXX XXX XXX Temporary debugging kludge!
@@ -180,16 +180,16 @@ def bql_row_column_predictive_probability(bdb, generator_id, rowid, colno):
     return metamodel.row_column_predictive_probability(bdb, generator_id,
         rowid, colno)
 
-### Infer and simulate
+### Predict and simulate
 
-def bql_infer(bdb, generator_id, colno, rowid, threshold, numsamples=None):
+def bql_predict(bdb, generator_id, colno, rowid, threshold, numsamples=None):
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    return metamodel.infer(bdb, generator_id, colno, rowid, threshold,
+    return metamodel.predict(bdb, generator_id, colno, rowid, threshold,
         numsamples=numsamples)
 
-def bql_infer_confidence(bdb, generator_id, colno, rowid, numsamples=None):
+def bql_predict_confidence(bdb, generator_id, colno, rowid, numsamples=None):
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    value, confidence = metamodel.infer_confidence(bdb, generator_id, colno,
+    value, confidence = metamodel.predict_confidence(bdb, generator_id, colno,
         rowid, numsamples=numsamples)
     # XXX Whattakludge!
     return json.dumps({'value': value, 'confidence': confidence})

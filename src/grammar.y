@@ -186,7 +186,7 @@ estimate(e)		::= K_ESTIMATE select_quant(quant)
 estimate_columns(one)	::= estimate_column(c).
 estimate_columns(many)	::= estimate_columns(cs) T_COMMA estimate_column(c).
 estimate_column(sel)	::= select_column(c).
-estimate_column(inf)	::= K_INFER column_name(col) K_AS column_name(name)
+estimate_column(pred)	::= K_PREDICT column_name(col) K_AS column_name(name)
 				K_CONFIDENCE column_name(confname).
 
 /*
@@ -461,7 +461,7 @@ bqlfn(depprob)		::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
 bqlfn(mutinf)		::= K_MUTUAL K_INFORMATION ofwith(cols)
 				nsamples_opt(nsamp).
 bqlfn(correl)		::= K_CORRELATION ofwith(cols).
-bqlfn(infer)		::= K_INFER column_name(col)
+bqlfn(predict)		::= K_PREDICT column_name(col)
 				K_WITH K_CONFIDENCE primary(cf).
 bqlfn(primary)		::= primary(p).
 
@@ -577,7 +577,6 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 	K_GROUP
 	K_IF
 	K_IN
-	K_INFER
 	K_INFORMATION
 	K_INITIALIZE
 	K_IS
@@ -600,6 +599,7 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 	K_OR
 	K_ORDER
 	K_PAIRWISE
+	K_PREDICT
 	K_PREDICTIVE
 	K_PROBABILITY
 	K_REGEXP
