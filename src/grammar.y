@@ -375,10 +375,12 @@ concatenative(concat)	::= concatenative(l) T_CONCAT collating(r).
 concatenative(collate)	::= collating(c).
 
 collating(collate)	::= collating(e) K_COLLATE L_NAME|L_STRING(c).
-collating(bitwise_not)	::= bitwise_not(n).
+collating(unary)	::= unary(u).
 
-bitwise_not(not)	::= T_BITNOT bitwise_not(n).
-bitwise_not(bql)	::= bqlfn(b).
+unary(bitwise_not)	::= T_BITNOT unary(u).
+unary(minus)		::= T_MINUS unary(u).
+unary(plus)		::= T_PLUS unary(u).
+unary(bql)		::= bqlfn(b).
 
 /*
  * The BQL functions come in five flavours:

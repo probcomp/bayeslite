@@ -1089,6 +1089,8 @@ operator_fmts = {
     ast.OP_REM:         '%s %% %s',
     ast.OP_CONCAT:      '%s || %s',
     ast.OP_BITNOT:      '~ %s',
+    ast.OP_NEGATE:      '- %s',
+    ast.OP_PLUSID:      '+ %s',
 }
 
 def compile_literal(bdb, lit, out):

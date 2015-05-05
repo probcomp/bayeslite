@@ -77,6 +77,10 @@ def test_select_trivial():
     assert bql2sql('select 1e0;') == 'SELECT 1.0;'
     assert bql2sql('select 1e+1;') == 'SELECT 10.0;'
     assert bql2sql('select 1e-1;') == 'SELECT 0.1;'
+    assert bql2sql('select -1e+1;') == 'SELECT (- 10.0);'
+    assert bql2sql('select +1e-1;') == 'SELECT (+ 0.1);'
+    assert bql2sql('select SQRT(1-EXP(-2*value)) FROM bm_mi;') == \
+        'SELECT "SQRT"((1 - "EXP"(((- 2) * "value")))) FROM "bm_mi";'
     assert bql2sql('select .1e0;') == 'SELECT 0.1;'
     assert bql2sql('select 1.e10;') == 'SELECT 10000000000.0;'
     assert bql2sql('select all 0;') == 'SELECT 0;'

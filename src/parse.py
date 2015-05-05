@@ -471,10 +471,11 @@ class BQLSemantics(object):
                                         return c
     def p_collating_collate(self, e, c):
                                         return ast.ExpCollate(e, c)
-    def p_collating_bitwise_not(self, n):
-                                        return n
-    def p_bitwise_not_not(self, n):     return ast.op(ast.OP_BITNOT, n)
-    def p_bitwise_not_bql(self, b):     return b
+    def p_collating_unary(self, u):     return u
+    def p_unary_bitwise_not(self, u):   return ast.op(ast.OP_BITNOT, u)
+    def p_unary_minus(self, u):         return ast.op(ast.OP_NEGATE, u)
+    def p_unary_plus(self, u):          return ast.op(ast.OP_PLUSID, u)
+    def p_unary_bql(self, b):           return b
 
     def p_bqlfn_predprob_row(self, col):        return ast.ExpBQLPredProb(col)
     def p_bqlfn_prob_const(self, col, e):       return ast.ExpBQLProb(col, e)

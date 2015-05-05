@@ -273,6 +273,8 @@ OP_DIV = 'DIV'
 OP_REM = 'REM'
 OP_CONCAT = 'CONCAT'
 OP_BITNOT = 'BITNOT'
+OP_NEGATE = 'NEGATE'
+OP_PLUSID = 'PLUSID'
 
 ExpBQLPredProb = namedtuple('ExpBQLPredProb', ['column'])
 ExpBQLProb = namedtuple('ExpBQLProb', ['column', 'value'])
