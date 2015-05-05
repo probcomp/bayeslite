@@ -1241,3 +1241,9 @@ def test_predprob_null():
         assert len(x) == 1
         assert len(x[0]) == 1
         assert isinstance(x[0][0], (int, float))
+
+def test_guess_all():
+    with test_core.bayesdb() as bdb:
+        bdb.sql_execute('create table foo (x numeric, y numeric, z numeric)')
+        bdb.sql_execute('insert into foo values (1, 2, 3)')
+        bdb.execute('create generator foo_cc for foo using crosscat(guess(*))')
