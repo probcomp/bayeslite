@@ -321,6 +321,12 @@ def test_estimate_bql():
         ' FROM "t1"' \
         ' WHERE ("ifnull"("label", bql_predict(1, 1, _rowid_, 0.7))' \
             ' = \'foo\');'
+    assert bql2sql('infer rowid, * from t1_cc') == \
+        'SELECT "rowid", "id",' \
+        ' "IFNULL"("label", bql_predict(1, 1, _rowid_, 0)),' \
+        ' "IFNULL"("age", bql_predict(1, 2, _rowid_, 0)),' \
+        ' "IFNULL"("weight", bql_predict(1, 3, _rowid_, 0))' \
+        ' FROM "t1";'
 
 def test_estimate_columns_trivial():
     prefix0 = 'SELECT c.name AS name'
