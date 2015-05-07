@@ -1374,3 +1374,5 @@ def test_nested_simulate():
         list(bdb.execute('select (simulate age from t1_cc limit 1),'
                 ' (simulate weight from t1_cc limit 1)'))
         assert bdb.temp_table_name() == 'bayesdb_temp_2'
+        assert not core.bayesdb_has_table(bdb, 'bayesdb_temp_0')
+        assert not core.bayesdb_has_table(bdb, 'bayesdb_temp_1')
