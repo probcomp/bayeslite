@@ -199,7 +199,6 @@ InfColAll = namedtuple('InfColAll', [])
 InfColOne = namedtuple('InfColOne', [
     'column',                   # XXX name
     'name',                     # XXX name or None
-    'confidence',               # XXX name or None
 ])
 
 EstCols = namedtuple('EstCols', [

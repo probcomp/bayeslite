@@ -349,17 +349,18 @@ def compile_infer_auto(bdb, infer, out):
         raise BQLError(bdb, 'No such generator: %s' % (infer.generator,))
     generator_id = core.bayesdb_get_generator_default(bdb, infer.generator)
     table = core.bayesdb_generator_table(bdb, generator_id)
-    def map_column(col, name, conf):
-        if conf is not None:
-            return ast.PredCol(col, name, conf)
+    confidence = infer.confidence
+    def map_column(col, name):
+        if core.bayesdb_generator_has_column(bdb, generator_id, col):
+            return ast.SelColExp(ast.ExpBQLPredict(col, confidence), name)
         else:
             return ast.SelColExp(ast.ExpCol(None, col), name)
     def map_columns(col):
         if isinstance(col, ast.InfColAll):
             column_names = core.bayesdb_table_column_names(bdb, table)
-            return [map_column(col, None, None) for col in column_names]
+            return [map_column(col, None) for col in column_names]
         elif isinstance(col, ast.InfColOne):
-            return [map_column(col.column, col.name, col.conf)]
+            return [map_column(col.column, col.name)]
         else:
             assert False, 'Invalid INFER column: %s' % (repr(col),)
     columns = [mcol for col in infer.columns for mcol in map_columns(col)]

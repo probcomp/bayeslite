@@ -334,8 +334,8 @@ class BQLSemantics(object):
 
     def p_infer_auto_column_all(self):
         return ast.InfColAll()
-    def p_infer_auto_column_one(self, col, name, conf):
-        return ast.InfColOne(col, name, conf)
+    def p_infer_auto_column_one(self, col, name):
+        return ast.InfColOne(col, name)
 
     def p_conf_opt_none(self):                  return None
     def p_conf_opt_some(self, conf):            return conf

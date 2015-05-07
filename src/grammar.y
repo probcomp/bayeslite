@@ -243,10 +243,7 @@ infer_auto_columns(many)	::= infer_auto_columns(cs) T_COMMA
 					infer_auto_column(c).
 
 infer_auto_column(all)		::= T_STAR.
-infer_auto_column(one)		::= column_name(col) as(name) conf_opt(conf).
-
-conf_opt(none)		::= .
-conf_opt(some)		::= K_CONFIDENCE L_NAME(conf).
+infer_auto_column(one)		::= column_name(col) as(name).
 
 withconf_opt(none)	::= .
 withconf_opt(some)	::= withconf(conf).
