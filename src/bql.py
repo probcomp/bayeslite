@@ -649,6 +649,7 @@ class WoundCursor(object):
     lastrowid = property(lambda self: self.cursor.lastrowid)
     description = property(lambda self: self.cursor.description)
     def __del__(self):
+        del self.cursor
         for (sql, bindings) in reversed(self.unwinders):
             self.bdb.sql_execute(sql, bindings)
         # Apparently object doesn't have a __del__ method.
