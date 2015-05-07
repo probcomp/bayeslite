@@ -178,8 +178,8 @@ SelTab = namedtuple('SelTab', [
 
 InferAuto = namedtuple('InferAuto', [
     'columns',                  # [InfCol* or PredCol]
-    'generator',                # XXX name
     'confidence',               # Exp* or None (implied 0)
+    'generator',                # XXX name
     'condition',                # Exp* or None (unconditional)
     'grouping',                 # Grouping or None
     'order',                    # [Ord] or None (unordered)

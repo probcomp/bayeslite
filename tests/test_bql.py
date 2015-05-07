@@ -300,19 +300,19 @@ def test_estimate_bql():
         'SELECT "rowid", bql_predict(1, 2, _rowid_, 0),' \
         ' bql_predict(1, 3, _rowid_, 0)' \
         ' FROM "t1";'
-    assert bql2sql('infer rowid, age, weight from t1_cc with confidence 0.9') \
+    assert bql2sql('infer rowid, age, weight with confidence 0.9 from t1_cc') \
         == \
         'SELECT "rowid", bql_predict(1, 2, _rowid_, 0.9),' \
         ' bql_predict(1, 3, _rowid_, 0.9)' \
         ' FROM "t1";'
-    assert bql2sql('infer rowid, age, weight from t1_cc with confidence 0.9'
+    assert bql2sql('infer rowid, age, weight with confidence 0.9 from t1_cc'
             ' where label = \'foo\'') \
         == \
         'SELECT "rowid", bql_predict(1, 2, _rowid_, 0.9),' \
         ' bql_predict(1, 3, _rowid_, 0.9)' \
         ' FROM "t1"' \
         ' WHERE ("label" = \'foo\');'
-    assert bql2sql('infer rowid, age, weight from t1_cc with confidence 0.9'
+    assert bql2sql('infer rowid, age, weight with confidence 0.9 from t1_cc'
             ' where predict label with confidence 0.7 = \'foo\'') \
         == \
         'SELECT "rowid", bql_predict(1, 2, _rowid_, 0.9),' \

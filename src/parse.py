@@ -324,8 +324,8 @@ class BQLSemantics(object):
     def p_estpairrow_e(self, e, generator, cond, ord, lim):
         return ast.EstPairRow(e, generator, cond, ord, lim)
 
-    def p_infer_auto(self, cols, generator, conf, cond, grouping, ord, lim):
-        return ast.InferAuto(cols, generator, conf, cond, grouping, ord, lim)
+    def p_infer_auto(self, cols, conf, generator, cond, grouping, ord, lim):
+        return ast.InferAuto(cols, conf, generator, cond, grouping, ord, lim)
     def p_infer_explicit(self, cols, generator, cond, grouping, ord, lim):
         return ast.InferExplicit(cols, generator, cond, grouping, ord, lim)
 

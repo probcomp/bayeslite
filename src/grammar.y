@@ -229,8 +229,8 @@ estpairrow(e)		::= K_ESTIMATE K_PAIRWISE K_ROW expression(e)
 				where(cond) order_by(ord) limit_opt(lim).
 
 infer(auto)		::= K_INFER infer_auto_columns(cols)
-				K_FROM generator_name(generator)
 				withconf_opt(conf)
+				K_FROM generator_name(generator)
 				where(cond) group_by(grouping) order_by(ord)
 				limit_opt(lim).
 infer(explicit)		::= K_INFER K_EXPLICIT infer_exp_columns(cols)
