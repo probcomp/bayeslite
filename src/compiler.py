@@ -24,6 +24,8 @@ To compile a parsed BQL query:
 4. Use :meth:`Output.getvalue` to get the compiled SQL text.
 5. Use :meth:`Output.getbindings` to get bindings for parameters that
    were actually used in the query.
+6. Use :func:`bayesdb_wind` or similar to bracket the execution of the
+   SQL query with wind/unwind commands.
 """
 
 import StringIO
@@ -54,6 +56,8 @@ class Output(object):
         self.bindings = bindings        # map of input index -> value
         self.renumber = {}              # map of input number -> output number
         self.select = []                # map of output index -> input index
+        self.winders = []               # list of pre-query (sql, bindings)
+        self.unwinders = []             # list of post-query (sql, bindings)
 
     def subquery(self):
         """Return an output accumulator for a subquery."""
@@ -133,6 +137,9 @@ class Output(object):
             # User supplied bindings we didn't understand.
             raise TypeError('Invalid query bindings: %s' % (self.bindings,))
 
+    def getwindings(self):
+        return self.winders, self.unwinders
+
     def write(self, text):
         """Accumulate `text` in the output of :meth:`getvalue`."""
         self.stringio.write(text)
@@ -167,6 +174,25 @@ class Output(object):
         # parser's job to map between numbered and named parameters.
         assert self.nampar_map[name] == n
         self.write_numpar(n)
+
+    def winder(self, sql, bindings):
+        self.winders.append((sql, bindings))
+    def unwinder(self, sql, bindings):
+        self.unwinders.append((sql, bindings))
+
+@contextlib.contextmanager
+def bayesdb_wind(bdb, winders, unwinders):
+    if 0 < len(winders) or 0 < len(unwinders):
+        with bdb.savepoint():
+            for (sql, bindings) in winders:
+                bdb.sql_execute(sql, bindings)
+            try:
+                yield
+            finally:
+                for (sql, bindings) in reversed(unwinders):
+                    bdb.sql_execute(sql, bindings)
+    else:
+        yield
 
 def compile_query(bdb, query, out):
     """Compile `query`, writing output to `output`.
@@ -458,18 +484,20 @@ def compile_select_column(bdb, selcol, i, named, bql_compiler, out):
             compile_query(bdb, selcol.query, subout)
         subquery = subout.getvalue()
         subbindings = subout.getbindings()
-        qt = sqlite3_quote_name(selcol.table)
-        subfirst = True
-        for row in bdb.sql_execute(subquery, subbindings):
-            assert len(row) == 1
-            assert isinstance(row[0], unicode)
-            assert str(row[0])
-            if subfirst:
-                subfirst = False
-            else:
-                out.write(', ')
-            qc = sqlite3_quote_name(str(row[0]))
-            out.write('%s.%s' % (qt, qc))
+        subwinders, subunwinders = subout.getwindings()
+        with bayesdb_wind(bdb, subwinders, subunwinders):
+            qt = sqlite3_quote_name(selcol.table)
+            subfirst = True
+            for row in bdb.sql_execute(subquery, subbindings):
+                assert len(row) == 1
+                assert isinstance(row[0], unicode)
+                assert str(row[0])
+                if subfirst:
+                    subfirst = False
+                else:
+                    out.write(', ')
+                qc = sqlite3_quote_name(str(row[0]))
+                out.write('%s.%s' % (qt, qc))
     elif isinstance(selcol, ast.SelColExp):
         compile_expression(bdb, selcol.expression, bql_compiler, out)
         if not named:
@@ -956,7 +984,9 @@ def compile_column_lists(bdb, generator_id, column_lists, _bql_compiler, out):
             compile_query(bdb, collist.query, subout)
             subquery = subout.getvalue()
             subbindings = subout.getbindings()
-            columns = bdb.sql_execute(subquery, subbindings).fetchall()
+            subwinders, subunwinders = subout.getwindings()
+            with bayesdb_wind(bdb, subwinders, subunwinders):
+                columns = bdb.sql_execute(subquery, subbindings).fetchall()
             subfirst = True
             for column in columns:
                 if subfirst:

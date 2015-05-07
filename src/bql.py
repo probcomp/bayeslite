@@ -54,7 +54,9 @@ def execute_phrase(bdb, phrase, bindings=()):
         out = compiler.Output(n_numpar, nampar_map, bindings)
         with bdb.savepoint():
             compiler.compile_query(bdb, phrase, out)
-        return bdb.sql_execute(out.getvalue(), out.getbindings())
+        winders, unwinders = out.getwindings()
+        return execute_wound(bdb, winders, unwinders, out.getvalue(),
+            out.getbindings())
 
     if isinstance(phrase, ast.Begin):
         txn.bayesdb_begin_transaction(bdb)
@@ -77,7 +79,11 @@ def execute_phrase(bdb, phrase, bindings=()):
             ifnotexists = 'IF NOT EXISTS ' if phrase.ifnotexists else ''
             out.write('CREATE %sTABLE %s%s AS ' % (temp, ifnotexists, qt))
             compiler.compile_query(bdb, phrase.query, out)
-            return bdb.sql_execute(out.getvalue(), out.getbindings())
+            winders, unwinders = out.getwindings()
+            with compiler.bayesdb_wind(bdb, winders, unwinders):
+                for _x in bdb.sql_execute(out.getvalue(), out.getbindings()):
+                    pass
+        return empty_cursor(bdb)
 
     if isinstance(phrase, ast.CreateTabSim):
         assert isinstance(phrase.simulation, ast.Simulate)
@@ -130,7 +136,10 @@ def execute_phrase(bdb, phrase, bindings=()):
             for _column_name, expression in phrase.simulation.constraints:
                 out.write(', ')
                 compiler.compile_nobql_expression(bdb, expression, out)
-            cursor = list(bdb.sql_execute(out.getvalue(), out.getbindings()))
+            winders, unwinders = out.getwindings()
+            with compiler.bayesdb_wind(bdb, winders, unwinders):
+                cursor = list(bdb.sql_execute(out.getvalue(),
+                        out.getbindings()))
             assert len(cursor) == 1
             nsamples = cursor[0][0]
             assert isinstance(nsamples, int)
@@ -613,6 +622,37 @@ def empty_cursor(bdb):
     cursor = bdb.sqlite3.cursor()
     cursor.execute('')
     return cursor
+
+def execute_wound(bdb, winders, unwinders, sql, bindings):
+    if len(winders) == 0 and len(unwinders) == 0:
+        return bdb.sql_execute(sql, bindings)
+    with bdb.savepoint():
+        for (wsql, wbindings) in winders:
+            bdb.sql_execute(wsql, wbindings)
+        try:
+            return WoundCursor(bdb, bdb.sql_execute(sql, bindings), unwinders)
+        except:
+            for (usql, ubindings) in unwinders:
+                bdb.sql_execute(usql, ubindings)
+            raise
+
+class WoundCursor(object):
+    def __init__(self, bdb, cursor, unwinders):
+        self.bdb = bdb
+        self.cursor = cursor
+        self.unwinders = unwinders
+    def __iter__(self):
+        return self
+    def next(self):
+        return self.cursor.next()
+    rowcount = property(lambda self: self.cursor.rowcount)
+    lastrowid = property(lambda self: self.cursor.lastrowid)
+    description = property(lambda self: self.cursor.description)
+    def __del__(self):
+        for (sql, bindings) in reversed(self.unwinders):
+            self.bdb.sql_execute(sql, bindings)
+        # Apparently object doesn't have a __del__ method.
+        #super(WoundCursor, self).__del__()
 
 @contextlib.contextmanager
 def defer_foreign_keys(bdb):
