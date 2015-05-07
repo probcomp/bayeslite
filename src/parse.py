@@ -340,7 +340,8 @@ class BQLSemantics(object):
     def p_conf_opt_none(self):                  return None
     def p_conf_opt_some(self, conf):            return conf
 
-    def p_withconf_opt_none(self):              return ast.ExpLit(0)
+    def p_withconf_opt_none(self):
+        return ast.ExpLit(ast.LitInt(0))
     def p_withconf_opt_some(self, conf):        return conf
     def p_withconf_conf(self, conf):            return conf
 

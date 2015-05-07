@@ -295,6 +295,11 @@ def test_estimate_bql():
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
                 ' bql_predict_confidence(1, 2, _rowid_) AS c2' \
                 ' FROM "t1");'
+    assert bql2sql('infer rowid, age, weight from t1_cc') \
+        == \
+        'SELECT "rowid", bql_predict(1, 2, _rowid_, 0),' \
+        ' bql_predict(1, 3, _rowid_, 0)' \
+        ' FROM "t1";'
     assert bql2sql('infer rowid, age, weight from t1_cc with confidence 0.9') \
         == \
         'SELECT "rowid", bql_predict(1, 2, _rowid_, 0.9),' \
