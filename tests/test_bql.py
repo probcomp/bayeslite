@@ -297,28 +297,30 @@ def test_estimate_bql():
                 ' FROM "t1");'
     assert bql2sql('infer rowid, age, weight from t1_cc') \
         == \
-        'SELECT "rowid", bql_predict(1, 2, _rowid_, 0),' \
-        ' bql_predict(1, 3, _rowid_, 0)' \
+        'SELECT "rowid", "IFNULL"("age", bql_predict(1, 2, _rowid_, 0)),' \
+        ' "IFNULL"("weight", bql_predict(1, 3, _rowid_, 0))' \
         ' FROM "t1";'
     assert bql2sql('infer rowid, age, weight with confidence 0.9 from t1_cc') \
         == \
-        'SELECT "rowid", bql_predict(1, 2, _rowid_, 0.9),' \
-        ' bql_predict(1, 3, _rowid_, 0.9)' \
+        'SELECT "rowid", "IFNULL"("age", bql_predict(1, 2, _rowid_, 0.9)),' \
+        ' "IFNULL"("weight", bql_predict(1, 3, _rowid_, 0.9))' \
         ' FROM "t1";'
     assert bql2sql('infer rowid, age, weight with confidence 0.9 from t1_cc'
             ' where label = \'foo\'') \
         == \
-        'SELECT "rowid", bql_predict(1, 2, _rowid_, 0.9),' \
-        ' bql_predict(1, 3, _rowid_, 0.9)' \
+        'SELECT "rowid", "IFNULL"("age", bql_predict(1, 2, _rowid_, 0.9)),' \
+        ' "IFNULL"("weight", bql_predict(1, 3, _rowid_, 0.9))' \
         ' FROM "t1"' \
         ' WHERE ("label" = \'foo\');'
     assert bql2sql('infer rowid, age, weight with confidence 0.9 from t1_cc'
-            ' where predict label with confidence 0.7 = \'foo\'') \
+            ' where ifnull(label, predict label with confidence 0.7)'
+                ' = \'foo\'') \
         == \
-        'SELECT "rowid", bql_predict(1, 2, _rowid_, 0.9),' \
-        ' bql_predict(1, 3, _rowid_, 0.9)' \
+        'SELECT "rowid", "IFNULL"("age", bql_predict(1, 2, _rowid_, 0.9)),' \
+        ' "IFNULL"("weight", bql_predict(1, 3, _rowid_, 0.9))' \
         ' FROM "t1"' \
-        ' WHERE (bql_predict(1, 1, _rowid_, 0.7) = \'foo\');'
+        ' WHERE ("ifnull"("label", bql_predict(1, 1, _rowid_, 0.7))' \
+            ' = \'foo\');'
 
 def test_estimate_columns_trivial():
     prefix0 = 'SELECT c.name AS name'
