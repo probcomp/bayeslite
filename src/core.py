@@ -356,7 +356,7 @@ def bayesdb_generator_column_number(bdb, generator_id, column_name):
     sql = '''
         SELECT c.colno
             FROM bayesdb_generator AS g,
-                bayesdb_generator_column as gc,
+                bayesdb_generator_column AS gc,
                 bayesdb_column AS c
             WHERE g.id = :generator_id AND c.name = :column_name
                 AND g.id = gc.generator_id
