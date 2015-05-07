@@ -290,7 +290,7 @@ class BQLSemantics(object):
     def p_query_estcols(self, q):               return q
     def p_query_estpaircols(self, q):           return q
     def p_query_estpairrow(self, q):            return q
-    def p_query_predict(self, q):               return q
+    def p_query_infer(self, q):                 return q
     def p_query_estimate_pairwise_row(self, q): return q
     def p_query_create_column_list(self, q):    return q
 
@@ -299,12 +299,6 @@ class BQLSemantics(object):
 
     def p_estimate_e(self, quant, cols, generator, cond, grouping, ord, lim):
         return ast.Estimate(quant, cols, generator, cond, grouping, ord, lim)
-
-    def p_estimate_columns_one(self, c):        return [c]
-    def p_estimate_columns_many(self, cs, c):   cs.append(c); return cs
-    def p_estimate_column_sel(self, c):         return c
-    def p_estimate_column_pred(self, col, name, confname):
-        return ast.PredCol(col, name, confname)
 
     def p_estcols_nocols(self, generator, cond, ord, lim):
         return ast.EstCols([], generator, cond, ord, lim)
@@ -329,6 +323,32 @@ class BQLSemantics(object):
 
     def p_estpairrow_e(self, e, generator, cond, ord, lim):
         return ast.EstPairRow(e, generator, cond, ord, lim)
+
+    def p_infer_auto(self, cols, generator, conf, cond, grouping, ord, lim):
+        return ast.InferAuto(cols, generator, conf, cond, grouping, ord, lim)
+    def p_infer_explicit(self, cols, generator, cond, grouping, ord, lim):
+        return ast.InferExplicit(cols, generator, cond, grouping, ord, lim)
+
+    def p_infer_auto_columns_one(self, c):      return [c]
+    def p_infer_auto_columns_many(self, cs, c): cs.append(c); return cs
+
+    def p_infer_auto_column_all(self):
+        return ast.InfColAll()
+    def p_infer_auto_column_one(self, col, name, conf):
+        return ast.InfColOne(col, name, conf)
+
+    def p_conf_opt_none(self):                  return None
+    def p_conf_opt_some(self, conf):            return conf
+
+    def p_withconf_opt_none(self):              return ast.ExpLit(0)
+    def p_withconf_opt_some(self, conf):        return conf
+    def p_withconf_conf(self, conf):            return conf
+
+    def p_infer_exp_columns_one(self, c):       return [c]
+    def p_infer_exp_columns_many(self, cs, c):  cs.append(c); return cs
+    def p_infer_exp_column_sel(self, c):        return c
+    def p_infer_exp_column_pred(self, col, name, confname):
+        return ast.PredCol(col, name, confname)
 
     def p_select_quant_distinct(self):          return ast.SELQUANT_DISTINCT
     def p_select_quant_all(self):               return ast.SELQUANT_ALL
@@ -488,8 +508,8 @@ class BQLSemantics(object):
     def p_bqlfn_mutinf(self, cols, nsamp):
         return ast.ExpBQLMutInf(cols[0], cols[1], nsamp)
     def p_bqlfn_correl(self, cols):             return ast.ExpBQLCorrel(*cols)
-    def p_bqlfn_predict(self, col, cf):         return ast.ExpBQLPredict(col,
-                                                    cf)
+    def p_bqlfn_predict(self, col, conf):       return ast.ExpBQLPredict(col,
+                                                    conf)
     def p_bqlfn_primary(self, p):               return p
 
     def p_wrt_none(self):                       return [ast.ColListAll()]

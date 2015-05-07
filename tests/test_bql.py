@@ -281,9 +281,13 @@ def test_estimate_bql():
     with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
         bql2sql('estimate correlation from t1_cc;')
-    assert bql2sql('estimate predict age with confidence 0.9 from t1_cc;') == \
+    with pytest.raises(bayeslite.BQLError):
+        # No PREDICT outside INFER.
+        bql2sql('estimate predict age with confidence 0.9 from t1_cc;')
+    assert bql2sql('infer explicit predict age with confidence 0.9'
+            ' from t1_cc;') == \
         'SELECT bql_predict(1, 2, _rowid_, 0.9) FROM "t1";'
-    assert bql2sql('estimate rowid, age,'
+    assert bql2sql('infer explicit rowid, age,'
             ' predict age as age_inf confidence age_conf from t1_cc') == \
         'SELECT c0 AS "rowid", c1 AS "age",' \
             ' bql_json_get(c2, \'value\') AS "age_inf",' \
@@ -622,10 +626,16 @@ def test_trivial_commands():
             with pytest.raises(AssertionError): # XXX
                 bdb.execute('select gender from t0')
                 assert False, 'Need to fix quoting of unknown columns!'
-            list(bdb.execute('estimate predict sex with confidence 0.9'
-                ' from t_cc'))
+            with pytest.raises(bayeslite.BQLError):
+                list(bdb.execute('estimate predict sex with confidence 0.9'
+                        ' from t_cc'))
+            list(bdb.execute('infer explicit predict sex with confidence 0.9'
+                    ' from t_cc'))
             with pytest.raises(bayeslite.BQLError):
                 bdb.execute('estimate predict gender with confidence 0.9'
+                    ' from t_cc')
+            with pytest.raises(bayeslite.BQLError):
+                bdb.execute('infer explicit predict gender with confidence 0.9'
                     ' from t_cc')
             bdb.execute('alter table t0 rename sex to gender')
             assert core.bayesdb_generator_column_number(bdb, generator_id,
@@ -645,11 +655,17 @@ def test_trivial_commands():
         list(bdb.execute('estimate pairwise row similarity from t_cc'))
         list(bdb.execute('select value from'
             ' (estimate pairwise correlation from t_cc)'))
-        list(bdb.execute('estimate predict age with confidence 0.9 from t_cc'))
-        list(bdb.execute('estimate predict AGE with confidence 0.9 from T_cc'))
-        list(bdb.execute('estimate predict aGe with confidence 0.9 from T_cC'))
+        list(bdb.execute('infer explicit predict age with confidence 0.9'
+                ' from t_cc'))
+        list(bdb.execute('infer explicit predict AGE with confidence 0.9'
+                ' from T_cc'))
+        list(bdb.execute('infer explicit predict aGe with confidence 0.9'
+                ' from T_cC'))
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate predict agee with confidence 0.9 from t_cc')
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('infer explicit predict agee with confidence 0.9'
+                ' from t_cc')
         # Make sure it works with the table too if we create a default
         # generator.
         with pytest.raises(bayeslite.BQLError):

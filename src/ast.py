@@ -124,6 +124,8 @@ def is_query(phrase):
     if isinstance(phrase, EstCols):     return True
     if isinstance(phrase, EstPairCols): return True
     if isinstance(phrase, EstPairRow):  return True
+    if isinstance(phrase, InferAuto):   return True
+    if isinstance(phrase, InferExplicit): return True
     # SIMULATE is *not* a normal query: it can appear only on the
     # right-hand side of `CREATE TABLE foo AS ...'.
     return False
@@ -172,6 +174,32 @@ PredCol = namedtuple('PredCol', [
 SelTab = namedtuple('SelTab', [
     'table',                    # XXX subquery or XXX name
     'name',                     # XXX name
+])
+
+InferAuto = namedtuple('InferAuto', [
+    'columns',                  # [InfCol* or PredCol]
+    'generator',                # XXX name
+    'confidence',               # Exp* or None (implied 0)
+    'condition',                # Exp* or None (unconditional)
+    'grouping',                 # Grouping or None
+    'order',                    # [Ord] or None (unordered)
+    'limit',                    # Lim or None (unlimited)
+])
+
+InferExplicit = namedtuple('InferExplicit', [
+    'columns',                  # [SelCol* or PredCol]
+    'generator',                # XXX name
+    'condition',                # Exp* or None (unconditional)
+    'grouping',                 # Grouping or None
+    'order',                    # [Ord] or None (unordered)
+    'limit',                    # Lim or None (unlimited)
+])
+
+InfColAll = namedtuple('InfColAll', [])
+InfColOne = namedtuple('InfColOne', [
+    'column',                   # XXX name
+    'name',                     # XXX name or None
+    'confidence',               # XXX name or None
 ])
 
 EstCols = namedtuple('EstCols', [

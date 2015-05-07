@@ -178,11 +178,15 @@ def compile_query(bdb, query, out):
     if isinstance(query, ast.Select):
         compile_select(bdb, query, out)
     elif isinstance(query, ast.Estimate):
+        compile_estimate(bdb, query, out)
+    elif isinstance(query, ast.InferExplicit):
         if any(isinstance(c, ast.PredCol) for c in query.columns):
-            compile_estimate_predict(bdb, query, out)
+            compile_infer_explicit_predict(bdb, query, out)
         else:
             named = True
-            compile_estimate(bdb, query, named, out)
+            compile_infer_explicit(bdb, query, named, out)
+    elif isinstance(query, ast.InferAuto):
+        compile_infer_auto(bdb, query, out)
     elif isinstance(query, ast.EstCols):
         compile_estcols(bdb, query, out)
     elif isinstance(query, ast.EstPairCols):
@@ -249,10 +253,10 @@ def compile_select(bdb, select, out):
             out.write(' OFFSET ')
             compile_nobql_expression(bdb, select.limit.offset, out)
 
-def compile_estimate_predict(bdb, estimate, out):
+def compile_infer_explicit_predict(bdb, infer, out):
     out.write('SELECT')
     first = True
-    for i, col in enumerate(estimate.columns):
+    for i, col in enumerate(infer.columns):
         if first:
             first = False
         else:
@@ -282,13 +286,89 @@ def compile_estimate_predict(bdb, estimate, out):
             raise NotImplementedError('You have no business'
                 ' mixing subquery-chosen columns with PREDICT!')
         else:
-            assert False, 'Invalid ESTIMATE column: %s' % (repr(col),)
+            assert False, 'Invalid INFER column: %s' % (repr(col),)
     out.write(' FROM ')
     with compiling_paren(bdb, out, '(', ')'):
         named = False
-        compile_estimate(bdb, estimate, named, out)
+        compile_infer_explicit(bdb, infer, named, out)
 
-def compile_estimate(bdb, estimate, named, out):
+def compile_infer_explicit(bdb, infer, named, out):
+    assert isinstance(infer, ast.InferExplicit)
+    out.write('SELECT')
+    if not core.bayesdb_has_generator_default(bdb, infer.generator):
+        raise BQLError(bdb, 'No such generator: %s' % (infer.generator,))
+    generator_id = core.bayesdb_get_generator_default(bdb, infer.generator)
+    bql_compiler = BQLCompiler_1Row_Infer(generator_id)
+    compile_select_columns(bdb, infer.columns, named, bql_compiler, out)
+    table_name = core.bayesdb_generator_table(bdb, generator_id)
+    qt = sqlite3_quote_name(table_name)
+    out.write(' FROM %s' % (qt,))
+    if infer.condition is not None:
+        out.write(' WHERE ')
+        compile_expression(bdb, infer.condition, bql_compiler, out)
+    if infer.grouping is not None:
+        assert 0 < len(infer.grouping.keys)
+        first = True
+        for key in infer.grouping.keys:
+            if first:
+                out.write(' GROUP BY ')
+                first = False
+            else:
+                out.write(', ')
+            compile_expression(bdb, key, bql_compiler, out)
+        if infer.grouping.condition:
+            out.write(' HAVING ')
+            compile_expression(bdb, infer.grouping.condition, bql_compiler,
+                out)
+    if infer.order is not None:
+        assert 0 < len(infer.order)
+        first = True
+        for order in infer.order:
+            if first:
+                out.write(' ORDER BY ')
+                first = False
+            else:
+                out.write(', ')
+            compile_expression(bdb, order.expression, bql_compiler, out)
+            if order.sense == ast.ORD_ASC:
+                pass
+            elif order.sense == ast.ORD_DESC:
+                out.write(' DESC')
+            else:
+                assert False, 'Invalid order sense: %s' % (repr(order.sense),)
+    if infer.limit is not None:
+        out.write(' LIMIT ')
+        compile_expression(bdb, infer.limit.limit, bql_compiler, out)
+        if infer.limit.offset is not None:
+            out.write(' OFFSET ')
+            compile_expression(bdb, infer.limit.offset, bql_compiler, out)
+
+def compile_infer_auto(bdb, infer, out):
+    assert isinstance(infer, ast.InferAuto)
+    if not core.bayesdb_has_generator_default(bdb, infer.generator):
+        raise BQLError(bdb, 'No such generator: %s' % (infer.generator,))
+    generator_id = core.bayesdb_get_generator_default(bdb, infer.generator)
+    table = core.bayesdb_generator_table(bdb, generator_id)
+    def map_column(col, name, conf):
+        if conf is not None:
+            return ast.PredCol(col, name, conf)
+        else:
+            return ast.SelColExp(ast.ExpCol(None, col), name)
+    def map_columns(col):
+        if isinstance(col, ast.InfColAll):
+            column_names = core.bayesdb_table_column_names(bdb, table)
+            return [map_column(col, None, None) for col in column_names]
+        elif isinstance(col, ast.InfColOne):
+            return [map_column(col.column, col.name, col.conf)]
+        else:
+            assert False, 'Invalid INFER column: %s' % (repr(col),)
+    columns = [mcol for col in infer.columns for mcol in map_columns(col)]
+    infer_exp = ast.InferExplicit(columns, infer.generator, infer.condition,
+        infer.grouping, infer.order, infer.limit)
+    named = True
+    return compile_infer_explicit(bdb, infer_exp, named, out)
+
+def compile_estimate(bdb, estimate, out):
     assert isinstance(estimate, ast.Estimate)
     out.write('SELECT')
     if estimate.quantifier == ast.SELQUANT_DISTINCT:
@@ -299,6 +379,7 @@ def compile_estimate(bdb, estimate, named, out):
         raise BQLError(bdb, 'No such generator: %s' % (estimate.generator,))
     generator_id = core.bayesdb_get_generator_default(bdb, estimate.generator)
     bql_compiler = BQLCompiler_1Row(generator_id)
+    named = True
     compile_select_columns(bdb, estimate.columns, named, bql_compiler, out)
     table_name = core.bayesdb_generator_table(bdb, generator_id)
     qt = sqlite3_quote_name(table_name)
@@ -675,7 +756,17 @@ class BQLCompiler_1Row(object):
             compile_bql_2col_2(bdb, generator_id,
                 'bql_column_correlation',
                 'Column correlation', None, bql, self, out)
-        elif isinstance(bql, ast.ExpBQLPredict):
+        elif isinstance(bql, (ast.ExpBQLPredict, ast.ExpBQLPredictConf)):
+            raise BQLError(bdb, 'PREDICT is not allowed outside INFER.')
+        else:
+            assert False, 'Invalid BQL function: %s' % (repr(bql),)
+
+class BQLCompiler_1Row_Infer(BQLCompiler_1Row):
+    def compile_bql(self, bdb, bql, out):
+        assert ast.is_bql(bql)
+        generator_id = self.generator_id
+        rowid_col = '_rowid_' # XXX Don't hard-code this.
+        if isinstance(bql, ast.ExpBQLPredict):
             assert bql.column is not None
             table_name = core.bayesdb_generator_table(bdb, generator_id)
             if not core.bayesdb_generator_has_column(bdb, generator_id,
@@ -696,7 +787,7 @@ class BQLCompiler_1Row(object):
             out.write('bql_predict_confidence(%d, %d, _rowid_)' %
                 (generator_id, colno))
         else:
-            assert False, 'Invalid BQL function: %s' % (repr(bql),)
+            super(self, BQLCompiler_1Row_Infer).compile_bql(bdb, bql, out)
 
 class BQLCompiler_2Row(object):
     def __init__(self, generator_id, rowid0_exp, rowid1_exp):

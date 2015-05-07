@@ -542,9 +542,9 @@ def test_trivial_commands():
             ' checkpoint 3 iterations') == \
         [ast.AnalyzeModels('t', None, 10, None, 3, False)]
     assert parse_bql_string('create temporary table tx as'
-            ' estimate x, predict x as xi confidence xc from t_cc') == \
+            ' infer explicit x, predict x as xi confidence xc from t_cc') == \
         [ast.CreateTabAs(True, False, 'tx',
-            ast.Estimate(ast.SELQUANT_ALL,
+            ast.InferExplicit(
                 [
                     ast.SelColExp(ast.ExpCol(None, 'x'), None),
                     ast.PredCol('x', 'xi', 'xc'),

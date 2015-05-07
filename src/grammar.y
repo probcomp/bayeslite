@@ -159,8 +159,8 @@ query(estimate)		::= estimate(q).
 query(estcols)		::= estcols(q).
 query(estpaircols)	::= estpaircols(q).
 query(estpairrow)	::= estpairrow(q).
-/*
 query(infer)		::= infer(q).
+/*
 query(estimate_pairwise_row)
 			::= estimate_pairwise_row(q).
 query(create_column_list)
@@ -175,19 +175,12 @@ select(s)		::= K_SELECT select_quant(quant) select_columns(cols)
 				order_by(ord)
 				limit_opt(lim).
 
-estimate(e)		::= K_ESTIMATE select_quant(quant)
-				estimate_columns(cols)
+estimate(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
 				K_FROM generator_name(generator)
 				where(cond)
 				group_by(grouping)
 				order_by(ord)
 				limit_opt(lim).
-
-estimate_columns(one)	::= estimate_column(c).
-estimate_columns(many)	::= estimate_columns(cs) T_COMMA estimate_column(c).
-estimate_column(sel)	::= select_column(c).
-estimate_column(pred)	::= K_PREDICT column_name(col) K_AS column_name(name)
-				K_CONFIDENCE column_name(confname).
 
 /*
  * XXX Can we reformulate this elegantly as a SELECT on the columns of
@@ -234,6 +227,39 @@ estpaircols_column(epc)	::= expression(e) as(name).
 estpairrow(e)		::= K_ESTIMATE K_PAIRWISE K_ROW expression(e)
 				K_FROM generator_name(generator)
 				where(cond) order_by(ord) limit_opt(lim).
+
+infer(auto)		::= K_INFER infer_auto_columns(cols)
+				K_FROM generator_name(generator)
+				withconf_opt(conf)
+				where(cond) group_by(grouping) order_by(ord)
+				limit_opt(lim).
+infer(explicit)		::= K_INFER K_EXPLICIT infer_exp_columns(cols)
+				K_FROM generator_name(generator)
+				where(cond) group_by(grouping) order_by(ord)
+				limit_opt(lim).
+
+infer_auto_columns(one)		::= infer_auto_column(c).
+infer_auto_columns(many)	::= infer_auto_columns(cs) T_COMMA
+					infer_auto_column(c).
+
+infer_auto_column(all)		::= T_STAR.
+infer_auto_column(one)		::= column_name(col) as(name) conf_opt(conf).
+
+conf_opt(none)		::= .
+conf_opt(some)		::= K_CONFIDENCE L_NAME(conf).
+
+withconf_opt(none)	::= .
+withconf_opt(some)	::= withconf(conf).
+
+withconf(conf)		::= K_WITH K_CONFIDENCE primary(conf).
+
+infer_exp_columns(one)	::= infer_exp_column(c).
+infer_exp_columns(many)	::= infer_exp_columns(cs) T_COMMA
+				infer_exp_column(c).
+
+infer_exp_column(sel)	::= select_column(c).
+infer_exp_column(pred)	::= K_PREDICT column_name(col) K_AS column_name(name)
+				K_CONFIDENCE column_name(confname).
 
 select_quant(distinct)	::= K_DISTINCT.
 select_quant(all)	::= K_ALL.
@@ -463,8 +489,7 @@ bqlfn(depprob)		::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
 bqlfn(mutinf)		::= K_MUTUAL K_INFORMATION ofwith(cols)
 				nsamples_opt(nsamp).
 bqlfn(correl)		::= K_CORRELATION ofwith(cols).
-bqlfn(predict)		::= K_PREDICT column_name(col)
-				K_WITH K_CONFIDENCE primary(cf).
+bqlfn(predict)		::= K_PREDICT column_name(col) withconf(conf).
 bqlfn(primary)		::= primary(p).
 
 /*
@@ -579,6 +604,7 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 	K_GROUP
 	K_IF
 	K_IN
+	K_INFER
 	K_INFORMATION
 	K_INITIALIZE
 	K_IS
