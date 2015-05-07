@@ -38,9 +38,6 @@ command(commit)		::= K_COMMIT.
 command(createtab_as)	::= K_CREATE temp_opt(temp) K_TABLE
 				ifnotexists(ifnotexists)
 				table_name(name) K_AS query(query).
-command(createtab_sim)	::= K_CREATE temp_opt(temp) K_TABLE
-				ifnotexists(ifnotexists)
-				table_name(name) K_AS simulate(query).
 command(droptab)	::= K_DROP K_TABLE ifexists(ifexists) table_name(name).
 command(altertab)	::= K_ALTER K_TABLE table_name(table)
 				altertab_cmds(cmds).
@@ -160,6 +157,7 @@ query(estcols)		::= estcols(q).
 query(estpaircols)	::= estpaircols(q).
 query(estpairrow)	::= estpairrow(q).
 query(infer)		::= infer(q).
+query(simulate)		::= simulate(q).
 /*
 query(estimate_pairwise_row)
 			::= estimate_pairwise_row(q).

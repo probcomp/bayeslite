@@ -32,6 +32,7 @@ import StringIO
 import contextlib
 
 import bayeslite.ast as ast
+import bayeslite.bqlfn as bqlfn
 import bayeslite.core as core
 
 from bayeslite.exception import BQLError
@@ -213,6 +214,8 @@ def compile_query(bdb, query, out):
             compile_infer_explicit(bdb, query, named, out)
     elif isinstance(query, ast.InferAuto):
         compile_infer_auto(bdb, query, out)
+    elif isinstance(query, ast.Simulate):
+        compile_simulate(bdb, query, out)
     elif isinstance(query, ast.EstCols):
         compile_estcols(bdb, query, out)
     elif isinstance(query, ast.EstPairCols):
@@ -533,6 +536,73 @@ def compile_select_table(bdb, table, out):
         compile_table_name(bdb, table, out)
     else:
         assert False, 'Invalid select table: %s' % (repr(table),)
+
+def compile_simulate(bdb, simulate, out):
+    # XXX Reduce copypasta with case for CreateTabSim in bql.py.
+    with bdb.savepoint():
+        temptable = bdb.temp_table_name()
+        assert not core.bayesdb_has_table(bdb, temptable)
+        generator_id = core.bayesdb_get_generator_default(bdb,
+            simulate.generator)
+        table = core.bayesdb_generator_table(bdb, generator_id)
+        qtt = sqlite3_quote_name(temptable)
+        qt = sqlite3_quote_name(table)
+        qgn = sqlite3_quote_name(simulate.generator)
+        column_names = simulate.columns
+        qcns = map(sqlite3_quote_name, column_names)
+        cursor = bdb.sql_execute('PRAGMA table_info(%s)' % (qt,))
+        column_sqltypes = {}
+        for _colno, name, sqltype, _nonnull, _default, _primary in cursor:
+            assert casefold(name) not in column_sqltypes
+            column_sqltypes[casefold(name)] = sqltype
+        assert 0 < len(column_sqltypes)
+        for column_name in column_names:
+            if casefold(column_name) not in column_sqltypes:
+                raise BQLError(bdb, 'No such column'
+                    ' in generator %s table %s: %s' %
+                    (repr(simulate.generator), repr(table), repr(column_name)))
+        for column_name, _expression in simulate.constraints:
+            if casefold(column_name) not in column_sqltypes:
+                raise BQLError(bdb, 'No such column'
+                    ' in generator %s table %s: %s' %
+                    (repr(simulate.generator), repr(table), repr(column_name)))
+        # XXX Move to compiler.py.
+        subout = out.subquery()
+        subout.write('SELECT ')
+        with compiling_paren(bdb, subout, 'CAST(', ' AS INTEGER)'):
+            compile_nobql_expression(bdb, simulate.nsamples, subout)
+        for _column_name, expression in simulate.constraints:
+            subout.write(', ')
+            compile_nobql_expression(bdb, expression, subout)
+        winders, unwinders = subout.getwindings()
+        with bayesdb_wind(bdb, winders, unwinders):
+            cursor = list(bdb.sql_execute(subout.getvalue(),
+                    subout.getbindings()))
+        assert len(cursor) == 1
+        nsamples = cursor[0][0]
+        assert isinstance(nsamples, int)
+        constraints = \
+            [(core.bayesdb_generator_column_number(bdb, generator_id, name),
+                    value)
+                for (name, _expression), value in
+                    zip(simulate.constraints, cursor[0][1:])]
+        colnos = \
+            [core.bayesdb_generator_column_number(bdb, generator_id, name)
+                for name in column_names]
+        out.winder('CREATE TEMP TABLE %s (%s)' %
+            (qtt,
+             ','.join('%s %s' %
+                    (qcn, column_sqltypes[casefold(column_name)])
+                for qcn, column_name in zip(qcns, column_names))),
+            ())
+        insert_sql = '''
+            INSERT INTO %s (%s) VALUES (%s)
+        ''' % (qtt, ','.join(qcns), ','.join('?' for qcn in qcns))
+        for row in bqlfn.bayesdb_simulate(bdb, generator_id, constraints,
+                colnos, numpredictions=nsamples):
+            out.winder(insert_sql, row)
+        out.unwinder('DROP TABLE %s' % (qtt,), ())
+        out.write('SELECT * FROM %s' % (qtt,))
 
 # XXX Use context to determine whether to yield column names or
 # numbers, so that top-level queries yield names, but, e.g.,

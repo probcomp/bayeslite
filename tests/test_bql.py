@@ -1061,6 +1061,73 @@ def test_parametrized():
             'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
             'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
         ]
+        assert sqltraced_execute('select * from (simulate age from t_cc'
+                    " given gender = 'F' limit 4)") == [
+            'PRAGMA table_info("bayesdb_temp_0")',
+            'SELECT id FROM bayesdb_generator WHERE name = :name' \
+                ' OR (defaultp AND tabname = :name)',
+            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
+            'PRAGMA table_info("t")',
+            "SELECT CAST(4 AS INTEGER), 'F'",
+            'SELECT c.colno' \
+                ' FROM bayesdb_generator AS g,' \
+                    ' bayesdb_generator_column AS gc,' \
+                    ' bayesdb_column AS c' \
+                ' WHERE g.id = :generator_id' \
+                    ' AND c.name = :column_name' \
+                    ' AND g.id = gc.generator_id' \
+                    ' AND g.tabname = c.tabname' \
+                    ' AND gc.colno = c.colno',
+            'SELECT c.colno' \
+                ' FROM bayesdb_generator AS g,' \
+                    ' bayesdb_generator_column AS gc,' \
+                    ' bayesdb_column AS c' \
+                ' WHERE g.id = :generator_id' \
+                    ' AND c.name = :column_name' \
+                    ' AND g.id = gc.generator_id' \
+                    ' AND g.tabname = c.tabname' \
+                    ' AND gc.colno = c.colno',
+            'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
+            'SELECT metadata_json FROM bayesdb_crosscat_metadata' \
+                ' WHERE generator_id = ?',
+            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
+            'SELECT MAX(_rowid_) FROM "t"',
+            'SELECT stattype FROM bayesdb_generator_column' \
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column' \
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT modelno FROM bayesdb_crosscat_theta' \
+                ' WHERE generator_id = ?',
+            'SELECT theta_json FROM bayesdb_crosscat_theta'
+                ' WHERE generator_id = ? AND modelno = ?',
+            'SELECT modelno FROM bayesdb_crosscat_theta' \
+                ' WHERE generator_id = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column' \
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column' \
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column' \
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column' \
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column' \
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column' \
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column' \
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column' \
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column' \
+                ' WHERE generator_id = ? AND colno = ?',
+            'CREATE TEMP TABLE "bayesdb_temp_0" ("age" NUMERIC)',
+            'INSERT INTO "bayesdb_temp_0" ("age") VALUES (?)',
+            'INSERT INTO "bayesdb_temp_0" ("age") VALUES (?)',
+            'INSERT INTO "bayesdb_temp_0" ("age") VALUES (?)',
+            'INSERT INTO "bayesdb_temp_0" ("age") VALUES (?)',
+            'SELECT * FROM (SELECT * FROM "bayesdb_temp_0")',
+            'DROP TABLE "bayesdb_temp_0"',
+        ]
 
 def test_createtab():
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
@@ -1299,3 +1366,11 @@ def test_guess_all():
         bdb.sql_execute('create table foo (x numeric, y numeric, z numeric)')
         bdb.sql_execute('insert into foo values (1, 2, 3)')
         bdb.execute('create generator foo_cc for foo using crosscat(guess(*))')
+
+def test_nested_simulate():
+    with test_core.t1() as (bdb, _table_id):
+        bdb.execute('initialize 1 model for t1_cc')
+        bdb.execute('analyze t1_cc for 1 iteration wait')
+        list(bdb.execute('select (simulate age from t1_cc limit 1),'
+                ' (simulate weight from t1_cc limit 1)'))
+        assert bdb.temp_table_name() == 'bayesdb_temp_2'

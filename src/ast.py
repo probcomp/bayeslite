@@ -39,6 +39,7 @@ CreateTabAs = namedtuple('CreateTabAs', [
     'name',                     # XXX name
     'query',                    # query
 ])
+# XXX CreateTabSim is not necessary.  Eliminate it.
 CreateTabSim = namedtuple('CreateTabSim', [
     # XXX Database name, &c.
     'temp',                     # boolean
@@ -126,8 +127,7 @@ def is_query(phrase):
     if isinstance(phrase, EstPairRow):  return True
     if isinstance(phrase, InferAuto):   return True
     if isinstance(phrase, InferExplicit): return True
-    # SIMULATE is *not* a normal query: it can appear only on the
-    # right-hand side of `CREATE TABLE foo AS ...'.
+    if isinstance(phrase, Simulate):    return True
     return False
 
 Select = namedtuple('Select', [
