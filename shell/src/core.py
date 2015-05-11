@@ -69,6 +69,8 @@ class Shell(cmd.Cmd):
 
         self._core_commands = set(self._cmds)
 
+        self.hookvars = {}
+
     def _installcmd(self, name, method):
         assert not hasattr(self, 'do_.%s' % (name,))
         assert name not in self._cmds
