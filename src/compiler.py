@@ -394,8 +394,8 @@ def compile_infer_auto(bdb, infer, out):
         else:
             assert False, 'Invalid INFER column: %s' % (repr(col),)
     columns = [mcol for col in infer.columns for mcol in map_columns(col)]
-    infer_exp = ast.InferExplicit(columns, infer.generator, infer.condition,
-        infer.grouping, infer.order, infer.limit)
+    infer_exp = ast.InferExplicit(columns, infer.generator, infer.modelnos,
+        infer.condition, infer.grouping, infer.order, infer.limit)
     named = True
     return compile_infer_explicit(bdb, infer_exp, named, out)
 
