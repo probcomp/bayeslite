@@ -1376,3 +1376,19 @@ def test_nested_simulate():
         assert bdb.temp_table_name() == 'bayesdb_temp_2'
         assert not core.bayesdb_has_table(bdb, 'bayesdb_temp_0')
         assert not core.bayesdb_has_table(bdb, 'bayesdb_temp_1')
+
+def test_using_models():
+    with pytest.raises(NotImplementedError):
+        bql2sql('simulate x, y from t1 using model 1 limit 1')
+    with pytest.raises(NotImplementedError):
+        bql2sql('estimate x, y from t1 using model 1')
+    with pytest.raises(NotImplementedError):
+        bql2sql('estimate columns from t1 using model 1')
+    with pytest.raises(NotImplementedError):
+        bql2sql('estimate pairwise mutual information from t1 using model 1')
+    with pytest.raises(NotImplementedError):
+        bql2sql('estimate pairwise row similarity from t1 using model 1')
+    with pytest.raises(NotImplementedError):
+        bql2sql('infer x, y from t1 using model 1')
+    with pytest.raises(NotImplementedError):
+        bql2sql('infer explicit x, y from t1 using model 1')
