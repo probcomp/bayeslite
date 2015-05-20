@@ -176,9 +176,10 @@ class BQLSemantics(object):
 
     # SQL Data Definition Language subset
     def p_command_createtab_as(self, temp, ifnotexists, name, query):
-        return ast.CreateTabAs(temp, ifnotexists, name, query)
-    def p_command_createtab_sim(self, temp, ifnotexists, name, query):
-        return ast.CreateTabSim(temp, ifnotexists, name, query)
+        if isinstance(query, ast.Simulate):
+            return ast.CreateTabSim(temp, ifnotexists, name, query)
+        else:
+            return ast.CreateTabAs(temp, ifnotexists, name, query)
     def p_command_droptab(self, ifexists, name):
         return ast.DropTab(ifexists, name)
     def p_command_altertab(self, table, cmds):
@@ -262,12 +263,12 @@ class BQLSemantics(object):
     def p_wait_opt_none(self):                  return False
     def p_wait_opt_some(self):                  return True
 
-    def p_simulate_s(self, cols, generator, constraints, lim):
-        return ast.Simulate(cols, generator, constraints, lim.limit)
-    def p_simulate_nolimit(self, cols, generator, constraints):
+    def p_simulate_s(self, cols, generator, models, constraints, lim):
+        return ast.Simulate(cols, generator, models, constraints, lim.limit)
+    def p_simulate_nolimit(self, cols, generator, models, constraints):
         # XXX Report source location.
         self.errors.append('simulate missing limit')
-        return ast.Simulate(cols, generator, constraints, 0)
+        return ast.Simulate(cols, generator, models, constraints, 0)
     def p_simulate_columns_one(self, col):
         return [col]
     def p_simulate_columns_many(self, cols, col):
@@ -291,25 +292,22 @@ class BQLSemantics(object):
     def p_query_estpaircols(self, q):           return q
     def p_query_estpairrow(self, q):            return q
     def p_query_infer(self, q):                 return q
+    def p_query_simulate(self, q):              return q
     def p_query_estimate_pairwise_row(self, q): return q
     def p_query_create_column_list(self, q):    return q
 
     def p_select_s(self, quant, cols, tabs, cond, grouping, ord, lim):
         return ast.Select(quant, cols, tabs, cond, grouping, ord, lim)
 
-    def p_estimate_e(self, quant, cols, generator, cond, grouping, ord, lim):
-        return ast.Estimate(quant, cols, generator, cond, grouping, ord, lim)
+    def p_estimate_e(self, quant, cols, generator, models, cond, grouping,
+            ord, lim):
+        return ast.Estimate(quant, cols, generator, models, cond, grouping,
+            ord, lim)
 
-    def p_estimate_columns_one(self, c):        return [c]
-    def p_estimate_columns_many(self, cs, c):   cs.append(c); return cs
-    def p_estimate_column_sel(self, c):         return c
-    def p_estimate_column_inf(self, col, name, confname):
-        return ast.InfCol(col, name, confname)
-
-    def p_estcols_nocols(self, generator, cond, ord, lim):
-        return ast.EstCols([], generator, cond, ord, lim)
-    def p_estcols_cols(self, cols, generator, cond, ord, lim):
-        return ast.EstCols(cols, generator, cond, ord, lim)
+    def p_estcols_nocols(self, generator, models, cond, ord, lim):
+        return ast.EstCols([], generator, models, cond, ord, lim)
+    def p_estcols_cols(self, cols, generator, models, cond, ord, lim):
+        return ast.EstCols(cols, generator, models, cond, ord, lim)
 
     def p_estcols_columns_opt_none(self):       return []
     def p_estcols_columns_opt_some(self, cols): return cols
@@ -317,8 +315,10 @@ class BQLSemantics(object):
     def p_estcols_columns_many(self, cols, col): cols.append(col); return cols
     def p_estcols_column_ec(self, e, name):     return (e, name)
 
-    def p_estpaircols_e(self, cols, generator, subcols, cond, ord, lim):
-        return ast.EstPairCols(cols, generator, subcols, cond, ord, lim)
+    def p_estpaircols_e(self, cols, generator, subcols, models, cond, ord,
+            lim):
+        return ast.EstPairCols(cols, generator, subcols, models, cond, ord,
+            lim)
 
     def p_estpaircols_columns_one(self, col):
         return [col]
@@ -327,8 +327,39 @@ class BQLSemantics(object):
     def p_estpaircols_column_epc(self, e, name):
         return (e, name)
 
-    def p_estpairrow_e(self, e, generator, cond, ord, lim):
-        return ast.EstPairRow(e, generator, cond, ord, lim)
+    def p_estpairrow_e(self, e, generator, models, cond, ord, lim):
+        return ast.EstPairRow(e, generator, models, cond, ord, lim)
+
+    def p_infer_auto(self, cols, conf, generator, models, cond, grouping,
+            ord, lim):
+        return ast.InferAuto(cols, conf, generator, models, cond, grouping,
+            ord, lim)
+    def p_infer_explicit(self, cols, generator, models, cond, grouping,
+            ord, lim):
+        return ast.InferExplicit(cols, generator, models, cond, grouping,
+            ord, lim)
+
+    def p_infer_auto_columns_one(self, c):      return [c]
+    def p_infer_auto_columns_many(self, cs, c): cs.append(c); return cs
+
+    def p_infer_auto_column_all(self):
+        return ast.InfColAll()
+    def p_infer_auto_column_one(self, col, name):
+        return ast.InfColOne(col, name)
+
+    def p_conf_opt_none(self):                  return None
+    def p_conf_opt_some(self, conf):            return conf
+
+    def p_withconf_opt_none(self):
+        return ast.ExpLit(ast.LitInt(0))
+    def p_withconf_opt_some(self, conf):        return conf
+    def p_withconf_conf(self, conf):            return conf
+
+    def p_infer_exp_columns_one(self, c):       return [c]
+    def p_infer_exp_columns_many(self, cs, c):  cs.append(c); return cs
+    def p_infer_exp_column_sel(self, c):        return c
+    def p_infer_exp_column_pred(self, col, name, confname):
+        return ast.PredCol(col, name, confname)
 
     def p_select_quant_distinct(self):          return ast.SELQUANT_DISTINCT
     def p_select_quant_all(self):               return ast.SELQUANT_ALL
@@ -347,6 +378,9 @@ class BQLSemantics(object):
 
     def p_from_empty(self):                     return None
     def p_from_nonempty(self, tables):          return tables
+
+    def p_usingmodels_opt_none(self):           return None
+    def p_usingmodels_opt_some(self, models):   return models
 
     def p_select_tables_one(self, t):           return [t]
     def p_select_tables_many(self, ts, t):      ts.append(t); return ts
@@ -471,10 +505,11 @@ class BQLSemantics(object):
                                         return c
     def p_collating_collate(self, e, c):
                                         return ast.ExpCollate(e, c)
-    def p_collating_bitwise_not(self, n):
-                                        return n
-    def p_bitwise_not_not(self, n):     return ast.op(ast.OP_BITNOT, n)
-    def p_bitwise_not_bql(self, b):     return b
+    def p_collating_unary(self, u):     return u
+    def p_unary_bitwise_not(self, u):   return ast.op(ast.OP_BITNOT, u)
+    def p_unary_minus(self, u):         return ast.op(ast.OP_NEGATE, u)
+    def p_unary_plus(self, u):          return ast.op(ast.OP_PLUSID, u)
+    def p_unary_bql(self, b):           return b
 
     def p_bqlfn_predprob_row(self, col):        return ast.ExpBQLPredProb(col)
     def p_bqlfn_prob_const(self, col, e):       return ast.ExpBQLProb(col, e)
@@ -487,7 +522,8 @@ class BQLSemantics(object):
     def p_bqlfn_mutinf(self, cols, nsamp):
         return ast.ExpBQLMutInf(cols[0], cols[1], nsamp)
     def p_bqlfn_correl(self, cols):             return ast.ExpBQLCorrel(*cols)
-    def p_bqlfn_infer(self, col, cf):           return ast.ExpBQLInfer(col, cf)
+    def p_bqlfn_predict(self, col, conf):       return ast.ExpBQLPredict(col,
+                                                    conf)
     def p_bqlfn_primary(self, p):               return p
 
     def p_wrt_none(self):                       return [ast.ColListAll()]

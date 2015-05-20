@@ -99,9 +99,9 @@ def test_hackmetamodel():
     bdb.sql_execute('CREATE TABLE t(a INTEGER, b TEXT)')
     bdb.sql_execute("INSERT INTO t (a, b) VALUES (42, 'fnord')")
     bdb.sql_execute('CREATE TABLE u AS SELECT * FROM t')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         bdb.execute('CREATE GENERATOR t_cc FOR t USING crosscat(a NUMERICAL)')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         bdb.execute('CREATE GENERATOR t_dd FOR t USING dotdog(a NUMERICAL)')
     crosscat = local_crosscat()
     crosscat_metamodel = bayeslite.crosscat.CrosscatMetamodel(crosscat)
@@ -109,19 +109,19 @@ def test_hackmetamodel():
     bayeslite.bayesdb_register_metamodel(bdb, dotdog_metamodel)
     bayeslite.bayesdb_deregister_metamodel(bdb, dotdog_metamodel)
     bayeslite.bayesdb_register_metamodel(bdb, dotdog_metamodel)
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         bdb.execute('CREATE GENERATOR t_cc FOR t USING crosscat(a NUMERICAL)')
     bdb.execute('CREATE GENERATOR t_dd FOR t USING dotdog(a NUMERICAL)')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         bdb.execute('CREATE GENERATOR t_dd FOR t USING dotdog(a NUMERICAL)')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         bdb.execute('CREATE GENERATOR t_cc FOR t USING crosscat(a NUMERICAL)')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         bdb.execute('CREATE GENERATOR t_dd FOR t USING dotdog(a NUMERICAL)')
     # XXX Rest of test originally exercised default metamodel, but
     # syntax doesn't support that now.  Not clear that's wrong either.
     bdb.execute('CREATE GENERATOR u_dd FOR u USING dotdog(a NUMERICAL)')
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         bdb.execute('CREATE GENERATOR u_dd FOR u USING dotdog(a NUMERICAL)')
 
 @contextlib.contextmanager
@@ -182,15 +182,15 @@ def test_casefold_colname():
     with pytest.raises(sqlite3.OperationalError):
         with t('t', 't_cc', 'create table t(x, X)', []):
             pass
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         columns = ['x CATEGORICAL', 'x CATEGORICAL']
         with t('t', 't_cc', 'create table t(x, y)', columns):
             pass
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         columns = ['x CATEGORICAL', 'X CATEGORICAL']
         with t('t', 't_cc', 'create table t(x, y)', columns):
             pass
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         columns = ['x CATEGORICAL', 'X NUMERICAL']
         with t('t', 't_cc', 'create table t(x, y)', columns):
             pass
@@ -215,7 +215,7 @@ def t0():
         columns=['n NUMERICAL'])
 
 def test_t0_badname():
-    with pytest.raises(ValueError):
+    with pytest.raises(bayeslite.BQLError):
         with bayesdb_generator(bayesdb(), 't0', 't0_cc', t0_schema, t0_data,
                 columns=['n CATEGORICAL', 'm CATEGORICAL']):
             pass
@@ -365,10 +365,10 @@ def test_t1_analysis_iter_deadline():
         for i in range(min(5, len(t1_rows)))
         for j in range(1,3)
         for conf in [0.01, 0.5, 0.99]])
-def test_t1_infer(rowid, colno, confidence):
+def test_t1_predict(rowid, colno, confidence):
     with analyzed_bayesdb_generator(t1(), 1, 1) as (bdb, generator_id):
         if rowid == 0: rowid = bayesdb_maxrowid(bdb, generator_id)
-        bqlfn.bql_infer(bdb, generator_id, colno, rowid, confidence)
+        bqlfn.bql_predict(bdb, generator_id, colno, rowid, confidence)
 
 @pytest.mark.parametrize('colnos,constraints,numpredictions',
     [(colnos, constraints, numpred)

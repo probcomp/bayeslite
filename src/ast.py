@@ -39,6 +39,7 @@ CreateTabAs = namedtuple('CreateTabAs', [
     'name',                     # XXX name
     'query',                    # query
 ])
+# XXX CreateTabSim is not necessary.  Eliminate it.
 CreateTabSim = namedtuple('CreateTabSim', [
     # XXX Database name, &c.
     'temp',                     # boolean
@@ -114,6 +115,7 @@ DropModels = namedtuple('DropModels', [
 Simulate = namedtuple('Simulate', [
     'columns',                  # [XXX name]
     'generator',                # XXX name
+    'modelnos',                 # [modelno]
     'constraints',              # [(XXX name, Exp*)]
     'nsamples',                 # Exp* or None
 ])
@@ -124,8 +126,9 @@ def is_query(phrase):
     if isinstance(phrase, EstCols):     return True
     if isinstance(phrase, EstPairCols): return True
     if isinstance(phrase, EstPairRow):  return True
-    # SIMULATE is *not* a normal query: it can appear only on the
-    # right-hand side of `CREATE TABLE foo AS ...'.
+    if isinstance(phrase, InferAuto):   return True
+    if isinstance(phrase, InferExplicit): return True
+    if isinstance(phrase, Simulate):    return True
     return False
 
 Select = namedtuple('Select', [
@@ -142,6 +145,7 @@ Estimate = namedtuple('Estimate', [
     'quantifier',               # SELQUANT_*
     'columns',                  # [SelCol*]
     'generator',                # XXX name
+    'modelnos',                 # [modelno]
     'condition',                # Exp* or None (unconditional)
     'grouping',                 # Grouping or None
     'order',                    # [Ord] or None (unordered)
@@ -163,7 +167,7 @@ SelColExp = namedtuple('SelColExp', [
     'name',                     # XXX name
 ])
 
-InfCol = namedtuple('InfCol', [
+PredCol = namedtuple('PredCol', [
     'column',                   # XXX name
     'name',                     # XXX name
     'confname',                 # XXX name
@@ -174,9 +178,37 @@ SelTab = namedtuple('SelTab', [
     'name',                     # XXX name
 ])
 
+InferAuto = namedtuple('InferAuto', [
+    'columns',                  # [InfCol* or PredCol]
+    'confidence',               # Exp* or None (implied 0)
+    'generator',                # XXX name
+    'modelnos',                 # [modelno]
+    'condition',                # Exp* or None (unconditional)
+    'grouping',                 # Grouping or None
+    'order',                    # [Ord] or None (unordered)
+    'limit',                    # Lim or None (unlimited)
+])
+
+InferExplicit = namedtuple('InferExplicit', [
+    'columns',                  # [SelCol* or PredCol]
+    'generator',                # XXX name
+    'modelnos',                 # [modelno]
+    'condition',                # Exp* or None (unconditional)
+    'grouping',                 # Grouping or None
+    'order',                    # [Ord] or None (unordered)
+    'limit',                    # Lim or None (unlimited)
+])
+
+InfColAll = namedtuple('InfColAll', [])
+InfColOne = namedtuple('InfColOne', [
+    'column',                   # XXX name
+    'name',                     # XXX name or None
+])
+
 EstCols = namedtuple('EstCols', [
     'columns',                  # [(Exp*, XXX name)]
     'generator',                # XXX name
+    'modelnos',                 # [modelno]
     'condition',                # Exp* or None (unconditional)
     'order',                    # [Ord] or None (unordered)
     'limit',                    # Lim or None (unlimited),
@@ -186,6 +218,7 @@ EstPairCols = namedtuple('EstPairCols', [
     'columns',                  # Exp*
     'generator',                # XXX name
     'subcolumns',               # ColList* or None
+    'modelnos',                 # [modelno]
     'condition',                # Exp* or None (unconditional)
     'order',                    # [Ord] or None (unordered)
     'limit',                    # Lim or None (unlimited),
@@ -194,6 +227,7 @@ EstPairCols = namedtuple('EstPairCols', [
 EstPairRow = namedtuple('EstPairRow', [
     'expression',               # Exp*
     'generator',                # XXX name
+    'modelnos',                 # [modelno]
     'condition',                # Exp* or None (unconditional)
     'order',                    # [Ord] or None (unordered)
     'limit',                    # Lim or None (unlimited),
@@ -273,6 +307,8 @@ OP_DIV = 'DIV'
 OP_REM = 'REM'
 OP_CONCAT = 'CONCAT'
 OP_BITNOT = 'BITNOT'
+OP_NEGATE = 'NEGATE'
+OP_PLUSID = 'PLUSID'
 
 ExpBQLPredProb = namedtuple('ExpBQLPredProb', ['column'])
 ExpBQLProb = namedtuple('ExpBQLProb', ['column', 'value'])
@@ -281,8 +317,8 @@ ExpBQLSim = namedtuple('ExpBQLSim', ['condition', 'column_lists'])
 ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
 ExpBQLMutInf = namedtuple('ExpBQLMutInf', ['column0', 'column1', 'nsamples'])
 ExpBQLCorrel = namedtuple('ExpBQLCorrel', ['column0', 'column1'])
-ExpBQLInfer = namedtuple('ExpBQLInfer', ['column', 'confidence'])
-ExpBQLInferConf = namedtuple('ExpBQLInferConf', ['column'])
+ExpBQLPredict = namedtuple('ExpBQLPredict', ['column', 'confidence'])
+ExpBQLPredictConf = namedtuple('ExpBQLPredictConf', ['column'])
 
 def is_bql(exp):
     if isinstance(exp, ExpBQLPredProb): return True
@@ -292,8 +328,8 @@ def is_bql(exp):
     if isinstance(exp, ExpBQLDepProb):  return True
     if isinstance(exp, ExpBQLMutInf):   return True
     if isinstance(exp, ExpBQLCorrel):   return True
-    if isinstance(exp, ExpBQLInfer):    return True
-    if isinstance(exp, ExpBQLInferConf): return True
+    if isinstance(exp, ExpBQLPredict):  return True
+    if isinstance(exp, ExpBQLPredictConf): return True
     return False
 
 LitNull = namedtuple('LitNull', ['value'])

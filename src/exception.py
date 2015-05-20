@@ -23,3 +23,7 @@ class BayesDBException(Exception):
     def __init__(self, bayesdb, *args, **kwargs):
         self.bayesdb = bayesdb
         super(BayesDBException, self).__init__(*args, **kwargs)
+
+class BQLError(BayesDBException):
+    """Errors in compiling or executing BQL."""
+    pass

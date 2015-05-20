@@ -70,9 +70,11 @@ def bayesdb_table_column_names(bdb, table):
 
     `bdb` must have a table named `table`.  If you're not sure, call
     :func:`bayesdb_has_table` first.
+
+    WARNING: This may modify the database by populating the
+    ``bayesdb_column`` table if it has not yet been populated.
     """
-    if not bayesdb_has_table(bdb, table):
-        raise ValueError('No such table: %s' % (repr(table),))
+    bayesdb_table_guarantee_columns(bdb, table)
     sql = '''
         SELECT name FROM bayesdb_column WHERE tabname = ?
             ORDER BY colno ASC
@@ -80,12 +82,30 @@ def bayesdb_table_column_names(bdb, table):
     # str because column names can't contain Unicode in sqlite3.
     return [str(row[0]) for row in bdb.sql_execute(sql, (table,))]
 
+def bayesdb_table_has_column(bdb, table, name):
+    """True if the table named `table` has a column named `name`.
+
+    `bdb` must have a table named `table`.  If you're not sure, call
+    :func:`bayesdb_has_table` first.
+
+    WARNING: This may modify the database by populating the
+    ``bayesdb_column`` table if it has not yet been populated.
+    """
+    bayesdb_table_guarantee_columns(bdb, table)
+    sql = 'SELECT COUNT(*) FROM bayesdb_column WHERE tabname = ? AND name = ?'
+    cursor = bdb.sql_execute(sql, (table, name))
+    return cursor.next()[0]
+
 def bayesdb_table_column_name(bdb, table, colno):
     """Return the name of the column numbered `colno` in `table`.
 
     `bdb` must have a table named `table`.  If you're not sure, call
     :func:`bayesdb_has_table` first.
+
+    WARNING: This may modify the database by populating the
+    ``bayesdb_column`` table if it has not yet been populated.
     """
+    bayesdb_table_guarantee_columns(bdb, table)
     sql = '''
         SELECT name FROM bayesdb_column WHERE tabname = ? AND colno = ?
     '''
@@ -103,7 +123,11 @@ def bayesdb_table_column_number(bdb, table, name):
 
     `bdb` must have a table named `table`.  If you're not sure, call
     :func:`bayesdb_has_table` first.
+
+    WARNING: This may modify the database by populating the
+    ``bayesdb_column`` table if it has not yet been populated.
     """
+    bayesdb_table_guarantee_columns(bdb, table)
     sql = '''
         SELECT colno FROM bayesdb_column WHERE tabname = ? AND name = ?
     '''
@@ -135,16 +159,6 @@ def bayesdb_table_guarantee_columns(bdb, table):
             bdb.sql_execute(insert_column_sql, (table, colno, name))
         if nrows == 0:
             raise ValueError('No such table: %s' % (repr(table),))
-
-def bayesdb_table_has_column(bdb, table, name):
-    """True if the table named `table` has a column named `name`.
-
-    `bdb` must have a table named `table`.  If you're not sure, call
-    :func:`bayesdb_has_table` first.
-    """
-    sql = 'SELECT COUNT(*) FROM bayesdb_column WHERE tabname = ? AND name = ?'
-    cursor = bdb.sql_execute(sql, (table, name))
-    return cursor.next()[0]
 
 def bayesdb_has_generator(bdb, name):
     """True if there is a generator named `name` in `bdb`.
@@ -292,6 +306,24 @@ def bayesdb_generator_column_stattype(bdb, generator_id, colno):
         assert len(row) == 1
         return row[0]
 
+def bayesdb_generator_has_column(bdb, generator_id, column_name):
+    """True if `generator_id` models a column named `name`."""
+    sql = '''
+        SELECT COUNT(*)
+            FROM bayesdb_generator AS g,
+                bayesdb_generator_column as gc,
+                bayesdb_column AS c
+            WHERE g.id = :generator_id AND c.name = :column_name
+                AND g.id = gc.generator_id
+                AND g.tabname = c.tabname
+                AND gc.colno = c.colno
+    '''
+    cursor = bdb.sql_execute(sql, {
+        'generator_id': generator_id,
+        'column_name': column_name,
+    })
+    return cursor.next()[0]
+
 def bayesdb_generator_column_name(bdb, generator_id, colno):
     """Return the name of the column numbered `colno` in `generator_id`."""
     sql = '''
@@ -324,7 +356,7 @@ def bayesdb_generator_column_number(bdb, generator_id, column_name):
     sql = '''
         SELECT c.colno
             FROM bayesdb_generator AS g,
-                bayesdb_generator_column as gc,
+                bayesdb_generator_column AS gc,
                 bayesdb_column AS c
             WHERE g.id = :generator_id AND c.name = :column_name
                 AND g.id = gc.generator_id

@@ -26,7 +26,7 @@ import bayeslite.shell.hook as hook
 def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('bdbpath', type=str, nargs='?', default=':memory:',
-                        help="bayesbd database file")
+                        help="bayesdb database file")
     parser.add_argument('-j', '--njob', type=int, default=None,
                         help="Max number of jobs (processes) useable.")
     parser.add_argument('-s', '--seed', type=int, default=None,

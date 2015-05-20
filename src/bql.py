@@ -31,6 +31,7 @@ import bayeslite.compiler as compiler
 import bayeslite.core as core
 import bayeslite.txn as txn
 
+from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 
@@ -53,7 +54,9 @@ def execute_phrase(bdb, phrase, bindings=()):
         out = compiler.Output(n_numpar, nampar_map, bindings)
         with bdb.savepoint():
             compiler.compile_query(bdb, phrase, out)
-        return bdb.sql_execute(out.getvalue(), out.getbindings())
+        winders, unwinders = out.getwindings()
+        return execute_wound(bdb, winders, unwinders, out.getvalue(),
+            out.getbindings())
 
     if isinstance(phrase, ast.Begin):
         txn.bayesdb_begin_transaction(bdb)
@@ -76,20 +79,24 @@ def execute_phrase(bdb, phrase, bindings=()):
             ifnotexists = 'IF NOT EXISTS ' if phrase.ifnotexists else ''
             out.write('CREATE %sTABLE %s%s AS ' % (temp, ifnotexists, qt))
             compiler.compile_query(bdb, phrase.query, out)
-            return bdb.sql_execute(out.getvalue(), out.getbindings())
+            winders, unwinders = out.getwindings()
+            with compiler.bayesdb_wind(bdb, winders, unwinders):
+                for _x in bdb.sql_execute(out.getvalue(), out.getbindings()):
+                    pass
+        return empty_cursor(bdb)
 
     if isinstance(phrase, ast.CreateTabSim):
         assert isinstance(phrase.simulation, ast.Simulate)
         with bdb.savepoint():
             if core.bayesdb_has_generator(bdb, phrase.name):
-                raise ValueError('Name already defined as generator: %s' %
+                raise BQLError(bdb, 'Name already defined as generator: %s' %
                     (repr(phrase.name),))
             if core.bayesdb_has_table(bdb, phrase.name):
-                raise ValueError('Name already defined as table: %s' %
+                raise BQLError(bdb, 'Name already defined as table: %s' %
                     (repr(phrase.name),))
             if not core.bayesdb_has_generator_default(bdb,
                     phrase.simulation.generator):
-                raise ValueError('No such generator: %s' %
+                raise BQLError(bdb, 'No such generator: %s' %
                     (phrase.simulation.generator,))
             generator_id = core.bayesdb_get_generator_default(bdb,
                 phrase.simulation.generator)
@@ -108,15 +115,15 @@ def execute_phrase(bdb, phrase, bindings=()):
             assert 0 < len(column_sqltypes)
             for column_name in column_names:
                 if casefold(column_name) not in column_sqltypes:
-                    raise ValueError('No such column in generator %s table %s'
-                        ': %s' %
+                    raise BQLError(bdb, 'No such column'
+                        ' in generator %s table %s: %s' %
                         (repr(phrase.simulation.generator),
                          repr(table),
                          repr(column_name)))
             for column_name, _expression in phrase.simulation.constraints:
                 if casefold(column_name) not in column_sqltypes:
-                    raise ValueError('No such column in generator %s table %s'
-                        ': %s' %
+                    raise BQLError(bdb, 'No such column'
+                        ' in generator %s table %s: %s' %
                         (repr(phrase.simulation.generator),
                          repr(table),
                          repr(column_name)))
@@ -129,7 +136,10 @@ def execute_phrase(bdb, phrase, bindings=()):
             for _column_name, expression in phrase.simulation.constraints:
                 out.write(', ')
                 compiler.compile_nobql_expression(bdb, expression, out)
-            cursor = list(bdb.sql_execute(out.getvalue(), out.getbindings()))
+            winders, unwinders = out.getwindings()
+            with compiler.bayesdb_wind(bdb, winders, unwinders):
+                cursor = list(bdb.sql_execute(out.getvalue(),
+                        out.getbindings()))
             assert len(cursor) == 1
             nsamples = cursor[0][0]
             assert isinstance(nsamples, int)
@@ -164,7 +174,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                 # XXX Automatically delete the generators?  Generators
                 # are more interesting than triggers and indices, so
                 # automatic deletion is not obviously right.
-                raise ValueError('Table still in use by generators: %s' %
+                raise BQLError(bdb, 'Table still in use by generators: %s' %
                     (repr(phrase.name),))
             bdb.sql_execute('DELETE FROM bayesdb_column WHERE tabname = ?',
                 (phrase.name,))
@@ -176,7 +186,7 @@ def execute_phrase(bdb, phrase, bindings=()):
         with bdb.savepoint():
             table = phrase.table
             if not core.bayesdb_has_table(bdb, table):
-                raise ValueError('No such table: %s' % (repr(table),))
+                raise BQLError(bdb, 'No such table: %s' % (repr(table),))
             for cmd in phrase.commands:
                 if isinstance(cmd, ast.AlterTabRenameTab):
                     # If the names differ only in case, we have to do
@@ -197,12 +207,12 @@ def execute_phrase(bdb, phrase, bindings=()):
                         # Make sure nothing else has this name and
                         # rename it.
                         if core.bayesdb_has_table(bdb, cmd.name):
-                            raise ValueError('Name already defined as table'
+                            raise BQLError(bdb, 'Name already defined as table'
                                 ': %s' %
                                 (repr(cmd.name),))
                         if core.bayesdb_has_generator(bdb, cmd.name):
-                            raise ValueError('Name already defined as generator'
-                                ': %s' %
+                            raise BQLError(bdb, 'Name already defined'
+                                ' as generator: %s' %
                                 (repr(cmd.name),))
                         rename_table(bdb, table, cmd.name)
                     # Remember the new name for subsequent commands.
@@ -217,11 +227,11 @@ def execute_phrase(bdb, phrase, bindings=()):
                     if old_folded != new_folded:
                         if not core.bayesdb_table_has_column(bdb, table,
                                 cmd.old):
-                            raise ValueError('No such column in table %s'
+                            raise BQLError(bdb, 'No such column in table %s'
                                 ': %s' %
                                 (repr(table), repr(cmd.old)))
                         if core.bayesdb_table_has_column(bdb, table, cmd.new):
-                            raise ValueError('Column already exists'
+                            raise BQLError(bdb, 'Column already exists'
                                 ' in table %s: %s' %
                                 (repr(table), repr(cmd.new)))
                     # Update bayesdb_column.  Everything else refers
@@ -252,7 +262,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                                 old_folded, new_folded)
                 elif isinstance(cmd, ast.AlterTabSetDefGen):
                     if not core.bayesdb_has_generator(bdb, cmd.generator):
-                        raise ValueError('No such generator: %s' %
+                        raise BQLError(bdb, 'No such generator: %s' %
                             (repr(cmd.generator),))
                     generator_id = core.bayesdb_get_generator(bdb,
                         cmd.generator)
@@ -285,21 +295,21 @@ def execute_phrase(bdb, phrase, bindings=()):
     if isinstance(phrase, ast.CreateGen):
         # Find the metamodel.
         if phrase.metamodel not in bdb.metamodels:
-            raise ValueError('No such metamodel: %s' %
+            raise BQLError(bdb, 'No such metamodel: %s' %
                 (repr(phrase.metamodel),))
         metamodel = bdb.metamodels[phrase.metamodel]
 
         def instantiate(columns):
             # Make sure there is no table by this name.
             if core.bayesdb_has_table(bdb, phrase.name):
-                raise ValueError('Name already defined as table: %s' %
+                raise BQLError(bdb, 'Name already defined as table: %s' %
                     (repr(phrase.name),))
 
             # Make sure there's no generator by this name unless we
             # were asked to redefine it in that case.
             if not phrase.ifnotexists and \
                core.bayesdb_has_generator(bdb, phrase.name):
-                raise ValueError('Name already defined as generator: %s' %
+                raise BQLError(bdb, 'Name already defined as generator: %s' %
                     (repr(phrase.name),))
 
             # Make sure the bayesdb_column table knows all the columns.
@@ -362,13 +372,13 @@ def execute_phrase(bdb, phrase, bindings=()):
                     column_map[casefold(name)] = colno
             # XXX Would be nice to report these simultaneously.
             if missing:
-                raise ValueError('No such columns in table %s: %s' %
+                raise BQLError(bdb, 'No such columns in table %s: %s' %
                     (repr(phrase.table), repr(list(missing))))
             if duplicates:
-                raise ValueError('Duplicate column names: %s' %
+                raise BQLError(bdb, 'Duplicate column names: %s' %
                     (repr(list(duplicates)),))
             if invalid:
-                raise ValueError('Invalid statistical types: %s' %
+                raise BQLError(bdb, 'Invalid statistical types: %s' %
                     (repr(list(invalid)),))
 
             # Insert column records.
@@ -404,7 +414,7 @@ def execute_phrase(bdb, phrase, bindings=()):
             if not core.bayesdb_has_generator(bdb, phrase.name):
                 if phrase.ifexists:
                     return empty_cursor(bdb)
-                raise ValueError('No such generator: %s' %
+                raise BQLError(bdb, 'No such generator: %s' %
                     (repr(phrase.name),))
             generator_id = core.bayesdb_get_generator(bdb, phrase.name)
             metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
@@ -431,19 +441,20 @@ def execute_phrase(bdb, phrase, bindings=()):
         with bdb.savepoint():
             generator = phrase.generator
             if not core.bayesdb_has_generator(bdb, generator):
-                raise ValueError('No such generator: %s' % (repr(generator),))
+                raise BQLError(bdb, 'No such generator: %s' %
+                    (repr(generator),))
             generator_id = core.bayesdb_get_generator(bdb, generator)
             for cmd in phrase.commands:
                 if isinstance(cmd, ast.AlterGenRenameGen):
                     # Make sure nothing else has this name.
                     if casefold(generator) != casefold(cmd.name):
                         if core.bayesdb_has_table(bdb, cmd.name):
-                            raise ValueError('Name already defined as table'
+                            raise BQLError(bdb, 'Name already defined as table'
                                 ': %s' %
                                 (repr(cmd.name),))
                         if core.bayesdb_has_generator(bdb, cmd.name):
-                            raise ValueError('Name already defined as generator'
-                                ': %s' %
+                            raise BQLError(bdb, 'Name already defined'
+                                ' as generator: %s' %
                                 (repr(cmd.name),))
                     # Update bayesdb_generator.  Everything else
                     # refers to it by id.
@@ -462,13 +473,15 @@ def execute_phrase(bdb, phrase, bindings=()):
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.InitModels):
-        with bdb.savepoint():
-            # Grab the arguments.
-            generator_id = core.bayesdb_get_generator_default(bdb,
-                phrase.generator)
-            modelnos = range(phrase.nmodels)
-            model_config = None         # XXX For now.
+        if not core.bayesdb_has_generator_default(bdb, phrase.generator):
+            raise BQLError(bdb, 'No such generator: %s' %
+                (phrase.generator,))
+        generator_id = core.bayesdb_get_generator_default(bdb,
+            phrase.generator)
+        modelnos = range(phrase.nmodels)
+        model_config = None         # XXX For now.
 
+        with bdb.savepoint():
             # Find the model numbers.  Omit existing ones for
             # ifnotexists; reject existing ones otherwise.
             if phrase.ifnotexists:
@@ -480,7 +493,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                     if core.bayesdb_generator_has_model(bdb, generator_id,
                         modelno))
                 if 0 < len(existing):
-                    raise ValueError('Generator %s already has models: %s' %
+                    raise BQLError(bdb, 'Generator %s already has models: %s' %
                         (repr(phrase.generator), sorted(existing)))
 
             # Stop now if there's nothing to initialize.
@@ -520,6 +533,9 @@ def execute_phrase(bdb, phrase, bindings=()):
         # progress in case of ^C in the middle.
         #
         # XXX Put these warning somewhere more appropriate.
+        if not core.bayesdb_has_generator_default(bdb, phrase.generator):
+            raise BQLError(bdb, 'No such generator: %s' %
+                (phrase.generator,))
         generator_id = core.bayesdb_get_generator_default(bdb,
             phrase.generator)
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
@@ -549,7 +565,8 @@ def execute_phrase(bdb, phrase, bindings=()):
                         'modelno': modelno,
                     })
                     if cursor.next()[0] == 0:
-                        raise ValueError('No such model in generator %s: %s' %
+                        raise BQLError(bdb, 'No such model'
+                            ' in generator %s: %s' %
                             (repr(phrase.generator), repr(modelno)))
             metamodel.drop_models(bdb, generator_id, modelnos=modelnos)
             if modelnos is None:
@@ -605,6 +622,38 @@ def empty_cursor(bdb):
     cursor = bdb.sqlite3.cursor()
     cursor.execute('')
     return cursor
+
+def execute_wound(bdb, winders, unwinders, sql, bindings):
+    if len(winders) == 0 and len(unwinders) == 0:
+        return bdb.sql_execute(sql, bindings)
+    with bdb.savepoint():
+        for (wsql, wbindings) in winders:
+            bdb.sql_execute(wsql, wbindings)
+        try:
+            return WoundCursor(bdb, bdb.sql_execute(sql, bindings), unwinders)
+        except:
+            for (usql, ubindings) in unwinders:
+                bdb.sql_execute(usql, ubindings)
+            raise
+
+class WoundCursor(object):
+    def __init__(self, bdb, cursor, unwinders):
+        self.bdb = bdb
+        self.cursor = cursor
+        self.unwinders = unwinders
+    def __iter__(self):
+        return self
+    def next(self):
+        return self.cursor.next()
+    rowcount = property(lambda self: self.cursor.rowcount)
+    lastrowid = property(lambda self: self.cursor.lastrowid)
+    description = property(lambda self: self.cursor.description)
+    def __del__(self):
+        del self.cursor
+        for (sql, bindings) in reversed(self.unwinders):
+            self.bdb.sql_execute(sql, bindings)
+        # Apparently object doesn't have a __del__ method.
+        #super(WoundCursor, self).__del__()
 
 @contextlib.contextmanager
 def defer_foreign_keys(bdb):

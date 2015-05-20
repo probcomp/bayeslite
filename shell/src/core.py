@@ -69,6 +69,8 @@ class Shell(cmd.Cmd):
 
         self._core_commands = set(self._cmds)
 
+        self.hookvars = {}
+
     def _installcmd(self, name, method):
         assert not hasattr(self, 'do_.%s' % (name,))
         assert name not in self._cmds
@@ -557,6 +559,8 @@ class Shell(cmd.Cmd):
                                 bayesdb_generator_column AS gc
                                 USING (colno))
                         WHERE g.id = ? AND g.id = gc.generator_id
+                            AND g.tabname = c.tabname
+                        ORDER BY colno ASC;
                 '''
                 cursor = self._bdb.sql_execute(sql, (generator_id,))
                 pretty.pp_cursor(self.stdout, cursor)

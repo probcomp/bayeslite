@@ -155,21 +155,25 @@ class IBayesDBMetamodel(object):
 
     def row_column_predictive_probability(self, bdb, generator_id, rowid,
             colno):
-        """Compute ``PREDICTIVE PROBABILITY OF <col>`` for given `rowid`."""
+        """Compute ``PREDICTIVE PROBABILITY OF <col>`` for given `rowid`.
+
+        If the row's value for that column is null, the result should
+        be null (i.e., Python `None`).
+        """
         raise NotImplementedError
 
-    def infer(self, bdb, generator_id, colno, rowid, threshold,
+    def predict(self, bdb, generator_id, colno, rowid, threshold,
             numsamples=None):
-        """Impute a value for a column, if confidence is high enough."""
-        value, confidence = self.infer_confidence(bdb, generator_id, colno,
+        """Predict a value for a column, if confidence is high enough."""
+        value, confidence = self.predict_confidence(bdb, generator_id, colno,
             rowid, numsamples=numsamples)
         if confidence < threshold:
             return None
         return value
 
-    def infer_confidence(self, bdb, generator_id, colno, rowid,
+    def predict_confidence(self, bdb, generator_id, colno, rowid,
             numsamples=None):
-        """Impute a value for a column and return confidence."""
+        """Predict a value for a column and return confidence."""
         raise NotImplementedError
 
     def simulate(self, bdb, generator_id, constraints, colnos,

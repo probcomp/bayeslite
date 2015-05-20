@@ -60,6 +60,7 @@ class BayesDB(object):
         self.tracer = None
         self.sql_tracer = None
         self.cache = None
+        self.temptable = 0
         schema.bayesdb_install_schema(self.sqlite3)
         bqlfn.bayesdb_install_bql(self.sqlite3, self)
 
@@ -179,3 +180,8 @@ class BayesDB(object):
     def set_progress_handler(self, handler, n):
         """Call `handler` periodically during query execution."""
         self.sqlite3.set_progress_handler(handler, n)
+
+    def temp_table_name(self):
+        n = self.temptable
+        self.temptable += 1
+        return 'bayesdb_temp_%u' % (n,)
