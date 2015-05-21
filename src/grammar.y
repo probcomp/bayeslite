@@ -134,11 +134,11 @@ wait_opt(some)		::= K_WAIT.
  */
 simulate(s)		::= K_SIMULATE simulate_columns(cols)
 				K_FROM generator_name(generator)
-				usingmodels_opt(models)
+				usingmodel_opt(modelno)
 				given_opt(constraints) limit(lim).
 simulate(nolimit)	::= K_SIMULATE simulate_columns(cols)
 				K_FROM generator_name(generator)
-				usingmodels_opt(models)
+				usingmodel_opt(modelno)
 				given_opt(constraints).
 
 simulate_columns(one)	::= column_name(col).
@@ -177,7 +177,7 @@ select(s)		::= K_SELECT select_quant(quant) select_columns(cols)
 
 estimate(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
 				K_FROM generator_name(generator)
-				usingmodels_opt(models)
+				usingmodel_opt(modelno)
 				where(cond)
 				group_by(grouping)
 				order_by(ord)
@@ -193,11 +193,11 @@ estimate(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
  */
 estcols(nocols)		::= K_ESTIMATE K_COLUMNS
 				K_FROM generator_name(generator)
-				usingmodels_opt(models)
+				usingmodel_opt(modelno)
 				where(cond) order_by(ord) limit_opt(lim).
 estcols(cols)		::= K_ESTIMATE K_COLUMNS estcols_columns(cols)
 				K_FROM generator_name(generator)
-				usingmodels_opt(models)
+				usingmodel_opt(modelno)
 				where(cond) order_by(ord) limit_opt(lim).
 
 estcols_columns(one)	::= estcols_column(col).
@@ -211,7 +211,7 @@ estcols_column(ec)	::= expression(e) as(name).
  */
 estpaircols(e)		::= K_ESTIMATE K_PAIRWISE estpaircols_columns(cols)
 				K_FROM generator_name(generator) for(subcols)
-				usingmodels_opt(models)
+				usingmodel_opt(modelno)
 				where(cond) order_by(ord) limit_opt(lim).
 
 estpaircols_columns(one)	::= estpaircols_column(col).
@@ -230,18 +230,18 @@ estpaircols_column(epc)	::= expression(e) as(name).
  */
 estpairrow(e)		::= K_ESTIMATE K_PAIRWISE K_ROW expression(e)
 				K_FROM generator_name(generator)
-				usingmodels_opt(models)
+				usingmodel_opt(modelno)
 				where(cond) order_by(ord) limit_opt(lim).
 
 infer(auto)		::= K_INFER infer_auto_columns(cols)
 				withconf_opt(conf)
 				K_FROM generator_name(generator)
-				usingmodels_opt(models)
+				usingmodel_opt(modelno)
 				where(cond) group_by(grouping) order_by(ord)
 				limit_opt(lim).
 infer(explicit)		::= K_INFER K_EXPLICIT infer_exp_columns(cols)
 				K_FROM generator_name(generator)
-				usingmodels_opt(models)
+				usingmodel_opt(modelno)
 				where(cond) group_by(grouping) order_by(ord)
 				limit_opt(lim).
 
@@ -287,8 +287,8 @@ from(nonempty)		::= K_FROM select_tables(tables).
  * XXX This mechanism is completely wrong.  The set of models should
  * be treated as just another table on which to do relational algebra.
  */
-usingmodels_opt(none)	::= .
-usingmodels_opt(some)	::= K_USING K_MODEL|K_MODELS modelset(models).
+usingmodel_opt(all)	::= .
+usingmodel_opt(one)	::= K_USING K_MODEL primary(modelno).
 
 /* XXX Allow all kinds of joins.  */
 select_tables(one)	::= select_table(t).

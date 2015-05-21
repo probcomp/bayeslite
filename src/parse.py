@@ -263,12 +263,12 @@ class BQLSemantics(object):
     def p_wait_opt_none(self):                  return False
     def p_wait_opt_some(self):                  return True
 
-    def p_simulate_s(self, cols, generator, models, constraints, lim):
-        return ast.Simulate(cols, generator, models, constraints, lim.limit)
-    def p_simulate_nolimit(self, cols, generator, models, constraints):
+    def p_simulate_s(self, cols, generator, modelno, constraints, lim):
+        return ast.Simulate(cols, generator, modelno, constraints, lim.limit)
+    def p_simulate_nolimit(self, cols, generator, modelno, constraints):
         # XXX Report source location.
         self.errors.append('simulate missing limit')
-        return ast.Simulate(cols, generator, models, constraints, 0)
+        return ast.Simulate(cols, generator, modelno, constraints, 0)
     def p_simulate_columns_one(self, col):
         return [col]
     def p_simulate_columns_many(self, cols, col):
@@ -299,15 +299,15 @@ class BQLSemantics(object):
     def p_select_s(self, quant, cols, tabs, cond, grouping, ord, lim):
         return ast.Select(quant, cols, tabs, cond, grouping, ord, lim)
 
-    def p_estimate_e(self, quant, cols, generator, models, cond, grouping,
+    def p_estimate_e(self, quant, cols, generator, modelno, cond, grouping,
             ord, lim):
-        return ast.Estimate(quant, cols, generator, models, cond, grouping,
+        return ast.Estimate(quant, cols, generator, modelno, cond, grouping,
             ord, lim)
 
-    def p_estcols_nocols(self, generator, models, cond, ord, lim):
-        return ast.EstCols([], generator, models, cond, ord, lim)
-    def p_estcols_cols(self, cols, generator, models, cond, ord, lim):
-        return ast.EstCols(cols, generator, models, cond, ord, lim)
+    def p_estcols_nocols(self, generator, modelno, cond, ord, lim):
+        return ast.EstCols([], generator, modelno, cond, ord, lim)
+    def p_estcols_cols(self, cols, generator, modelno, cond, ord, lim):
+        return ast.EstCols(cols, generator, modelno, cond, ord, lim)
 
     def p_estcols_columns_opt_none(self):       return []
     def p_estcols_columns_opt_some(self, cols): return cols
@@ -315,9 +315,9 @@ class BQLSemantics(object):
     def p_estcols_columns_many(self, cols, col): cols.append(col); return cols
     def p_estcols_column_ec(self, e, name):     return (e, name)
 
-    def p_estpaircols_e(self, cols, generator, subcols, models, cond, ord,
+    def p_estpaircols_e(self, cols, generator, subcols, modelno, cond, ord,
             lim):
-        return ast.EstPairCols(cols, generator, subcols, models, cond, ord,
+        return ast.EstPairCols(cols, generator, subcols, modelno, cond, ord,
             lim)
 
     def p_estpaircols_columns_one(self, col):
@@ -327,16 +327,16 @@ class BQLSemantics(object):
     def p_estpaircols_column_epc(self, e, name):
         return (e, name)
 
-    def p_estpairrow_e(self, e, generator, models, cond, ord, lim):
-        return ast.EstPairRow(e, generator, models, cond, ord, lim)
+    def p_estpairrow_e(self, e, generator, modelno, cond, ord, lim):
+        return ast.EstPairRow(e, generator, modelno, cond, ord, lim)
 
-    def p_infer_auto(self, cols, conf, generator, models, cond, grouping,
+    def p_infer_auto(self, cols, conf, generator, modelno, cond, grouping,
             ord, lim):
-        return ast.InferAuto(cols, conf, generator, models, cond, grouping,
+        return ast.InferAuto(cols, conf, generator, modelno, cond, grouping,
             ord, lim)
-    def p_infer_explicit(self, cols, generator, models, cond, grouping,
+    def p_infer_explicit(self, cols, generator, modelno, cond, grouping,
             ord, lim):
-        return ast.InferExplicit(cols, generator, models, cond, grouping,
+        return ast.InferExplicit(cols, generator, modelno, cond, grouping,
             ord, lim)
 
     def p_infer_auto_columns_one(self, c):      return [c]
@@ -379,8 +379,8 @@ class BQLSemantics(object):
     def p_from_empty(self):                     return None
     def p_from_nonempty(self, tables):          return tables
 
-    def p_usingmodels_opt_none(self):           return None
-    def p_usingmodels_opt_some(self, models):   return models
+    def p_usingmodel_opt_all(self):             return None
+    def p_usingmodel_opt_one(self, modelno):    return modelno
 
     def p_select_tables_one(self, t):           return [t]
     def p_select_tables_many(self, ts, t):      ts.append(t); return ts

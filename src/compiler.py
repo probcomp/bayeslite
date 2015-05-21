@@ -323,8 +323,8 @@ def compile_infer_explicit_predict(bdb, infer, out):
 
 def compile_infer_explicit(bdb, infer, named, out):
     assert isinstance(infer, ast.InferExplicit)
-    if infer.modelnos:
-        raise NotImplementedError('USING MODELS is not yet implemented.')
+    if infer.modelno:
+        raise NotImplementedError('USING MODEL is not yet implemented.')
     out.write('SELECT')
     if not core.bayesdb_has_generator_default(bdb, infer.generator):
         raise BQLError(bdb, 'No such generator: %s' % (infer.generator,))
@@ -376,8 +376,8 @@ def compile_infer_explicit(bdb, infer, named, out):
 
 def compile_infer_auto(bdb, infer, out):
     assert isinstance(infer, ast.InferAuto)
-    if infer.modelnos:
-        raise NotImplementedError('USING MODELS is not yet implemented.')
+    if infer.modelno:
+        raise NotImplementedError('USING MODEL is not yet implemented.')
     if not core.bayesdb_has_generator_default(bdb, infer.generator):
         raise BQLError(bdb, 'No such generator: %s' % (infer.generator,))
     generator_id = core.bayesdb_get_generator_default(bdb, infer.generator)
@@ -398,15 +398,15 @@ def compile_infer_auto(bdb, infer, out):
         else:
             assert False, 'Invalid INFER column: %s' % (repr(col),)
     columns = [mcol for col in infer.columns for mcol in map_columns(col)]
-    infer_exp = ast.InferExplicit(columns, infer.generator, infer.modelnos,
+    infer_exp = ast.InferExplicit(columns, infer.generator, infer.modelno,
         infer.condition, infer.grouping, infer.order, infer.limit)
     named = True
     return compile_infer_explicit(bdb, infer_exp, named, out)
 
 def compile_estimate(bdb, estimate, out):
     assert isinstance(estimate, ast.Estimate)
-    if estimate.modelnos:
-        raise NotImplementedError('USING MODELS is not yet implemented.')
+    if estimate.modelno:
+        raise NotImplementedError('USING MODEL is not yet implemented.')
     out.write('SELECT')
     if estimate.quantifier == ast.SELQUANT_DISTINCT:
         out.write(' DISTINCT')
@@ -544,8 +544,8 @@ def compile_select_table(bdb, table, out):
         assert False, 'Invalid select table: %s' % (repr(table),)
 
 def compile_simulate(bdb, simulate, out):
-    if simulate.modelnos:
-        raise NotImplementedError('USING MODELS is not yet implemented.')
+    if simulate.modelno:
+        raise NotImplementedError('USING MODEL is not yet implemented.')
     # XXX Reduce copypasta with case for CreateTabSim in bql.py.
     with bdb.savepoint():
         temptable = bdb.temp_table_name()
@@ -620,8 +620,8 @@ def compile_simulate(bdb, simulate, out):
 # XXX Use query parameters, not quotation.
 def compile_estcols(bdb, estcols, out):
     assert isinstance(estcols, ast.EstCols)
-    if estcols.modelnos:
-        raise NotImplementedError('USING MODELS is not yet implemented.')
+    if estcols.modelno:
+        raise NotImplementedError('USING MODEL is not yet implemented.')
     # XXX UH OH!  This will have the effect of shadowing names.  We
     # need an alpha-renaming pass.
     if not core.bayesdb_has_generator_default(bdb, estcols.generator):
@@ -673,8 +673,8 @@ def compile_estcols(bdb, estcols, out):
 
 def compile_estpaircols(bdb, estpaircols, out):
     assert isinstance(estpaircols, ast.EstPairCols)
-    if estpaircols.modelnos:
-        raise NotImplementedError('USING MODELS is not yet implemented.')
+    if estpaircols.modelno:
+        raise NotImplementedError('USING MODEL is not yet implemented.')
     colno0_exp = 'c0.colno'     # XXX
     colno1_exp = 'c1.colno'     # XXX
     if not core.bayesdb_has_generator_default(bdb, estpaircols.generator):
@@ -750,8 +750,8 @@ def compile_estpaircols(bdb, estpaircols, out):
 
 def compile_estpairrow(bdb, estpairrow, out):
     assert isinstance(estpairrow, ast.EstPairRow)
-    if estpairrow.modelnos:
-        raise NotImplementedError('USING MODELS is not yet implemented.')
+    if estpairrow.modelno:
+        raise NotImplementedError('USING MODEL is not yet implemented.')
     if not core.bayesdb_has_generator_default(bdb, estpairrow.generator):
         raise BQLError(bdb, 'No such generator: %s' % (estpairrow.generator,))
     generator_id = core.bayesdb_get_generator_default(bdb,

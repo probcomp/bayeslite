@@ -681,45 +681,47 @@ def test_simulate():
                 ],
                 ast.ExpLit(ast.LitInt(10))))]
 
-def test_using_models():
-    assert parse_bql_string('simulate x from t using models 0-2,4-7,9'
+def test_using_model():
+    assert parse_bql_string('simulate x from t using model 42'
             ' limit 10') == \
-        [ast.Simulate(['x'], 't', [0,1,2,4,5,6,7,9], [],
+        [ast.Simulate(['x'], 't', ast.ExpLit(ast.LitInt(42)), [],
             ast.ExpLit(ast.LitInt(10)))]
     with pytest.raises(parse.BQLParseError):
         assert parse_bql_string('simulate x from t'
-                ' using models 0-2,4-7,9') == \
-            [ast.Simulate(['x'], 't', [0,1,2,4,5,6,7,9], [],
+                ' using model (87)') == \
+            [ast.Simulate(['x'], 't', ast.ExpLit(ast.LitInt(87)), [],
                 ast.ExpLit(ast.LitInt(10)))]
-    assert parse_bql_string('estimate x from t using models 0-2,4-7,9') == \
+    assert parse_bql_string('estimate x from t using model (1+2)') == \
         [ast.Estimate(ast.SELQUANT_ALL,
             [ast.SelColExp(ast.ExpCol(None, 'x'), None)],
-            't', [0,1,2,4,5,6,7,9],
+            't',
+            ast.ExpOp(ast.OP_ADD, (
+                ast.ExpLit(ast.LitInt(1)),
+                ast.ExpLit(ast.LitInt(2)),
+            )),
             None, None, None, None)]
-    assert parse_bql_string('estimate columns from t'
-            ' using models 0-2,4-7,9') == \
-        [ast.EstCols([], 't', [0,1,2,4,5,6,7,9], None, None, None)]
+    assert parse_bql_string('estimate columns from t using model modelno') == \
+        [ast.EstCols([], 't', ast.ExpCol(None, 'modelno'), None, None, None)]
     assert parse_bql_string('estimate columns 42 from t'
-            ' using models 0-2,4-7,9') == \
+            ' using model modelno') == \
         [ast.EstCols([(ast.ExpLit(ast.LitInt(42)), None)], 't',
-            [0,1,2,4,5,6,7,9],
+            ast.ExpCol(None, 'modelno'),
             None, None, None)]
     assert parse_bql_string('estimate pairwise 42 from t'
-            ' using models 0-2,4-7,9') == \
+            ' using model modelno') == \
         [ast.EstPairCols([(ast.ExpLit(ast.LitInt(42)), None)], 't', None,
-            [0,1,2,4,5,6,7,9],
+            ast.ExpCol(None, 'modelno'),
             None, None, None)]
     assert parse_bql_string('estimate pairwise row similarity from t'
-            ' using models 0-2,4-7,9') == \
+            ' using model modelno') == \
         [ast.EstPairRow(ast.ExpBQLSim(None, [ast.ColListAll()]), 't',
-            [0,1,2,4,5,6,7,9],
+            ast.ExpCol(None, 'modelno'),
             None, None, None)]
-    assert parse_bql_string('infer x from t using models 0-2,4-7,9') == \
+    assert parse_bql_string('infer x from t using model modelno') == \
         [ast.InferAuto([ast.InfColOne('x', None)], ast.ExpLit(ast.LitInt(0)),
-            't', [0,1,2,4,5,6,7,9],
+            't', ast.ExpCol(None, 'modelno'),
             None, None, None, None)]
-    assert parse_bql_string('infer explicit x from t'
-            ' using models 0-2,4-7,9') == \
+    assert parse_bql_string('infer explicit x from t using model modelno') == \
         [ast.InferExplicit([ast.SelColExp(ast.ExpCol(None, 'x'), None)],
-            't', [0,1,2,4,5,6,7,9],
+            't', ast.ExpCol(None, 'modelno'),
             None, None, None, None)]
