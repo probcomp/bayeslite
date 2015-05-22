@@ -129,9 +129,6 @@ anckpt(niters)		::= K_CHECKPOINT L_INTEGER(n) K_ITERATION|K_ITERATIONS.
 wait_opt(none)		::= .
 wait_opt(some)		::= K_WAIT.
 
-/*
- * SIMULATE: special query only for CREATE TABLE AS, for now.
- */
 simulate(s)		::= K_SIMULATE simulate_columns(cols)
 				K_FROM generator_name(generator)
 				usingmodel_opt(modelno)
