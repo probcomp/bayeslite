@@ -379,8 +379,10 @@ class BQLSemantics(object):
     def p_from_empty(self):                     return None
     def p_from_nonempty(self, tables):          return tables
 
-    def p_usingmodel_opt_all(self):             return None
-    def p_usingmodel_opt_one(self, modelno):    return modelno
+    def p_usingmodel_opt_all(self):
+        return ast.ExpLit(ast.LitNull(None))
+    def p_usingmodel_opt_one(self, modelno):
+        return modelno
 
     def p_select_tables_one(self, t):           return [t]
     def p_select_tables_many(self, ts, t):      ts.append(t); return ts

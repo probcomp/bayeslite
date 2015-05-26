@@ -128,11 +128,16 @@ def execute_phrase(bdb, phrase, bindings=()):
                          repr(table),
                          repr(column_name)))
             # XXX Move to compiler.py.
+            # XXX Copypasta of this in compile_simulate!
             out = compiler.Output(n_numpar, nampar_map, bindings)
             out.write('SELECT ')
             with compiler.compiling_paren(bdb, out, 'CAST(', ' AS INTEGER)'):
                 compiler.compile_nobql_expression(bdb,
                     phrase.simulation.nsamples, out)
+            out.write(', ')
+            with compiler.compiling_paren(bdb, out, 'CAST(', ' AS INTEGER)'):
+                compiler.compile_nobql_expression(bdb,
+                    phrase.simulation.modelno, out)
             for _column_name, expression in phrase.simulation.constraints:
                 out.write(', ')
                 compiler.compile_nobql_expression(bdb, expression, out)
@@ -143,11 +148,13 @@ def execute_phrase(bdb, phrase, bindings=()):
             assert len(cursor) == 1
             nsamples = cursor[0][0]
             assert isinstance(nsamples, int)
+            modelno = cursor[0][1]
+            assert modelno is None or isinstance(modelno, int)
             constraints = \
                 [(core.bayesdb_generator_column_number(bdb, generator_id, name),
                         value)
                     for (name, _expression), value in
-                        zip(phrase.simulation.constraints, cursor[0][1:])]
+                        zip(phrase.simulation.constraints, cursor[0][2:])]
             colnos = \
                 [core.bayesdb_generator_column_number(bdb, generator_id, name)
                     for name in column_names]
@@ -162,7 +169,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                 INSERT INTO %s (%s) VALUES (%s)
             ''' % (qn, ','.join(qcns), ','.join('?' for qcn in qcns))
             for row in bqlfn.bayesdb_simulate(bdb, generator_id, constraints,
-                    colnos, numpredictions=nsamples):
+                    colnos, modelno=modelno, numpredictions=nsamples):
                 bdb.sql_execute(insert_sql, row)
         return empty_cursor(bdb)
 
