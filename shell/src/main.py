@@ -70,7 +70,7 @@ def run(stdin, stdout, stderr, argv):
                     bdbshell.dot_read(path)
                 else:
                     bdbshell.stdout.write('%s is not a file.  Aborting.\n' %
-                        str(path))
+                        (str(path),))
                     break
         bdbshell.cmdloop()
     return 0
