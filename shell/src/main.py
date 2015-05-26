@@ -27,7 +27,7 @@ def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('bdbpath', type=str, nargs='?', default=':memory:',
                         help="bayesdb database file")
-    parser.add_argument('-j', '--njob', type=int, default=None,
+    parser.add_argument('-j', '--njob', type=int, default=0,
                         help="Max number of jobs (processes) useable.")
     parser.add_argument('-s', '--seed', type=int, default=None,
                         help="Random seed for the default generator.")
@@ -48,12 +48,10 @@ def run(stdin, stdout, stderr, argv):
     args = parse_args(argv[1:])
     bdb = bayeslite.bayesdb_open(pathname=args.bdbpath)
 
-    # People shouldn't have to ask to go fast, they should have to ask to
-    # slow down.
-    if args.njob not in [0, 1]:
+    if args.njob != 1:
         import crosscat.MultiprocessingEngine as ccme
-        crosscat = ccme.MultiprocessingEngine(seed=args.seed,
-                                              cpu_count=args.njob)
+        njob = args.njob if args.njob > 0 else None
+        crosscat = ccme.MultiprocessingEngine(seed=args.seed, cpu_count=njob)
     else:
         import crosscat.LocalEngine as ccle
         crosscat = ccle.LocalEngine(seed=args.seed)
