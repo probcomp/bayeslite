@@ -71,7 +71,8 @@ def run(stdin, stdout, stderr, argv):
                 if os.path.isfile(path):
                     bdbshell.dot_read(path)
                 else:
-                    bdbshell.stdout.write('%s is not a file. Aborting.\n' % str(path))
+                    bdbshell.stdout.write('%s is not a file.  Aborting.\n' %
+                        str(path))
                     break
         bdbshell.cmdloop()
     return 0
