@@ -25,7 +25,7 @@ import bayeslite.shell.hook as hook
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument('bdbpath', type=str, nargs='?', default=':memory:',
+    parser.add_argument('bdbpath', type=str, nargs='?', default=None,
                         help="bayesdb database file")
     parser.add_argument('-j', '--njob', type=int, default=0,
                         help="Max number of jobs (processes) useable.")
@@ -39,6 +39,8 @@ def parse_args(argv):
     parser.add_argument('--debug', action='store_true', help="For unit tests.")
     parser.add_argument('--no-init-file', action='store_true',
                         help="Do not load ~/.bayesliterc")
+    parser.add_argument('-m', '--memory', action='store_true',
+                        help="Use temporary database not saved to disk")
 
     args = parser.parse_args(argv)
     return args
@@ -46,6 +48,13 @@ def parse_args(argv):
 
 def run(stdin, stdout, stderr, argv):
     args = parse_args(argv[1:])
+    if args.bdbpath is None and not args.memory:
+        progname = argv[0]
+        slash = progname.rfind('/')
+        if slash:
+            progname = progname[slash + 1:]
+        stderr.write('%s: pass filename or -m/--memory\n' % (progname,))
+        return 1
     bdb = bayeslite.bayesdb_open(pathname=args.bdbpath)
 
     if args.njob != 1:
