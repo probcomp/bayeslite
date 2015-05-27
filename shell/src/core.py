@@ -484,7 +484,10 @@ class Shell(cmd.Cmd):
         # XXX Lousy, lousy tokenizer.
         tokens = line.split()
         if len(tokens) == 0:
-            self.stdout.write('Describe what, pray tell?\n')
+            self.stdout.write('Usage: .describe table(s) [<table>...]\n')
+            self.stdout.write('       .describe generator(s) [<gen>...]\n')
+            self.stdout.write('       .describe columns [<gen>...]\n')
+            self.stdout.write('       .describe model(s) [<gen>...]\n')
             return
         if casefold(tokens[0]) == 'table' or \
            casefold(tokens[0]) == 'tables':
