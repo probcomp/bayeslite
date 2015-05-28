@@ -232,8 +232,13 @@ class BQLSemantics(object):
             wait):
         iterations = anlimit[1] if anlimit[0] == 'iterations' else None
         seconds = anlimit[1] if anlimit[0] == 'seconds' else None
+        ckpt_iterations = None
+        ckpt_seconds = None
+        if anckpt is not None:
+            ckpt_iterations = anckpt[1] if anckpt[0] == 'iterations' else None
+            ckpt_seconds = anckpt[1] if anckpt[0] == 'seconds' else None
         return ast.AnalyzeModels(generator, models, iterations, seconds,
-            anckpt, wait)
+            ckpt_iterations, ckpt_seconds, wait)
     def p_command_drop_models(self, models, generator):
         return ast.DropModels(generator, models)
 
@@ -253,12 +258,13 @@ class BQLSemantics(object):
     def p_modelrange_single(self, modelno):     return [modelno]
     def p_modelrange_multi(self, minno, maxno): return range(minno, maxno + 1)
 
-    def p_anlimit_iterations(self, n):          return ('iterations', n)
-    def p_anlimit_minutes(self, n):             return ('seconds', 60*n)
-    def p_anlimit_seconds(self, n):             return ('seconds', n)
+    def p_anlimit_l(self, duration):            return duration
+    def p_anckpt_opt_none(self):                return None
+    def p_anckpt_opt_some(self, duration):      return duration
 
-    def p_anckpt_none(self):                    return None
-    def p_anckpt_niters(self, n):               return n
+    def p_anduration_iterations(self, n):       return ('iterations', n)
+    def p_anduration_minutes(self, n):          return ('seconds', 60*n)
+    def p_anduration_seconds(self, n):          return ('seconds', n)
 
     def p_wait_opt_none(self):                  return False
     def p_wait_opt_some(self):                  return True

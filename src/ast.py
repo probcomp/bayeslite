@@ -104,7 +104,8 @@ AnalyzeModels = namedtuple('AnalyzeModels', [
     'modelnos',
     'iterations',
     'seconds',
-    'iterations_per_checkpoint',
+    'ckpt_iterations',
+    'ckpt_seconds',
     'wait',
 ])
 DropModels = namedtuple('DropModels', [

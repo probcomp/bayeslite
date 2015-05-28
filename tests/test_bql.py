@@ -1442,3 +1442,10 @@ def test_using_models():
         'SELECT "id", "age",' \
             ' "ifnull"("weight", bql_predict(1, 42, 3, _rowid_, 0.9))' \
         ' FROM "t1";'
+
+def test_checkpoint():
+    with test_core.t1() as (bdb, _generator_id):
+        bdb.execute('initialize 1 model for t1_cc')
+        bdb.execute('analyze t1_cc for 10 iterations checkpoint 1 iteration'
+            ' wait')
+        bdb.execute('analyze t1_cc for 5 seconds checkpoint 1 second wait')

@@ -115,7 +115,7 @@ class IBayesDBMetamodel(object):
         raise NotImplementedError
 
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
-            max_seconds=None, iterations_per_checkpoint=None):
+            max_seconds=None, ckpt_iterations=None, ckpt_seconds=None):
         """Analyze the specified model numbers of a generator.
 
         If none are specified, analyze all of them.
@@ -123,8 +123,10 @@ class IBayesDBMetamodel(object):
         :param int iterations: maximum number of iterations of analysis for
             each model
         :param int max_seconds: requested maximum number of seconds to analyze
-        :param int iterations_per_checkpoint: number of iterations before
-            committing results of analysis to the database
+        :param int ckpt_iterations: number of iterations before committing
+            results of analysis to the database
+        :param int ckpt_seconds: number of seconds before committing results of
+            anlaysis to the database
         """
         raise NotImplementedError
 

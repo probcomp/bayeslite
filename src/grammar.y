@@ -95,7 +95,7 @@ command(init_models)	::= K_INITIALIZE L_INTEGER(n) K_MODEL|K_MODELS
 				K_FOR generator_name(generator).
 command(analyze_models)	::= K_ANALYZE generator_name(generator)
 				anmodelset_opt(models) anlimit(anlimit)
-				anckpt(anckpt)
+				anckpt_opt(anckpt)
 				wait_opt(wait).
 command(drop_models)	::= K_DROP K_MODEL|K_MODELS modelset_opt(models)
 				K_FROM generator_name(generator).
@@ -119,12 +119,14 @@ modelset(many)		::= modelset(m) T_COMMA modelrange(r).
 modelrange(single)	::= L_INTEGER(modelno).
 modelrange(multi)	::= L_INTEGER(minno) T_MINUS L_INTEGER(maxno).
 
-anlimit(iterations)	::= K_FOR L_INTEGER(n) K_ITERATION|K_ITERATIONS.
-anlimit(minutes)	::= K_FOR L_INTEGER(n) K_MINUTE|K_MINUTES.
-anlimit(seconds)	::= K_FOR L_INTEGER(n) K_SECOND|K_SECONDS.
+anlimit(l)		::= K_FOR anduration(duration).
 
-anckpt(none)		::= .
-anckpt(niters)		::= K_CHECKPOINT L_INTEGER(n) K_ITERATION|K_ITERATIONS.
+anckpt_opt(none)	::= .
+anckpt_opt(some)	::= K_CHECKPOINT anduration(duration).
+
+anduration(iterations)	::= L_INTEGER(n) K_ITERATION|K_ITERATIONS.
+anduration(minutes)	::= L_INTEGER(n) K_MINUTE|K_MINUTES.
+anduration(seconds)	::= L_INTEGER(n) K_SECOND|K_SECONDS.
 
 wait_opt(none)		::= .
 wait_opt(some)		::= K_WAIT.

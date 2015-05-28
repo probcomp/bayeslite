@@ -551,7 +551,8 @@ def execute_phrase(bdb, phrase, bindings=()):
             modelnos=phrase.modelnos,
             iterations=phrase.iterations,
             max_seconds=phrase.seconds,
-            iterations_per_checkpoint=phrase.iterations_per_checkpoint)
+            ckpt_iterations=phrase.ckpt_iterations,
+            ckpt_seconds=phrase.ckpt_seconds)
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.DropModels):

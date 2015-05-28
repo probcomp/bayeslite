@@ -518,7 +518,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     del cc_cache.thetas[generator_id]
 
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
-            max_seconds=None, iterations_per_checkpoint=None):
+            max_seconds=None, ckpt_iterations=None, ckpt_seconds=None):
         # XXX What about a schema change or insert in the middle of
         # analysis?
         M_c = self._crosscat_metadata(bdb, generator_id)
@@ -541,12 +541,18 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         '''
         if max_seconds is not None:
             deadline = time.time() + max_seconds
+        if ckpt_seconds is not None:
+            ckpt_deadline = time.time() + ckpt_seconds
+        if ckpt_iterations is not None:
+            ckpt_counter = ckpt_iterations
         while (iterations is None or 0 < iterations) and \
               (max_seconds is None or time.time() < deadline):
             n_steps = 1
-            if iterations_per_checkpoint is not None:
-                assert 0 < iterations_per_checkpoint
-                n_steps = iterations_per_checkpoint
+            if ckpt_seconds is not None:
+                n_steps = 1
+            elif ckpt_iterations is not None:
+                assert 0 < ckpt_iterations
+                n_steps = ckpt_iterations
             elif iterations is not None and max_seconds is None:
                 n_steps = iterations
             with bdb.savepoint():
@@ -566,18 +572,24 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                         (core.bayesdb_generator_name(bdb, generator_id),))
                 X_L_list = [theta['X_L'] for theta in thetas]
                 X_D_list = [theta['X_D'] for theta in thetas]
-                X_L_list, X_D_list, diagnostics = self._crosscat.analyze(
-                    M_c=M_c,
-                    T=T,
-                    do_diagnostics=True,
-                    # XXX Require the models share a common kernel_list.
-                    kernel_list=thetas[0]['model_config']['kernel_list'],
-                    X_L=X_L_list,
-                    X_D=X_D_list,
-                    n_steps=n_steps,
-                )
-                if iterations is not None:
-                    iterations -= n_steps
+                while (ckpt_iterations is None or 0 < ckpt_counter) and \
+                      (ckpt_seconds is None or time.time() < ckpt_deadline):
+                    X_L_list, X_D_list, diagnostics = self._crosscat.analyze(
+                        M_c=M_c,
+                        T=T,
+                        do_diagnostics=True,
+                        # XXX Require the models share a common kernel_list.
+                        kernel_list=thetas[0]['model_config']['kernel_list'],
+                        X_L=X_L_list,
+                        X_D=X_D_list,
+                        n_steps=n_steps,
+                    )
+                    if iterations is not None:
+                        iterations -= n_steps
+                    if ckpt_iterations is not None:
+                        ckpt_counter -= n_steps
+                    if ckpt_iterations is None and ckpt_seconds is None:
+                        break
                 cc_cache = self._crosscat_cache(bdb)
                 for i, (modelno, theta, X_L, X_D) \
                         in enumerate(
@@ -631,6 +643,10 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                             cc_cache.thetas[generator_id][modelno] = theta
                         else:
                             cc_cache.thetas[generator_id] = {modelno: theta}
+                if ckpt_seconds is not None:
+                    ckpt_deadline = time.time() + ckpt_seconds
+                if ckpt_iterations is not None:
+                    ckpt_counter = ckpt_iterations
 
     def column_dependence_probability(self, bdb, generator_id, modelno,
             colno0, colno1):
