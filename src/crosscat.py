@@ -572,6 +572,11 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                         (core.bayesdb_generator_name(bdb, generator_id),))
                 X_L_list = [theta['X_L'] for theta in thetas]
                 X_D_list = [theta['X_D'] for theta in thetas]
+                # XXX It would be nice to take advantage of Crosscat's
+                # internal timer to avoid transferring states between
+                # Python and C++ more often than is necessary, but it
+                # doesn't report back to us the number of iterations
+                # actually performed.
                 while (ckpt_iterations is None or 0 < ckpt_counter) and \
                       (ckpt_seconds is None or time.time() < ckpt_deadline):
                     X_L_list, X_D_list, diagnostics = self._crosscat.analyze(
