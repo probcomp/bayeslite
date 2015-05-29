@@ -294,6 +294,15 @@ def test_hook(spawnbdb):
     c.expect_prompt()
 
 
+def test_read_usage(spawnbdb):
+    c = spawnbdb
+    c.sendexpectcmd('.read')
+    c.expect_lines([
+        'Usage: .read <path/to/file> [options]',
+    ])
+    c.expect_prompt()
+
+
 def test_read_nonsequential(spawnbdb):
     c = spawnbdb
     with read_data() as fname:
