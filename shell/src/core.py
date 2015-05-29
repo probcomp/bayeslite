@@ -191,7 +191,7 @@ class Shell(cmd.Cmd):
         if len(args) > 1:
             for arg in set(args[1:]):
                 if arg not in ['-s', '-c', '-v']:
-                    print 'Invalid argument %s\n' % (arg,)
+                    self.stdout.write('Invalid argument %s\n' % (arg,))
                     return
                 if arg == '-s':
                     sequential = True
