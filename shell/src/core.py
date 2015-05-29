@@ -181,6 +181,9 @@ class Shell(cmd.Cmd):
         -v : Verbose
         '''
         args = argsin.split()
+        if len(args) == 0:
+            self.stdout.write('Usage: .read <path/to/file> [options]\n')
+            return
         path = args[0]
         sequential = False
         hide_comments = False
