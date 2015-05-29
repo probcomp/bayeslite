@@ -95,7 +95,7 @@ command(init_models)	::= K_INITIALIZE L_INTEGER(n) K_MODEL|K_MODELS
 				K_FOR generator_name(generator).
 command(analyze_models)	::= K_ANALYZE generator_name(generator)
 				anmodelset_opt(models) anlimit(anlimit)
-				anckpt(anckpt)
+				anckpt_opt(anckpt)
 				wait_opt(wait).
 command(drop_models)	::= K_DROP K_MODEL|K_MODELS modelset_opt(models)
 				K_FROM generator_name(generator).
@@ -119,26 +119,25 @@ modelset(many)		::= modelset(m) T_COMMA modelrange(r).
 modelrange(single)	::= L_INTEGER(modelno).
 modelrange(multi)	::= L_INTEGER(minno) T_MINUS L_INTEGER(maxno).
 
-anlimit(iterations)	::= K_FOR L_INTEGER(n) K_ITERATION|K_ITERATIONS.
-anlimit(minutes)	::= K_FOR L_INTEGER(n) K_MINUTE|K_MINUTES.
-anlimit(seconds)	::= K_FOR L_INTEGER(n) K_SECOND|K_SECONDS.
+anlimit(l)		::= K_FOR anduration(duration).
 
-anckpt(none)		::= .
-anckpt(niters)		::= K_CHECKPOINT L_INTEGER(n) K_ITERATION|K_ITERATIONS.
+anckpt_opt(none)	::= .
+anckpt_opt(some)	::= K_CHECKPOINT anduration(duration).
+
+anduration(iterations)	::= L_INTEGER(n) K_ITERATION|K_ITERATIONS.
+anduration(minutes)	::= L_INTEGER(n) K_MINUTE|K_MINUTES.
+anduration(seconds)	::= L_INTEGER(n) K_SECOND|K_SECONDS.
 
 wait_opt(none)		::= .
 wait_opt(some)		::= K_WAIT.
 
-/*
- * SIMULATE: special query only for CREATE TABLE AS, for now.
- */
 simulate(s)		::= K_SIMULATE simulate_columns(cols)
 				K_FROM generator_name(generator)
-				usingmodels_opt(models)
+				usingmodel_opt(modelno)
 				given_opt(constraints) limit(lim).
 simulate(nolimit)	::= K_SIMULATE simulate_columns(cols)
 				K_FROM generator_name(generator)
-				usingmodels_opt(models)
+				usingmodel_opt(modelno)
 				given_opt(constraints).
 
 simulate_columns(one)	::= column_name(col).
@@ -177,7 +176,7 @@ select(s)		::= K_SELECT select_quant(quant) select_columns(cols)
 
 estimate(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
 				K_FROM generator_name(generator)
-				usingmodels_opt(models)
+				usingmodel_opt(modelno)
 				where(cond)
 				group_by(grouping)
 				order_by(ord)
@@ -193,11 +192,11 @@ estimate(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
  */
 estcols(nocols)		::= K_ESTIMATE K_COLUMNS
 				K_FROM generator_name(generator)
-				usingmodels_opt(models)
+				usingmodel_opt(modelno)
 				where(cond) order_by(ord) limit_opt(lim).
 estcols(cols)		::= K_ESTIMATE K_COLUMNS estcols_columns(cols)
 				K_FROM generator_name(generator)
-				usingmodels_opt(models)
+				usingmodel_opt(modelno)
 				where(cond) order_by(ord) limit_opt(lim).
 
 estcols_columns(one)	::= estcols_column(col).
@@ -211,7 +210,7 @@ estcols_column(ec)	::= expression(e) as(name).
  */
 estpaircols(e)		::= K_ESTIMATE K_PAIRWISE estpaircols_columns(cols)
 				K_FROM generator_name(generator) for(subcols)
-				usingmodels_opt(models)
+				usingmodel_opt(modelno)
 				where(cond) order_by(ord) limit_opt(lim).
 
 estpaircols_columns(one)	::= estpaircols_column(col).
@@ -230,18 +229,18 @@ estpaircols_column(epc)	::= expression(e) as(name).
  */
 estpairrow(e)		::= K_ESTIMATE K_PAIRWISE K_ROW expression(e)
 				K_FROM generator_name(generator)
-				usingmodels_opt(models)
+				usingmodel_opt(modelno)
 				where(cond) order_by(ord) limit_opt(lim).
 
 infer(auto)		::= K_INFER infer_auto_columns(cols)
 				withconf_opt(conf)
 				K_FROM generator_name(generator)
-				usingmodels_opt(models)
+				usingmodel_opt(modelno)
 				where(cond) group_by(grouping) order_by(ord)
 				limit_opt(lim).
 infer(explicit)		::= K_INFER K_EXPLICIT infer_exp_columns(cols)
 				K_FROM generator_name(generator)
-				usingmodels_opt(models)
+				usingmodel_opt(modelno)
 				where(cond) group_by(grouping) order_by(ord)
 				limit_opt(lim).
 
@@ -287,8 +286,8 @@ from(nonempty)		::= K_FROM select_tables(tables).
  * XXX This mechanism is completely wrong.  The set of models should
  * be treated as just another table on which to do relational algebra.
  */
-usingmodels_opt(none)	::= .
-usingmodels_opt(some)	::= K_USING K_MODEL|K_MODELS modelset(models).
+usingmodel_opt(all)	::= .
+usingmodel_opt(one)	::= K_USING K_MODEL primary(modelno).
 
 /* XXX Allow all kinds of joins.  */
 select_tables(one)	::= select_table(t).

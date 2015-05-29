@@ -31,17 +31,17 @@ def bayesdb_install_bql(db, cookie):
         db.create_function(name, nargs,
             lambda *args: bayesdb_bql(fn, cookie, *args))
     function("bql_column_correlation", 3, bql_column_correlation)
-    function("bql_column_dependence_probability", 3,
+    function("bql_column_dependence_probability", 4,
         bql_column_dependence_probability)
-    function("bql_column_mutual_information", 4, bql_column_mutual_information)
-    function("bql_column_typicality", 2, bql_column_typicality)
-    function("bql_column_value_probability", 3, bql_column_value_probability)
+    function("bql_column_mutual_information", 5, bql_column_mutual_information)
+    function("bql_column_typicality", 3, bql_column_typicality)
+    function("bql_column_value_probability", 4, bql_column_value_probability)
     function("bql_row_similarity", -1, bql_row_similarity)
-    function("bql_row_typicality", 2, bql_row_typicality)
-    function("bql_row_column_predictive_probability", 3,
+    function("bql_row_typicality", 3, bql_row_typicality)
+    function("bql_row_column_predictive_probability", 4,
         bql_row_column_predictive_probability)
-    function("bql_predict", 4, bql_predict)
-    function("bql_predict_confidence", 3, bql_predict_confidence)
+    function("bql_predict", 5, bql_predict)
+    function("bql_predict_confidence", 4, bql_predict_confidence)
     function("bql_json_get", 3, bql_json_get)
 
 # XXX XXX XXX Temporary debugging kludge!
@@ -137,60 +137,66 @@ define_correlation('numerical', 'categorical', correlation_anovar2_cd)
 define_correlation('numerical', 'numerical', correlation_pearsonr2)
 
 # Two-column function:  DEPENDENCE PROBABILITY [OF <col0> WITH <col1>]
-def bql_column_dependence_probability(bdb, generator_id, colno0, colno1):
+def bql_column_dependence_probability(bdb, generator_id, modelno, colno0,
+        colno1):
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    return metamodel.column_dependence_probability(bdb, generator_id, colno0,
-        colno1)
+    return metamodel.column_dependence_probability(bdb, generator_id, modelno,
+        colno0, colno1)
 
 # Two-column function:  MUTUAL INFORMATION [OF <col0> WITH <col1>]
-def bql_column_mutual_information(bdb, generator_id, colno0, colno1,
+def bql_column_mutual_information(bdb, generator_id, modelno, colno0, colno1,
         numsamples=None):
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    return metamodel.column_mutual_information(bdb, generator_id, colno0,
-        colno1, numsamples=numsamples)
+    return metamodel.column_mutual_information(bdb, generator_id, modelno,
+        colno0, colno1, numsamples=numsamples)
 
 # One-column function:  TYPICALITY OF <col>
-def bql_column_typicality(bdb, generator_id, colno):
+def bql_column_typicality(bdb, generator_id, modelno, colno):
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    return metamodel.column_typicality(bdb, generator_id, colno)
+    return metamodel.column_typicality(bdb, generator_id, modelno, colno)
 
 # One-column function:  PROBABILITY OF <col>=<value>
-def bql_column_value_probability(bdb, generator_id, colno, value):
+def bql_column_value_probability(bdb, generator_id, modelno, colno, value):
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    return metamodel.column_value_probability(bdb, generator_id, colno, value)
+    return metamodel.column_value_probability(bdb, generator_id, modelno,
+        colno, value)
 
 ### BayesDB row functions
 
 # Row function:  SIMILARITY TO <target_row> [WITH RESPECT TO <columns>]
-def bql_row_similarity(bdb, generator_id, rowid, target_rowid, *colnos):
+def bql_row_similarity(bdb, generator_id, modelno, rowid, target_rowid,
+        *colnos):
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
     if len(colnos) == 0:
         colnos = core.bayesdb_generator_column_numbers(bdb, generator_id)
-    return metamodel.row_similarity(bdb, generator_id, rowid, target_rowid,
-        colnos)
+    return metamodel.row_similarity(bdb, generator_id, modelno, rowid,
+        target_rowid, colnos)
 
 # Row function:  TYPICALITY
-def bql_row_typicality(bdb, generator_id, rowid):
+def bql_row_typicality(bdb, generator_id, modelno, rowid):
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    return metamodel.row_typicality(bdb, generator_id, rowid)
+    return metamodel.row_typicality(bdb, generator_id, modelno, rowid)
 
 # Row function:  PREDICTIVE PROBABILITY OF <column>
-def bql_row_column_predictive_probability(bdb, generator_id, rowid, colno):
+def bql_row_column_predictive_probability(bdb, generator_id, modelno, rowid,
+        colno):
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
     return metamodel.row_column_predictive_probability(bdb, generator_id,
-        rowid, colno)
+        modelno, rowid, colno)
 
 ### Predict and simulate
 
-def bql_predict(bdb, generator_id, colno, rowid, threshold, numsamples=None):
+def bql_predict(bdb, generator_id, modelno, colno, rowid, threshold,
+        numsamples=None):
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    return metamodel.predict(bdb, generator_id, colno, rowid, threshold,
-        numsamples=numsamples)
+    return metamodel.predict(bdb, generator_id, modelno, colno, rowid,
+        threshold, numsamples=numsamples)
 
-def bql_predict_confidence(bdb, generator_id, colno, rowid, numsamples=None):
+def bql_predict_confidence(bdb, generator_id, modelno, colno, rowid,
+        numsamples=None):
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    value, confidence = metamodel.predict_confidence(bdb, generator_id, colno,
-        rowid, numsamples=numsamples)
+    value, confidence = metamodel.predict_confidence(bdb, generator_id,
+        modelno, colno, rowid, numsamples=numsamples)
     # XXX Whattakludge!
     return json.dumps({'value': value, 'confidence': confidence})
 
@@ -198,7 +204,8 @@ def bql_predict_confidence(bdb, generator_id, colno, rowid, numsamples=None):
 def bql_json_get(bdb, json, key):
     return json.loads(json)[key]
 
-def bayesdb_simulate(bdb, generator_id, constraints, colnos, numpredictions=1):
+def bayesdb_simulate(bdb, generator_id, constraints, colnos,
+        modelno=None, numpredictions=1):
     """Simulate rows from a generative model, subject to constraints.
 
     Returns a list of `numpredictions` tuples, with a value for each
@@ -207,7 +214,7 @@ def bayesdb_simulate(bdb, generator_id, constraints, colnos, numpredictions=1):
     value)``.
     """
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    return metamodel.simulate(bdb, generator_id, constraints, colnos,
+    return metamodel.simulate(bdb, generator_id, modelno, constraints, colnos,
         numpredictions=numpredictions)
 
 def bayesdb_insert(bdb, generator_id, row):

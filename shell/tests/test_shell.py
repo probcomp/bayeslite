@@ -76,7 +76,7 @@ def read_data():
 
 @pytest.fixture
 def spawnbdb():
-    c = spawnjr('bayeslite --no-init-file --debug')
+    c = spawnjr('bayeslite --no-init-file --debug --memory')
     c.delaybeforesend = 0
     c.expect_lines([
         'Welcome to the Bayeslite shell.',

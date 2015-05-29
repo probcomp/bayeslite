@@ -104,7 +104,8 @@ AnalyzeModels = namedtuple('AnalyzeModels', [
     'modelnos',
     'iterations',
     'seconds',
-    'iterations_per_checkpoint',
+    'ckpt_iterations',
+    'ckpt_seconds',
     'wait',
 ])
 DropModels = namedtuple('DropModels', [
@@ -115,7 +116,7 @@ DropModels = namedtuple('DropModels', [
 Simulate = namedtuple('Simulate', [
     'columns',                  # [XXX name]
     'generator',                # XXX name
-    'modelnos',                 # [modelno]
+    'modelno',                  # modelno
     'constraints',              # [(XXX name, Exp*)]
     'nsamples',                 # Exp* or None
 ])
@@ -145,7 +146,7 @@ Estimate = namedtuple('Estimate', [
     'quantifier',               # SELQUANT_*
     'columns',                  # [SelCol*]
     'generator',                # XXX name
-    'modelnos',                 # [modelno]
+    'modelno',                  # modelno
     'condition',                # Exp* or None (unconditional)
     'grouping',                 # Grouping or None
     'order',                    # [Ord] or None (unordered)
@@ -182,7 +183,7 @@ InferAuto = namedtuple('InferAuto', [
     'columns',                  # [InfCol* or PredCol]
     'confidence',               # Exp* or None (implied 0)
     'generator',                # XXX name
-    'modelnos',                 # [modelno]
+    'modelno',                  # modelno
     'condition',                # Exp* or None (unconditional)
     'grouping',                 # Grouping or None
     'order',                    # [Ord] or None (unordered)
@@ -192,7 +193,7 @@ InferAuto = namedtuple('InferAuto', [
 InferExplicit = namedtuple('InferExplicit', [
     'columns',                  # [SelCol* or PredCol]
     'generator',                # XXX name
-    'modelnos',                 # [modelno]
+    'modelno',                  # modelno
     'condition',                # Exp* or None (unconditional)
     'grouping',                 # Grouping or None
     'order',                    # [Ord] or None (unordered)
@@ -208,7 +209,7 @@ InfColOne = namedtuple('InfColOne', [
 EstCols = namedtuple('EstCols', [
     'columns',                  # [(Exp*, XXX name)]
     'generator',                # XXX name
-    'modelnos',                 # [modelno]
+    'modelno',                  # modelno
     'condition',                # Exp* or None (unconditional)
     'order',                    # [Ord] or None (unordered)
     'limit',                    # Lim or None (unlimited),
@@ -218,7 +219,7 @@ EstPairCols = namedtuple('EstPairCols', [
     'columns',                  # Exp*
     'generator',                # XXX name
     'subcolumns',               # ColList* or None
-    'modelnos',                 # [modelno]
+    'modelno',                  # modelno
     'condition',                # Exp* or None (unconditional)
     'order',                    # [Ord] or None (unordered)
     'limit',                    # Lim or None (unlimited),
@@ -227,7 +228,7 @@ EstPairCols = namedtuple('EstPairCols', [
 EstPairRow = namedtuple('EstPairRow', [
     'expression',               # Exp*
     'generator',                # XXX name
-    'modelnos',                 # [modelno]
+    'modelno',                  # modelno
     'condition',                # Exp* or None (unconditional)
     'order',                    # [Ord] or None (unordered)
     'limit',                    # Lim or None (unlimited),

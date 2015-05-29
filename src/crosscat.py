@@ -184,7 +184,9 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 for value, (_name, colno) in zip(row, columns)]
             for row in cursor]
 
-    def _crosscat_thetas(self, bdb, generator_id):
+    def _crosscat_thetas(self, bdb, generator_id, modelno):
+        if modelno is not None:
+            return {modelno: self._crosscat_theta(bdb, generator_id, modelno)}
         sql = '''
             SELECT modelno FROM bayesdb_crosscat_theta
                 WHERE generator_id = ?
@@ -220,18 +222,18 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     cc_cache.thetas[generator_id] = {modelno: theta}
             return theta
 
-    def _crosscat_latent_stata(self, bdb, generator_id):
-        thetas = self._crosscat_thetas(bdb, generator_id)
+    def _crosscat_latent_stata(self, bdb, generator_id, modelno):
+        thetas = self._crosscat_thetas(bdb, generator_id, modelno)
         return ((thetas[modelno]['X_L'], thetas[modelno]['X_D'])
             for modelno in sorted(thetas.iterkeys()))
 
-    def _crosscat_latent_state(self, bdb, generator_id):
+    def _crosscat_latent_state(self, bdb, generator_id, modelno):
         return [statum[0] for statum
-            in self._crosscat_latent_stata(bdb, generator_id)]
+            in self._crosscat_latent_stata(bdb, generator_id, modelno)]
 
-    def _crosscat_latent_data(self, bdb, generator_id):
+    def _crosscat_latent_data(self, bdb, generator_id, modelno):
         return [statum[1] for statum
-            in self._crosscat_latent_stata(bdb, generator_id)]
+            in self._crosscat_latent_stata(bdb, generator_id, modelno)]
 
     def name(self):
         return 'crosscat'
@@ -516,7 +518,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     del cc_cache.thetas[generator_id]
 
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
-            max_seconds=None, iterations_per_checkpoint=None):
+            max_seconds=None, ckpt_iterations=None, ckpt_seconds=None):
         # XXX What about a schema change or insert in the middle of
         # analysis?
         M_c = self._crosscat_metadata(bdb, generator_id)
@@ -539,17 +541,24 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         '''
         if max_seconds is not None:
             deadline = time.time() + max_seconds
+        if ckpt_seconds is not None:
+            ckpt_deadline = time.time() + ckpt_seconds
+        if ckpt_iterations is not None:
+            ckpt_counter = ckpt_iterations
         while (iterations is None or 0 < iterations) and \
               (max_seconds is None or time.time() < deadline):
             n_steps = 1
-            if iterations_per_checkpoint is not None:
-                assert 0 < iterations_per_checkpoint
-                n_steps = iterations_per_checkpoint
+            if ckpt_seconds is not None:
+                n_steps = 1
+            elif ckpt_iterations is not None:
+                assert 0 < ckpt_iterations
+                n_steps = ckpt_iterations
             elif iterations is not None and max_seconds is None:
                 n_steps = iterations
             with bdb.savepoint():
                 if modelnos is None:
-                    numbered_thetas = self._crosscat_thetas(bdb, generator_id)
+                    numbered_thetas = self._crosscat_thetas(bdb, generator_id,
+                        None)
                     update_modelnos = sorted(numbered_thetas.iterkeys())
                     thetas = [numbered_thetas[modelno] for modelno in
                         update_modelnos]
@@ -563,18 +572,29 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                         (core.bayesdb_generator_name(bdb, generator_id),))
                 X_L_list = [theta['X_L'] for theta in thetas]
                 X_D_list = [theta['X_D'] for theta in thetas]
-                X_L_list, X_D_list, diagnostics = self._crosscat.analyze(
-                    M_c=M_c,
-                    T=T,
-                    do_diagnostics=True,
-                    # XXX Require the models share a common kernel_list.
-                    kernel_list=thetas[0]['model_config']['kernel_list'],
-                    X_L=X_L_list,
-                    X_D=X_D_list,
-                    n_steps=n_steps,
-                )
-                if iterations is not None:
-                    iterations -= n_steps
+                # XXX It would be nice to take advantage of Crosscat's
+                # internal timer to avoid transferring states between
+                # Python and C++ more often than is necessary, but it
+                # doesn't report back to us the number of iterations
+                # actually performed.
+                while (ckpt_iterations is None or 0 < ckpt_counter) and \
+                      (ckpt_seconds is None or time.time() < ckpt_deadline):
+                    X_L_list, X_D_list, diagnostics = self._crosscat.analyze(
+                        M_c=M_c,
+                        T=T,
+                        do_diagnostics=True,
+                        # XXX Require the models share a common kernel_list.
+                        kernel_list=thetas[0]['model_config']['kernel_list'],
+                        X_L=X_L_list,
+                        X_D=X_D_list,
+                        n_steps=n_steps,
+                    )
+                    if iterations is not None:
+                        iterations -= n_steps
+                    if ckpt_iterations is not None:
+                        ckpt_counter -= n_steps
+                    if ckpt_iterations is None and ckpt_seconds is None:
+                        break
                 cc_cache = self._crosscat_cache(bdb)
                 for i, (modelno, theta, X_L, X_D) \
                         in enumerate(
@@ -628,15 +648,21 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                             cc_cache.thetas[generator_id][modelno] = theta
                         else:
                             cc_cache.thetas[generator_id] = {modelno: theta}
+                if ckpt_seconds is not None:
+                    ckpt_deadline = time.time() + ckpt_seconds
+                if ckpt_iterations is not None:
+                    ckpt_counter = ckpt_iterations
 
-    def column_dependence_probability(self, bdb, generator_id, colno0, colno1):
+    def column_dependence_probability(self, bdb, generator_id, modelno,
+            colno0, colno1):
         if colno0 == colno1:
             return 1
         cc_colno0 = crosscat_cc_colno(bdb, generator_id, colno0)
         cc_colno1 = crosscat_cc_colno(bdb, generator_id, colno1)
         count = 0
         nmodels = 0
-        for X_L, X_D in self._crosscat_latent_stata(bdb, generator_id):
+        for X_L, X_D in self._crosscat_latent_stata(bdb, generator_id,
+                modelno):
             nmodels += 1
             assignments = X_L['column_partition']['assignments']
             if assignments[cc_colno0] != assignments[cc_colno1]:
@@ -646,12 +672,12 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             count += 1
         return float('NaN') if nmodels == 0 else (float(count)/float(nmodels))
 
-    def column_mutual_information(self, bdb, generator_id, colno0, colno1,
-            numsamples=None):
+    def column_mutual_information(self, bdb, generator_id, modelno, colno0,
+            colno1, numsamples=None):
         if numsamples is None:
             numsamples = 100
-        X_L_list = self._crosscat_latent_state(bdb, generator_id)
-        X_D_list = self._crosscat_latent_data(bdb, generator_id)
+        X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
+        X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
         cc_colno0 = crosscat_cc_colno(bdb, generator_id, colno0)
         cc_colno1 = crosscat_cc_colno(bdb, generator_id, colno1)
         r = self._crosscat.mutual_information(
@@ -669,20 +695,21 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         # the mean.
         return arithmetic_mean(mi)
 
-    def column_typicality(self, bdb, generator_id, colno):
+    def column_typicality(self, bdb, generator_id, modelno, colno):
         return self._crosscat.column_structural_typicality(
-            X_L_list=self._crosscat_latent_state(bdb, generator_id),
+            X_L_list=self._crosscat_latent_state(bdb, generator_id, modelno),
             col_id=crosscat_cc_colno(bdb, generator_id, colno),
         )
 
-    def column_value_probability(self, bdb, generator_id, colno, value):
+    def column_value_probability(self, bdb, generator_id, modelno, colno,
+            value):
         M_c = self._crosscat_metadata(bdb, generator_id)
         try:
             code = crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
         except KeyError:
             return 0
-        X_L_list = self._crosscat_latent_state(bdb, generator_id)
-        X_D_list = self._crosscat_latent_data(bdb, generator_id)
+        X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
+        X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
         # Fabricate a nonexistent (`unobserved') row id.
         fake_row_id = len(X_D_list[0][0])
         cc_colno = crosscat_cc_colno(bdb, generator_id, colno)
@@ -695,26 +722,27 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         )
         return math.exp(r)
 
-    def row_similarity(self, bdb, generator_id, rowid, target_rowid, colnos):
+    def row_similarity(self, bdb, generator_id, modelno, rowid, target_rowid,
+            colnos):
         return self._crosscat.similarity(
             M_c=self._crosscat_metadata(bdb, generator_id),
-            X_L_list=self._crosscat_latent_state(bdb, generator_id),
-            X_D_list=self._crosscat_latent_data(bdb, generator_id),
+            X_L_list=self._crosscat_latent_state(bdb, generator_id, modelno),
+            X_D_list=self._crosscat_latent_data(bdb, generator_id, modelno),
             given_row_id=crosscat_row_id(rowid),
             target_row_id=crosscat_row_id(target_rowid),
             target_columns=[crosscat_cc_colno(bdb, generator_id, colno)
                 for colno in colnos],
         )
 
-    def row_typicality(self, bdb, generator_id, rowid):
+    def row_typicality(self, bdb, generator_id, modelno, rowid):
         return self._crosscat.row_structural_typicality(
-            X_L_list=self._crosscat_latent_state(bdb, generator_id),
-            X_D_list=self._crosscat_latent_data(bdb, generator_id),
+            X_L_list=self._crosscat_latent_state(bdb, generator_id, modelno),
+            X_D_list=self._crosscat_latent_data(bdb, generator_id, modelno),
             row_id=crosscat_row_id(rowid),
         )
 
-    def row_column_predictive_probability(self, bdb, generator_id, rowid,
-            colno):
+    def row_column_predictive_probability(self, bdb, generator_id, modelno,
+            rowid, colno):
         M_c = self._crosscat_metadata(bdb, generator_id)
         table_name = core.bayesdb_generator_table(bdb, generator_id)
         colname = core.bayesdb_generator_column_name(bdb, generator_id, colno)
@@ -738,14 +766,14 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         cc_colno = crosscat_cc_colno(bdb, generator_id, colno)
         r = self._crosscat.simple_predictive_probability_multistate(
             M_c=M_c,
-            X_L_list=self._crosscat_latent_state(bdb, generator_id),
-            X_D_list=self._crosscat_latent_data(bdb, generator_id),
+            X_L_list=self._crosscat_latent_state(bdb, generator_id, modelno),
+            X_D_list=self._crosscat_latent_data(bdb, generator_id, modelno),
             Y=[],
             Q=[(crosscat_row_id(rowid), cc_colno, code)],
         )
         return math.exp(r)
 
-    def predict_confidence(self, bdb, generator_id, colno, rowid,
+    def predict_confidence(self, bdb, generator_id, modelno, colno, rowid,
             numsamples=None):
         if numsamples is None:
             numsamples = 1
@@ -777,8 +805,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         cc_colno = crosscat_cc_colno(bdb, generator_id, colno)
         code, confidence = self._crosscat.impute_and_confidence(
             M_c=M_c,
-            X_L=self._crosscat_latent_state(bdb, generator_id),
-            X_D=self._crosscat_latent_data(bdb, generator_id),
+            X_L=self._crosscat_latent_state(bdb, generator_id, modelno),
+            X_D=self._crosscat_latent_data(bdb, generator_id, modelno),
             Y=[(row_id,
                 crosscat_gen_colno(bdb, generator_id, cc_colno_),
                 crosscat_value_to_code(bdb, generator_id, M_c,
@@ -792,7 +820,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         value = crosscat_code_to_value(bdb, generator_id, M_c, colno, code)
         return value, confidence
 
-    def simulate(self, bdb, generator_id, constraints, colnos,
+    def simulate(self, bdb, generator_id, modelno, constraints, colnos,
             numpredictions=1):
         M_c = self._crosscat_metadata(bdb, generator_id)
         table_name = core.bayesdb_generator_table(bdb, generator_id)
@@ -816,8 +844,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                  for colno, value in constraints]
         raw_outputs = self._crosscat.simple_predictive_sample(
             M_c=M_c,
-            X_L=self._crosscat_latent_state(bdb, generator_id),
-            X_D=self._crosscat_latent_data(bdb, generator_id),
+            X_L=self._crosscat_latent_state(bdb, generator_id, modelno),
+            X_D=self._crosscat_latent_data(bdb, generator_id, modelno),
             Y=Y,
             Q=[(fake_row_id, crosscat_cc_colno(bdb, generator_id, colno))
                 for colno in colnos],

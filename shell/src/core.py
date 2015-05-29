@@ -181,6 +181,9 @@ class Shell(cmd.Cmd):
         -v : Verbose
         '''
         args = argsin.split()
+        if len(args) == 0:
+            self.stdout.write('Usage: .read <path/to/file> [options]\n')
+            return
         path = args[0]
         sequential = False
         hide_comments = False
@@ -188,7 +191,7 @@ class Shell(cmd.Cmd):
         if len(args) > 1:
             for arg in set(args[1:]):
                 if arg not in ['-s', '-c', '-v']:
-                    print 'Invalid argument %s\n' % (arg,)
+                    self.stdout.write('Invalid argument %s\n' % (arg,))
                     return
                 if arg == '-s':
                     sequential = True
@@ -259,7 +262,7 @@ class Shell(cmd.Cmd):
             negative = ['no', 'n']
             if not autorehook:
                 self.stdout.write("Do you want to rehook the %s command?\n"
-                                  % cmdname)
+                    % (cmdname,))
                 yesno = raw_input('y/n? ').lower()
                 while yesno not in affirmative+negative:
                     self.stdout.write("Invalid response to yes/no question.\n")
@@ -303,13 +306,13 @@ class Shell(cmd.Cmd):
         try:
             imp.load_source('bayeslite_shell_hooks', path)
         except IOError:
-            self.stdout.write("No such file or directory %s\n" % path)
+            self.stdout.write("No such file or directory %s\n" % (path,))
             return
         except SyntaxError:
-            self.stdout.write("%s is an invalid python file.\n" % path)
+            self.stdout.write("%s is an invalid python file.\n" % (path,))
             return
         except Exception as err:
-            self.stdout.write("%s\n" % repr(err))
+            self.stdout.write("%s\n" % (repr(err),))
             return
         else:
             self._hooked_filenames.add(path)
@@ -484,7 +487,10 @@ class Shell(cmd.Cmd):
         # XXX Lousy, lousy tokenizer.
         tokens = line.split()
         if len(tokens) == 0:
-            self.stdout.write('Describe what, pray tell?\n')
+            self.stdout.write('Usage: .describe table(s) [<table>...]\n')
+            self.stdout.write('       .describe generator(s) [<gen>...]\n')
+            self.stdout.write('       .describe columns [<gen>...]\n')
+            self.stdout.write('       .describe model(s) [<gen>...]\n')
             return
         if casefold(tokens[0]) == 'table' or \
            casefold(tokens[0]) == 'tables':

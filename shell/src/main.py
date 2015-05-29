@@ -14,8 +14,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import os
 import argparse
+import os
 
 import bayeslite
 import bayeslite.crosscat
@@ -25,9 +25,9 @@ import bayeslite.shell.hook as hook
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument('bdbpath', type=str, nargs='?', default=':memory:',
+    parser.add_argument('bdbpath', type=str, nargs='?', default=None,
                         help="bayesdb database file")
-    parser.add_argument('-j', '--njob', type=int, default=None,
+    parser.add_argument('-j', '--njob', type=int, default=0,
                         help="Max number of jobs (processes) useable.")
     parser.add_argument('-s', '--seed', type=int, default=None,
                         help="Random seed for the default generator.")
@@ -39,6 +39,8 @@ def parse_args(argv):
     parser.add_argument('--debug', action='store_true', help="For unit tests.")
     parser.add_argument('--no-init-file', action='store_true',
                         help="Do not load ~/.bayesliterc")
+    parser.add_argument('-m', '--memory', action='store_true',
+                        help="Use temporary database not saved to disk")
 
     args = parser.parse_args(argv)
     return args
@@ -46,14 +48,19 @@ def parse_args(argv):
 
 def run(stdin, stdout, stderr, argv):
     args = parse_args(argv[1:])
+    if args.bdbpath is None and not args.memory:
+        progname = argv[0]
+        slash = progname.rfind('/')
+        if slash:
+            progname = progname[slash + 1:]
+        stderr.write('%s: pass filename or -m/--memory\n' % (progname,))
+        return 1
     bdb = bayeslite.bayesdb_open(pathname=args.bdbpath)
 
-    # People shouldn't have to ask to go fast, they should have to ask to
-    # slow down.
-    if args.njob not in [0, 1]:
+    if args.njob != 1:
         import crosscat.MultiprocessingEngine as ccme
-        crosscat = ccme.MultiprocessingEngine(seed=args.seed,
-                                              cpu_count=args.njob)
+        njob = args.njob if args.njob > 0 else None
+        crosscat = ccme.MultiprocessingEngine(seed=args.seed, cpu_count=njob)
     else:
         import crosscat.LocalEngine as ccle
         crosscat = ccle.LocalEngine(seed=args.seed)
@@ -71,7 +78,8 @@ def run(stdin, stdout, stderr, argv):
                 if os.path.isfile(path):
                     bdbshell.dot_read(path)
                 else:
-                    bdbshell.stdout.write('%s is not a file. Aborting.\n' % str(path))
+                    bdbshell.stdout.write('%s is not a file.  Aborting.\n' %
+                        (str(path),))
                     break
         bdbshell.cmdloop()
     return 0

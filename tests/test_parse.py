@@ -388,7 +388,8 @@ def test_select_bql():
                         ast.ExpLit(ast.LitInt(8)),
                     )),
                     [ast.ColListSub(
-                        ast.EstCols([], 't', None, None,
+                        ast.EstCols([], 't', ast.ExpLit(ast.LitNull(None)),
+                            None,
                             [ast.Ord(ast.ExpBQLTyp(None), ast.ORD_ASC)],
                             ast.Lim(ast.ExpLit(ast.LitInt(1)), None))
                     )]),
@@ -461,7 +462,7 @@ def test_select_bql():
         [ast.Select(ast.SELQUANT_ALL, [
                 ast.SelColExp(ast.ExpCol(None, 'key'), None),
                 ast.SelColSub('t',
-                    ast.EstCols([], 't', None, None,
+                    ast.EstCols([], 't', ast.ExpLit(ast.LitNull(None)), None,
                         [ast.Ord(ast.ExpBQLDepProb('c', None), ast.ORD_DESC)],
                         ast.Lim(ast.ExpLit(ast.LitInt(4)), None)))
             ],
@@ -513,34 +514,37 @@ def test_trivial_commands():
     assert parse_bql_string('initialize 2 models if not exists for t;') == \
         [ast.InitModels(True, 't', 2, None)]
     assert parse_bql_string('analyze t for 1 iteration;') == \
-        [ast.AnalyzeModels('t', None, 1, None, None, False)]
+        [ast.AnalyzeModels('t', None, 1, None, None, None, False)]
     assert parse_bql_string('analyze t for 1 iteration wait;') == \
-        [ast.AnalyzeModels('t', None, 1, None, None, True)]
+        [ast.AnalyzeModels('t', None, 1, None, None, None, True)]
     assert parse_bql_string('analyze t for 1 minute;') == \
-        [ast.AnalyzeModels('t', None, None, 60, None, False)]
+        [ast.AnalyzeModels('t', None, None, 60, None, None, False)]
     assert parse_bql_string('analyze t for 1 minute wait;') == \
-        [ast.AnalyzeModels('t', None, None, 60, None, True)]
+        [ast.AnalyzeModels('t', None, None, 60, None, None, True)]
     assert parse_bql_string('analyze t for 2 minutes;') == \
-        [ast.AnalyzeModels('t', None, None, 120, None, False)]
+        [ast.AnalyzeModels('t', None, None, 120, None, None, False)]
     assert parse_bql_string('analyze t for 2 minutes wait;') == \
-        [ast.AnalyzeModels('t', None, None, 120, None, True)]
+        [ast.AnalyzeModels('t', None, None, 120, None, None, True)]
     assert parse_bql_string('analyze t for 1 second;') == \
-        [ast.AnalyzeModels('t', None, None, 1, None, False)]
+        [ast.AnalyzeModels('t', None, None, 1, None, None, False)]
     assert parse_bql_string('analyze t for 1 second wait;') == \
-        [ast.AnalyzeModels('t', None, None, 1, None, True)]
+        [ast.AnalyzeModels('t', None, None, 1, None, None, True)]
     assert parse_bql_string('analyze t for 2 seconds;') == \
-        [ast.AnalyzeModels('t', None, None, 2, None, False)]
+        [ast.AnalyzeModels('t', None, None, 2, None, None, False)]
     assert parse_bql_string('analyze t for 2 seconds wait;') == \
-        [ast.AnalyzeModels('t', None, None, 2, None, True)]
+        [ast.AnalyzeModels('t', None, None, 2, None, None, True)]
     assert parse_bql_string('analyze t model 1 for 1 iteration;') == \
-        [ast.AnalyzeModels('t', [1], 1, None, None, False)]
+        [ast.AnalyzeModels('t', [1], 1, None, None, None, False)]
     assert parse_bql_string('analyze t models 1,2,3 for 1 iteration;') == \
-        [ast.AnalyzeModels('t', [1,2,3], 1, None, None, False)]
+        [ast.AnalyzeModels('t', [1,2,3], 1, None, None, None, False)]
     assert parse_bql_string('analyze t models 1-3,5 for 1 iteration;') == \
-        [ast.AnalyzeModels('t', [1,2,3,5], 1, None, None, False)]
+        [ast.AnalyzeModels('t', [1,2,3,5], 1, None, None, None, False)]
     assert parse_bql_string('analyze t for 10 iterations'
             ' checkpoint 3 iterations') == \
-        [ast.AnalyzeModels('t', None, 10, None, 3, False)]
+        [ast.AnalyzeModels('t', None, 10, None, 3, None, False)]
+    assert parse_bql_string('analyze t for 10 seconds'
+            ' checkpoint 3 seconds') == \
+        [ast.AnalyzeModels('t', None, None, 10, None, 3, False)]
     assert parse_bql_string('create temporary table tx as'
             ' infer explicit x, predict x as xi confidence xc from t_cc') == \
         [ast.CreateTabAs(True, False, 'tx',
@@ -549,7 +553,7 @@ def test_trivial_commands():
                     ast.SelColExp(ast.ExpCol(None, 'x'), None),
                     ast.PredCol('x', 'xi', 'xc'),
                 ],
-                't_cc', None, None, None, None, None,
+                't_cc', ast.ExpLit(ast.LitNull(None)), None, None, None, None,
             ))]
 
 def test_parametrized():
@@ -658,68 +662,71 @@ def test_simulate():
     assert parse_bql_string('create table s as'
             ' simulate x from t limit 10') == \
         [ast.CreateTabSim(False, False, 's',
-            ast.Simulate(['x'], 't', None, [], ast.ExpLit(ast.LitInt(10))))]
+            ast.Simulate(['x'], 't', ast.ExpLit(ast.LitNull(None)), [],
+                ast.ExpLit(ast.LitInt(10))))]
     assert parse_bql_string('create table if not exists s as'
             ' simulate x, y from t given z = 0 limit 10') == \
         [ast.CreateTabSim(False, True, 's',
-            ast.Simulate(['x', 'y'], 't', None,
+            ast.Simulate(['x', 'y'], 't', ast.ExpLit(ast.LitNull(None)),
                 [('z', ast.ExpLit(ast.LitInt(0)))],
                 ast.ExpLit(ast.LitInt(10))))]
     assert parse_bql_string('create temp table s as'
             ' simulate x, y from t given z = 0 limit 10') == \
         [ast.CreateTabSim(True, False, 's',
-            ast.Simulate(['x', 'y'], 't', None,
+            ast.Simulate(['x', 'y'], 't', ast.ExpLit(ast.LitNull(None)),
                 [('z', ast.ExpLit(ast.LitInt(0)))],
                 ast.ExpLit(ast.LitInt(10))))]
     assert parse_bql_string('create temp table if not exists s as'
             ' simulate x, y from t given z = 0, w = 1 limit 10') == \
         [ast.CreateTabSim(True, True, 's',
-            ast.Simulate(['x', 'y'], 't', None,
+            ast.Simulate(['x', 'y'], 't', ast.ExpLit(ast.LitNull(None)),
                 [
                     ('z', ast.ExpLit(ast.LitInt(0))),
                     ('w', ast.ExpLit(ast.LitInt(1))),
                 ],
                 ast.ExpLit(ast.LitInt(10))))]
 
-def test_using_models():
-    assert parse_bql_string('simulate x from t using models 0-2,4-7,9'
+def test_using_model():
+    assert parse_bql_string('simulate x from t using model 42'
             ' limit 10') == \
-        [ast.Simulate(['x'], 't', [0,1,2,4,5,6,7,9], [],
+        [ast.Simulate(['x'], 't', ast.ExpLit(ast.LitInt(42)), [],
             ast.ExpLit(ast.LitInt(10)))]
     with pytest.raises(parse.BQLParseError):
         assert parse_bql_string('simulate x from t'
-                ' using models 0-2,4-7,9') == \
-            [ast.Simulate(['x'], 't', [0,1,2,4,5,6,7,9], [],
+                ' using model (87)') == \
+            [ast.Simulate(['x'], 't', ast.ExpLit(ast.LitInt(87)), [],
                 ast.ExpLit(ast.LitInt(10)))]
-    assert parse_bql_string('estimate x from t using models 0-2,4-7,9') == \
+    assert parse_bql_string('estimate x from t using model (1+2)') == \
         [ast.Estimate(ast.SELQUANT_ALL,
             [ast.SelColExp(ast.ExpCol(None, 'x'), None)],
-            't', [0,1,2,4,5,6,7,9],
+            't',
+            ast.ExpOp(ast.OP_ADD, (
+                ast.ExpLit(ast.LitInt(1)),
+                ast.ExpLit(ast.LitInt(2)),
+            )),
             None, None, None, None)]
-    assert parse_bql_string('estimate columns from t'
-            ' using models 0-2,4-7,9') == \
-        [ast.EstCols([], 't', [0,1,2,4,5,6,7,9], None, None, None)]
+    assert parse_bql_string('estimate columns from t using model modelno') == \
+        [ast.EstCols([], 't', ast.ExpCol(None, 'modelno'), None, None, None)]
     assert parse_bql_string('estimate columns 42 from t'
-            ' using models 0-2,4-7,9') == \
+            ' using model modelno') == \
         [ast.EstCols([(ast.ExpLit(ast.LitInt(42)), None)], 't',
-            [0,1,2,4,5,6,7,9],
+            ast.ExpCol(None, 'modelno'),
             None, None, None)]
     assert parse_bql_string('estimate pairwise 42 from t'
-            ' using models 0-2,4-7,9') == \
+            ' using model modelno') == \
         [ast.EstPairCols([(ast.ExpLit(ast.LitInt(42)), None)], 't', None,
-            [0,1,2,4,5,6,7,9],
+            ast.ExpCol(None, 'modelno'),
             None, None, None)]
     assert parse_bql_string('estimate pairwise row similarity from t'
-            ' using models 0-2,4-7,9') == \
+            ' using model modelno') == \
         [ast.EstPairRow(ast.ExpBQLSim(None, [ast.ColListAll()]), 't',
-            [0,1,2,4,5,6,7,9],
+            ast.ExpCol(None, 'modelno'),
             None, None, None)]
-    assert parse_bql_string('infer x from t using models 0-2,4-7,9') == \
+    assert parse_bql_string('infer x from t using model modelno') == \
         [ast.InferAuto([ast.InfColOne('x', None)], ast.ExpLit(ast.LitInt(0)),
-            't', [0,1,2,4,5,6,7,9],
+            't', ast.ExpCol(None, 'modelno'),
             None, None, None, None)]
-    assert parse_bql_string('infer explicit x from t'
-            ' using models 0-2,4-7,9') == \
+    assert parse_bql_string('infer explicit x from t using model modelno') == \
         [ast.InferExplicit([ast.SelColExp(ast.ExpCol(None, 'x'), None)],
-            't', [0,1,2,4,5,6,7,9],
+            't', ast.ExpCol(None, 'modelno'),
             None, None, None, None)]

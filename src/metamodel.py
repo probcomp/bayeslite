@@ -115,7 +115,7 @@ class IBayesDBMetamodel(object):
         raise NotImplementedError
 
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
-            max_seconds=None, iterations_per_checkpoint=None):
+            max_seconds=None, ckpt_iterations=None, ckpt_seconds=None):
         """Analyze the specified model numbers of a generator.
 
         If none are specified, analyze all of them.
@@ -123,38 +123,43 @@ class IBayesDBMetamodel(object):
         :param int iterations: maximum number of iterations of analysis for
             each model
         :param int max_seconds: requested maximum number of seconds to analyze
-        :param int iterations_per_checkpoint: number of iterations before
-            committing results of analysis to the database
+        :param int ckpt_iterations: number of iterations before committing
+            results of analysis to the database
+        :param int ckpt_seconds: number of seconds before committing results of
+            anlaysis to the database
         """
         raise NotImplementedError
 
-    def column_dependence_probability(self, bdb, generator_id, colno0, colno1):
+    def column_dependence_probability(self, bdb, generator_id, modelno, colno0,
+            colno1):
         """Compute ``DEPENDENCE PROBABILITY OF <col0> WITH <col1>``."""
         raise NotImplementedError
 
-    def mutual_information(self, bdb, generator_id, colno0, colno1,
+    def mutual_information(self, bdb, generator_id, modelno, colno0, colno1,
             numsamples=100):
         """Compute ``MUTUAL INFORMATION OF <col0> WITH <col1>``."""
         raise NotImplementedError
 
-    def column_typicality(self, bdb, generator_id, colno):
+    def column_typicality(self, bdb, generator_id, modelno, colno):
         """Compute ``TYPICALITY OF <col>``."""
         raise NotImplementedError
 
-    def column_value_probability(self, bdb, generator_id, colno, value):
+    def column_value_probability(self, bdb, generator_id, modelno, colno,
+            value):
         """Compute ``PROBABILITY OF <col> = <value>``."""
         raise NotImplementedError
 
-    def row_similarity(self, bdb, generator_id, rowid, target_rowid, colnos):
+    def row_similarity(self, bdb, generator_id, modelno, rowid, target_rowid,
+            colnos):
         """Compute ``SIMILARITY TO <target_row>`` for given `rowid`."""
         raise NotImplementedError
 
-    def row_typicality(self, bdb, generator_id, rowid):
+    def row_typicality(self, bdb, generator_id, modelno, rowid):
         """Compute ``TYPICALITY`` for given `rowid`."""
         raise NotImplementedError
 
-    def row_column_predictive_probability(self, bdb, generator_id, rowid,
-            colno):
+    def row_column_predictive_probability(self, bdb, generator_id, modelno,
+            rowid, colno):
         """Compute ``PREDICTIVE PROBABILITY OF <col>`` for given `rowid`.
 
         If the row's value for that column is null, the result should
@@ -162,21 +167,21 @@ class IBayesDBMetamodel(object):
         """
         raise NotImplementedError
 
-    def predict(self, bdb, generator_id, colno, rowid, threshold,
+    def predict(self, bdb, generator_id, modelno, colno, rowid, threshold,
             numsamples=None):
         """Predict a value for a column, if confidence is high enough."""
-        value, confidence = self.predict_confidence(bdb, generator_id, colno,
-            rowid, numsamples=numsamples)
+        value, confidence = self.predict_confidence(bdb, generator_id, modelno,
+            colno, rowid, numsamples=numsamples)
         if confidence < threshold:
             return None
         return value
 
-    def predict_confidence(self, bdb, generator_id, colno, rowid,
+    def predict_confidence(self, bdb, generator_id, modelno, colno, rowid,
             numsamples=None):
         """Predict a value for a column and return confidence."""
         raise NotImplementedError
 
-    def simulate(self, bdb, generator_id, constraints, colnos,
+    def simulate(self, bdb, generator_id, modelno, constraints, colnos,
             numpredictions=1):
         """Simulate `colnos` from a generator, subject to `constraints`.
 
@@ -190,7 +195,7 @@ class IBayesDBMetamodel(object):
         """
         raise NotImplementedError
 
-    def insertmany(self, bdb, generator_id, rows):
+    def insertmany(self, bdb, generator_id, modelno, rows):
         """Insert `rows` into a generator, updating analyses accordingly.
 
         `rows` is a list of tuples with one value for each column
