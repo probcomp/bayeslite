@@ -60,6 +60,19 @@ DO:     qt = sqlite3_quote_name(table)
 DON'T:  db.execute('SELECT %s FROM %s WHERE x = ?' % (column, table), (x,))
 DON'T:  db.execute('SELECT %s FROM %s WHERE x = %d' % (qc, qt, x))
 
+* SQL updates
+
+When issuing an UPDATE command to sqlite3, if you can count the number
+of rows it should affect, do so and assert that it affected that many
+rows:
+
+    total_changes = bdb.sqlite3.total_changes
+    bdb.sql_execute('UPDATE ...', (...))
+    assert bdb.sqlite3.total_changes - total_changes == 1
+
+XXX Should not use bdb.sqlite3 explicitly here.
+XXX Not every use is so marked.
+
 * Python coding style
 
 Generally follow PEP 8, with these exceptions:
