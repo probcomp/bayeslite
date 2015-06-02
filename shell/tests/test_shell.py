@@ -95,11 +95,17 @@ def spawntable():
 
 
 @pytest.fixture
-def spawngen(spawntable):
+def spawntablegen(spawntable):
     table, c = spawntable
     c.sendexpectcmd('.guess dha_cc %s' % (table,))
     c.expect_prompt()
-    return 'dha_cc', c
+    return table, 'dha_cc', c
+
+
+@pytest.fixture
+def spawngen(spawntablegen):
+    table, gen, c = spawntablegen
+    return gen, c
 
 
 # Tests begin
@@ -161,7 +167,7 @@ def test_dot_csv(spawntable):
 def test_describe_columns_without_generator(spawntable):
     table, c = spawntable
     c.sendexpectcmd('.describe columns %s' % (table,))
-    c.expect_lines(['No such generator: %s' % (table,)])
+    c.expect_lines(['No such generator: %s' % (repr(table),)])
     c.expect_prompt()
 
 
@@ -202,16 +208,50 @@ def test_sql(spawntable):
     c.expect_prompt()
 
 
-def test_describe_column_with_generator(spawngen):
-    gen, c = spawngen
-    c.sendexpectcmd('.describe models %s' % (gen,))
-    c.expect_lines([
+def test_describe_generator(spawntablegen):
+    table, gen, c = spawntablegen
+    generator_output = [
+        'id |   name | tabname | metamodel',
+        '---+--------+---------+----------',
+        ' 1 | dha_cc |     dha |  crosscat',
+    ]
+    c.sendexpectcmd('.describe generator %s' % (table,))
+    c.expect_lines(['No such generator: %s' % (repr(table),),])
+    c.expect_prompt()
+    c.sendexpectcmd('.describe generator %s' % (gen,))
+    c.expect_lines(generator_output)
+    c.expect_prompt()
+    c.sendexpectcmd('alter table %s set default generator to %s;' %
+        (table, gen))
+    c.expect_prompt()
+    c.sendexpectcmd('.describe generator %s' % (table,))
+    c.expect_lines(generator_output)
+    c.expect_prompt()
+
+
+def test_describe_models(spawntablegen):
+    table, gen, c = spawntablegen
+    models_output = [
         'modelno | iterations',
         '--------+-----------',
-    ])
+    ]
+    c.sendexpectcmd('.describe models %s' % (table,))
+    c.expect_lines(['No such generator: %s' % (repr(table),),])
     c.expect_prompt()
-    c.sendexpectcmd('.describe columns %s' % (gen,))
-    c.expect_lines([
+    c.sendexpectcmd('.describe models %s' % (gen,))
+    c.expect_lines(models_output)
+    c.expect_prompt()
+    c.sendexpectcmd('alter table %s set default generator to %s;' %
+        (table, gen))
+    c.expect_prompt()
+    c.sendexpectcmd('.describe models %s' % (table,))
+    c.expect_lines(models_output)
+    c.expect_prompt()
+
+
+def test_describe_column_with_generator(spawntablegen):
+    table, gen, c = spawntablegen
+    columns_output = [
         'colno |                name |  stattype | shortname',
         '------+---------------------+-----------+----------',
         '    1 |         N_DEATH_ILL | numerical |      None',
@@ -277,7 +317,18 @@ def test_describe_column_with_generator(spawngen):
         '   61 |           AMI_SCORE | numerical |      None',
         '   62 |           CHF_SCORE | numerical |      None',
         '   63 |         PNEUM_SCORE | numerical |      None',
-    ])
+    ]
+    c.sendexpectcmd('.describe columns %s' % (table,))
+    c.expect_lines(['No such generator: %s' % (repr(table),),])
+    c.expect_prompt()
+    c.sendexpectcmd('.describe columns %s' % (gen,))
+    c.expect_lines(columns_output)
+    c.expect_prompt()
+    c.sendexpectcmd('alter table %s set default generator to %s;' %
+        (table, gen))
+    c.expect_prompt()
+    c.sendexpectcmd('.describe columns %s' % (table,))
+    c.expect_lines(columns_output)
     c.expect_prompt()
 
 
