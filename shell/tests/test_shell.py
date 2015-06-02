@@ -136,6 +136,24 @@ def test_help_returns_list_of_commands(spawnbdb):
     c.expect_prompt()
 
 
+def test_trace_usage(spawnbdb):
+    c = spawnbdb
+    c.sendexpectcmd('.trace')
+    c.expect_lines([
+        'Usage: .trace bql',
+        '       .trace sql',
+    ])
+
+
+def test_untrace_usage(spawnbdb):
+    c = spawnbdb
+    c.sendexpectcmd('.untrace')
+    c.expect_lines([
+        'Usage: .untrace bql',
+        '       .untrace sql',
+    ])
+
+
 def test_dot_csv(spawntable):
     _table, _c = spawntable
 

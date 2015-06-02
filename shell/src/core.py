@@ -369,7 +369,8 @@ class Shell(cmd.Cmd):
                 self._bdb.sql_trace(self._sql_trace)
                 self._sql_traced = True
         else:
-            self.stdout.write('Trace what?\n')
+            self.stdout.write('Usage: .trace bql\n')
+            self.stdout.write('       .trace sql\n')
 
     def dot_untrace(self, line):
         '''untrace queries
@@ -387,7 +388,8 @@ class Shell(cmd.Cmd):
                 self._bdb.sql_untrace(self._sql_trace)
                 self._sql_traced = False
         else:
-            self.stdout.write('Untrace what?\n')
+            self.stdout.write('Usage: .untrace bql\n')
+            self.stdout.write('       .untrace sql\n')
 
     def dot_csv(self, line):
         '''create table from CSV file
