@@ -1449,3 +1449,10 @@ def test_checkpoint():
         bdb.execute('analyze t1_cc for 10 iterations checkpoint 1 iteration'
             ' wait')
         bdb.execute('analyze t1_cc for 5 seconds checkpoint 1 second wait')
+
+def test_infer_confidence():
+    with test_core.t1() as (bdb, _generator_id):
+        bdb.execute('initialize 1 model for t1_cc')
+        bdb.execute('analyze t1_cc for 1 iteration wait')
+        list(bdb.execute('infer explicit rowid, age,'
+            ' predict age as age_inf confidence age_conf from t1_cc'))

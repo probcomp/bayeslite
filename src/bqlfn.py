@@ -14,6 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import json
 import math
 import time
 
@@ -42,7 +43,7 @@ def bayesdb_install_bql(db, cookie):
         bql_row_column_predictive_probability)
     function("bql_predict", 5, bql_predict)
     function("bql_predict_confidence", 4, bql_predict_confidence)
-    function("bql_json_get", 3, bql_json_get)
+    function("bql_json_get", 2, bql_json_get)
 
 # XXX XXX XXX Temporary debugging kludge!
 import sys
@@ -201,8 +202,8 @@ def bql_predict_confidence(bdb, generator_id, modelno, colno, rowid,
     return json.dumps({'value': value, 'confidence': confidence})
 
 # XXX Whattakludge!
-def bql_json_get(bdb, json, key):
-    return json.loads(json)[key]
+def bql_json_get(bdb, blob, key):
+    return json.loads(blob)[key]
 
 def bayesdb_simulate(bdb, generator_id, constraints, colnos,
         modelno=None, numpredictions=1):
