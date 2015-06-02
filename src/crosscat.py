@@ -776,7 +776,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
     def predict_confidence(self, bdb, generator_id, modelno, colno, rowid,
             numsamples=None):
         if numsamples is None:
-            numsamples = 1
+            numsamples = 100    # XXXWARGHWTF
         M_c = self._crosscat_metadata(bdb, generator_id)
         column_names = core.bayesdb_generator_column_names(bdb, generator_id)
         table_name = core.bayesdb_generator_table(bdb, generator_id)
