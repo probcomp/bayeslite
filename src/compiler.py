@@ -957,15 +957,19 @@ class BQLCompiler_1Col(object):
         assert ast.is_bql(bql)
         generator_id = self.generator_id
         if isinstance(bql, ast.ExpBQLProb):
-            if bql.column is not None:
-                raise BQLError(bdb, 'Probability of value needs no column.')
             out.write('bql_column_value_probability(%d, ' % (generator_id,))
             compile_expression(bdb, self.modelno, self, out)
-            out.write(', %s, ' % (self.colno_exp,))
+            out.write(', ')
+            if bql.column is None:
+                out.write('%s' % (self.colno_exp,))
+            else:
+                colno = core.bayesdb_generator_column_number(bdb, generator_id,
+                    bql.column)
+                out.write('%d' % (colno,))
+            out.write(', ')
             compile_expression(bdb, bql.value, self, out)
             out.write(')')
         elif isinstance(bql, ast.ExpBQLPredProb):
-            # XXX Is this true?
             raise BQLError(bdb, 'Predictive probability makes sense'
                 ' only at row.')
         elif isinstance(bql, ast.ExpBQLTyp):
