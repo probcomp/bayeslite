@@ -15,7 +15,6 @@ try:
     except:
         pass
 except ImportError:
-    import pdb; pdb.set_trace()
     DO_PLOT = False
 
 
@@ -109,6 +108,10 @@ def plot(result, filename=None):
         ax_org.set_xlabel(shape)
     plt.suptitle('N=%i, n_models=%i, n_iter=%i' %
                  (args['n'], args['n_model'], args['n_iter']))
+
+    if not DO_PLOT:
+        import time
+        filename = 'exp_haystacks_results_' + str(time.time()) + '.png'
 
     if filename is None:
         plt.show()

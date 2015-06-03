@@ -113,7 +113,8 @@ def plot(result, filename=None):
     args = result['args']
     num_tests = len(result['n_distractor'])
     gs = gridspec.GridSpec(num_tests, 2)
-    plt.figure(tight_layout=True, facecolor='white', figsize=(10, num_tests*3))
+    plt.figure(facecolor='white', figsize=(10, num_tests*3))
+    plt.tight_layout()
     x = range(result['args']['step'], result['args']['n_iter']+1,
               result['args']['step'])
     for i, (ndiscols, data) in enumerate(result['n_distractor'].iteritems()):
@@ -131,6 +132,10 @@ def plot(result, filename=None):
 
     plt.suptitle('N=%i, n_models=%i, n_iter=%i' %
                  (args['n'], args['n_model'], args['n_iter']))
+
+    if not DO_PLOT:
+        import time
+        filename = 'exp_haystacks_results_' + str(time.time()) + '.png'
 
     if filename is None:
         plt.show()
