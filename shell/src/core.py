@@ -369,7 +369,8 @@ class Shell(cmd.Cmd):
                 self._bdb.sql_trace(self._sql_trace)
                 self._sql_traced = True
         else:
-            self.stdout.write('Trace what?\n')
+            self.stdout.write('Usage: .trace bql\n')
+            self.stdout.write('       .trace sql\n')
 
     def dot_untrace(self, line):
         '''untrace queries
@@ -387,7 +388,8 @@ class Shell(cmd.Cmd):
                 self._bdb.sql_untrace(self._sql_trace)
                 self._sql_traced = False
         else:
-            self.stdout.write('Untrace what?\n')
+            self.stdout.write('Usage: .untrace bql\n')
+            self.stdout.write('       .untrace sql\n')
 
     def dot_csv(self, line):
         '''create table from CSV file
@@ -489,8 +491,8 @@ class Shell(cmd.Cmd):
         if len(tokens) == 0:
             self.stdout.write('Usage: .describe table(s) [<table>...]\n')
             self.stdout.write('       .describe generator(s) [<gen>...]\n')
-            self.stdout.write('       .describe columns [<gen>...]\n')
-            self.stdout.write('       .describe model(s) [<gen>...]\n')
+            self.stdout.write('       .describe columns <gen>\n')
+            self.stdout.write('       .describe model(s) <gen> [<model>...]\n')
             return
         if casefold(tokens[0]) == 'table' or \
            casefold(tokens[0]) == 'tables':
@@ -530,13 +532,16 @@ class Shell(cmd.Cmd):
                 qualifier = '1'
             else:
                 params = tokens[1:]
-                qualifier = \
-                    '(' + ' OR '.join(['name = ?' for _p in params]) + ')'
+                names = ','.join('?%d' % (i + 1,) for i in range(len(params)))
+                qualifier = '''
+                    (name IN ({names}) OR (defaultp AND tabname IN ({names})))
+                '''.format(names=names)
                 ok = True
                 for generator in params:
-                    if not core.bayesdb_has_generator(self._bdb, generator):
+                    if not core.bayesdb_has_generator_default(self._bdb,
+                            generator):
                         self.stdout.write('No such generator: %s\n' %
-                                          (repr(generator),))
+                            (repr(generator),))
                         ok = False
                 if not ok:
                     return
@@ -546,17 +551,21 @@ class Shell(cmd.Cmd):
                     WHERE %s
             ''' % (qualifier,)
             with self._bdb.savepoint():
-                pretty.pp_cursor(self.stdout, self._bdb.execute(sql, params))
+                pretty.pp_cursor(self.stdout,
+                    self._bdb.sql_execute(sql, params))
         elif casefold(tokens[0]) == 'columns':
             if len(tokens) != 2:
                 self.stdout.write('Describe columns of what generator?\n')
                 return
             generator = tokens[1]
             with self._bdb.savepoint():
-                if not core.bayesdb_has_generator(self._bdb, generator):
-                    self.stdout.write('No such generator: %s\n' % (generator,))
+                if not core.bayesdb_has_generator_default(self._bdb,
+                        generator):
+                    self.stdout.write('No such generator: %s\n' %
+                        (repr(generator),))
                     return
-                generator_id = core.bayesdb_get_generator(self._bdb, generator)
+                generator_id = core.bayesdb_get_generator_default(self._bdb,
+                    generator)
                 sql = '''
                     SELECT c.colno AS colno, c.name AS name,
                             gc.stattype AS stattype, c.shortname AS shortname
@@ -576,10 +585,13 @@ class Shell(cmd.Cmd):
                 return
             generator = tokens[1]
             with self._bdb.savepoint():
-                if not core.bayesdb_has_generator(self._bdb, generator):
-                    self.stdout.write('No such generator: %s\n' % (generator,))
+                if not core.bayesdb_has_generator_default(self._bdb,
+                        generator):
+                    self.stdout.write('No such generator: %s\n' %
+                        (repr(generator),))
                     return
-                generator_id = core.bayesdb_get_generator(self._bdb, generator)
+                generator_id = core.bayesdb_get_generator_default(self._bdb,
+                    generator)
                 qualifier = None
                 if len(tokens) == 2:
                     qualifier = '1'
@@ -590,13 +602,13 @@ class Shell(cmd.Cmd):
                             modelno = int(token)
                         except ValueError:
                             self.stdout.write('Invalid model number: %s\n' %
-                                              (token,))
+                                (repr(token),))
                             return
                         else:
                             if not core.bayesdb_generator_has_model(
                                     self._bdb, generator_id, modelno):
                                 self.stdout.write('No such model: %d\n' %
-                                                  (modelno,))
+                                    (modelno,))
                                 return
                             modelnos.append(modelno)
                     qualifier = 'modelno IN (%s)' % \
@@ -608,5 +620,7 @@ class Shell(cmd.Cmd):
                 cursor = self._bdb.sql_execute(sql, (generator_id,))
                 pretty.pp_cursor(self.stdout, cursor)
         else:
-            self.stdout.write('I don\'t know what a %s is.\n' %
-                              (repr(tokens[0]),))
+            self.stdout.write('Usage: .describe table(s) [<table>...]\n')
+            self.stdout.write('       .describe generator(s) [<gen>...]\n')
+            self.stdout.write('       .describe columns <gen>\n')
+            self.stdout.write('       .describe model(s) <gen> [<model>...]\n')

@@ -348,14 +348,13 @@ def test_estimate_columns_trivial():
             ' (probability of value 42) > 0.5') == \
         prefix + \
         ' AND (bql_column_value_probability(1, NULL, c.colno, 42) > 0.5);'
-    # XXX ESTIMATE COLUMNS FROM T1 WHERE PROBABILITY OF 1 > 0.5
+    assert bql2sql('estimate columns from t1_cc'
+            ' where (probability of value 8) > (probability of age = 16)') == \
+        prefix + \
+        ' AND (bql_column_value_probability(1, NULL, c.colno, 8) >' \
+        ' bql_column_value_probability(1, NULL, 2, 16));'
     with pytest.raises(bayeslite.BQLError):
-        # Must omit column.
-        bql2sql('estimate columns from t1_cc where (probability of x = 0)'
-            ' > 0.5;')
-    with pytest.raises(bayeslite.BQLError):
-        # Must omit column.  PREDICTIVE PROBABILITY makes no sense
-        # without row.
+        # PREDICTIVE PROBABILITY makes no sense without row.
         bql2sql('estimate columns from t1_cc where' +
             ' predictive probability of x > 0;')
     assert bql2sql('estimate columns from t1_cc where typicality > 0.5;') == \
@@ -1449,3 +1448,10 @@ def test_checkpoint():
         bdb.execute('analyze t1_cc for 10 iterations checkpoint 1 iteration'
             ' wait')
         bdb.execute('analyze t1_cc for 5 seconds checkpoint 1 second wait')
+
+def test_infer_confidence():
+    with test_core.t1() as (bdb, _generator_id):
+        bdb.execute('initialize 1 model for t1_cc')
+        bdb.execute('analyze t1_cc for 1 iteration wait')
+        list(bdb.execute('infer explicit rowid, age,'
+            ' predict age as age_inf confidence age_conf from t1_cc'))
