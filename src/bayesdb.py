@@ -140,13 +140,11 @@ class BayesDB(object):
             phrase = phrases.next()
         except StopIteration:
             raise ValueError('no BQL phrase in string')
-        more = None
         try:
             phrases.next()
-            more = True
         except StopIteration:
-            more = False
-        if more:
+            pass
+        else:
             raise ValueError('>1 phrase in string')
         return bql.execute_phrase(self, phrase, bindings)
 
