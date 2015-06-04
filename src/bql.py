@@ -81,8 +81,7 @@ def execute_phrase(bdb, phrase, bindings=()):
             compiler.compile_query(bdb, phrase.query, out)
             winders, unwinders = out.getwindings()
             with compiler.bayesdb_wind(bdb, winders, unwinders):
-                for _x in bdb.sql_execute(out.getvalue(), out.getbindings()):
-                    pass
+                bdb.sql_execute(out.getvalue(), out.getbindings())
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.CreateTabSim):
