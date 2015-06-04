@@ -133,6 +133,32 @@ CREATE TABLE bayesdb_crosscat_subsample (
 );
 '''
 
+crosscat_schema_3to4 = '''
+UPDATE bayesdb_metamodel SET version = 4 WHERE name = 'crosscat';
+
+CREATE TABLE bayesdb_crosscat_subsample_temp (
+	generator_id    INTEGER NOT NULL
+				REFERENCES bayesdb_crosscat_metadata,
+	sql_rowid	INTEGER NOT NULL,
+	cc_row_id	INTEGER NOT NULL,
+	PRIMARY KEY(generator_id, sql_rowid ASC),
+	UNIQUE(generator_id, cc_row_id ASC)
+	-- Can't express the desired foreign key constraint,
+	--	FOREIGN KEY(sql_rowid) REFERENCES <table of generator>(rowid),
+	-- for two reasons:
+	--   1. No way for constraint to have data-dependent table.
+	--   2. Can't refer to implicit rowid in sqlite3 constraints.
+	-- So we'll just hope nobody botches it.
+);
+INSERT INTO bayesdb_crosscat_subsample_temp
+    SELECT * FROM bayesdb_crosscat_subsample;
+DROP TABLE bayesdb_crosscat_subsample;
+ALTER TABLE bayesdb_crosscat_subsample_temp
+    RENAME TO bayesdb_crosscat_subsample;
+
+DROP TABLE bayesdb_crosscat_subsampled;
+'''
+
 class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
     """Crosscat metamodel for BayesDB.
 
@@ -207,23 +233,12 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         columns = list(bdb.sql_execute(columns_sql, (generator_id,)))
         colnames = [name for name, _colno in columns]
         qcns = map(sqlite3_quote_name, colnames)
-        subsampled = bdb.sql_execute('''
-            SELECT COUNT(*) FROM bayesdb_crosscat_subsampled
-                WHERE generator_id = ?
-        ''', (generator_id,)).next()[0]
-        sql = None
-        params = None
-        if subsampled == 0:
-            sql = 'SELECT %s FROM %s' % (','.join(qcns), qt)
-            params = ()
-        else:
-            sql = '''
-                SELECT %s FROM %s AS t, bayesdb_crosscat_subsample AS s
-                    WHERE s.generator_id = ?
-                        AND s.sql_rowid = t._rowid_
-            ''' % (','.join('t.%s' % (qcn,) for qcn in qcns), qt)
-            params = (generator_id,)
-        cursor = bdb.sql_execute(sql, params)
+        cursor = bdb.sql_execute('''
+            SELECT %s FROM %s AS t, bayesdb_crosscat_subsample AS s
+                WHERE s.generator_id = ?
+                    AND s.sql_rowid = t._rowid_
+        ''' % (','.join('t.%s' % (qcn,) for qcn in qcns), qt),
+            (generator_id,))
         return [[crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
                 for value, (_name, colno) in zip(row, columns)]
             for row in cursor]
@@ -287,12 +302,6 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
 
     def _crosscat_get_rows(self, bdb, generator_id, rowids, X_L_list,
             X_D_list):
-        subsampled = bdb.sql_execute('''
-            SELECT COUNT(*) FROM bayesdb_crosscat_subsampled
-                WHERE generator_id = ?
-        ''', (generator_id,)).next()[0]
-        if subsampled == 0:
-            return [rowid - 1 for rowid in rowids], X_L_list, X_D_list
         row_ids = [None] * len(rowids)
         index = {}
         for i, rowid in enumerate(rowids):
@@ -405,7 +414,26 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 for stmt in crosscat_schema_2to3.split(';'):
                     bdb.sql_execute(stmt)
                 version = 3
-            if version != 3:
+            if version == 3:
+                cursor = bdb.sql_execute('''
+                    SELECT generator_id FROM bayesdb_crosscat_metadata
+                        WHERE NOT EXISTS
+                                (SELECT * FROM bayesdb_crosscat_subsampled AS s
+                                    WHERE s.generator_id = generator_id)
+                ''')
+                for (generator_id,) in cursor:
+                    table_name = core.bayesdb_generator_table(bdb,
+                        generator_id)
+                    qt = sqlite3_quote_name(table_name)
+                    bdb.sql_execute('''
+                        INSERT INTO bayesdb_crosscat_subsample
+                            (generator_id, sql_rowid, cc_rowid)
+                            SELECT ?, _rowid_, _rowid_ - 1 FROM %s
+                    ''' % (qt,), (generator_id,))
+                for stmt in crosscat_schema_3to4.split(';'):
+                    bdb.sql_execute(stmt)
+                version = 4
+            if version != 4:
                 raise BQLError(bdb, 'Crosscat already installed'
                     ' with unknown schema version: %d' % (version,))
 
@@ -514,29 +542,27 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                         'value': codemap[code],
                     })
 
-            # If necessary, choose a subsample.
+            # Choose a subsample (possibly the whole thing).
+            qt = sqlite3_quote_name(table)
+            cursor = None
             if do_subsample:
-                qt = sqlite3_quote_name(table)
-                cursor = bdb.sql_execute('SELECT COUNT(*) FROM %s' % (qt,))
-                nrows = cursor.next()[0]
-                if do_subsample < nrows:
-                    cursor = bdb.sql_execute('''
-                        SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC LIMIT ?
-                    ''' % (qt,), (do_subsample,))
-                    insert_subsampled_sql = '''
-                        INSERT INTO bayesdb_crosscat_subsampled (generator_id)
-                            VALUES (?)
-                    '''
-                    bdb.sql_execute(insert_subsampled_sql, (generator_id,))
-                    insert_subsample_sql = '''
-                        INSERT INTO bayesdb_crosscat_subsample
-                            (generator_id, sql_rowid, cc_row_id)
-                            VALUES (?, ?, ?)
-                    '''
-                    for i, row in enumerate(cursor):
-                        rowid = row[0]
-                        bdb.sql_execute(insert_subsample_sql,
-                            (generator_id, rowid, i))
+                cursor = bdb.sql_execute('''
+                    SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC LIMIT ?
+                ''' % (qt,), (do_subsample,))
+            else:
+                cursor = bdb.sql_execute('''
+                     SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC
+                ''' % (qt,))
+            insert_subsample_sql = '''
+                INSERT INTO bayesdb_crosscat_subsample
+                    (generator_id, sql_rowid, cc_row_id)
+                    VALUES (?, ?, ?)
+            '''
+            for i, row in enumerate(cursor):
+                sql_rowid = row[0]
+                cc_row_id = i
+                bdb.sql_execute(insert_subsample_sql,
+                    (generator_id, sql_rowid, cc_row_id))
 
     def drop_generator(self, bdb, generator_id):
         with bdb.savepoint():
@@ -570,11 +596,6 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     WHERE generator_id = ?
             '''
             bdb.sql_execute(delete_subsample_sql, (generator_id,))
-            delete_subsampled_sql = '''
-                DELETE FROM bayesdb_crosscat_subsampled
-                    WHERE generator_id = ?
-            '''
-            bdb.sql_execute(delete_subsampled_sql, (generator_id,))
             delete_codemap_sql = '''
                 DELETE FROM bayesdb_crosscat_column_codemap
                     WHERE generator_id = ?
