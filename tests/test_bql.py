@@ -905,13 +905,15 @@ def test_parametrized():
             'SELECT bql_row_similarity(1, NULL, _rowid_,'
                 ' (SELECT _rowid_ FROM "t" WHERE ("rowid" = 1)), 0) FROM "t"',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
-            'SELECT metadata_json FROM bayesdb_crosscat_metadata'
-                ' WHERE generator_id = ?',
             'SELECT modelno FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ?',
             'SELECT theta_json FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ? AND modelno = ?',
             'SELECT modelno FROM bayesdb_crosscat_theta'
+                ' WHERE generator_id = ?',
+            'SELECT COUNT(*) FROM bayesdb_crosscat_subsampled'
+                ' WHERE generator_id = ?',
+            'SELECT metadata_json FROM bayesdb_crosscat_metadata'
                 ' WHERE generator_id = ?',
             'SELECT cc_colno FROM bayesdb_crosscat_column'
                 ' WHERE generator_id = ? AND colno = ?',
@@ -949,13 +951,15 @@ def test_parametrized():
             'SELECT bql_row_similarity(1, NULL, _rowid_,'
                 ' (SELECT _rowid_ FROM "t" WHERE ("rowid" = 1)), 0) FROM "t"',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
-            'SELECT metadata_json FROM bayesdb_crosscat_metadata'
-                ' WHERE generator_id = ?',
             'SELECT modelno FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ?',
             'SELECT theta_json FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ? AND modelno = ?',
             'SELECT modelno FROM bayesdb_crosscat_theta'
+                ' WHERE generator_id = ?',
+            'SELECT COUNT(*) FROM bayesdb_crosscat_subsampled'
+                ' WHERE generator_id = ?',
+            'SELECT metadata_json FROM bayesdb_crosscat_metadata'
                 ' WHERE generator_id = ?',
             'SELECT cc_colno FROM bayesdb_crosscat_column'
                 ' WHERE generator_id = ? AND colno = ?',
