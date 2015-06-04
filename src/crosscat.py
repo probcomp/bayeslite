@@ -407,6 +407,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         do_subsample = self._subsample
         columns = []
         for directive in schema:
+            # XXX Whattakludge.  Invent a better parsing scheme for
+            # these things, please.
             if isinstance(directive, list) and \
                len(directive) == 2 and \
                isinstance(directive[0], (str, unicode)) and \
