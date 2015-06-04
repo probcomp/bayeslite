@@ -544,6 +544,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             # Delete all the things referring to the generator:
             # - diagnostics
             # - models
+            # - subsample
             # - codemap
             # - columns
             # - metadata
@@ -557,6 +558,16 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     WHERE generator_id = ?
             '''
             bdb.sql_execute(delete_models_sql, (generator_id,))
+            delete_subsample_sql = '''
+                DELETE FROM bayesdb_crosscat_subsample
+                    WHERE generator_id = ?
+            '''
+            bdb.sql_execute(delete_subsample_sql, (generator_id,))
+            delete_subsampled_sql = '''
+                DELETE FROM bayesdb_crosscat_subsampled
+                    WHERE generator_id = ?
+            '''
+            bdb.sql_execute(delete_subsampled_sql, (generator_id,))
             delete_codemap_sql = '''
                 DELETE FROM bayesdb_crosscat_column_codemap
                     WHERE generator_id = ?

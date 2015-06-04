@@ -38,6 +38,7 @@ def test_subsample():
                 name IGNORE
             )
         ''')
+        bdb.execute('DROP GENERATOR dhacc_full')
         bdb.execute('''
             CREATE GENERATOR dhacc FOR dha USING crosscat (
                 SUBSAMPLE(100),
@@ -57,3 +58,4 @@ def test_subsample():
             ' FROM dhacc WHERE _rowid_ = 1 OR _rowid_ = 101'))
         list(bdb.execute('INFER mdcr_spnd_amblnc FROM dhacc'
             ' WHERE _rowid_ = 1 OR _rowid_ = 101'))
+        bdb.execute('DROP GENERATOR dhacc')
