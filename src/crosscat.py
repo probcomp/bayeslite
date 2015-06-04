@@ -294,7 +294,12 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         if subsampled == 0:
             return [rowid - 1 for rowid in rowids], X_L_list, X_D_list
         row_ids = [None] * len(rowids)
-        index = dict((rowid, i) for i, rowid in enumerate(rowids))
+        index = {}
+        for i, rowid in enumerate(rowids):
+            if rowid in index:
+                index[rowid].add(i)
+            else:
+                index[rowid] = set([i])
         cursor = bdb.sql_execute('''
             SELECT sql_rowid, cc_row_id FROM bayesdb_crosscat_subsample
                 WHERE generator_id = ?
@@ -302,7 +307,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         ''' % (','.join('%d' % (rowid,) for rowid in rowids)),
             (generator_id,))
         for rowid, row_id in cursor:
-            row_ids[index[rowid]] = row_id
+            for i in index[rowid]:
+                row_ids[i] = row_id
             del index[rowid]
         if 0 < len(index):
             rowids = sorted(index.keys())
@@ -336,8 +342,9 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 SELECT MAX(cc_row_id) + 1 FROM bayesdb_crosscat_subsample
                     WHERE generator_id = ?
             ''', (generator_id,)).next()[0]
-            for i, rowid in enumerate(rowids):
-                row_ids[index[rowid]] = next_row_id + i
+            for n, rowid in enumerate(rowids):
+                for i in index[rowid]:
+                    row_ids[i] = next_row_id + n
         assert all(row_id is not None for row_id in row_ids)
         return row_ids, X_L_list, X_D_list
 
