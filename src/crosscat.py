@@ -174,7 +174,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
 
     def __init__(self, crosscat, subsample=None):
         if subsample is None:
-            subsample = 1000    # XXX
+            subsample = False
         self._crosscat = crosscat
         self._subsample = subsample
 
