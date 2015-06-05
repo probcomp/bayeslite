@@ -207,7 +207,7 @@ def test_casefold_colname():
 def t0_schema(bdb):
     bdb.sql_execute('create table t0 (id integer primary key, n integer)')
 def t0_data(bdb):
-    for row in [(0, 0), (1, 1), (42, 42)]:
+    for row in [(0, 0), (1, 1), (2, 42), (3, 87)]:
         bdb.sql_execute('insert into t0 (id, n) values (?, ?)', row)
 
 def t0():
@@ -397,9 +397,8 @@ def test_t1_simulate(colnos, constraints, numpredictions):
         for exname in examples.keys()
         for colno in range(1,3)])
 def test_onecolumn(exname, colno):
-    if exname == 't0':
-        # XXX Also too few columns for this test.
-        pytest.xfail("Crosscat can't handle a table with only one column.")
+    if exname == 't0' and colno > 0:
+        pytest.skip('Not enough columns in %s.' % (exname,))
     if exname.startswith('t1_sub') and colno > 1:
         pytest.skip('Not enough columns in %s.' % (exname,))
     with analyzed_bayesdb_generator(examples[exname](), 1, 1) \
@@ -414,8 +413,6 @@ def test_onecolumn(exname, colno):
         for colno0 in range(1,3)
         for colno1 in range(1,3)])
 def test_twocolumn(exname, colno0, colno1):
-    if exname == 't0':
-        pytest.xfail("Crosscat can't handle a table with only one column.")
     if exname == 't0':
         pytest.skip('Not enough columns in t0.')
     if exname.startswith('t1_sub') and (colno0 > 1 or colno1 > 1):
@@ -473,9 +470,7 @@ def test_t1_column_value_probability(colno, rowid):
         for target in range(2,4)
         for colnos in powerset(range(1,3))])
 def test_row_similarity(exname, source, target, colnos):
-    if exname == 't0':
-        pytest.xfail("Crosscat can't handle a table with only one column.")
-    if exname == 't0' and colnos != [] and colnos != [0]:
+    if exname == 't0' and any(colno > 0 for colno in colnos):
         pytest.skip('Not enough columns in t0.')
     if exname.startswith('t1_sub') and any(colno > 1 for colno in colnos):
         pytest.skip('Not enough columns in %s.' % (exname,))
@@ -492,8 +487,6 @@ def test_row_similarity(exname, source, target, colnos):
         for exname in examples.keys()
         for rowid in range(4)])
 def test_row_typicality(exname, rowid):
-    if exname == 't0':
-        pytest.xfail("Crosscat can't handle a table with only one column.")
     if exname == 't0' and colnos != [] and colnos != [0]:
         pytest.skip('Not enough columns in t0.')
     with analyzed_bayesdb_generator(examples[exname](), 1, 1) \
@@ -509,8 +502,6 @@ def test_row_typicality(exname, rowid):
         for rowid in range(4)
         for colno in range(1,3)])
 def test_row_column_predictive_probability(exname, rowid, colno):
-    if exname == 't0':
-        pytest.xfail("Crosscat can't handle a table with only one column.")
     if exname == 't0' and colnos != [] and colnos != [0]:
         pytest.skip('Not enough columns in t0.')
     if exname.startswith('t1_sub') and any(colno > 1 for colno in colnos):
