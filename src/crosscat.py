@@ -159,6 +159,32 @@ ALTER TABLE bayesdb_crosscat_subsample_temp
 DROP TABLE bayesdb_crosscat_subsampled;
 '''
 
+crosscat_schema_4to5 = '''
+UPDATE bayesdb_metamodel SET version = 5 WHERE name = 'crosscat';
+
+-- Remove the constraint that logscore be nonpositive, since evidently
+-- it is the log of a density rather than the log of a normalized
+-- probability.
+ALTER TABLE bayesdb_crosscat_diagnostics
+    RENAME TO bayesdb_crosscat_diagnostics_temp;
+CREATE TABLE bayesdb_crosscat_diagnostics (
+	generator_id	INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+	modelno		INTEGER NOT NULL,
+	checkpoint	INTEGER NOT NULL,
+	logscore	REAL NOT NULL,
+	num_views	INTEGER NOT NULL CHECK (0 < num_views),
+	column_crp_alpha
+			REAL NOT NULL,
+	iterations	INTEGER,	-- Not historically recorded.
+	PRIMARY KEY(generator_id, modelno, checkpoint),
+	FOREIGN KEY(generator_id, modelno)
+		REFERENCES bayesdb_generator_model(generator_id, modelno)
+);
+INSERT INTO bayesdb_crosscat_diagnostics
+    SELECT * FROM bayesdb_crosscat_diagnostics_temp;
+DROP TABLE bayesdb_crosscat_diagnostics_temp;
+'''
+
 class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
     """Crosscat metamodel for BayesDB.
 
@@ -433,7 +459,11 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 for stmt in crosscat_schema_3to4.split(';'):
                     bdb.sql_execute(stmt)
                 version = 4
-            if version != 4:
+            if version == 4:
+                for stmt in crosscat_schema_4to5.split(';'):
+                    bdb.sql_execute(stmt)
+                version = 5
+            if version != 5:
                 raise BQLError(bdb, 'Crosscat already installed'
                     ' with unknown schema version: %d' % (version,))
 
