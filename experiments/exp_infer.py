@@ -65,12 +65,14 @@ def run(args):
     btable = 'dha_infer'
     generator = 'dha_infer_cc'
 
-    impute_cols = eu.read_csv_header(DHA_CSV)
-    del impute_cols[impute_cols.index('NAME')]
+    all_cols = eu.read_csv_header(DHA_CSV)
+    del all_cols[all_cols.index('NAME')]
 
     temp = tempfile.NamedTemporaryFile()
-    indices, values = eu.remove_csv_values(DHA_CSV, temp.name, impute_cols,
+    indices, values = eu.remove_csv_values(DHA_CSV, temp.name, all_cols,
                                            args['prop_missing'])
+
+    impute_cols = indices.keys()
 
     with bayeslite.bayesdb_open() as bdb:
         engine = bayeslite.crosscat.CrosscatMetamodel(MultiprocessingEngine())
