@@ -9,6 +9,7 @@ generative models for data in a table.
 .. toctree::
    :maxdepth: 2
 
+   bql
    api
    internals
 
