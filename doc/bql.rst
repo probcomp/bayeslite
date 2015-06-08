@@ -186,3 +186,46 @@ Data Modelling Language
       ``ANALYZE t_cc FOR 10 MINUTES CHECKPOINT 30 SECONDS``
 
       ``ANALYZE t_cc MODELS 1-3,7-9 FOR 10 ITERATIONS CHECKPOINT 1 ITERATION``
+
+BQL Queries
+-----------
+
+.. index:: ``SELECT``
+``SELECT [DISTINCT|ALL] <columns> FROM <table> [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+
+   Standard SQL select.
+
+.. index:: ``ESTIMATE``
+``ESTIMATE [DISTINCT|ALL] <columns> FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+
+   ...
+
+.. index:: ``ESTIMATE COLUMNS``
+``ESTIMATE COLUMNS [<columns>] FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+
+   ...
+
+.. index:: ``ESTIMATE PAIRWISE``
+``ESTIMATE PAIRWISE <columns> FROM <generator> [FOR <subcolumns>] [USING MODEL <modelno>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
+
+   ...
+
+.. index:: ``ESTIMATE PAIRWISE ROW``
+``ESTIMATE PAIRWISE ROW <expression> FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
+
+   ...
+
+.. index:: ``INFER``
+``INFER <colnames> [WITH CONFIDENCE <conf>] FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+
+   ...
+
+.. index:: ``INFER EXPLICIT``
+``INFER EXPLICIT <columns> FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+
+   ...
+
+.. index:: ``SIMULATE``
+``SIMULATE <colnames> FROM <generator> [USING MODEL <modelno>] [GIVEN <constraint>]``
+
+   ...
