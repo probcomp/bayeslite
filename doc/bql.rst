@@ -18,6 +18,11 @@ A BQL phrase is either a command or a query.  In contexts admitting
 multiple BQL phrases, e.g. at the bayeslite shell, each phrase must be
 terminated by a semicolon before the next one begins.
 
+Expressions in BQL are like SQL, and may involve standard arithmetic,
+SQL functions such as IFNULL, &c.  Expressions in BQL may additionally
+involve model functions such as ``PREDICTIVE PROBABILITY OF <column>``
+in appropriate contexts.
+
 In the following syntax description, square brackets denote optional
 terms.  For example, the pattern
 
@@ -213,28 +218,36 @@ BQL Queries
 ``ESTIMATE [DISTINCT|ALL] <columns> FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the table associated with *generator*, extended
-   with model estimators of one implied row.
+   with model estimators of one implied row.  Values of model
+   estimators are averaged over all models if ``USING MODEL`` is not
+   specified.
 
 .. index:: ``ESTIMATE COLUMNS``
 ``ESTIMATE COLUMNS [<columns>] FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the modelled columns of *generator*, extended
-   with model estimators of one implied column.
+   with model estimators of one implied column.  Values of model
+   estimators are averaged over all models if ``USING MODEL`` is not
+   specified.
 
 .. index:: ``ESTIMATE PAIRWISE``
 ``ESTIMATE PAIRWISE <columns> FROM <generator> [FOR <subcolumns>] [USING MODEL <modelno>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the modelled columns of
    *generator*, extended with model estimators of two implied columns.
+   Values of model estimators are averaged over all models if ``USING
+   MODEL`` is not specified.
 
 .. index:: ``ESTIMATE PAIRWISE ROW``
 ``ESTIMATE PAIRWISE ROW <expression> FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the table assocated with
    *generator*, extended with model estimators of two implied rows.
+   Values of model estimators are averaged over all models if ``USING
+   MODEL`` is not specified.
 
-   (Currently the only such functions are ``SIMILARITY`` and
-   ``SIMILARITY WITH RESPECT TO (...)``.)
+   (Currently the only functions of two implied rows are
+   ``SIMILARITY`` and ``SIMILARITY WITH RESPECT TO (...)``.)
 
 .. index:: ``INFER``
 ``INFER <colnames> [WITH CONFIDENCE <conf>] FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
@@ -245,6 +258,11 @@ BQL Queries
    values in columns named in *condition*, *grouping*, and *ordering*
    will not be.  Model estimators and model predictions are allowed in
    the expressions.
+
+   Values of model estimators are averaged over all models if ``USING
+   MODEL`` is not specified.
+
+   XXX: What about values and confidences of model predictions?
 
    FUTURE: *Colnames* will be allowed to have arbitrary expressions,
    with any references to columns inside automatically filled in if
@@ -266,6 +284,11 @@ BQL Queries
    the column *name*, and one named *confidence* holding the
    confidence of the prediction.
 
+   Values of model estimators are averaged over all models if ``USING
+   MODEL`` is not specified.
+
+   XXX: What about values and confidences of model predictions?
+
 .. index:: ``SIMULATE``
 ``SIMULATE <colnames> FROM <generator> [USING MODEL <modelno>] [GIVEN <constraint>] [LIMIT <limit>]``
 
@@ -275,6 +298,9 @@ BQL Queries
       ``<column> = <expression>``
 
    The number of rows in the result will be *limit*.
+
+   Each row is drawn from a single model, but if ``USING MODEL`` is
+   not specified, different rows may be drawn from different models.
 
 Model Estimators
 ----------------
