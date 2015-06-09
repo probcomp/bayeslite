@@ -38,67 +38,55 @@ def train_models(args):
     engine = bayeslite.crosscat.CrosscatMetamodel(
             MultiprocessingEngine())
     bayeslite.bayesdb_register_metamodel(bdb, engine)
-
-    
     colno = args['colno']
     coltypes = args['coltypes']
-
     model_hypers = {i:[] for i in xrange(args['n_model'])}
-    for k in xrange(args['n_model']):
-        
-        print "ANALYZING MODEL {} for {} Iterations".format(k, args['target_iters'])
 
-        temp = tempfile.NamedTemporaryFile()
-        eu.data_to_csv(np.asarray(args['dataset']), temp.name)
-        
-        btable = 'hyper{}_{}'.format(args['n_model'], k)
-        generator = 'hyper{}_cc{}'.format(args['n_model'], k)
-        bayeslite.bayesdb_read_csv_file(bdb, btable, temp.name, header=True, create=True)
-        qt_btable = sqlite3_quote_name(btable)
-        temp.close()
+    temp = tempfile.NamedTemporaryFile()
+    eu.data_to_csv(np.asarray(args['dataset']), temp.name)
+    
+    btable = 'hyper{}'.format(args['n_model'])
+    generator = 'hyper{}_cc'.format(args['n_model'])
+    bayeslite.bayesdb_read_csv_file(bdb, btable, temp.name, header=True, create=True)
+    qt_btable = sqlite3_quote_name(btable)
+    temp.close()
 
-        # bql = '''
-        # SELECT * FROM {}
-        # '''.format(qt_btable)
-        # pprint(bdb.execute(bql))
+    C = ['c{} {}'.format(s, coltypes[s]) for s in xrange(len(coltypes))]
+    bql = '''
+    CREATE GENERATOR {} FOR {}
+        USING crosscat (
+            {}
+        );
+    '''.format(generator, qt_btable, str(C)[2:-2].replace('\'',''))
+    bdb.execute(bql)
 
-        C = ['c{} {}'.format(s, coltypes[s]) for s in xrange(len(coltypes))]
+    bql = '''
+    INITIALIZE {} MODELS FOR {}
+    '''.format(args['n_model'], generator)
+    bdb.execute(bql)
+
+    print "ANALYZING {} MODELS for {} Iterations".format(args['n_model'], args['target_iters'])
+    total_iters = args['step_size']
+    while (total_iters <= args['target_iters']):
+        print total_iters,
+        sys.stdout.flush()
+    
         bql = '''
-        CREATE GENERATOR {} FOR {}
-            USING crosscat (
-                {}
-            );
-        '''.format(generator, qt_btable, str(C)[2:-2].replace('\'',''))
+        ANALYZE {} FOR {} ITERATIONS WAIT;
+        '''.format(generator, args['step_size'])
         bdb.execute(bql)
 
-        bql = '''
-        INITIALIZE 1 MODELS FOR {}
-        '''.format(generator)
-        bdb.execute(bql)
-
-        total_iters = args['step_size']
-        while (total_iters <= args['target_iters']):
-            print total_iters,
-            sys.stdout.flush()
-        
-            bql = '''
-            ANALYZE {} FOR {} ITERATIONS WAIT;
-            '''.format(generator, args['step_size'])
-            bdb.execute(bql)
-
-            generator_id = core.bayesdb_get_generator(bdb, generator)
-            sql = '''
-            SELECT theta_json FROM bayesdb_crosscat_theta WHERE generator_id = {}
-            '''.format(generator_id)
-            cursor = bdb.sql_execute(sql)
-            (theta_json,) = cursor.fetchall()[0]
+        generator_id = core.bayesdb_get_generator(bdb, generator)
+        sql = '''
+        SELECT theta_json FROM bayesdb_crosscat_theta WHERE generator_id = {}
+        '''.format(generator_id)
+        cursor = bdb.sql_execute(sql)
+        for (k, (theta_json,)) in enumerate(cursor):
             theta = json.loads(theta_json)
-            
             model_hypers[k].append(theta['X_L']['column_hypers'][colno])
-
-            total_iters += args['step_size']
-        print
-
+        total_iters += args['step_size']
+    
+    print
     bdb.close()
     return model_hypers
 
@@ -121,7 +109,7 @@ def plot(result, filename=None):
     actual_weights = args['actual_component_weights']
 
     fig, ax = plt.subplots()
-    ax.set_xlabel('Number of Iterations', fontweight = 'bold')
+    ax.set_xlabel('Number of Iterations'+'\n'+'({} Samples)'.format(args['n_samples']), fontweight = 'bold')
     ax.set_ylabel(r'$\log P(\mu,\rho | D)$', fontweight = 'bold')
     ax.set_title(r'Log Density of Mixture Component Mean and Precison $(\mu,\rho)$'+'\n'+
         'Under Posterior Dirichlet Process Base Distribution')
@@ -147,16 +135,8 @@ def plot(result, filename=None):
     ax.legend(loc=3)
     ax.grid()
 
-    # ax.plot(xs, averages, alpha = 1, color = 'black', linestyle = '--', label = 'CC Mean')
-    # ax.text(ax.get_xlim()[1], averages[-1], r'$\mu_{{CC}} = {:.3f}$'.format(averages[-1]), color = 'black')
-
-    # actual_average = 0
-    # for i,(z,w) in enumerate(zip(args['actual_component_params'],args['actual_component_weights'])):
-    #     ax.axhline(y = z['mu'], color = 'blue', alpha = 0.4)
-    #     ax.text(ax.get_xlim()[1], z['mu'], r'$(w_{},\mu_{})=({:.2f},{:.2f})$'.format(i,i,w,z['mu']), color = 'blue')
-    #     actual_average += z['mu'] * w
-    # ax.axhline(y = actual_average, color = 'red', linestyle='--')
-    # ax.text(ax.get_xlim()[1], actual_average, r'$\sum w_kp_k={:.3f}$'.format(actual_average), color = 'red')
+    import pickle
+    pickle.dump(ax, file('myplot.pickle', 'w'))
 
     if not DO_PLOT:
         import time
@@ -170,8 +150,9 @@ def plot(result, filename=None):
 if __name__ == '__main__':
     args = {
     'n_model' : 10,
+    'n_samples': 200,
     'step_size' : 5,
-    'target_iters' : 50,
+    'target_iters' : 150,
     'seed' : 448
     }
 
@@ -182,9 +163,9 @@ if __name__ == '__main__':
     None, None, dict(K=9), None, None, None]
     cols_to_views = [0, 0, 0, 1, 1, 2, 1, 0, 2, 3, 1, 0]
     cluster_weights = [[.3, .3, .4],[.6, .2, .1, .1],[.4, .4, .2],[.8, .2]]
-    separation = [0.6, 0.4, 0.5, 0.6]
+    separation = [0.6, 0.9, 0.5, 0.6]
     sdata = sdg.gen_data(cctypes,
-        1000,
+        args['n_samples'],
         cols_to_views, 
         cluster_weights, 
         separation, 
@@ -198,8 +179,6 @@ if __name__ == '__main__':
     args['actual_component_params'] = sdata[2]['component_params'][args['colno']]
     args['actual_component_weights'] = cluster_weights[cols_to_views[args['colno']]]
 
-    for n_samples in [20]:
-        args['n_samples'] = n_samples
-        args['dataset'] = np.asarray(sdata[0][:n_samples])
-        result = runner(args)
-        plot(result)
+    args['dataset'] = np.asarray(sdata[0])
+    result = runner(args)
+    plot(result)
