@@ -18,6 +18,19 @@ A BQL phrase is either a command or a query.  In contexts admitting
 multiple BQL phrases, e.g. at the bayeslite shell, each phrase must be
 terminated by a semicolon before the next one begins.
 
+In the following syntax description, square brackets denote optional
+terms.  For example, the pattern
+
+   ``DEPENDENCE PROBABILITY [[OF <column1>] WITH <column2>]``
+
+allows
+
+* ``DEPENDENCE PROBABILITY``
+* ``DEPENDENCE PROBABILITY WITH quagga``
+* ``DEPENDENCE PROBABILITY OF eland WITH quagga``
+
+but not ``DEPENDENCE PROBABILITY OF eland``.
+
 BQL Commands
 ------------
 
@@ -193,39 +206,132 @@ BQL Queries
 .. index:: ``SELECT``
 ``SELECT [DISTINCT|ALL] <columns> FROM <table> [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
-   Standard SQL select.
+   Standard SQL ``SELECT``.  Model estimators are not allowed, except
+   in subqueries of types that allow them.
 
 .. index:: ``ESTIMATE``
 ``ESTIMATE [DISTINCT|ALL] <columns> FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
-   ...
+   Like ``SELECT`` on the table associated with *generator*, extended
+   with model estimators of one implied row.
 
 .. index:: ``ESTIMATE COLUMNS``
 ``ESTIMATE COLUMNS [<columns>] FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
-   ...
+   Like ``SELECT`` on the modelled columns of *generator*, extended
+   with model estimators of one implied column.
 
 .. index:: ``ESTIMATE PAIRWISE``
 ``ESTIMATE PAIRWISE <columns> FROM <generator> [FOR <subcolumns>] [USING MODEL <modelno>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
-   ...
+   Like ``SELECT`` on the self-join of the modelled columns of
+   *generator*, extended with model estimators of two implied columns.
 
 .. index:: ``ESTIMATE PAIRWISE ROW``
 ``ESTIMATE PAIRWISE ROW <expression> FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
-   ...
+   Like ``SELECT`` on the self-join of the table assocated with
+   *generator*, extended with model estimators of two implied rows.
+
+   (Currently the only such functions are ``SIMILARITY`` and
+   ``SIMILARITY WITH RESPECT TO (...)``.)
 
 .. index:: ``INFER``
 ``INFER <colnames> [WITH CONFIDENCE <conf>] FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
-   ...
+   Select the specified *colnames* from *generator*, filling in
+   missing values if they can be filled in with confidence at least
+   *conf*.  Only missing values *colnames* will be filled in; missing
+   values in columns named in *condition*, *grouping*, and *ordering*
+   will not be.  Model estimators and model predictions are allowed in
+   the expressions.
+
+   FUTURE: *Colnames* will be allowed to have arbitrary expressions,
+   with any references to columns inside automatically filled in if
+   missing.
 
 .. index:: ``INFER EXPLICIT``
 ``INFER EXPLICIT <columns> FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
-   ...
+   Like ``SELECT`` on the table associated with *generator*, extended
+   with model estimators of one implied row and with model predictions.
+
+   In addition to normal ``SELECT`` columns, *columns* may include
+   columns of the form
+
+      ``PREDICT <name> [AS <rename>] CONFIDENCE <confidence>``
+
+   This results in two resulting columns, one named *rename*, or
+   *name* if *rename* is ont supplied, holding a predicted value of
+   the column *name*, and one named *confidence* holding the
+   confidence of the prediction.
 
 .. index:: ``SIMULATE``
-``SIMULATE <colnames> FROM <generator> [USING MODEL <modelno>] [GIVEN <constraint>]``
+``SIMULATE <colnames> FROM <generator> [USING MODEL <modelno>] [GIVEN <constraint>] [LIMIT <limit>]``
+
+   Select the requested *colnames* from rows sampled from *generator*.
+   The returned rows satisfy *constraint*, which must be of the form
+
+      ``<column> = <expression>``
+
+   The number of rows in the result will be *limit*.
+
+Model Estimators
+----------------
+
+Model estimators are functions of a model, up to two columns, and up to one row.
+
+.. index:: ``PREDICTIVE PROBABILITY``
+``PREDICTIVE PROBABILITY OF <column>``
+
+   ...
+
+.. index:: ``PROBABILITY OF``
+``PROBABILITY OF <column> = <expression>``
+``PROBABILITY OF VALUE <expression>``
+
+   ...
+
+   WARNING: The value this function is not a normalized probability in
+   [0, 1], but rather a probability density with a normalization
+   constant that is common to the column but may vary between columns.
+   So it may take on values above 1.
+
+.. index:: ``TYPICALITY``
+``TYPICALITY``
+``TYPICALITY [OF <column>]``
+
+   ...
+
+.. index:: ``SIMILARITY``
+``SIMILARITY [TO (<expression>)] [WITH RESPECT TO (<columns>)]``
+
+   ...
+
+.. index:: ``CORRELATION``
+``CORRELATION [[OF <column1>] WITH <column2>]``
+
+   ...
+
+.. index:: ``DEPENDENCE PROBABILITY``
+``DEPENDENCE PROBABILITY [[OF <column1>] WITH <column2>]``
+
+   ...
+
+.. index:: ``MUTUAL INFORMATION``
+``MUTUAL INFORMATION [[OF <column1>] WITH <column2>]``
+
+   ...
+
+.. index:: ``DEPENDENCE PROBABILITY``
+``DEPENDENCE PROBABILITY [[OF <column1>] WITH <column2>]``
+
+   ...
+
+Model Predictions
+-----------------
+
+.. index:: ``PREDICT``
+``PREDICT <column> [WITH CONFIDENCE <confidence>]``
 
    ...
