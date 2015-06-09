@@ -284,49 +284,69 @@ Model estimators are functions of a model, up to two columns, and up to one row.
 .. index:: ``PREDICTIVE PROBABILITY``
 ``PREDICTIVE PROBABILITY OF <column>``
 
-   ...
+   Function of one implied row.  Returns the predictive probability of
+   *column* for this row.
+
+   XXX: Rewrite this description!
 
 .. index:: ``PROBABILITY OF``
-``PROBABILITY OF <column> = <expression>``
-``PROBABILITY OF VALUE <expression>``
+``PROBABILITY OF <column> = <value>``
+``PROBABILITY OF VALUE <value>``
 
-   ...
+   Constant, or function of one implied column.  Returns the
+   probability that *column* or the implied column has the value
+   *value*.
 
    WARNING: The value this function is not a normalized probability in
    [0, 1], but rather a probability density with a normalization
    constant that is common to the column but may vary between columns.
    So it may take on values above 1.
 
-.. index:: ``TYPICALITY``
+.. index:: ``TYPICALITY`` (row)
 ``TYPICALITY``
+
+   Function of one implied row.  Returns a measure of the typicality
+   of the row, i.e. how much it shares in common with many other rows.
+
+.. index:: ``TYPICALITY`` (column)
 ``TYPICALITY [OF <column>]``
 
-   ...
+   Constant, or function of one implied column.  Returns a measure of
+   the typicality of the column, i.e. how much it shares in common
+   with many other columns.
 
 .. index:: ``SIMILARITY``
 ``SIMILARITY [TO (<expression>)] [WITH RESPECT TO (<columns>)]``
 
-   ...
+   Function of one or two implied rows.  If given ``TO``, returns a
+   measure of the similarity of the implied row with the first row
+   satisfying <expression>.  Otherwise, returns a measure of the
+   similarity of the two implied rows.  The similarity may be
+   considered with respect to a subset of columns.
 
 .. index:: ``CORRELATION``
 ``CORRELATION [[OF <column1>] WITH <column2>]``
 
-   ...
+   Constant, or function of one or two implied columns.  Returns
+   standard measures of correlation between columns:
+
+   * Pearson correlation coefficient for two numerical columns.
+   * Cramer's phi for two categorical columns.
+   * ANOVA R^2 for a categorical column and a numerical column.
+
+   Cyclic columns are not supported.
 
 .. index:: ``DEPENDENCE PROBABILITY``
 ``DEPENDENCE PROBABILITY [[OF <column1>] WITH <column2>]``
 
-   ...
+   Constant, or function of one or two implied columns.  Returns the
+   probability (density) that the two columns are dependent.
 
 .. index:: ``MUTUAL INFORMATION``
 ``MUTUAL INFORMATION [[OF <column1>] WITH <column2>]``
 
-   ...
-
-.. index:: ``DEPENDENCE PROBABILITY``
-``DEPENDENCE PROBABILITY [[OF <column1>] WITH <column2>]``
-
-   ...
+   Constant, or function of one or two implied columns.  Returns the
+   strength of dependence between the two columns, in units of bits.
 
 Model Predictions
 -----------------
@@ -334,4 +354,7 @@ Model Predictions
 .. index:: ``PREDICT``
 ``PREDICT <column> [WITH CONFIDENCE <confidence>]``
 
-   ...
+   Function of one implied row.  Samples a value for *column* from the
+   model given the other values in the row, and returns it if the
+   confidence of the prediction is at least *confidence*; otherwise
+   returns null.
