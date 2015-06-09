@@ -2,7 +2,7 @@
 
 Every commit on long-term branches including master should pass
 
-% ./check.sh
+   % ./check.sh
 
 which builds bayeslite and runs the automatic tests.  Please run this
 in your .git/hooks/pre-commit script during development, and in each
