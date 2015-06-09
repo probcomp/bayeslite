@@ -21,6 +21,18 @@ run a subset of tests, and stop at the first failure, with
 However, please double-check that every commit you have made passes
 all tests before publishing the commits.
 
+* Randomization
+
+Avoid indiscriminate nondeterminism.
+
+All random choices should be made from PRNGs with seeds that the user
+can control, via the normal Python API and the bayeslite shell.  Any
+actual nondeterminism should be clearly labelled as such, e.g. a
+future shell command to choose a seed from /dev/urandom.
+
+(Crosscat is currently nondeterministc, but this is a bug in
+Crosscat.)
+
 * SQL/BQL parameters
 
 Use SQL/BQL parameters to pass strings and other values into SQL/BQL.
