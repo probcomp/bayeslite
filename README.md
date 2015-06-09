@@ -24,3 +24,14 @@ $ python setup.py install
 Bayeslite is tested on Ubuntu 14.04.  It should also run on other
 operating systems with sqlite3 >= 3.7.17, but we don't regularly test
 them.
+
+## Documentation
+
+Run
+
+```
+$ make doc
+```
+
+to build all documentation in build/doc, one directory per output
+format, e.g. build/doc/pdf/bayeslite.pdf.
