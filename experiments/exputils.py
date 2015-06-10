@@ -41,15 +41,26 @@ def remove_csv_values(csv_filename, out_filename, cols, prop_missing):
     df = pd.DataFrame.from_csv(csv_filename)
     keys = list(df.index)
 
+    num_missing = int(df.shape[0]*df.shape[1]*prop_missing)
+    assert num_missing > 0
+    print num_missing
+
+    all_indices = [(col, key,) for key in keys for col in cols]
+
+    idxs = random.sample(all_indices, num_missing)
+
     indices = dict()
     values = dict()
-    for col in cols:
-        idxs = random.sample(keys, int(len(keys)*prop_missing))
-        vals = list(df.loc[idxs, col])
-        df.loc[idxs, col] = float('NaN')
 
-        indices[col] = idxs
-        values[col] = vals
+    for col, idx in idxs:
+        val = df.loc[idx, col]
+        df.loc[idx, col] = float('NaN')
+        if indices.get(col, None) is None:
+            indices[col] = [idx]
+            values[col] = [val]
+        else:
+            indices[col].append(idx)
+            values[col].append(val)
 
     df.to_csv(out_filename, na_rep='NaN')
 
