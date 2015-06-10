@@ -162,6 +162,7 @@ def runner(args):
 def plot(result, filename=None):
     args = result['args']
     n_model = args['n_model']
+    initial_size = args['initial_size']
     step_size = args['step_size']
     target_iters = args['target_iters']
     target_samples = args['target_samples']
@@ -173,13 +174,13 @@ def plot(result, filename=None):
     rho_min, rho_max, rho_av = min(actual_rhos), max(actual_rhos), np.dot(actual_weights, actual_rhos)
 
     if args['byiter']:
-        xs = np.arange(step_size, target_iters + 1, step_size)
+        xs = np.arange(initial_size, target_iters + 1, step_size)
         train_type = 'Iterations'
         train_count = target_iters
         fixed_type = 'Samples'
         fixed_count = target_samples
     else:
-        xs = np.arange(step_size, target_samples + 1, step_size)
+        xs = np.arange(initial_size, target_samples + 1, step_size)
         train_type = 'Samples'
         train_count = target_samples
         fixed_type = 'Iterations'
@@ -222,10 +223,10 @@ def plot(result, filename=None):
                 line_pdfs[i,counter] += log_pdf_joint
 
         # normalize density on the grid
-        grid_pdfs[xs[counter]] = grid / -args['n_model']
+        grid_pdfs[xs[counter]] = grid / args['n_model']
 
         # normalize density on the actual params
-        line_pdfs[:,counter] /= -args['n_model']
+        line_pdfs[:,counter] /= args['n_model']
 
     # plot density of actual parameters
     fig, ax = plt.subplots()
@@ -250,7 +251,7 @@ def plot(result, filename=None):
         ax.set_xlabel(r'$\mu$', fontweight = 'bold')
         ax.set_ylabel(r'$\rho$', fontweight = 'bold')
         heatmap = ax.pcolormesh(mus, rhos, grid_pdfs[counter],
-            cmap=plt.cm.brg)
+            cmap=plt.cm.brg_r)
         ax.axis('tight')
         
         for weight, hypers in zip(actual_weights, actual_params):
@@ -274,10 +275,10 @@ def plot(result, filename=None):
 if __name__ == '__main__':
     args = {
     'n_model' : 5,
-    'step_size' : 2,
-    'initial_size':5,
+    'step_size' : 25,
+    'initial_size':25,
     'target_samples': 100,
-    'target_iters' : 250,
+    'target_iters' : 500,
     'seed' : 448,
     'byiter': True
     }
@@ -291,7 +292,7 @@ if __name__ == '__main__':
     cluster_weights = [[.3, .3, .4],[.9,0.1],[.4, .4, .2],[.8, .2],[0.4,0.5,0.1]]
     separation = [0.6, 0.9, 0.5, 0.6, 0.15]
     sdata = sdg.gen_data(cctypes,
-        1000,
+        args['target_samples'],
         cols_to_views, 
         cluster_weights, 
         separation, 
@@ -304,6 +305,8 @@ if __name__ == '__main__':
 
     args['actual_component_params'] = sdata[2]['component_params'][args['colno']]
     args['actual_component_weights'] = cluster_weights[cols_to_views[args['colno']]]
+
+    print args['actual_component_params']
 
     args['dataset'] = np.asarray(sdata[0])
     result = runner(args)
