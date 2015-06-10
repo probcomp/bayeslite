@@ -186,7 +186,7 @@ def plot(result, filename=None):
         fixed_type = 'Iterations'
         fixed_count = target_iters
 
-    RESOLUTION = 70
+    RESOLUTION = 85
     mus = np.linspace(mu_min-np.abs(mu_min), mu_max+np.abs(mu_min), RESOLUTION)
     rhos = np.linspace(0.4*rho_min, 1.6*rho_max, RESOLUTION)
     
@@ -229,16 +229,16 @@ def plot(result, filename=None):
         line_pdfs[:,counter] /= args['n_model']
 
     # plot density of actual parameters
-    fig, ax = plt.subplots()
-    ax.set_xlabel('Number of {}'.format(train_type), fontweight = 'bold')
-    ax.set_ylabel(r'$\log P(\mu,\rho | D)$', fontweight = 'bold')
-    ax.set_title(r'Log Density of Mixture Component Mean and Precison $(\mu,\rho)$'+'\n'+
-        'Under Posterior Dirichlet Process Base Distribution ({} {})'.format(fixed_count, fixed_type),
-        fontweight = 'bold')
+    # fig, ax = plt.subplots()
+    # ax.set_xlabel('Number of {}'.format(train_type), fontweight = 'bold')
+    # ax.set_ylabel(r'$\log P(\mu,\rho | D)$', fontweight = 'bold')
+    # ax.set_title(r'Log Density of Mixture Component Mean and Precison $(\mu,\rho)$'+'\n'+
+    #     'Under Posterior Dirichlet Process Base Distribution ({} {})'.format(fixed_count, fixed_type),
+    #     fontweight = 'bold')
 
-    for (i,row) in enumerate(line_pdfs):
-        ax.plot(xs, row, label = r'$w_{}={}$'.format(i, actual_weights[i]), color = 'rbgmcyk'[i])
-    ax.legend(loc=3)
+    # for (i,row) in enumerate(line_pdfs):
+    #     ax.plot(xs, row, label = r'$w_{}={}$'.format(i, actual_weights[i]), color = 'rbgmcyk'[i])
+    # ax.legend(loc=3)
 
     # plot density of the grid
     fig, axes = plt.subplots(nrows = 2, ncols = len(xs)/2, sharex=True, sharey=True)
@@ -278,7 +278,7 @@ if __name__ == '__main__':
     'step_size' : 25,
     'initial_size':25,
     'target_samples': 100,
-    'target_iters' : 500,
+    'target_iters' : 250,
     'seed' : 448,
     'byiter': True
     }
@@ -289,7 +289,7 @@ if __name__ == '__main__':
     distargs = [None, None, dict(K=9), None, dict(K=7), dict(K=4),
     None, None, dict(K=9), None, None, None, None, None]
     cols_to_views = [0, 0, 0, 1, 1, 2, 1, 0, 2, 3, 1, 0, 4, 4]
-    cluster_weights = [[.3, .3, .4],[.9,0.1],[.4, .4, .2],[.8, .2],[0.4,0.5,0.1]]
+    cluster_weights = [[.2, .3, .5],[.9, .1],[.4, .4, .2],[.8, .2],[.4, .5, .1]]
     separation = [0.6, 0.9, 0.5, 0.6, 0.15]
     sdata = sdg.gen_data(cctypes,
         args['target_samples'],
