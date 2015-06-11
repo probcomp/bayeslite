@@ -27,7 +27,7 @@ def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('bdbpath', type=str, nargs='?', default=None,
                         help="bayesdb database file")
-    parser.add_argument('-j', '--njob', type=int, default=0,
+    parser.add_argument('-j', '--jobs', type=int, default=0,
                         help="Max number of jobs (processes) useable.")
     parser.add_argument('-s', '--seed', type=int, default=None,
                         help="Random seed for the default generator.")
@@ -57,10 +57,10 @@ def run(stdin, stdout, stderr, argv):
         return 1
     bdb = bayeslite.bayesdb_open(pathname=args.bdbpath)
 
-    if args.njob != 1:
+    if args.jobs != 1:
         import crosscat.MultiprocessingEngine as ccme
-        njob = args.njob if args.njob > 0 else None
-        crosscat = ccme.MultiprocessingEngine(seed=args.seed, cpu_count=njob)
+        jobs = args.jobs if args.jobs > 0 else None
+        crosscat = ccme.MultiprocessingEngine(seed=args.seed, cpu_count=jobs)
     else:
         import crosscat.LocalEngine as ccle
         crosscat = ccle.LocalEngine(seed=args.seed)
