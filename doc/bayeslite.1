@@ -1,0 +1,172 @@
+.\" Copyright (c) 2010-2014, MIT Probabilistic Computing Project
+.\"
+.\" Licensed under the Apache License, Version 2.0 (the "License");
+.\" you may not use this file except in compliance with the License.
+.\" You may obtain a copy of the License at
+.\"
+.\"     http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\" Unless required by applicable law or agreed to in writing, software
+.\" distributed under the License is distributed on an "AS IS" BASIS,
+.\" WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.\" See the License for the specific language governing permissions and
+.\" limitations under the License.
+.\"
+.Dd June 11, 2015
+.Dt BAYESLITE 1
+.Os
+.Sh NAME
+.Nm bayeslite
+.Nd interactive BQL shell
+.Sh SYNOPSIS
+.Nm
+.Op Fl bdmq
+.Op Fl f Ar pathname
+.Op Fl j Ar n
+.Op Fl s Ar seed
+.Op Ar bayesdb
+.Sh DESCRIPTION
+.Nm
+is an interactive shell for Bayeslite, a probabilistic database built
+on SQLite 3.
+.Pp
+.Nm
+either works on a transient in-memory database, if the
+.Fl m Ns / Ns Fl Fl memory
+option is provided, or on a database stored in the file
+.Ar bayesdb .
+Either the
+.Fl m Ns / Ns Fl Fl memory
+option or a database must be provided, to avoid the mistake of doing
+useful analysis in an unintentionally transient database.
+.Pp
+Before printing a prompt and executing queries and commands entered by the user,
+.Nm
+will execute queries and commands in the file
+.Pa ~/.bayesliterc .
+This behaviour can be suppressed with the
+.Fl q Ns / Ns Fl Fl no\-init\-file
+option.
+.Pp
+The following options are supported:
+.Bl -tag -width indent
+.It Fl b , Fl Fl batch
+Batch mode: exit after processing files specified with the
+.Fl f / Fl Fl file
+options.
+.It Fl d , Fl Fl debug
+Debug mode: enable internal debugging features, mainly for automatic tests.
+.It Fl f Ar pathname , Fl Fl file Ns = Ns Ar pathname
+Execute the BQL and shell commands in the file at
+.Ar pathname
+as if the user had typed them in, but without printing prompts or results.
+.It Fl m , Fl Fl memory
+Store data in a transient database in memory, rather than in a file on disk.
+.It Fl j Ar n , Fl Fl jobs Ns = Ns Ar n
+Use
+.Ar n
+parallel jobs for model initialization and analysis.
+.It Fl q , Fl Fl no\-init\-file
+Suppress loading of
+.Pa ~/.bayesliterc
+on startup.
+.It Fl s Ar s , Fl Fl seed Ns = Ns Ar s
+Use
+.Ar s
+as the initial seed for random choices.
+.El
+.Sh INPUT COMMANDS
+Input at the
+.Sq Sy "bayeslite> "
+prompt is normally interpreted as a BQL query, which must be
+terminated by a semicolon before
+.Nm
+will execute it and print its results.
+Input that begins with a
+.Sq \&.
+is interpreted as a shell command, performing operations outside BQL.
+.Pp
+The following commands are supported, in addition to any that may be
+loaded with the
+.Sy ".hook"
+command:
+.Bl -tag -width indent
+.It Sy ".codebook" Ar table Ar pathname
+Import a codebook for
+.Ar table
+from the file
+.Ar pathname ,
+which must contain a CSV table having columns
+.Sq name ,
+.Sq shortname ,
+.Sq description ,
+and
+.Sq value_map .
+.It Sy ".csv" Ar table Ar pathname
+Create a table named
+.Ar table
+from the CSV data in the file at
+.Ar pathname .
+.It Sy ".describe" Ar type Ar name ...
+Describe the objects named
+.Ar name ...
+of type
+.Ar type ,
+which may be one of:
+.Bl -tag -compact -offset abcd
+.It Sy table Ns Pq Sy s
+.It Sy generator Ns Pq Sy s
+.It Sy columns
+.It Sy model Ns Pq Sy s
+.El
+For
+.Sy columns
+and
+.Sy model Ns Pq Sy s ,
+.Ar name
+refers to a generator or to a table with a default generator, whose
+columns and models will be shown.
+.It Sy ".guess" Ar generator Ar table
+Create a generator named
+.Ar generator
+for the table
+.Ar table ,
+guessing the statistical types of the columns in
+.Ar table .
+.It Sy ".help"
+Show brief help for all commands.
+.It Sy ".help" Ar cmd ...
+Show detailed help for the named commands.
+.It Sy ".hook" Ar pathname
+Load the Python source file at
+.Ar pathname
+to install new commands into the shell.
+.It Sy ".python" Ar expression
+Evaluate the Python expression
+.Ar expression
+and print the result.
+.It Sy ".read" Ar pathname
+Execute BQL and shell commands in the file at
+.Ar pathname .
+.It Sy ".sql" Ar query
+Execute the SQL query
+.Ar query
+and print the resulting table, if any.
+.It Sy ".trace" Op Sy "bql" Ns | Ns Sy "sql"
+Enable tracing of BQL or SQL queries: any BQL or SQL query executed
+will be printed first.
+.It Sy ".untrace" Op Sy "bql" Ns | Ns Sy "sql"
+Disable tracing of BQL or SQL queries.
+.El
+.Sh FILES
+.Bl -tag -width indent
+.It Pa ~/.bayesliterc
+Initialization file, executed on startup.
+.El
+.Sh BUGS
+There is no way to save a transient database to disk.
+.Pp
+The
+.Sy ".python"
+command allows only Python expressions, not Python statements like the
+normal Python REPL additionally supports.
