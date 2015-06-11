@@ -100,7 +100,9 @@ def runner(args):
             
             if col_types[i] == 'NUMERICAL':
                 
+                # kernel for KL divergence integral
                 def kl_func(x):
+                    # compute bayesdb log density
                     bql = '''
                         ESTIMATE PROBABILITY OF {}=? FROM {} LIMIT 1
                         '''.format(quote(col_names[i]),quote(table))
@@ -191,7 +193,7 @@ def plot(result, filename=None):
 
 if __name__ == '__main__':
 
-    # INITIALIZE EXPERIMENT ARGUMENTS
+    # initiaze experiment arguments
     args = {
     'n_model': 5,
     'checkpoints': [0] + [2**i for i in xrange(9)],
