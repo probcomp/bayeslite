@@ -34,10 +34,10 @@ def parse_args(argv):
     parser.add_argument('-f', '--file', type=str, nargs="+", default=None,
                         help="Path to commands file. May be used to specify a "
                         "project-specific init file.")
-    parser.add_argument('--batch', action='store_true',
+    parser.add_argument('-b', '--batch', action='store_true',
                         help="Exit after executing file specified with -f.")
-    parser.add_argument('--debug', action='store_true', help="For unit tests.")
-    parser.add_argument('--no-init-file', action='store_true',
+    parser.add_argument('-d', '--debug', action='store_true', help="For unit tests.")
+    parser.add_argument('-q', '--no-init-file', action='store_true',
                         help="Do not load ~/.bayesliterc")
     parser.add_argument('-m', '--memory', action='store_true',
                         help="Use temporary database not saved to disk")
