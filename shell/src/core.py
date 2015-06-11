@@ -59,13 +59,13 @@ class Shell(cmd.Cmd):
         self._installcmd('describe', self.dot_describe)
         self._installcmd('guess', self.dot_guess)
         self._installcmd('help', self.dot_help)
+        self._installcmd('hook', self.dot_hook)
         self._installcmd('legacymodels', self.dot_legacymodels)
         self._installcmd('python', self.dot_python)
+        self._installcmd('read', self.dot_read)
         self._installcmd('sql', self.dot_sql)
         self._installcmd('trace', self.dot_trace)
         self._installcmd('untrace', self.dot_untrace)
-        self._installcmd('read', self.dot_read)
-        self._installcmd('hook', self.dot_hook)
 
         self._core_commands = set(self._cmds)
 
