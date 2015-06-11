@@ -238,6 +238,9 @@ BQL Queries
    Values of model estimators are averaged over all models if ``USING
    MODEL`` is not specified.
 
+   In addition to a literal list of column names, the list of
+   subcolumns may be an ``ESTIMATE COLUMNS`` subquery.
+
 .. index:: ``ESTIMATE PAIRWISE ROW``
 ``ESTIMATE PAIRWISE ROW <expression> FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
@@ -302,8 +305,21 @@ BQL Queries
    Each row is drawn from a single model, but if ``USING MODEL`` is
    not specified, different rows may be drawn from different models.
 
+BQL Expressions
+---------------
+
+BQL expressions, like SQL expressions, may name columns, include query
+parameters, use standard arithmetic operators, and use SQL functions
+such as ``ABS(<x>)``, as documented in the `SQLite3 Manual`_.
+
+.. _SQLite3 Manual: https://www.sqlite.org/lang.html
+
+In addition, BQL expressions in ``ESTIMATE`` and ``INFER`` queries may
+use model estimators, and BQL expressions in ``INFER`` queries may use
+model predictions.
+
 Model Estimators
-----------------
+^^^^^^^^^^^^^^^^
 
 Model estimators are functions of a model, up to two columns, and up to one row.
 
@@ -350,6 +366,9 @@ Model estimators are functions of a model, up to two columns, and up to one row.
    similarity of the two implied rows.  The similarity may be
    considered with respect to a subset of columns.
 
+   In addition to a literal list of column names, the list of columns
+   may be an ``ESTIMATE COLUMNS`` subquery.
+
 .. index:: ``CORRELATION``
 ``CORRELATION [[OF <column1>] WITH <column2>]``
 
@@ -375,7 +394,7 @@ Model estimators are functions of a model, up to two columns, and up to one row.
    strength of dependence between the two columns, in units of bits.
 
 Model Predictions
------------------
+^^^^^^^^^^^^^^^^^
 
 .. index:: ``PREDICT``
 ``PREDICT <column> [WITH CONFIDENCE <confidence>]``
