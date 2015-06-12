@@ -169,6 +169,7 @@ class Shell(cmd.Cmd):
                     continue
                 assert 1 < len(doc)
                 self.stdout.write('.%s %s' % (cmnd, '\n'.join(doc[1:])))
+                self.stdout.write('(END)\n\n')
 
     def dot_read(self, argsin):
         '''read a file of shell commands
