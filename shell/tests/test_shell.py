@@ -356,7 +356,10 @@ def test_hook(spawnbdb):
     ])
     c.expect_prompt()
     c.sendexpectcmd('.help myhook')
-    c.expect_lines(['.myhook <string>'])
+    c.expect_lines(['.myhook <string>',
+                    '(END)',
+                    '',
+                    ])
     c.expect_prompt()
     c.sendexpectcmd('.myhook zoidberg')
     c.expect_lines(['john zoidberg'])
