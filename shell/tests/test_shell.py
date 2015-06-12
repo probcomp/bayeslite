@@ -125,6 +125,7 @@ def test_help_returns_list_of_commands(spawnbdb):
     c = spawnbdb
     c.sendexpectcmd('.help')
     c.expect_lines([
+        '       .assert    Make assertions about BQL queries',
         '     .codebook    load codebook for table',
         '          .csv    create table from CSV file',
         '     .describe    describe BayesDB entities',
@@ -226,6 +227,27 @@ def test_describe_generator(spawntablegen):
     c.expect_prompt()
     c.sendexpectcmd('.describe generator %s' % (table,))
     c.expect_lines(generator_output)
+    c.expect_prompt()
+
+
+@pytest.mark.xfail
+def test_assert_fail(spawntablegen):
+    table, gen, c = spawntablegen
+    c.sendexpectcmd(".assert == 'SELECT 1.2;' 'SELECT \"Mike Pipper\";'")
+
+
+def test_assert_pass(spawntablegen):
+    table, gen, c = spawntablegen
+    c.sendexpectcmd(".assert == 'SELECT 1.2;' 'SELECT 1.2;'")
+    c.expect_prompt()
+    c.sendexpectcmd(".assert == 'SELECT 1.20;' 'SELECT 1.2;'")
+    c.expect_prompt()
+    c.sendexpectcmd(".assert > 'SELECT 10;' 'SELECT 1.2;'")
+    c.expect_prompt()
+    c.sendexpectcmd(".assert >= 'SELECT 10;' 'SELECT 1.2;'")
+    c.expect_prompt()
+    c.sendexpectcmd(".assert in 'SELECT \"Akron OH\";' "
+                    "'SELECT Name FROM %s;'" % (table,))
     c.expect_prompt()
 
 
@@ -339,6 +361,7 @@ def test_hook(spawnbdb):
     c.expect_prompt()
     c.sendexpectcmd('.help')
     c.expect_lines([
+        '       .assert    Make assertions about BQL queries',
         '     .codebook    load codebook for table',
         '          .csv    create table from CSV file',
         '     .describe    describe BayesDB entities',
