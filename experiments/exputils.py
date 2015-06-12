@@ -1,5 +1,8 @@
 import numpy as np
 import pandas as pd
+from scipy.spatial.distance import pdist, squareform
+from scipy.stats.mstats import rankdata
+
 import random
 import csv
 
@@ -76,6 +79,77 @@ def data_to_csv(data, filename):
         header = ','.join('c' + str(i) for i in range(num_cols))
     np.savetxt(filename, data, delimiter=',', header=header, comments='')
 
+
+def kernel_two_sample_test(X, Y, permutations = 100):
+    '''
+    This funciton tests the null hypothesis that X and Y are samples drawn
+    from the same population. The permutation method (non-parametric)
+    is used, and the test statistic is E[k(x,x')] + E[k(y,y')] - 2E[k(x,y)].
+    A Gaussian kernel is used with width equal to the median distance between
+    vectors in the aggregate sample.
+
+    For more information see:
+        http://www.stat.berkeley.edu/~sbalakri/Papers/MMD12.pdf
+        https://normaldeviate.wordpress.com/2012/07/14/modern-two-sample-tests/
+
+    :param X: N by D numpy array of samples from the first population
+    :param Y: M by D numpy array of samples from the second population
+
+    :return: p-value of the statistical test
+    '''
+
+    assert isinstance(X, np.ndarray)
+    assert isinstance(Y, np.ndarray)
+    assert X.shape[1] == Y.shape[1]
+
+    N = X.shape[0]
+    M = Y.shape[0]
+
+    # compute the observed statistic
+    t_star = _compute_kernel_statistic(X,Y)
+    T = [t_star]
+
+    # pool the samples
+    S = np.vstack((X,Y))
+
+    # compute resampled test statistics
+    for k in xrange(permutations):
+        np.random.shuffle(S)
+        Xp, Yp = S[:N], S[N:]
+        tb = _compute_kernel_statistic(Xp, Yp)
+        T.append(tb)
+
+    # fraction of samples larger than observed t_star
+    f = len(T) - rankdata(T)[0]
+    return 1. * f / (len(T))
+
+def _compute_kernel_statistic(X, Y):
+    assert isinstance(X, np.ndarray)
+    assert isinstance(Y, np.ndarray)
+    assert X.shape[1] == Y.shape[1]
+
+    N = X.shape[0]
+    M = Y.shape[0]
+
+    # determine width of Gaussian kernel
+    Pxyxy = pdist(np.vstack((X,Y)),'euclidean')
+    s = np.median(Pxyxy)
+    if s == 0:
+        s = 1
+
+    Kxy = squareform(Pxyxy)[:N,N:]
+    Exy = np.exp(- Kxy ** 2 / s ** 2)
+    Exy = np.mean(Exy)
+    
+    Kxx = squareform(pdist(X),'euclidean')
+    Exx = np.exp(- Kxx ** 2 / s ** 2)
+    Exx = np.mean(Exx)
+
+    Kyy = squareform(pdist(Y),'euclidean')
+    Eyy = np.exp(- Kyy ** 2 / s ** 2)
+    Eyy = np.mean(Eyy)
+
+    return Exx + Eyy - 2*Exy
 
 def gen_zero_correlation_data(which, n, clarity):
     """Generate data from a zero-correlation dateset."""
