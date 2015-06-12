@@ -15,8 +15,11 @@
 #   limitations under the License.
 
 import StringIO
+import sqlite3
 import cmd
 import traceback
+import warnings
+import re
 
 import bayeslite
 import bayeslite.bql as bql
@@ -66,6 +69,7 @@ class Shell(cmd.Cmd):
         self._installcmd('sql', self.dot_sql)
         self._installcmd('trace', self.dot_trace)
         self._installcmd('untrace', self.dot_untrace)
+        self._installcmd('assert', self.dot_assert)
 
         self._core_commands = set(self._cmds)
 
@@ -478,6 +482,73 @@ class Shell(cmd.Cmd):
                                                  create=True)
         except Exception:
             self.stdout.write(traceback.format_exc())
+
+    def dot_assert(self, line):
+        '''Make assertions about BQL queries
+        <operator> '<bql>' '<bql>'
+
+        The first bql query must return a table with a single entry. The second
+        bql query must return a table with a single column. If the second
+        query results in a column of multiple values, the operator, unless it
+        is `in`, will be done on each value; the assertion will then be that
+        all values in the 2nd query satisfy the assertion.
+
+        Supports python comparisson operators and `in`.
+
+        Examples
+        --------
+        bayeslite> .assert in 'SELECT "foo"' 'SELECT Names FROM t;'
+        bayeslite> .assert > 'SELECT 0' 'SELECT probability FROM t;'
+        '''
+        comp = line.split()[0]
+        bqls = re.findall("'([^']*)'", line)
+        if len(bqls) != 2:
+            self.stdout.write("Found the wrong number (%d) of bql queries. "
+                              "Please quote the queries with single quotes.\n"
+                              % (len(bqls),))
+            return
+
+        bql1, bql2 = bqls
+        try:
+            table_1 = self._bdb.execute(bql1).fetchall()
+            table_2 = self._bdb.execute(bql2).fetchall()
+        except Exception as err:
+            self.stdout.write(str(err) + '\n')
+            return
+
+        if len(table_1) == 0:
+            self.stdout.write('bql1 produced an empty table.\n')
+            return
+
+        if len(table_2) == 0:
+            self.stdout.write('bql1 produced an empty table.\n')
+            return
+
+        table_1_row = table_1[0]
+        if len(table_1) > 1 or len(table_1_row) > 1:
+            self.stdout.write('bql1 must ouput a table with a single cell.\n')
+            return
+
+        table_2_row = table_2[0]
+        if len(table_2_row) > 1:
+            self.stdout.write('bql2 must ouput a table with one column.\n')
+            return
+
+        item_1 = table_1_row[0]
+        item_2 = [item[0] for item in table_2]
+
+        result = False
+        if comp == 'in':
+            result = item_1 in item_2
+        else:
+            if isinstance(item_1, (str, unicode)):
+                item_1 = '"%s"' % (item_1,)
+            lst = eval('[{} {} a for a in {}]'.format(item_1, comp, item_2))
+            result = all(lst)
+
+        if not result:
+            asrtn = '{} {} {}'.format(bql1, comp, bql2)
+            warnings.warn('Assertion, {}, failed.'.format(asrtn))
 
     def dot_describe(self, line):
         '''describe BayesDB entities
