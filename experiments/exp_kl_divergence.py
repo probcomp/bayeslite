@@ -184,9 +184,6 @@ def plot(result, filename=None):
     ax.legend(loc = 'best')
     ax.grid()
 
-    picklename = 'exp_kl_divergence' + str(time.time()) + '.pkl'
-    pickle.dump(ax, file(picklename,'w'))
-
     if not DO_PLOT:
         filename = 'exp_kl_divergence' + str(time.time()) + '.png'
 
@@ -237,12 +234,6 @@ if __name__ == '__main__':
 
     separation = [0.8, 0.9, 0.65, 0.7, 0.75]
 
-    # cols_to_views = [0]
-    # cctypes = ['multinomial']
-    # distargs = [dict(K=9)]
-    # component_weights = [[.2, .3, .5]]
-    # separation = [0.8]
-
     synethic_data = sdg.gen_data(cctypes,
         args['target_samples'],
         cols_to_views,
@@ -259,9 +250,8 @@ if __name__ == '__main__':
     args['col_types'] = ['NUMERICAL' if s == 'continuous' else 'CATEGORICAL'
         for s in cctypes]
 
-    # result = runner(args)
+    result = runner(args)    
     
-    
-    picklename = 'exp_kl_divergence1434147218.51.pkl'
-    result = pickle.load(file(picklename))
+    # picklename = 'exp_kl_divergence1434147218.51.pkl'
+    # result = pickle.load(file(picklename))
     plot(result)

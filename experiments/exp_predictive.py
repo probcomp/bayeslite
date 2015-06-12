@@ -227,7 +227,7 @@ if __name__ == '__main__':
     # initiaze experiment arguments
     args = {
     'n_model': 5,
-    'target_iterations': 250,
+    'target_iterations': 20,
     'target_samples': 250,
     'seed' : 448,
     }
@@ -263,12 +263,6 @@ if __name__ == '__main__':
 
     separation = [0.8, 0.9, 0.65, 0.7, 0.75]
 
-    # cols_to_views = [0]
-    # cctypes = ['multinomial']
-    # distargs = [dict(K=9)]
-    # component_weights = [[.2, .3, .5]]
-    # separation = [0.8]
-
     synethic_data = sdg.gen_data(cctypes,
         args['target_samples'],
         cols_to_views,
@@ -285,8 +279,8 @@ if __name__ == '__main__':
     args['col_types'] = ['NUMERICAL' if s == 'continuous' else 'CATEGORICAL'
         for s in cctypes]
 
-    # result = runner(args)
-
-    picklename = 'exp_predictive1434146762.92.pkl'
-    result = pickle.load(file(filename))
+    result = runner(args)
+    
+    # picklename = 'exp_predictive1434146762.92.pkl'
+    # result = pickle.load(file(filename))
     plot(result)
