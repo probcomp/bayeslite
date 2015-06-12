@@ -1,6 +1,7 @@
 import bayeslite
 import bayeslite.bql as bql
 import bayeslite.core as core
+import bayeslite.crosscat
 import bayeslite.parse as parse
 import crosscat.LocalEngine as localengine
 from prettytable import PrettyTable
@@ -37,14 +38,14 @@ def print_cursors(curs):
 
 model_file = 'dha_models.pkl.gz'
 table_name = 'dh_test'
+generator_name = 'dh_test_cc'
 
 
 # bayeslite
-bdb = bayeslite.BayesDB()
-bayeslite.bayesdb_register_metamodel(bdb, 'crosscat', localengine.LocalEngine(seed=0))
-bayeslite.bayesdb_set_default_metamodel(bdb, 'crosscat')
-bayeslite.bayesdb_import_csv_file(bdb, table_name, 'dha.csv')
-bayeslite.bayesdb_load_legacy_models(bdb, table_name, model_file)
+bdb = bayeslite.bayesdb_open()
+bayeslite.bayesdb_register_metamodel(bdb, bayeslite.crosscat.CrosscatMetamodel(localengine.LocalEngine(seed=0)))
+bayeslite.bayesdb_read_csv_file(bdb, table_name, 'dha.csv', header=True, create=True)
+bayeslite.bayesdb_load_legacy_models(bdb, generator_name, table_name, 'crosscat', model_file, create=True)
 
-try_query('estimate columns from {} order by dependence probability with MDCR_SPND_AMBLNC DESC limit 10'.format(table_name))
-try_query('estimate columns from {} order by dependence probability with QUAL_SCORE limit 10'.format(table_name))
+try_query('estimate columns from {} order by dependence probability with MDCR_SPND_AMBLNC DESC limit 10'.format(generator_name))
+try_query('estimate columns from {} order by dependence probability with QUAL_SCORE limit 10'.format(generator_name))
