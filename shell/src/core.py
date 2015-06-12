@@ -15,7 +15,6 @@
 #   limitations under the License.
 
 import StringIO
-import sqlite3
 import cmd
 import traceback
 import warnings
