@@ -17,7 +17,6 @@
 import StringIO
 import cmd
 import traceback
-import warnings
 import re
 
 import bayeslite
@@ -547,7 +546,7 @@ class Shell(cmd.Cmd):
 
         if not result:
             asrtn = '{} {} {}'.format(bql1, comp, bql2)
-            warnings.warn('Assertion, {}, failed.'.format(asrtn))
+            self.stdout.write('Warning: Assertion, {}, failed.'.format(asrtn))
 
     def dot_describe(self, line):
         '''describe BayesDB entities
