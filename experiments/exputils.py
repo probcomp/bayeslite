@@ -272,6 +272,6 @@ def main():
                 ax.set_ylabel(w)
     plt.show()
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
     # main()
     

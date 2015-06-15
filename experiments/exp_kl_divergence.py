@@ -155,7 +155,7 @@ def runner(args):
     result['args'] = args
     result['KL_vals'] = KL_vals
     
-    picklename = 'exp_kl_divergence' + str(time.time()) + '.pkl'
+    picklename = 'data/exp_kl_divergence' + str(time.time()) + '.pkl'
     pickle.dump(result, file(picklename,'w'))
 
     return result
@@ -250,8 +250,8 @@ if __name__ == '__main__':
     args['col_types'] = ['NUMERICAL' if s == 'continuous' else 'CATEGORICAL'
         for s in cctypes]
 
-    result = runner(args)    
+    # result = runner(args)    
     
-    # picklename = 'exp_kl_divergence1434147218.51.pkl'
+    # picklename = 'data/exp_kl_divergence1434147218.51.pkl'
     # result = pickle.load(file(picklename))
     plot(result)

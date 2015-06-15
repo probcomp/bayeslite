@@ -142,7 +142,7 @@ def runner(args):
     result['CC'] = CC
     result['SY'] = SY
     
-    picklename = 'exp_predictive' + str(time.time()) + '.pkl'
+    picklename = 'data/exp_predictive' + str(time.time()) + '.pkl'
     pickle.dump(result, file(picklename,'w'))
     
     return result
@@ -281,6 +281,6 @@ if __name__ == '__main__':
 
     result = runner(args)
     
-    # picklename = 'exp_predictive1434146762.92.pkl'
+    # picklename = 'data/exp_predictive1434146762.92.pkl'
     # result = pickle.load(file(filename))
     plot(result)
