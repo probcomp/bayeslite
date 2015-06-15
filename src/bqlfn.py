@@ -117,7 +117,7 @@ def correlation_anovar2(data_group, data_y):
                 sample.append(data_y[i])
         samples.append(sample)
     F = stats.f_oneway(samples)
-    return 1 - 1/(1 + F*((n_groups - 1) / (n - n_groups)))
+    return 1 - 1/(1 + F*(float(n_groups - 1) / float(n - n_groups)))
 
 def correlation_anovar2_dc(discrete_data, continuous_data):
     return correlation_anovar2(discrete_data, continuous_data)
