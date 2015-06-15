@@ -97,7 +97,8 @@ executing SQL instead of BQL in Bayeslite.
 .. index:: ``ALTER TABLE``
 ``ALTER TABLE <name> <alterations>``
 
-   Alter the specified properties of the table *name*.  The following
+   Alter the specified properties of the table *name*.  *Alterations*
+   is a comma-separated list of alterations.  The following
    alterations are supported:
 
    .. index:: ``RENAME TO``
@@ -125,10 +126,10 @@ Data Modelling Language
 .. index:: ``CREATE GENERATOR``
 ``CREATE [DEFAULT] GENERATOR <name> [IF NOT EXISTS] FOR <table> USING <metamodel> (<schema>)``
 
-   Create a generative model named *name* for *table* in the language
-   of *metamodel*.  *Schema* describes the generative model in syntax
-   that depends on the metamodel.  Typically, it is a comma-separated
-   list of clauses of the form
+   Create a generative model named *name* for the table named *table*
+   in the language of *metamodel*.  *Schema* describes the generative
+   model in syntax that depends on the metamodel.  Typically, it is a
+   comma-separated list of clauses of the form
 
       ``<column> <type>``
 
@@ -153,13 +154,15 @@ Data Modelling Language
 .. index:: ``DROP GENERATOR``
 ``DROP GENERATOR [IF EXISTS] <name>``
 
-   Drop the generator *name* and all its models.
+   Drop the generator named *name* and all its models.
 
 .. index:: ``ALTER GENERATOR``
 ``ALTER GENERATOR <name> <alterations>``
 
-   Alter the specified properties of the generator named *name*.  The
-   following alterations are supported:
+   Alter the specified properties of the generator named *name*, or of
+   the default generator of the table named *name*.  *Alterations* is
+   a comma-separated list of alterations.  The following alterations
+   are supported:
 
    .. index:: ``RENAME TO``
    ``RENAME TO <newname>``
@@ -170,14 +173,16 @@ Data Modelling Language
 ``INITIALIZE <n> MODEL[S] [IF NOT EXISTS] FOR <name>``
 
    Perform metamodel-specific initialization of up to *n* models for
-   the generator *name*.  If the generator already had models, the
-   ones it had are unchanged.
+   the generator named *name*, or the default generator of the table
+   named *name*.  *n* must be a literal integer.  If the generator
+   already had models, the ones it had are unchanged.
 
 .. index:: ``DROP MODELS``
 ``DROP MODELS <modelset> FROM <name>``
 
-   Drop the specified models from the generator *name*.  *Modelset* is
-   a comma-separated list of model numbers or hyphenated model number
+   Drop the specified models from the generator named *name*, or the
+   default generator of the table named *name*.  *Modelset* is a
+   comma-separated list of model numbers or hyphenated model number
    ranges, inclusive on both bounds.
 
    Example:
@@ -192,8 +197,9 @@ Data Modelling Language
 ``ANALYZE <name> [MODEL[S] <modelset>] [FOR <duration>] [CHECKPOINT <duration>] WAIT``
 
    Perform metamodel-specific analysis of the specified models of the
-   generator *name*.  *Modelset* is a comma-separated list of model
-   numbers or hyphenated model number ranges.  *Duration* is either
+   generator *name*, or of the default generator of the table named
+   *name*.  *Modelset* is a comma-separated list of model numbers or
+   hyphenated model number ranges.  *Duration* is either
    ``<n> SECOND[S]``, ``<n> MINUTE[S]``, or ``<n> ITERATION[S]``.
 
    The ``FOR`` duration specifies how long to perform analysis.  The
@@ -215,29 +221,63 @@ BQL Queries
    Standard SQL ``SELECT``.  Model estimators are not allowed, except
    in subqueries of types that allow them.
 
+   ``<columns>``
+      Comma-separated list of BQL expressions, each with an optional
+      ``AS <name>`` to name the column in the resulting table.
+
+   ``FROM <table>``
+      *Table* is a comma-separated list of table names or subqueries,
+      each with an optional ``AS <name>`` to qualify the table name in
+      references to its columns.  When multiple tables are specified
+      separated by commas, their join (cartesian product) is selected
+      from.
+
+      FUTURE: All SQL joins will be supported.
+
+   ``WHERE <condition>``
+      *Condition* is a BQL expression selecting a subset of the input
+      rows from *table* for which output rows will be computed.
+
+   ``GROUP BY <grouping>``
+      *Grouping* is a BQL expression specifying a key on which to
+      group output rows.  May be the name of an output column with
+      ``AS <name>`` in *columns*.
+
+   ``ORDER BY *expression* [ASC|DESC]``
+      *Expression* is a BQL expression specifying a key by which to
+      order output rows, after grouping if any.  Rows are yielded in
+      ascending order of the key by default or if ``ASC`` is
+      specified, or in descending order of the key if ``DESC`` is
+      specified.
+
+   ``LIMIT <n> [OFFSET <offset>]`` or ``LIMIT <offset>, <n>``
+      *N* and *offset* are BQL expressions.  Only up to *n*
+      (inclusive) rows are returned after grouping and ordering,
+      starting at *offset* from the beginning.
+
 .. index:: ``ESTIMATE``
 ``ESTIMATE [DISTINCT|ALL] <columns> FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the table associated with *generator*, extended
-   with model estimators of one implied row.  Values of model
-   estimators are averaged over all models if ``USING MODEL`` is not
-   specified.
+   with model estimators of one implied row.
+
+   ``USING MODEL <modelno>``
+      *Modelno* is a BQL expression specifying the number of the model
+      of *generator* to use in model estimators.  Values of model
+      estimators are averaged over all models if ``USING MODEL`` is
+      not specified.
 
 .. index:: ``ESTIMATE COLUMNS``
 ``ESTIMATE COLUMNS [<columns>] FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the modelled columns of *generator*, extended
-   with model estimators of one implied column.  Values of model
-   estimators are averaged over all models if ``USING MODEL`` is not
-   specified.
+   with model estimators of one implied column.
 
 .. index:: ``ESTIMATE PAIRWISE``
 ``ESTIMATE PAIRWISE <columns> FROM <generator> [FOR <subcolumns>] [USING MODEL <modelno>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the modelled columns of
    *generator*, extended with model estimators of two implied columns.
-   Values of model estimators are averaged over all models if ``USING
-   MODEL`` is not specified.
 
    In addition to a literal list of column names, the list of
    subcolumns may be an ``ESTIMATE COLUMNS`` subquery.
@@ -247,8 +287,6 @@ BQL Queries
 
    Like ``SELECT`` on the self-join of the table assocated with
    *generator*, extended with model estimators of two implied rows.
-   Values of model estimators are averaged over all models if ``USING
-   MODEL`` is not specified.
 
    (Currently the only functions of two implied rows are
    ``SIMILARITY`` and ``SIMILARITY WITH RESPECT TO (...)``.)
@@ -258,13 +296,13 @@ BQL Queries
 
    Select the specified *colnames* from *generator*, filling in
    missing values if they can be filled in with confidence at least
-   *conf*.  Only missing values *colnames* will be filled in; missing
-   values in columns named in *condition*, *grouping*, and *ordering*
-   will not be.  Model estimators and model predictions are allowed in
-   the expressions.
+   *conf*, a BQL expression.  Only missing values *colnames* will be
+   filled in; missing values in columns named in *condition*,
+   *grouping*, and *ordering* will not be.  Model estimators and model
+   predictions are allowed in the expressions.
 
-   Values of model estimators are averaged over all models if ``USING
-   MODEL`` is not specified.
+   *Colnames* is a comma-separated list of column names, **not**
+   arbitrary BQL expressions.
 
    XXX: What about values and confidences of model predictions?
 
@@ -288,18 +326,17 @@ BQL Queries
    the column *name*, and one named *confidence* holding the
    confidence of the prediction.
 
-   Values of model estimators are averaged over all models if ``USING
-   MODEL`` is not specified.
-
    XXX: What about values and confidences of model predictions?
 
 .. index:: ``SIMULATE``
-``SIMULATE <colnames> FROM <generator> [USING MODEL <modelno>] [GIVEN <constraint>] [LIMIT <limit>]``
+``SIMULATE <colnames> FROM <generator> [USING MODEL <modelno>] [GIVEN <constraints>] [LIMIT <limit>]``
 
    Select the requested *colnames* from rows sampled from *generator*.
-   The returned rows satisfy *constraint*, which must be of the form
+   *Constraints* is a comma-separated list of constraints of the form
 
-      ``<column> = <expression>``
+      ``<colname> = <expression>``
+
+   representing equations that the returned rows satisfy.
 
    The number of rows in the result will be *limit*.
 
@@ -328,15 +365,15 @@ Model estimators are functions of a model, up to two columns, and up to one row.
 ``PREDICTIVE PROBABILITY OF <column>``
 
    Function of one implied row.  Returns the predictive probability of
-   *column* for this row.
+   the column named *column* for this row.
 
    XXX: Rewrite this description!
 
 .. index:: ``PROBABILITY OF``
 ``PROBABILITY OF <column> = <value>``
 
-   Constant.  Returns the probability that *column* has the value
-   *value*.
+   Constant.  Returns the probability that the column named *column*
+   has the value of the BQL expression *value*.
 
    WARNING: The value this function is not a normalized probability in
    [0, 1], but rather a probability density with a normalization
@@ -346,7 +383,7 @@ Model estimators are functions of a model, up to two columns, and up to one row.
 ``PROBABILITY OF VALUE <value>``
 
    Function of one implied column.  Returns the probability that the
-   implied column has the value *value*.
+   implied column has the value of the BQL expression *value*.
 
 .. index:: ``TYPICALITY`` (row)
 ``TYPICALITY``
@@ -370,8 +407,8 @@ Model estimators are functions of a model, up to two columns, and up to one row.
    similarity of the two implied rows.  The similarity may be
    considered with respect to a subset of columns.
 
-   In addition to a literal list of column names, the list of columns
-   may be an ``ESTIMATE COLUMNS`` subquery.
+   *Columns* is a comma-separated list of column names or
+   ``ESTIMATE COLUMNS`` subqueries.
 
 .. index:: ``CORRELATION``
 ``CORRELATION [[OF <column1>] WITH <column2>]``
@@ -403,7 +440,7 @@ Model Predictions
 .. index:: ``PREDICT``
 ``PREDICT <column> [WITH CONFIDENCE <confidence>]``
 
-   Function of one implied row.  Samples a value for *column* from the
-   model given the other values in the row, and returns it if the
-   confidence of the prediction is at least *confidence*; otherwise
-   returns null.
+   Function of one implied row.  Samples a value for the column named
+   *column* from the model given the other values in the row, and
+   returns it if the confidence of the prediction is at least the
+   value of the BQL expression *confidence*; otherwise returns null.
