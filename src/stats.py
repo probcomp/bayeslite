@@ -110,3 +110,26 @@ def f_oneway(groups):
 
 assert relerr(9.3,
         f_oneway([[6,8,4,5,3,4],[8,12,9,11,6,8],[13,9,11,8,7,12]])) < 0.01
+
+def anova_prop_var_explained(groups):
+    """Proportion of variance explained by conditions (ANOVA)
+
+    http://onlinestatbook.com/2/effect_size/variance_explained.html
+    """
+    N = sum(len(group) for group in groups)
+    means = [arithmetic_mean(group) for group in groups]
+    overall_mean = float_sum(x for group in groups for x in group) / N
+    ssq_total = float_sum((x-overall_mean)**2 for group in groups 
+        for x in group)
+    ssq_condition = float_sum(len(group) * (mean - overall_mean)**2
+        for group, mean in zip(groups, means))
+    return ssq_condition / ssq_total
+
+assert relerr(0.073, anova_prop_var_explained([[2.5,5.5,6.5,3.5,3,3.5,6,5,4,4.5,
+    5,5.5,3.5,6,6.5,3,8,6.5,8,6,6,3,7,8,4,3,2.5,8,4.5,5.5,7.5,6,9,6.5],
+    [7,3,6,4.5,3.5,4,3,3,3.5,4.5,7,5,5,7.5,2.5,5,5.5,5.5,5,4,5,6.5,6.5,7,3.5,5,
+    3.5,9,2.5,8.5,3.5,4.5,3.5,4.5],
+    [5.5,4,4,5,6,3.5,3.5,3.5,4,5.5,5.5,4.5,2.5,5.5,4.5,3,3.5,8,5,7.5,8,4,5.5,
+    6.5,5,4,3,5,4,4,6,8,4.5,5.5],
+    [2,4,4,3,6,4.5,2,6,3,3,4.5,8,4,5,3.5,4.5,6.5,3.5,4.5,4.5,2.5,2.5,4.5,2.5,6,
+    6,2,4,5.5,4,2.5,2.5,3,6.5]])) < 0.01
