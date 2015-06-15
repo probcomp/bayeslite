@@ -80,11 +80,11 @@ def data_to_csv(data, filename):
     np.savetxt(filename, data, delimiter=',', header=header, comments='')
 
 
-def kernel_two_sample_test(X, Y, permutations = 100):
+def kernel_two_sample_test(X, Y, permutations = 2500):
     '''
     This funciton tests the null hypothesis that X and Y are samples drawn
     from the same population. The permutation method (non-parametric)
-    is used, and the test statistic is E[k(x,x')] + E[k(y,y')] - 2E[k(x,y)].
+    is used, and the test statistic is E[k(X,X')] + E[k(Y,Y')] - 2E[k(X,Y)].
     A Gaussian kernel is used with width equal to the median distance between
     vectors in the aggregate sample.
 
@@ -92,10 +92,13 @@ def kernel_two_sample_test(X, Y, permutations = 100):
         http://www.stat.berkeley.edu/~sbalakri/Papers/MMD12.pdf
         https://normaldeviate.wordpress.com/2012/07/14/modern-two-sample-tests/
 
-    :param X: N by D numpy array of samples from the first population
-    :param Y: M by D numpy array of samples from the second population
+    :param X: N by D numpy array of samples from the first population.
+        Each row is a D-dimensional data point.
+    :param Y: M by D numpy array of samples from the second population.
+        Each row is a D-dimensional data point.
+    :param permutations: (optional) number of times to resample, default 2500.
 
-    :return: p-value of the statistical test
+    :returns: p-value of the statistical test
     '''
 
     assert isinstance(X, np.ndarray)
@@ -114,6 +117,7 @@ def kernel_two_sample_test(X, Y, permutations = 100):
 
     # compute resampled test statistics
     for k in xrange(permutations):
+        print k
         np.random.shuffle(S)
         Xp, Yp = S[:N], S[N:]
         tb = _compute_kernel_statistic(Xp, Yp)
@@ -124,6 +128,7 @@ def kernel_two_sample_test(X, Y, permutations = 100):
     return 1. * f / (len(T))
 
 def _compute_kernel_statistic(X, Y):
+    """Compute a single two-sample test statistic"""
     assert isinstance(X, np.ndarray)
     assert isinstance(Y, np.ndarray)
     assert X.shape[1] == Y.shape[1]
@@ -245,8 +250,7 @@ def _gen_ring(n, clarity):
         data[i, :] = [x, y]
     return data
 
-
-if __name__ == "__main__":
+def main():
     from matplotlib import pyplot as plt
     from matplotlib import gridspec
 
@@ -267,3 +271,7 @@ if __name__ == "__main__":
             if c == 0:
                 ax.set_ylabel(w)
     plt.show()
+
+if __name__ == "__main__":
+    # main()
+    
