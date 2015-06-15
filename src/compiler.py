@@ -183,6 +183,11 @@ class Output(object):
 
 @contextlib.contextmanager
 def bayesdb_wind(bdb, winders, unwinders):
+    """Perform queries `winders` before and `unwinders` after.
+
+    Each of `winders` and `unwinders` is a list of ``(<sql>,
+    <bindings>)`` tuples.
+    """
     if 0 < len(winders) or 0 < len(unwinders):
         with bdb.savepoint():
             for (sql, bindings) in winders:
