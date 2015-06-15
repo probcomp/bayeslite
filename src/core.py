@@ -247,7 +247,7 @@ def bayesdb_generator_metamodel(bdb, id):
         return bdb.metamodels[row[0]]
 
 def bayesdb_generator_table(bdb, id):
-    """Return the name of the table of the generator with id `id'."""
+    """Return the name of the table of the generator with id `id`."""
     sql = 'SELECT tabname FROM bayesdb_generator WHERE id = ?'
     cursor = bdb.sql_execute(sql, (id,))
     try:
