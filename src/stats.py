@@ -98,11 +98,14 @@ def f_oneway(groups):
     K = len(groups)
     N = sum(len(group) for group in groups)
     means = [arithmetic_mean(group) for group in groups]
-    overall_mean = float_sum(x for x in group for group in groups) / N
+    overall_mean = float_sum(x for group in groups for x in group) / N
     bgv = float_sum(len(group) * (mean - overall_mean)**2 / (K - 1)
         for group, mean in zip(groups, means))
-    wgv = float_sum((x - mean)**2/(N - K) for x in group
-        for group, mean in zip(groups, means))
+    wgv = float_sum(float((x - mean)**2)/float(N - K)
+        for group, mean in zip(groups, means)
+        for x in group)
+    if wgv == 0:
+        return float('+inf')
     return bgv / wgv
 
 assert relerr(9.3,
