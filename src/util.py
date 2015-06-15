@@ -61,8 +61,8 @@ def float_sum(iterable):
 
     This implementation uses Kahan-Babuška summation.
     """
-    s = 0
-    c = 0
+    s = 0.0
+    c = 0.0
     for x in iterable:
         xf = float(x)
         s1 = s + xf
