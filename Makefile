@@ -14,6 +14,7 @@ DOCS = \
 PDFLATEX = pdflatex
 PYTHON = python
 SPHINX_BUILD = sphinx-build
+SPHINX_FLAGS =
 
 # Options for above commands.
 PDFLATEXOPTS =
@@ -45,7 +46,8 @@ doc: $(DOCS)
 $(SPHINX_DOCS): pythenv.sh build
 	rm -rf build/doc/$@ && \
 	rm -rf build/doc/$@.tmp && \
-	./pythenv.sh $(SPHINX_BUILD) -b $@ doc build/doc/$@.tmp && \
+	./pythenv.sh $(SPHINX_BUILD) $(SPHINX_FLAGS) -b $@ doc \
+	  build/doc/$@.tmp && \
 	mv -f build/doc/$@.tmp build/doc/$@
 
 .PHONY: pdf
