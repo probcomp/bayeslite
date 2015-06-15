@@ -2,7 +2,7 @@ Bayeslite API internals
 =======================
 
 :mod:`bayeslite.compiler`: BQL-to-SQL query compiler
-----------------------------------------------
+----------------------------------------------------
 
 .. automodule:: bayeslite.compiler
    :members:
