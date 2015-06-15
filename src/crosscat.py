@@ -448,12 +448,16 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                                     WHERE s.generator_id = generator_id)
                 ''')
                 for (generator_id,) in cursor:
+                    bdb.sql_execute('''
+                        INSERT INTO bayesdb_crosscat_subsampled (generator_id)
+                            VALUES (?)
+                    ''', (generator_id,))
                     table_name = core.bayesdb_generator_table(bdb,
                         generator_id)
                     qt = sqlite3_quote_name(table_name)
                     bdb.sql_execute('''
                         INSERT INTO bayesdb_crosscat_subsample
-                            (generator_id, sql_rowid, cc_rowid)
+                            (generator_id, sql_rowid, cc_row_id)
                             SELECT ?, _rowid_, _rowid_ - 1 FROM %s
                     ''' % (qt,), (generator_id,))
                 for stmt in crosscat_schema_3to4.split(';'):
