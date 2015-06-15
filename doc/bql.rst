@@ -10,16 +10,17 @@ BQL is a probabilistic extension to SQL that supports
 * simulating data from generative models.
 
 BQL does not currently include any of the SQL Data Modification
-Language (DML), i.e. ``INSERT``, ``UPDATE``, &c., and includes only
-limited subset of the SQL Data Definition Language (DDL), i.e. ``CREATE
-TABLE``.
+Language (DML) -- ``INSERT``, ``UPDATE``, and other commands to modify
+the contents of tables -- and includes only limited subset of the SQL
+Data Definition Language (DDL) -- ``CREATE TABLE`` and commands to
+modify the database schema.
 
 A BQL phrase is either a command or a query.  In contexts admitting
 multiple BQL phrases, e.g. at the bayeslite shell, each phrase must be
 terminated by a semicolon before the next one begins.
 
 Expressions in BQL are like SQL, and may involve standard arithmetic,
-SQL functions such as IFNULL, &c.  Expressions in BQL may additionally
+SQL functions such as ``IFNULL``.  Expressions in BQL may additionally
 involve model functions such as ``PREDICTIVE PROBABILITY OF <column>``
 in appropriate contexts.
 
