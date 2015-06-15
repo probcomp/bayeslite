@@ -334,16 +334,19 @@ Model estimators are functions of a model, up to two columns, and up to one row.
 
 .. index:: ``PROBABILITY OF``
 ``PROBABILITY OF <column> = <value>``
-``PROBABILITY OF VALUE <value>``
 
-   Constant, or function of one implied column.  Returns the
-   probability that *column* or the implied column has the value
+   Constant.  Returns the probability that *column* has the value
    *value*.
 
    WARNING: The value this function is not a normalized probability in
    [0, 1], but rather a probability density with a normalization
    constant that is common to the column but may vary between columns.
    So it may take on values above 1.
+
+``PROBABILITY OF VALUE <value>``
+
+   Function of one implied column.  Returns the probability that the
+   implied column has the value *value*.
 
 .. index:: ``TYPICALITY`` (row)
 ``TYPICALITY``
