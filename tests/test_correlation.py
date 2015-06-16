@@ -54,23 +54,25 @@ def test_correlation():
                 (1, 'n0', 'nx', None),
                 (1, 'n1', 'nx', None),
             ]
-        bdb.sql_execute('create table t(id, c0, c1, cx, n0, n1, nx)')
+        bdb.sql_execute('create table t(id, c0, c1, cx, cy, n0, n1, nx, ny)')
         data = [
-            ('foo', 'quagga', 'x', 0, 42, 0),
-            ('bar', 'eland', 'x', 87, 3.1415926, 0),
-            ('baz', 'caribou', 'x', 92.1, 73, 0),
+            ('foo', 'quagga', 'x', 'y', 0, 42, 0, 13),
+            ('bar', 'eland', 'x', 'y', 87, 3.1415926, 0, 13),
+            ('baz', 'caribou', 'x', 'y', 92.1, 73, 0, 13),
         ] * 10
         for i, row in enumerate(data):
             row = (i + 1,) + row
-            bdb.sql_execute('insert into t values (?,?,?,?,?,?,?)', row)
+            bdb.sql_execute('insert into t values (?,?,?,?,?,?,?,?,?)', row)
         bdb.execute('''
             create generator t_cc for t using crosscat (
                 c0 CATEGORICAL,
                 c1 CATEGORICAL,
                 cx CATEGORICAL,
+                cy CATEGORICAL,
                 n0 NUMERICAL,
                 n1 NUMERICAL,
-                nx NUMERICAL
+                nx NUMERICAL,
+                ny NUMERICAL
             )
         ''')
         assert list(bdb.execute('estimate pairwise correlation from t_cc'
@@ -78,17 +80,30 @@ def test_correlation():
             [
                 (2, 'c0', 'c1', 1.),
                 (2, 'c0', 'cx', 0.),
+                (2, 'c0', 'cy', 0.),
                 (2, 'c0', 'n0', 1.),
                 (2, 'c0', 'n1', 1.),
                 (2, 'c0', 'nx', 0.),
+                (2, 'c0', 'ny', 0.),
                 (2, 'c1', 'cx', 0.),
+                (2, 'c1', 'cy', 0.),
                 (2, 'c1', 'n0', 1.),
                 (2, 'c1', 'n1', 1.),
                 (2, 'c1', 'nx', 0.),
+                (2, 'c1', 'ny', 0.),
+                (2, 'cx', 'cy', 1.),
                 (2, 'cx', 'n0', 0.),
                 (2, 'cx', 'n1', 0.),
                 (2, 'cx', 'nx', 1.),
+                (2, 'cx', 'ny', 1.),
+                (2, 'cy', 'n0', 0.),
+                (2, 'cy', 'n1', 0.),
+                (2, 'cy', 'nx', 1.),
+                (2, 'cy', 'ny', 1.),
                 (2, 'n0', 'n1', 0.00024252650945111442),
-                (2, 'n0', 'nx', 0.),
-                (2, 'n1', 'nx', 0.),
+                (2, 'n0', 'nx', None),
+                (2, 'n0', 'ny', None),
+                (2, 'n1', 'nx', None),
+                (2, 'n1', 'ny', None),
+                (2, 'nx', 'ny', None),
             ]

@@ -39,11 +39,10 @@ def pearsonr(a0, a1):
     den0_sq = float_sum((x0 - m0)**2 for x0 in a0)
     den1_sq = float_sum((x1 - m1)**2 for x1 in a1)
     den = math.sqrt(den0_sq*den1_sq)
-    if den != 0.0:
-        r = num / den
-    else:
-        # One column has all one value; the other column varies.
-        r = 0.0
+    if den == 0.0:
+        # Not enough variation in at least one column.
+        return float('NaN')
+    r = num / den
     # Clamp r in [-1, +1] in case of floating-point error.
     r = min(r, +1.0)
     r = max(r, -1.0)
