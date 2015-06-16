@@ -83,8 +83,9 @@ def data_to_csv(data, filename):
 def kernel_two_sample_test(X, Y, permutations = 2500):
     '''
     This funciton tests the null hypothesis that X and Y are samples drawn
-    from the same population. The permutation method (non-parametric)
-    is used, and the test statistic is E[k(X,X')] + E[k(Y,Y')] - 2E[k(X,Y)].
+    from the same population of arbitrary dimension D. The permutation method
+    (non-parametric) is used, the test statistic is 
+    E[k(X,X')] + E[k(Y,Y')] - 2E[k(X,Y)].
     A Gaussian kernel is used with width equal to the median distance between
     vectors in the aggregate sample.
 
@@ -117,7 +118,6 @@ def kernel_two_sample_test(X, Y, permutations = 2500):
 
     # compute resampled test statistics
     for k in xrange(permutations):
-        print k
         np.random.shuffle(S)
         Xp, Yp = S[:N], S[N:]
         tb = _compute_kernel_statistic(Xp, Yp)
