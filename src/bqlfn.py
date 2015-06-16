@@ -107,7 +107,7 @@ def correlation_anovar2(data_group, data_y):
     assert n == len(data_y)
     group_values = unique(data_group)
     n_groups = len(group_values)
-    if n_groups == len(data_group):
+    if n_groups == n:
         return float('NaN')
     samples = []
     for v in group_values:
