@@ -85,14 +85,20 @@ def correlation_pearsonr2(data0, data1):
 def correlation_cramerphi(data0, data1):
     n = len(data0)
     assert n == len(data1)
+    if n == 0:
+        return float('NaN')
     unique0 = unique_indices(data0)
     unique1 = unique_indices(data1)
-    min_levels = min(len(unique0), len(unique1))
-    if min_levels <= 1:
-        return float('NaN')
-    ct = [0] * len(unique0)
+    n0 = len(unique0)
+    n1 = len(unique1)
+    if n0 == 1 and n1 == 1:
+        return 1.
+    min_levels = min(n0, n1)
+    if min_levels == 1:
+        return 0.
+    ct = [0] * n0
     for i0, j0 in enumerate(unique0):
-        ct[i0] = [0] * len(unique1)
+        ct[i0] = [0] * n1
         for i1, j1 in enumerate(unique1):
             c = 0
             for i in range(n):
@@ -107,8 +113,13 @@ def correlation_anovar2(data_group, data_y):
     assert n == len(data_y)
     group_values = unique(data_group)
     n_groups = len(group_values)
-    if n_groups == n:
+    if n_groups == n or n_groups == 0:
         return float('NaN')
+    if n_groups == 1:
+        if all(data_y[i] == data_y[0] for i in xrange(1, len(data_y))):
+            return 1.
+        else:
+            return 0.
     samples = []
     for v in group_values:
         sample = []
