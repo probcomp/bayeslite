@@ -25,7 +25,7 @@ def unique(array):
     NaNs, omit them before passing them here.
     """
     for x in array:
-        assert not (type(x) == float and math.isnan(x))
+        assert not (isinstance(x, float) and math.isnan(x))
     if len(array) < 2:
         return array
     array_sorted = sorted(array)
@@ -43,7 +43,7 @@ def unique_indices(array):
     NaNs, omit them before passing them here.
     """
     for x in array:
-        assert not (type(x) == float and math.isnan(x))
+        assert not (isinstance(x, float) and math.isnan(x))
     if len(array) == 0:
         return []
     if len(array) == 1:
