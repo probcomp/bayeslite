@@ -111,8 +111,11 @@ def correlation_cramerphi(data0, data1):
 def correlation_anovar2(data_group, data_y):
     n = len(data_group)
     assert n == len(data_y)
-    group_values = unique(data_group)
-    n_groups = len(group_values)
+    group_index = {}
+    for x in data_group:
+        if x not in group_index:
+            group_index[x] = len(group_index)
+    n_groups = len(group_index)
     if n_groups == n or n_groups == 0:
         return float('NaN')
     if n_groups == 1:
@@ -120,14 +123,12 @@ def correlation_anovar2(data_group, data_y):
             return 1.
         else:
             return 0.
-    samples = []
-    for v in group_values:
-        sample = []
-        for i in range(n):
-            if data_group[i] == v:
-                sample.append(data_y[i])
-        samples.append(sample)
-    F = stats.f_oneway(samples)
+    groups = [None] * n_groups
+    for i in xrange(n_groups):
+        groups[i] = []
+    for x, y in zip(data_group, data_y):
+        groups[group_index[x]].append(y)
+    F = stats.f_oneway(groups)
     return 1 - 1/(1 + F*(float(n_groups - 1) / float(n - n_groups)))
 
 def correlation_anovar2_dc(discrete_data, continuous_data):
