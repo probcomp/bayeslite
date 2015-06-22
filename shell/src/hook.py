@@ -59,3 +59,8 @@ def bayesdb_shell_cmd(name, autorehook=False):
         current_shell()._hook(name, bayesdb_shellhookexp(func),
                               autorehook=autorehook)
     return wrapper
+
+
+def bayesdb_shell_init(func):
+    func(current_shell())
+    return func
