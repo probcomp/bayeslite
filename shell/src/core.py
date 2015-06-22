@@ -306,15 +306,8 @@ class Shell(cmd.Cmd):
 
         try:
             imp.load_source('bayeslite_shell_hooks', path)
-        except IOError:
-            self.stdout.write("No such file or directory %s\n" % (path,))
-            return
-        except SyntaxError:
-            self.stdout.write("%s is an invalid python file.\n" % (path,))
-            return
-        except Exception as err:
-            self.stdout.write("%s\n" % (repr(err),))
-            return
+        except Exception as e:
+            self.stdout.write(traceback.format_exc())
         else:
             self._hooked_filenames.add(path)
 
