@@ -45,45 +45,25 @@ def test_codebook_valmap():
         cc = crosscat.LocalEngine.LocalEngine(seed=0)
         ccme = bayeslite.crosscat.CrosscatMetamodel(cc)
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
-        
         bayeslite.bayesdb_read_csv(bdb, 'dummy', file(DUMMY_DATA),
-            header = True,
-            create = True)
-        
+            header=True, create=True)
         bayeslite.bayesdb_load_codebook_csv_file(bdb, 'dummy', DUMMY_CODEBOOK)
-
-        bdb.execute("""
-        CREATE GENERATOR dummy_cc FOR dummy 
-            USING crosscat(
-                GUESS(*),
-                kerberos IGNORE,
-                age NUMERICAL,
-                city CATEGORICAL
-            );
-        """)
-
-        bdb.execute("""
-        INITIALIZE 10 MODELS FOR dummy_cc;
-        """)
-
-        bdb.execute("""
-        ANALYZE dummy_cc FOR 20 ITERATIONS WAIT;
-        """)
-
-        bdb.execute("""
-        SIMULATE age FROM dummy_cc GIVEN city = RIO LIMIT 5 
-        """)
-
-        bdb.sql_execute("""
-        INSERT INTO dummy (kerberos, age, city) VALUES
-            ('jackie', 18, 'LA'), ('rocker', 22, 'DC');
-        """)
-
-        bdb.execute("""
-        ANALYZE dummy_cc FOR 20 ITERATIONS WAIT;
-        """)
-
+        bdb.execute('''
+            CREATE GENERATOR dummy_cc FOR dummy
+                USING crosscat(
+                    GUESS(*),
+                    kerberos IGNORE,
+                    age NUMERICAL,
+                    city CATEGORICAL
+                )
+        ''')
+        bdb.execute('INITIALIZE 10 MODELS FOR dummy_cc')
+        bdb.execute('ANALYZE dummy_cc FOR 20 ITERATIONS WAIT')
+        bdb.execute('SIMULATE age FROM dummy_cc GIVEN city = RIO LIMIT 5')
+        bdb.sql_execute('''
+            INSERT INTO dummy (kerberos, age, city) VALUES
+                ('jackie', 18, 'LA'), ('rocker', 22, 'DC')
+        ''')
+        bdb.execute('ANALYZE dummy_cc FOR 20 ITERATIONS WAIT')
         with pytest.raises(exceptions.KeyError):
-            bdb.execute("""
-            SIMULATE age FROM dummy_cc GIVEN city = LA LIMIT 5;
-            """)
+            bdb.execute('SIMULATE age FROM dummy_cc GIVEN city = LA LIMIT 5')
