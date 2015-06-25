@@ -27,7 +27,6 @@ value map.
     SIMULATE specifying `city` = `LA` (throws KeyError)
 """
 
-import exceptions
 import os
 import pytest
 
@@ -65,5 +64,5 @@ def test_codebook_valmap():
                 ('jackie', 18, 'LA'), ('rocker', 22, 'DC')
         ''')
         bdb.execute('ANALYZE dummy_cc FOR 20 ITERATIONS WAIT')
-        with pytest.raises(exceptions.KeyError):
+        with pytest.raises(KeyError):
             bdb.execute('SIMULATE age FROM dummy_cc GIVEN city = LA LIMIT 5')
