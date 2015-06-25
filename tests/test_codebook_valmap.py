@@ -44,8 +44,9 @@ def test_codebook_valmap():
         cc = crosscat.LocalEngine.LocalEngine(seed=0)
         ccme = bayeslite.crosscat.CrosscatMetamodel(cc)
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
-        bayeslite.bayesdb_read_csv(bdb, 'dummy', file(DUMMY_DATA),
-            header=True, create=True)
+        with open(DUMMY_DATA, 'rU') as f:
+            bayeslite.bayesdb_read_csv(bdb, 'dummy', f, header=True,
+                create=True)
         bayeslite.bayesdb_load_codebook_csv_file(bdb, 'dummy', DUMMY_CODEBOOK)
         bdb.execute('''
             CREATE GENERATOR dummy_cc FOR dummy
