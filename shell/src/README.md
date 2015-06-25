@@ -4,7 +4,7 @@ Access the bayeslite shell with the `bayeslite` command. Type `.help`
 in the shell to see a list of commands.
 
 ## Arguments
-- `--no-init-file`: do not source `~/bayeslite.rc`
+- `--no-init-file`: do not source `~/.bayesliterc`
 - `-f <path>`: source a file of commands
     + Ex: `$ bayeslite mydatabase.bdb -f hooks/myhooks.bql` 
 
@@ -38,34 +38,57 @@ bayeslite> .zmatrix ESTIMATE PAIRWISE DEPENDENCE PROBABILITY FROM mytable_cc -f 
 
 ## Adding your own commands with `.hook`
 
+Simply define a python function that takes a `self` argument and an `args`
+argument. 
+
+`args` is the string of text that follows the dot command. For
+example, in
+
+    bayeslite> .myfunc -v -n Tommy
+
+`args` would be the string `'-v -n Tommy'`.
+
+`self` is the shell object. The
+`self` variable then gives you access to the bayesdb object (via `self._bdb`)
+and the `hookvars` attribute. `self.hookvars` is a dictionary you can use to
+communicate between shell commands.
+
+### Example
+
 ```python
 # my_contrib.py
 from bayeslite.shell import pretty
 from bayeslite.shell.hook import bayesdb_shell_cmd
 
+
 @bayesdb_shell_cmd("hello")
 def say_hello_to_name(self, args):
-    """ Says hello """
+    """ Says hello
+    <name>
+    """
     self.stdout.write("Hello, %s.\n" % (args,))
+    self.hookvars['hello_name'] = args
+
 
 @bayesdb_shell_cmd("byebye", autorehook=True)
-def say_hello_to_name(self, args):
-    """ Says bye-bye """
-    self.stdout.write("Bye-bye.\n")
+def say_bye_to_name(self, args):
+    name = self.hookvars.get('hello_name', 'friend')
+    self.stdout.write("Bye-bye, {}.\n".format(name))
 
-# Alias a long query you use a lot 
-@bayesdb_shell_cmd("mycmd", autorehook=True):
+
+# Alias a long query you use a lot
+@bayesdb_shell_cmd("mycmd", autorehook=True)
 def get_cust_order_data_name(self, args):
-    '''Get order id, order date, and cutomer name, by customer name 
+    '''Get order id, order date, and cutomer name, by customer name
     <customer_name>
 
     Example:
-    bayeslite> .mycmd John Keats 
+    bayeslite> .mycmd John Keats
     '''
     query = '''
     SELECT Orders.OrderID, Orders.OrderDate, Customers.CustomerName
         FROM Customers, Orders
-        WHERE Customers.CustomerName = ? 
+        WHERE Customers.CustomerName = ?
             AND Customers.CustomerID = Orders.CustomerID;
     '''
     cursor = self._bdb.execute(query, (args,))
@@ -80,9 +103,18 @@ added command ".hello"
 added command ".byebye"
 added command ".mycmd"
 bayeslite> .help hello
-.hello Says hello
-bayeslite> .hello Gary Oldman
-Hello, Gary Oldman.
+.hello <name>
+(END)
+
+bayeslite> .help byebye
+.byebye ...(END)
+
+bayeslite> .byebye
+Bye-bye, friend.
+bayeslite> .hello Nathan
+Hello, Nathan.
+bayeslite> .byebye
+Bye-bye, Nathan.
 ```
 
 You are free to `.hook` a file multiple times. Re-hooking a file will reload the contents of the file. This can be especially useful for development. If you try to re-hook a file, you must confirm that you want to re-hook the file and confirm that you want to re-hook each function in that file for which `autorehook=False`.

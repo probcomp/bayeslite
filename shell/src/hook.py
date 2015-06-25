@@ -43,7 +43,14 @@ def current_shell():
 class bayesdb_shellhookexp(object):
     def __init__(self, func):
         self.func = func
-        self.__doc__ = func.__doc__
+        fdoc = func.__doc__
+        if fdoc is None or len(fdoc.strip()) == 0:
+            fdoc = 'NO DOCUMENTATION...\n...\n'
+
+        if len(fdoc.split('\n')) == 1:
+            fdoc += '\n...\n'
+
+        self.__doc__ = fdoc
 
     def __call__(self, *args):
         try:
