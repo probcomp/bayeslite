@@ -508,6 +508,15 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                casefold(directive[1]) != 'guess':
                 columns.append((directive[0], directive[1]))
                 continue
+            if directive == []:
+                # Skip extra commas so you can write
+                #
+                #    CREATE GENERATOR t_cc FOR t USING crosscat(
+                #        x,
+                #        y,
+                #        z,
+                #    )
+                continue
             raise BQLError(bdb, 'Invalid crosscat column model: %s' %
                 (repr(directive),))
 
