@@ -304,10 +304,12 @@ class Shell(cmd.Cmd):
                 self.stdout.write("Abondoning hook of %s\n" % (path,))
                 return
 
+        self.stdout.write('Loading hooks at %s...\n' % (path,))
         try:
             imp.load_source('bayeslite_shell_hooks', path)
         except Exception as e:
             self.stdout.write(traceback.format_exc())
+            self.stdout.write('Failed to load hooks: %s\n' % (repr(path),))
         else:
             self._hooked_filenames.add(path)
 
