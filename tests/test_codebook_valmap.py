@@ -35,7 +35,6 @@ import crosscat.LocalEngine
 
 import bayeslite
 import bayeslite.crosscat
-from bayeslite.sqlite3_util import sqlite3_quote_name as quote
 
 root = os.path.dirname(os.path.abspath(__file__))
 DUMMY_CODEBOOK = os.path.join(root, 'dummy_codebook.csv')
