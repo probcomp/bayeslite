@@ -14,6 +14,19 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+"""
+A categorical column in crosscat can only take on a fixed number of values
+v1, v2, ..., v3.  In this test, we have a categorical column called
+`city` which takes on values `RIO, LA, SF, DC` as specified in the codebook
+value map.
+
+    INITIALIZE dummy table with only RIO and SF appearing in dataset
+    ANALYZE dummy_cc
+    INSERT rows with `city` names `LA` and `DC`
+    ANALYZE dummy_cc
+    SIMULATE specifying `city` = `LA` (throws KeyError)
+"""
+
 import exceptions
 import os
 import pytest
@@ -27,19 +40,6 @@ from bayeslite.sqlite3_util import sqlite3_quote_name as quote
 root = os.path.dirname(os.path.abspath(__file__))
 DUMMY_CODEBOOK = os.path.join(root, 'dummy_codebook.csv')
 DUMMY_DATA = os.path.join(root, 'dummy.csv')
-
-"""
-A categorical column in crosscat can only take on a fixed number of values 
-v1, v2, ..., v3. In this test, we have a categorical column called
-`city` which takes on values `RIO, LA, SF, DC` as specified in the codebook
-value map. 
-
-    INITIALIE dummy table with only RIO and SF appearing in dataset
-    ANALYZE dummy_cc
-    INSERT rows with `city` names `LA` and `DC`
-    ANALYZE dummy_cc
-    SIMULATE specifying `city` = `LA` (throws KeyError)
-"""
 
 def test_codebook_valmap():
     with bayeslite.bayesdb_open() as bdb:
