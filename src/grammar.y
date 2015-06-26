@@ -487,8 +487,8 @@ unary(bql)		::= bqlfn(b).
  */
 bqlfn(predprob_row)	::= K_PREDICTIVE K_PROBABILITY K_OF column_name(col).
 bqlfn(prob_const)	::= K_PROBABILITY K_OF column_name(col)
-				T_EQ primary(e).
-bqlfn(prob_1col)	::= K_PROBABILITY K_OF K_VALUE primary(e).
+				T_EQ unary(e).
+bqlfn(prob_1col)	::= K_PROBABILITY K_OF K_VALUE unary(e).
 bqlfn(typ_1col_or_row)	::= K_TYPICALITY.
 bqlfn(typ_const)	::= K_TYPICALITY K_OF column_name(col).
 bqlfn(sim_1row)		::= K_SIMILARITY K_TO
