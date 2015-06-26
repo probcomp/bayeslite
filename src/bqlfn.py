@@ -174,79 +174,6 @@ def bql_column_value_probability(bdb, generator_id, modelno, colno, value):
     return metamodel.column_value_probability(bdb, generator_id, modelno,
         colno, value)
 
-### BayesDB generator functions
-
-# Two-generator function:  KL DIVERGENCE [OF <q_gen> FROM <p_gen> FOR <coln0>]
-def bql_generator_kl_divergence(bdb, p_generator_id, q_generator_id, 
-    p_colno, q_colno, n_samples = 10000):
-
-    p_genname = sqlite3_quote_name(
-        core.bayesdb_generator_name(bdb, p_generator_id))
-    p_tablename = sqlite3_quote_name(
-        core.bayesdb_generator_table(bdb, p_generator_id))
-    p_colname = sqlite3_quote_name(
-        core.bayesdb_generator_column_name(bdb, p_generator_id, p_colno))
-    p_stt = core.bayesdb_generator_column_stattype(bdb, p_generator_id, p_colno)
-
-    q_genname = sqlite3_quote_name(
-        core.bayesdb_generator_name(bdb, q_generator_id))
-    q_table = sqlite3_quote_name(
-        core.bayesdb_generator_table(bdb, p_generator_id))
-    q_colname = sqlite3_quote_name(
-        core.bayesdb_generator_column_name(bdb, q_generator_id, q_colno))
-    q_stt = core.bayesdb_generator_column_stattype(bdb, q_generator_id, q_colno)
-    
-    if p_stt != q_stt:
-        raise ValueError('Cannot compute KL divergence for different stattypes'
-            '%s/%s. Make sure both generators specify the same stattype for'
-            'their columns' % (st0, st1))
-
-    samples = []
-    if p_stt == 'categorical':
-        sql = '''
-            SELECT DISTINCT %s FROM %s;
-        '''.format(p_colname, p_tablename)
-        p_categories = set(bdb.sql_execute(sql).fetchall())
-
-        sql = '''
-            SELECT DISTINCT %s FROM %s;
-        '''.format(q_colname, q_tablename)
-        q_categories = set(bdb.sql_execute(sql).fetchall())
-
-        if (p_categories != q_categories):
-            raise ValueError('Categorical columns must have the same categories'
-                'to compute KL divergence:\n'
-                '{}\n{}'.format(p_categories, q_categories))
-
-        p_support = len(p_categories)
-        samples = range(q_support)
-    else:
-        curs = bdb.execute('''
-            SIMULATE %s FROM %s LIMIT %s
-        '''.format(p_colname, p_genname, n_samples))
-        for s in curs:
-            samples.append(s[0])
-    
-    kl = 0
-    for s in samples:
-        bql = '''
-            ESTIMATE PROBABILITY OF {}=? FROM {} LIMIT 1
-        '''.format(p_colname, p_genname)
-        crs = bdb.execute(bql, (s,))
-        log_p = math.log(crs.next()[0])
-
-        bql = '''
-            ESTIMATE PROBABILITY OF {}=? FROM {} LIMIT 1
-        '''.format(q_colname, q_genname)
-        crs = bdb.execute(bql, (s,))
-        log_q = math.log(crs.next()[0])
-
-        kl += (log_p - log_q)
-
-    assert kl > 0
-    return kl
-
-
 ### BayesDB row functions
 
 # Row function:  SIMILARITY TO <target_row> [WITH RESPECT TO <columns>]
