@@ -1,4 +1,0 @@
-name,shortname,description,value_map
-kerberos,student kerbeos,unique identifier for student in the athena system,NaN
-age,student age,"student age in years, rounded up",NaN
-city,student hometown,city before joining college,"{ ""RIO"": ""Rio de Janeiro"",""DC"": ""Washington DC"",""SF"": ""San Francisco"",""LA"": ""Los Angeles"" }"
