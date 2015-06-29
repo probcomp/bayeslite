@@ -60,10 +60,11 @@ def test_codebook_value_map():
         bayeslite.bayesdb_read_csv(bdb,'dummy', dummy_data,
             header=True,create=True)
 
-        tempbook = tempfile.NamedTemporaryFile()
-        tempbook.write(dummy_codebook)
-        tempbook.flush()
-        bayeslite.bayesdb_load_codebook_csv_file(bdb, 'dummy', tempbook.name)
+        with tempfile.NamedTemporaryFile(prefix='bayeslite') as tempbook:
+            with open(tempbook.name, 'w') as f:
+                f.write(dummy_codebook)
+            bayeslite.bayesdb_load_codebook_csv_file(bdb, 'dummy',
+                tempbook.name)
 
         bdb.execute('''
             CREATE GENERATOR dummy_cc FOR dummy
