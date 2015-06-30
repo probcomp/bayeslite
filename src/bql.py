@@ -658,8 +658,17 @@ class WoundCursor(object):
     description = property(lambda self: self.cursor.description)
     def __del__(self):
         del self.cursor
-        for (sql, bindings) in reversed(self.unwinders):
-            self.bdb.sql_execute(sql, bindings)
+        # If the database is still open, we need to undo the effects
+        # of the cursor when done.  But the effects are (intended to
+        # be) in-memory only, so otherwise, if the database is closed,
+        # we need not do anything.
+        #
+        # XXX Name the question of whether it's closed a little less
+        # kludgily.  (But that might encourage people outside to
+        # depend on that, which is not such a great idea.)
+        if self.bdb.sqlite3 is not None:
+            for (sql, bindings) in reversed(self.unwinders):
+                self.bdb.sql_execute(sql, bindings)
         # Apparently object doesn't have a __del__ method.
         #super(WoundCursor, self).__del__()
 
