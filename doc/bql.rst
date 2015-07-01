@@ -322,7 +322,7 @@ BQL Queries
       ``PREDICT <name> [AS <rename>] CONFIDENCE <confidence>``
 
    This results in two resulting columns, one named *rename*, or
-   *name* if *rename* is ont supplied, holding a predicted value of
+   *name* if *rename* is not supplied, holding a predicted value of
    the column *name*, and one named *confidence* holding the
    confidence of the prediction.
 
