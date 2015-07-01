@@ -389,6 +389,8 @@ def compile_infer_auto(bdb, infer, out):
         if core.bayesdb_generator_has_column(bdb, generator_id, col):
             pred = ast.ExpBQLPredict(col, confidence)
             exp = ast.ExpApp(False, 'IFNULL', [exp, pred])
+        if name is None:
+            name = col
         return ast.SelColExp(exp, name)
     def map_columns(col):
         if isinstance(col, ast.InfColAll):
