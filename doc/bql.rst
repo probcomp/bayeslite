@@ -319,12 +319,12 @@ BQL Queries
    In addition to normal ``SELECT`` columns, *columns* may include
    columns of the form
 
-      ``PREDICT <name> [AS <rename>] CONFIDENCE <confidence>``
+      ``PREDICT <name> [AS <rename>] CONFIDENCE <confname>``
 
    This results in two resulting columns, one named *rename*, or
    *name* if *rename* is not supplied, holding a predicted value of
-   the column *name*, and one named *confidence* holding the
-   confidence of the prediction.
+   the column *name*, and one named *confname* holding the confidence
+   of the prediction.
 
    XXX: What about values and confidences of model predictions?
 
