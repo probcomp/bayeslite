@@ -14,23 +14,25 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pytest
+import math
+
+import bayeslite.stats as stats
 
 def relerr(expected, actual):
     """Relative error between expected and actual: ``abs((a - e)/e)``."""
     return abs((actual - expected)/expected)
 
 def test_pearsonr():
-    assert math.isnan(pearsonr([], []))
-    assert pearsonr([1,2,3], [2,4,6]) == +1.0
-    assert pearsonr([1,2,3], [-2,-4,-6]) == -1.0
-    assert pearsonr([1,2,3], [6,4,2]) == -1.0
-    assert pearsonr([1,2,3], [+1,-1,+1]) == 0.0
+    assert math.isnan(stats.pearsonr([], []))
+    assert stats.pearsonr([1,2,3], [2,4,6]) == +1.0
+    assert stats.pearsonr([1,2,3], [-2,-4,-6]) == -1.0
+    assert stats.pearsonr([1,2,3], [6,4,2]) == -1.0
+    assert stats.pearsonr([1,2,3], [+1,-1,+1]) == 0.0
 
 def test_chi2_contingency():
-    assert chi2_contingency([[42]]) == 0.
-    assert relerr(7.66, chi2_contingency([[4,2,3],[3,16,2]])) < 0.01
+    assert stats.chi2_contingency([[42]]) == 0.
+    assert relerr(7.66, stats.chi2_contingency([[4,2,3],[3,16,2]])) < 0.01
 
 def test_f_oneway():
-    assert relerr(9.3,
-        f_oneway([[6,8,4,5,3,4],[8,12,9,11,6,8],[13,9,11,8,7,12]])) < 0.01
+    data = [[6,8,4,5,3,4],[8,12,9,11,6,8],[13,9,11,8,7,12]]
+    assert relerr(9.3, stats.f_oneway(data)) < 0.01
