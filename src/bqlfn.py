@@ -176,30 +176,39 @@ def bql_column_value_probability(bdb, generator_id, modelno, colno, value):
 
 ### BayesDB generator functions
 
-# Two-generator function:  KL DIVERGENCE [OF <q_gen> FROM <p_gen> FOR <coln0>]
-def bql_generator_kl_divergence(bdb, p_generator_id, q_generator_id, 
+# One-generator function: LL OF <cols> FROM <gen>
+def bql_generator_loglikelihood(bdb, generator_id, colnos):
+    genname = sqlite3_quote_name(
+        core.bayesdb_generator_name(bdb, generator_id))
+    tablename = sqlite3_quote_name(
+        core.bayesdb_generator_table(bdb, generator_id))
+    colnames = sqlite3_quote_name(
+        core.bayesdb_generator_column_name(bdb, p_gen_id, p_colno))
+
+# Two-generator function: KL DIVERGENCE(<cols> FROM <q_gen>,<cols> FROM <p_gen>]
+def bql_generator_kl_divergence(bdb, p_gen_id, q_gen_id,
     p_colno, q_colno, n_samples = 10000):
 
     p_genname = sqlite3_quote_name(
-        core.bayesdb_generator_name(bdb, p_generator_id))
+        core.bayesdb_generator_name(bdb, p_gen_id))
     p_tablename = sqlite3_quote_name(
-        core.bayesdb_generator_table(bdb, p_generator_id))
+        core.bayesdb_generator_table(bdb, p_gen_id))
     p_colname = sqlite3_quote_name(
-        core.bayesdb_generator_column_name(bdb, p_generator_id, p_colno))
-    p_stt = core.bayesdb_generator_column_stattype(bdb, p_generator_id, p_colno)
+        core.bayesdb_generator_column_name(bdb, p_gen_id, p_colno))
+    p_stt = core.bayesdb_generator_column_stattype(bdb, p_gen_id, p_colno)
 
     q_genname = sqlite3_quote_name(
-        core.bayesdb_generator_name(bdb, q_generator_id))
+        core.bayesdb_generator_name(bdb, q_gen_id))
     q_table = sqlite3_quote_name(
-        core.bayesdb_generator_table(bdb, p_generator_id))
+        core.bayesdb_generator_table(bdb, p_gen_id))
     q_colname = sqlite3_quote_name(
-        core.bayesdb_generator_column_name(bdb, q_generator_id, q_colno))
-    q_stt = core.bayesdb_generator_column_stattype(bdb, q_generator_id, q_colno)
+        core.bayesdb_generator_column_name(bdb, q_gen_id, q_colno))
+    q_stt = core.bayesdb_generator_column_stattype(bdb, q_gen_id, q_colno)
     
     if p_stt != q_stt:
         raise ValueError('Cannot compute KL divergence for different stattypes'
             '%s/%s. Make sure both generators specify the same stattype for'
-            'their columns' % (st0, st1))
+            'their columns' % (p_stt, q_stt))
 
     samples = []
     if p_stt == 'categorical':
@@ -213,13 +222,15 @@ def bql_generator_kl_divergence(bdb, p_generator_id, q_generator_id,
         '''.format(q_colname, q_tablename)
         q_categories = set(bdb.sql_execute(sql).fetchall())
 
+        if len(p_categories) == 0:
+            raise ValueError('Cannot compute KL divergence on empty support')
+
         if (p_categories != q_categories):
             raise ValueError('Categorical columns must have the same categories'
                 'to compute KL divergence:\n'
                 '{}\n{}'.format(p_categories, q_categories))
 
-        p_support = len(p_categories)
-        samples = range(q_support)
+        samples = p_categories
     else:
         curs = bdb.execute('''
             SIMULATE %s FROM %s LIMIT %s
@@ -228,23 +239,24 @@ def bql_generator_kl_divergence(bdb, p_generator_id, q_generator_id,
             samples.append(s[0])
     
     kl = 0
-    for s in samples:
+    for x in samples:
         bql = '''
             ESTIMATE PROBABILITY OF {}=? FROM {} LIMIT 1
         '''.format(p_colname, p_genname)
-        crs = bdb.execute(bql, (s,))
-        log_p = math.log(crs.next()[0])
+        crs = bdb.execute(bql, (x,))
+        p_x = crs.next()[0]
 
         bql = '''
             ESTIMATE PROBABILITY OF {}=? FROM {} LIMIT 1
         '''.format(q_colname, q_genname)
-        crs = bdb.execute(bql, (s,))
-        log_q = math.log(crs.next()[0])
+        crs = bdb.execute(bql, (x,))
+        q_x = crs.next()[0]
 
-        kl += (log_p - log_q)
+        prefactor = len(samples)*p_x if p_stt == 'categorical' else 1
+        kl += (prefactor*(math.log(p_x) - math.log(q_x)))
 
-    assert kl > 0
-    return kl
+    assert(kl > 0)
+    return kl / len(samples)
 
 
 ### BayesDB row functions
