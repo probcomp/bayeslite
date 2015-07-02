@@ -291,6 +291,14 @@ def test_estimate_bql():
             ' from t1_cc;') == \
         'SELECT bql_predict(1, NULL, 2, _rowid_, 0.9) FROM "t1";'
     assert bql2sql('infer explicit rowid, age,'
+            ' predict age confidence age_conf from t1_cc') == \
+        'SELECT c0 AS "rowid", c1 AS "age",' \
+            ' bql_json_get(c2, \'value\') AS "age",' \
+            ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
+            ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
+                ' bql_predict_confidence(1, NULL, 2, _rowid_) AS c2' \
+                ' FROM "t1");'
+    assert bql2sql('infer explicit rowid, age,'
             ' predict age as age_inf confidence age_conf from t1_cc') == \
         'SELECT c0 AS "rowid", c1 AS "age",' \
             ' bql_json_get(c2, \'value\') AS "age_inf",' \

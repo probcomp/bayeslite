@@ -261,7 +261,7 @@ infer_exp_columns(many)	::= infer_exp_columns(cs) T_COMMA
 				infer_exp_column(c).
 
 infer_exp_column(sel)	::= select_column(c).
-infer_exp_column(pred)	::= K_PREDICT column_name(col) K_AS column_name(name)
+infer_exp_column(pred)	::= K_PREDICT column_name(col) as(name)
 				K_CONFIDENCE column_name(confname).
 
 select_quant(distinct)	::= K_DISTINCT.
