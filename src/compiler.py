@@ -297,7 +297,8 @@ def compile_infer_explicit_predict(bdb, infer, out):
             out.write(',')
         out.write(' ')
         if isinstance(col, ast.PredCol):
-            qvcn = sqlite3_quote_name(col.name)
+            vcn = col.column if col.name is None else col.name
+            qvcn = sqlite3_quote_name(vcn)
             out.write("bql_json_get(c%u, 'value') AS %s" % (i, qvcn))
             out.write(', ')
             qccn = sqlite3_quote_name(col.confname)
