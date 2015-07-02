@@ -593,6 +593,7 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 	K_BY
 	/* K_CASE */
 	K_CAST
+	K_CHECKPOINT
 	K_COLLATE
 	K_COLUMNS
 	K_CONF
