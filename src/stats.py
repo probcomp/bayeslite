@@ -48,12 +48,6 @@ def pearsonr(a0, a1):
     r = max(r, -1.0)
     return r
 
-assert math.isnan(pearsonr([], []))
-assert pearsonr([1,2,3], [2,4,6]) == +1.0
-assert pearsonr([1,2,3], [-2,-4,-6]) == -1.0
-assert pearsonr([1,2,3], [6,4,2]) == -1.0
-assert pearsonr([1,2,3], [+1,-1,+1]) == 0.0
-
 def signum(x):
     """Sign of x: -1 if x<0, 0 if x=0, +1 if x>0."""
     if x < 0:
@@ -62,10 +56,6 @@ def signum(x):
         return +1
     else:
         return 0
-
-def relerr(expected, actual):
-    """Relative error between expected and actual: ``abs((a - e)/e)``."""
-    return abs((actual - expected)/expected)
 
 def chi2_contingency(contingency, correction=None):
     """Pearson chi^2 test of independence on contingency table.
@@ -95,9 +85,6 @@ def chi2_contingency(contingency, correction=None):
         return ((O - E)**2)/E
     return float_sum(q(i0, i1) for i0 in range(n0) for i1 in range(n1))
 
-assert chi2_contingency([[42]]) == 0.
-assert relerr(7.66, chi2_contingency([[4,2,3],[3,16,2]])) < 0.01
-
 def f_oneway(groups):
     """F-test in one-way analysis of variance (ANOVA).
 
@@ -118,6 +105,3 @@ def f_oneway(groups):
         else:
             return float('+inf')
     return bgv / wgv
-
-assert relerr(9.3,
-        f_oneway([[6,8,4,5,3,4],[8,12,9,11,6,8],[13,9,11,8,7,12]])) < 0.01
