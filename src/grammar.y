@@ -581,13 +581,17 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 /*
  * XXX For some reason, putting CASE and WHEN here break the parser.
  * Needs further analysis.
+ *
+ *	grep -o 'K_[A-Z_]*' | awk '{ printf("\t%s\n", $1) }' | sort -u
  */
 %fallback L_NAME
 	K_ALL
+	K_ALTER
 	K_ANALYZE
 	K_AND
 	K_AS
 	K_ASC
+	K_BEGIN
 	K_BETWEEN
 	K_BTABLE
 	K_BY
@@ -595,10 +599,14 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 	K_CAST
 	K_CHECKPOINT
 	K_COLLATE
+	K_COLUMN
 	K_COLUMNS
+	K_COMMIT
 	K_CONF
+	K_CONFIDENCE
 	K_CORRELATION
 	K_CREATE
+	K_DEFAULT
 	K_DEPENDENCE
 	K_DESC
 	K_DISTINCT
@@ -608,11 +616,14 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 	K_ESCAPE
 	K_ESTIMATE
 	K_EXISTS
+	K_EXPLICIT
 	K_FOR
 	K_FROM
+	K_GENERATOR
 	K_GIVEN
 	K_GLOB
 	K_GROUP
+	K_HAVING
 	K_IF
 	K_IN
 	K_INFER
@@ -642,12 +653,15 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 	K_PREDICTIVE
 	K_PROBABILITY
 	K_REGEXP
+	K_RENAME
 	K_RESPECT
+	K_ROLLBACK
 	K_ROW
 	K_SAMPLES
 	K_SECOND
 	K_SECONDS
 	K_SELECT
+	K_SET
 	K_SIMILARITY
 	K_SIMULATE
 	K_TABLE
@@ -656,6 +670,7 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 	K_THEN
 	K_TO
 	K_TYPICALITY
+	K_UNSET
 	K_USING
 	K_VALUE
 	K_WAIT
