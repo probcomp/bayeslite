@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 #   Copyright (c) 2010-2014, MIT Probabilistic Computing Project
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,17 +16,35 @@
 """Miscellaneous statistics utilities."""
 
 import math
-
 from bayeslite.util import float_sum
 
+# Constants for numerical integration.
+MACHEP = 2**-56
+MAXNUM = 2**127
+BIG = 4.503599627370496e15
+BIGINV = 2.22044604925031308085e-16
+
+
 def arithmetic_mean(array):
-    """Arithmetic mean of elements of `array` in floating-point."""
+    """Computes the arithmetic mean of elements of `array`.
+
+    :param list<float> array: List of floats to compute arithmetic mean.
+
+    :return: Arithmetic mean of `array`.
+    :rtype: float
+    """
     return float_sum(array) / len(array)
 
-def pearsonr(a0, a1):
-    """Return Pearson r: correlation coefficient for a sample.
 
+def pearsonr(a0, a1):
+    """Computes the Pearson r correlation coefficient of two samples.
     https://en.wikipedia.org/wiki/Pearson_product-moment_correlation_coefficient
+
+    :param list<float> a0: Observations of the first random variable.
+    :param list<float> a1: Observations of the second random variable.
+
+    :return: Perason r correlation coefficient of samples `a0` and `a1`.
+    :rtype: float
     """
     n = len(a0)
     assert n == len(a1)
@@ -48,8 +65,15 @@ def pearsonr(a0, a1):
     r = max(r, -1.0)
     return r
 
+
 def signum(x):
-    """Sign of x: -1 if x<0, 0 if x=0, +1 if x>0."""
+    """Computes the sign of `x`.
+
+    :param float x: Argument to signum.
+
+    :return: Sign of `x`: (``-1 if x<0, 0 if x=0, +1 if x>0``).
+    :rtype: int
+    """
     if x < 0:
         return -1
     elif 0 < x:
@@ -57,16 +81,24 @@ def signum(x):
     else:
         return 0
 
+
 def chi2_contingency(contingency, correction=None):
-    """Pearson chi^2 test of independence on contingency table.
+    """Computes observed Pearson Chi2 test statistic for a test of independence
+    on a contingency table.
+    http://en.wikipedia.org/wiki/Pearson%27s_chi-squared_test#Test_of_independence
 
-    If correction=True, move each observation count in the direction
-    of the expectation by 1/2.
+    :param list<list> contingency: 2D table of observed frequencies. The
+    dimensions must be M by N, where M (resp N) is the number of discrete
+    values taken by the first (resp second) random variable.
 
-    https://en.wikipedia.org/wiki/Pearson%27s_chi-squared_test#Test_of_independence
+    :param boolean correction: If ``True``, moves each observation count in the
+    direction of the expectation by 1/2.
+
+    :return: The observed Pearson chi2 test statistic on the `contingency` table.
+    :rtype: float
     """
     if correction is None:
-        correction is True
+        correction = True
     assert 0 < len(contingency)
     assert all(all(isinstance(v, int) for v in row) for row in contingency)
     n = float(sum(sum(row) for row in contingency))
@@ -85,10 +117,17 @@ def chi2_contingency(contingency, correction=None):
         return ((O - E)**2)/E
     return float_sum(q(i0, i1) for i0 in range(n0) for i1 in range(n1))
 
-def f_oneway(groups):
-    """F-test in one-way analysis of variance (ANOVA).
 
+def f_oneway(groups):
+    """Computes observed F test statistic for a one-way analysis of variance
+    (ANOVA).
     https://en.wikipedia.org/wiki/F-test#Multiple-comparison_ANOVA_problems
+
+    :param list<list> groups: List of lists of the observed values of each
+    group. The outer list must length equal to the number of groups.
+
+    :return: The observed F test statistic on `groups`.
+    :rtype: float
     """
     K = len(groups)
     N = sum(len(group) for group in groups)
@@ -105,3 +144,86 @@ def f_oneway(groups):
         else:
             return float('+inf')
     return bgv / wgv
+
+
+def t_cdf(x, df):
+    """Approximate cumulative distribution function for Student's t probability
+    distribution.
+    ``t_cdf(x,df) = P(T_df < x)``
+    Values are tested to within 0.5% of values returned by the
+    Cephes C library for numerical integration.
+
+    :param float x: Argument to the survival function, must be positive.
+    :param float df: Degrees of freedom of the chi2 distribution.
+
+    :return: The area from negative infinity to `x` under the t probability
+        distribution with degrees of freedom `df`.
+    :rtype: float
+    """
+    import numpy
+    numpy.random.seed(seed=0)
+
+    if df <= 0:
+        raise ValueError("Degrees of freedom must be positive.")
+    if x == 0:
+        return 0.5
+
+    MONTE_CARLO_SAMPLES = 1e5
+    T = numpy.random.standard_t(df, size=MONTE_CARLO_SAMPLES)
+    p = numpy.sum(T < x) / MONTE_CARLO_SAMPLES
+    return p
+
+def chi2_sf(x, df):
+    """Approximate survival function (tail) for the chi2 probability
+    distribution.
+    ``chi2_sf(x, df) = P(CHI > x)``
+    Values are tested to within 0.5% of values returned by the
+    Cephes C library for numerical integration.
+
+    :param float x: Argument to the survival function, must be positive.
+    :param float df: Degrees of freedom of the chi2 distribution.
+
+    :return: The area from `x` to infinity under the chi2 probability
+        distribution with degrees of freedom df.
+    :rtype: float
+    """
+    import numpy
+    numpy.random.seed(seed=0)
+
+    if df <= 0:
+        raise ValueError("Degrees of freedom must be positive.")
+    if x <= 0:
+        return 1.0
+
+    MONTE_CARLO_SAMPLES = 5e5
+    CHI = numpy.random.chisquare(df, size=MONTE_CARLO_SAMPLES)
+    p = numpy.sum(CHI > x) / MONTE_CARLO_SAMPLES
+    return p
+
+def f_sf(x, df_num, df_den):
+    """Approximate cumulative distribution function for the F probability
+    distribution.
+    ``f_sf(x, df_num, df_den) = P(F < x)``
+    Values are tested to within 1% of values returned by the
+    Cephes C library for numerical integration.
+
+    :param float x: Argument to the survival function, must be positive.
+    :param float df_num: Degrees of freedom of the numerator.
+    :param float df_den: Degrees of freedom of the denominator.
+
+    :return: The area from negative infinity to `x` under the t probability
+        distribution with degrees of freedom `df`.
+    :rtype: float
+    """
+    import numpy
+    numpy.random.seed(seed=0)
+
+    if df_num <= 0 or df_den <= 0:
+        raise ValueError("Degrees of freedom must be positive.")
+    if x <= 0:
+        return 1.0
+
+    MONTE_CARLO_SAMPLES = 1e5
+    F = numpy.random.f(df_num, df_den, size=MONTE_CARLO_SAMPLES)
+    p = numpy.sum(F > x) / MONTE_CARLO_SAMPLES
+    return p
