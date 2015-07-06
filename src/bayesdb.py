@@ -175,10 +175,6 @@ class BayesDB(object):
         with txn.bayesdb_savepoint(self):
             yield
 
-    def set_progress_handler(self, handler, n):
-        """Call `handler` periodically during query execution."""
-        self.sqlite3.set_progress_handler(handler, n)
-
     def temp_table_name(self):
         n = self.temptable
         self.temptable += 1
