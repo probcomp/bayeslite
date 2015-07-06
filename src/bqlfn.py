@@ -98,6 +98,8 @@ def correlation_pearsonr2(data0, data1):
     corr = stats.pearsonr(data0, data1)**2
     if math.isnan(corr):
         return (corr, float('NaN'))
+    if corr == 1.:
+        return (corr, 0.)
     # Computeip observed t-stat.
     N = len(data0)
     t = corr * math.sqrt((N-2) / (1 - corr**2))
