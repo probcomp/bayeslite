@@ -16,7 +16,6 @@
 """Miscellaneous statistics utilities."""
 
 import math
-import numpy
 from bayeslite.util import float_sum
 
 # Constants for numerical integration.
@@ -29,6 +28,10 @@ BIGINV = 2.22044604925031308085e-16
 def arithmetic_mean(array):
     """Computes the arithmetic mean of elements of `array`.
 
+    :param list<float> array: List of floats to compute arithmetic mean.
+
+    :return: Arithmetic mean of `array`.
+    :rtype: float
     """
     return float_sum(array) / len(array)
 
@@ -147,16 +150,21 @@ def t_cdf(x, df):
     """Approximate cumulative distribution function for Student's t probability
     distribution.
     ``t_cdf(x,df) = P(T_df < x)``
+    Values are tested to within 0.5% of values returned by the 
+    Cephes C library for numerical integration.
 
-    :param float x: argument to the survival function, must be positive
-    :param float df: degrees of freedom of the chi2 distribution
+    :param float x: Argument to the survival function, must be positive.
+    :param float df: Degrees of freedom of the chi2 distribution.
  
     :return: The area from negative infinity to `x` under the t probability
         distribution with degrees of freedom `df`.
     :rtype: float
     """
+    import numpy
+    numpy.random.seed(seed=0)
+    
     if df <= 0:
-        raise ValueError("Degrees of freedom must be positive")
+        raise ValueError("Degrees of freedom must be positive.")
     if x == 0:
         return 0.5
     
@@ -165,111 +173,57 @@ def t_cdf(x, df):
     p = numpy.sum(T < x) / MONTE_CARLO_SAMPLES
     return p
 
-
 def chi2_sf(x, df):
     """Approximate survival function (tail) for the chi2 probability 
     distribution.
-    ``chi2_sf(x, df) = P(X_df > x)``
+    ``chi2_sf(x, df) = P(CHI > x)``
+    Values are tested to within 0.5% of values returned by the 
+    Cephes C library for numerical integration.
 
-    :param float x: argument to the survival function, must be positive
-    :param float df: degrees of freedom of the chi2 distribution
+    :param float x: Argument to the survival function, must be positive.
+    :param float df: Degrees of freedom of the chi2 distribution.
  
     :return: The area from `x` to infinity under the chi2 probability
         distribution with degrees of freedom df.
     :rtype: float
     """
+    import numpy
+    numpy.random.seed(seed=0)
+
     if df <= 0:
         raise ValueError("Degrees of freedom must be positive.")
     if x <= 0:
         return 1.0
-    if x < 1.0 or x < df:
-        return 1.0 - _igam(0.5 * df, 0.5 * x)
-    return _igamc(0.5 * df, 0.5 * x)
-
-
-def _igamc(a, x):
-    """Computes the complemented incomplete Gamma integral.
-    The function is defined by:
-
-                                inf.
-                                   -
-                          1       | |  -t  a-1
-                    =   -----     |   e   t   dt.
-                         -      | |
-                        | (a)    -
-                                    x
-
-    :param float a: exponent in the integral, must be positive.
-    :param float x: lower limit of the integral, must be positive.
- 
-    :return: The area from `x` to infnity under the aforementioned integral.
-    :rtype: float
-    """
-    # Compute  x**a * exp(-x) / Gamma(a).
-    ax = math.exp(a * math.log(x) - x - math.lgamma(a))
-
-    # Continued fraction.
-    y = 1.0 - a
-    z = x + y + 1.0
-    c = 0.0
-    pkm2 = 1.0
-    qkm2 = x
-    pkm1 = x + 1.0
-    qkm1 = z * x
-    ans = pkm1 / qkm1
-    while True:
-        c += 1.0
-        y += 1.0
-        z += 2.0
-        yc = y * c
-        pk = pkm1 * z - pkm2 * yc
-        qk = qkm1 * z - qkm2 * yc
-        if qk != 0:
-            r = pk / qk
-            t = abs((ans - r) / r)
-            ans = r
-        else:
-            t = 1.0
-        pkm2 = pkm1
-        pkm1 = pk
-        qkm2 = qkm1
-        qkm1 = qk
-        if abs(pk) > BIG:
-                pkm2 *= BIGINV
-                pkm1 *= BIGINV
-                qkm2 *= BIGINV
-                qkm1 *= BIGINV
-        if t <= MACHEP:
-            return ans * ax
-
-
-def _igam(a, x):
-    """Computes the left tail of incomplete Gamma function.
-    The function is defined by:
-
-                 inf.      k
-          a  -x   -       x
-         x  e     >   ----------
-                  -     -
-                k=0   | (a+k+1)
     
-    :param float a: exponent in the integral, must be positive.
-    :param float x: upper limit of the integral, must be positive.
+    MONTE_CARLO_SAMPLES = 5e5
+    CHI = numpy.random.chisquare(df, size = MONTE_CARLO_SAMPLES)
+    p = numpy.sum(CHI > x) / MONTE_CARLO_SAMPLES
+    return p
+
+def f_sf(x, df_num, df_den):
+    """Approximate cumulative distribution function for the F probability
+    distribution.
+    ``f_sf(x, df_num, df_den) = P(F < x)``
+    Values are tested to within 1% of values returned by the
+    Cephes C library for numerical integration.
+
+    :param float x: Argument to the survival function, must be positive.
+    :param float df_num: Degrees of freedom of the numerator.
+    :param float df_den: Degrees of freedom of the denominator.
  
-    :return: The area from 0 to `x` under the aforementioned integral.
+    :return: The area from negative infinity to `x` under the t probability
+        distribution with degrees of freedom `df`.
     :rtype: float
     """
+    import numpy
+    numpy.random.seed(seed=0)
 
-    # Compute  x**a * exp(-x) / Gamma(a).
-    ax = math.exp(a * math.log(x) - x - math.lgamma(a))
-
-    # Power series.
-    r = a
-    c = 1.0
-    ans = 1.0
-    while True:
-        r += 1.0
-        c *= x / r
-        ans += c
-        if c / ans <= MACHEP:
-            return ans * ax / a
+    if df_num <= 0 or df_den <= 0:
+        raise ValueError("Degrees of freedom must be positive.")
+    if x <= 0:
+        return 1.0
+    
+    MONTE_CARLO_SAMPLES = 1e5
+    F = numpy.random.f(df_num, df_den, size = MONTE_CARLO_SAMPLES)
+    p = numpy.sum(F > x) / MONTE_CARLO_SAMPLES
+    return p
