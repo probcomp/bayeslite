@@ -82,7 +82,7 @@ def signum(x):
         return 0
 
 
-def chi2_contingency(contingency, correction=True):
+def chi2_contingency(contingency, correction=None):
     """Computes observed Pearson Chi2 test statistic for a test of independence
     on a contingency table.
     http://en.wikipedia.org/wiki/Pearson%27s_chi-squared_test#Test_of_independence
@@ -97,6 +97,8 @@ def chi2_contingency(contingency, correction=True):
     :return: The observed Pearson chi2 test statistic on the `contingency` table.
     :rtype: float
     """
+    if correction is None:
+        correction = True
     assert 0 < len(contingency)
     assert all(all(isinstance(v, int) for v in row) for row in contingency)
     n = float(sum(sum(row) for row in contingency))
@@ -194,7 +196,7 @@ def chi2_sf(x, df):
         return 1.0
 
     MONTE_CARLO_SAMPLES = 5e5
-    CHI = numpy.random.chisquare(df, size = MONTE_CARLO_SAMPLES)
+    CHI = numpy.random.chisquare(df, size=MONTE_CARLO_SAMPLES)
     p = numpy.sum(CHI > x) / MONTE_CARLO_SAMPLES
     return p
 
@@ -222,6 +224,6 @@ def f_sf(x, df_num, df_den):
         return 1.0
 
     MONTE_CARLO_SAMPLES = 1e5
-    F = numpy.random.f(df_num, df_den, size = MONTE_CARLO_SAMPLES)
+    F = numpy.random.f(df_num, df_den, size=MONTE_CARLO_SAMPLES)
     p = numpy.sum(F > x) / MONTE_CARLO_SAMPLES
     return p
