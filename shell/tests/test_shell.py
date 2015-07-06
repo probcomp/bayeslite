@@ -335,7 +335,10 @@ def test_describe_column_with_generator(spawntablegen):
 def test_hook(spawnbdb):
     c = spawnbdb
     c.sendexpectcmd('.hook %s' % (THOOKS_PY,))
-    c.expect_lines(['added command ".myhook"'])
+    c.expect_lines([
+        'Loading hooks at %s...' % (THOOKS_PY,),
+        'added command ".myhook"',
+    ])
     c.expect_prompt()
     c.sendexpectcmd('.help')
     c.expect_lines([
