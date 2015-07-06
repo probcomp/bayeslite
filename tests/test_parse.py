@@ -730,3 +730,19 @@ def test_using_model():
         [ast.InferExplicit([ast.SelColExp(ast.ExpCol(None, 'x'), None)],
             't', ast.ExpCol(None, 'modelno'),
             None, None, None, None)]
+
+def test_is_bql():
+    assert ast.is_bql(ast.ExpLit(ast.LitInt(0))) == False
+    assert ast.is_bql(ast.ExpNumpar(0)) == False
+    assert ast.is_bql(ast.ExpNampar(0, 'x')) == False
+    assert ast.is_bql(ast.ExpCol('t', 'c')) == False
+    # ...
+    assert ast.is_bql(ast.ExpBQLPredProb('c'))
+    assert ast.is_bql(ast.ExpBQLProb('c', 0))
+    assert ast.is_bql(ast.ExpBQLTyp('c'))
+    assert ast.is_bql(ast.ExpBQLSim(ast.ExpLit(ast.LitInt(0)), []))
+    assert ast.is_bql(ast.ExpBQLDepProb('c0', 'c1'))
+    assert ast.is_bql(ast.ExpBQLMutInf('c0', 'c1', 100))
+    assert ast.is_bql(ast.ExpBQLCorrel('c0', 'c1'))
+    assert ast.is_bql(ast.ExpBQLPredict('c', ast.ExpLit(ast.LitInt(0.5))))
+    assert ast.is_bql(ast.ExpBQLPredictConf('c'))
