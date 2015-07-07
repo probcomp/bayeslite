@@ -47,7 +47,14 @@ def bayesdb_load_codebook_csv_file(bdb, table, pathname):
                 raise IOError('Column does not exist in table %s: %s' %
                     (repr(table), repr(column_name)))
             colno = core.bayesdb_table_column_number(bdb, table, column_name)
-            value_map = json.loads(value_map_json)
+            try:
+                value_map = json.loads(value_map_json)
+            except ValueError:
+                if value_map_json == '':
+                    value_map = float('NaN')
+                else:
+                    raise IOError('Invalid value map for column %s' %
+                        (column_name,))
             if isinstance(value_map, float) and math.isnan(value_map):
                 # No value map.
                 pass
