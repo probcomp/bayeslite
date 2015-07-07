@@ -781,6 +781,9 @@ def test_trivial_commands():
         list(bdb.execute('estimate columns from t0'))
         list(bdb.execute('estimate pairwise correlation from t0'))
         list(bdb.execute('estimate pairwise row similarity from t0'))
+        bdb.execute('alter table t0 unset default generator')
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('estimate * from t0')
         bdb.execute('alter table t0 rename to t')
         bdb.execute('alter table t set default generator to t_ccd')
         list(bdb.execute('estimate * from t'))
