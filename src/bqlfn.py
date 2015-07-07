@@ -99,6 +99,8 @@ def correlation_pearsonr2(data0, data1):
     corr = stats.pearsonr(data0, data1)**2
     if math.isnan(corr):
         return (float('NaN'), float('NaN'))
+    if corr == 1.:
+        return (1., 0.)
     # Compute observed t-stat.
     N = len(data0)
     t = corr * math.sqrt((N-2) / (1 - corr**2))

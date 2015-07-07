@@ -110,7 +110,7 @@ def chi2_contingency(contingency, correction=None):
     :rtype: float
     """
     if correction is None:
-        correction = True
+        correction = False
     assert 0 < len(contingency)
     assert all(all(isinstance(v, int) for v in row) for row in contingency)
     n = float(sum(sum(row) for row in contingency))
