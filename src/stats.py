@@ -32,6 +32,22 @@ def arithmetic_mean(array):
 
 def pearsonr(a0, a1):
     """Computes the Pearson r correlation coefficient of two samples.
+
+    For random variables X, Y:
+
+                 cov(X, Y)
+    r(X, Y) = ---------------,
+              sigma_X sigma_Y
+
+    where
+
+      cov(X, Y) = E[(X - E[X]) (Y - E[Y])],
+    {sigma_X}^2 = E[(X - E[X])^2], and
+    {sigma_Y}^2 = E[(Y - E[Y])^2]
+
+    For a sample a0, we take the mean of a0 instead of E[X], and the
+    variance of a0 instead of E[(X - E[X])^2].
+
     https://en.wikipedia.org/wiki/Pearson_product-moment_correlation_coefficient
 
     :param list<float> a0: Observations of the first random variable.
@@ -43,6 +59,7 @@ def pearsonr(a0, a1):
     n = len(a0)
     assert n == len(a1)
     if n == 0:
+        # No data, so no notion of correlation.
         return float('NaN')
     m0 = arithmetic_mean(a0)
     m1 = arithmetic_mean(a1)
@@ -51,7 +68,8 @@ def pearsonr(a0, a1):
     den1_sq = float_sum((x1 - m1)**2 for x1 in a1)
     den = math.sqrt(den0_sq*den1_sq)
     if den == 0.0:
-        # Not enough variation in at least one column.
+        # No variation in at least one column, so no notion of
+        # correlation.
         return float('NaN')
     r = num / den
     # Clamp r in [-1, +1] in case of floating-point error.
@@ -134,8 +152,18 @@ def f_oneway(groups):
         for x in group)
     if wgv == 0.0:
         if bgv == 0.0:
-            return 0.0
+            # No variation between or within groups, so we cannot
+            # ascertain any correlation between them -- it is as if we
+            # had no data about the groups: every value in every group
+            # is the same.
+            return float('NaN')
         else:
+            # Within-group variability is zero, meaning for each
+            # group, each value is the same; between-group variability
+            # is nonzero, meaning there is variation between the
+            # groups.  So if there were zero correlation we could not
+            # possibly observe this, whereas all finite F statistics
+            # could be observed with zero correlation.
             return float('+inf')
     return bgv / wgv
 

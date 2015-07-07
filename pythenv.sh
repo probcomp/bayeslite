@@ -10,4 +10,7 @@ version=`"${PYTHON}" -c 'import sys; print sys.version[0:3]'`
 libdir="${root}/build/lib.${platform}-${version}"
 export PYTHONPATH="${libdir}${PYTHONPATH:+:${PYTHONPATH}}"
 
+bindir="${root}/build/scripts-${version}"
+export PATH="${bindir}${PATH:+:${PATH}}"
+
 exec "$@"

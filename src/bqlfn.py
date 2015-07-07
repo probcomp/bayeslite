@@ -98,10 +98,8 @@ def correlation_pearsonr2(data0, data1):
     # Compute the observed correlation.
     corr = stats.pearsonr(data0, data1)**2
     if math.isnan(corr):
-        return (corr, float('NaN'))
-    if corr == 1.:
-        return (corr, 0.)
-    # Computeip observed t-stat.
+        return (float('NaN'), float('NaN'))
+    # Compute observed t-stat.
     N = len(data0)
     t = corr * math.sqrt((N-2) / (1 - corr**2))
     # Compute p-value for two sided t-test.
@@ -118,11 +116,11 @@ def correlation_cramerphi(data0, data1):
     unique1 = unique_indices(data1)
     n0 = len(unique0)
     n1 = len(unique1)
-    if n0 == 1 and n1 == 1:
-        return (1., 0.)
     min_levels = min(n0, n1)
     if min_levels == 1:
-        return (0., 1.)
+        # No variation in at least one column, so no notion of
+        # correlation.
+        return (float('NaN'), float('NaN'))
     ct = [0] * n0
     for i0, j0 in enumerate(unique0):
         ct[i0] = [0] * n1
@@ -148,23 +146,27 @@ def correlation_anovar2(data_group, data_y):
         if x not in group_index:
             group_index[x] = len(group_index)
     n_groups = len(group_index)
-    if n_groups == n or n_groups == 0:
+    if n_groups == 0:
+        # No data, so no notion of correlation.
+        return (float('NaN'), float('NaN'))
+    if n_groups == n:
+        # No variation in any group, so no notion of correlation.
         return (float('NaN'), float('NaN'))
     if n_groups == 1:
-        if all(data_y[i] == data_y[0] for i in xrange(1, len(data_y))):
-            return (1., 0.)
-        else:
-            return (0., 1)
+        # Only one group means we can draw no information from the
+        # choice of group, so no notion of correlation.
+        return (float('NaN'), float('NaN'))
     groups = [None] * n_groups
     for i in xrange(n_groups):
         groups[i] = []
     for x, y in zip(data_group, data_y):
         groups[group_index[x]].append(y)
-    
     # Compute observed F stat.
     F = stats.f_oneway(groups)
     # Compute observed correlation.
     corr = 1 - 1/(1 + F*(float(n_groups - 1) / float(n - n_groups)))
+    if math.isnan(corr):
+        return (float('NaN'), float('NaN'))
     # Compute p-value for F-test.
     pvalue = stats.f_sf(F, n_groups-1, n-n_groups)
     return (corr, pvalue)

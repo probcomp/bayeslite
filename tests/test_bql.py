@@ -66,6 +66,15 @@ def bql2sqlparam(string):
 def bql_execute(bdb, string, bindings=()):
     return map(tuple, bdb.execute(string, bindings))
 
+def test_badbql():
+    with test_core.t1() as (bdb, _generator_id):
+        with pytest.raises(ValueError):
+            bdb.execute('')
+        with pytest.raises(ValueError):
+            bdb.execute(';')
+        with pytest.raises(ValueError):
+            bdb.execute('select 0; select 1')
+
 def test_select_trivial():
     assert bql2sql('select null;') == 'SELECT NULL;'
     assert bql2sql("select 'x';") == "SELECT 'x';"
@@ -703,7 +712,12 @@ def test_trivial_commands():
                     'gender') \
                 == colno
         bdb.execute('alter generator t0_cc rename to t_cc')     # XXX
-        bdb.execute('alter table t rename to t0')               # XXX
+        bdb.execute('alter table t rename to T0')               # XXX
+        bdb.sql_execute('create table t0_temp(x)')
+        bdb.execute('alter table T0 rename to t0')
+        assert bdb.execute('select count(*) from t0_temp').next()[0] == 0
+        assert bdb.execute('select count(*) from t0').next()[0] > 0
+        bdb.execute('drop table T0_TEMP')
         bdb.execute('analyze t_cc model 0 for 1 iteration wait')
         bdb.execute('analyze t_cc model 1 for 1 iteration wait')
         bdb.execute('analyze t_cc models 0-1 for 1 iteration wait')
@@ -772,6 +786,9 @@ def test_trivial_commands():
         list(bdb.execute('estimate columns from t0'))
         list(bdb.execute('estimate pairwise correlation from t0'))
         list(bdb.execute('estimate pairwise row similarity from t0'))
+        bdb.execute('alter table t0 unset default generator')
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('estimate * from t0')
         bdb.execute('alter table t0 rename to t')
         bdb.execute('alter table t set default generator to t_ccd')
         list(bdb.execute('estimate * from t'))
@@ -868,6 +885,15 @@ def test_parametrized():
         with pytest.raises(ValueError):
             bdb.execute('select * from t where age < ? and rank > :r',
                 {':r': 4})
+        def traced_execute(query, *args):
+            bql = []
+            def trace(string, _bindings):
+                bql.append(' '.join(string.split()))
+            bdb.trace(trace)
+            with bdb.savepoint():
+                bdb.execute(query, *args)
+            bdb.untrace(trace)
+            return bql
         def sqltraced_execute(query, *args):
             sql = []
             def trace(string, _bindings):
@@ -886,6 +912,13 @@ def test_parametrized():
         thetas1 = list(bdb.sql_execute('select * from bayesdb_crosscat_theta'))
         assert iters0 != iters1
         assert thetas0 != thetas1
+        assert traced_execute('estimate similarity to (rowid = 1)'
+                ' with respect to (estimate columns from t_cc limit 1)'
+                ' from t_cc;') == [
+            'estimate similarity to (rowid = 1)' \
+                ' with respect to (estimate columns from t_cc limit 1)' \
+                ' from t_cc;',
+        ]
         assert sqltraced_execute('estimate similarity to (rowid = 1)'
                 ' with respect to (estimate columns from t_cc limit 1)'
                 ' from t_cc;') == [
@@ -1351,6 +1384,25 @@ def test_txn():
         list(bdb.execute('SELECT * FROM t'))
         list(bdb.execute('ESTIMATE * FROM t_cc'))
 
+        # Make sure bdb.transaction works, rolls back on exception,
+        # and handles nesting correctly with respect to savepoints.
+        try:
+            with bdb.transaction():
+                bdb.sql_execute('create table quagga(x)')
+                raise StopIteration
+        except StopIteration:
+            pass
+        with pytest.raises(sqlite3.OperationalError):
+            bdb.execute('select * from quagga')
+        with bdb.transaction():
+            with bdb.savepoint():
+                with bdb.savepoint():
+                    pass
+        with bdb.savepoint():
+            with pytest.raises(bayeslite.BayesDBTxnError):
+                with bdb.transaction():
+                    pass
+
         # XXX To do: Make sure other effects (e.g., analysis) get
         # rolled back by ROLLBACK.
 
@@ -1400,6 +1452,105 @@ def test_guess_all():
         bdb.sql_execute('insert into foo values (1, 2, 3)')
         bdb.execute('create generator foo_cc for foo using crosscat(guess(*))')
 
+def test_misc_errors():
+    with test_core.t1() as (bdb, _generator_id):
+        with pytest.raises(bayeslite.BQLError):
+            # t1_cc already exists as a generator.
+            bdb.execute('create table t1_cc as simulate weight from t1_cc'
+                ' limit 1')
+        with pytest.raises(bayeslite.BQLError):
+            # t1 already exists as a table.
+            bdb.execute('create table t1 as simulate weight from t1_cc'
+                ' limit 1')
+        with pytest.raises(bayeslite.BQLError):
+            # t1x does not exist as a generator or table.
+            bdb.execute('create table t1_sim as simulate weight from t1x'
+                ' limit 1')
+        with pytest.raises(bayeslite.BQLError):
+            # t1_cc does not have a column waught.
+            bdb.execute('create table t1_sim as simulate waught from t1_cc'
+                ' limit 1')
+        with pytest.raises(bayeslite.BQLError):
+            # t1_cc does not have a column agee.
+            bdb.execute('create table t1_sim as simulate weight from t1_cc'
+                ' given agee = 42 limit 1')
+        with pytest.raises(bayeslite.BQLError):
+            # t2 does not exist as a table.
+            bdb.execute('alter table t2 set default generator to t1_cc')
+        with bdb.savepoint():
+            bdb.sql_execute('create table t2(x)')
+            with pytest.raises(bayeslite.BQLError):
+                # t1 already exists as a table.
+                bdb.execute('alter table t2 rename to t1')
+            with pytest.raises(bayeslite.BQLError):
+                # t1_cc already exists as a generator.
+                bdb.execute('alter table t2 rename to t1_cc')
+        with pytest.raises(NotImplementedError):
+            # Renaming columns is not yet implemented.
+            bdb.execute('alter table t1 rename weight to mass')
+        with pytest.raises(bayeslite.BQLError):
+            # t1_xc does not exist as a generator.
+            bdb.execute('alter table t1 set default generator to t1_xc')
+        with pytest.raises(bayeslite.BQLError):
+            # xcat does not exist as a metamodel.
+            bdb.execute('create generator t1_xc for t1 using xcat(guess(*))')
+        with pytest.raises(bayeslite.BQLError):
+            # t1 already exists as a table.
+            bdb.execute('create generator t1 for t1 using crosscat(guess(*))')
+        with pytest.raises(bayeslite.BQLError):
+            # t1_cc already exists as a generator.
+            bdb.execute('create generator t1_cc for t1'
+                ' using crosscat(guess(*))')
+        with pytest.raises(bayeslite.BQLError):
+            # multinomial is not a known statistical type.
+            bdb.execute('create generator t1_xc for t1'
+                ' using crosscat(weight multinomial)')
+        with pytest.raises(bayeslite.BQLError):
+            # t1_xc does not exist as a generator.
+            bdb.execute('alter generator t1_xc rename to t1_xcat')
+        with pytest.raises(bayeslite.BQLError):
+            # t1 already exists as a table.
+            bdb.execute('alter generator t1_cc rename to t1')
+        with bdb.savepoint():
+            bdb.execute('create generator t1_xc for t1'
+                ' using crosscat(guess(*))')
+            with pytest.raises(bayeslite.BQLError):
+                # t1_xc already exists as a generator.
+                bdb.execute('alter generator t1_cc rename to t1_xc')
+        with pytest.raises(NotImplementedError):
+            # Need WAIT.
+            bdb.execute('analyze t1_cc for 1 iteration')
+        with bdb.savepoint():
+            bdb.execute('initialize 1 model for t1_cc')
+            bdb.execute('analyze t1_cc for 1 iteration wait')
+            with pytest.raises(sqlite3.OperationalError):
+                bdb.execute('select'
+                    ' nonexistent((simulate age from t1_cc limit 1));')
+        with bdb.savepoint():
+            bdb.sql_execute('create table t(x, y)')
+            bdb.execute('create generator tcc for t'
+                ' using crosscat(x cyclic, y cyclic)')
+            # XXX Should be NotImplementedError, but sqlite3 doesn't
+            # pass this through!
+            with pytest.raises(sqlite3.OperationalError):
+                bdb.execute('estimate pairwise correlation from tcc')
+        with pytest.raises(ValueError):
+            bdb.execute('select :x', {'y': 42})
+        with pytest.raises(ValueError):
+            bdb.execute('select :x', {'x': 53, 'y': 42})
+        with pytest.raises(ValueError):
+            bdb.execute('select ?, ?', (1,))
+        with pytest.raises(ValueError):
+            bdb.execute('select ?', (1, 2))
+        with pytest.raises(TypeError):
+            bdb.execute('select ?', 42)
+        with pytest.raises(NotImplementedError):
+            bdb.execute('infer explicit predict age confidence ac, *'
+                ' from t1_cc')
+        with pytest.raises(NotImplementedError):
+            bdb.execute('infer explicit predict age confidence ac,'
+                ' t1.(select age from t1 limit 1) from t1_cc')
+
 def test_nested_simulate():
     with test_core.t1() as (bdb, _table_id):
         bdb.execute('initialize 1 model for t1_cc')
@@ -1409,6 +1560,8 @@ def test_nested_simulate():
         assert bdb.temp_table_name() == 'bayesdb_temp_2'
         assert not core.bayesdb_has_table(bdb, 'bayesdb_temp_0')
         assert not core.bayesdb_has_table(bdb, 'bayesdb_temp_1')
+        list(bdb.execute('simulate weight from t1_cc'
+            ' given age = (simulate age from t1_cc limit 1) limit 1'))
 
 def test_using_models():
     def setup(bdb):
@@ -1471,5 +1624,5 @@ def test_infer_confidence():
     with test_core.t1() as (bdb, _generator_id):
         bdb.execute('initialize 1 model for t1_cc')
         bdb.execute('analyze t1_cc for 1 iteration wait')
-        list(bdb.execute('infer explicit rowid, age,'
-            ' predict age as age_inf confidence age_conf from t1_cc'))
+        list(bdb.execute('infer explicit rowid, rowid as another_rowid, 4,'
+            ' age, predict age as age_inf confidence age_conf from t1_cc'))
