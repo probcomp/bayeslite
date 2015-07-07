@@ -91,11 +91,11 @@ def correlation_cramerphi(data0, data1):
     unique1 = unique_indices(data1)
     n0 = len(unique0)
     n1 = len(unique1)
-    if n0 == 1 and n1 == 1:
-        return 1.
     min_levels = min(n0, n1)
     if min_levels == 1:
-        return 0.
+        # No variation in at least one column, so no notion of
+        # correlation.
+        return float('NaN')
     ct = [0] * n0
     for i0, j0 in enumerate(unique0):
         ct[i0] = [0] * n1
@@ -116,13 +116,16 @@ def correlation_anovar2(data_group, data_y):
         if x not in group_index:
             group_index[x] = len(group_index)
     n_groups = len(group_index)
-    if n_groups == n or n_groups == 0:
+    if n_groups == 0:
+        # No data, so no notion of correlation.
+        return float('NaN')
+    if n_groups == n:
+        # No variation in any group, so no notion of correlation.
         return float('NaN')
     if n_groups == 1:
-        if all(data_y[i] == data_y[0] for i in xrange(1, len(data_y))):
-            return 1.
-        else:
-            return 0.
+        # Only one group means we can draw no information from the
+        # choice of group, so no notion of correlation.
+        return float('NaN')
     groups = [None] * n_groups
     for i in xrange(n_groups):
         groups[i] = []
