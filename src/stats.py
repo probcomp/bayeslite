@@ -18,12 +18,6 @@
 import math
 from bayeslite.util import float_sum
 
-# Constants for numerical integration.
-MACHEP = 2**-56
-MAXNUM = 2**127
-BIG = 4.503599627370496e15
-BIGINV = 2.22044604925031308085e-16
-
 
 def arithmetic_mean(array):
     """Computes the arithmetic mean of elements of `array`.

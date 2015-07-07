@@ -95,6 +95,7 @@ keywords = {
     "predict": grammar.K_PREDICT,
     "predictive": grammar.K_PREDICTIVE,
     "probability": grammar.K_PROBABILITY,
+    "pvalue": grammar.K_PVALUE,
     "regexp": grammar.K_REGEXP,
     "rename": grammar.K_RENAME,
     "respect": grammar.K_RESPECT,

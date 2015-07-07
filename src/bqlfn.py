@@ -32,6 +32,7 @@ def bayesdb_install_bql(db, cookie):
         db.create_function(name, nargs,
             lambda *args: bayesdb_bql(fn, cookie, *args))
     function("bql_column_correlation", 3, bql_column_correlation)
+    function("bql_column_correlation_pvalue", 3, bql_column_correlation_pvalue)
     function("bql_column_dependence_probability", 4,
         bql_column_dependence_probability)
     function("bql_column_mutual_information", 5, bql_column_mutual_information)
@@ -88,7 +89,7 @@ def bql_column_correlation(bdb, generator_id, colno0, colno1):
 def bql_column_correlation_pvalue(bdb, generator_id, colno0, colno1):
     (st0, st1, data0, data1) = bql_column_stattypes_and_data(bdb, generator_id,
         colno0, colno1)
-    if (st0, st1) not in correlation_pvalue_methods:
+    if (st0, st1) not in correlation_methods:
         raise NotImplementedError('No correlation pvalue method for %s/%s.' %
             (st0, st1))
     return correlation_methods[st0, st1](data0, data1)[1]
