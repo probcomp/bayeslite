@@ -23,8 +23,6 @@ on, are compiled into SQL; commands, as in ``CREATE TABLE``,
 language) are executed directly.
 """
 
-import contextlib
-
 import bayeslite.ast as ast
 import bayeslite.bqlfn as bqlfn
 import bayeslite.compiler as compiler
@@ -671,12 +669,3 @@ class WoundCursor(object):
                 self.bdb.sql_execute(sql, bindings)
         # Apparently object doesn't have a __del__ method.
         #super(WoundCursor, self).__del__()
-
-@contextlib.contextmanager
-def defer_foreign_keys(bdb):
-    defer = bdb.sql_execute('PRAGMA defer_foreign_keys').next()[0]
-    bdb.sql_execute('PRAGMA defer_foreign_keys = ON')
-    yield
-    if not defer:
-        bdb.sql_execute('PRAGMA defer_foreign_keys = OFF')
-        bdb.sql_execute('PRAGMA foreign_key_check')

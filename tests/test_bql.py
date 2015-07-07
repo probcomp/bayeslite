@@ -66,6 +66,15 @@ def bql2sqlparam(string):
 def bql_execute(bdb, string, bindings=()):
     return map(tuple, bdb.execute(string, bindings))
 
+def test_badbql():
+    with test_core.t1() as (bdb, _generator_id):
+        with pytest.raises(ValueError):
+            bdb.execute('')
+        with pytest.raises(ValueError):
+            bdb.execute(';')
+        with pytest.raises(ValueError):
+            bdb.execute('select 0; select 1')
+
 def test_select_trivial():
     assert bql2sql('select null;') == 'SELECT NULL;'
     assert bql2sql("select 'x';") == "SELECT 'x';"
@@ -868,6 +877,15 @@ def test_parametrized():
         with pytest.raises(ValueError):
             bdb.execute('select * from t where age < ? and rank > :r',
                 {':r': 4})
+        def traced_execute(query, *args):
+            bql = []
+            def trace(string, _bindings):
+                bql.append(' '.join(string.split()))
+            bdb.trace(trace)
+            with bdb.savepoint():
+                bdb.execute(query, *args)
+            bdb.untrace(trace)
+            return bql
         def sqltraced_execute(query, *args):
             sql = []
             def trace(string, _bindings):
@@ -886,6 +904,13 @@ def test_parametrized():
         thetas1 = list(bdb.sql_execute('select * from bayesdb_crosscat_theta'))
         assert iters0 != iters1
         assert thetas0 != thetas1
+        assert traced_execute('estimate similarity to (rowid = 1)'
+                ' with respect to (estimate columns from t_cc limit 1)'
+                ' from t_cc;') == [
+            'estimate similarity to (rowid = 1)' \
+                ' with respect to (estimate columns from t_cc limit 1)' \
+                ' from t_cc;',
+        ]
         assert sqltraced_execute('estimate similarity to (rowid = 1)'
                 ' with respect to (estimate columns from t_cc limit 1)'
                 ' from t_cc;') == [
