@@ -175,6 +175,17 @@ class BayesDB(object):
         with txn.bayesdb_savepoint(self):
             yield
 
+    @contextlib.contextmanager
+    def transaction(self):
+        """Transaction context.  On return, commit; on exception, roll back.
+
+        Transactions may not be nested: use a savepoint if you need
+        nesting.  Parsed metadata and models are cached in Python
+        during a savepoint.
+        """
+        with txn.bayesdb_transaction(self):
+            yield
+
     def temp_table_name(self):
         n = self.temptable
         self.temptable += 1

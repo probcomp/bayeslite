@@ -1384,6 +1384,25 @@ def test_txn():
         list(bdb.execute('SELECT * FROM t'))
         list(bdb.execute('ESTIMATE * FROM t_cc'))
 
+        # Make sure bdb.transaction works, rolls back on exception,
+        # and handles nesting correctly with respect to savepoints.
+        try:
+            with bdb.transaction():
+                bdb.sql_execute('create table quagga(x)')
+                raise StopIteration
+        except StopIteration:
+            pass
+        with pytest.raises(sqlite3.OperationalError):
+            bdb.execute('select * from quagga')
+        with bdb.transaction():
+            with bdb.savepoint():
+                with bdb.savepoint():
+                    pass
+        with bdb.savepoint():
+            with pytest.raises(bayeslite.BayesDBTxnError):
+                with bdb.transaction():
+                    pass
+
         # XXX To do: Make sure other effects (e.g., analysis) get
         # rolled back by ROLLBACK.
 
