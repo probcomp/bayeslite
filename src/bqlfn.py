@@ -83,7 +83,8 @@ def bql_column_correlation(bdb, generator_id, colno0, colno1):
     if (st0, st1) not in correlation_methods:
         raise NotImplementedError('No correlation method for %s/%s.' %
             (st0, st1))
-    return correlation_methods[st0, st1](data0, data1)[0]
+    (corr, pval) = correlation_methods[st0, st1](data0, data1)
+    return corr
 
 # Two-column function:  CORRELATION PVALUE [OF <col0> WITH <col1>]
 def bql_column_correlation_pvalue(bdb, generator_id, colno0, colno1):
@@ -92,7 +93,8 @@ def bql_column_correlation_pvalue(bdb, generator_id, colno0, colno1):
     if (st0, st1) not in correlation_methods:
         raise NotImplementedError('No correlation pvalue method for %s/%s.' %
             (st0, st1))
-    return correlation_methods[st0, st1](data0, data1)[1]
+    (corr, pval) = correlation_methods[st0, st1](data0, data1)
+    return pval
 
 def correlation_pearsonr2(data0, data1):
     # Compute the observed correlation.
