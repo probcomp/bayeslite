@@ -64,24 +64,24 @@ def test_chi2_sf():
         stats.chi2_sf(2, -10)
     
     # Survival of x = 0 should be 1.
-    assert relerr(stats.chi2_sf(0,12), 1.) < .05
-    assert relerr(stats.chi2_sf(0,6), 1.) < .05
-    assert relerr(stats.chi2_sf(0,130), 1.) < .05
+    assert relerr(1., stats.chi2_sf(0,12)) < .05
+    assert relerr(1., stats.chi2_sf(0,6)) < .05
+    assert relerr(1., stats.chi2_sf(0,130)) < .05
 
     # Test x < 1, x >= df against reference values.
-    assert relerr(stats.chi2_sf(.8,.1), .0357175) < .05
-    assert relerr(stats.chi2_sf(.6,.6), .2730426) < .05
-    assert relerr(stats.chi2_sf(.1,.05), .0602823) < .05
+    assert relerr(.0357175, stats.chi2_sf(.8,.1)) < .05
+    assert relerr(.2730426, stats.chi2_sf(.6,.6)) < .05
+    assert relerr(.0602823, stats.chi2_sf(.1,.05)) < .05
 
     # Test x >= 1, x <= df against reference values.
-    assert relerr(stats.chi2_sf(9,12), .7029304) < .05
-    assert relerr(stats.chi2_sf(1.9,3), .5934191) < .05
-    assert relerr(stats.chi2_sf(1,4.2), .9238371) < .05
+    assert relerr(.7029304, stats.chi2_sf(9,12)) < .05
+    assert relerr(.5934191, stats.chi2_sf(1.9,3)) < .05
+    assert relerr(.9238371, stats.chi2_sf(1,4.2)) < .05
 
     # Test x >= 1, x > df against reference values.
-    assert relerr(stats.chi2_sf(8,7), .3325939) < .05
-    assert relerr(stats.chi2_sf(3.9,1), .0482861) < .05
-    assert abserr(stats.chi2_sf(193,121), .3464377e-4) < .05
+    assert relerr(.3325939, stats.chi2_sf(8,7)) < .05
+    assert relerr(.0482861, stats.chi2_sf(3.9,1)) < .05
+    assert abserr(.3464377e-4, stats.chi2_sf(193,121)) < .05
 
 def test_f_sf():
     # Non-positive degrees of freedom should throw an error.
@@ -97,35 +97,35 @@ def test_f_sf():
         stats.f_sf(2,1,-1)
 
     # Survival of x = 0 should be 1.
-    assert relerr(stats.f_sf(0,1,12) , 1) < .05
-    assert relerr(stats.f_sf(0,6,0.5) , 1) < .05
-    assert relerr(stats.f_sf(0,130,121) , 1) < .05
+    assert relerr(1, stats.f_sf(0,1,12)) < .05
+    assert relerr(1, stats.f_sf(0,6,0.5)) < .05
+    assert relerr(1, stats.f_sf(0,130,121)) < .05
     
     # Survival of x < 0 should be 1.
-    assert relerr(stats.f_sf(-1,1,12) , 1) < .05
-    assert relerr(stats.f_sf(-100,6,0.5) , 1) < .05
-    assert relerr(stats.f_sf(-0.02,130,121) , 1) < .05
+    assert relerr(1, stats.f_sf(-1,1,12)) < .05
+    assert relerr(1, stats.f_sf(-100,6,0.5)) < .05
+    assert relerr(1, stats.f_sf(-0.02,130,121)) < .05
 
     # Test against reference values.
-    assert relerr(stats.f_sf(1,12,8), .5173903) < .05
-    assert relerr(stats.f_sf(1.9,1,3), .2618860) < .05
-    assert relerr(stats.f_sf(1,100,100), .5000000) < .05
-    assert relerr(stats.f_sf(19,14,1), .1781364) < .05
-    assert relerr(stats.f_sf(0.76,23,15),  .7306588) < .05
-    assert relerr(stats.f_sf(4.3,1,12), .0602978) < .05
-    assert relerr(stats.f_sf(1.1,2,1), .5590169) < .05
-    assert relerr(stats.f_sf(8,2,2), .1111111) < .05
-    assert relerr(stats.f_sf(0.2,432,123), .9999999) < .05
-    assert relerr(stats.f_sf(0.8,432,123), .9452528) < .05
-    assert relerr(stats.f_sf(10,5,3), .0434186) < .05
+    assert relerr(.5173903, stats.f_sf(1,12,8)) < .05
+    assert relerr(.2618860, stats.f_sf(1.9,1,3)) < .05
+    assert relerr(.5000000, stats.f_sf(1,100,100)) < .05
+    assert relerr(.1781364, stats.f_sf(19,14,1)) < .05
+    assert relerr(.7306588, stats.f_sf(0.76,23,15)) < .05
+    assert relerr(.0602978, stats.f_sf(4.3,1,12)) < .05
+    assert relerr(.5590169, stats.f_sf(1.1,2,1)) < .05
+    assert relerr(.1111111, stats.f_sf(8,2,2)) < .05
+    assert relerr(.9999999, stats.f_sf(0.2,432,123)) < .05
+    assert relerr(.9452528, stats.f_sf(0.8,432,123)) < .05
+    assert relerr(.0434186, stats.f_sf(10,5,3)) < .05
     
     # Test against reference very close to zero.
-    assert abserr(stats.f_sf(11,19,4), .0158130) < .01
-    assert abserr(stats.f_sf(14,9,6), .0022310) < .01
-    assert abserr(stats.f_sf(200,432,123), .1458691e-112) < .01
-    assert abserr(stats.f_sf(29,23,29), .2489256e-13) < .01
-    assert abserr(stats.f_sf(31,11,13), .1656276e-06) < .01
-    assert abserr(stats.f_sf(18,14,12), .6424023e-5) < .01
+    assert abserr(.0158130, stats.f_sf(11,19,4)) < .01
+    assert abserr(.0022310, stats.f_sf(14,9,6)) < .01
+    assert abserr(.1458691e-112, stats.f_sf(200,432,123)) < .01
+    assert abserr(.2489256e-13, stats.f_sf(29,23,29)) < .01
+    assert abserr(.1656276e-06, stats.f_sf(31,11,13)) < .01
+    assert abserr(.6424023e-5, stats.f_sf(18,14,12)) < .01
 
 def test_t_cdf():
     # Non-positive degrees of freedom should throw an error.
@@ -135,28 +135,28 @@ def test_t_cdf():
         stats.t_cdf(2,-10)
     
     # CDF of x = 0 should be 0.5.
-    assert relerr(stats.t_cdf(0,12) , .5) < .01
-    assert relerr(stats.t_cdf(0,6) , .5) < .01
-    assert relerr(stats.t_cdf(0,130) , .5) < .01
+    assert relerr(.5, stats.t_cdf(0,12)) < .01
+    assert relerr(.5, stats.t_cdf(0,6)) < .01
+    assert relerr(.5, stats.t_cdf(0,130)) < .01
 
     # Test against various reference values.
-    assert relerr(stats.t_cdf(.8, .1), .57484842931039226) < .05
-    assert relerr(stats.t_cdf(.6, .6), .64922051214061649) < .05
-    assert relerr(stats.t_cdf(.1, .05), .51046281131211058) < .05
-    assert relerr(stats.t_cdf(9, 12), .99999944795492968) < .05
-    assert relerr(stats.t_cdf(1.9, 3), .92318422834700042) < .05
-    assert relerr(stats.t_cdf(1, 4.2), .81430689864299455) < .05
-    assert relerr(stats.t_cdf(8, 7), .99995442539414559) < .05
-    assert relerr(stats.t_cdf(3.9, 1), .92010336338282994) < .05
-    assert relerr(stats.t_cdf(193, 121), 1.0) < .05
-    assert relerr(stats.t_cdf(-.8, .1), .42515157068960779) < .05
-    assert relerr(stats.t_cdf(-.6, .6), .35077948785938345) < .05
-    assert relerr(stats.t_cdf(-.1, .05), .48953718868788948) < .05
-    assert relerr(stats.t_cdf(-1.9, 3), .076815771652999562) < .05
-    assert relerr(stats.t_cdf(-1, 4.2), .18569310135700545) < .05
-    assert relerr(stats.t_cdf(-1, 7), .17530833141010374) < .05
-    assert relerr(stats.t_cdf(-3.9, 1), .079896636617170003) < .05
-    assert relerr(stats.t_cdf(-0.5, 121), .30899158341328747) < .05
+    assert relerr(.57484842931039226, stats.t_cdf(.8, .1)) < .05
+    assert relerr(.64922051214061649, stats.t_cdf(.6, .6)) < .05
+    assert relerr(.51046281131211058, stats.t_cdf(.1, .05)) < .05
+    assert relerr(.99999944795492968, stats.t_cdf(9, 12)) < .05
+    assert relerr(.92318422834700042, stats.t_cdf(1.9, 3)) < .05
+    assert relerr(.81430689864299455, stats.t_cdf(1, 4.2)) < .05
+    assert relerr(.99995442539414559, stats.t_cdf(8, 7)) < .05
+    assert relerr(.92010336338282994, stats.t_cdf(3.9, 1)) < .05
+    assert relerr(1.0, stats.t_cdf(193, 121)) < .05
+    assert relerr(.42515157068960779, stats.t_cdf(-.8, .1)) < .05
+    assert relerr(.35077948785938345, stats.t_cdf(-.6, .6)) < .05
+    assert relerr(.48953718868788948, stats.t_cdf(-.1, .05)) < .05
+    assert relerr(.076815771652999562, stats.t_cdf(-1.9, 3)) < .05
+    assert relerr(.18569310135700545, stats.t_cdf(-1, 4.2)) < .05
+    assert relerr(.17530833141010374, stats.t_cdf(-1, 7)) < .05
+    assert relerr(.079896636617170003, stats.t_cdf(-3.9, 1)) < .05
+    assert relerr(.30899158341328747, stats.t_cdf(-0.5, 121)) < .05
     
     # Test against reference very close to zero.
-    assert abserr(stats.chi2_sf(193,121), .346437e-4) < .01
+    assert abserr(.346437e-4, stats.chi2_sf(193,121)) < .01
