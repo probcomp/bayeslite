@@ -122,14 +122,6 @@ Simulate = namedtuple('Simulate', [
 ])
 
 def is_query(phrase):
-    if isinstance(phrase, Select):          return True
-    if isinstance(phrase, Estimate):        return True
-    if isinstance(phrase, EstCols):         return True
-    if isinstance(phrase, EstPairCols):     return True
-    if isinstance(phrase, EstPairRow):      return True
-    if isinstance(phrase, InferAuto):       return True
-    if isinstance(phrase, InferExplicit):   return True
-    if isinstance(phrase, Simulate):        return True
     if isinstance(phrase, Select):
         return True
     if isinstance(phrase, Estimate):
