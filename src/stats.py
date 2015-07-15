@@ -184,7 +184,7 @@ def t_cdf(x, df):
     numpy.random.seed(seed=0)
 
     if df <= 0:
-        raise ValueError("Degrees of freedom must be positive.")
+        raise ValueError('Degrees of freedom must be positive.')
     if x == 0:
         return 0.5
 
@@ -211,7 +211,7 @@ def chi2_sf(x, df):
     numpy.random.seed(seed=0)
 
     if df <= 0:
-        raise ValueError("Degrees of freedom must be positive.")
+        raise ValueError('Degrees of freedom must be positive.')
     if x <= 0:
         return 1.0
 
@@ -239,7 +239,7 @@ def f_sf(x, df_num, df_den):
     numpy.random.seed(seed=0)
 
     if df_num <= 0 or df_den <= 0:
-        raise ValueError("Degrees of freedom must be positive.")
+        raise ValueError('Degrees of freedom must be positive.')
     if x <= 0:
         return 1.0
 
