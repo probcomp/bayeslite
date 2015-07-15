@@ -83,39 +83,56 @@ def bql_column_correlation(bdb, generator_id, colno0, colno1):
     if (st0, st1) not in correlation_methods:
         raise NotImplementedError('No correlation method for %s/%s.' %
             (st0, st1))
-    (corr, pval) = correlation_methods[st0, st1](data0, data1)
-    return corr
+    return correlation_methods[st0, st1](data0, data1)
 
 # Two-column function:  CORRELATION PVALUE [OF <col0> WITH <col1>]
 def bql_column_correlation_pvalue(bdb, generator_id, colno0, colno1):
     (st0, st1, data0, data1) = bql_column_stattypes_and_data(bdb, generator_id,
         colno0, colno1)
-    if (st0, st1) not in correlation_methods:
+    if (st0, st1) not in correlation_p_methods:
         raise NotImplementedError('No correlation pvalue method for %s/%s.' %
             (st0, st1))
-    (corr, pval) = correlation_methods[st0, st1](data0, data1)
-    return pval
+    return correlation_p_methods[st0, st1](data0, data1)
 
 def correlation_pearsonr2(data0, data1):
-    # Compute observed correlation.
-    corr = stats.pearsonr(data0, data1)**2
-    if math.isnan(corr):
-        return (float('NaN'), float('NaN'))
-    if corr == 1.:
-        return (1., 0.)
-    # Compute observed t-stat.
-    N = len(data0)
-    t = corr * math.sqrt((N - 2)/(1 - corr**2))
-    # Compute p-value for two sided t-test.
-    t = t if t <= 0 else -t
-    pvalue = 2 * stats.t_cdf(t, N - 2)
-    return (corr, pvalue)
+    return stats.pearsonr(data0, data1)**2
+
+def correlation_p_pearsonr2(data0, data1):
+    correlation = correlation_pearsonr2(data0, data1)
+    if math.isnan(correlation):
+        return float('NaN')
+    if correlation == 1.:
+        return 0.
+    n = len(data0)
+    assert n == len(data1)
+    # Compute observed t statistic.
+    t = correlation * math.sqrt((n - 2)/(1 - correlation**2))
+    # Compute p-value for two-sided t-test.
+    return 2 * stats.t_cdf(-abs(t), n - 2)
 
 def correlation_cramerphi(data0, data1):
+    # Compute observed chi^2 statistic.
+    chi2, n0, n1 = cramerphi_chi2(data0, data1)
+    if math.isnan(chi2):
+        return float('NaN')
+    n = len(data0)
+    assert n == len(data1)
+    # Compute observed correlation.
+    return math.sqrt(chi2 / (n * (min(n0, n1) - 1)))
+
+def correlation_p_cramerphi(data0, data1):
+    # Compute observed chi^2 statistic.
+    chi2, n0, n1 = cramerphi_chi2(data0, data1)
+    if math.isnan(chi2):
+        return float('NaN')
+    # Compute p-value for chi^2 test of independence.
+    return stats.chi2_sf(chi2, (n0 - 1)*(n1 - 1))
+
+def cramerphi_chi2(data0, data1):
     n = len(data0)
     assert n == len(data1)
     if n == 0:
-        return (float('NaN'), float('NaN'))
+        return float('NaN'), 0, 0
     unique0 = unique_indices(data0)
     unique1 = unique_indices(data1)
     n0 = len(unique0)
@@ -124,7 +141,7 @@ def correlation_cramerphi(data0, data1):
     if min_levels == 1:
         # No variation in at least one column, so no notion of
         # correlation.
-        return (float('NaN'), float('NaN'))
+        return float('NaN'), n0, n1
     ct = [0] * n0
     for i0, j0 in enumerate(unique0):
         ct[i0] = [0] * n1
@@ -135,14 +152,30 @@ def correlation_cramerphi(data0, data1):
                     c += 1
             ct[i0][i1] = c
     # Compute observed chi^2 statistic.
-    chisq = stats.chi2_contingency(ct, correction=False)
-    # Compute observed correlation.
-    corr = math.sqrt(chisq / (n * (min_levels - 1)))
-    # Compute p-value for chi^2 test of independence.
-    pvalue = stats.chi2_sf(chisq, (n0 - 1)*(n1 - 1))
-    return (corr, pvalue)
+    chi2 = stats.chi2_contingency(ct, correction=False)
+    return chi2, n0, n1
 
 def correlation_anovar2(data_group, data_y):
+    # Compute observed F-test statistic.
+    F, n_groups = anovar2(data_group, data_y)
+    if math.isnan(F):
+        return float('NaN')
+    n = len(data_group)
+    assert n == len(data_y)
+    # Compute observed correlation.
+    return 1 - 1/(1 + F*(float(n_groups - 1) / float(n - n_groups)))
+
+def correlation_p_anovar2(data_group, data_y):
+    # Compute observed F-test statistic.
+    F, n_groups = anovar2(data_group, data_y)
+    if math.isnan(F):
+        return float('NaN')
+    n = len(data_group)
+    assert n == len(data_y)
+    # Compute p-value for F-test.
+    return stats.f_sf(F, n_groups - 1, n - n_groups)
+
+def anovar2(data_group, data_y):
     n = len(data_group)
     assert n == len(data_y)
     group_index = {}
@@ -152,14 +185,14 @@ def correlation_anovar2(data_group, data_y):
     n_groups = len(group_index)
     if n_groups == 0:
         # No data, so no notion of correlation.
-        return (float('NaN'), float('NaN'))
+        return float('NaN'), n_groups
     if n_groups == n:
         # No variation in any group, so no notion of correlation.
-        return (float('NaN'), float('NaN'))
+        return float('NaN'), n_groups
     if n_groups == 1:
         # Only one group means we can draw no information from the
         # choice of group, so no notion of correlation.
-        return (float('NaN'), float('NaN'))
+        return float('NaN'), n_groups
     groups = [None] * n_groups
     for i in xrange(n_groups):
         groups[i] = []
@@ -167,13 +200,7 @@ def correlation_anovar2(data_group, data_y):
         groups[group_index[x]].append(y)
     # Compute observed F-test statistic.
     F = stats.f_oneway(groups)
-    # Compute observed correlation.
-    corr = 1 - 1/(1 + F*(float(n_groups - 1) / float(n - n_groups)))
-    if math.isnan(corr):
-        return (float('NaN'), float('NaN'))
-    # Compute p-value for F-test.
-    pvalue = stats.f_sf(F, n_groups - 1, n - n_groups)
-    return (corr, pvalue)
+    return F, n_groups
 
 def correlation_anovar2_dc(discrete_data, continuous_data):
     return correlation_anovar2(discrete_data, continuous_data)
@@ -181,7 +208,14 @@ def correlation_anovar2_dc(discrete_data, continuous_data):
 def correlation_anovar2_cd(continuous_data, discrete_data):
     return correlation_anovar2(discrete_data, continuous_data)
 
+def correlation_p_anovar2_dc(discrete_data, continuous_data):
+    return correlation_p_anovar2(discrete_data, continuous_data)
+
+def correlation_p_anovar2_cd(continuous_data, discrete_data):
+    return correlation_p_anovar2(discrete_data, continuous_data)
+
 correlation_methods = {}
+correlation_p_methods = {}
 
 def define_correlation(stattype0, stattype1, method):
     assert casefold(stattype0) == stattype0
@@ -189,10 +223,21 @@ def define_correlation(stattype0, stattype1, method):
     assert (stattype0, stattype1) not in correlation_methods
     correlation_methods[stattype0, stattype1] = method
 
+def define_correlation_p(stattype0, stattype1, method):
+    assert casefold(stattype0) == stattype0
+    assert casefold(stattype1) == stattype1
+    assert (stattype0, stattype1) not in correlation_p_methods
+    correlation_p_methods[stattype0, stattype1] = method
+
 define_correlation('categorical', 'categorical', correlation_cramerphi)
 define_correlation('categorical', 'numerical', correlation_anovar2_dc)
 define_correlation('numerical', 'categorical', correlation_anovar2_cd)
 define_correlation('numerical', 'numerical', correlation_pearsonr2)
+
+define_correlation_p('categorical', 'categorical', correlation_p_cramerphi)
+define_correlation_p('categorical', 'numerical', correlation_p_anovar2_dc)
+define_correlation_p('numerical', 'categorical', correlation_p_anovar2_cd)
+define_correlation_p('numerical', 'numerical', correlation_p_pearsonr2)
 
 # Two-column function:  DEPENDENCE PROBABILITY [OF <col0> WITH <col1>]
 def bql_column_dependence_probability(bdb, generator_id, modelno, colno0,
