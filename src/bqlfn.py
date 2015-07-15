@@ -105,10 +105,10 @@ def correlation_pearsonr2(data0, data1):
         return (1., 0.)
     # Compute observed t-stat.
     N = len(data0)
-    t = corr * math.sqrt((N-2) / (1 - corr**2))
+    t = corr * math.sqrt((N - 2)/(1 - corr**2))
     # Compute p-value for two sided t-test.
     t = t if t <= 0 else -t
-    pvalue = 2 * stats.t_cdf(t, N-2)
+    pvalue = 2 * stats.t_cdf(t, N - 2)
     return (corr, pvalue)
 
 def correlation_cramerphi(data0, data1):
@@ -139,7 +139,7 @@ def correlation_cramerphi(data0, data1):
     # Compute observed correlation.
     corr = math.sqrt(chisq / (n * (min_levels - 1)))
     # Compute p-value for chi^2 test of independence.
-    pvalue = stats.chi2_sf(chisq, (n0-1)*(n1-1))
+    pvalue = stats.chi2_sf(chisq, (n0 - 1)*(n1 - 1))
     return (corr, pvalue)
 
 def correlation_anovar2(data_group, data_y):
@@ -172,7 +172,7 @@ def correlation_anovar2(data_group, data_y):
     if math.isnan(corr):
         return (float('NaN'), float('NaN'))
     # Compute p-value for F-test.
-    pvalue = stats.f_sf(F, n_groups-1, n-n_groups)
+    pvalue = stats.f_sf(F, n_groups - 1, n - n_groups)
     return (corr, pvalue)
 
 def correlation_anovar2_dc(discrete_data, continuous_data):
