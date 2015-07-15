@@ -181,7 +181,6 @@ def t_cdf(x, df):
     :rtype: float
     """
     import numpy
-    numpy.random.seed(seed=0)
 
     if df <= 0:
         raise ValueError('Degrees of freedom must be positive.')
@@ -189,7 +188,8 @@ def t_cdf(x, df):
         return 0.5
 
     MONTE_CARLO_SAMPLES = 1e5
-    T = numpy.random.standard_t(df, size=MONTE_CARLO_SAMPLES)
+    random = numpy.random.RandomState(seed=0)
+    T = random.standard_t(df, size=MONTE_CARLO_SAMPLES)
     p = numpy.sum(T < x) / MONTE_CARLO_SAMPLES
     return p
 
@@ -208,7 +208,6 @@ def chi2_sf(x, df):
     :rtype: float
     """
     import numpy
-    numpy.random.seed(seed=0)
 
     if df <= 0:
         raise ValueError('Degrees of freedom must be positive.')
@@ -216,7 +215,8 @@ def chi2_sf(x, df):
         return 1.0
 
     MONTE_CARLO_SAMPLES = 5e5
-    CHI = numpy.random.chisquare(df, size=MONTE_CARLO_SAMPLES)
+    random = numpy.random.RandomState(seed=0)
+    CHI = random.chisquare(df, size=MONTE_CARLO_SAMPLES)
     p = numpy.sum(CHI > x) / MONTE_CARLO_SAMPLES
     return p
 
@@ -236,7 +236,6 @@ def f_sf(x, df_num, df_den):
     :rtype: float
     """
     import numpy
-    numpy.random.seed(seed=0)
 
     if df_num <= 0 or df_den <= 0:
         raise ValueError('Degrees of freedom must be positive.')
@@ -244,6 +243,7 @@ def f_sf(x, df_num, df_den):
         return 1.0
 
     MONTE_CARLO_SAMPLES = 1e5
-    F = numpy.random.f(df_num, df_den, size=MONTE_CARLO_SAMPLES)
+    random = numpy.random.RandomState(seed=0)
+    F = random.f(df_num, df_den, size=MONTE_CARLO_SAMPLES)
     p = numpy.sum(F > x) / MONTE_CARLO_SAMPLES
     return p
