@@ -190,8 +190,7 @@ def t_cdf(x, df):
     MONTE_CARLO_SAMPLES = 1e5
     random = numpy.random.RandomState(seed=0)
     T = random.standard_t(df, size=MONTE_CARLO_SAMPLES)
-    p = numpy.sum(T < x) / MONTE_CARLO_SAMPLES
-    return p
+    return numpy.sum(T < x) / MONTE_CARLO_SAMPLES
 
 def chi2_sf(x, df):
     """Approximate survival function for chi^2 distribution.
@@ -217,8 +216,7 @@ def chi2_sf(x, df):
     MONTE_CARLO_SAMPLES = 5e5
     random = numpy.random.RandomState(seed=0)
     CHI = random.chisquare(df, size=MONTE_CARLO_SAMPLES)
-    p = numpy.sum(CHI > x) / MONTE_CARLO_SAMPLES
-    return p
+    return numpy.sum(CHI > x) / MONTE_CARLO_SAMPLES
 
 def f_sf(x, df_num, df_den):
     """Approximate survival function for the F distribution.
@@ -245,5 +243,4 @@ def f_sf(x, df_num, df_den):
     MONTE_CARLO_SAMPLES = 1e5
     random = numpy.random.RandomState(seed=0)
     F = random.f(df_num, df_den, size=MONTE_CARLO_SAMPLES)
-    p = numpy.sum(F > x) / MONTE_CARLO_SAMPLES
-    return p
+    return numpy.sum(F > x) / MONTE_CARLO_SAMPLES
