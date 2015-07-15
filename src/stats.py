@@ -221,9 +221,9 @@ def chi2_sf(x, df):
     return p
 
 def f_sf(x, df_num, df_den):
-    """Approximate CDF for the F distribution.
+    """Approximate survival function for the F distribution.
 
-    ``f_sf(x, df_num, df_den) = P(F < x)``
+    ``f_sf(x, df_num, df_den) = P(F > x)``
     Values are tested to within 1% of values returned by the
     Cephes C library for numerical integration.
 
@@ -231,7 +231,7 @@ def f_sf(x, df_num, df_den):
     :param float df_num: Degrees of freedom of the numerator.
     :param float df_den: Degrees of freedom of the denominator.
 
-    :return: Area from negative infinity to `x` under t distribution
+    :return: Area from negative infinity to `x` under F distribution
         with degrees of freedom `df`.
     :rtype: float
     """
