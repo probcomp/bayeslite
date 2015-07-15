@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 #   Copyright (c) 2010-2014, MIT Probabilistic Computing Project
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,8 +17,8 @@
 """Miscellaneous statistics utilities."""
 
 import math
-from bayeslite.util import float_sum
 
+from bayeslite.util import float_sum
 
 def arithmetic_mean(array):
     """Arithmetic mean of elements of `array`.
@@ -28,7 +29,6 @@ def arithmetic_mean(array):
     :rtype: float
     """
     return float_sum(array) / len(array)
-
 
 def pearsonr(a0, a1):
     """Pearson r correlation coefficient of two samples.
@@ -77,7 +77,6 @@ def pearsonr(a0, a1):
     r = max(r, -1.0)
     return r
 
-
 def signum(x):
     """Sign of `x`.
 
@@ -92,7 +91,6 @@ def signum(x):
         return +1
     else:
         return 0
-
 
 def chi2_contingency(contingency, correction=None):
     """Pearson chi^2 statistic for test of independence on contingency table.
@@ -129,7 +127,6 @@ def chi2_contingency(contingency, correction=None):
             O += 0.5*signum(E - O)
         return ((O - E)**2)/E
     return float_sum(q(i0, i1) for i0 in range(n0) for i1 in range(n1))
-
 
 def f_oneway(groups):
     """F-test statistic for one-way analysis of variance (ANOVA).
@@ -168,7 +165,6 @@ def f_oneway(groups):
             # could be observed with zero correlation.
             return float('+inf')
     return bgv / wgv
-
 
 def t_cdf(x, df):
     """Approximate CDF for Student's t distribution.
