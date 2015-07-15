@@ -20,7 +20,7 @@ from bayeslite.util import float_sum
 
 
 def arithmetic_mean(array):
-    """Computes the arithmetic mean of elements of `array`.
+    """Arithmetic mean of elements of `array`.
 
     :param list<float> array: List of floats to compute arithmetic mean.
 
@@ -31,7 +31,7 @@ def arithmetic_mean(array):
 
 
 def pearsonr(a0, a1):
-    """Computes the Pearson r correlation coefficient of two samples.
+    """Pearson r correlation coefficient of two samples.
 
     For random variables X, Y:
 
@@ -53,7 +53,7 @@ def pearsonr(a0, a1):
     :param list<float> a0: Observations of the first random variable.
     :param list<float> a1: Observations of the second random variable.
 
-    :return: Perason r correlation coefficient of samples `a0` and `a1`.
+    :return: Pearson r correlation coefficient of samples `a0` and `a1`.
     :rtype: float
     """
     n = len(a0)
@@ -79,11 +79,11 @@ def pearsonr(a0, a1):
 
 
 def signum(x):
-    """Computes the sign of `x`.
+    """Sign of `x`.
 
     :param float x: Argument to signum.
 
-    :return: Sign of `x`: (``-1 if x<0, 0 if x=0, +1 if x>0``).
+    :return: Sign of `x`: ``-1 if x<0, 0 if x=0, +1 if x>0``.
     :rtype: int
     """
     if x < 0:
@@ -95,18 +95,19 @@ def signum(x):
 
 
 def chi2_contingency(contingency, correction=None):
-    """Computes observed Pearson Chi2 test statistic for a test of independence
-    on a contingency table.
-    http://en.wikipedia.org/wiki/Pearson%27s_chi-squared_test#Test_of_independence
+    """Pearson chi^2 statistic for test of independence on contingency table.
 
-    :param list<list> contingency: 2D table of observed frequencies. The
-    dimensions must be M by N, where M (resp N) is the number of discrete
-    values taken by the first (resp second) random variable.
+    https://en.wikipedia.org/wiki/Pearson%27s_chi-squared_test#Test_of_independence
 
-    :param boolean correction: If ``True``, moves each observation count in the
-    direction of the expectation by 1/2.
+    :param list<list> contingency: Table counting values of two random
+    variables X, Y in a population sample: for each pair of values
+    x_i, y_j that X, Y can take, contingency[i][j] is the number of
+    occurrences of that pair.
 
-    :return: The observed Pearson chi2 test statistic on the `contingency` table.
+    :param boolean correction: If ``True``, move each observation
+    count in the direction of the expectation by 1/2.
+
+    :return: Observed Pearson chi^2 test statistic on `contingency`.
     :rtype: float
     """
     if correction is None:
@@ -131,14 +132,15 @@ def chi2_contingency(contingency, correction=None):
 
 
 def f_oneway(groups):
-    """Computes observed F test statistic for a one-way analysis of variance
-    (ANOVA).
+    """F-test statistic for one-way analysis of variance (ANOVA).
+
     https://en.wikipedia.org/wiki/F-test#Multiple-comparison_ANOVA_problems
 
-    :param list<list> groups: List of lists of the observed values of each
-    group. The outer list must length equal to the number of groups.
+    :param list<list> groups: List of lists of the observed values of
+        each group.  The outer list must length equal to the number of
+        groups.
 
-    :return: The observed F test statistic on `groups`.
+    :return: Observed F test statistic on `groups`.
     :rtype: float
     """
     K = len(groups)
@@ -169,17 +171,17 @@ def f_oneway(groups):
 
 
 def t_cdf(x, df):
-    """Approximate cumulative distribution function for Student's t probability
-    distribution.
+    """Approximate CDF for Student's t distribution.
+
     ``t_cdf(x,df) = P(T_df < x)``
     Values are tested to within 0.5% of values returned by the
     Cephes C library for numerical integration.
 
     :param float x: Argument to the survival function, must be positive.
-    :param float df: Degrees of freedom of the chi2 distribution.
+    :param float df: Degrees of freedom of the chi^2 distribution.
 
-    :return: The area from negative infinity to `x` under the t probability
-        distribution with degrees of freedom `df`.
+    :return: Area from negative infinity to `x` under t distribution
+        with degrees of freedom `df`.
     :rtype: float
     """
     import numpy
@@ -196,17 +198,17 @@ def t_cdf(x, df):
     return p
 
 def chi2_sf(x, df):
-    """Approximate survival function (tail) for the chi2 probability
-    distribution.
+    """Approximate survival function for chi^2 distribution.
+
     ``chi2_sf(x, df) = P(CHI > x)``
     Values are tested to within 0.5% of values returned by the
     Cephes C library for numerical integration.
 
     :param float x: Argument to the survival function, must be positive.
-    :param float df: Degrees of freedom of the chi2 distribution.
+    :param float df: Degrees of freedom of the chi^2 distribution.
 
-    :return: The area from `x` to infinity under the chi2 probability
-        distribution with degrees of freedom df.
+    :return: Area from `x` to infinity under the chi^2 distribution
+        with degrees of freedom `df`.
     :rtype: float
     """
     import numpy
@@ -223,8 +225,8 @@ def chi2_sf(x, df):
     return p
 
 def f_sf(x, df_num, df_den):
-    """Approximate cumulative distribution function for the F probability
-    distribution.
+    """Approximate CDF for the F distribution.
+
     ``f_sf(x, df_num, df_den) = P(F < x)``
     Values are tested to within 1% of values returned by the
     Cephes C library for numerical integration.
@@ -233,8 +235,8 @@ def f_sf(x, df_num, df_den):
     :param float df_num: Degrees of freedom of the numerator.
     :param float df_den: Degrees of freedom of the denominator.
 
-    :return: The area from negative infinity to `x` under the t probability
-        distribution with degrees of freedom `df`.
+    :return: Area from negative infinity to `x` under t distribution
+        with degrees of freedom `df`.
     :rtype: float
     """
     import numpy

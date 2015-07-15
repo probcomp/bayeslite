@@ -97,7 +97,7 @@ def bql_column_correlation_pvalue(bdb, generator_id, colno0, colno1):
     return pval
 
 def correlation_pearsonr2(data0, data1):
-    # Compute the observed correlation.
+    # Compute observed correlation.
     corr = stats.pearsonr(data0, data1)**2
     if math.isnan(corr):
         return (float('NaN'), float('NaN'))
@@ -134,11 +134,11 @@ def correlation_cramerphi(data0, data1):
                 if data0[i] == data0[j0] and data1[i] == data1[j1]:
                     c += 1
             ct[i0][i1] = c
-    # Compute observed Chi2 stat.
+    # Compute observed chi^2 statistic.
     chisq = stats.chi2_contingency(ct, correction=False)
-    # Compute the observed correlation
+    # Compute observed correlation.
     corr = math.sqrt(chisq / (n * (min_levels - 1)))
-    # Compute p-value for Chi2 test of independence.
+    # Compute p-value for chi^2 test of independence.
     pvalue = stats.chi2_sf(chisq, (n0-1)*(n1-1))
     return (corr, pvalue)
 
@@ -165,7 +165,7 @@ def correlation_anovar2(data_group, data_y):
         groups[i] = []
     for x, y in zip(data_group, data_y):
         groups[group_index[x]].append(y)
-    # Compute observed F stat.
+    # Compute observed F-test statistic.
     F = stats.f_oneway(groups)
     # Compute observed correlation.
     corr = 1 - 1/(1 + F*(float(n_groups - 1) / float(n - n_groups)))
