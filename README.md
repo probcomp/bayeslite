@@ -16,6 +16,8 @@ which provides a general-purpose metamodel.
 Running the automatic tests requires [pytest](http://pytest.org/) and
 Crosscat.
 
+Building the documentation requires [Sphinx](http://sphinx-doc.org/).
+
 ## Test
 
 To check that everything is working (requires pytest and Crosscat):
@@ -48,11 +50,18 @@ $ bayeslite foo.bdb
 
 ## Documentation
 
-Run
+To build the documentation (requires sphinx):
 
 ```
 $ make doc
 ```
 
-to build all documentation in build/doc, one directory per output
-format, e.g. build/doc/pdf/bayeslite.pdf.
+The result will be placed in `build/doc`, with one subdirectory per
+output format.
+
+To build only one output format, e.g. HTML because you don't want to
+install TeX:
+
+```
+$ make html
+```
