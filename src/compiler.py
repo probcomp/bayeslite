@@ -867,6 +867,10 @@ class BQLCompiler_1Row(object):
             compile_bql_2col_2(bdb, generator_id, None,
                 'bql_column_correlation',
                 'Column correlation', None, bql, self, out)
+        elif isinstance(bql, ast.ExpBQLCorrelPval):
+            compile_bql_2col_2(bdb, generator_id, None,
+                'bql_column_correlation_pvalue',
+                'Column correlation pvalue', None, bql, self, out)
         elif isinstance(bql, (ast.ExpBQLPredict, ast.ExpBQLPredictConf)):
             raise BQLError(bdb, 'PREDICT is not allowed outside INFER.')
         else:
@@ -946,6 +950,8 @@ class BQLCompiler_2Row(object):
             raise BQLError(bdb, 'Mutual information is 0-row function.')
         elif isinstance(bql, ast.ExpBQLCorrel):
             raise BQLError(bdb, 'Column correlation is 0-row function.')
+        elif isinstance(bql, ast.ExpBQLCorrelPval):
+            raise BQLError(bdb, 'Column correlation pvalue is 0-row function.')
         elif isinstance(bql, ast.ExpBQLPredict):
             raise BQLError(bdb, 'Predict is a 1-row function.')
         elif isinstance(bql, ast.ExpBQLPredictConf):
@@ -1001,6 +1007,10 @@ class BQLCompiler_1Col(object):
             compile_bql_2col_1(bdb, generator_id, None,
                 'bql_column_correlation',
                 'Column correlation', None, bql, self.colno_exp, self, out)
+        elif isinstance(bql, ast.ExpBQLCorrelPval):
+            compile_bql_2col_1(bdb, generator_id, None,
+                'bql_column_correlation_pvalue',
+                'Column correlation pvalue', None, bql, self.colno_exp, self, out)
         elif isinstance(bql, ast.ExpBQLPredict):
             raise BQLError(bdb, 'Predict is a 1-row function.')
         elif isinstance(bql, ast.ExpBQLPredictConf):
@@ -1046,6 +1056,12 @@ class BQLCompiler_2Col(object):
             compile_bql_2col_0(bdb, generator_id, None,
                 'bql_column_correlation',
                 'Correlation',
+                None,
+                bql, self.colno0_exp, self.colno1_exp, self, out)
+        elif isinstance(bql, ast.ExpBQLCorrelPval):
+            compile_bql_2col_0(bdb, generator_id, None,
+                'bql_column_correlation_pvalue',
+                'Correlation pvalue',
                 None,
                 bql, self.colno0_exp, self.colno1_exp, self, out)
         elif isinstance(bql, ast.ExpBQLPredict):

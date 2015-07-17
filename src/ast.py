@@ -326,6 +326,7 @@ ExpBQLSim = namedtuple('ExpBQLSim', ['condition', 'column_lists'])
 ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
 ExpBQLMutInf = namedtuple('ExpBQLMutInf', ['column0', 'column1', 'nsamples'])
 ExpBQLCorrel = namedtuple('ExpBQLCorrel', ['column0', 'column1'])
+ExpBQLCorrelPval = namedtuple('ExpBQLCorrelPval', ['column0', 'column1'])
 ExpBQLPredict = namedtuple('ExpBQLPredict', ['column', 'confidence'])
 ExpBQLPredictConf = namedtuple('ExpBQLPredictConf', ['column'])
 
@@ -343,6 +344,8 @@ def is_bql(exp):
     if isinstance(exp, ExpBQLMutInf):
         return True
     if isinstance(exp, ExpBQLCorrel):
+        return True
+    if isinstance(exp, ExpBQLCorrelPval):
         return True
     if isinstance(exp, ExpBQLPredict):
         return True

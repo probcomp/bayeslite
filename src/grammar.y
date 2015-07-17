@@ -499,6 +499,7 @@ bqlfn(depprob)		::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
 bqlfn(mutinf)		::= K_MUTUAL K_INFORMATION ofwith(cols)
 				nsamples_opt(nsamp).
 bqlfn(correl)		::= K_CORRELATION ofwith(cols).
+bqlfn(correl_pval)	::= K_CORRELATION K_PVALUE ofwith(cols).
 bqlfn(predict)		::= K_PREDICT column_name(col) withconf(conf).
 bqlfn(primary)		::= primary(p).
 
@@ -652,6 +653,7 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 	K_PREDICT
 	K_PREDICTIVE
 	K_PROBABILITY
+	K_PVALUE
 	K_REGEXP
 	K_RENAME
 	K_RESPECT
