@@ -190,12 +190,12 @@ estimate(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
  * nonterminal estcols_columns_opt, to work around what appears to be
  * a bug in lemonade.  *@!&#^$!@&*
  */
-estcols(nocols)		::= K_ESTIMATE K_COLUMNS
-				K_FROM generator_name(generator)
+estcols(nocols)		::= K_ESTIMATE
+				K_FROM K_COLUMNS K_OF generator_name(generator)
 				usingmodel_opt(modelno)
 				where(cond) order_by(ord) limit_opt(lim).
-estcols(cols)		::= K_ESTIMATE K_COLUMNS estcols_columns(cols)
-				K_FROM generator_name(generator)
+estcols(cols)		::= K_ESTIMATE estcols_columns(cols)
+				K_FROM K_COLUMNS K_OF generator_name(generator)
 				usingmodel_opt(modelno)
 				where(cond) order_by(ord) limit_opt(lim).
 
@@ -209,7 +209,8 @@ estcols_column(ec)	::= expression(e) as(name).
  * list of columns with itself.
  */
 estpaircols(e)		::= K_ESTIMATE K_PAIRWISE estpaircols_columns(cols)
-				K_FROM generator_name(generator) for(subcols)
+				K_FROM K_COLUMNS K_OF generator_name(generator)
+				for(subcols)
 				usingmodel_opt(modelno)
 				where(cond) order_by(ord) limit_opt(lim).
 
@@ -227,7 +228,7 @@ estpaircols_column(epc)	::= expression(e) as(name).
  * the moment: the only thing it is sensible to do here right now is
  * SIMILARITY.
  */
-estpairrow(e)		::= K_ESTIMATE K_PAIRWISE K_ROW expression(e)
+estpairrow(e)		::= K_ESTIMATE K_PAIRWISE expression(e)
 				K_FROM generator_name(generator)
 				usingmodel_opt(modelno)
 				where(cond) order_by(ord) limit_opt(lim).
