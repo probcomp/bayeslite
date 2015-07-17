@@ -31,7 +31,7 @@ def parse_args(argv):
                         help="Max number of jobs (processes) useable.")
     parser.add_argument('-s', '--seed', type=int, default=None,
                         help="Random seed for the default generator.")
-    parser.add_argument('-f', '--file', type=str, nargs="+", default=None,
+    parser.add_argument('-f', '--file', type=str, nargs=1, default=None,
                         help="Path to commands file. May be used to specify a "
                         "project-specific init file.")
     parser.add_argument('-b', '--batch', action='store_true',
