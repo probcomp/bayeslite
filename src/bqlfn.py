@@ -21,6 +21,8 @@ import time
 import bayeslite.core as core
 import bayeslite.stats as stats
 
+from bayeslite.exception import BQLError
+
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
 from bayeslite.util import casefold
@@ -269,6 +271,8 @@ def bql_column_value_probability(bdb, generator_id, modelno, colno, value):
 # Row function:  SIMILARITY TO <target_row> [WITH RESPECT TO <columns>]
 def bql_row_similarity(bdb, generator_id, modelno, rowid, target_rowid,
         *colnos):
+    if target_rowid is None:
+        raise BQLError(bdb, 'No such target row for SIMILARITY')
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
     if len(colnos) == 0:
         colnos = core.bayesdb_generator_column_numbers(bdb, generator_id)
