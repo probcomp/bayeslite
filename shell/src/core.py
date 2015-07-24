@@ -307,8 +307,8 @@ class Shell(cmd.Cmd):
         try:
             imp.load_source('bayeslite_shell_hooks', path)
         except Exception as e:
-            self.stdout.write(traceback.format_exc())
-            self.stdout.write('Failed to load hooks: %s\n' % (repr(path),))
+            self.stdout.write('%s\n' % (e,))
+            self.stdout.write('Failed to load hooks: %s\n' % (path,))
         else:
             self._hooked_filenames.add(path)
 
@@ -320,7 +320,9 @@ class Shell(cmd.Cmd):
         '''
         try:
             pretty.pp_cursor(self.stdout, self._bdb.sql_execute(line))
-        except Exception:
+        except sqlite3.Error as e:
+            self.stdout.write('%s\n' % (e,))
+        except Exception as e:
             self.stdout.write(traceback.format_exc())
         return False
 
@@ -404,6 +406,8 @@ class Shell(cmd.Cmd):
             with open(pathname, 'rU') as f:
                 bayeslite.bayesdb_read_csv(self._bdb, table, f, header=True,
                                            create=True, ifnotexists=False)
+        except IOError as e:
+            self.stdout.write('%s\n' % (e,))
         except Exception:
             self.stdout.write(traceback.format_exc())
 
@@ -425,6 +429,8 @@ class Shell(cmd.Cmd):
         try:
             bayeslite.bayesdb_load_codebook_csv_file(self._bdb, table,
                                                      pathname)
+        except IOError as e:
+            self.stdout.write('%s\n' % (e,))
         except Exception:
             self.stdout.write(traceback.format_exc())
 
@@ -471,6 +477,8 @@ class Shell(cmd.Cmd):
             bayeslite.bayesdb_load_legacy_models(self._bdb, generator, table,
                                                  self._metamodel, pathname,
                                                  create=True)
+        except IOError as e:
+            self.stdout.write('%s\n' % (e,))
         except Exception:
             self.stdout.write(traceback.format_exc())
 
