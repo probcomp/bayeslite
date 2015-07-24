@@ -77,7 +77,7 @@ class Shell(cmd.Cmd):
 
     def _uninstallcmd(self, name):
         if name in self._core_commands:
-            raise ValueError('Cannot uninstall core command: %s\n' % (name,))
+            raise ValueError('Cannot uninstall core command: %s' % (name,))
         delattr(self, 'do_.%s' % (name,))
         self._cmds.remove(name)
 
@@ -274,7 +274,7 @@ class Shell(cmd.Cmd):
                 try:
                     self._uninstallcmd(cmdname)
                 except ValueError as err:
-                    self.stdout.write('{}'.format(err))
+                    self.stdout.write('%s\n' % (err,))
                     return
             else:
                 do_print('skipping "%s".\n' % cmdname)
