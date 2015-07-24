@@ -129,6 +129,8 @@ class Shell(cmd.Cmd):
                         else:
                             self.stdout.write('\n')
                         pretty.pp_cursor(self.stdout, cursor)
+            except (bayeslite.BayesDBException, bayeslite.BQLParseError) as e:
+                self.stdout.write('%s\n' % (e,))
             except Exception:
                 self.stdout.write(traceback.format_exc())
         else:
