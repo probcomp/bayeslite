@@ -14,10 +14,34 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+version = '0.1.dev'
+
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
+
+# Append the Git commit id if this is an unadorned development
+# version.
+if version.endswith('.dev'):
+    try:
+        import subprocess
+        desc = subprocess.check_output(['git', 'describe', '--always'])
+    except Exception:
+        version += '+unknown'
+    else:
+        version += '+git-' + desc.strip()
+
+# XXX Mega-kludge.  See below about grammars for details.
+try:
+    with open('src/version.py', 'rU') as f:
+        version_old = f.readlines()
+except IOError:
+    version_old = None
+version_new = ['__version__ = %s' % (repr(version),)]
+if version_old != version_new:
+    with open('src/version.py', 'w') as f:
+        f.writelines(version_new)
 
 # XXX This is a mega-kludge.  Since distutils/setuptools has no way to
 # order dependencies (what kind of brain-dead build system can't do
@@ -55,7 +79,7 @@ for grammar in grammars:
 
 setup(
     name='bayeslite',
-    version='0.1.dev',
+    version=version,
     packages=[
         'bayeslite',
         'bayeslite.plex',

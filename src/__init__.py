@@ -77,6 +77,7 @@ from bayeslite.parse import BQLParseError
 from bayeslite.read_csv import bayesdb_read_csv
 from bayeslite.read_csv import bayesdb_read_csv_file
 from bayeslite.txn import BayesDBTxnError
+from bayeslite.version import __version__
 
 __all__ = [
     'BQLParseError',
@@ -92,4 +93,5 @@ __all__ = [
     'bayesdb_register_metamodel',
     'bayesdb_simulate',
     'IBayesDBMetamodel',
+    '__version__',
 ]

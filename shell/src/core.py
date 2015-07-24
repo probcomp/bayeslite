@@ -82,7 +82,8 @@ class Shell(cmd.Cmd):
         self._cmds.remove(name)
 
     def cmdloop(self, *args, **kwargs):
-        self.stdout.write('Welcome to the Bayeslite shell.\n')
+        version = bayeslite.__version__
+        self.stdout.write('Welcome to the Bayeslite %s shell.\n' % (version,))
         self.stdout.write('Type `.help\' for help.\n')
         while True:
             try:
