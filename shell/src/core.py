@@ -445,8 +445,7 @@ class Shell(cmd.Cmd):
         # XXX Lousy, lousy tokenizer.
         tokens = line.split()
         if len(tokens) != 2:
-            self.stdout.write('Usage: '
-                              '.guess <generator> <table>\n')
+            self.stdout.write('Usage: .guess <generator> <table>\n')
             return
         generator = tokens[0]
         table = tokens[1]
