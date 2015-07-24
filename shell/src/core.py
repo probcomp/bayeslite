@@ -35,13 +35,11 @@ class Shell(cmd.Cmd):
     sql_prompt    = '   sql...> '
     python_prompt = 'python...> '
 
-    def __init__(self, bdb, metamodel, debug=False):
+    def __init__(self, bdb, metamodel):
         self.prompt = self.def_prompt
         self.bql = StringIO.StringIO()
         self.identchars += '.'
         cmd.Cmd.__init__(self, 'Tab')
-
-        self._debug = debug
 
         self._bdb = bdb
         self._metamodel = metamodel
@@ -244,9 +242,6 @@ class Shell(cmd.Cmd):
         except Exception as err:
             self.stdout.write('Unexpected exception: {}.\n'.format(err))
             return
-
-        if self._debug:
-            self.stdout.write('--DEBUG: .read complete\n')
 
     def _hook(self, cmdname, func, autorehook=False, yes=False, silent=False):
         import types

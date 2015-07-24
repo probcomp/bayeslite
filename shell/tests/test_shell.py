@@ -76,7 +76,7 @@ def read_data():
 
 @pytest.fixture
 def spawnbdb():
-    c = spawnjr('bayeslite --no-init-file --debug --memory')
+    c = spawnjr('bayeslite --no-init-file --memory')
     c.delaybeforesend = 0
     c.expect_lines([
         'Welcome to the Bayeslite shell.',
@@ -395,7 +395,6 @@ def test_read_nonsequential(spawnbdb):
             'Alameda County CA',
             '        Albany GA',
             '        Albany NY',
-            '--DEBUG: .read complete',
         ])
     c.expect_prompt()
 
@@ -432,6 +431,5 @@ def test_read_nonsequential_verbose(spawnbdb):
             'Alameda County CA',
             '        Albany GA',
             '        Albany NY',
-            '--DEBUG: .read complete',
         ])
         c.expect_prompt()
