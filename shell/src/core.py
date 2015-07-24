@@ -300,7 +300,7 @@ class Shell(cmd.Cmd):
                 yesno = raw_input('y/n? ')
 
             if yesno in negative:
-                self.stdout.write("Abondoning hook of %s\n" % (path,))
+                self.stdout.write("Abandoning hook of %s\n" % (path,))
                 return
 
         self.stdout.write('Loading hooks at %s...\n' % (path,))
