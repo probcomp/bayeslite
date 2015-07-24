@@ -58,6 +58,13 @@ def bayesdb(metamodel=None, **kwargs):
     finally:
         bdb.close()
 
+def test_bayesdb_instantiation():
+    # Use bayesdb_open -- don't instantiate directly.
+    with pytest.raises(TypeError):
+        bayeslite.BayesDB()
+    with pytest.raises(ValueError):
+        bayeslite.BayesDB(':memory:', 0xdeadbeef)
+
 def test_openclose():
     with bayesdb():
         pass

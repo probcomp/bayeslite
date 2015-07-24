@@ -76,7 +76,7 @@ def read_data():
 
 @pytest.fixture
 def spawnbdb():
-    c = spawnjr('bayeslite --no-init-file --debug --memory')
+    c = spawnjr('bayeslite --no-init-file --memory')
     c.delaybeforesend = 0
     c.expect_lines([
         'Welcome to the Bayeslite shell.',
@@ -335,7 +335,10 @@ def test_describe_column_with_generator(spawntablegen):
 def test_hook(spawnbdb):
     c = spawnbdb
     c.sendexpectcmd('.hook %s' % (THOOKS_PY,))
-    c.expect_lines(['added command ".myhook"'])
+    c.expect_lines([
+        'Loading hooks at %s...' % (THOOKS_PY,),
+        'added command ".myhook"',
+    ])
     c.expect_prompt()
     c.sendexpectcmd('.help')
     c.expect_lines([
@@ -392,7 +395,6 @@ def test_read_nonsequential(spawnbdb):
             'Alameda County CA',
             '        Albany GA',
             '        Albany NY',
-            '--DEBUG: .read complete',
         ])
     c.expect_prompt()
 
@@ -429,6 +431,20 @@ def test_read_nonsequential_verbose(spawnbdb):
             'Alameda County CA',
             '        Albany GA',
             '        Albany NY',
-            '--DEBUG: .read complete',
         ])
         c.expect_prompt()
+
+
+def test_exception(spawnbdb):
+    c = spawnbdb
+    c.sendexpectcmd('SELECT +;')
+    c.expect_lines(['Parse error: syntax error near ;'])
+    c.expect_prompt()
+    c.sendexpectcmd('COMMIT;')
+    c.expect_lines(['Not in a transaction!'])
+    c.expect_prompt()
+    c.sendexpectcmd('BEGIN;')
+    c.expect_prompt()
+    c.sendexpectcmd('BEGIN;')
+    c.expect_lines(['Already in a transaction!'])
+    c.expect_prompt()

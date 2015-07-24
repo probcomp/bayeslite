@@ -21,17 +21,45 @@ import math
 from bayeslite.util import float_sum
 
 def arithmetic_mean(array):
-    """Arithmetic mean of elements of `array` in floating-point."""
+    """Arithmetic mean of elements of `array`.
+
+    :param list<float> array: List of floats to compute arithmetic mean.
+
+    :return: Arithmetic mean of `array`.
+    :rtype: float
+    """
     return float_sum(array) / len(array)
 
 def pearsonr(a0, a1):
-    """Return Pearson r: correlation coefficient for a sample.
+    """Pearson r correlation coefficient of two samples.
+
+    For random variables X, Y:
+
+                 cov(X, Y)
+    r(X, Y) = ---------------,
+              sigma_X sigma_Y
+
+    where
+
+      cov(X, Y) = E[(X - E[X]) (Y - E[Y])],
+    {sigma_X}^2 = E[(X - E[X])^2], and
+    {sigma_Y}^2 = E[(Y - E[Y])^2]
+
+    For a sample a0, we take the mean of a0 instead of E[X], and the
+    variance of a0 instead of E[(X - E[X])^2].
 
     https://en.wikipedia.org/wiki/Pearson_product-moment_correlation_coefficient
+
+    :param list<float> a0: Observations of the first random variable.
+    :param list<float> a1: Observations of the second random variable.
+
+    :return: Pearson r correlation coefficient of samples `a0` and `a1`.
+    :rtype: float
     """
     n = len(a0)
     assert n == len(a1)
     if n == 0:
+        # No data, so no notion of correlation.
         return float('NaN')
     m0 = arithmetic_mean(a0)
     m1 = arithmetic_mean(a1)
@@ -40,7 +68,8 @@ def pearsonr(a0, a1):
     den1_sq = float_sum((x1 - m1)**2 for x1 in a1)
     den = math.sqrt(den0_sq*den1_sq)
     if den == 0.0:
-        # Not enough variation in at least one column.
+        # No variation in at least one column, so no notion of
+        # correlation.
         return float('NaN')
     r = num / den
     # Clamp r in [-1, +1] in case of floating-point error.
@@ -48,14 +77,14 @@ def pearsonr(a0, a1):
     r = max(r, -1.0)
     return r
 
-assert math.isnan(pearsonr([], []))
-assert pearsonr([1,2,3], [2,4,6]) == +1.0
-assert pearsonr([1,2,3], [-2,-4,-6]) == -1.0
-assert pearsonr([1,2,3], [6,4,2]) == -1.0
-assert pearsonr([1,2,3], [+1,-1,+1]) == 0.0
-
 def signum(x):
-    """Sign of x: -1 if x<0, 0 if x=0, +1 if x>0."""
+    """Sign of `x`.
+
+    :param float x: Argument to signum.
+
+    :return: Sign of `x`: ``-1 if x<0, 0 if x=0, +1 if x>0``.
+    :rtype: int
+    """
     if x < 0:
         return -1
     elif 0 < x:
@@ -63,20 +92,24 @@ def signum(x):
     else:
         return 0
 
-def relerr(expected, actual):
-    """Relative error between expected and actual: ``abs((a - e)/e)``."""
-    return abs((actual - expected)/expected)
-
 def chi2_contingency(contingency, correction=None):
-    """Pearson chi^2 test of independence on contingency table.
-
-    If correction=True, move each observation count in the direction
-    of the expectation by 1/2.
+    """Pearson chi^2 statistic for test of independence on contingency table.
 
     https://en.wikipedia.org/wiki/Pearson%27s_chi-squared_test#Test_of_independence
+
+    :param list<list> contingency: Table counting values of two random
+    variables X, Y in a population sample: for each pair of values
+    x_i, y_j that X, Y can take, contingency[i][j] is the number of
+    occurrences of that pair.
+
+    :param boolean correction: If ``True``, move each observation
+    count in the direction of the expectation by 1/2.
+
+    :return: Observed Pearson chi^2 test statistic on `contingency`.
+    :rtype: float
     """
     if correction is None:
-        correction is True
+        correction = False
     assert 0 < len(contingency)
     assert all(all(isinstance(v, int) for v in row) for row in contingency)
     n = float(sum(sum(row) for row in contingency))
@@ -95,13 +128,17 @@ def chi2_contingency(contingency, correction=None):
         return ((O - E)**2)/E
     return float_sum(q(i0, i1) for i0 in range(n0) for i1 in range(n1))
 
-assert chi2_contingency([[42]]) == 0.
-assert relerr(7.66, chi2_contingency([[4,2,3],[3,16,2]])) < 0.01
-
 def f_oneway(groups):
-    """F-test in one-way analysis of variance (ANOVA).
+    """F-test statistic for one-way analysis of variance (ANOVA).
 
     https://en.wikipedia.org/wiki/F-test#Multiple-comparison_ANOVA_problems
+
+    :param list<list> groups: List of lists of the observed values of
+        each group.  The outer list must length equal to the number of
+        groups.
+
+    :return: Observed F test statistic on `groups`.
+    :rtype: float
     """
     K = len(groups)
     N = sum(len(group) for group in groups)
@@ -114,10 +151,96 @@ def f_oneway(groups):
         for x in group)
     if wgv == 0.0:
         if bgv == 0.0:
-            return 0.0
+            # No variation between or within groups, so we cannot
+            # ascertain any correlation between them -- it is as if we
+            # had no data about the groups: every value in every group
+            # is the same.
+            return float('NaN')
         else:
+            # Within-group variability is zero, meaning for each
+            # group, each value is the same; between-group variability
+            # is nonzero, meaning there is variation between the
+            # groups.  So if there were zero correlation we could not
+            # possibly observe this, whereas all finite F statistics
+            # could be observed with zero correlation.
             return float('+inf')
     return bgv / wgv
 
-assert relerr(9.3,
-        f_oneway([[6,8,4,5,3,4],[8,12,9,11,6,8],[13,9,11,8,7,12]])) < 0.01
+def t_cdf(x, df):
+    """Approximate CDF for Student's t distribution.
+
+    ``t_cdf(x,df) = P(T_df < x)``
+    Values are tested to within 0.5% of values returned by the
+    Cephes C library for numerical integration.
+
+    :param float x: Argument to the survival function, must be positive.
+    :param float df: Degrees of freedom of the chi^2 distribution.
+
+    :return: Area from negative infinity to `x` under t distribution
+        with degrees of freedom `df`.
+    :rtype: float
+    """
+    import numpy
+
+    if df <= 0:
+        raise ValueError('Degrees of freedom must be positive.')
+    if x == 0:
+        return 0.5
+
+    MONTE_CARLO_SAMPLES = 1e5
+    random = numpy.random.RandomState(seed=0)
+    T = random.standard_t(df, size=MONTE_CARLO_SAMPLES)
+    return numpy.sum(T < x) / MONTE_CARLO_SAMPLES
+
+def chi2_sf(x, df):
+    """Approximate survival function for chi^2 distribution.
+
+    ``chi2_sf(x, df) = P(CHI > x)``
+    Values are tested to within 0.5% of values returned by the
+    Cephes C library for numerical integration.
+
+    :param float x: Argument to the survival function, must be positive.
+    :param float df: Degrees of freedom of the chi^2 distribution.
+
+    :return: Area from `x` to infinity under the chi^2 distribution
+        with degrees of freedom `df`.
+    :rtype: float
+    """
+    import numpy
+
+    if df <= 0:
+        raise ValueError('Degrees of freedom must be positive.')
+    if x <= 0:
+        return 1.0
+
+    MONTE_CARLO_SAMPLES = 5e5
+    random = numpy.random.RandomState(seed=0)
+    CHI = random.chisquare(df, size=MONTE_CARLO_SAMPLES)
+    return numpy.sum(CHI > x) / MONTE_CARLO_SAMPLES
+
+def f_sf(x, df_num, df_den):
+    """Approximate survival function for the F distribution.
+
+    ``f_sf(x, df_num, df_den) = P(F > x)``
+    Values are tested to within 1% of values returned by the
+    Cephes C library for numerical integration.
+
+    :param float x: Argument to the survival function, must be positive.
+    :param float df_num: Degrees of freedom of the numerator.
+    :param float df_den: Degrees of freedom of the denominator.
+
+    :return: Area from negative infinity to `x` under F distribution
+        with degrees of freedom `df`.
+    :rtype: float
+    """
+    import numpy
+
+    if df_num <= 0 or df_den <= 0:
+        raise ValueError('Degrees of freedom must be positive.')
+    if x <= 0:
+        return 1.0
+
+    MONTE_CARLO_SAMPLES = 1e5
+    random = numpy.random.RandomState(seed=0)
+    F = random.f(df_num, df_den, size=MONTE_CARLO_SAMPLES)
+    return numpy.sum(F > x) / MONTE_CARLO_SAMPLES

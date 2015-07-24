@@ -194,7 +194,7 @@ class BQLSemantics(object):
     def p_altertab_cmd_setdefgen(self, generator):
         return ast.AlterTabSetDefGen(generator)
     def p_altertab_cmd_unsetdefgen(self):
-        return ast.AlterTabSetDefGen()
+        return ast.AlterTabUnsetDefGen()
 
     # BQL Model Definition Language
     def p_command_creategen(self, defaultp, name, ifnotexists, table,
@@ -530,6 +530,7 @@ class BQLSemantics(object):
     def p_bqlfn_mutinf(self, cols, nsamp):
         return ast.ExpBQLMutInf(cols[0], cols[1], nsamp)
     def p_bqlfn_correl(self, cols):             return ast.ExpBQLCorrel(*cols)
+    def p_bqlfn_correl_pval(self, cols):        return ast.ExpBQLCorrelPval(*cols)
     def p_bqlfn_predict(self, col, conf):       return ast.ExpBQLPredict(col,
                                                     conf)
     def p_bqlfn_primary(self, p):               return p

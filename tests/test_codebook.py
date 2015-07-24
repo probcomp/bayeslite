@@ -86,3 +86,42 @@ def test_codebook_value_map():
         c = bdb.sql_execute('SELECT * FROM dummy')
         with pytest.raises(KeyError):
             bdb.execute('SIMULATE age FROM dummy_cc GIVEN city = LA LIMIT 5')
+
+def test_empty_codebook():
+    with bayeslite.bayesdb_open() as bdb:
+        bdb.sql_execute('create table t(x, y)')
+        with tempfile.NamedTemporaryFile(prefix='bayeslite') as tf:
+            with pytest.raises(IOError):
+                bayeslite.bayesdb_load_codebook_csv_file(bdb, 't', tf.name)
+            with open(tf.name, 'w') as f:
+                f.write('gnome, shotname, descruption, value_mop\n')
+            with pytest.raises(IOError):
+                bayeslite.bayesdb_load_codebook_csv_file(bdb, 't', tf.name)
+            with open(tf.name, 'w') as f:
+                f.write('name, shortname, description, value_map\n')
+            bayeslite.bayesdb_load_codebook_csv_file(bdb, 't', tf.name)
+            with open(tf.name, 'w') as f:
+                f.write('name, shortname, description, value_map\n')
+                f.write('x, eks, Greek chi,\n')
+                f.write('y, why, quagga\n')
+            with pytest.raises(IOError):
+                bayeslite.bayesdb_load_codebook_csv_file(bdb, 't', tf.name)
+            with open(tf.name, 'w') as f:
+                f.write('name, shortname, description, value_map\n')
+                f.write('x, eks, Greek chi,\n')
+                f.write('y, why, quagga,{x=42}\n')
+            with pytest.raises(IOError):
+                bayeslite.bayesdb_load_codebook_csv_file(bdb, 't', tf.name)
+            with open(tf.name, 'w') as f:
+                f.write('name, shortname, description, value_map\n')
+                f.write('x, eks, Greek chi,\n')
+                f.write('y, why, quagga,"[1,2,3]"\n')
+            with pytest.raises(IOError):
+                bayeslite.bayesdb_load_codebook_csv_file(bdb, 't', tf.name)
+            with open(tf.name, 'w') as f:
+                f.write('name, shortname, description, value_map\n')
+                f.write('x, eks, Greek chi,\n')
+                f.write('y, why, quagga,{"x":42}\n')
+                f.write('z, zee, eland,\n')
+            with pytest.raises(IOError):
+                bayeslite.bayesdb_load_codebook_csv_file(bdb, 't', tf.name)

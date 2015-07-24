@@ -122,14 +122,22 @@ Simulate = namedtuple('Simulate', [
 ])
 
 def is_query(phrase):
-    if isinstance(phrase, Select):      return True
-    if isinstance(phrase, Estimate):    return True
-    if isinstance(phrase, EstCols):     return True
-    if isinstance(phrase, EstPairCols): return True
-    if isinstance(phrase, EstPairRow):  return True
-    if isinstance(phrase, InferAuto):   return True
-    if isinstance(phrase, InferExplicit): return True
-    if isinstance(phrase, Simulate):    return True
+    if isinstance(phrase, Select):
+        return True
+    if isinstance(phrase, Estimate):
+        return True
+    if isinstance(phrase, EstCols):
+        return True
+    if isinstance(phrase, EstPairCols):
+        return True
+    if isinstance(phrase, EstPairRow):
+        return True
+    if isinstance(phrase, InferAuto):
+        return True
+    if isinstance(phrase, InferExplicit):
+        return True
+    if isinstance(phrase, Simulate):
+        return True
     return False
 
 Select = namedtuple('Select', [
@@ -318,19 +326,31 @@ ExpBQLSim = namedtuple('ExpBQLSim', ['condition', 'column_lists'])
 ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
 ExpBQLMutInf = namedtuple('ExpBQLMutInf', ['column0', 'column1', 'nsamples'])
 ExpBQLCorrel = namedtuple('ExpBQLCorrel', ['column0', 'column1'])
+ExpBQLCorrelPval = namedtuple('ExpBQLCorrelPval', ['column0', 'column1'])
 ExpBQLPredict = namedtuple('ExpBQLPredict', ['column', 'confidence'])
 ExpBQLPredictConf = namedtuple('ExpBQLPredictConf', ['column'])
 
 def is_bql(exp):
-    if isinstance(exp, ExpBQLPredProb): return True
-    if isinstance(exp, ExpBQLProb):     return True
-    if isinstance(exp, ExpBQLTyp):      return True
-    if isinstance(exp, ExpBQLSim):      return True
-    if isinstance(exp, ExpBQLDepProb):  return True
-    if isinstance(exp, ExpBQLMutInf):   return True
-    if isinstance(exp, ExpBQLCorrel):   return True
-    if isinstance(exp, ExpBQLPredict):  return True
-    if isinstance(exp, ExpBQLPredictConf): return True
+    if isinstance(exp, ExpBQLPredProb):
+        return True
+    if isinstance(exp, ExpBQLProb):
+        return True
+    if isinstance(exp, ExpBQLTyp):
+        return True
+    if isinstance(exp, ExpBQLSim):
+        return True
+    if isinstance(exp, ExpBQLDepProb):
+        return True
+    if isinstance(exp, ExpBQLMutInf):
+        return True
+    if isinstance(exp, ExpBQLCorrel):
+        return True
+    if isinstance(exp, ExpBQLCorrelPval):
+        return True
+    if isinstance(exp, ExpBQLPredict):
+        return True
+    if isinstance(exp, ExpBQLPredictConf):
+        return True
     return False
 
 LitNull = namedtuple('LitNull', ['value'])
