@@ -208,7 +208,13 @@ class Shell(cmd.Cmd):
         is_continuation = lambda s: s.startswith(('\t', '  ', '    ',))
 
         try:
-            with open(path, 'rU') as f:
+            f = open(path, 'rU')
+        except Exception as e:
+            self.stdout.write('%s\n' % (e,))
+            return
+
+        try:
+            with f:
                 padding = ' '*11
                 cmds_exec = []
                 cmds_disp = []
@@ -238,12 +244,8 @@ class Shell(cmd.Cmd):
                     self.onecmd(cmd_exec)
                     if sequential:
                         raw_input('Press any key to continue.')
-        except IOError:
-            self.stdout.write('%s not found.\n' % (path,))
-            return
-        except Exception as err:
-            self.stdout.write('Unexpected exception: {}.\n'.format(err))
-            return
+        except Exception as e:
+            self.stdout.write('%s\n' % (e,))
 
     def _hook(self, cmdname, func, autorehook=False, yes=False, silent=False):
         import types
