@@ -41,7 +41,7 @@ try:
         version_old = f.readlines()
 except IOError:
     version_old = None
-version_new = ['__version__ = %s' % (repr(version),)]
+version_new = ['__version__ = %s\n' % (repr(version),)]
 if version_old != version_new:
     with open('src/version.py', 'w') as f:
         f.writelines(version_new)
