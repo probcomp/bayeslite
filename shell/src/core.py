@@ -77,12 +77,13 @@ class Shell(cmd.Cmd):
 
     def _uninstallcmd(self, name):
         if name in self._core_commands:
-            raise ValueError('Cannot uninstall core command: %s\n' % (name,))
+            raise ValueError('Cannot uninstall core command: %s' % (name,))
         delattr(self, 'do_.%s' % (name,))
         self._cmds.remove(name)
 
     def cmdloop(self, *args, **kwargs):
-        self.stdout.write('Welcome to the Bayeslite shell.\n')
+        version = bayeslite.__version__
+        self.stdout.write('Welcome to the Bayeslite %s shell.\n' % (version,))
         self.stdout.write('Type `.help\' for help.\n')
         while True:
             try:
@@ -208,7 +209,13 @@ class Shell(cmd.Cmd):
         is_continuation = lambda s: s.startswith(('\t', '  ', '    ',))
 
         try:
-            with open(path, 'rU') as f:
+            f = open(path, 'rU')
+        except Exception as e:
+            self.stdout.write('%s\n' % (e,))
+            return
+
+        try:
+            with f:
                 padding = ' '*11
                 cmds_exec = []
                 cmds_disp = []
@@ -238,12 +245,8 @@ class Shell(cmd.Cmd):
                     self.onecmd(cmd_exec)
                     if sequential:
                         raw_input('Press any key to continue.')
-        except IOError:
-            self.stdout.write('%s not found.\n' % (path,))
-            return
-        except Exception as err:
-            self.stdout.write('Unexpected exception: {}.\n'.format(err))
-            return
+        except Exception as e:
+            self.stdout.write('%s\n' % (e,))
 
     def _hook(self, cmdname, func, autorehook=False, yes=False, silent=False):
         import types
@@ -272,7 +275,7 @@ class Shell(cmd.Cmd):
                 try:
                     self._uninstallcmd(cmdname)
                 except ValueError as err:
-                    self.stdout.write('{}'.format(err))
+                    self.stdout.write('%s\n' % (err,))
                     return
             else:
                 do_print('skipping "%s".\n' % cmdname)
@@ -298,15 +301,15 @@ class Shell(cmd.Cmd):
                 yesno = raw_input('y/n? ')
 
             if yesno in negative:
-                self.stdout.write("Abondoning hook of %s\n" % (path,))
+                self.stdout.write("Abandoning hook of %s\n" % (path,))
                 return
 
         self.stdout.write('Loading hooks at %s...\n' % (path,))
         try:
             imp.load_source('bayeslite_shell_hooks', path)
         except Exception as e:
-            self.stdout.write(traceback.format_exc())
-            self.stdout.write('Failed to load hooks: %s\n' % (repr(path),))
+            self.stdout.write('%s\n' % (e,))
+            self.stdout.write('Failed to load hooks: %s\n' % (path,))
         else:
             self._hooked_filenames.add(path)
 
@@ -318,7 +321,9 @@ class Shell(cmd.Cmd):
         '''
         try:
             pretty.pp_cursor(self.stdout, self._bdb.sql_execute(line))
-        except Exception:
+        except sqlite3.Error as e:
+            self.stdout.write('%s\n' % (e,))
+        except Exception as e:
             self.stdout.write(traceback.format_exc())
         return False
 
@@ -402,6 +407,8 @@ class Shell(cmd.Cmd):
             with open(pathname, 'rU') as f:
                 bayeslite.bayesdb_read_csv(self._bdb, table, f, header=True,
                                            create=True, ifnotexists=False)
+        except IOError as e:
+            self.stdout.write('%s\n' % (e,))
         except Exception:
             self.stdout.write(traceback.format_exc())
 
@@ -423,6 +430,8 @@ class Shell(cmd.Cmd):
         try:
             bayeslite.bayesdb_load_codebook_csv_file(self._bdb, table,
                                                      pathname)
+        except IOError as e:
+            self.stdout.write('%s\n' % (e,))
         except Exception:
             self.stdout.write(traceback.format_exc())
 
@@ -436,8 +445,7 @@ class Shell(cmd.Cmd):
         # XXX Lousy, lousy tokenizer.
         tokens = line.split()
         if len(tokens) != 2:
-            self.stdout.write('Usage: '
-                              '.guess <generator> <table>\n')
+            self.stdout.write('Usage: .guess <generator> <table>\n')
             return
         generator = tokens[0]
         table = tokens[1]
@@ -469,6 +477,8 @@ class Shell(cmd.Cmd):
             bayeslite.bayesdb_load_legacy_models(self._bdb, generator, table,
                                                  self._metamodel, pathname,
                                                  create=True)
+        except IOError as e:
+            self.stdout.write('%s\n' % (e,))
         except Exception:
             self.stdout.write(traceback.format_exc())
 

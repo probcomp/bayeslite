@@ -20,6 +20,8 @@ import pexpect
 import pytest
 import tempfile
 
+from bayeslite import __version__ as bayeslite_version
+
 
 TIMEOUT = 2
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -79,7 +81,7 @@ def spawnbdb():
     c = spawnjr('bayeslite --no-init-file --memory')
     c.delaybeforesend = 0
     c.expect_lines([
-        'Welcome to the Bayeslite shell.',
+        'Welcome to the Bayeslite %s shell.' % (bayeslite_version,),
         "Type `.help' for help.",
     ])
     c.expect_prompt()
