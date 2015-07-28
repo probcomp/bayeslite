@@ -59,6 +59,7 @@ class Shell(cmd.Cmd):
         self._installcmd('help', self.dot_help)
         self._installcmd('hook', self.dot_hook)
         self._installcmd('legacymodels', self.dot_legacymodels)
+        self._installcmd('open', self.dot_open)
         self._installcmd('python', self.dot_python)
         self._installcmd('read', self.dot_read)
         self._installcmd('sql', self.dot_sql)
@@ -326,6 +327,16 @@ class Shell(cmd.Cmd):
         except Exception as e:
             self.stdout.write(traceback.format_exc())
         return False
+
+    def dot_open(self, line):
+        '''Close existing database and open new one
+        <filename>|-m
+        Opens the given filename, or a fresh memory-only database with -m.
+        '''
+        # Need a completely new bdb object. Hope no one aliased it.
+        if (line == "-m"):
+            line = None
+        self._bdb = bayeslite.bayesdb_open(pathname=line)
 
     def dot_python(self, line):
         '''evaluate a Python expression
