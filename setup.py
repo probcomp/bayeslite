@@ -33,6 +33,8 @@ if version.endswith('+'):
     except Exception:
         version += 'unknown'
     else:
+        print '# tag: %s' % (tag,)
+        print '# git describe: %s' % (desc,)
         assert desc.startswith(tag)
         version = desc[1:].strip()
 
