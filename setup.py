@@ -24,7 +24,7 @@ with open('VERSION', 'rU') as f:
 
 # Append the Git commit id if this is a development version.
 if version.endswith('+'):
-    tag = tag = 'v' + version[:-1]
+    tag = 'v' + version[:-1]
     try:
         import subprocess
         desc = subprocess.check_output([
