@@ -14,12 +14,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-version = '0.1.dev20150727+'
-
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
+
+with open('VERSION', 'rU') as f:
+    version = f.readline().strip()
 
 # Append the Git commit id if this is a development version.
 if version.endswith('+'):
