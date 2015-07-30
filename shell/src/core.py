@@ -329,12 +329,15 @@ class Shell(cmd.Cmd):
         return False
 
     def dot_open(self, line):
-        '''Close existing database and open new one
-        <filename>|-m
-        Opens the given filename, or a fresh memory-only database with -m.
+        '''close existing database and open new one
+        <pathname>|-m
+
+        Open the given filename, or a fresh memory-only database with -m.
+
+        WARNING: Discards all existing state.
         '''
         # Need a completely new bdb object. Hope no one aliased it.
-        if (line == "-m"):
+        if line == '-m':
             line = None
         self._bdb = bayeslite.bayesdb_open(pathname=line)
 
