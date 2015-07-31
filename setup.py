@@ -28,7 +28,7 @@ if version.endswith('+'):
     try:
         import subprocess
         desc = subprocess.check_output([
-            'git', 'describe', '--always', '--dirty', '--match', tag,
+            'git', 'describe', '--dirty', '--match', tag,
         ])
     except Exception:
         version += 'unknown'
