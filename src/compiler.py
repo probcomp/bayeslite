@@ -905,7 +905,7 @@ class BQLCompiler_1Row_Infer(BQLCompiler_1Row):
             compile_expression(bdb, self.modelno, self, out)
             out.write(', %d, _rowid_)' % (colno,))
         else:
-            super(self, BQLCompiler_1Row_Infer).compile_bql(bdb, bql, out)
+            super(BQLCompiler_1Row_Infer, self).compile_bql(bdb, bql, out)
 
 class BQLCompiler_2Row(object):
     def __init__(self, generator_id, modelno, rowid0_exp, rowid1_exp):

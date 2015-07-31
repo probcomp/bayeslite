@@ -1626,3 +1626,10 @@ def test_infer_confidence():
         bdb.execute('analyze t1_cc for 1 iteration wait')
         list(bdb.execute('infer explicit rowid, rowid as another_rowid, 4,'
             ' age, predict age as age_inf confidence age_conf from t1_cc'))
+
+def test_infer_as_estimate():
+    with test_core.t1() as (bdb, _generator_id):
+        bdb.execute('initialize 1 model for t1_cc')
+        bdb.execute('analyze t1_cc for 1 iteration wait')
+        list(bdb.execute('infer explicit predictive probability of age'
+            ' from t1_cc'))
