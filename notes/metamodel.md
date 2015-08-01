@@ -225,14 +225,13 @@ def logpdf(self, bdb, generator_id, modelno, A, Gx)
 #### GENERIC IMPLEMENTATION
 Meta-model specific.
 
-
 #### CROSSCAT IMPLEMENTATION
-current for `column_value_probability`:
+current for `column_value_probability`
 ```python
 column_value_probability(self, bdb, generator_id, modelno, colno, value)
 ```
 
-proposed using `logpdf`:
+proposed using `logpdf`
 ```python
 logpdf(self, bdb, generator_id, modelno, A=[(colno,r*,value)], Gx=NONE)
 ```
@@ -240,23 +239,22 @@ logpdf(self, bdb, generator_id, modelno, A=[(colno,r*,value)], Gx=NONE)
 - `Gx` is ignored entirely.
 - Proceed with current implementation.
 
-current for `column_predictive_probability`:
+current for `column_predictive_probability`
 ```python
 def row_column_predictive_probability(self, bdb, generator_id, modelno,
     rowid, colno)
 ```
 
-proposed using `logpdf`:
-```
+proposed using `logpdf`
+```python
 logpdf(self, bdb, generator_id, modelno, A=[(colno,rowid,value)],
     Gx=[(col1,rowid,value1),(col2,rowid,value2),...)
-```python
+```
 - `A` can only contain one cell, `rowid` is not ignored. `value` is taken from
 the current value for `(colno,rowid)` in the table.
 - `Gx` contains a list of cells along the same `rowid`, with the `value`s taken
 from the current table. Any cell from a different `rowid` is ignored.
 - Proceed with current implementation.
-
 
 # TODO
 - Row Similarity
