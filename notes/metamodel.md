@@ -210,7 +210,8 @@ the behavior by only allowing one column in the generalized version.
 ```python
 def column_value_probability(self, bdb, generator_id, modelno, colno,
     value)
-
+```
+```python
 def row_column_predictive_probability(self, bdb, generator_id, modelno,
     rowid, colno)
 ```
@@ -249,7 +250,7 @@ proposed using `logpdf`:
 ```
 logpdf(self, bdb, generator_id, modelno, A=[(colno,rowid,value)],
     Gx=[(col1,rowid,value1),(col2,rowid,value2),...)
-```
+```python
 - `A` can only contain one cell, `rowid` is not ignored. `value` is taken from
 the current value for `(colno,rowid)` in the table.
 - `Gx` contains a list of cells along the same `rowid`, with the `value`s taken
