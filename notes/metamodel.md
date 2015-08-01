@@ -12,15 +12,15 @@ with `R` rows, an *observed* row `r_i` is one where `r_i` is in
 `[1,...,R]`. A hypothetical row is indicated by sampling `r_i ~ Uniform[0,1]`
 to ensure all hypothetical members are unique.
 
-Above each new function is the proposed definition, and a paragraph which
-outlines its probabilistic interpretation. Below each new function is an
-explanation as to how the behavior of the current definition can be realized
-in CC n using the new, generalized definition.
+This document outlines the list of functions currently in `metamodel.py` and
+proposes a new function signature, a generic definition on how it can be
+implemented natively, and an explanation as to how the behavior of the current
+definition can be realized in CrossCat using the new definition.
 
 An important note is that the staged refactoring of Bayeslite metamodels
 is a separate project from updating the CrossCat implementation such that it
 can fully implement the new interface. Instead, this document will show how to
- use the inputs to the generalized functions such that they are fully compatible
+use the inputs to the generalized functions such that they are fully compatible
 with CrossCat's current implementation. The long-term goal is to replace the
 current CrossCat implementation with a more powerful, general version written in
 VentureScript, but such a project is beyond the scope of this document.
@@ -40,8 +40,8 @@ must implement are `SIMULATE` and `LOGPDF`. The rest of the functions can be
 implemented generically by invoking these two primitives and forming Monte Carlo
 estimates.
 
-@Vkm how will BQL queries allow the user to specify the difference between
-observed and hypothetical members of the population?
+(note to self: how will BQL queries allow the user to specify the difference between
+observed and hypothetical members of the population?)
 
 - - -
 
@@ -49,8 +49,9 @@ observed and hypothetical members of the population?
 
 We will use `(c_i, r_j)` denote the cell `X[j,k]` in the table, which is a
 univariate random variable for which we have (typically) one realization.
-Random vectors are expressed as arbitrary collections of cells, over which we
-can define joint distributions.
+However, multiple realization for a single cell are also possible (note to self:
+how is this indicated in a database table?). Random vectors are expressed as
+arbitrary collections of cells, over which we can define joint distributions.
 
 For a table `X` with `C` columns and `R` rows, the allowed values of the indices
 are:
@@ -101,15 +102,15 @@ TODO
 
 #### CROSSCAT IMPLEMENTATION
 current
-```
+```python
 column_dependence_probability(self, bdb, generator_id, modelno,
     colno0 = c0, colno1 = c1)
 ````
 
 proposed
-```
+```python
 dependence_probability(self, bdb, generator_id, modelno,
-A = [(c0,r*)], B = [(c1,r*)], G = NONE)
+    A = [(c0,r*)], B = [(c1,r*)], G = NONE)
 ```
 - Only allow `A` to have one column `A = [(c_1^a,r*)]`. Ignore the row `r*`
 - Same for `B`.
@@ -122,8 +123,8 @@ A = [(c0,r*)], B = [(c1,r*)], G = NONE)
 
 #### CURRENT DEFINITION
 ```python
-    def column_mutual_information(self, bdb, generator_id, modelno, colno0,
-        colno1, numsamples=None):
+def column_mutual_information(self, bdb, generator_id, modelno, colno0,
+    colno1, numsamples=None):
 ```
 
 
@@ -155,8 +156,8 @@ proposed
 mutual_information(self, bdb, generator_id, modelno,
     A = [(c0,r*)], B = [(c1,r*)], G=NONE, Fx=NONE).
 ```
-- Only allow A to have one column A = [(c_1^a,r_1^a)]. Ignore row r*.
-- Same for B.
+- Only allow `A` to have one column `A = [(c_1^a,r_1^a)]`. Ignore row `r*`.
+- Same for `B`.
 - Ignore givens entirely.
 - Do the same thing as mutual information currently does.
 
@@ -225,26 +226,26 @@ Meta-model specific.
 
 
 #### CROSSCAT IMPLEMENTATION
-current
-```
+current for `column_value_probability`:
+```python
 column_value_probability(self, bdb, generator_id, modelno, colno, value)
 ```
 
-proposed
-```
+proposed using `logpdf`:
+```python
 logpdf(self, bdb, generator_id, modelno, A=[(colno,r*,value)], Gx=NONE)
 ```
 - `A` can only contain one cell, and the row `r*` will be ignored.
 - `Gx` is ignored entirely.
 - Proceed with current implementation.
 
-current
-```
+current for `column_predictive_probability`:
+```python
 def row_column_predictive_probability(self, bdb, generator_id, modelno,
     rowid, colno)
 ```
 
-proposed
+proposed using `logpdf`:
 ```
 logpdf(self, bdb, generator_id, modelno, A=[(colno,rowid,value)],
     Gx=[(col1,rowid,value1),(col2,rowid,value2),...)
@@ -266,3 +267,4 @@ def row_similarity(self, bdb, generator_id, modelno, rowid, target_rowid,
 ```python
 def column_typicality(self, bdb, generator_id, modelno, colno)
 ```
+- Feedback, iterations, comments, updates.
