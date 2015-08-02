@@ -596,7 +596,8 @@ class Shell(cmd.Cmd):
                 '''
                 cursor = self._bdb.sql_execute(sql, (generator_id,))
                 pretty.pp_cursor(self.stdout, cursor)
-        elif casefold(tokens[0]) == 'models':
+        elif casefold(tokens[0]) == 'model' or \
+                casefold(tokens[0]) == 'models':
             if len(tokens) < 2:
                 self.stdout.write('Describe models of what generator?\n')
                 return
