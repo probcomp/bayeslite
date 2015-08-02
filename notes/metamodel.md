@@ -46,7 +46,7 @@ observed and hypothetical members of the population?
 
 ## Section 2: Notation
 
-We will use `(c_i, r_j)` denote the cell `X[j,k]` in the table, which is a
+We will use `(c_i, r_j)` denote the cell `X[r_j,c_i]` in the table, which is a
 univariate random variable for which we have (typically) one realization.
 Random vectors are expressed as arbitrary collections of cells, over which we
 can define joint distributions.
@@ -67,15 +67,15 @@ a cell from the table. In other words:
 - `A = [(c_i^a, r_i^a) for i = 1 ... |A|]`
 - `B = [(c_i^b, r_i^b) for i = 1 ... |B|]`
 
-Sometimes we will need to specify values for cells `X[c,r] = x`, so we will use
-3-tuples of the form
+Sometimes we will need to specify values for cells `X[r,c] = x`. We will suffix
+such collections with an `x`. For example `Fx` is now a collection of 3-tuples:
 - `Fx = [(c_i^f, r_i^f, x_{(c_i^f,r_i^f)}) for i = 1 ... |Fx|]`
 
-For example the notation `p(A,B|Fx)` is a shorthand for the joint distribution:
+The notation `p(A,B|Fx)` is a shorthand for the joint distribution:
 ```python
-p( X[c_1^a,r_1^a],...,X[c_|A|^a,r_|A|^a],
-   X[c_1^b,r_1^b],...,X[c_|B|^b,r_|B|^b] | # <- NOTE WE ARE CONIDTIONING
-   X[c_i^f, r_i^f] = x_{(c_i^f,r_i^f)})
+p( X[r_1^a,c_1^a],...,X[r_|A|^a,c_|A|^a],
+   X[r_1^b,c_1^b],...,X[r_|B|^b,c_|B|^b] | # <- NOTE WE ARE CONIDTIONING
+   X[r_i^f,c_i^f] = x_{(c_i^f,r_i^f)})
   )
 ```
 
