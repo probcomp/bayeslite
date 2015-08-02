@@ -19,10 +19,12 @@ An important note is that the staged refactoring of Bayeslite metamodels is a
 separate project from updating the CrossCat implementation such that it can
 fully implement the new interface. Instead, this document will show how to use
 the syntax of the generalized functions to invoke queries that are fully
-compatible with CrossCat's current implementation. The long-term goal is to
-replace the current CrossCat implementation with a more powerful, general
-version written in VentureScript, but that project is beyond the scope of this
-document.
+compatible with CrossCat's current implementation. Some of the generalizations
+are already supported by CrossCat's API, so we will be able to use them now.
+
+The long-term goal is to replace the current CrossCat implementation with a more
+powerful, general version written in VentureScript, but that project is beyond
+the scope of this document.
 
 A particular metamodel can admit optimized approximations for each function
 based on its internal structure. For instance, CrossCat defines dependence in
@@ -94,7 +96,7 @@ def column_dependence_probability(self, bdb, generator_id, modelno,
 #### PROPOSED DEFINITION
 ```python
 # Computes the probability that the joint distribution p(A,B|Gx)
-# factors as p(A|G)*p(B|G). Alternatively computes the probability that the KL
+# factors as p(A|Gx)*p(B|Gx). Alternatively computes the probability that the KL
 # divergence between the two said distributions is zero.
 def dependence_probability(self, bdb, generator_id, modelno, A, B, Gx)
 ```
@@ -114,9 +116,9 @@ column_dependence_probability(self, bdb, generator_id, modelno,
 dependence_probability(self, bdb, generator_id, modelno,
     A = [(c0,r*)], B = [(c1,r*)], G = NONE)
 ```
-- Only allow `A` to have one column `A = [(c_1^a,r*)]`. Ignore the row `r*`
+- Only allow `A` to have one column `A = [(c0,r*)]`. Ignore the row `r*`
 - Same for `B`.
-- Ignore `G` (conditionals).
+- Ignore `Gx` (conditionals).
 - Proceed as `column_dependence_probability` currently does.
 
 - - -
@@ -156,10 +158,10 @@ column_mutual_information(self, bdb, generator_id, modelno,
 mutual_information(self, bdb, generator_id, modelno,
     A = [(c0,r*)], B = [(c1,r*)], G=NONE, Fx=NONE).
 ```
-- Only allow `A` to have one column `A = [(c_1^a,r_1^a)]`. Ignore row `r*`.
+- Only allow `A` to have one column `A = [(c0,r*)]`. Ignore row `r*`.
 - Same for `B`.
-- Ignore givens entirely.
-- Do the same thing as mutual information currently does.
+- Ignore Gx (conditionals).
+- Proceed as `mutual_information` currently does.
 
 - - -
 
@@ -193,9 +195,9 @@ simulate(self, bdb, generator_id, modelno, constraints, colnos,
 simulate(self, bdb, generator_id, modelno,
     A = [(colnos,r),...], Gx = constraints])
 ```
-- Rather than use `fake row` in Y and Q (see current SIMULATE source),
+- Rather than use `fake row` in `Y` and `Q` (see current `SIMULATE` source),
 use the rows from A and Gx (if they are not hypothetical).
-- If any of the rows in A or Gx is hypothetical, then use a fake row
+- If any of the rows in `A` or `Gx` is hypothetical, then use a fake row
 (as is currently being done).
 
 - - -
@@ -219,7 +221,7 @@ def row_column_predictive_probability(self, bdb, generator_id, modelno,
 #### PROPOSED DEFINITION
 ```python
 # Evaluates the density p(A=Ax|G=Gx).
-def logpdf(self, bdb, generator_id, modelno, A, Gx)
+def logpdf(self, bdb, generator_id, modelno, Ax, Gx)
 ```
 
 #### GENERIC IMPLEMENTATION
@@ -235,8 +237,8 @@ column_value_probability(self, bdb, generator_id, modelno, colno, value)
 ```python
 logpdf(self, bdb, generator_id, modelno, A=[(colno,r*,value)], Gx=NONE)
 ```
-- `A` can only contain one cell, and the row `r*` will be ignored.
-- `Gx` is ignored entirely.
+- `A` can only contain one column, and the row `r*` will be ignored.
+- Ignore `Gx` (conditionals).
 - Proceed with current implementation.
 
 - Current invocation (`row_column_predictive_probability`):
@@ -250,21 +252,28 @@ def row_column_predictive_probability(self, bdb, generator_id, modelno,
 logpdf(self, bdb, generator_id, modelno, A=[(colno,rowid,value)],
     Gx=[(col1,rowid,value1),(col2,rowid,value2),...)
 ```
-- `A` can only contain one cell, `rowid` is not ignored. `value` is taken from
+- `A` can only contain one column, `rowid` is not ignored, `value` is taken from
 the current value for `(colno,rowid)` in the table.
 - `Gx` contains a list of cells along the same `rowid`, with the `value`s taken
 from the current table. Any cell from a different `rowid` is ignored.
 - Proceed with current implementation.
 
-# TODO
-- Row Similarity
+## Section 4: Todo
+
+### Row Similarity
 ```python
 def row_similarity(self, bdb, generator_id, modelno, rowid, target_rowid,
     colnos)
 ```
+Ideas: Just a `similarity` between `A` and `B`. The current invocation can be
+achieved using `A=[(rowid,colnos1),(rowid,colnos2),...]` and using
+`B=[(target_rowid,colnos1),(target_rowid,colnos2),...]`.
+
 - Column Typicality
 ```python
 def column_typicality(self, bdb, generator_id, modelno, colno)
 ```
+This one seems very CrossCat specific, need to think about what `TYPICALITY`
+means in a general context.
 
 - Feedback, iterations, comments, updates.
