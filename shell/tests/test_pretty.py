@@ -28,14 +28,15 @@ class MockCursor(object):
         return iter(self.rows)
 
 def test_pretty():
-    cursor = MockCursor([['name'], ['age'], ['favourite food']], [
+    labels = ['name', 'age', 'favourite food']
+    table = [
         ['Spot', 3, 'kibble'],
         ['Skruffles', 2, 'kibble'],
         ['Zorb', 2, 'zorblaxian kibble'],
         [u'Zörb', 87, u'zørblaχian ﻛبﻞ'],
-    ])
+    ]
     out = StringIO.StringIO()
-    pretty.pp_cursor(out, cursor)
+    pretty.pp_list(out, table, labels)
     assert out.getvalue() == \
         u'     name | age |    favourite food\n' \
         u'----------+-----+------------------\n' \
@@ -45,17 +46,18 @@ def test_pretty():
         u'     Zörb |  87 |    zørblaχian ﻛبﻞ\n'
 
 def test_pretty_unicomb():
-    pytest.xfail('pp_cursor counts code points, not grapheme clusters.')
-    cursor = MockCursor([['name'], ['age'], ['favourite food']], [
+    pytest.xfail('pp_list counts code points, not grapheme clusters.')
+    labels = ['name', 'age', 'favourite food']
+    table = [
         ['Spot', 3, 'kibble'],
         ['Skruffles', 2, 'kibble'],
         ['Zorb', 2, 'zorblaxian kibble'],
         ['Zörb', 87, 'zørblaχian ﻛبﻞ'],
         [u'Zörb', 42, u'zörblǎxïǎn kïbble'],
         ['Zörb', 87, 'zørblaχian ﻛِبّﻞ'],
-    ])
+    ]
     out = StringIO.StringIO()
-    pretty.pp_cursor(out, cursor)
+    pretty.pp_list(out, table, labels)
     assert out.getvalue() == \
         u'     name | age |    favourite food\n' \
         u'----------+-----+------------------\n' \
