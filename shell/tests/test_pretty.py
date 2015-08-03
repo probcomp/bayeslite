@@ -19,14 +19,6 @@ import pytest
 
 import bayeslite.shell.pretty as pretty
 
-class MockCursor(object):
-    def __init__(self, description, rows):
-        self.description = description
-        self.rows = rows
-
-    def __iter__(self):
-        return iter(self.rows)
-
 def test_pretty():
     labels = ['name', 'age', 'favourite food']
     table = [
