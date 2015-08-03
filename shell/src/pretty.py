@@ -19,6 +19,9 @@ def pp_cursor(out, cursor):
         return
     labels = [d[0] for d in cursor.description]
     table = list(cursor)
+    pp_list(out, table, labels)
+
+def pp_list(out, table, labels):
     # XXX Consider quotation/escapes.
     colwidths = [len(label) for label in labels]
     for row in table:
