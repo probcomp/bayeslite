@@ -746,7 +746,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 bdb.sql_execute(sql, (generator_id, modelno))
             if cc_cache is not None and generator_id in cc_cache.thetas:
                 for modelno in modelnos:
-                    if modelno in thetas:
+                    if modelno in cc_cache.thetas[generator_id]:
                         del cc_cache.thetas[generator_id][modelno]
                 if len(cc_cache.thetas[generator_id]) == 0:
                     del cc_cache.thetas[generator_id]

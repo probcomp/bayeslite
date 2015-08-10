@@ -17,11 +17,9 @@
 import StringIO
 import pytest
 import sqlite3
-import tempfile
 
 import bayeslite
 import bayeslite.ast as ast
-import bayeslite.bql as bql
 import bayeslite.compiler as compiler
 import bayeslite.core as core
 import bayeslite.guess as guess
@@ -650,6 +648,9 @@ def test_trivial_commands():
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('drop models 0-2 from t_cc')
         bdb.execute('drop models 0-1 from t_cc')
+        with bdb.savepoint():
+            bdb.execute('initialize 2 models for t_cc')
+            bdb.execute('drop models 0-1 from t_cc')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('drop models 0-1 from t_cc')
         bdb.execute('initialize 2 models for t_cc')
