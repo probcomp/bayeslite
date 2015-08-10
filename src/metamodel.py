@@ -135,8 +135,8 @@ class IBayesDBMetamodel(object):
         """Compute ``DEPENDENCE PROBABILITY OF <col0> WITH <col1>``."""
         raise NotImplementedError
 
-    def mutual_information(self, bdb, generator_id, modelno, colno0, colno1,
-            numsamples=100):
+    def column_mutual_information(self, bdb, generator_id, modelno, colno0,
+            colno1, numsamples=100):
         """Compute ``MUTUAL INFORMATION OF <col0> WITH <col1>``."""
         raise NotImplementedError
 

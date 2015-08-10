@@ -16,7 +16,6 @@
 
 import json
 import math
-import time
 
 import bayeslite.core as core
 import bayeslite.stats as stats
@@ -26,7 +25,6 @@ from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
 from bayeslite.util import casefold
-from bayeslite.util import unique
 from bayeslite.util import unique_indices
 
 def bayesdb_install_bql(db, cookie):
