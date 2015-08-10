@@ -1087,8 +1087,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         else:
             assert len(row) == 1
             max_rowid = row[0]
-        fake_rowid = max_rowid + 1
-        fake_row_id = fake_rowid - 1
+        fake_rowid = max_rowid + 1   # Synthesize a non-existent SQLite row id
+        fake_row_id = fake_rowid - 1 # Crosscat row ids are 0-indexed
         # XXX Why special-case empty constraints?
         Y = None
         if constraints is not None:
