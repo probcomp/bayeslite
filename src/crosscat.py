@@ -1215,16 +1215,6 @@ def create_metadata_cyclic(_bdb, _generator_id, _colno):
         'code_to_value': {},
     }
 
-def create_metadata_ignore(bdb, generator_id, colno):
-    metadata = create_metadata_categorical(bdb, generator_id, colno)
-    metadata['modeltype'] = 'ignore'
-    return metadata
-
-def create_metadata_key(bdb, table, colno):
-    metadata = create_metadata_categorical(bdb, generator_id, colno)
-    metadata['modeltype'] = 'key'
-    return metadata
-
 def create_metadata_categorical(bdb, generator_id, colno):
     table = core.bayesdb_generator_table(bdb, generator_id)
     column_name = core.bayesdb_table_column_name(bdb, table, colno)
@@ -1245,8 +1235,6 @@ def create_metadata_categorical(bdb, generator_id, colno):
 metadata_creators = {
     'categorical': create_metadata_categorical,
     'cyclic': create_metadata_cyclic,
-    'ignore': create_metadata_ignore,   # XXX Why any metadata here?
-    'key': create_metadata_key,         # XXX Why any metadata here?
     'numerical': create_metadata_numerical,
 }
 
