@@ -1121,7 +1121,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             for row in rows:
                 if len(row) != len(sql_column_names):
                     raise BQLError(bdb, 'Wrong row length'
-                        ': expected %d, got %d'
+                        ': expected %d, got %d' %
                         (len(sql_column_names), len(row)))
                 bdb.sql_execute(sql, row)
 
