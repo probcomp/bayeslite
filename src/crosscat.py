@@ -1309,7 +1309,7 @@ def crosscat_gen_colno(bdb, generator_id, cc_colno):
         row = cursor.next()
     except StopIteration:
         generator = core.bayesdb_generator_name(bdb, generator_id)
-        colname = core.bayesdb_generator_column_name(bdb, generator_id, colno)
+        colname = core.bayesdb_generator_column_name(bdb, generator_id, cc_colno)
         raise BQLError(bdb, 'Column not Crosscat-modelled'
             ' in generator %s: %s' % (repr(generator), repr(colname)))
     else:
