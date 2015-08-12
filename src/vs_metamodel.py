@@ -137,7 +137,7 @@ class VSMetamodel(object): # TODO New metamodel
         colnames = [name for name, _colno in columns]
         qcns = map(sqlite3_quote_name, colnames)
         cursor = bdb.sql_execute('''
-            SELECT %s FROM %s
+            SELECT %s FROM %s AS t
         ''' % (','.join('t.%s' % (qcn,) for qcn in qcns), qt))
         return [row for row in cursor]
 
