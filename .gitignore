@@ -3,3 +3,7 @@
 /src/grammar.out
 /src/grammar.py
 /src/version.py
+/**/__pycache__/
+/bayeslite.egg-info
+/dist/
+/shell/tests/thooks.pyc
