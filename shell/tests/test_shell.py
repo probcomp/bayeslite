@@ -209,6 +209,11 @@ def test_sql(spawntable):
         '  4 | description |    TEXT |       0 |       None |  0',
     ])
     c.expect_prompt()
+    c.sendexpectcmd('.sql select * from foo')
+    c.expect_lines([
+        'no such table: foo'
+    ])
+    c.expect_prompt()
 
 
 def test_describe_generator(spawntablegen):
