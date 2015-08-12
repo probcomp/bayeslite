@@ -24,9 +24,34 @@ from venture.ripl.ripl import Ripl
 
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
+vs_schema_1 = '''
+INSERT INTO bayesdb_metamodel (name, version) VALUES ('venture_script', 1);
+'''
+
 class VSMetamodel(object): # TODO New metamodel
     def name(self):
         return 'venture_script'
+
+    def register(self, bdb):
+        with bdb.savepoint():
+            schema_sql = 'SELECT version FROM bayesdb_metamodel WHERE name = ?'
+            cursor = bdb.sql_execute(schema_sql, (self.name(),))
+            version = None
+            try:
+                row = cursor.next()
+            except StopIteration:
+                version = 0
+            else:
+                version = row[0]
+            assert version is not None
+            if version == 0:
+                # XXX WHATTAKLUDGE!
+                for stmt in vs_schema_1.split(';'):
+                    bdb.sql_execute(stmt)
+                version = 1
+            if version != 1:
+                raise BQLError(bdb, 'VentureScript already installed'
+                    ' with unknown schema version: %d' % (version,))
 
     def _parse_schema(self, bdb, schema):
         program = None
