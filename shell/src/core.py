@@ -17,6 +17,7 @@
 import StringIO
 import cmd
 import traceback
+import sqlite3
 
 import bayeslite
 import bayeslite.bql as bql
