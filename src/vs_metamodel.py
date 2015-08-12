@@ -100,6 +100,23 @@ class VSMetamodel(object): # TODO New metamodel
             raise BQLError(bdb, 'Cannot initialize VentureScript metamodel, no PROGRAM given')
         return (program, columns)
 
+    def _vs_cache(self, bdb):
+        if bdb.cache is None:
+            return None
+        if 'venture_script' in bdb.cache:
+            return bdb.cache['venture_script']
+        else:
+            vs_cache = {}
+            bdb.cache['venture_script'] = vs_cache
+            return vs_cache
+
+    def _vs_cache_for(self, bdb, key):
+        cache = self._vs_cache(bdb)
+        if cache is None:
+            return NullBox()
+        else:
+            return HashBox(cache, key)
+
     def _vs_program(self, bdb, generator_id):
         sql = '''
             SELECT program FROM bayesdb_venture_script_program
@@ -141,7 +158,7 @@ class VSMetamodel(object): # TODO New metamodel
         ''' % (','.join('t.%s' % (qcn,) for qcn in qcns), qt))
         return [row for row in cursor]
 
-    def _vs_ripl(self, bdb, generator_id, model_no):
+    def _vs_retrieve_ripl(self, bdb, generator_id, model_no):
         sql = '''
             SELECT ripl_str FROM bayesdb_venture_script_ripl
                 WHERE generator_id = ? AND modelno = ?
@@ -156,6 +173,24 @@ class VSMetamodel(object): # TODO New metamodel
         else:
             string_ = row[0]
             return Ripl.deserialize(string_)
+
+    def _vs_ripl(self, bdb, generator_id, model_no):
+        box = self._vs_cache_for(bdb, ('ripls', generator_id, model_no))
+        return box.get() or box.set(self._vs_retrieve_ripl(bdb, generator_id, model_no))
+
+    def _vs_save_ripl(self, bdb, generator_id, model_no, ripl):
+        string_ = ripl.serialize()
+        insert_ripl_sql = '''
+            INSERT INTO bayesdb_venture_script_ripl
+                (generator_id, modelno, ripl_str)
+                VALUES (:generator_id, :modelno, :ripl_str)
+        '''
+        bdb.sql_execute(insert_ripl_sql, {
+            'generator_id': generator_id,
+            'modelno': model_no,
+            'ripl_str': string_,
+        })
+        self._vs_cache_for(bdb, ('ripls', generator_id, model_no)).set(ripl)
 
     def create_generator(self, bdb, _table, schema, instantiate):
         (program, columns) = self._parse_schema(bdb, schema)
@@ -183,17 +218,7 @@ class VSMetamodel(object): # TODO New metamodel
             # between each row, if it wants.
             for row in data:
                 ripl.infer(v.app(v.sym("datum"), v.quote(row)))
-            string_ = ripl.serialize()
-            insert_ripl_sql = '''
-                INSERT INTO bayesdb_venture_script_ripl
-                    (generator_id, modelno, ripl_str)
-                    VALUES (:generator_id, :modelno, :ripl_str)
-            '''
-            bdb.sql_execute(insert_ripl_sql, {
-                'generator_id': generator_id,
-                'modelno': modelno,
-                'ripl_str': string_,
-            })
+            self._vs_save_ripl(bdb, generator_id, modelno, ripl)
 
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
             _max_seconds=None, _ckpt_iterations=None, _ckpt_seconds=None):
@@ -227,3 +252,22 @@ class VSMetamodel(object): # TODO New metamodel
                 result.append(ripl.infer(v.app(v.sym("sim_cell"), colno)))
             results.append(result)
         return results
+
+class NullBox(object):
+    def get(self): return None
+    def set(self, value): return value
+
+class HashBox(object):
+    def __init__(self, cache, key):
+        self.cache = cache
+        self.key = key
+
+    def get(self):
+        if self.key in self.cache:
+            return self.cache[self.key]
+        else:
+            return None
+
+    def set(self, value):
+        self.cache[self.key] = value
+        return value
