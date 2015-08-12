@@ -26,6 +26,21 @@ from bayeslite.sqlite3_util import sqlite3_quote_name
 
 vs_schema_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('venture_script', 1);
+
+CREATE TABLE bayesdb_venture_script_program (
+	generator_id	INTEGER NOT NULL PRIMARY KEY
+				REFERENCES bayesdb_generator(id),
+	program		TEXT NOT NULL
+);
+
+CREATE TABLE bayesdb_venture_script_ripl (
+	generator_id	INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+	modelno		INTEGER NOT NULL,
+	ripl_str	BLOB NOT NULL,
+	PRIMARY KEY(generator_id, modelno),
+	FOREIGN KEY(generator_id, modelno)
+		REFERENCES bayesdb_generator_model(generator_id, modelno)
+);
 '''
 
 class VSMetamodel(object): # TODO New metamodel
