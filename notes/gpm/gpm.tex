@@ -83,13 +83,13 @@ framework for jointly learning the structure of a collection of GPM
 $\set{\mathcal{G}_i}$ that interact with another to produce a statistical
 population.
 
-A GPM $\mathcal{G}$ which can be learned from data is referred to as learnable
-generative population model. A learnable GPM $\mathcal{G}$ is probabilistic
-model defined over a space of GPMs. We will see in Section
-\ref{sec:learnable_gpm} that a learnable GPM is a GPM in its own right and can
+A GPM $\mathcal{G}$ which can be learned from data is referred to an
+\textit{adaptive generative population model}. An adaptive GPM $\mathcal{G}$ is
+probabilistic model defined over a space of GPMs. We will see in Section
+\ref{sec:adaptive_gpm} that a adaptive GPM is a GPM in its own right and can
 answer the same questions about the statistical population $\mathbf{X}$. The MML
 includes a
-\textit{default learnable generative population model} which defines a
+\textit{default adaptive generative population model} which defines a
 distribution over a collection of
 \textit{GPMs from a default class} using a hierarchal, semi-parametric Bayesian
 model derived from CrossCat.
@@ -121,7 +121,7 @@ A member $\mathcal{G}$ of the CrossCat GPM class is a particular cross-
 categorization and component parameters $CC_j^{\theta^*}$ from the model class.
 Since we do not know $j$ or $\theta^*$, we instead place distribution over all
 GPMS with this common structure. The object which carries this distribution over
-$\mathcal{M}_\textbf{X}$ is a learnable generative population model, whose
+$\mathcal{M}_\textbf{X}$ is a adaptive generative population model, whose
 population members are GPMs that generate the $\mathbf{X}$!
 
 Unlike Example \ref{ex:normal_gpm}, the generation process is inherently tied to
@@ -139,11 +139,11 @@ structure into 'global' vs 'row-related' latents to differentiate between
 observed and hypothetical members.}
 \end{example}
 
-The default learnable GPM is not obliged to model all columns jointly by
+The default adaptive GPM is not obliged to model all columns jointly by
 positing some GPM from the CrossCat class. The MML includes modeling
 instructions for describing dependence constraints, and specifying a
 compositional, directed-acyclic network of arbitrary GPMs implemented by a user.
-It also includes inference instructions for initializing learnable GPMs and
+It also includes inference instructions for initializing adaptive GPMs and
 performing updates of the posterior distribution on GPMs.
 
 The MML is thus a complete (but sub- Turing) probabilistic programming language
@@ -183,7 +183,7 @@ $$p(\mathbf{X}) = \int_\alpha{(\Pi_{i=1}^Np(\mathbf{X}_i|\mathcal{G}_\alpha))d
 
 The Di Finetti measure $\mathcal{Q}$ is the object which defines a distribution
 over the (fixed) measures (GPMs) that produce a statistical population. In this
-sense, $\mathcal{Q}$ represents the learnable GPM.
+sense, $\mathcal{Q}$ represents the adaptive GPM.
 
 \end{discussion}
 
@@ -250,40 +250,40 @@ While the requirement that the GPM should respond to questions about arbitrary
 cells in the random table may appear overwhelmingly complex, the structure of
 most GPMs induces several internal simplifications.
 
-\section{Extended Interface for Learnable Generative Population Models}
-\label{sec:learnable_gpm}
+\section{Extended Interface for adaptive Generative Population Models}
+\label{sec:adaptive_gpm}
 
 As outlined in Section \ref{sec:overview}, some GPMs can be learned from an
 observed statistical population $\mathbf{X}$. Learning the GPM structure will be
-based on approximate probabilistic inference in a \textit{learnable generative
+based on approximate probabilistic inference in a \textit{adaptive generative
 population model} $\mathcal{G}$ which is a probabilistic model defined over a
 space of GPMs $\set{\mathcal{G_\alpha}}$. The GPMs $\mathcal{G}_\alpha$
 typically share structure (such as belonging to the same parametric class) but
 this is not a formal restriction.
 
-A key insight about a learnable GPM $\mathcal{G}$ is that it can \textit{answer
+A key insight about a adaptive GPM $\mathcal{G}$ is that it can \textit{answer
 the same questions about the underlying statistical population} $\mathbf{X}$
 that any one of its GPMs $\mathcal{G}_\alpha$ can. These questions are answered
 achieved by an appropriate sequence of sampling, conditioning, and
 marginalization operations over the space of GPMs $\mathcal{G}_\alpha$.
-Moreover, a learnable GPM $\mathcal{Q}$ can itself define a distribution over a
-space of learnable GPMs, up to an infinitely deep level of recursion.
+Moreover, a adaptive GPM $\mathcal{Q}$ can itself define a distribution over a
+space of adaptive GPMs, up to an infinitely deep level of recursion.
 
-Thus far, all learnable GPMs in BayesDB have been based on \textit{Markov chain}
-methods. These learnable GPMs internally maintain a sample from an approximate
+Thus far, all adaptive GPMs in BayesDB have been based on \textit{Markov chain}
+methods. These adaptive GPMs internally maintain a sample from an approximate
 posterior over GPMS, and provide a Markov chain transition operator that updates
 the sample stochastically. Some Markov chains are \textit{asymptotically
 Bayesian} in the sense that the distribution that results from sequences of $T$
 updates converges to the posterior over GPMs as $T$ tends to infinity.
 
-The extended interface for learnable GPMs based on Markov chains is outlined
+The extended interface for adaptive GPMs based on Markov chains is outlined
 below:
 
 \begin{enumerate}
 
 \item \texttt{$\mathcal{G}$ = initialize(schema = $\Lambda$)}
 
-    Initializes a learnable GPM with the given schema \texttt{$\Lambda$ =
+    Initializes a adaptive GPM with the given schema \texttt{$\Lambda$ =
     (typed-outputs, typed-inputs, body)}, and returns an arbitrary
     initialization $\theta_\mathcal{G}^0$ and empty tabular data store
     $\mathbf{X}_\mathcal{G}$.
@@ -329,12 +329,12 @@ p(\mathcal{T}^t(\theta_\mathcal{G}))) = 0
 A sufficiently expressive asymptotically Bayesian Markov chain GPM may also be
 \textit{asymptotically consistent} in the usual sense.
 
-\section{An Ensemble of Learnable Generative Population Models}
+\section{An Ensemble of adaptive Generative Population Models}
 \label{sec:ensemble}
 
-If BayesDB inferences were based on a single instance of a learnable GPM, the
+If BayesDB inferences were based on a single instance of a adaptive GPM, the
 inferences would arbitrarily suppress modeling uncertainty. The MML provides an
-alternative constructor for learnable GPMs that internally manages and ensemble
+alternative constructor for adaptive GPMs that internally manages and ensemble
 of GPMs. In the language of Markov Chains, the ensemble represents a set of
 independent, parallel chains.
 
@@ -380,7 +380,7 @@ possible extension.
 \begin{excercise} \label{ex:normal_vs_normal} Testing the Default Generative
 Population Model
 
-    Consider a learnable GPM $\mathcal{G}_N$ which defines a distribution over
+    Consider a adaptive GPM $\mathcal{G}_N$ which defines a distribution over
     the space of mixture of Gaussian GPMs of the form seen in Example
     \ref{ex:normal_gpm}. Rather than fix the parameters as we did earlier, now
     place a prior over the number of Gaussian components $i$ and the weights,
@@ -416,7 +416,7 @@ analysis, such as a context-sensitive measure of similarity.
 
 Below are a collection of queries that can be answered using semantics from the
 GPM interface. Consider a GPM $\mathcal{G}$ ascribing to either the primitive or
-learnable GPM interface.
+adaptive GPM interface.
 
 \begin{enumerate}
 \item $\set{I_k} = \texttt{CMI}(
@@ -478,4 +478,3 @@ learnable GPM interface.
 \end{enumerate}
 
 \end{document}
-
