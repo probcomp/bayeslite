@@ -17,9 +17,11 @@
 \newcommand{\set}[1]{\{#1\}}
 
 \title{Draft Technical Notes on BayesDB}
+
 \begin{document}
 
 \maketitle
+
 \section{Overview: Generative Population Models and the BayesDB Minimal Modeling Language}
 \label{sec:overview}
 
@@ -30,10 +32,9 @@ and inference programs written in the BayesDB Minimal Modeling Language (MML).
 Each GPM induces a random table $\mathbf{X}$ with a finite  number of columns
 and an infinite number of rows. Some of the rows are observed and represent the
 actual dataset stored in BayesDB. Each cell $\mathbf{X_{ij}}$ in the table
-represents a random variable, and may have one or more realizations
-$x_{ij}^{(t)}$.
+represents a random variable, and perhaps an associated realization
+$x_{ij}$.
 
-\todo{Note sure how to formalize this in a tabular form.}
 A GPM $\mathcal{G}$ can simulate and evaluate the probability of an arbitrary
 collection of cells in the random table, for either observed or hypothetical
 rows.
@@ -42,7 +43,8 @@ In its simplest form a GPM $\mathcal{G}$ is a fixed object that fully
 characterizes a data generating process, and observing generated members has no
 bearing on the actual structure.
 
-\begin{example} \label{ex:normal_gpm} A Pretty Normal Generative Population Model
+\begin{example} \label{ex:normal_gpm} A Pretty Normal Generative Population 
+Model
 
 Consider a GPM $\mathcal{G}$ which simulates $D$-dimensional members of a
 statistical population according to a mixture of two normal distributions such
@@ -79,20 +81,18 @@ parameters $\theta$ given a fixed generative process $M_i$, or learning the
 generative process $M_i$ from some fixed model class $\mathcal{M}$, or even
 learning the model class itself $\mathcal{M}$ from a set of competing model
 classes $\set{\mathcal{M}_k}$. The Minimal Modeling Language provides a
-framework for jointly learning the structure of a collection of GPM
+framework for jointly learning the structure of a collection of GPMs
 $\set{\mathcal{G}_i}$ that interact with another to produce a statistical
 population.
 
 A GPM $\mathcal{G}$ which can be learned from data is referred to an
 \textit{adaptive generative population model}. An adaptive GPM $\mathcal{G}$ is
 probabilistic model defined over a space of GPMs. We will see in Section
-\ref{sec:adaptive_gpm} that a adaptive GPM is a GPM in its own right and can
-answer the same questions about the statistical population $\mathbf{X}$. The MML
-includes a
-\textit{default adaptive generative population model} which defines a
-distribution over a collection of
-\textit{GPMs from a default class} using a hierarchal, semi-parametric Bayesian
-model derived from CrossCat.
+\ref{sec:adaptive_gpm} that an adaptive GPM is a GPM for an observed population
+in its own right and can answer the same questions about the statistical population $\mathbf{X}$. 
+The MML includes a \textit{default adaptive generative population model} which defines a
+distribution over a collection of \textit{GPMs from a default class} using a
+hierarchal, semi-parametric Bayesian model derived from CrossCat.
 
 \begin{example} \label{ex:crosscat} What Exactly Is CrossCat?
 
@@ -196,7 +196,7 @@ constraints for arbitrary subsets of variables. The interface for
 
 \begin{enumerate}
 
-\item \texttt{$\mathcal{G}$ = initialize( schema = $\Lambda$)}
+\item \texttt{$\mathcal{G}$ = initialize(schema = $\Lambda$)}
 
     Initialize a GPM with the given schema, and return the resulting GPM
     $\mathcal{G}$.
@@ -343,7 +343,7 @@ independent, parallel chains.
 
     Initializes a collection of $N$ GPMs with the schema $\Lambda$.
     $$
-    \mathcal{Q} = 
+    \mathcal{Q} =
     (\set{\mathcal{G}_s = (\theta_{\mathcal{G}}^{(s,0)})}_{s=1}^S,
     \mathbf{X_\mathcal{Q}})
     $$
@@ -361,7 +361,8 @@ of simple Monte Carlo.
 $\mathcal{G}_k$ for each of the $N$ samples in the returned set.
 
     $$
-    \set{\vec{s}_i} = \cup_k \texttt{simulate} (\mathcal{G}_k,\dots,\texttt{size} = 1) \text{ where }
+    \set{\vec{s}_i} = \cup_k \texttt{simulate}
+    (\mathcal{G}_k,\dots,\texttt{size} = 1) \text{ where }
     \mathcal{G}_k \sim U[\set{\mathcal{G}_s}]
     $$
 
@@ -419,6 +420,7 @@ GPM interface. Consider a GPM $\mathcal{G}$ ascribing to either the primitive or
 adaptive GPM interface.
 
 \begin{enumerate}
+
 \item $\set{I_k} = \texttt{CMI}(
     \mathcal{G},
     A = \set{(r_i^a,c_i^a)}_{i=1}^{|A|}, B = \set{(r_i^b,c_i^b)}_{i=1}^{|B|}, C
@@ -443,8 +445,8 @@ adaptive GPM interface.
     corresponding to a unique member of the population.
 
     \begin{align*}
-    r_i &\sim U[0,1] \text{ where } i \in \set{0,\dots,N-1}\\
-    \set{(\hat{a}_i, \hat{b}_i, \hat{c}_i)} &\sim (A,B,C)|D=d\\
+    r_i &\sim U[0,1] \text{ where } j \in \set{0,\dots,N-1}\\
+    \set{(\hat{a}_j, \hat{b}_j, \hat{c}_j)} &\sim (A,B,C)|D=d\\
     \end{align*}
     These samples can be used to form a Monte Carlo estimate of the desired
     conditional mutual information.
@@ -453,9 +455,10 @@ adaptive GPM interface.
     I(A:B|C,D=d) &:=
         \int \log \frac{p_{C|D=d}(c) p_{A,B,C|D=d}(a,b,c)}
             {p_{A,C|D=d}(a,c) p_{B,C|D=d}(b,c)}dF_{A,B,C|D=d}(a,b,c)\\ & \approx
-        \sum_{(a,b,c)\in\set{(\hat{a}_i,\hat{b}_i,\hat{c}_i)}}
-         \frac{p_{C|D=d}(\hat{c}_i) p_{A,B,C|D=d}(\hat{a}_i,\hat{b}_i,\hat{c}_i)}
-         {p_{A,C|D=d}(\hat{a}_i,\hat{c}_i) p_{B,C|D=d}(\hat{b}_i,\hat{c}_i)}
+        \sum_{(a,b,c)\in\set{(\hat{a}_j,\hat{b}_j,\hat{c}_j)}}
+         \frac{p_{C|D=d}(\hat{c}_j) 
+         p_{A,B,C|D=d}(\hat{a}_j,\hat{b}_j,\hat{c}_j)}
+         {p_{A,C|D=d}(\hat{a}_j,\hat{c}_j) p_{B,C|D=d}(\hat{b}_j,\hat{c}_j)}
     \end{align*}
 
     \end{algorithm}
@@ -463,18 +466,126 @@ adaptive GPM interface.
     The output of \texttt{CMI} is set of $K$ estimates $\set{I_k}$, where each
     estimate is created using $N$ samples. This allows us to characterize
     uncertainty over the true value by computing Monte Carlo standard errors and
-    other quantities of interest.
+    other quantities of interest. For a primitive GPM, a single estimate $I_1$ is
+    returned, where $N\times K$ samples are used to form the estimate.
+
+    \todo[inline]{I think it is valuable to return a set of estimates even
+        for a primitive GPM to characterize uncertainty. By the CLT, the variance
+        of the estimator drops as $1/\sqrt{N}$, so using a sample with $NK$
+        gives a reduction of variance $\propto 1/\sqrt{K}$ but does not allow us
+        to characterize the uncertainty.}
 
     Note that the samples are generated by invoking
     \begin{align*}
-    {\tt simulate(} \mathcal{G}, {\tt targets} =
-    \set{(r^,c_i^a)}\cup\set{r^,c_i^b}\cup\set{r^,c_i^c}, {\tt givens} =
-    \set{(r_i^b,c_i^b,x_{(r_i^b,c_i^b)})}, {\tt size} = 1)
+    {\tt simulate(} \mathcal{G},
+    {\tt targets} = \set{(r^*,c_i^a)} \cup \set{r^*,c_i^b} \cup \set{r^*,c_i^c},\\
+    {\tt givens} = \set{(r_i^b,c_i^b,x_{(r_i^b,c_i^b)})},
+    {\tt size} = 1)
     \end{align*}
-    and the densities in the estimated are evaluated by invoking the
-    corresponding \texttt{logpdf} command. An alternative implementation of
-    Algorithm \ref{alg:cmi} would be to sample a single row index $r^* \sim
-    U[0,1]$ and using $N$ samples.
-\end{enumerate}
+
+    The log densities are evaluated by invoking
+    \begin{align*}
+    {\tt logpdf(} \mathcal{G}, {\tt targets} = \set{(r^*,c_i^a,\hat{a}_{j,i})}
+    \cup\set{r^*,c_i^b,\hat{b}_{j,i}}\cup\set{r^*,c_i^c,,\hat{b}_{j,i}},\\
+    {\tt  givens} = \set{(r_i^b,c_i^b,x_{(r_i^b,c_i^b)})}, {\tt size} = 1)
+    \end{align*}
+
+    \begin{excercise}
+    Consider an alternative implementation of Algorithm \ref{alg:cmi}, where a
+    single row index is drawn $r^* \sim U[0,1]$ and $N$ samples are used in
+    \texttt{simulate}. Is this an equivalent implementation?
+    \end{excercise}
+
+\item $p = \texttt{marginal-dependence-prob}(\mathcal{G},
+    \texttt{colA}=c_i,
+    \texttt{colB}=c_j,
+    \texttt{accuracy}=N)$
+
+    \todo[inline]{Figure out how to allow the user to set a throttle for desired
+        accuracy. Here I am using a generic accuracy term both in marginal-
+        depprob and CMI}
+
+    Computes the probability, under the random latent structure of the GPM,
+    that the two variables $\mathbf{X}_{r^*,c_i}$ and $\mathbf{X}_{r^*,c_j}$ are
+    unconditionally independent.
+
+    \begin{align*}
+    \mathbb{P}_\mathcal{G}\set{I(\mathbf{X}_{r^*,c_i} : \mathbf{X}_{r^*,c_j} = 0)}
+    \end{align*}
+
+    Given that mutual information is zero if and only the two variables are
+    statistically independent, the following simple Monte Carlo procedure is a
+    suggested implementation.
+
+    \begin{algorithm} \label{alg:marginal_depprob} First obtain a set of mutual
+        information estimates by invoking {\tt CMI}
+
+        \begin{align*}
+        \set{I_k} = {\tt CMI}(
+        \mathcal{G},
+        A = \set{(r_i^*,c_i)}, B = \set{(r_i^*,c_j)}, C = \emptyset, D =
+        \emptyset,\\ {\tt accuracy} = N, {\tt size} = N)
+        \end{align*}
+
+        Return the fraction of samples from $\set{I_k}$ for which the mutual
+        information is zero
+        \begin{align*}
+            p = \frac{1}{|\set{I_k}|}\sum_{k}{\mathbb{I}_{\set{0}}(I_k)}
+        \end{align*}
+    \end{algorithm}
+
+\item $r^2 = \texttt{marginal-dependence-magnitude}(\mathcal{G},
+    \texttt{colA}=c_i,
+    \texttt{colB}=c_j,
+    \texttt{accuracy}=N)$
+
+    Computes an informational measure of correlation between
+    $\mathbf{X}_{r^*,c_i}$ and $\mathbf{X}_{r^*,c_j}$ based on EH Linfoot. The
+    implementation is straightforward.
+
+    \begin{algorithm} \label{alg:linfoot} Compute a point estimate for the
+        mutual information $I_0$ between $\mathbf{X}_{r^*,c_i}$ and
+        $\mathbf{X}_{r^*,c_j}$ using an appropriate invocation of {\tt CMI}.
+
+        Return the Linfoot measure $r^2$
+
+        \begin{align*}
+        r^2 = \sqrt{1 - \exp{(-2I_0)}}
+        \end{align*}
+
+    \end{algorithm}
+
+    \todo[inline]{Should this function return a point estimate or a collection
+    of estimates?}
+    \todo[inline]{The Linfoot measure\\
+        http://www.sciencedirect.com/science/article/pii/S001999585790116X\\ is
+        what has been traditionally used by Bax. Linfoot is normalized between
+        [0,1] but there are some questionable properties, if $Y=g(X)$ Linfoot is
+        not guaranteed to be 1 (easy to construct example in discrete case).
+        Moreover feedback from PPAML is that the zmatrices it produces are
+        sparse and uninsightful, and give the implication that continuous
+        variables are more dependent than categorical ones.}
+
+\item $r^2 = \texttt{generative-similarity}(\mathcal{G},
+    \texttt{context-vars} = \set{c_i},
+    \texttt{rowA}=r_i,
+    \texttt{rowB}=r_j,
+    \texttt{accuracy}=N)$
+
+    Computes the context-sensitive generative similarity for two members of the
+    statistical population. This is defined as the probability, under the random
+    latent structure of the GPM, that
+    \texttt{rowA} and \texttt{rowB} are identically distributed conditioned on
+    \texttt{context-vars}.
+    \end{enumerate}
+    
+\section{TODOs}
+
+    \todo[inline]{Explain what it means to have 'observed members' of a
+    statistical population. In particular, a GPM's latentness can be broken down
+    into 'global' and 'row-specific'. Specifying a row index is and implicit
+    conditioning any distribution on the row-latents. This idea is mostly
+    applicable to GPMs which implicitly cluster the observed population, (and
+    carry a distribution over cluster assignments).}
 
 \end{document}
