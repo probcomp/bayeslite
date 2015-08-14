@@ -1,0 +1,75 @@
+* Current BayesDB schema
+
+Table metadata is a record with three fields, stored in a JSON blob:
+
+  name_to_idx           dict mapping column names to column indices
+  idx_to_name           dict mapping column number strings to column names
+                          (XXX This is silly: why not an array of names?)
+  column_codebook       optional array mapping colno to column codebook record
+    [colno]
+      short_name          column name
+      description         string describing the column
+  column_metadata       array mapping colno to column metadata record
+    [colno]
+      modeltype           string identifying the model type, one of
+                            - `normal_inverse_gamma' (numerical)
+                            - `symmetric_dirichlet_distance' (categorical)
+                            - `vonmises' (cyclic)
+      value_to_code       dict, empty for non-categorical model types,
+                            mapping integer indices to string values
+                            (XXX This is silly: why not an array of values?)
+                            (XXX This is named backwards!)
+      code_to_value       dict, empty for non-categorical model types,
+                            mapping string values to integer indices
+      parameters          optional(?) record of modeltype-specific parameters
+        min                 minimum value (cyclic)
+        max                 maximum value (cyclic)
+        cardinality         number of distinct values (categorical) [???]
+
+XXX Not really necessary, can be encoded in SQL.  But these get passed
+to the engine, so can't change it immediately.
+
+Crosscat model data is a record with the following fields:
+
+  X_L                   record
+    column_partition      record
+      hypers                record
+        alpha                 concentration parameter of CRP
+      assignments           array mapping colno ---> viewno
+        [colno]               view number of this column
+      counts                array mapping viewno ---> number of columns
+        [viewno]              sum(assignments == viewno)
+    column_hypers         array mapping colno to record
+      [colno]
+        fixed               boolean, true iff parameters fixed
+        strength            (asymmetric_beta_bernoulli)
+        balance             (asymmetric_beta_bernoulli)
+        ...
+    view_state            array mapping viewno to record
+      [viewno]
+        column_names        array of strings indices locally consistent ???
+        column_component_suffstats
+                            array mapping colno ---> array
+          [colno]             array mapping catno ---> record of suff. stats
+            [catno]
+              0_count           (asymmetric_beta_bernoulli)
+              1_count           (asymmetric_beta_bernoulli)
+              N_count           (asymmetric_beta_bernoulli)
+              ...
+
+        row_partition_model record
+          hypers              record
+            alpha               concentration parameter of CRP in this view
+          counts              array mapping catno ---> number of rows
+            [catno]             sum(X_D[viewno] == catno)
+  X_D                   array of views
+    [viewno]              array mapping rowno ---> catno
+      [rowno]               category number
+  iterations            integer number of analysis iterations
+  column_crp_alpha      stack of crp alpha values
+  logscore              stack of logscore values
+  num_views             stack of nviews values
+  model_config          record
+    kernel_list           ?
+    initialization        ?
+    row_initialization    ?
