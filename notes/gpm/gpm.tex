@@ -31,7 +31,7 @@ with a table in the database, which represents individuals observed
 from that population.\footnote{Perhaps partially, if some cells in the
   table are null.} These generative population models are provided by
 BayesDB based on modeling schemas and inference programs written in
-the BayesDB Minimal Modeling Language (MML).
+the BayesDB Minimal Modeling Language.
 
 \subsection{Generative Population Models}
 
@@ -59,8 +59,8 @@ probability distribution on arbitrary-size populations, it is not
 particularly interesting, because the individuals are independent and
 the parameterization is fixed.\footnote{One plausible scenario in
   which such a ``fixed'' GPM can arise is by learning the model
-  externally from the MML.  A user may decide to import such a GPM
-  into BayesDB, without leaving room for BayesDB to adapt it.}
+  externally from BayesDB.  A user may decide to import such a GPM
+  into BayesDB, without providing a hook for BayesDB to adapt it.}
 
 In typical applications we are interested in \textit{learning
 the GPM from data}. For example, this might be learning the specific
@@ -126,13 +126,14 @@ quality of approximation of the above ideal.
 
 \subsection{The Minimal Modeling Language}
 
-The Minimal Modeling Language provides a
-framework for specifying various GPM classes and learning particular GPMs
-within them from data.
+The BayesDB Minimal Modeling Language (MML) provides a framework for
+associating various GPMs with data tables stored in BayesDB, and
+adapting them to the data (learning), if applicable.
 
-The MML includes a \textit{default adaptive generative population model} which defines a
-distribution over a collection of \textit{GPMs from a default class} using a
-hierarchal, semi-parametric Bayesian model derived from CrossCat.
+The MML includes a \textit{default adaptive generative population
+  model} which defines a distribution over a collection of
+\textit{GPMs from a default class} using a hierarchal, semi-parametric
+Bayesian model derived from CrossCat.
 
 \begin{example} \label{ex:crosscat} What Exactly Is CrossCat?
 
@@ -156,12 +157,11 @@ defines a GPM class:
 $\mathcal{M}_\textbf{X} = \set{CC_j^{\theta} \text{ : cross-cat of } \mathbf{X}
 \text{ with partition } j \text{ and component model params } \theta}$.
 
-A member $\mathcal{G}$ of the CrossCat GPM class is a particular cross-
-categorization and component parameters $CC_j^{\theta^*}$ from the model class.
-Since we do not know $j$ or $\theta^*$, we instead place distribution over all
-GPMS with this common structure. The object which carries this distribution over
-$\mathcal{M}_\textbf{X}$ is a adaptive generative population model, whose
-population members are GPMs that generate the $\mathbf{X}$!
+A member $\mathcal{G}$ of the CrossCat GPM class is a particular
+cross- categorization with partition $j$ and component parameters
+$CC_j^{\theta^*}$.  Adding a prior over these possible structures
+defines an adaptive generative population model.
+\end{example}
 
 Unlike Example \ref{ex:normal_gpm}, the generation process is inherently tied to
 the statistical population it has produced $\mathbf{X}$. Observing more
@@ -176,7 +176,6 @@ explicate various design choices when simulating, sampling, and running
 posterior inference. In particular we are going to have to break down the latent
 structure into 'global' vs 'row-related' latents to differentiate between
 observed and hypothetical members.}
-\end{example}
 
 The default adaptive GPM is not obliged to model all columns jointly by
 positing some GPM from the CrossCat class. The MML includes modeling
