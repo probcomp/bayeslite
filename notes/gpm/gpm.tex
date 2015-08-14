@@ -77,75 +77,15 @@ details).  The Minimal Modeling Language (Section~\ref{sec:mml}) permits specify
 directed, acycling compositions of
 such objects (on the columns).}
 
-In typical applications we are interested in \textit{learning
-the GPM from data}. For example, this might be learning the specific
-parameters $\theta$ given a fixed generative process $M_i$, or learning the
-generative process $M_i$ from some fixed model class $\mathcal{M}$, or even
-learning the model class itself $\mathcal{M}$ from a set of competing model
-classes $\set{\mathcal{M}_k}$.
-
-Learning from data is feasible if we assume some commonality between
-the individuals of a population.  This amounts to supposing that the
-distribution on populations is not IID on individuals.  Since it
-is nonetheless exchangeable, de Finetti's theorem \todo{cite}
-permits us to treat it as a distribution over (unobserved) distributions
-over individuals.
-
-We are thus led to the following formal structure:
-
-\begin{eqnarray*}
-\hat{\theta} & \sim & \Pi(.) \\
-\theta_i & \sim & \pi(.|\hat\theta) \qquad \textrm{for each individual $i$} \\
-\vec{x}_{ij} & \sim & q(.|\theta_i, \hat\theta)
-\end{eqnarray*}
-
-Here $\hat\theta$ is some arbitrary latent structure shared among the
-population, presumed distributed according to distribution $\Pi$ (a
-priori of observing any data); $\theta_i$ is per-individual latent
-structure, assumed independent across individuals conditioned on
-$\hat\theta$; and $\vec{x}_{ij}$ are the observable per-individual
-features that correspond to cells in the data table.  A GPM of this form is given by the
-sample spaces for $\hat\theta$, $\theta_i$, and $\vec{x}_{ij}$, and by the
-distributions $\Pi(.)$, $\pi(.|\hat\theta)$, and $q(.|\theta_i, \hat\theta)$.
-
-\begin{remark}
-For any fixed value of $\hat\theta$, the marginal composition
-
-\begin{eqnarray}
- p(\vec{x}_{ij}|\hat\theta) & = &
- \int_{\theta_i} q(\vec{x}_{ij}|\theta_i, \hat\theta) \pi(\theta_i|\hat\theta)
- \label{eqn:marginal-individual}
-\end{eqnarray}
-
-itself gives a valid generative population model (whose individuals
-are independent). \label{rem:gpm-class}
-\end{remark}
-This is an example of a \emph{GPM class}, in this
-case parameterized on $\hat\theta$.
-
-The above theory justifies the possibility of learning.  Given a
-particular initial GPM $\G$, observations of some individuals
-$\{\vec{x}_{ij}\}_{i \in I}$ license a change in the distribution
-$\Pi(\hat\theta)$ to a data-dependent distribution
-$\Pi(\hat\theta|\{\vec{x}_{ij}\})$ on $\hat\theta$ that applies to
-further individuals from the population.  An \emph{adaptive generative
-  population model} (Section~\ref{sec:adaptive_gpm}) is a GPM equipped
-with a computational capability to adapt to data in that framework.
-
-We might imagine an \emph{exactly Bayesian adaptive generative population model}
-as one whose posterior distribution $\Pi(.|\{\vec{x}_{ij}\})$ on
-$\hat\theta$ is given by Bayes' Rule:
-
-\[ \Pi(\hat\theta|\{\vec{x}_{ij}\}) \propto \Pi(\hat\theta) p(\{\vec{x}_{ij}\}|\hat\theta), \]
-
-where the $\Pi(.)$ on the right hand side is the prior and the $p(.|\hat\theta)$
-marginalizes out the per-individual latent variables $\theta_i$ (eqn~\ref{eqn:marginal-individual}).
-Since this is not computationally tractable in general, but admits
-anytime approximations of increasing quality (e.g., by running a Markov chain
-transition operators for more steps), the
-interface defined in Section~\ref{sec:adaptive_gpm} also admits
-iteratively adaptive GPMs that expose a throttle on computational
-effort.
+In typical applications we are interested in \textit{learning the GPM
+  from data}. For example, this might be learning the specific
+parameters $\theta$ given a fixed generative process $M_i$, or
+learning the generative process $M_i$ from some fixed model class
+$\mathcal{M}$, or even learning the model class itself $\mathcal{M}$
+from a set of competing model classes $\set{\mathcal{M}_k}$.  BayesDB
+enables this with its notion of \emph{adaptive generative population
+  models}, discussed in Section~\ref{sec:formalism-adaptive-gpm} and
+specified in Section~\ref{sec:adaptive_gpm}.
 
 \begin{example}
 \todo[inline]{Some trivial approximate adaptive thing?  Maybe a
@@ -339,6 +279,7 @@ refer to a fresh individual (i.e., marginalizing out any
 per-individual latent structure).
 
 \subsection{Formalism for Adaptive GPMs}
+\label{sec:formalism-adaptive-gpm}
 
 As outlined in Section \ref{sec:overview}, some GPMs can be learned
 from observations $\{x_{ij}\}$ of a statistical population
