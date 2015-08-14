@@ -208,6 +208,7 @@ all possible marginal distributions subject to equality
 constraints for arbitrary subsets of variables.
 
 \subsection{Non-Adaptive GPMs}
+\label{sec:non-adaptive_gpm}
 
 Since non-adaptive GPMs are by assumption IID on the individuals in
 the population, they admit a simpler interface than adaptive ones.  As
@@ -373,59 +374,64 @@ this document, and omit the adjective.
 \subsection{Interface for Adaptive GPMs}
 \label{sec:adaptive_gpm}
 
-Learning the GPM structure will be
-based on approximate probabilistic inference in a \textit{adaptive generative
-population model} $\G$ which is a probabilistic model defined over a
-space of GPMs $\set{\mathcal{G_\alpha}}$. The GPMs $\G_\alpha$
-typically share structure (such as belonging to the same parametric class) but
-this is not a formal restriction.
-
-A key insight about a adaptive GPM $\G$ is that it can \textit{answer
-the same questions about the underlying statistical population} $\mathbf{X}$
-that any one of its GPMs $\G_\alpha$ can. These questions are answered
-achieved by an appropriate sequence of sampling, conditioning, and
-marginalization operations over the space of GPMs $\G_\alpha$.
-Moreover, a adaptive GPM $\mathcal{Q}$ can itself define a distribution over a
-space of adaptive GPMs, up to an infinitely deep level of recursion.
-
-Thus far, all adaptive GPMs in BayesDB have been based on \textit{Markov chain}
-methods. These adaptive GPMs internally maintain a sample from an approximate
-posterior over GPMS, and provide a Markov chain transition operator that updates
-the sample stochastically. Some Markov chains are \textit{asymptotically
-Bayesian} in the sense that the distribution that results from sequences of $T$
-updates converges to the posterior over GPMs as $T$ tends to infinity.
-
 The extended interface for adaptive GPMs based on Markov chains is outlined
-below:
+below.  The key differences from the interface to non-adaptive GPMs
+defined in Section~\ref{sec:non-adaptive_gpm} are as follows:
+
+\begin{itemize}
+\item We add \texttt{incorporate} and \texttt{remove} methods to
+  manipulate the set of observed individuals on which the adaptive GPM
+  is taken to be conditioned.
+\item We add an \texttt{infer} method to control expenditure of
+  computation on incremental adaptation.
+\item We generalize the \texttt{simulate} and \texttt{logpdf} methods
+  to permit querying and conditioning on multiple rows, since the
+  joint distribution on several rows need no longer be the product of
+  the corresponding marginal distributions.
+\end{itemize}
+
+Note: BayesDB implements an algorithm for recovering joint multi-row
+simulation in terms of single-row simulations, so the multi-row
+version of \texttt{simulate} may be viewed as an optional
+optimization.
+
+\todo[inline]{An adaptive GPM can be used as a non-adaptive GPM by
+  marginalizing out the distribution over the class it is supposed to
+  adapt over.  Technical difficulty: that calls for non-incorporating
+  simulations, whereas the promised algorithm for multi-row simulate
+  in terms of single-row simulate relies on simulations incorporating
+  their results (which is expected to be cheap).}
+
+\todo[inline]{Analogous issue with drawing multiple samples from block
+  simulation.  The samples are supposed to be IID; which one does the
+  simulation incorporate?}
 
 \begin{enumerate}
 
 \item \texttt{$\G$ = initialize(schema = $\Lambda$)}
 
-    Initializes a adaptive GPM with the given schema \texttt{$\Lambda$ =
-    (typed-outputs, typed-inputs, body)}, and returns an arbitrary
-    initialization $\theta_\G^0$ and empty tabular data store
-    $\mathbf{X}_\G$.
+    Initializes an adaptive GPM with the given schema \texttt{$\Lambda$ =
+    (typed-outputs, typed-inputs, body)}.  This is identical with the
+    \texttt{initialize} operation for non-adaptive GPMs.  The distribution $\Pi$
+    on adaptations is taken to be conditioned on the empty set of observations
+    $\Pi(\G_\alpha|\{\})$.
 
-    \todo[inline]{If there are columns in \texttt{typed-outputs} or \texttt
-    {typed-inputs} for which no generative procedure is defined in
-    \texttt{body}, then the default GPM will be used to jointly model those
-    columns. This is required because the MML needs a full generative model to
-    query arbitrary patterns of population members. Otherwise several important
-    queries would be ill-defined (for instance, simulating an output without
-    conditioning on an input).}
+\item \texttt{$\vec{s}$ =
+    simulate($\G$, targets = $\set{(r_j,c_j)}_{j=1}^{|T|}$, givens
+    = $\set{(r_k, c_k, x_{r_kc_k})}_{k=1}^{|G|}$)}
 
-\item \texttt{$\set{\vec{s}_i}_{i=1}^N$ =
-    simulate($\G$, targets = $\set{(r_i^t,c_i^t)}_{i=1}^{|T|}$, givens
-    = $\set{(r_i^g, c_i^g, x_{(r_i^g, c_i^g)})}_{i=1}^{|G|}$, samples = $N$)}
-
-    Generate $N$ samples from the specified conditional distribution.
+    Generate a joint sample from the specified conditional
+    distribution on cells.
     $$
-    \set{\vec{s}_i}_{i=1}^N \sim p( \set{ \mathbf{X}_{(r_i^t,c_i^t)} } |
-    \set{ \mathbf{X}_{(r_i^g,c_i^g)} = x_{(r_i^g,c_i^g)} }, \G)
+    \vec{s} \sim p( \set{ \mathbf{X}_{r_jc_j} } |
+    \set{ \mathbf{X}_{r_kc_k} = x_{r_kc_k} }, \G)
     $$
 
-    Note that each $\vec{s}_i$ is a $|T|$ dimensional vector.
+    Note that $\vec{s}$ is a $|T|$ dimensional vector of the simulated
+    values for those cells.  As in the non-adaptive case
+    (Section~\ref{sec:non-adaptive_gpm}), row indexes control conditioning
+    or lack thereof on per-individual latent structure, but all conditioning
+    on manifest structure is determined by the \texttt{givens}.
 
 \item \texttt{$\log p$ =
     logpdf($\G$, targets = $\set{(r_i^t, c_i^t, x_{(r_i^t,
@@ -440,7 +446,7 @@ below:
     \set{ \mathbf{X}_{(r_i^g,c_i^g)} = x_{(r_i^g,c_i^g)} }, \G)
     $$
 
-\item \texttt{incorporate(value = $(r_j,c_j,x_{(r_j,c_j)})$)}
+\item \texttt{incorporate($\G$, value = $(r_j,c_j,x_{(r_j,c_j)})$)}
 
     Records an observation $x_{(r_j,c_j)}$ in the cell $\mathbf{X_{r_j,c_j}}$.
     If there is no row $r_j$, a new one will be created.
@@ -449,11 +455,11 @@ below:
     $x_{(r_j,c_j)}$ incompatible with the meta-schema $\Lambda$ (for example
     providing a wrong data type).
 
-\item \texttt{remove($(r_j,c_j$)}
+\item \texttt{remove($\G$, $(r_j,c_j$)}
 
     Removes the observation $x_{(r_i,c_j)}$ stored in cell $\mathbf{X}_{ij}$.
 
-\item \texttt{infer(program = $\mathcal{P}$)}
+\item \texttt{infer($\G$, program = $\mathcal{P}$)}
 
     Simulate an internal Markov chain transition operator $\mathcal{T}$ based on
     the inference procedure specified in the program $\mathcal{P}$.
