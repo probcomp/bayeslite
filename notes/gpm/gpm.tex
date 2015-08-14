@@ -10,6 +10,7 @@
 
 
 \newtheorem{example}{Example}[section]
+\newtheorem{remark}{Remark}[section]
 \newtheorem{discussion}{Discussion}[section]
 \newtheorem{excercise}{Excercise}[section]
 \newtheorem{algorithm}{Algorithm}[section]
@@ -44,7 +45,7 @@ exchangeable.
 \begin{example} \label{ex:normal_gpm} A Pretty Normal Generative Population 
 Model
 
-Consider the following GPM $\mathcal{G}$ on $D$-dimensional members of
+Consider the following GPM on $D$-dimensional members of
 a population $\mathbf{X}$: The individuals $\mathbf{X_i}$ are taken to
 be independently identically distributed according to a mixture of two
 normal distributions
@@ -89,9 +90,24 @@ population, presumed distributed according to distribution $\Pi$ (a
 priori of observing any data); $\theta_i$ is per-individual latent
 structure, assumed independent across individuals conditioned on
 $\hat\theta$; and $\vec{x}_{ij}$ are the observable per-individual
-features that correspond to cells in the data table.  A GPM is given by the
+features that correspond to cells in the data table.  A GPM of this form is given by the
 sample spaces for $\hat\theta$, $\theta_i$, and $\vec{x}_{ij}$, and by the
 distributions $\Pi(.)$, $\pi(.|\hat\theta)$, and $q(.|\theta_i, \hat\theta)$.
+
+\begin{remark}
+For any fixed value of $\hat\theta$, the marginal composition
+
+\begin{eqnarray}
+ p(\vec{x}_{ij}|\hat\theta) & = & 
+ \int_{\theta_i} q(\vec{x}_{ij}|\theta_i, \hat\theta) \pi(\theta_i|\hat\theta)
+ \label{eqn:marginal-individual}
+\end{eqnarray}
+
+itself gives a valid generative population model (whose individuals
+are independent). \label{rem:gpm-class}
+\end{remark}
+This is an example of a \emph{GPM class}, in this
+case parameterized on $\hat\theta$.
 
 The above theory justifies the possibility of learning.  Given a
 particular initial GPM $\mathcal{G}$, observations of some individuals
@@ -102,19 +118,20 @@ further individuals from the population.  An \emph{adaptive generative
   population model} (Section~\ref{sec:adaptive_gpm}) is a GPM equipped
 with a computational capability to adapt to data in that framework.
 
-We might imagine an \emph{ideal adaptive generative population model}
+We might imagine an \emph{exactly Bayesian adaptive generative population model}
 as one whose posterior distribution $\Pi(.|\{\vec{x}_{ij}\})$ on
 $\hat\theta$ is given by Bayes' Rule:
 
 \[ \Pi(\hat\theta|\{\vec{x}_{ij}\}) \propto \Pi(\hat\theta) p(\{\vec{x}_{ij}\}|\hat\theta), \]
 
-where the $\Pi(.)$ on the right hand side is the prior and the $p(.)$
-marginalizes out the per-individual latent variables $\theta_i$.
-Since this ideal is not computationally tractable in general, the
+where the $\Pi(.)$ on the right hand side is the prior and the $p(.|\hat\theta)$
+marginalizes out the per-individual latent variables $\theta_i$ (eqn~\ref{eqn:marginal-individual}).
+Since this is not computationally tractable in general, but admits
+anytime approximations of increasing quality (e.g., by running a Markov chain
+transition operators for more steps), the
 interface defined in Section~\ref{sec:adaptive_gpm} also admits
-approximate adaptive GPMs that expose a throttle on computational
-effort, which would, in the asymptotically Bayesian case, control the
-quality of approximation of the above ideal.
+iteratively adaptive GPMs that expose a throttle on computational
+effort.
 
 \begin{example}
 \todo[inline]{Some trivial approximate adaptive thing?  Maybe a
@@ -135,7 +152,7 @@ The MML includes a \textit{default adaptive generative population
 \textit{GPMs from a default class} using a hierarchal, semi-parametric
 Bayesian model derived from CrossCat.
 
-\begin{example} \label{ex:crosscat} What Exactly Is CrossCat?
+\begin{example} \label{ex:crosscat} CrossCat
 
 A cross-categorization of a data table $\mathbf{X}$ with $D$ columns and $N$ rows is
 a partition of the columns $(X_1,\dots,X_D)$ into blocks called \textit{views}.
@@ -157,19 +174,20 @@ defines a GPM class:
 $\mathcal{M}_\textbf{X} = \set{CC_j^{\theta} \text{ : cross-cat of } \mathbf{X}
 \text{ with partition } j \text{ and component model params } \theta}$.
 
-A member $\mathcal{G}$ of the CrossCat GPM class is a particular
+A member of the CrossCat GPM class is a particular
 cross- categorization with partition $j$ and component parameters
 $CC_j^{\theta^*}$.  Adding a prior over these possible structures
 defines an adaptive generative population model.
 \end{example}
 
-Unlike Example \ref{ex:normal_gpm}, the generation process is inherently tied to
+Unlike Example~\ref{ex:normal_gpm}, the latent information of the GPM
+in Example~\ref{ex:crosscat} is structurally dependent on
 the statistical population it has produced $\mathbf{X}$. Observing more
 generated members $\mathbf{X} \to
 \mathbf{X}'$ means the GPM class under consideration grows from
-$\mathcal{M}_\textbf{X}$ to $\mathcal{M}_\textbf{X'}$ (both the number of
+$\mathcal{M}_\textbf{X}$ to $\mathcal{M}_\textbf{X'}$, as both the number of
 possible cross-categorizations $j$ and the dimensionality of the vector of
-latents $\theta$ increase).
+latents $\theta$ increase.
 
 \todo[inline]{The reason I am being so pedantic about this construction is to
 explicate various design choices when simulating, sampling, and running
@@ -184,9 +202,9 @@ compositional, directed-acyclic network of arbitrary GPMs implemented by a user.
 It also includes inference instructions for initializing adaptive GPMs and
 performing updates of the posterior distribution on GPMs.
 
-The MML is thus a complete (but sub- Turing) probabilistic programming language
+The MML is thus a complete (but sub-Turing) probabilistic programming language
 that interoperates with queries written in BQL. The set of primitive GPMs can be
-extended by loading foreign GPMs written in VentureScript, and can be used to
+extended by loading foreign GPMs written in VentureScript or Python, and can be used to
 transparently integrate models from disparate probabilistic programming
 languages such as Stan and statistical computing environments such as R. Because
 BQL programs only depend on the statistical data types of the columns, the
