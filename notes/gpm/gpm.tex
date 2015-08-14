@@ -42,7 +42,7 @@ set of attributes (which correspond to columns). A ``population'' is
 an inherently unordered collection, so the distribution is taken to be
 exchangeable.
 
-\begin{example} \label{ex:normal_gpm} A Pretty Normal Generative Population 
+\begin{example} \label{ex:normal_gpm} A Pretty Normal Generative Population
 Model
 
 Consider the following GPM on $D$-dimensional members of
@@ -98,7 +98,7 @@ distributions $\Pi(.)$, $\pi(.|\hat\theta)$, and $q(.|\theta_i, \hat\theta)$.
 For any fixed value of $\hat\theta$, the marginal composition
 
 \begin{eqnarray}
- p(\vec{x}_{ij}|\hat\theta) & = & 
+ p(\vec{x}_{ij}|\hat\theta) & = &
  \int_{\theta_i} q(\vec{x}_{ij}|\theta_i, \hat\theta) \pi(\theta_i|\hat\theta)
  \label{eqn:marginal-individual}
 \end{eqnarray}
@@ -265,7 +265,7 @@ constraints for arbitrary subsets of variables. The interface for
     from. The \path{body} is an opaque binary that contains any generator
     specific configuration information, such as a probabilistic program.
 
-\item \texttt{$\set{\vec{s}_i}_{i=1}^N$ = 
+\item \texttt{$\set{\vec{s}_i}_{i=1}^N$ =
     simulate($\mathcal{G}$, targets = $\set{(r_i^t,c_i^t)}_{i=1}^{|T|}$, givens
     = $\set{(r_i^g, c_i^g, x_{(r_i^g, c_i^g)})}_{i=1}^{|G|}$, samples = $N$)}
 
@@ -512,7 +512,7 @@ adaptive GPM interface.
         \int \log \frac{p_{C|D=d}(c) p_{A,B,C|D=d}(a,b,c)}
             {p_{A,C|D=d}(a,c) p_{B,C|D=d}(b,c)}dF_{A,B,C|D=d}(a,b,c)\\ & \approx
         \sum_{(a,b,c)\in\set{(\hat{a}_j,\hat{b}_j,\hat{c}_j)}}
-         \frac{p_{C|D=d}(\hat{c}_j) 
+         \frac{p_{C|D=d}(\hat{c}_j)
          p_{A,B,C|D=d}(\hat{a}_j,\hat{b}_j,\hat{c}_j)}
          {p_{A,C|D=d}(\hat{a}_j,\hat{c}_j) p_{B,C|D=d}(\hat{b}_j,\hat{c}_j)}
     \end{align*}
@@ -634,7 +634,7 @@ adaptive GPM interface.
     \texttt{rowA} and \texttt{rowB} are identically distributed conditioned on
     \texttt{context-vars}.
     \end{enumerate}
-    
+
 \section{TODOs}
 
     \todo[inline]{Explain what it means to have 'observed members' of a
