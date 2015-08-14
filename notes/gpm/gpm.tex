@@ -10,12 +10,18 @@
 
 
 \newtheorem{example}{Example}[section]
+\newtheorem{definition}{Definition}[section]
 \newtheorem{remark}{Remark}[section]
 \newtheorem{discussion}{Discussion}[section]
 \newtheorem{excercise}{Excercise}[section]
 \newtheorem{algorithm}{Algorithm}[section]
 
+\DeclareMathOperator{\argmin}{arg\,min}
+\DeclareMathOperator{\argmax}{arg\,max}
+
 \newcommand{\set}[1]{\{#1\}}
+\newcommand{\G}{\mathcal{G}}
+\newcommand{\T}{\mathcal{T}}
 
 \title{Draft Technical Notes on BayesDB}
 
@@ -118,7 +124,7 @@ This is an example of a \emph{GPM class}, in this
 case parameterized on $\hat\theta$.
 
 The above theory justifies the possibility of learning.  Given a
-particular initial GPM $\mathcal{G}$, observations of some individuals
+particular initial GPM $\G$, observations of some individuals
 $\{\vec{x}_{ij}\}_{i \in I}$ license a change in the distribution
 $\Pi(\hat\theta)$ to a data-dependent distribution
 $\Pi(\hat\theta|\{\vec{x}_{ij}\})$ on $\hat\theta$ that applies to
@@ -240,12 +246,12 @@ generator is free to make any assumptions about its population, the IID
 assumption is a strong one. The default generator (and almost any generator
 being learned under the Bayesian framework) will usually assume that the rows
 are not IID but exchangeably coupled. De Finetti's theorem guarantees that there
-exists a mixture of random measures $\set{\mathcal{G}_\alpha}$ (which in most
+exists a mixture of random measures $\set{\G_\alpha}$ (which in most
 cases is indexed by the latent state of the GPM) where the population is
 conditionally IID.
 
-$$p(\mathbf{X}) = \int_\alpha{(\Pi_{i=1}^Np(\mathbf{X}_i|\mathcal{G}_\alpha))d
-\mathcal{Q}(\mathcal{G}_\alpha)}$$
+$$p(\mathbf{X}) = \int_\alpha{(\Pi_{i=1}^Np(\mathbf{X}_i|\G_\alpha))d
+\mathcal{Q}(\G_\alpha)}$$
 
 The De Finetti measure $\mathcal{Q}$ is the object which defines a distribution
 over the (fixed) measures (GPMs) that produce a statistical population. In this
@@ -270,10 +276,10 @@ Section~\ref{sec:adaptive_gpm}.
 
 \begin{enumerate}
 
-\item \texttt{$\mathcal{G}$ = initialize(schema = $\Lambda$)}
+\item \texttt{$\G$ = initialize(schema = $\Lambda$)}
 
     Initialize a GPM with the given schema, and return the resulting GPM
-    $\mathcal{G}$.
+    $\G$.
 
     Each GPM is initialized with a \textit{schema} $\Lambda=$\path{(typed-
     outputs, typed-inputs, body)}. The \path{typed- outputs} component specifies
@@ -285,19 +291,19 @@ Section~\ref{sec:adaptive_gpm}.
     desired configuration information.
 
 \item \texttt{$\vec{s}_i$ =
-    simulate($\mathcal{G}$, row = $i$, targets = $\set{c_j}_{j=1}^{|T|}$, givens
+    simulate($\G$, row = $i$, targets = $\set{c_j}_{j=1}^{|T|}$, givens
     = $\set{(c_k, x_{ik})}_{k=1}^{|G|}$)}
 
     Generate a sample from the specified conditional distribution on columns:
     $$
     \vec{s} \sim p( \set{ \mathbf{X}_{ij} } |
-    \set{ \mathbf{X}_{ik} = x_{ik} }, \mathcal{G}).
+    \set{ \mathbf{X}_{ik} = x_{ik} }, \G).
     $$
 
     The returned $\vec{s}$ is a $|T|$ dimensional vector.
 
 \item \texttt{$\log p$ =
-    logpdf($\mathcal{G}$, row = $i$, targets = $\set{(c_j, x_{ij})}_{j=1}^{|T|}$,
+    logpdf($\G$, row = $i$, targets = $\set{(c_j, x_{ij})}_{j=1}^{|T|}$,
     givens = $\set{(c_k, x_{ik})}_{k=1}^{|G|}$)}
 
     Evaluate the log probability density of the specified conditional
@@ -305,7 +311,7 @@ Section~\ref{sec:adaptive_gpm}.
 
     $$
     \log p = p( \set{ \mathbf{X}_{ij} = x_{ij} } |
-    \set{ \mathbf{X}_{ik} = x_{ik} }, \mathcal{G}).
+    \set{ \mathbf{X}_{ik} = x_{ik} }, \G).
     $$
 
     The density is interpreted as marginalizing out all random
@@ -316,9 +322,9 @@ Section~\ref{sec:adaptive_gpm}.
 The column indexes $c_j, c_k$ referred to above must refer to columns
 present in the table---the MML does not have a notion of hypothetical
 columns.  Further, the \texttt{target} indexes must be a subset of the
-columns in the \texttt{typed-outputs} of the GPM $\mathcal{G}$, and
+columns in the \texttt{typed-outputs} of the GPM $\G$, and
 the \texttt{given} indexes of each query must be a superset of the
-\texttt{typed-inputs} of the GPM $\mathcal{G}$.  Note: A client may
+\texttt{typed-inputs} of the GPM $\G$.  Note: A client may
 specify some of the \texttt{typed-outputs} as \texttt{given} in any
 given query.  Doing so picks out a conditional version of the output
 distribution.
@@ -332,22 +338,112 @@ the \texttt{givens}.  In the latter case, the distribution is taken to
 refer to a fresh individual (i.e., marginalizing out any
 per-individual latent structure).
 
-\section{Extended Interface for Adaptive Generative Population Models}
+\subsection{Formalism for Adaptive GPMs}
+
+As outlined in Section \ref{sec:overview}, some GPMs can be learned
+from observations $\{x_{ij}\}$ of a statistical population
+$\mathbf{X}$.  Since we permit the learning to itself be stochastic,
+the general case is a family of conditional probability distributions
+(of learning results) for all possible sets of observations.  Formally:
+
+\begin{definition} Adaptive Generative Population Model
+
+An \emph{Adaptive Generative Population Model} over a class of GPMs
+$\{\G_\alpha\}$ is a family of conditional probability distributions
+$\Pi(\G_\alpha|\{\mathbf{X}_{ij} = x_{ij}\})$, for all possible
+observation sets $\{x_{ij}\}$.
+\end{definition}
+
+\begin{example} Linear Regression
+
+Linear regression (with a fixed noise model $\mathcal{N}$) can be viewed as a
+conditional adaptive GPM over the class of non-adaptive GPMs
+parameterized by the possible regression coefficients $\vec\beta_j$.
+For input columns $\{x_j\}$ and output column $y$,
+the update rule corresponding to maximum likelihood estimation would be
+
+\[ \vec\beta_j^*|\{x_{ij}, y_i\} = \argmax_{\vec\beta_j^*} \sum_i p_{\mathcal{N}}(y_i - x_{ij}^T \beta_j^*). \]
+
+The \texttt{simulate} and \texttt{logpdf} methods would refer to the
+noise distribution around the predicted value for $y$.
+\end{example}
+
+\begin{example} Exact Bayesian Adaptive GPMs
+
+For any GPM class $\{\G_\alpha\}$, an \emph{exact Bayesian adaptive
+  generative population model} is given by a prior
+$\Pi(\G_\alpha)$ over
+$\{\G_\alpha\}$, and the adaptation rule
+
+\[ \Pi(\G_\alpha|\{\vec{x}_{ij}\}) \propto \Pi(\G_\alpha) p(\{\vec{x}_{ij}\}|\G_\alpha), \]
+
+where $p(.|\G_\alpha)$ is the probability of the observed data under
+the particular GPM $\G_\alpha$. \label{ex:exact-bayes}
+\end{example}
+
+\subsection{Incremental Adaptive GPMs}
+
+The desired adaptation rule of an adaptive GPM (such as the exact
+Bayesian rule of Example~\ref{ex:exact-bayes}) may not always be
+tractable to compute.  BayesDB permits adaptive GPMs to expose a
+time-accuracy tradeoff in the form of incremental adaptation, where
+the client is invited to select the amount of computational resources
+they are willing to commit, and rewarded for greater commitment with a
+superior quality of adaptation.  Formally this involves adding a ``fuel''
+parameter to the adaptation rule:
+
+\begin{definition} Incremental Adaptive Generative Population Model
+
+An \emph{Incremental Adaptive Generative Population Model} over a class of GPMs
+$\{\G_\alpha\}$ is a family of conditional probability distributions
+$\Pi_n(\G_\alpha|\{\mathbf{X}_{ij} = x_{ij}\})$, for all possible
+observation sets $\{x_{ij}\}$ and all positive integers $n$, where increasing
+$n$ represents increasing computational cost.
+\end{definition}
+
+\begin{example} Bayesian Markov Adaptive GPMs
+
+For any GPM class $\{\G_\alpha\}$, a \emph{Bayesian Markov adaptive
+  generative population model} is given by a prior
+$\Pi(\G_\alpha)$ over
+$\{\G_\alpha\}$, a data-dependent transition operator
+$\T_{\{\vec{x}_{ij}\}}$ over $\{\G_\alpha\}$, and
+an adaptation rule that consists of iterating $\T$:
+
+\[ \Pi_n(\G_\alpha|\{\vec{x}_{ij}\}) = \T_{\{\vec{x}_{ij}\}}^n \Pi(\G_\alpha). \]
+\label{ex:markov-bayes}
+\end{example}
+
+This will be \emph{asymptotically Bayesian} if the transition operator
+converges to the true posterior, that is if
+
+\[ \lim_{n\to\infty}D_{KL}(\Pi^*(\G_\alpha) \| \Pi_n(\G_\alpha|\{\vec{x}_{ij}\})) = 0, \]
+
+where $\Pi^*(\G_\alpha|\{\vec{x}_{ij}\}) \propto \Pi(\G_\alpha) p(\{\vec{x}_{ij}\}|\G_\alpha)$
+as in the exact Bayes case (Example~\ref{ex:exact-bayes}).
+If the true data distribution falls into the hypothesis class given by
+the prior $\Pi$, this will also be \emph{asymptotically consistent} in
+the usual sense.
+
+Since non-incremental adaptive GPMs are a special case of incremental
+ones, we will make the assumption of incrementality in the rest of
+this document, and omit the adjective.
+
+\subsection{Interface for Adaptive GPMs}
 \label{sec:adaptive_gpm}
 
-As outlined in Section \ref{sec:overview}, some GPMs can be learned from an
-observed statistical population $\mathbf{X}$. Learning the GPM structure will be
+Learning the GPM structure will be
 based on approximate probabilistic inference in a \textit{adaptive generative
-population model} $\mathcal{G}$ which is a probabilistic model defined over a
-space of GPMs $\set{\mathcal{G_\alpha}}$. The GPMs $\mathcal{G}_\alpha$
+population model} $\G$ which is a probabilistic model defined over a
+space of GPMs $\set{\mathcal{G_\alpha}}$. The GPMs $\G_\alpha$
 typically share structure (such as belonging to the same parametric class) but
 this is not a formal restriction.
 
-A key insight about a adaptive GPM $\mathcal{G}$ is that it can \textit{answer
+A key insight about a adaptive GPM $\G$ is that it can \textit{answer
 the same questions about the underlying statistical population} $\mathbf{X}$
-that any one of its GPMs $\mathcal{G}_\alpha$ can. These questions are answered
+that any one of its GPMs $\G_\alpha$ can. These questions are answered
 achieved by an appropriate sequence of sampling, conditioning, and
-marginalization operations over the space of GPMs $\mathcal{G}_\alpha$.
+marginalization operations over the space of GPMs $\G_\alpha$.
 Moreover, a adaptive GPM $\mathcal{Q}$ can itself define a distribution over a
 space of adaptive GPMs, up to an infinitely deep level of recursion.
 
@@ -363,12 +459,12 @@ below:
 
 \begin{enumerate}
 
-\item \texttt{$\mathcal{G}$ = initialize(schema = $\Lambda$)}
+\item \texttt{$\G$ = initialize(schema = $\Lambda$)}
 
     Initializes a adaptive GPM with the given schema \texttt{$\Lambda$ =
     (typed-outputs, typed-inputs, body)}, and returns an arbitrary
-    initialization $\theta_\mathcal{G}^0$ and empty tabular data store
-    $\mathbf{X}_\mathcal{G}$.
+    initialization $\theta_\G^0$ and empty tabular data store
+    $\mathbf{X}_\G$.
 
     \todo[inline]{If there are columns in \texttt{typed-outputs} or \texttt
     {typed-inputs} for which no generative procedure is defined in
@@ -379,19 +475,19 @@ below:
     conditioning on an input).}
 
 \item \texttt{$\set{\vec{s}_i}_{i=1}^N$ =
-    simulate($\mathcal{G}$, targets = $\set{(r_i^t,c_i^t)}_{i=1}^{|T|}$, givens
+    simulate($\G$, targets = $\set{(r_i^t,c_i^t)}_{i=1}^{|T|}$, givens
     = $\set{(r_i^g, c_i^g, x_{(r_i^g, c_i^g)})}_{i=1}^{|G|}$, samples = $N$)}
 
     Generate $N$ samples from the specified conditional distribution.
     $$
     \set{\vec{s}_i}_{i=1}^N \sim p( \set{ \mathbf{X}_{(r_i^t,c_i^t)} } |
-    \set{ \mathbf{X}_{(r_i^g,c_i^g)} = x_{(r_i^g,c_i^g)} }, \mathcal{G})
+    \set{ \mathbf{X}_{(r_i^g,c_i^g)} = x_{(r_i^g,c_i^g)} }, \G)
     $$
 
     Note that each $\vec{s}_i$ is a $|T|$ dimensional vector.
 
 \item \texttt{$\log p$ =
-    logpdf($\mathcal{G}$, targets = $\set{(r_i^t, c_i^t, x_{(r_i^t,
+    logpdf($\G$, targets = $\set{(r_i^t, c_i^t, x_{(r_i^t,
     c_i^t)})}_{i=1}^{|T|}$, givens = $\set{(r_i^g, c_i^g, x_{(r_i^g,
     c_i^g)})}_{i=1}^{|G|}$}
 
@@ -400,7 +496,7 @@ below:
 
     $$
     \log p = p( \set{ \mathbf{X}_{(r_i^t,c_i^t)} = x_{(r_i^t,c_i^t)} } |
-    \set{ \mathbf{X}_{(r_i^g,c_i^g)} = x_{(r_i^g,c_i^g)} }, \mathcal{G})
+    \set{ \mathbf{X}_{(r_i^g,c_i^g)} = x_{(r_i^g,c_i^g)} }, \G)
     $$
 
 \item \texttt{incorporate(value = $(r_j,c_j,x_{(r_j,c_j)})$)}
@@ -429,8 +525,8 @@ below:
 Some Markov chain GPMs are \textit{asymptotically Bayesian}:
 
 \begin{equation*}
-\lim_{t\to\infty}D_{KL}(p(\theta_\mathcal{G}|\mathbf{X_\mathcal{G}}) ||
-p(\mathcal{T}^t(\theta_\mathcal{G}))) = 0
+\lim_{t\to\infty}D_{KL}(p(\theta_\G|\mathbf{X_\G}) ||
+p(\mathcal{T}^t(\theta_\G))) = 0
 \end{equation*}
 
 A sufficiently expressive asymptotically Bayesian Markov chain GPM may also be
@@ -451,7 +547,7 @@ independent, parallel chains.
     Initializes a collection of $N$ GPMs with the schema $\Lambda$.
     $$
     \mathcal{Q} =
-    (\set{\mathcal{G}_s = (\theta_{\mathcal{G}}^{(s,0)})}_{s=1}^S,
+    (\set{\G_s = (\theta_{\G}^{(s,0)})}_{s=1}^S,
     \mathbf{X_\mathcal{Q}})
     $$
 
@@ -465,19 +561,19 @@ of simple Monte Carlo.
 
 \begin{enumerate}
 \item \texttt{simulate} delegates to a randomly sampled Markov chain GPM
-$\mathcal{G}_k$ for each of the $N$ samples in the returned set.
+$\G_k$ for each of the $N$ samples in the returned set.
 
     $$
     \set{\vec{s}_i} = \cup_k \texttt{simulate}
-    (\mathcal{G}_k,\dots,\texttt{size} = 1) \text{ where }
-    \mathcal{G}_k \sim U[\set{\mathcal{G}_s}]
+    (\G_k,\dots,\texttt{size} = 1) \text{ where }
+    \G_k \sim U[\set{\G_s}]
     $$
 
 \item \texttt{logpdf} forms a Monte Carlo estimate of the expected density using
 all of the GPMs in the ensemble.
 
     $$
-    \log p = \frac{1}{S}\sum_s\texttt{logpdf}(\mathcal{G}_s)
+    \log p = \frac{1}{S}\sum_s\texttt{logpdf}(\G_s)
     $$
 \end{enumerate}
 
@@ -488,23 +584,23 @@ possible extension.
 \begin{excercise} \label{ex:normal_vs_normal} Testing the Default Generative
 Population Model
 
-    Consider a adaptive GPM $\mathcal{G}_N$ which defines a distribution over
+    Consider a adaptive GPM $\G_N$ which defines a distribution over
     the space of mixture of Gaussian GPMs of the form seen in Example
     \ref{ex:normal_gpm}. Rather than fix the parameters as we did earlier, now
     place a prior over the number of Gaussian components $i$ and the weights,
     means, and covariances $\theta$. Also consider the default GPM
-    $\mathcal{G}_{CC}$ from Example \ref{ex:crosscat}, which has a vague prior
+    $\G_{CC}$ from Example \ref{ex:crosscat}, which has a vague prior
     over the cross-categorizations and mixture parameters.
 
     Suppose a population $\mathbf{X}$ is observed, and we are interested in
     comparing the two GPMs. If you know about the internals of CrossCat, it
-    should be clear that the collection of GPMs that $\mathcal{G}_N$ can
-    generate is a subset of the GPMs generated by $\mathcal{G}_{CC}$ (how?).
+    should be clear that the collection of GPMs that $\G_N$ can
+    generate is a subset of the GPMs generated by $\G_{CC}$ (how?).
 
     How can you invoke the GPM interface to test the performance of the default
     metamodel? (Hint: first define a set of ``performance'' metrics and a
-    synthetic dataset). Does it make sense for $\mathcal{G}_N$ to outperform
-    $\mathcal{G}_{CC}$ in certain regimes? Can you think of other GPMs that are
+    synthetic dataset). Does it make sense for $\G_N$ to outperform
+    $\G_{CC}$ in certain regimes? Can you think of other GPMs that are
     special members of the default GPM class (hint: Naive Bayes, \dots), and
     associated tests?
 \end{excercise}
@@ -523,13 +619,13 @@ mechanism can be used to implement additional measures that are useful for data
 analysis, such as a context-sensitive measure of similarity.
 
 Below are a collection of queries that can be answered using semantics from the
-GPM interface. Consider a GPM $\mathcal{G}$ ascribing to either the primitive or
+GPM interface. Consider a GPM $\G$ ascribing to either the primitive or
 adaptive GPM interface.
 
 \begin{enumerate}
 
 \item $\set{I_k} = \texttt{CMI}(
-    \mathcal{G},
+    \G,
     A = \set{(r_i^a,c_i^a)}_{i=1}^{|A|}, B = \set{(r_i^b,c_i^b)}_{i=1}^{|B|}, C
     = \set{(r_i^c,c_i^c)}_{i=1}^{|D|}, D =
     \set{(r_i^a,c_i^a,x_{(r_i^a,c_i^a)})}_{i=1}^{|D|},
@@ -584,7 +680,7 @@ adaptive GPM interface.
 
     Note that the samples are generated by invoking
     \begin{align*}
-    {\tt simulate(} \mathcal{G},
+    {\tt simulate(} \G,
     {\tt targets} = \set{(r^*,c_i^a)} \cup \set{r^*,c_i^b} \cup \set{r^*,c_i^c},\\
     {\tt givens} = \set{(r_i^b,c_i^b,x_{(r_i^b,c_i^b)})},
     {\tt size} = 1)
@@ -592,7 +688,7 @@ adaptive GPM interface.
 
     The log densities are evaluated by invoking
     \begin{align*}
-    {\tt logpdf(} \mathcal{G}, {\tt targets} = \set{(r^*,c_i^a,\hat{a}_{j,i})}
+    {\tt logpdf(} \G, {\tt targets} = \set{(r^*,c_i^a,\hat{a}_{j,i})}
     \cup\set{r^*,c_i^b,\hat{b}_{j,i}}\cup\set{r^*,c_i^c,,\hat{b}_{j,i}},\\
     {\tt  givens} = \set{(r_i^b,c_i^b,x_{(r_i^b,c_i^b)})}, {\tt size} = 1)
     \end{align*}
@@ -603,7 +699,7 @@ adaptive GPM interface.
     \texttt{simulate}. Is this an equivalent implementation?
     \end{excercise}
 
-\item $p = \texttt{marginal-dependence-prob}(\mathcal{G},
+\item $p = \texttt{marginal-dependence-prob}(\G,
     \texttt{colA}=c_i,
     \texttt{colB}=c_j,
     \texttt{accuracy}=N)$
@@ -617,7 +713,7 @@ adaptive GPM interface.
     unconditionally independent.
 
     \begin{align*}
-    \mathbb{P}_\mathcal{G}\set{I(\mathbf{X}_{r^*,c_i} : \mathbf{X}_{r^*,c_j} = 0)}
+    \mathbb{P}_\G\set{I(\mathbf{X}_{r^*,c_i} : \mathbf{X}_{r^*,c_j} = 0)}
     \end{align*}
 
     Given that mutual information is zero if and only the two variables are
@@ -629,7 +725,7 @@ adaptive GPM interface.
 
         \begin{align*}
         \set{I_k} = {\tt CMI}(
-        \mathcal{G},
+        \G,
         A = \set{(r_i^*,c_i)}, B = \set{(r_i^*,c_j)}, C = \emptyset, D =
         \emptyset,\\ {\tt accuracy} = N, {\tt size} = N)
         \end{align*}
@@ -641,7 +737,7 @@ adaptive GPM interface.
         \end{align*}
     \end{algorithm}
 
-\item $r^2 = \texttt{marginal-dependence-magnitude}(\mathcal{G},
+\item $r^2 = \texttt{marginal-dependence-magnitude}(\G,
     \texttt{colA}=c_i,
     \texttt{colB}=c_j,
     \texttt{accuracy}=N)$
@@ -673,7 +769,7 @@ adaptive GPM interface.
         sparse and uninsightful, and give the implication that continuous
         variables are more dependent than categorical ones.}
 
-\item $r^2 = \texttt{generative-similarity}(\mathcal{G},
+\item $r^2 = \texttt{generative-similarity}(\G,
     \texttt{context-vars} = \set{c_i},
     \texttt{rowA}=r_i,
     \texttt{rowB}=r_j,
