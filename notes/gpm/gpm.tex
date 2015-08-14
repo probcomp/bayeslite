@@ -63,6 +63,14 @@ the parameterization is fixed.\footnote{One plausible scenario in
   externally from BayesDB.  A user may decide to import such a GPM
   into BayesDB, without providing a hook for BayesDB to adapt it.}
 
+\todo[inline]{
+BayesDB admits the notion of a \emph{conditional GPM} that treats some
+attributes as unmodeled inputs, and specifies a probability
+distribution on other attributes (see Section~\ref{sec:generators} for
+details).  The Minimal Modeling Language (Section~\ref{sec:mml}) permits specifying complete GPMs as
+directed, acycling compositions of
+such objects (on the columns).}
+
 In typical applications we are interested in \textit{learning
 the GPM from data}. For example, this might be learning the specific
 parameters $\theta$ given a fixed generative process $M_i$, or learning the
@@ -142,6 +150,7 @@ effort.
 \end{example}
 
 \subsection{The Minimal Modeling Language}
+\label{sec:mml}
 
 The BayesDB Minimal Modeling Language (MML) provides a framework for
 associating various GPMs with data tables stored in BayesDB, and
@@ -219,8 +228,9 @@ $\mathbf{X}$ with a finite number of columns $D$ (representing attributes) and
 an infinite number of rows (representing members of the population). A finite
 number of rows $r_i \in
 \set{1,\dots,N}$ are actually observed, so $\mathbf{X}$ is stored in BayesDB as
-an $N \times D$ table. Hypothetical members are indexed by drawing a row index
-$r^*\sim U[0,1]$, which guarantees their uniqueness.
+an $N \times D$ table. Hypothetical members may be referenced by any other row index,
+for example by drawing a random real row index
+$r^*\sim U[0,1]$.
 
 \begin{discussion} \label{disc:iid} Technical Aside On IID Rows
 
@@ -229,7 +239,7 @@ population are independent and identically distributed. While a particular
 generator is free to make any assumptions about its population, the IID
 assumption is a strong one. The default generator (and almost any generator
 being learned under the Bayesian framework) will usually assume that the rows
-are not IID but exchangeably coupled. Di Finetti's theorem guarantees that there
+are not IID but exchangeably coupled. De Finetti's theorem guarantees that there
 exists a mixture of random measures $\set{\mathcal{G}_\alpha}$ (which in most
 cases is indexed by the latent state of the GPM) where the population is
 conditionally IID.
@@ -237,7 +247,7 @@ conditionally IID.
 $$p(\mathbf{X}) = \int_\alpha{(\Pi_{i=1}^Np(\mathbf{X}_i|\mathcal{G}_\alpha))d
 \mathcal{Q}(\mathcal{G}_\alpha)}$$
 
-The Di Finetti measure $\mathcal{Q}$ is the object which defines a distribution
+The De Finetti measure $\mathcal{Q}$ is the object which defines a distribution
 over the (fixed) measures (GPMs) that produce a statistical population. In this
 sense, $\mathcal{Q}$ represents the adaptive GPM.
 
@@ -246,9 +256,17 @@ sense, $\mathcal{Q}$ represents the adaptive GPM.
 Generative population models provide the primitive statistical inferences that
 are used by BayesDB to implement inferential queries in BQL. To support all of
 BQL, a GPM must provide the ability to \textbf{sample from} and \textbf{evaluate
-the log density} of all possible marginal distributions subject to equality
-constraints for arbitrary subsets of variables. The interface for
-\textit{initializing} and \textit{querying} GPMs is outlined below.
+the log density of}\footnote{With respect to counting measure for variables of
+discrete statistical types and Lebesgue measure for continuous}
+all possible marginal distributions subject to equality
+constraints for arbitrary subsets of variables.
+
+\subsection{Non-Adaptive GPMs}
+
+Since non-adaptive GPMs are by assumption IID on the individuals in
+the population, they admit a simpler interface than adaptive ones.  As
+such we present it first, and defer the generalization to
+Section~\ref{sec:adaptive_gpm}.
 
 \begin{enumerate}
 
@@ -258,53 +276,61 @@ constraints for arbitrary subsets of variables. The interface for
     $\mathcal{G}$.
 
     Each GPM is initialized with a \textit{schema} $\Lambda=$\path{(typed-
-    outputs, typed-inputs, body)}. The \path{typed- outputs} component species
+    outputs, typed-inputs, body)}. The \path{typed- outputs} component specifies
     the column indexes and statistical types of each column that the GPM will be
     responsible for generating. The \path {typed-inputs} component specifies the
-    indexes and statistical types of columns that the data generator can read
-    from. The \path{body} is an opaque binary that contains any generator
-    specific configuration information, such as a probabilistic program.
+    indexes and statistical types of columns that the GPM can read
+    from.  If this set is non-empty, the GPM is \emph{conditional}.
+    The \path{body} is a GPM-specific blob (opaque to BayesDB) that contains any
+    desired configuration information.
 
-\item \texttt{$\set{\vec{s}_i}_{i=1}^N$ =
-    simulate($\mathcal{G}$, targets = $\set{(r_i^t,c_i^t)}_{i=1}^{|T|}$, givens
-    = $\set{(r_i^g, c_i^g, x_{(r_i^g, c_i^g)})}_{i=1}^{|G|}$, samples = $N$)}
+\item \texttt{$\vec{s}_i$ =
+    simulate($\mathcal{G}$, row = $i$, targets = $\set{c_j}_{j=1}^{|T|}$, givens
+    = $\set{(c_k, x_{ik})}_{k=1}^{|G|}$)}
 
-    Generate $N$ samples from the specified conditional distribution.
+    Generate a sample from the specified conditional distribution on columns:
     $$
-    \set{\vec{s}_i}_{i=1}^N \sim p( \set{ \mathbf{X}_{(r_i^t,c_i^t)} } |
-    \set{ \mathbf{X}_{(r_i^g,c_i^g)} = x_{(r_i^g,c_i^g)} }, \mathcal{G})
+    \vec{s} \sim p( \set{ \mathbf{X}_{ij} } |
+    \set{ \mathbf{X}_{ik} = x_{ik} }, \mathcal{G}).
     $$
 
-    Note that each $\vec{s}_i$ is a $|T|$ dimensional vector
+    The returned $\vec{s}$ is a $|T|$ dimensional vector.
 
 \item \texttt{$\log p$ =
-    logpdf($\mathcal{G}$, targets = $\set{(r_i^t, c_i^t, x_{(r_i^t,
-    c_i^t)})}_{i=1}^{|T|}$, givens = $\set{(r_i^g, c_i^g, x_{(r_i^g,
-    c_i^g)})}_{i=1}^{|G|}$}
+    logpdf($\mathcal{G}$, row = $i$, targets = $\set{(c_j, x_{ij})}_{j=1}^{|T|}$,
+    givens = $\set{(c_k, x_{ik})}_{k=1}^{|G|}$)}
 
     Evaluate the log probability density of the specified conditional
-    distribution at a target point.
+    distribution on columns at a target point:
 
     $$
-    \log p = p( \set{ \mathbf{X}_{(r_i^t,c_i^t)} = x_{(r_i^t,c_i^t)} } |
-    \set{ \mathbf{X}_{(r_i^g,c_i^g)} = x_{(r_i^g,c_i^g)} }, \mathcal{G})
+    \log p = p( \set{ \mathbf{X}_{ij} = x_{ij} } |
+    \set{ \mathbf{X}_{ik} = x_{ik} }, \mathcal{G}).
     $$
+
+    The density is interpreted as marginalizing out all random
+    variables that are not mentioned.
 
 \end{enumerate}
 
-For a BayesDB table $\mathbf{X}$ with $D$ columns and $N$ rows, the allowed
-values for the indexes are
-    \subitem $c_i \in \set{1,\dots,D}$
-    \subitem $r_i \in \set{1,\dots,N} \cup [0,1]$
+The column indexes $c_j, c_k$ referred to above must refer to columns
+present in the table---the MML does not have a notion of hypothetical
+columns.  Further, the \texttt{target} indexes must be a subset of the
+columns in the \texttt{typed-outputs} of the GPM $\mathcal{G}$, and
+the \texttt{given} indexes of each query must be a superset of the
+\texttt{typed-inputs} of the GPM $\mathcal{G}$.  Note: A client may
+specify some of the \texttt{typed-outputs} as \texttt{given} in any
+given query.  Doing so picks out a conditional version of the output
+distribution.
 
-The implications of this restriction are that the MML does not have a notion of
-a hypothetical column. The row indexes in $\set{1,\dots,N}$ correspond to
-observed rows, while $r_i \in [0,1]$ are hypothetical members whose uniqueness
-is guaranteed by simulating from the uniform distribution on the unit interval.
-
-While the requirement that the GPM should respond to questions about arbitrary
-cells in the random table may appear overwhelmingly complex, the structure of
-most GPMs induces several internal simplifications.
+The row index $i$ may either refer to an individual in the
+table, or a hypothetical individual.  In the former case, the
+distribution being sampled or assessed is taken as conditional on
+whatever latent information is available about that individual, but
+\emph{not on any attributes stored in the table} except as repeated in
+the \texttt{givens}.  In the latter case, the distribution is taken to
+refer to a fresh individual (i.e., marginalizing out any
+per-individual latent structure).
 
 \section{Extended Interface for Adaptive Generative Population Models}
 \label{sec:adaptive_gpm}
@@ -351,6 +377,31 @@ below:
     query arbitrary patterns of population members. Otherwise several important
     queries would be ill-defined (for instance, simulating an output without
     conditioning on an input).}
+
+\item \texttt{$\set{\vec{s}_i}_{i=1}^N$ =
+    simulate($\mathcal{G}$, targets = $\set{(r_i^t,c_i^t)}_{i=1}^{|T|}$, givens
+    = $\set{(r_i^g, c_i^g, x_{(r_i^g, c_i^g)})}_{i=1}^{|G|}$, samples = $N$)}
+
+    Generate $N$ samples from the specified conditional distribution.
+    $$
+    \set{\vec{s}_i}_{i=1}^N \sim p( \set{ \mathbf{X}_{(r_i^t,c_i^t)} } |
+    \set{ \mathbf{X}_{(r_i^g,c_i^g)} = x_{(r_i^g,c_i^g)} }, \mathcal{G})
+    $$
+
+    Note that each $\vec{s}_i$ is a $|T|$ dimensional vector.
+
+\item \texttt{$\log p$ =
+    logpdf($\mathcal{G}$, targets = $\set{(r_i^t, c_i^t, x_{(r_i^t,
+    c_i^t)})}_{i=1}^{|T|}$, givens = $\set{(r_i^g, c_i^g, x_{(r_i^g,
+    c_i^g)})}_{i=1}^{|G|}$}
+
+    Evaluate the log probability density of the specified conditional
+    distribution at a target point.
+
+    $$
+    \log p = p( \set{ \mathbf{X}_{(r_i^t,c_i^t)} = x_{(r_i^t,c_i^t)} } |
+    \set{ \mathbf{X}_{(r_i^g,c_i^g)} = x_{(r_i^g,c_i^g)} }, \mathcal{G})
+    $$
 
 \item \texttt{incorporate(value = $(r_j,c_j,x_{(r_j,c_j)})$)}
 
