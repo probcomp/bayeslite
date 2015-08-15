@@ -185,6 +185,23 @@ INSERT INTO bayesdb_crosscat_diagnostics
 DROP TABLE bayesdb_crosscat_diagnostics_temp;
 '''
 
+crosscat_schema_5to6 = '''
+UPDATE bayesdb_metamodel SET version = 6 WHERE name = 'crosscat';
+
+CREATE TABLE bayesdb_crosscat_dep_constraints (
+    generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    colno0  INTEGER NOT NULL,
+    colno1  INTEGER NOT NULL
+    -- TODO FOREIGN KEY REFERENCE
+);
+CREATE TABLE bayesdb_crosscat_indep_constraints (
+    generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    colno0  INTEGER NOT NULL,
+    colno1  INTEGER NOT NULL
+    -- TODO FOREIGN KEY REFERENCE
+);
+'''
+
 class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
     """Crosscat metamodel for BayesDB.
 
@@ -299,6 +316,25 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 (repr(generator), modelno))
         else:
             theta = json.loads(row[0])
+            # # XXX BEGIN HACK XXX
+            # # JSON dumps integer keys as strings. This causes problems since
+            # # the col_ensure data structure is c_map[int, vector[int]]
+            # # this means that we need this snippet:
+            # # u'col_ensure': {u'dependent': {u'1': [0], u'0': [1]}...
+            # # to be:
+            # # u'col_ensure': {u'dependent': {1: [0], 0: [1]}...
+            # # Riastradh, let us figure out a good way to do this.
+            # import ipdb; ipdb.set_trace()
+            # if 'col_ensure' in theta['X_L']:
+            #     for key in ['dependent', 'independent']:
+            #         # JSON dumps empty dict() as None, giving SEGFAULT in cpp
+            #         if theta['X_L']['col_ensure'][key] is None:
+            #             theta['X_L']['col_ensure'][key] = dict()
+            #         else:
+            #             theta['X_L']['col_ensure'][key] = \
+            #                 {int(k):v for (k,v) in \
+            #                 theta['X_L']['col_ensure'][key].items()}
+            # # XXX END HACK XXX
             if cc_cache is not None:
                 if generator_id in cc_cache.thetas:
                     assert modelno not in cc_cache.thetas[generator_id]
@@ -467,7 +503,11 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 for stmt in crosscat_schema_4to5.split(';'):
                     bdb.sql_execute(stmt)
                 version = 5
-            if version != 5:
+            if version == 5:
+                for stmt in crosscat_schema_5to6.split(';'):
+                    bdb.sql_execute(stmt)
+                version = 6
+            if version != 6:
                 raise BQLError(bdb, 'Crosscat already installed'
                     ' with unknown schema version: %d' % (version,))
 
@@ -700,9 +740,19 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             initialization=model_config['initialization'],
             row_initialization=model_config['row_initialization'],
         )
+        # XXX HACK Ensure dependent columns.
         if len(modelnos) == 1:  # XXX Ugh.  Fix crosscat so it doesn't do this.
             X_L_list = [X_L_list]
             X_D_list = [X_D_list]
+        X_L_list, X_D_list = self._crosscat.ensure_col_dep_constraints(
+            M_c=M_c,
+            M_r=None,
+            T=self._crosscat_data(bdb, generator_id, M_c),
+            X_L=X_L_list,
+            X_D=X_D_list,
+            dep_constraints=[(0,1,1)]
+            )
+        import ipdb; ipdb.set_trace()
         insert_theta_sql = '''
             INSERT INTO bayesdb_crosscat_theta
                 (generator_id, modelno, theta_json)
