@@ -56,7 +56,8 @@ a population $\mathbf{X}$: The individuals $\mathbf{X_i}$ are taken to
 be independently identically distributed according to a mixture of two
 normal distributions
 
-\[ p_\mathbf{X_i}(x) = w_1\mathcal{N}(x;\mu_1,\Sigma_1) + w_2\mathcal{N}(x;\mu_2,\Sigma_2) \]
+\[ p_\mathbf{X_i}(x) = w_1\mathcal{N}(x;\mu_1,\Sigma_1) +
+ w_2\mathcal{N}(x;\mu_2,\Sigma_2) \]
 
 with fixed parameterization $(w_1, \mu_1, \Sigma_1, w_2, \mu_2, \Sigma_2)$.
 \end{example}
@@ -109,7 +110,8 @@ Bayesian model derived from CrossCat.
 
 \begin{example} \label{ex:crosscat} CrossCat
 
-A cross-categorization of a data table $\mathbf{X}$ with $D$ columns and $N$ rows is
+A cross-categorization of a data table $\mathbf{X}$ with $D$ columns and $N$ 
+rows is
 a partition of the columns $(X_1,\dots,X_D)$ into blocks called \textit{views}.
 In each view, we have a partition of the rows $(X_1^{i},\dots,X_D^{i})_{i=1}^N$
 into blocks called \textit{categories}.
@@ -203,7 +205,7 @@ Generative population models provide the primitive statistical inferences that
 are used by BayesDB to implement inferential queries in BQL. To support all of
 BQL, a GPM must provide the ability to \textbf{sample from} and \textbf{evaluate
 the log density of}\footnote{With respect to counting measure for variables of
-discrete statistical types and Lebesgue measure for continuous}
+discrete statistical types and Lebesgue measure for continuous.}
 all possible marginal distributions subject to equality
 constraints for arbitrary subsets of variables.
 
@@ -231,7 +233,7 @@ Section~\ref{sec:adaptive_gpm}.
     The \path{body} is a GPM-specific blob (opaque to BayesDB) that contains any
     desired configuration information.
 
-\item \texttt{$\vec{s}_i$ =
+\item \texttt{$\vec{s}$ =
     simulate($\G$, row = $i$, targets = $\set{c_j}_{j=1}^{|T|}$, givens
     = $\set{(c_k, x_{ik})}_{k=1}^{|G|}$)}
 
@@ -251,7 +253,7 @@ Section~\ref{sec:adaptive_gpm}.
     distribution on columns at a target point:
 
     $$
-    \log p = p( \set{ \mathbf{X}_{ij} = x_{ij} } |
+    \log p = \log p( \set{ \mathbf{X}_{ij} = x_{ij} } |
     \set{ \mathbf{X}_{ik} = x_{ik} }, \G).
     $$
 
@@ -285,7 +287,7 @@ per-individual latent structure).
 \label{sec:formalism-adaptive-gpm}
 
 As outlined in Section \ref{sec:overview}, some GPMs can be learned
-from observations $\{x_{ij}\}$ of a statistical population
+from observations $\set{\mathbf{X}_{ij} = x_{ij}}$ of a statistical population
 $\mathbf{X}$.  Since we permit the learning to itself be stochastic,
 the general case is a family of conditional probability distributions
 (of learning results) for all possible sets of observations.  Formally:
@@ -298,18 +300,35 @@ $\Pi(\G_\alpha|\{\mathbf{X}_{ij} = x_{ij}\})$, for all possible
 observation sets $\{x_{ij}\}$.
 \end{definition}
 
+\todo[inline]{Figure out whether we want the Adaptive GPM to be defined as a 
+family of  conditional distributions $\Pi\set{\mathcal{G}_\alpha}$ indexed by 
+$\alpha$, or just define it as  $\Pi$, which is the distribution over the
+$\mathcal{G}_\alpha$.}
+
 \begin{example} Linear Regression
 
-Linear regression (with a fixed noise model $\mathcal{N}$) can be viewed as a
+Linear regression (with a fixed noise model $\mathcal{E}$) can be viewed as a
 conditional adaptive GPM over the class of non-adaptive GPMs
 parameterized by the possible regression coefficients $\vec\beta_j$.
 For input columns $\{x_j\}$ and output column $y$,
 the update rule corresponding to maximum likelihood estimation would be
 
-\[ \vec\beta_j^*|\{x_{ij}, y_i\} = \argmax_{\vec\beta_j^*} \sum_i p_{\mathcal{N}}(y_i - x_{ij}^T \beta_j^*). \]
+\[ \vec\beta_j^*|\{x_{ij}, y_i\} = \argmax_{\vec\beta_j^*} \sum_i 
+p_{\mathcal{E}}(y_i - x_{ij}^T \beta_j^*). \]
 
-The \texttt{simulate} and \texttt{logpdf} methods would refer to the
+The {\tt simulate} and {\tt logpdf} methods would refer to the
 noise distribution around the predicted value for $y$.
+
+\todo[inline]{Clear up this notation.
+    How can $x_{ij}$, which is just a cell, have a vector operation?
+    What is $j$ indexing?
+    We seem to maximize the probability of the noise by subtracting the
+    observation from the conditional mean. The more natural
+    way to express the MLE is maximize the observation $y_i$ conditioned
+    on the data, ie $p(y_i|x_i\beta)$. Although the noise model $\mathcal{E}$
+    is fixed, we still do not know the parameters $\sigma$ of the noise,
+    and that is typically learned from data as well.
+    We are also overloading $\set{x_j}$ to mean columns, observations, etc.}
 \end{example}
 
 \begin{example} Exact Bayesian Adaptive GPMs
@@ -319,10 +338,18 @@ For any GPM class $\{\G_\alpha\}$, an \emph{exact Bayesian adaptive
 $\Pi(\G_\alpha)$ over
 $\{\G_\alpha\}$, and the adaptation rule
 
-\[ \Pi(\G_\alpha|\{\vec{x}_{ij}\}) \propto \Pi(\G_\alpha) p(\{\vec{x}_{ij}\}|\G_\alpha), \]
+\[ \Pi(\G_\alpha|\set{\mathbf{X}_{ij} = x_{ij}}) \propto \Pi(\G_\alpha)
+ p(\set{\mathbf{X}_{ij} = x_{ij}}|\G_\alpha), \]
 
-where $p(.|\G_\alpha)$ is the probability of the observed data under
+where $p(\cdot|\G_\alpha)$ is the probability of the observed data under
 the particular GPM $\G_\alpha$. \label{ex:exact-bayes}
+
+\todo[inline]{I killed the vector notation which I discourage from
+    using, especially when coupling a vector with two subscripts and
+    throwing it inside a set.
+    I brought back the $\mathbf{X}$ the random 
+    table, to keep it at the forefront. The table
+    is essential to discussion of GPMs, and is a familiar notation.}
 \end{example}
 
 \subsection{Incremental Adaptive GPMs}
@@ -341,7 +368,7 @@ parameter to the adaptation rule:
 
 An \emph{Incremental Adaptive Generative Population Model} over a
 class of GPMs $\{\G_\alpha\}$ is a family of conditional probability
-distributions $\Pi_n(\G_\alpha|\{\mathbf{X}_{ij} = x_{ij}\})$, for all
+distributions $\Pi_n(\G_\alpha|\set{\mathbf{X}_{ij} = x_{ij}})$, for all
 possible observation sets $\{x_{ij}\}$ and all positive integers $n$,
 where increasing $n$ represents increasing computational
 cost.\footnote{In Section~\ref{sec:adaptive_gpm} we will specify a
@@ -359,7 +386,8 @@ $\{\G_\alpha\}$, a data-dependent transition operator
 $\T_{\{\vec{x}_{ij}\}}$ over $\{\G_\alpha\}$, and
 an adaptation rule that consists of iterating $\T$:
 
-\[ \Pi_n(\G_\alpha|\{\vec{x}_{ij}\}) = \T_{\{\vec{x}_{ij}\}}^n \Pi(\G_\alpha). \]
+\[ \Pi_n(\G_\alpha|\set{\mathbf{X}_{ij} = x_{ij}}) = \T_{\set{x_{ij}}}^n 
+\Pi(\G_\alpha). \]
 \label{ex:markov-bayes}
 \end{example}
 
@@ -368,7 +396,8 @@ converges to the true posterior, that is if
 
 \[ \lim_{n\to\infty}D_{KL}(\Pi^*(\G_\alpha) \| \Pi_n(\G_\alpha|\{\vec{x}_{ij}\})) = 0, \]
 
-where $\Pi^*(\G_\alpha|\{\vec{x}_{ij}\}) \propto \Pi(\G_\alpha) p(\{\vec{x}_{ij}\}|\G_\alpha)$
+where $\Pi^*(\G_\alpha|\set{\mathbf{X}_{ij}=x_{ij}}) \propto 
+\Pi(\G_\alpha) p(\set{\mathbf{X}_{ij}=x_{ij}}|\G_\alpha)$
 as in the exact Bayes case (Example~\ref{ex:exact-bayes}).
 If the true data distribution falls into the hypothesis class given by
 the prior $\Pi$, this will also be \emph{asymptotically consistent} in
@@ -422,6 +451,9 @@ optimization.
     \texttt{initialize} operation for non-adaptive GPMs.  The distribution $\Pi$
     on adaptations is taken to be conditioned on the empty set of observations
     $\Pi(\G_\alpha|\{\})$.
+    
+    \todo[inline]{I take it the last sentence is just a fancy way to say ``the 
+    prior"?}
 
 \item \texttt{$\vec{s}$ =
     simulate($\G$, targets = $\set{(r_j,c_j)}_{j=1}^{|T|}$, givens
@@ -439,6 +471,8 @@ optimization.
     (Section~\ref{sec:non-adaptive_gpm}), row indexes control conditioning
     or lack thereof on per-individual latent structure, but all conditioning
     on manifest structure is determined by the \texttt{givens}.
+    
+    \todo[inline]{This is as far as we have reached with the rewrite.}
 
 \item \texttt{$\log p$ =
     logpdf($\G$, targets = $\set{(r_j, c_j, x_{r_jc_j})}_{j=1}^{|T|}$,
