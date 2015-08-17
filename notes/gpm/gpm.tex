@@ -604,26 +604,23 @@ all of the GPMs in the ensemble.
 More elaborate methods such as likelihood weighting or particle
 filtering ensembles are possible extensions.
 
-\section{Characterizing Probabilistic Dependence}
+\section{Derived Functions}
 
-Many analysis subproblems correspond directly to invocations of the GPM
-interface. For example, missing or unknown values can be inferring an set of
-results via \texttt{simulate} and reducing these to a point estimate. MAP
-prediction can be approximated the single result with the highest likelihood
-under \texttt{logpdf}.
+The operations \texttt{simulate} and \texttt{logpdf} are directly
+accessible to BQL programs via the \texttt{SIMULATE} and
+\texttt{PROBABILITY OF} syntax.  Other query functions may be
+implemented generically in terms of \texttt{simulate} and
+\texttt{logpdf}; though many of them may also have more efficient
+short-cut implementations that are specific to the structure of a
+given GPM.  This section lists the derived functions, their
+definitions, and default implementations provided by BayesDB.
 
-The GPM interface is also sufficient to implement generic mechanisms for
-characterizing context-specific conditional dependence and independence. This
-mechanism can be used to implement additional measures that are useful for data
-analysis, such as a context-sensitive measure of similarity.
+\todo[inline]{What time/accuracy knobs should be exposed in the
+  interfaces?}
 
-Below are a collection of queries that can be answered using semantics from the
-GPM interface. Consider a GPM $\G$ ascribing to either the primitive or
-adaptive GPM interface.
+\subsection{Conditional Mutual Information}
 
-\begin{enumerate}
-
-\item $\set{I_k} = \texttt{CMI}(
+ $\set{I_k} = \texttt{CMI}(
     \G,
     A = \set{(r_i^a,c_i^a)}_{i=1}^{|A|}, B = \set{(r_i^b,c_i^b)}_{i=1}^{|B|}, C
     = \set{(r_i^c,c_i^c)}_{i=1}^{|D|}, D =
@@ -698,7 +695,9 @@ adaptive GPM interface.
     \texttt{simulate}. Is this an equivalent implementation?
     \end{excercise}
 
-\item $p = \texttt{marginal-dependence-prob}(\G,
+\subsection{Marginal Dependence Probability}
+
+ $p = \texttt{marginal-dependence-prob}(\G,
     \texttt{colA}=c_i,
     \texttt{colB}=c_j,
     \texttt{accuracy}=N)$
@@ -736,7 +735,9 @@ adaptive GPM interface.
         \end{align*}
     \end{algorithm}
 
-\item $r^2 = \texttt{marginal-dependence-magnitude}(\G,
+\subsection{Marginal Dependence Magnitue}
+
+ $r^2 = \texttt{marginal-dependence-magnitude}(\G,
     \texttt{colA}=c_i,
     \texttt{colB}=c_j,
     \texttt{accuracy}=N)$
@@ -768,7 +769,9 @@ adaptive GPM interface.
         sparse and uninsightful, and give the implication that continuous
         variables are more dependent than categorical ones.}
 
-\item $r^2 = \texttt{generative-similarity}(\G,
+\subsection{Generative Similarity}
+
+  $r^2 = \texttt{generative-similarity}(\G,
     \texttt{context-vars} = \set{c_i},
     \texttt{rowA}=r_i,
     \texttt{rowB}=r_j,
@@ -779,7 +782,14 @@ adaptive GPM interface.
     latent structure of the GPM, that
     \texttt{rowA} and \texttt{rowB} are identically distributed conditioned on
     \texttt{context-vars}.
-    \end{enumerate}
+
+\subsection{Imputation}
+
+\subsection{Correlation}
+
+\subsection{Typicality}
+
+\subsection{Column Similarity}
 
 \section{TODOs}
 
