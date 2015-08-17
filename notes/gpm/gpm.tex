@@ -255,8 +255,10 @@ Section~\ref{sec:adaptive_gpm}.
     \set{ \mathbf{X}_{ik} = x_{ik} }, \G).
     $$
 
-    The density is interpreted as marginalizing out all random
-    variables that are not mentioned.
+    The density is with respect to a product of counting and Lebesgue
+    measures, correspoding to discrete and continuous statistical
+    types for the relevant columns.  The distribution is interpreted
+    as marginalizing out all random variables that are not mentioned.
 
 \end{enumerate}
 
@@ -335,12 +337,17 @@ superior quality of adaptation.  Formally this involves adding a ``fuel''
 parameter to the adaptation rule:
 
 \begin{definition} Incremental Adaptive Generative Population Model
+\label{def:incremental-adaptive}
 
-An \emph{Incremental Adaptive Generative Population Model} over a class of GPMs
-$\{\G_\alpha\}$ is a family of conditional probability distributions
-$\Pi_n(\G_\alpha|\{\mathbf{X}_{ij} = x_{ij}\})$, for all possible
-observation sets $\{x_{ij}\}$ and all positive integers $n$, where increasing
-$n$ represents increasing computational cost.
+An \emph{Incremental Adaptive Generative Population Model} over a
+class of GPMs $\{\G_\alpha\}$ is a family of conditional probability
+distributions $\Pi_n(\G_\alpha|\{\mathbf{X}_{ij} = x_{ij}\})$, for all
+possible observation sets $\{x_{ij}\}$ and all positive integers $n$,
+where increasing $n$ represents increasing computational
+cost.\footnote{In Section~\ref{sec:adaptive_gpm} we will specify a
+  somewhat more flexible interface to learning than iterating a single
+  transition operator, but spelling that out at this point would be
+  needlessly notationally cumbersome.}
 \end{definition}
 
 \begin{example} Bayesian Markov Adaptive GPMs
@@ -434,50 +441,75 @@ optimization.
     on manifest structure is determined by the \texttt{givens}.
 
 \item \texttt{$\log p$ =
-    logpdf($\G$, targets = $\set{(r_i^t, c_i^t, x_{(r_i^t,
-    c_i^t)})}_{i=1}^{|T|}$, givens = $\set{(r_i^g, c_i^g, x_{(r_i^g,
-    c_i^g)})}_{i=1}^{|G|}$}
+    logpdf($\G$, targets = $\set{(r_j, c_j, x_{r_jc_j})}_{j=1}^{|T|}$,
+    givens = $\set{(r_k, c_k, x_{r_kc_k})}_{k=1}^{|G|}$)}
 
     Evaluate the log probability density of the specified conditional
-    distribution at a target point.
+    distribution on cells at a target point.
 
     $$
-    \log p = p( \set{ \mathbf{X}_{(r_i^t,c_i^t)} = x_{(r_i^t,c_i^t)} } |
-    \set{ \mathbf{X}_{(r_i^g,c_i^g)} = x_{(r_i^g,c_i^g)} }, \G)
+    \log p = p( \set{ \mathbf{X}_{r_jc_j} = x_{r_jc_j} } |
+    \set{ \mathbf{X}_{r_kc_k} = x_{r_kc_k} }, \G)
     $$
 
-\item \texttt{incorporate($\G$, value = $(r_j,c_j,x_{(r_j,c_j)})$)}
+    As in the non-adaptive case, the density is with respect to a
+    product of counting and Lebesgue measures, correspoding to
+    discrete and continuous statistical types for the relevant
+    columns.  The distribution is interpreted as marginalizing out all
+    random variables that are not mentioned.
 
-    Records an observation $x_{(r_j,c_j)}$ in the cell $\mathbf{X_{r_j,c_j}}$.
-    If there is no row $r_j$, a new one will be created.
+\item \texttt{incorporate($\G$, value = $(i, j, x_{ij})$)}
 
-    Errors result from overwriting existing cells, or inserting values
-    $x_{(r_j,c_j)}$ incompatible with the meta-schema $\Lambda$ (for example
-    providing a wrong data type).
+    Record an observation $x_{ij}$ in the cell $\mathbf{X_{ij}}$.
+    If there is no row $i$, create a new one.
 
-\item \texttt{remove($\G$, $(r_j,c_j$)}
+    It is an error for the client to overwrite existing cells, or to insert values
+    $x_{ij}$ incompatible with the schema $\Lambda$ (for example,
+    providing data of the wrong type).
 
-    Removes the observation $x_{(r_i,c_j)}$ stored in cell $\mathbf{X}_{ij}$.
+    Consecutive calls to \texttt{incorporate} (and \texttt{remove})
+    should commute.  In the case of incremental GPMs, intervening
+    \texttt{infer} is permitted to break commutativity.
+
+\item \texttt{remove($\G$, $(i, j)$)}
+
+    Remove the observation $x_{ij}$ stored in cell $\mathbf{X}_{ij}$.
+    Consecutive \texttt{remove} should exactly invert
+    \texttt{incorporate} on the same cell.  In the case of incremental
+    GPMs, intervening \texttt{infer} is permitted to change the
+    result.  (That is, \texttt{incorporate}, \texttt{infer}, \texttt{remove}
+    may be different from just the \texttt{infer}.)
 
 \item \texttt{infer($\G$, program = $\mathcal{P}$)}
 
-    Simulate an internal Markov chain transition operator $\mathcal{T}$ based on
-    the inference procedure specified in the program $\mathcal{P}$.
+    Adjust any internal latent state in accordance with the inference
+    procedure specified in the program $\mathcal{P}$.  To BayesDB, the
+    inference program is an opaque blob; the menu of accepted
+    inference programs is expected to be designed in tandem with the
+    \texttt{body} specified in the schema $\Lambda$.
 
-    This inference program is typically designed in cohesion with the
-    \texttt{body} specified in the schema $\Lambda$. Each run of \texttt{infer}
-    improves the quality of the posterior sample.
+    In the case where $\G$'s state is samples from the current state
+    of a Markov chain, $\mathcal{P}$ would specify application of a
+    transition operator.  If that operator were asymptotically
+    Bayesian, each run of \texttt{infer} would improve the quality
+    with which the distribution on sub-models $\{\G_\alpha\}$
+    approximates the posterior.
 \end{enumerate}
 
-Some Markov chain GPMs are \textit{asymptotically Bayesian}:
+Note that the interface specified above is somewhat more flexible than
+Definition~\ref{def:incremental-adaptive} given for incremental
+adaptive GPMs.  In particular:
 
-\begin{equation*}
-\lim_{t\to\infty}D_{KL}(p(\theta_\G|\mathbf{X_\G}) ||
-p(\mathcal{T}^t(\theta_\G))) = 0
-\end{equation*}
-
-A sufficiently expressive asymptotically Bayesian Markov chain GPM may also be
-\textit{asymptotically consistent} in the usual sense.
+\begin{itemize}
+\item Addition (and removal) of data may be interleaved with learning
+  and querying.
+\item A GPM may specify a menu of possible inference programs as
+  options for learning, in which case the learned distribution on
+  $\{\G_\alpha\}$ would depend on the sequence of arguments passed to invocations
+  of \texttt{infer} (and how they are interspersed with
+  \texttt{incorporate} and \texttt{remove}), rather than simply on
+  their count as Definition~\ref{def:incremental-adaptive} suggests.
+\end{itemize}
 
 \section{An Ensemble of Adaptive Generative Population Models}
 \label{sec:ensemble}
