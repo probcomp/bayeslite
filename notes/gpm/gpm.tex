@@ -657,7 +657,7 @@ adaptive GPM interface.
     I(A:B|C,D=d) &:=
         \int \log \frac{p_{C|D=d}(c) p_{A,B,C|D=d}(a,b,c)}
             {p_{A,C|D=d}(a,c) p_{B,C|D=d}(b,c)}dF_{A,B,C|D=d}(a,b,c)\\ & \approx
-        \sum_{(a,b,c)\in\set{(\hat{a}_j,\hat{b}_j,\hat{c}_j)}}
+        \sum_{(a,b,c)\in\set{(\hat{a}_j,\hat{b}_j,\hat{c}_j)}} \log
          \frac{p_{C|D=d}(\hat{c}_j)
          p_{A,B,C|D=d}(\hat{a}_j,\hat{b}_j,\hat{c}_j)}
          {p_{A,C|D=d}(\hat{a}_j,\hat{c}_j) p_{B,C|D=d}(\hat{b}_j,\hat{c}_j)}
