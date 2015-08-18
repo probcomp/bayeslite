@@ -719,44 +719,43 @@ dependent).
 
 \subsection{Marginal Dependence Magnitude}
 
-\todo[inline,color=red]{The content in this section is stale.
-  Dependence magnitude is kinda slippery.  It was supposed to be
-  mutual information, but that's information-theoretic strength of
-  dependence, not the ``effect size'' that people will think of given
-  this name.  There's also the question of conditioning it on being
-  non-zero with the above.}
+\todo[inline,color=red]{Dependence magnitude is slippery:}
 
- $r^2 = \texttt{marginal-dependence-magnitude}(\G,
-    \texttt{colA}=c_i,
-    \texttt{colB}=c_j,
-    \texttt{accuracy}=N)$
+We have consistently meant ``some normalized version of mutual
+information'', but:
+\begin{itemize}
+\item Mutual information measures how informative one variable is
+  about another; what people actually want when they ask for a
+  magnitude of dependence is ``effect size''---how much can pushing
+  one variable be expected to move another.  This is what correlation
+  coefficients and regression coefficients try to get at.
+\item Normalizing mutual information turns out to be non-trivial,
+  because the definition is fuzzy in the continuous case---it always
+  takes an infinite number of bits to exactly encode a continuous
+  value, so information gain is a strange concept.
+\end{itemize}
 
-    Computes an informational measure of correlation between
-    $\mathbf{X}_{r^*,c_i}$ and $\mathbf{X}_{r^*,c_j}$ based on EH Linfoot. The
-    implementation is straightforward.
+If we do mean ``some normalized version of mutual information'', the
+default implementation is straightforward once we select a
+normalization mechanism.  One historical choice would be the Linfoot
+measure:\footnote{http://www.sciencedirect.com/science/article/pii/S001999585790116X}
 
-    \begin{algorithm} \label{alg:linfoot} Compute a point estimate for the
-        mutual information $I_0$ between $\mathbf{X}_{r^*,c_i}$ and
-        $\mathbf{X}_{r^*,c_j}$ using an appropriate invocation of {\tt CMI}.
+\begin{align*}
+r^2 = \sqrt{1 - \exp{(-2I_0)}}
+\end{align*}
 
-        Return the Linfoot measure $r^2$
+Linfoot is normalized between 0 and 1, but there are some questionable
+properties.  For example, if $Y=g(X)$, Linfoot is not guaranteed to be
+1 (easy to construct an example in the discrete case).  Moreover, feedback
+from PPAML is that the z-matrices it produces are sparse and
+uninsightful, and give the implication that continuous variables are
+more dependent than categorical ones.
 
-        \begin{align*}
-        r^2 = \sqrt{1 - \exp{(-2I_0)}}
-        \end{align*}
-
-    \end{algorithm}
-
-    \todo[inline]{Should this function return a point estimate or a collection
-    of estimates?}
-    \todo[inline]{The Linfoot measure\\
-        http://www.sciencedirect.com/science/article/pii/S001999585790116X\\ is
-        what has been traditionally used by Bax. Linfoot is normalized between
-        [0,1] but there are some questionable properties, if $Y=g(X)$ Linfoot is
-        not guaranteed to be 1 (easy to construct example in discrete case).
-        Moreover feedback from PPAML is that the zmatrices it produces are
-        sparse and uninsightful, and give the implication that continuous
-        variables are more dependent than categorical ones.}
+\todo[inline]{Thought: If we already have probability of dependence,
+  magnitude of dependence may naturally read as ``assuming there is a
+  dependence'', which would suggest excluding ensemble members for
+  which the distributions register as independent from any averages
+  involving magnitudes.  Do we want to do that?}
 
 \subsection{Generative Similarity}
 
