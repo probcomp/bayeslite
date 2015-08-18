@@ -30,6 +30,23 @@
 
 \maketitle
 
+\todo[inline]{This is not a software spec.  That's probably best
+  written in software, perhaps referncing this document.  The software may
+  expand on this in a few places.  For example:
+  \begin{itemize}
+  \item bulk generation of multiple iid samples from the same distribution
+  \item specifying the data representation for collections of cells
+  \end{itemize}}
+
+\todo[inline]{I intentionally tried to include discriminative methods
+  as adaptive GPMs that may use non-Bayesian adaptation rules.  For
+  example, maximum likelihood estimation would be a perfectly good
+  (deterministic?) adaptive GPM.  Is this clear enough?}
+
+\todo[inline]{Missing data.  Should explicitly say somewhere that
+  missing data values are treated as ``no observation'', rather than
+  observing a sentinel and forcing the GPM to deal with it.}
+
 \section{Overview: Generative Population Models and the BayesDB Minimal Modeling Language}
 \label{sec:overview}
 
@@ -811,15 +828,6 @@ Actually, come to think of it, I think that arrangement requires no
 special provision by us: the user's GPM may treat a column in the
 table as the identity of an individual.}
 
-\todo[inline]{I intentionally tried to include discriminative methods
-  as adaptive GPMs that may use non-Bayesian adaptation rules.  For
-  example, maximum likelihood estimation would be a perfectly good
-  (deterministic?) adaptive GPM.  Is this clear enough?}
-
-\todo[inline]{Missing data.  Should explicitly say somewhere that
-  missing data values are treated as ``no observation'', rather than
-  observing a sentinel and forcing the GPM to deal with it.}
-
 \todo[inline]{Find a place for the ideas contained in this chunk of prize-winning text:}
 
 \begin{discussion} \label{disc:iid} Technical Aside On IID Rows
@@ -842,14 +850,6 @@ over the (fixed) measures (GPMs) that produce a statistical population. In this
 sense, $\mathcal{Q}$ represents the adaptive GPM.
 
 \end{discussion}
-
-\todo[inline]{This is not a software spec.  That's probably best
-  written in software, perhaps referncing this document.  The software may
-  expand on this in a few places.  For example:
-  \begin{itemize}
-  \item bulk generation of multiple iid samples from the same distribution
-  \item specifying the data representation for collections of cells
-  \end{itemize}}
 
 \todo[inline]{Issue: Do we want to specify simulate as auto-incorporating?  I.e.,
 all simulations are implicitly part of a multi-row simulate unless
