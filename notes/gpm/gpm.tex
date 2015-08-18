@@ -682,57 +682,42 @@ attributes corresponding to the desired columns.
 
 \subsection{Marginal Dependence Probability}
 
-\todo[inline,color=red]{Define dep prob as the probability under the
-  distribution over the class of GPMs that the requested variables are
-  indpendent in that member of the class.  (Note: probability only
-  arises because learning is stochastic; the confidence (in a
-  frequentist sense) that things are independent in the posterior
-  predictive is a different quantity).  Implement by invoking some
-  independence test (e.g., mutual information or KL-divergence) on
-  each element of an ensemble, and returning the proportion of
-  passes.  Possibly expand to conditional independence (via CMI),
-  possibly conditioned on cells having values.
-  The content currently in this section is stale.}
+\begin{definition} Dependence Probability
 
- $p = \texttt{marginal-dependence-prob}(\G,
-    \texttt{colA}=c_i,
-    \texttt{colB}=c_j,
-    \texttt{accuracy}=N)$
+The \emph{dependence probability} of random variables $A$ and $B$
+under a probability distribution $\Pi$ over GPMs $\set{\G_\alpha}$
+is the probability with respect to $\Pi$ that $A$ and $B$ are
+dependent in $\G_\alpha$.
+\end{definition}
 
-    \todo[inline]{Figure out how to allow the user to set a throttle for desired
-        accuracy. Here I am using a generic accuracy term both in marginal-
-        depprob and CMI}
+We speak of \emph{marginal} dependence probability because we
+marginalize out random variables other than $A$ and $B$.
 
-    Computes the probability, under the random latent structure of the GPM,
-    that the two variables $\mathbf{X}_{r^*,c_i}$ and $\mathbf{X}_{r^*,c_j}$ are
-    unconditionally independent.
+BayesDB can estimate the dependence probability of two cells under an
+ensemble GPM by querying each ensemble member for the (unconditional)
+mutual information of those two cells and returning the proportion of
+members where the result is non-zero (indicating dependence).
 
-    \begin{align*}
-    \mathbb{P}_\G\set{I(\mathbf{X}_{r^*,c_i} : \mathbf{X}_{r^*,c_j} = 0)}
-    \end{align*}
+Note: Dependence probability is well-defined for a deterministically
+adaptive GPM, but is always either zero or one (independent or
+dependent).
 
-    Given that mutual information is zero if and only the two variables are
-    statistically independent, the following simple Monte Carlo procedure is a
-    suggested implementation.
+\todo[inline]{The dependence probability of columns is the dependence
+  probability of those cells for (the same) fresh individual.}
 
-    \begin{algorithm} \label{alg:marginal_depprob} First obtain a set of mutual
-        information estimates by invoking {\tt CMI}
+\todo[inline]{Can generalize to dep-prob between any two sets of
+  cells, jointly; and/or dep-prob conditioned on any desired data}
 
-        \begin{align*}
-        \set{I_k} = {\tt CMI}(
-        \G,
-        A = \set{(r_i^*,c_i)}, B = \set{(r_i^*,c_j)}, C = \emptyset, D =
-        \emptyset,\\ {\tt accuracy} = N, {\tt size} = N)
-        \end{align*}
+\todo[inline]{Is there a meaningful concept of ``conditional
+  probability of dependence'' which would correspond to ``conditional
+  mutual information''?  For example, the probability over $c$ under
+  the distribution $C$ that A|C and B|C are dependent at $C=c$?}
 
-        Return the fraction of samples from $\set{I_k}$ for which the mutual
-        information is zero
-        \begin{align*}
-            p = \frac{1}{|\set{I_k}|}\sum_{k}{\mathbb{I}_{\set{0}}(I_k)}
-        \end{align*}
-    \end{algorithm}
+\todo[inline]{Dependence probability is not to be confused with
+  confidence (in a frequentist sense) that things are independent in
+  the posterior predictive.}
 
-\subsection{Marginal Dependence Magnitue}
+\subsection{Marginal Dependence Magnitude}
 
 \todo[inline,color=red]{The content in this section is stale.
   Dependence magnitude is kinda slippery.  It was supposed to be
