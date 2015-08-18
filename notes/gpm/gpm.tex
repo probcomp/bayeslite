@@ -181,27 +181,6 @@ an $N \times D$ table. Hypothetical members may be referenced by any other row i
 for example by drawing a random real row index
 $r^*\sim U[0,1]$.
 
-\begin{discussion} \label{disc:iid} Technical Aside On IID Rows
-
-The classical statistical framework generally assumes that all members of a
-population are independent and identically distributed. While a particular
-generator is free to make any assumptions about its population, the IID
-assumption is a strong one. The default generator (and almost any generator
-being learned under the Bayesian framework) will usually assume that the rows
-are not IID but exchangeably coupled. De Finetti's theorem guarantees that there
-exists a mixture of random measures $\set{\G_\alpha}$ (which in most
-cases is indexed by the latent state of the GPM) where the population is
-conditionally IID.
-
-$$p(\mathbf{X}) = \int_\alpha{(\Pi_{i=1}^Np(\mathbf{X}_i|\G_\alpha))d
-\mathcal{Q}(\G_\alpha)}$$
-
-The De Finetti measure $\mathcal{Q}$ is the object which defines a distribution
-over the (fixed) measures (GPMs) that produce a statistical population. In this
-sense, $\mathcal{Q}$ represents the adaptive GPM.
-
-\end{discussion}
-
 Generative population models provide the primitive statistical inferences that
 are used by BayesDB to implement inferential queries in BQL. To support all of
 BQL, a GPM must provide the ability to \textbf{sample from} and \textbf{evaluate
@@ -680,6 +659,18 @@ attributes corresponding to the desired columns.
 
 \subsection{Marginal Dependence Probability}
 
+\todo[inline,color=red]{Define dep prob as the probability under the
+  distribution over the class of GPMs that the requested variables are
+  indpendent in that member of the class.  (Note: probability only
+  arises because learning is stochastic; the confidence (in a
+  frequentist sense) that things are independent in the posterior
+  predictive is a different quantity).  Implement by invoking some
+  independence test (e.g., mutual information or KL-divergence) on
+  each element of an ensemble, and returning the proportion of
+  passes.  Possibly expand to conditional independence (via CMI),
+  possibly conditioned on cells having values.
+  The content currently in this section is stale.}
+
  $p = \texttt{marginal-dependence-prob}(\G,
     \texttt{colA}=c_i,
     \texttt{colB}=c_j,
@@ -720,6 +711,13 @@ attributes corresponding to the desired columns.
 
 \subsection{Marginal Dependence Magnitue}
 
+\todo[inline,color=red]{The content in this section is stale.
+  Dependence magnitude is kinda slippery.  It was supposed to be
+  mutual information, but that's information-theoretic strength of
+  dependence, not the ``effect size'' that people will think of given
+  this name.  There's also the question of conditioning it on being
+  non-zero with the above.}
+
  $r^2 = \texttt{marginal-dependence-magnitude}(\G,
     \texttt{colA}=c_i,
     \texttt{colB}=c_j,
@@ -754,6 +752,16 @@ attributes corresponding to the desired columns.
 
 \subsection{Generative Similarity}
 
+\begin{definition} Generative Similarity
+
+The probability, under the random latent structure of the GPM, that
+\texttt{rowA} and \texttt{rowB} are identically distributed
+conditioned on \texttt{context-vars}.
+\end{definition}
+
+\todo[inline,color=red]{Improve the definition; the rest of the
+  content in this section is stale.}
+
   $r^2 = \texttt{generative-similarity}(\G,
     \texttt{context-vars} = \set{c_i},
     \texttt{rowA}=r_i,
@@ -768,19 +776,99 @@ attributes corresponding to the desired columns.
 
 \subsection{Imputation}
 
-\subsection{Correlation}
+\todo[inline,color=red]{Intent: The confidence of imputation is the
+  probability that the requested marginal (and conditional?)
+  distribution has a ``good'' unimodal summary.  The concept of
+  ``unimodal summary'' is a bit fuzzy with continuous variables.}
 
 \subsection{Typicality}
 
+\todo[inline,color=red]{I don't even know what row/column typicality
+  is supposed to be, sans crosscat. Delete?}
+
 \subsection{Column Similarity}
+
+\todo[inline,color=red]{Idea: column similarity might usefully be the
+  probability that those cells of a fresh individual are identically
+  distributed.}
 
 \section{TODOs}
 
-    \todo[inline]{Explain what it means to have 'observed members' of a
-    statistical population. In particular, a GPM's latentness can be broken down
-    into 'global' and 'row-specific'. Specifying a row index is and implicit
-    conditioning any distribution on the row-latents. This idea is mostly
-    applicable to GPMs which implicitly cluster the observed population, (and
-    carry a distribution over cluster assignments).}
+\todo[inline]{Do we need to be clearer about the meaning of 'observed members' of a
+statistical population? In particular, a GPM's latentness can be broken down
+into 'global' and 'row-specific'. Specifying a row index is an implicit
+conditioning of a distribution on the row-latents---but not on the other observations
+about the row, since those can be supplied separately by the givens.}
+
+\todo[inline]{The spec now identifies rows in the database with individuals in
+the statistical population.  In principle, this need not be so---we can admit, e.g.,
+a special (categorical) column that serves as an individual ID.  These can collide,
+implying multiple observations of the same individual (so now the latents break
+down into per-individual latents and per-observation latents); these can also be unknown,
+implying identity inference.
+
+Actually, come to think of it, I think that arrangement requires no
+special provision by us: the user's GPM may treat a column in the
+table as the identity of an individual.}
+
+\todo[inline]{I intentionally tried to include discriminative methods
+  as adaptive GPMs that may use non-Bayesian adaptation rules.  For
+  example, maximum likelihood estimation would be a perfectly good
+  (deterministic?) adaptive GPM.  Is this clear enough?}
+
+\todo[inline]{Missing data.  Should explicitly say somewhere that
+  missing data values are treated as ``no observation'', rather than
+  observing a sentinel and forcing the GPM to deal with it.}
+
+\todo[inline]{Find a place for the ideas contained in this chunk of prize-winning text:}
+
+\begin{discussion} \label{disc:iid} Technical Aside On IID Rows
+
+The classical statistical framework generally assumes that all members of a
+population are independent and identically distributed. While a particular
+generator is free to make any assumptions about its population, the IID
+assumption is a strong one. The default generator (and almost any generator
+being learned under the Bayesian framework) will usually assume that the rows
+are not IID but exchangeably coupled. De Finetti's theorem guarantees that there
+exists a mixture of random measures $\set{\G_\alpha}$ (which in most
+cases is indexed by the latent state of the GPM) where the population is
+conditionally IID.
+
+$$p(\mathbf{X}) = \int_\alpha{(\Pi_{i=1}^Np(\mathbf{X}_i|\G_\alpha))d
+\mathcal{Q}(\G_\alpha)}$$
+
+The De Finetti measure $\mathcal{Q}$ is the object which defines a distribution
+over the (fixed) measures (GPMs) that produce a statistical population. In this
+sense, $\mathcal{Q}$ represents the adaptive GPM.
+
+\end{discussion}
+
+\todo[inline]{This is not a software spec.  That's probably best
+  written in software, perhaps referncing this document.  The software may
+  expand on this in a few places.  For example:
+  \begin{itemize}
+  \item bulk generation of multiple iid samples from the same distribution
+  \item specifying the data representation for collections of cells
+  \end{itemize}}
+
+\todo[inline]{Issue: Do we want to specify simulate as auto-incorporating?  I.e.,
+all simulations are implicitly part of a multi-row simulate unless
+expressly undone.  Notes:}
+\begin{verbatim}
+- Pro: Natural definition of multi-row simulate in terms of single-row
+  - But: Does not extend to logpdf
+- Pro: Avoids dirtying inference state as a simulate/incorporate cycle
+  would
+- Undoing can be implemented by rollback at the DB level
+- Can still offer multi-row simulate and auto-forgetting simulate as
+  alternatives
+- Con: Multi-sample IID simulate becomes hairier
+- Con: Can't that simulate and logpdf do not modify the GPM (and that
+  incorporate/remove/infer commute through simulates, which would not
+  be true)
+- Alternative: Specify "incorporate-just-generated" as another
+  interface method, or maybe "simulate-incorporating" as an
+  inference-avoiding fast path
+\end{verbatim}
 
 \end{document}
