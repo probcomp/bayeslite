@@ -683,6 +683,7 @@ attributes corresponding to the desired columns.
 \subsection{Marginal Dependence Probability}
 
 \begin{definition} Dependence Probability
+\label{def:dep-prob}
 
 The \emph{dependence probability} of random variables $A$ and $B$
 under a probability distribution $\Pi$ over GPMs $\set{\G_\alpha}$
@@ -759,27 +760,39 @@ more dependent than categorical ones.
 
 \subsection{Generative Similarity}
 
-\begin{definition} Generative Similarity
+There are actually three different things that similarity of two
+type-aligned collections of cells (e.g., two rows) might reasonably
+mean:
 
-The probability, under the random latent structure of the GPM, that
-\texttt{rowA} and \texttt{rowB} are identically distributed
-conditioned on \texttt{context-vars}.
-\end{definition}
+\begin{itemize}
+\item Probability of being marginally equidistributed (note: this is
+  orthogonal to dependence)
+\item Information-theoretic distance between marginal distributions
+\item Domain-semantic distance between marginal distributions
+\end{itemize}
 
-\todo[inline,color=red]{Improve the definition; the rest of the
-  content in this section is stale.}
+The first of these can be defined and computed similarly to dependence
+probability (definition~\ref{def:dep-prob}), except with K-L
+divergence instead of mutual information.
 
-  $r^2 = \texttt{generative-similarity}(\G,
-    \texttt{context-vars} = \set{c_i},
-    \texttt{rowA}=r_i,
-    \texttt{rowB}=r_j,
-    \texttt{accuracy}=N)$
+The second of these can just be the K-L divergence, perhaps
+symmetrized, normalized, and/or smoothed (e.g., Jensen-Shannon
+divergence \footnote{https://en.wikipedia.org/wiki/Jensen-Shannon\_divergence},
+or its square root, which has the additional advantage of being a metric).
 
-    Computes the context-sensitive generative similarity for two members of the
-    statistical population. This is defined as the probability, under the random
-    latent structure of the GPM, that
-    \texttt{rowA} and \texttt{rowB} are identically distributed conditioned on
-    \texttt{context-vars}.
+The third of these is pretty obnoxious, because it calls for distances
+between distinct data items.  It may be possible to make a reasonable
+interface for metrics on numerical variables, but similarity of
+different categorical values is likely to be a problem.  On the other
+hand, the information-theoretic measures all treat any two distinct
+end values as maximally dissimilar.
+
+In any case, similarity is definable for any two collections,
+admitting arbitrary fixed-value conditions, and admitting a
+``conditioned'' variant that asks whether the desired variables are
+always similar for all possible values that might be conditioned upon
+(or giving the expectation of their similarity over the possible
+conditioning values).
 
 \subsection{Imputation}
 
