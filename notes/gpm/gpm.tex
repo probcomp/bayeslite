@@ -434,7 +434,7 @@ this document, and omit the adjective.
 \subsection{Interface for Adaptive GPMs}
 \label{sec:adaptive_gpm}
 
-The extended interface for adaptive GPMs based on Markov chains is outlined
+The interface for (potentially incremental) adaptive GPMs is outlined
 below.  The key differences from the interface to non-adaptive GPMs
 defined in Section~\ref{sec:non-adaptive_gpm} are as follows:
 
@@ -450,21 +450,9 @@ defined in Section~\ref{sec:non-adaptive_gpm} are as follows:
   the corresponding marginal distributions.
 \end{itemize}
 
-Note: BayesDB implements an algorithm for recovering joint multi-row
-simulation in terms of single-row simulations, so the multi-row
-version of \texttt{simulate} may be viewed as an optional
-optimization.
-
-\todo[inline]{An adaptive GPM can be used as a non-adaptive GPM by
-  marginalizing out the distribution over the class it is supposed to
-  adapt over.  Technical difficulty: that calls for non-incorporating
-  simulations, whereas the promised algorithm for multi-row simulate
-  in terms of single-row simulate relies on simulations incorporating
-  their results (which is expected to be cheap).}
-
-\todo[inline]{Analogous issue with drawing multiple samples from block
-  simulation.  The samples are supposed to be IID; which one does the
-  simulation incorporate?}
+Note: An adaptive GPM can be used as a non-adaptive GPM by
+marginalizing out the distribution over the class it is supposed to
+adapt over.
 
 \begin{enumerate}
 
@@ -985,9 +973,9 @@ expressly undone.  Notes:}
 - Can still offer multi-row simulate and auto-forgetting simulate as
   alternatives
 - Con: Multi-sample IID simulate becomes hairier
-- Con: Can't that simulate and logpdf do not modify the GPM (and that
-  incorporate/remove/infer commute through simulates, which would not
-  be true)
+- Con: Can't promise that simulate and logpdf do not modify the GPM
+  (and that incorporate/remove/infer commute through simulates, which
+  would not be true)
 - Alternative: Specify "incorporate-just-generated" as another
   interface method, or maybe "simulate-incorporating" as an
   inference-avoiding fast path
