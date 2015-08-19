@@ -917,15 +917,11 @@ what this ought to be useful for.  Decision: remove row and column
 typicality for the public release, and possibly reconsider it in light
 of reception and time.
 
-\section{TODOs}
+\section{Open Issues}
 
-\todo[inline]{Do we need to be clearer about the meaning of 'observed members' of a
-statistical population? In particular, a GPM's latentness can be broken down
-into 'global' and 'row-specific'. Specifying a row index is an implicit
-conditioning of a distribution on the row-latents---but not on the other observations
-about the row, since those can be supplied separately by the givens.}
+\subsection{Identity Remapping}
 
-\todo[inline]{The spec now identifies rows in the database with individuals in
+The spec now identifies rows in the database with individuals in
 the statistical population.  In principle, this need not be so---we can admit, e.g.,
 a special (categorical) column that serves as an individual ID.  These can collide,
 implying multiple observations of the same individual (so now the latents break
@@ -934,14 +930,18 @@ implying identity inference.
 
 Actually, come to think of it, I think that arrangement requires no
 special provision by us: the user's GPM may treat a column in the
-table as the identity of an individual.}
+table as the identity of an individual.
+
+\todo[inline]{Agreed?}
+
+\subsection{Technical Aside On IID Rows}
 
 \todo[inline]{Find a place for the ideas contained in this chunk of prize-winning text:}
 
-\begin{discussion} \label{disc:iid} Technical Aside On IID Rows
-
 The classical statistical framework generally assumes that all members of a
-population are independent and identically distributed. While a particular
+population are independent and identically
+distributed.  \todo{Conditioned on parameters that are taken
+to be unknown and adversarially set.} While a particular
 generator is free to make any assumptions about its population, the IID
 assumption is a strong one. The default generator (and almost any generator
 being learned under the Bayesian framework) will usually assume that the rows
@@ -957,27 +957,39 @@ The De Finetti measure $\mathcal{Q}$ is the object which defines a distribution
 over the (fixed) measures (GPMs) that produce a statistical population. In this
 sense, $\mathcal{Q}$ represents the adaptive GPM.
 
-\end{discussion}
+\subsection{Incorporating simulated data}
 
-\todo[inline]{Issue: Do we want to specify simulate as auto-incorporating?  I.e.,
+Incorporating data simulated from the current latent distribution is
+cheap, at least in a Bayesian GPM, because it does not alter the
+latent distribution.  However, if a client calls \texttt{simulate} and
+then \texttt{incorporate}, the GPM has no proof that the item being
+incorporated is the item that was simulated, so is called upon to do
+more inference to reach the new posterior.  It seems advantageous to
+be able to avoid this work, especially for the purpose of constructing
+multi-row simulate from single-row simulate.
+
+\begin{itemize}
+\item Option: Specify simulate as auto-incorporating.  That is,
 all simulations are implicitly part of a multi-row simulate unless
-expressly undone.  Notes:}
-\begin{verbatim}
-- Pro: Natural definition of multi-row simulate in terms of single-row
-  - But: Does not extend to logpdf
-- Pro: Avoids dirtying inference state as a simulate/incorporate cycle
+expressly undone.
+\begin{itemize}
+\item Pro: Natural definition of multi-row simulate in terms of single-row
+\item But: Does not extend to logpdf
+\item Pro: Avoids dirtying inference state as a simulate/incorporate cycle
   would
-- Undoing can be implemented by rollback at the DB level
-- Can still offer multi-row simulate and auto-forgetting simulate as
-  alternatives
-- Con: Multi-sample IID simulate becomes hairier
-- Con: Can't promise that simulate and logpdf do not modify the GPM
+\item Undoing can be implemented by rollback at the DB level
+\item Can still offer multi-row simulate and auto-forgetting simulate as
+  alternatives/fast paths
+\item Con: Multi-sample IID simulate becomes hairier
+\item Con: Can't promise that simulate and logpdf do not modify the GPM
   (and that incorporate/remove/infer commute through simulates, which
   would not be true)
-- Alternative: Specify "incorporate-just-generated" as another
-  interface method, or maybe "simulate-incorporating" as an
-  inference-avoiding fast path
-\end{verbatim}
+\end{itemize}
+\item Option: Specify ``incorporate-just-generated'' as another
+  interface method.
+\item Option: Specify ``simulate-incorporating'' as an
+  inference-avoiding fast path.
+\end{itemize}
 
 \appendix
 \section{Stuff to revisit after the first public release}
