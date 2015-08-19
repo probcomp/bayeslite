@@ -489,7 +489,7 @@ adapt over.
     distribution on cells at a target point.
 
     $$
-    \log p = p( \set{ \mathbf{X}_{r_jc_j} = x_{r_jc_j} } |
+    \log p = \log p( \set{ \mathbf{X}_{r_jc_j} = x_{r_jc_j} } |
     \set{ \mathbf{X}_{r_kc_k} = x_{r_kc_k} }, \G)
     $$
 
@@ -514,7 +514,7 @@ adapt over.
 
 \item \texttt{remove($\G$, $(i, j)$)}
 
-    Remove the observation $x_{ij}$ stored in cell $\mathbf{X}_{ij}$.
+    Remove the observation $x_{ij}$ from the in cell $\mathbf{X_{ij}}$.
     Consecutive \texttt{remove} should exactly invert
     \texttt{incorporate} on the same cell.  In the case of incremental
     GPMs, intervening \texttt{infer} is permitted to change the
