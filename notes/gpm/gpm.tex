@@ -796,10 +796,112 @@ conditioning values).
 
 \subsection{Imputation}
 
-\todo[inline,color=red]{Intent: The confidence of imputation is the
-  probability that the requested marginal (and conditional?)
-  distribution has a ``good'' unimodal summary.  The concept of
-  ``unimodal summary'' is a bit fuzzy with continuous variables.}
+The intent of imputation for some cell(s) $A$ is to return a single
+(vector) value that summarizes the information in the (joint)
+distribution on $A$, and the confidence that this summary is ``good''.
+
+If all of $A$ is discrete, this has a natural interpretation as
+``return the max a-posteriori value, with confidence its
+probability.''  If continuous variables are involved, however, things
+get a bit fuzzier.
+
+\subsubsection{Credible Sets}
+
+Imputation can be viewed as a version of the Bayesian credible set
+problem.  Valid answers to the credible set problem are pairs of a set
+of values and a lower bound on the probability mass contained in that
+set.  Desired answers are small sets and high mass bounds.  The
+discrete solution suggested above obeys the constraint that the
+returned set must be a singleton, and optimizes the mass bound subject
+to that.
+
+One can therefore imagine queries that constrain either the size of
+the set and request the location and the best confidence (impute with
+confidence), or constrain the confidence and request the location and
+the best size (impute with error estimate), or constrain both and
+request the location or failure.  (Constraining the location is
+assessment, not imputation).  In the multidimenional case, there is
+also the issue of the shape of the set.  Natural choices for
+continuous variables include balls under $L_1$ (Manhattan distance,
+i.e. total error), $L_2$ (Euclidean distance), or $L_\infty$ (maximum
+error), or various combinations thereof that treat different
+dimensions non-uniformly; natural choices in the fully discrete case
+include singletons, boxes, or no shape restriction (a list of
+plausible tuples).
+
+All of these queries are approximately answerable in terms of
+\texttt{simulate}: draw a bunch of samples, find a set of the proper
+shape, and report the fraction of them that it covered as the
+confidence.  There may be some variations where one uses assessments
+of the sample points rather than their count for some information,
+especially in the discrete setting.  In low dimensions, quadrature
+over assessment may also be competitive.
+
+\subsubsection{Approximating Distributions}
+
+Credible sets can be viewed as summarizing the distribution as uniform
+over some shape and size of set, except for two not unrelated
+considerations.  One is that interpreting a set as a uniform
+probability distribution requires having a base measure (e.g.,
+Lebesgue) and having that set's size in that measure be finite and
+positive.  The other is in the performance metric: ``the mass
+contained in the set'' can always be increased by enlarging the set,
+whereas enlarging the support of a uniform distribution reduces its
+density at the supported points and thus may reduce the accuracy with
+which it approximates the target.
+
+One can therefore consider a formulation of imputation as
+approximating the true distribution with some unimodal one.  This
+leaves open the choice of unimodal distribution class and the choice
+of distance measure.  For any such choice, the result is a
+well-defined optimization problem.\footnote{This optimization
+  formulation goes by the name ``variational inference'' when applied
+  to approximating the posterior on latents with respect to K-L
+  divergence.  Here we are approximating the posterior predictive
+  distribution, with a to-be-chosen quality metric.}
+
+BayesDB can approach all variants of imputation as approximation by
+the following generic recipe: Draw some samples from the distribution
+being approximated; fit a distribution from the approximating family
+to them; estimate the desired distance metric (e.g., K-L divergence);
+and report all the above.
+
+Interface questions also arise:
+\begin{itemize}
+\item An imputation in this style produces two different error
+  estimates: the dispersion of the approximating distribution, and its
+  divergence from the true distribution.  How to surface both of them?
+\item Allowing the user to bounding the confidence (in the sense of
+  distance to the true distribution) still makes some sense, even
+  though we would not be able to compensate for an exacting bound by
+  supplying a broad prediction.
+\item Does it make sense to allow the user to bound the dispersion of
+  the approximating distribution (i.e., ``error tolerance'')?  Such a
+  restriction would behave weirdly, in that it wouldn't always be
+  binding.
+\item If the divergence metric is taken to be K-L divergence, how to
+  communicate it to the user?  I personally find actual divergence
+  numbers pretty unintuitive, and they would not be normalized.  Is
+  total variation distance any better?  Is there a Monte Carlo
+  estimation procedure for it that we can rely on?
+\end{itemize}
+
+\subsubsection{Other Considerations}
+
+\paragraph{Conditional Imputation}
+Since we assume that a GPM can simulate and assess conditionally, we
+can expose conditional imputation: ``Tell me about the value of $A$
+assuming $B=b$.''  In fact, for a data cleaning application, one would
+expect imputation of empty cells to be conditioned on the non-empty
+cells in the same row.
+
+\paragraph{Joint or Marginal Imputation}
+If the values of multiple cells are called for, there is a choice
+about whether to impute them marginally (i.e., each separately) or
+jointly (i.e., one imputation summarizing the joint distribution on
+those cells).  I don't know whether those are different for CrossCat,
+but it's not hard to compute with examples of general distributions
+where those two questions have different answers.
 
 \subsection{Typicality}
 
