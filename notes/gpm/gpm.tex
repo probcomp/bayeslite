@@ -559,14 +559,14 @@ If BayesDB inferences were based on a single instance of an adaptive
 GPM, the inferences could arbitrarily suppress modeling
 uncertainty. The MML provides users a generic \emph{GPM ensemble}
 mechanism, that can be used for measuring and improving accuracy of
-inferences.  In the language of Markov Chains, the ensemble represents
+inferences.  In the language of Markov chains, the ensemble represents
 a set of independent, parallel chains, which answers queries by simple
 Monte Carlo over its constituents.
 
 An ensemble of (adaptive, incremental) GPMs is itself an (adaptive,
 resp.\ incremental) GPM.  The default ensemble implements the GPM interface of
 Section~\ref{sec:adaptive_gpm}
-interface as follows:
+as follows:
 
 \begin{enumerate}
 \item \texttt{$\mathcal{Q}$ = initialize(schema = $\Lambda$, count = S)}
@@ -618,11 +618,14 @@ accessible to BQL programs via the \texttt{SIMULATE} and
 implemented generically in terms of \texttt{simulate} and
 \texttt{logpdf}; though many of them may also have more efficient
 short-cut implementations that are specific to the structure of a
-given GPM.  This section lists the derived functions, their
-definitions, and default implementations provided by BayesDB.
+given GPM.  This section defines the derived functions and sketches
+their default implementations provided by BayesDB; a software
+interface to GPMs should permit the GPM to override any of these
+implementations with custom ones tailored to the model, as they may be
+subtantially more efficient.
 
 \todo[inline]{What time/accuracy knobs should be exposed in the
-  interfaces?}
+  interfaces?  I suppose that can be left to the software spec also.}
 
 \subsection{Conditional Mutual Information}
 
@@ -716,7 +719,7 @@ dependent).
 \todo[inline]{Is there a meaningful concept of ``conditional
   probability of dependence'' which would correspond to ``conditional
   mutual information''?  For example, the probability over $c$ under
-  the distribution $C$ that A|C and B|C are dependent at $C=c$?}
+  the distribution $C$ that $A|C$ and $B|C$ are dependent at $C=c$?}
 
 \todo[inline]{Dependence probability is not to be confused with
   confidence (in a frequentist sense) that things are independent in
@@ -781,7 +784,7 @@ divergence instead of mutual information.
 
 The second of these can just be the K-L divergence, perhaps
 symmetrized, normalized, and/or smoothed (e.g., Jensen-Shannon
-divergence \footnote{https://en.wikipedia.org/wiki/Jensen-Shannon\_divergence},
+divergence\footnote{https://en.wikipedia.org/wiki/Jensen-Shannon\_divergence},
 or its square root, which has the additional advantage of being a metric).
 
 The third of these is pretty obnoxious, because it calls for distances
