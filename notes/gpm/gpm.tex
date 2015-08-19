@@ -22,7 +22,7 @@
 
 \newcommand{\set}[1]{\{#1\}}
 \newcommand{\G}{\mathcal{G}}
-\newcommand{\T}{\mathcal{T}}
+\newcommand{\T}{T}
 
 \title{Draft Technical Notes on BayesDB}
 
@@ -407,7 +407,7 @@ For any GPM class $\{\G_\alpha\}$, a \emph{Bayesian Markov adaptive
   generative population model} is given by a prior
 $\Pi(\G_\alpha)$ over
 $\{\G_\alpha\}$, a data-dependent transition operator
-$\T_{\{\vec{x}_{ij}\}}$ over $\{\G_\alpha\}$, and
+$\T_{\{x_{ij}\}}$ over $\{\G_\alpha\}$, and
 an adaptation rule that consists of iterating $\T$:
 
 \[ \Pi_n(\G_\alpha|\set{\mathbf{X}_{ij} = x_{ij}}) = \T_{\set{x_{ij}}}^n 
@@ -418,7 +418,7 @@ an adaptation rule that consists of iterating $\T$:
 This will be \emph{asymptotically Bayesian} if the transition operator
 converges to the true posterior, that is if
 
-\[ \lim_{n\to\infty}D_{KL}(\Pi^*(\G_\alpha) \| \Pi_n(\G_\alpha|\{\vec{x}_{ij}\})) = 0, \]
+\[ \lim_{n\to\infty}D_{KL}\Big(\Pi^*(\G_\alpha|\set{\mathbf{X}_{ij} = x_{ij}}) \Big\| \Pi_n(\G_\alpha|\set{\mathbf{X}_{ij} = x_{ij}})\Big) = 0, \]
 
 where $\Pi^*(\G_\alpha|\set{\mathbf{X}_{ij}=x_{ij}}) \propto 
 \Pi(\G_\alpha) p(\set{\mathbf{X}_{ij}=x_{ij}}|\G_\alpha)$
