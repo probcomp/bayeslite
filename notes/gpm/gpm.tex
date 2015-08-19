@@ -87,7 +87,7 @@ probability distribution over possible learned explanations).
 BQL programs are executed against a set of ambient data
 \textit{generative population models} (GPMs).  A GPM is assoicated
 with a table in the database, which represents individuals observed
-from that population.\footnote{Perhaps partially, if some cells in the
+from that population.\footnote{Perhaps partially observed, if some cells in the
   table are null.} These generative population models are provided by
 BayesDB based on modeling schemas and inference programs written in
 the BayesDB Minimal Modeling Language.
@@ -122,14 +122,6 @@ the parameterization is fixed.\footnote{One plausible scenario in
   externally from BayesDB.  A user may decide to import such a GPM
   into BayesDB, without providing a hook for BayesDB to adapt it.}
 
-\todo[inline]{
-BayesDB admits the notion of a \emph{conditional GPM} that treats some
-attributes as unmodeled inputs, and specifies a probability
-distribution on other attributes (see Section~\ref{sec:generators} for
-details).  The Minimal Modeling Language (Section~\ref{sec:mml}) permits specifying complete GPMs as
-directed, acycling compositions of
-such objects (on the columns).}
-
 In typical applications we are interested in \textit{learning the GPM
   from data}. For example, this might be learning the specific
 parameters $\theta$ given a fixed generative process $M_i$, or
@@ -137,15 +129,38 @@ learning the generative process $M_i$ from some fixed model class
 $\mathcal{M}$, or even learning the model class itself $\mathcal{M}$
 from a set of competing model classes $\set{\mathcal{M}_k}$.  BayesDB
 enables this with its notion of \emph{adaptive generative population
-  models}, discussed in Section~\ref{sec:formalism-adaptive-gpm} and
-specified in Section~\ref{sec:adaptive_gpm}.
+  models}, formalized in
+Sections~\ref{sec:formalism-adaptive-gpm}~and~\ref{sec:formalism-incremental-gpm}
+and specified in Section~\ref{sec:adaptive_gpm}.
 
 \begin{example}
-\todo[inline]{Some trivial approximate adaptive thing?  Maybe a
-  two-cluster Gaussian with unknown means and covariances, with the
-  collapsed version as ideal-adaptive and the uncollapsed version with
-  some inference scheme as approximately adaptive?  Perhaps also MLE
-  of the parameters as an alternative to Bayes?}
+The GPM from Example~\ref{ex:normal_gpm} becomes adaptive if we take
+the parameterization $(w_1, \mu_1, \Sigma_1, w_2, \mu_2, \Sigma_2)$ as
+unknown and supply some scheme for inferring it from the observed
+data.  Maximum likelihood estimation, posterior inference (exact or
+approximate) in the presence of some prior, or any other deterministic
+or stochastic procedure is permissible.  Different procedures lead to
+different adaptive models, which in turn yield different answers to
+queries.
+\end{example}
+
+We speak of \emph{generative} population models because we want a
+joint probability distribution on all attributes of an individual, for
+example to be able to impute arbitrary missing features, or synthesize
+populations of hypothetical individuals from the model.  There are,
+however, many techniques for modeling relationships between attributes
+of an individual.  To be able to take advantage of these methods,
+BayesDB admits the notion of a \emph{conditional GPM} that treats some
+attributes as unmodeled inputs, and specifies a probability
+distribution on other attributes (see Section~\ref{sec:generators} for
+details).  The BayesDB Minimal Modeling Language
+(Section~\ref{sec:mml}) permits specifying complete GPMs as directed,
+acyclic compositions of such objects (on the columns).
+
+\begin{example}
+Regression (linear, logistic, or otherwise) and classification methods
+are canonical instances of conditional GPMs, predicting the dependent
+variable from the independent ones.
 \end{example}
 
 \subsection{The Minimal Modeling Language}
@@ -384,6 +399,7 @@ the particular GPM $\G_\alpha$. \label{ex:exact-bayes}
 \end{example}
 
 \subsection{Incremental Adaptive GPMs}
+\label{sec:formalism-incremental-gpm}
 
 The desired adaptation rule of an adaptive GPM (such as the exact
 Bayesian rule of Example~\ref{ex:exact-bayes}) may not always be
