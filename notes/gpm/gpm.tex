@@ -30,24 +30,52 @@
 
 \maketitle
 
-\todo[inline]{This is not a software spec.  That's probably best
-  written in software, perhaps referncing this document.  The software may
-  expand on this in a few places.  For example:
-  \begin{itemize}
-  \item bulk generation of multiple iid samples from the same distribution
-  \item specifying the data representation for collections of cells
-  \end{itemize}}
+\begin{abstract}
+This document presents a probability-theoretic (but not necessarily
+Bayesian) description of what it could possibly mean to ``have a model
+of a data table'', and to ``learn a model of a data table''.  The goal
+is to set the terms in which the interfaces to and semantics of
+BayesDB operations may be described and discussed.
+\end{abstract}
 
-\todo[inline]{This is not a syntax spec either.  There is squish room
-  in the interpretation of BQL queries against this interface (for
-  example, should PREDICTIVE PROBABILITY auto-condition on the data
-  present in the other cells of the row?), which in principle we
-  should polish off.}
+\section{Preface}
 
-\todo[inline]{I intentionally tried to include discriminative methods
-  as adaptive GPMs that may use non-Bayesian adaptation rules.  For
-  example, maximum likelihood estimation would be a perfectly good
-  (deterministic?) adaptive GPM.  Is this clear enough?}
+There are several things this document is not.
+
+\paragraph{This is not a software spec.}  That is left to be
+written in software.  If this document has served its purpose, the
+software spec would reference it for conceptual background.  In
+paricular, a software interface may depart from the interfaces of
+Sections~\ref{sec:non-adaptive_gpm}~and~\ref{sec:adaptive_gpm} in
+a few places.  For example:
+\begin{itemize}
+\item Specifying generation of multiple IID samples from the same
+  distribution as a bulk operation for efficiency.
+\item Specifying a particular data representation for collections of cells.
+\item Possibility meriting more serious discussion: Intentionally
+  restricting the class of questions that population models are
+  expected to be able to answer, to prevent client analyses from
+  relying on rare capabilities.
+\end{itemize}
+
+\paragraph{This is not a BQL syntax spec.}  There is squish room
+in the interpretation of BQL queries against this interface.  For
+example, should PREDICTIVE PROBABILITY condition on the data present
+in the other cells of the row, on the row's identity, or both?  What
+to make syntactically convenient is about anticipating user needs and
+matching them to model capabilities; the authors expect this process to be
+iterative.
+
+\paragraph{This is not a Bayesian manifesto.}  Present nomenclature
+notwithstanding, BayesDB has no reason to impose a Bayesian philosophy
+of induction or learning on either its users or the implementors of
+its population models.  Probability theory enters into BayesDB and
+this document because it's the best formalism the authors know for
+what it means to have a quantitatively incomplete model of something.
+That happens in two places in BayesDB: any given population model is
+expected to be incomplete; and the results of learning a population
+model from observations may be incomplete (i.e., represent a
+probability distribution over possible learned explanations).
 
 \todo[inline]{Missing data.  Should explicitly say somewhere that
   missing data values are treated as ``no observation'', rather than
