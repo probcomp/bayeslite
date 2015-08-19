@@ -905,14 +905,10 @@ where those two questions have different answers.
 
 \subsection{Typicality}
 
-\todo[inline,color=red]{I don't even know what row/column typicality
-  is supposed to be, sans crosscat. Delete?}
-
-\subsection{Column Similarity}
-
-\todo[inline,color=red]{Idea: column similarity might usefully be the
-  probability that those cells of a fresh individual are identically
-  distributed.}
+There is no consensus in the field on what this ought to be, or on
+what this ought to be useful for.  Decision: remove row and column
+typicality for the public release, and possibly reconsider it in light
+of reception and time.
 
 \section{TODOs}
 
@@ -975,5 +971,17 @@ expressly undone.  Notes:}
   interface method, or maybe "simulate-incorporating" as an
   inference-avoiding fast path
 \end{verbatim}
+
+\appendix
+\section{Stuff to revisit after the first public release}
+
+\paragraph{Row/column typicality}
+We might try to see whether early users want this, and whether it can
+be defined sensibly.
+
+\paragraph{Column similarity}
+Idea: column similarity might usefully be the probability that those
+cells of a fresh individual are identically distributed.  We can think
+about whether to add this.
 
 \end{document}
