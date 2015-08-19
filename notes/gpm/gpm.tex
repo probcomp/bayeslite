@@ -499,7 +499,7 @@ adapt over.
     columns.  The distribution is interpreted as marginalizing out all
     random variables that are not mentioned.
 
-\item \texttt{incorporate($\G$, value = $(i, j, x_{ij})$)}
+\item \texttt{$\G'$ = incorporate($\G$, value = $(i, j, x_{ij})$)}
 
     Record an observation $x_{ij}$ in the cell $\mathbf{X_{ij}}$.
     If there is no row $i$, create a new one.
@@ -512,7 +512,7 @@ adapt over.
     should commute.  In the case of incremental GPMs, intervening
     \texttt{infer} is permitted to break commutativity.
 
-\item \texttt{remove($\G$, $(i, j)$)}
+\item \texttt{$\G'$ = remove($\G$, $(i, j)$)}
 
     Remove the observation $x_{ij}$ from the in cell $\mathbf{X_{ij}}$.
     Consecutive \texttt{remove} should exactly invert
@@ -521,7 +521,7 @@ adapt over.
     result.  (That is, \texttt{incorporate}, \texttt{infer}, \texttt{remove}
     may be different from just the \texttt{infer}.)
 
-\item \texttt{infer($\G$, program = $\mathcal{P}$)}
+\item \texttt{$\G'$ = infer($\G$, program = $\mathcal{P}$)}
 
     Adjust any internal latent state in accordance with the inference
     procedure specified in the program $\mathcal{P}$.  To BayesDB, the
