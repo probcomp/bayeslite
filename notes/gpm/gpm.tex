@@ -351,25 +351,14 @@ observation sets $\{x_{ij}\}$.
 Linear regression (with a fixed noise model $\mathcal{E}$) can be viewed as a
 conditional adaptive GPM over the class of non-adaptive GPMs
 parameterized by the possible regression coefficients $\vec\beta_j$.
-For input columns $\{x_j\}$ and output column $y$,
+For a given set of input columns, defining inputs $\vec x$, and output column $y$,
 the update rule corresponding to maximum likelihood estimation would be
 
-\[ \vec\beta_j^*|\{x_{ij}, y_i\} = \argmax_{\vec\beta_j^*} \sum_i 
-p_{\mathcal{E}}(y_i - x_{ij}^T \beta_j^*). \]
+\[ \vec\beta^*|\{\vec x_i, y_i\} = \argmax_{\vec\beta^*} \sum_i
+   p_{\mathcal{E}}(y_i | \vec x_i^T \vec\beta^*). \]
 
 The {\tt simulate} and {\tt logpdf} methods would refer to the
 noise distribution around the predicted value for $y$.
-
-\todo[inline]{Clear up this notation.
-    How can $x_{ij}$, which is just a cell, have a vector operation?
-    What is $j$ indexing?
-    We seem to maximize the probability of the noise by subtracting the
-    observation from the conditional mean. The more natural
-    way to express the MLE is maximize the observation $y_i$ conditioned
-    on the data, ie $p(y_i|x_i\beta)$. Although the noise model $\mathcal{E}$
-    is fixed, we still do not know the parameters $\sigma$ of the noise,
-    and that is typically learned from data as well.
-    We are also overloading $\set{x_j}$ to mean columns, observations, etc.}
 \end{example}
 
 \begin{example} Exact Bayesian Adaptive GPMs
