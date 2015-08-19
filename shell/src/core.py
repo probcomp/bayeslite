@@ -181,6 +181,8 @@ class Shell(cmd.Cmd):
         Adds a set of dot commands from the file at path to the cmdqueue.
         Options:
         -s : Sequential. Wait for keypress after each command has completed
+        -i : Interactive. Prompt whether to run the command for each command,
+             and allow going backwards to previous commands.
         -c : Do not add comments to the command queue.
         -v : Verbose
         '''
@@ -189,14 +191,19 @@ class Shell(cmd.Cmd):
             self.stdout.write('Usage: .read <path/to/file> [options]\n')
             return
         path = args[0]
+        interactive = False
         sequential = False
         hide_comments = False
         verbose = False
         if len(args) > 1:
             for arg in set(args[1:]):
-                if arg not in ['-s', '-c', '-v']:
+                if arg not in ['-s', '-c', '-v', '-i']:
                     self.stdout.write('Invalid argument %s\n' % (arg,))
                     return
+                if arg == '-i':
+                    interactive = True
+                    verbose = True
+
                 if arg == '-s':
                     sequential = True
                     verbose = True
@@ -207,7 +214,7 @@ class Shell(cmd.Cmd):
                 if arg == '-v':
                     verbose = True
 
-        is_comment = lambda s: s.strip()[:2] == '--'
+        is_comment = lambda s: s.strip()[:2] == '--' or s.isspace()
         is_continuation = lambda s: s.startswith(('\t', '  ', '    ',))
 
         try:
@@ -224,27 +231,48 @@ class Shell(cmd.Cmd):
                 cmd_exec = []
                 cmd_disp = []
                 for i, line in enumerate(f):
-                    if (hide_comments and is_comment(line)) or line.isspace():
+                    if is_comment(line) and hide_comments:
                         continue
-
-                    if len(cmd_exec) == 0:
-                        cmd_exec.append(line.strip())
-                        cmd_disp.append(line)
-                    elif is_continuation(line):
-                        cmd_exec.append(line.strip())
-                        cmd_disp.append(padding + line)
                     else:
-                        cmds_exec.append(' '.join(cmd_exec) + '\n')
-                        cmd_exec = [line.strip()]
-                        cmds_disp.append(''.join(cmd_disp))
-                        cmd_disp = [line]
+                        if len(cmd_exec) == 0:
+                            if not is_comment(line):
+                                cmd_exec.append(line.strip())
+                            cmd_disp.append(line)
+                        elif is_continuation(line):
+                            cmd_exec.append(line.strip())
+                            cmd_disp.append(padding + line)
+                        else:
+                            cmds_exec.append(' '.join(cmd_exec) + '\n')
+                            if not is_comment(line):
+                                cmd_exec = [line.strip()]
+                            else:
+                                cmd_exec = []
+                            cmds_disp.append(''.join(cmd_disp))
+                            cmd_disp = [line]
                 cmds_exec.append(' '.join(cmd_exec) + '\n')
                 cmds_disp.append('\n'.join(cmd_disp))
 
-                for cmd_disp, cmd_exec in zip(cmds_disp, cmds_exec):
+                i = 0
+                while i < cmds_exec:
+                    cmd_disp = cmds_disp[i]
+                    cmd_exec = cmds_exec[i]
                     if verbose:
                         self.stdout.write('bayeslite> ' + cmd_disp)
+                    if interactive:
+                        input = raw_input('Enter to run, p for previous, n for next, q to stop.')
+                        if input == '':
+                            #nothing.
+                            pass
+                        elif input == 'n':
+                            i += 1
+                            continue
+                        elif input == 'p':
+                            i -= 1
+                            continue
+                        elif input == 'q':
+                            return
                     self.onecmd(cmd_exec)
+                    i += 1
                     if sequential:
                         raw_input('Press any key to continue.')
         except Exception as e:
