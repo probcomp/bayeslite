@@ -361,17 +361,17 @@ observation sets $\{x_{ij}\}$.
 
 \begin{example} Linear Regression
 
-Linear regression (with a fixed noise model $\mathcal{E}$) can be viewed as a
+Linear regression (with a fixed model $p_o(.|.)$ for the output noise) can be viewed as a
 conditional adaptive GPM over the class of non-adaptive GPMs
-parameterized by the possible regression coefficients $\vec\beta_j$.
+parameterized by the possible regression coefficients $\vec\beta$.
 For a given set of input columns, defining inputs $\vec x$, and output column $y$,
-the update rule corresponding to maximum likelihood estimation would be
+the adaptation rule corresponding to maximum likelihood estimation would be
 
 \[ \vec\beta^*|\{\vec x_i, y_i\} = \argmax_{\vec\beta^*} \sum_i
-   p_{\mathcal{E}}(y_i | \vec x_i^T \vec\beta^*). \]
+   p_o(y_i | \vec x_i^T \vec\beta^*). \]
 
 The {\tt simulate} and {\tt logpdf} methods would refer to the
-noise distribution around the predicted value for $y$.
+noise distribution around the predicted value for $y$, namely $p_o(.|\vec x^T \vec \beta)$.
 \end{example}
 
 \begin{example} Exact Bayesian Adaptive GPMs
