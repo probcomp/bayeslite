@@ -692,7 +692,9 @@ conditioned on given values $d$ for any fourth collection of cells $D$:
     in the appropriate pattern.
 
 \todo[inline]{Specify effort throttles and characterization of
-  uncertainty (e.g., returning the entire set of $n$ point estimates)}
+  uncertainty (e.g., returning central limit theorem-based error estimate,
+  returning the entire set of $n$ point estimates so the user can check
+  whether CLT seems to be applying)}
 \todo[inline]{With an ensemble, there is a choice of whether to
   internally average the individual members' assessments, or to expose
   all of them for further uncertainty characterization (in any of
@@ -740,6 +742,11 @@ dependent).
   probability of dependence'' which would correspond to ``conditional
   mutual information''?  For example, the probability over $c$ under
   the distribution $C$ that $A|C$ and $B|C$ are dependent at $C=c$?}
+
+\todo[inline]{Taylor says: We have not actually studied how useful of
+  a concept this is outside of crosscat---is there a sense of what
+  space of common models would not just peg this to zero or one pretty
+  much all the time?}
 
 \todo[inline]{Dependence probability is not to be confused with
   confidence (in a frequentist sense) that things are independent in
