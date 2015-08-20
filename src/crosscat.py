@@ -678,6 +678,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
 
             # Delete all the things referring to the generator:
             # - diagnostics
+            # - column depedencies
             # - models
             # - subsample
             # - codemap
@@ -688,6 +689,11 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     WHERE generator_id = ?
             '''
             bdb.sql_execute(delete_diagnostics_sql, (generator_id,))
+            delete_column_dependency_sql = '''
+                DELETE FROM bayesdb_crosscat_column_dependency
+                    WHERE generator_id = ?
+            '''
+            bdb.sql_execute(delete_column_dependency_sql, (generator_id,))
             delete_models_sql = '''
                 DELETE FROM bayesdb_crosscat_theta
                     WHERE generator_id = ?
@@ -762,20 +768,17 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         if len(modelnos) == 1:  # XXX Ugh.  Fix crosscat so it doesn't do this.
             X_L_list = [X_L_list]
             X_D_list = [X_D_list]
-        # Ensure dependent columns.
-        lookup_dependence_sql = '''
-        SELECT coln0, colno1, dependent FROM bayesdb_crosscat_dep_constraints
-        WHERE generator_id = ?
-        '''
-        # dep_constraints = bdb.sql TODO
-        X_L_list, X_D_list = self._crosscat.ensure_col_dep_constraints(
-            M_c=M_c,
-            M_r=None,
-            T=self._crosscat_data(bdb, generator_id, M_c),
-            X_L=X_L_list,
-            X_D=X_D_list,
-            dep_constraints=[(0,1,1)]
-        )
+        # Ensure dependent columns if necessary.
+        dep_constraints = crosscat_gen_column_dependency(bdb, generator_id)
+        if dep_constraints:
+            X_L_list, X_D_list = self._crosscat.ensure_col_dep_constraints(
+                M_c=M_c,
+                M_r=None,
+                T=self._crosscat_data(bdb, generator_id, M_c),
+                X_L=X_L_list,
+                X_D=X_D_list,
+                dep_constraints=dep_constraints
+            )
         insert_theta_sql = '''
             INSERT INTO bayesdb_crosscat_theta
                 (generator_id, modelno, theta_json)
@@ -1390,3 +1393,12 @@ def crosscat_gen_colno(bdb, generator_id, cc_colno):
         assert len(row) == 1
         assert isinstance(row[0], int)
         return row[0]
+
+def crosscat_gen_column_dependency(bdb, generator_id):
+    sql = '''
+        SELECT colno0, colno1, dependent
+            FROM bayesdb_crosscat_column_dependency
+            WHERE generator_id = ?
+    '''
+    cursor = bdb.sql_execute(sql, (generator_id,))
+    return cursor.fetchall()
