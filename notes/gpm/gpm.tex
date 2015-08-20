@@ -964,7 +964,8 @@ table as the identity of an individual.
 
 \subsection{Technical Aside On IID Rows}
 
-\todo[inline]{Find a place for the ideas contained in this chunk of prize-winning text:}
+\todo[inline]{Find a place for the ideas contained in this chunk of
+  prize-winning text, or flush it (see also the next section):}
 
 The classical statistical framework generally assumes that all members of a
 population are independent and identically
@@ -984,6 +985,50 @@ $$p(\mathbf{X}) = \int_\alpha{(\Pi_{i=1}^Np(\mathbf{X}_i|\G_\alpha))d
 The De Finetti measure $\mathcal{Q}$ is the object which defines a distribution
 over the (fixed) measures (GPMs) that produce a statistical population. In this
 sense, $\mathcal{Q}$ represents the adaptive GPM.
+
+\subsection{Alternate Discussion Leading to de Finetti}
+
+\todo[inline]{Find a place for the ideas contained in this chunk of
+  prize-winning text, or flush it (see also the previous section):}
+
+Learning from data is feasible if we assume some commonality between
+the individuals of a population.  This amounts to supposing that the
+distribution on populations is not IID on individuals.  Since it
+is nonetheless exchangeable, de Finetti's theorem \todo{cite}
+permits us to treat it as a distribution over (unobserved) distributions
+over individuals.
+
+We are thus led to the following formal structure:
+
+\begin{eqnarray*}
+\hat{\theta} & \sim & \Pi(.) \\
+\theta_i & \sim & \pi(.|\hat\theta) \qquad \textrm{for each individual $i$} \\
+\vec{x}_{ij} & \sim & q(.|\theta_i, \hat\theta)
+\end{eqnarray*}
+
+Here $\hat\theta$ is some arbitrary latent structure shared among the
+population, presumed distributed according to distribution $\Pi$ (a
+priori of observing any data); $\theta_i$ is per-individual latent
+structure, assumed independent across individuals conditioned on
+$\hat\theta$; and $\vec{x}_{ij}$ are the observable per-individual
+features that correspond to cells in the data table.  A GPM of this form is given by the
+sample spaces for $\hat\theta$, $\theta_i$, and $\vec{x}_{ij}$, and by the
+distributions $\Pi(.)$, $\pi(.|\hat\theta)$, and $q(.|\theta_i, \hat\theta)$.
+
+\begin{remark}
+For any fixed value of $\hat\theta$, the marginal composition
+
+\begin{eqnarray}
+ p(\vec{x}_{ij}|\hat\theta) & = &
+ \int_{\theta_i} q(\vec{x}_{ij}|\theta_i, \hat\theta) \pi(\theta_i|\hat\theta)
+ \label{eqn:marginal-individual}
+\end{eqnarray}
+
+itself gives a valid generative population model (whose individuals
+are independent). \label{rem:gpm-class}
+\end{remark}
+This is an example of a \emph{GPM class}, in this
+case parameterized on $\hat\theta$.
 
 \subsection{Incorporating simulated data}
 
