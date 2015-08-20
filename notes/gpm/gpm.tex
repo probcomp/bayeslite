@@ -22,6 +22,7 @@
 
 \newcommand{\set}[1]{\{#1\}}
 \newcommand{\G}{\mathcal{G}}
+\newcommand{\R}{\mathbb{R}}
 \newcommand{\T}{T}
 
 \title{Draft Technical Notes on BayesDB}
@@ -342,9 +343,21 @@ the general case is a family of conditional probability distributions
 
 An \emph{Adaptive Generative Population Model} over a class of GPMs
 $\{\G_\alpha\}$ is a family of conditional probability distributions
-$\Pi(\G_\alpha|\{\mathbf{X}_{ij} = x_{ij}\})$, for all possible
+$\Pi(\G_\alpha|\{\mathbf{X}_{ij} = x_{ij}\})$, indexed by possible
 observation sets $\{x_{ij}\}$.
 \end{definition}
+
+\todo[inline]{Define what the notation $\Pi$ means, since it confused
+   Taylor on first reading and apparently is not standard notation in the
+   literature.
+  Unfortunately, it seems there is no obvious summary like we might
+   summarize that $f$ is a real-valued function on the plane by writing
+   $f: \R^2 \to \R$.
+  The analogous statement here is that $\Pi$ is a function from a
+   tagged union of all products of all data domains (meaning partial
+   assignments of cells in the table on which we are conditioning) to a
+   probability distribution on the $\G_\alpha$.
+  Which is a mouthful.}
 
 \begin{example} Linear Regression
 
