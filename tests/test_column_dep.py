@@ -129,8 +129,8 @@ def test_impossible_duplicate_dependency():
                 a CATEGORICAL,
                 b CATEGORICAL,
                 c CATEGORICAL,
-                INDEPENDENT(a b c),
-                DEPENDENT(a c),
+                INDEPENDENT(a,b,c),
+                DEPENDENT(a,c),
             );
         '''
 
@@ -167,9 +167,9 @@ def test_impossible_nontransitive_dependency():
                 a CATEGORICAL,
                 b CATEGORICAL,
                 c CATEGORICAL,
-                DEPENDENT(a b),
-                DEPENDENT(b c),
-                INDEPENDENT(a c)
+                DEPENDENT(a,b),
+                DEPENDENT(b,c),
+                INDEPENDENT(a,c)
             );
         '''
 

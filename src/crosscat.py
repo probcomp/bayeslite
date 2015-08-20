@@ -526,12 +526,16 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                len(directive) == 2 and \
                isinstance(directive[0], (str, unicode)) and \
                casefold(directive[0]) == 'dependent':
+                while ',' in directive[1]:
+                    directive[1].remove(',')
                 dep_constraints.append((directive[1],True))
                 continue
             if isinstance(directive, list) and \
                len(directive) == 2 and \
                isinstance(directive[0], (str, unicode)) and \
                casefold(directive[0]) == 'independent':
+                while ',' in directive[1]:
+                    directive[1].remove(',')
                 dep_constraints.append((directive[1],False))
                 continue
             if isinstance(directive, list) and \
