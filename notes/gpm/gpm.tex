@@ -379,7 +379,7 @@ noise distribution around the predicted value for $y$, namely $p_o(.|\vec x^T \v
 For any GPM class $\{\G_\alpha\}$, an \emph{exact Bayesian adaptive
   generative population model} is given by a prior
 $\Pi(\G_\alpha)$ over
-$\{\G_\alpha\}$, and the adaptation rule
+$\{\G_\alpha\}$, and adaptation by Bayes' rule
 
 \[ \Pi(\G_\alpha|\set{\mathbf{X}_{ij} = x_{ij}}) \propto \Pi(\G_\alpha)
  p(\set{\mathbf{X}_{ij} = x_{ij}}|\G_\alpha), \]
@@ -658,6 +658,13 @@ $A|C$ and $B|C$.  In the discrete case this can be written as
     \end{eqnarray*}
 
 \end{definition}
+
+\todo[inline]{Write this out in general measure-theoretic terms first,
+  as the expectation over $C$ of the K-L divergence of the product of
+  the marginals $p_A p_B$ from the joint $p_{A,B}$.  Derive the above
+  discrete formula if it is needed.  Check that the proposed sampling
+  algorithm constitutes a valid Monte Carlo estimate of the CMI in the
+  continuous as well as discrete cases.}
 
 In the context of the (notionally) infinite random table $\mathbf{X}$
 induced by any given GPM $\G$,
