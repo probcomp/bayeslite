@@ -71,7 +71,7 @@ iterative.
 notwithstanding, BayesDB has no reason to impose a Bayesian philosophy
 of induction or learning on either its users or the implementors of
 its population models.  Probability theory enters into BayesDB and
-this document because it's the best formalism the authors know for
+this document because it is the best formalism the authors know for
 what it means to have a quantitatively incomplete model of something.
 That happens in two places in BayesDB: any given population model is
 expected to be incomplete; and the results of learning a population
@@ -105,11 +105,11 @@ exchangeable.
 Model
 
 Consider the following GPM on $D$-dimensional members of
-a population $\mathbf{X}$: The individuals $\mathbf{X_i}$ are taken to
+a population $\mathbf{X}$: The individuals $\mathbf{X}_i$ are taken to
 be independently identically distributed according to a mixture of two
 normal distributions
 
-\[ p_\mathbf{X_i}(x) = w_1\mathcal{N}(x;\mu_1,\Sigma_1) +
+\[ p_{\mathbf{X}_i}(x) = w_1\mathcal{N}(x;\mu_1,\Sigma_1) +
  w_2\mathcal{N}(x;\mu_2,\Sigma_2) \]
 
 with fixed parameterization $(w_1, \mu_1, \Sigma_1, w_2, \mu_2, \Sigma_2)$.
@@ -129,7 +129,7 @@ parameters $\theta$ given a fixed generative process $M_i$, or
 learning the generative process $M_i$ from some fixed model class
 $\mathcal{M}$, or even learning the model class itself $\mathcal{M}$
 from a set of competing model classes $\set{\mathcal{M}_k}$.  BayesDB
-enables this with its notion of \emph{adaptive generative population
+enables this learning with its notion of \emph{adaptive generative population
   models}, formalized in
 Sections~\ref{sec:formalism-adaptive-gpm}~and~\ref{sec:formalism-incremental-gpm}
 and specified in Section~\ref{sec:adaptive_gpm}.
@@ -145,22 +145,30 @@ different adaptive models, which in turn yield different answers to
 queries.
 \end{example}
 
-We speak of \emph{generative} population models because we want a
-joint probability distribution on all attributes of an individual, for
-example to be able to impute arbitrary missing features, or synthesize
-populations of hypothetical individuals from the model.  There are,
+We speak of \emph{generative} population models to capture a
+joint probability distribution on all attributes of an individual.
+
+\todo[inline]{Not only do we have a joint distribution over all attributes of
+    an individual, but in fact a joint distribution over all the 
+    attributes of all the individuals. This is an important feature of adaptive 
+    GPMs which should be made clear.}
+
+Joint distributions allow us to impute arbitrary missing attributes, or 
+synthesize populations of hypothetical individuals from the generative 
+model.  There are,
 however, many techniques for modeling relationships between attributes
 of an individual.  To be able to take advantage of these methods,
 BayesDB admits the notion of a \emph{conditional GPM} that treats some
 attributes as unmodeled inputs, and specifies a probability
-distribution on other attributes (see Section~\ref{sec:generators} for
+distribution on other attributes conditioned on the unmodeled inputs
+(see Section~\ref{sec:generators} for
 details).  The BayesDB Minimal Modeling Language
 (Section~\ref{sec:mml}) permits specifying complete GPMs as directed,
 acyclic compositions of such objects (on the columns).
 
 \begin{example}
-Regression (linear, logistic, or otherwise) and classification methods
-are canonical instances of conditional GPMs, predicting the dependent
+Regression (linear, logistic, Poisson, or otherwise) and classification methods
+are canonical instances of conditional GPMs, generating the dependent
 variable from the independent ones.
 \end{example}
 
@@ -179,10 +187,15 @@ Bayesian model derived from CrossCat.
 \begin{example} \label{ex:crosscat} CrossCat
 
 A cross-categorization of a data table $\mathbf{X}$ with $D$ columns and $N$ 
-rows is
-a partition of the columns $(X_1,\dots,X_D)$ into blocks called \textit{views}.
-In each view, we have a partition of the rows $(X_1^{i},\dots,X_D^{i})_{i=1}^N$
+rows is a partition $\mathbf{v}$ of the columns 
+$\set{\mathbf{X}_{(\cdot,1)},\dots,\mathbf{X}_{(\cdot,D)}}$ into blocks 
+called \textit{views}.
+In each view $v \in \mathbf{v}$, we have a partition $\mathbf{c}_v$ of the rows 
+$\set{\set{\mathbf{X}_{(i,j)}:j \in v}}_{i=1}^N$
 into blocks called \textit{categories}.
+Formally, a cross-categorization of 
+$\mathbf{X}$ is a pair $z = (\mathbf{v},\mathbf{c_v})$ where
+$\mathbf{c_v} := \set{c_v: v \in \mathbf{v}}$.
 
 \begin{figure}[ht]
     \centering
@@ -192,18 +205,36 @@ into blocks called \textit{categories}.
   independent conditioned on the latent structure.}
 \label{fig:cc}
 \end{figure}
-The collection of all possible column/row partitions $j$ of
-$\mathbf{X}$, with their associated component parameters $\theta$,
-defines a GPM class:
+The collection
+$\mathbf{z} = \set{(\mathbf{v},\mathbf{c_v})}$ of all possible column/row 
+partitions of $\mathbf{X}$
+    \footnote{For readers who enjoy combinatorics, the cardinality of 
+        $\mathbf{z}$ for an $N$ by $D$ table
+        is exactly $\sum_{k=1}^{D}\left({D \brace k}B(N)^k\right)$ 
+        where ${D \brace k}$ is a Stirling number of the second kind, and 
+        $B(N)$ is the $N$th Bell number.},
+with their associated component parameters $\theta$, defines a GPM class:
 
-$\mathcal{M}_\textbf{X} = \set{CC_j^{\theta} \text{ : cross-cat of } \mathbf{X}
-\text{ with partition } j \text{ and component model params } \theta}$.
+$\mathcal{M}_\textbf{X} = \set{CC_z^{\theta} \text{ : cross-cat of } \mathbf{X}
+\text{ with partition } z \text{ and component model params } \theta}$.
 
-A member of the CrossCat GPM class is a particular
-cross-categorization with partition $j$ and component parameters
-$CC_j^{\theta^*}$.  Adding a prior over these possible structures
-defines an adaptive generative population model.
+A member $CC_{z^*}^{\theta^*}$ of the CrossCat GPM class 
+$\mathcal{M}_\mathbf{X}$ is a particular cross-categorization with partition 
+$z^* \in \mathbf{z}$ and component parameters $\theta^*$.  Adding a prior over 
+all possible members of $\mathcal{M}_\mathbf{X}$ defines an adaptive generative 
+population model.
 \end{example}
+
+\todo[inline]{The reason I am being so pedantic about this construction is to
+    explicate various design choices when simulating, sampling, and running
+    posterior inference. In particular we are going to have to break down the 
+    latent
+    structure into ``global'' vs ``row-related'' latents to differentiate 
+    between
+    observed and hypothetical members. I am also trying to be very careful with 
+    the
+    notation since it will help us update crosscat to implement the 
+    fully-general GPM interface.}
 
 Unlike Example~\ref{ex:normal_gpm}, the latent information of the GPM
 in Example~\ref{ex:crosscat} is structurally dependent on
@@ -211,42 +242,46 @@ the statistical population it has produced $\mathbf{X}$. Observing more
 generated members $\mathbf{X} \to
 \mathbf{X}'$ means the GPM class under consideration grows from
 $\mathcal{M}_\textbf{X}$ to $\mathcal{M}_\textbf{X'}$, as both the number of
-possible cross-categorizations $j$ and the dimensionality of the vector of
-latents $\theta$ increase.
+possible cross-categorizations $|\mathbf{z}|$ and the dimensionality of the 
+vector of latents $\theta$ increase.
 
-\todo[inline]{The reason I am being so pedantic about this construction is to
-explicate various design choices when simulating, sampling, and running
-posterior inference. In particular we are going to have to break down the latent
-structure into ``global'' vs ``row-related'' latents to differentiate between
-observed and hypothetical members.}
+\todo[inline]{RE: last sentance, this is actually one possible definition of
+    a ``non-parametric" model. Should we say that?}
 
 The default adaptive GPM is not obliged to model all columns jointly by
-positing some GPM from the CrossCat class. The MML includes modeling
+positing some GPM from the CrossCat model class. The MML includes modeling
 instructions for describing dependence constraints, and specifying a
 compositional, directed-acyclic network of arbitrary GPMs implemented by a user.
 It also includes inference instructions for initializing adaptive GPMs and
-performing updates of the posterior distribution on GPMs.
+performing updates of the posterior distribution over GPMs.
 
 The MML is thus a complete (but sub-Turing) probabilistic programming language
-that interoperates with queries written in BQL. The set of primitive GPMs can be
-extended by loading foreign GPMs written in VentureScript or Python, and can be used to
-transparently integrate models from disparate probabilistic programming
-languages such as Stan and statistical computing environments such as R. Because
-BQL programs only depend on the statistical data types of the columns, the
-underlying modeling technologies, GPM assumptions, and inference tactics can be
-changed without invalidating end-user data analysis workflows.
+that interoperates with queries written in BQL. The set of primitive GPMs
+\todo{Define what is a ``primitive GPM''.}
+can be extended by loading foreign GPMs written in VentureScript or Python. 
+Models from disparate probabilistic programming systems (such as PyMC or PStan) 
+and statistical computing environments (such as R) can be transparently 
+integrated into BayesDB using the MML. Because BQL programs only depend on the 
+statistical data types of the columns, the underlying modeling technologies, 
+GPM assumptions, and inference tactics can be changed without invalidating 
+end-user data analysis workflows.
 
 \section{Interface for Generative Population Models} \label{sec:generators}
 A \textit{generative population model} is a probabilistic model of a data
 generating process and a statistical population that it has produced. It is
-informative to think of this statistical population as an infinite table
+informative to think of this statistical population as an infinite random table
 $\mathbf{X}$ with a finite number of columns $D$ (representing attributes) and
-an infinite number of rows (representing members of the population). A finite
-number of rows $r_i \in
-\set{1,\dots,N}$ are actually observed, so $\mathbf{X}$ is stored in BayesDB as
-an $N \times D$ table. Hypothetical members may be referenced by any other row index,
-for example by drawing a random real row index
-$r^*\sim U[0,1]$.
+an infinite number of rows (representing members of the population).
+
+For notational flexibility, we refer to the columns
+as $\mathbf{X}_{(\cdot,c)}$ where $c \in \set{1, \dots, D}$,
+and the rows as $\mathbf{X}_{(r,\cdot)}$. A finite
+number of rows $r \in \set{1,\dots,N}$ are actually observed, so 
+$\mathbf{X}$ is stored in BayesDB as an $N \times D$ table. Hypothetical 
+members may be referenced by any other row index, for example by drawing a 
+random real row index $r^*\sim U[0,1]$. A particular cell in the table
+$\mathbf{X}_{(r,c)}$ represents the $c$th attribute of the 
+$r$th member.
 
 Generative population models provide the primitive statistical inferences that
 are used by BayesDB to implement inferential queries in BQL. To support all of
@@ -281,38 +316,38 @@ Section~\ref{sec:adaptive_gpm}.
     desired configuration information.
 
 \item \texttt{$\vec{s}$ =
-    simulate($\G$, row = $i$, targets = $\set{c_j}_{j=1}^{|T|}$, givens
-    = $\set{(c_k, x_{ik})}_{k=1}^{|G|}$)}
+    simulate($\G$, row = $r$, targets = $\set{c_t}_{t=1}^{|T|}$, givens
+    = $\set{(c_g, x_{(r,c_g)})}_{g=1}^{|G|}$)}
 
     Generate a sample from the specified conditional distribution on columns:
     $$
-    \vec{s} \sim p( \set{ \mathbf{X}_{ij} } |
-    \set{ \mathbf{X}_{ik} = x_{ik} }, \G).
+    \vec{s} \sim p( \set{ \mathbf{X}_{(r,c_t)} } |
+    \set{ \mathbf{X}_{(r,c_g)} = x_{(r,c_g)} }, \G).
     $$
 
     The returned $\vec{s}$ is a $|T|$ dimensional vector.
 
 \item \texttt{$\log p$ =
-    logpdf($\G$, row = $i$, targets = $\set{(c_j, x_{ij})}_{j=1}^{|T|}$,
-    givens = $\set{(c_k, x_{ik})}_{k=1}^{|G|}$)}
+    logpdf($\G$, row = $r$, targets = $\set{(c_t, x_{(r,c_t)})}_{t=1}^{|T|}$,
+    givens = $\set{(c_g, x_{(r,c_g)})}_{g=1}^{|G|}$)}
 
     Evaluate the log probability density of the specified conditional
     distribution on columns at a target point:
 
-    $$
-    \log p = \log p( \set{ \mathbf{X}_{ij} = x_{ij} } |
-    \set{ \mathbf{X}_{ik} = x_{ik} }, \G).
-    $$
+    \[
+    \log p = \log p( \set{ \mathbf{X}_{(r,c_t)} = x_{(r,c_t)} } |
+    \set{ \mathbf{X}_{(r,c_g)} = x_{(r,c_g)} }, \G).
+    \]
 
     The density is with respect to a product of counting and Lebesgue
-    measures, correspoding to discrete and continuous statistical
+    measures, corresponding to discrete and continuous statistical
     types for the relevant columns.  The distribution is interpreted
     as marginalizing out all random variables that are not mentioned.
 
 \end{enumerate}
 
-The column indexes $c_j, c_k$ referred to above must refer to columns
-present in the table---the MML does not have a notion of hypothetical
+Note that $t_j$ and $g_k$ are column indexes and must refer to columns
+present in the table --- the MML does not have a notion of hypothetical
 columns.  Further, the \texttt{target} indexes must be a subset of the
 columns in the \texttt{typed-outputs} of the GPM $\G$, and
 the \texttt{given} indexes of each query must be a superset of the
@@ -321,11 +356,11 @@ specify some of the \texttt{typed-outputs} as \texttt{given} in any
 given query.  Doing so picks out a conditional version of the output
 distribution.
 
-The row index $i$ may either refer to an individual in the
+The row index $r$ may either refer to an individual in the
 table, or a hypothetical individual.  In the former case, the
 distribution being sampled or assessed is taken as conditional on
 whatever latent information is available about that individual, but
-\emph{not on any attributes stored in the table} except as repeated in
+\textit{not on any attributes stored in the table} except as repeated in
 the \texttt{givens}.  In the latter case, the distribution is taken to
 refer to a fresh individual (i.e., marginalizing out any
 per-individual latent structure).
@@ -334,8 +369,8 @@ per-individual latent structure).
 \label{sec:formalism-adaptive-gpm}
 
 As outlined in Section \ref{sec:overview}, some GPMs can be learned
-from observations $\set{\mathbf{X}_{ij} = x_{ij}}$ of a statistical population
-$\mathbf{X}$.  Since we permit the learning to itself be stochastic,
+from observations $\set{\mathbf{X}_{(i,j)} = x_{(i,j)}}$ of a statistical 
+population $\mathbf{X}$.  Since we permit the learning to itself be stochastic,
 the general case is a family of conditional probability distributions
 (of learning results) for all possible sets of observations.  Formally:
 
@@ -343,8 +378,8 @@ the general case is a family of conditional probability distributions
 
 An \emph{Adaptive Generative Population Model} over a class of GPMs
 $\{\G_\alpha\}$ is a family of conditional probability distributions
-$\Pi(\G_\alpha|\{\mathbf{X}_{ij} = x_{ij}\})$, indexed by possible
-observation sets $\{x_{ij}\}$.
+$\Pi(\G_\alpha|\{\mathbf{X}_{(i,j)} = x_{(i,j)}\})$, indexed by possible
+observation sets $\{x_{(i,j)}\}$.
 \end{definition}
 
 \todo[inline]{Define what the notation $\Pi$ means, since it confused
@@ -357,34 +392,72 @@ observation sets $\{x_{ij}\}$.
    tagged union of all products of all data domains (meaning partial
    assignments of cells in the table on which we are conditioning) to a
    probability distribution on the $\G_\alpha$.
-  Which is a mouthful.}
+  Which is a mouthful. - Taylor
+  
+  The way $\Pi$ is defined is a 
+  \textit{conditional probability distribution over} 
+  $\set{\G_\alpha}$. This means that the correct
+  specification is either $d\Pi(\G_\alpha)$ or
+  $\Pi(d\G_\alpha)$, or $\Pi(A)$ where $A$ is a measurable subset
+  of $\G_\alpha$. We do not make this distinction in fear of delving too
+  far down the world of measure theory. However $\Pi$ is being overloaded as 
+  both a measure and a density (which is not guaranteed to exist).
+  
+  To define the notion of an \textbf{adaptation rule}, let $\mathbf{X}^\infty$ 
+  be  the set of all infinite random tables $\mathbf{X}$. The adaptation rule 
+  $a$ is then $a: \mathbf{X}^\infty \to (\mathcal{F}_\alpha \xrightarrow{\Pi} 
+  [0,1])$ where $\mathcal{F}$ is an appropriate $\sigma$ field over $\alpha$ 
+  which indexes the GPMs in the model class. Since we only ever observe a 
+  finite random table $\mathbf{X}^N$ then $a$ must be defined in terms of some 
+  limiting process on $a_n$. Because $a$ is in general a probabilistic program 
+  , the mapping is generally stochastic.
 
-\begin{example} Linear Regression
+  I am happy to sweep this under the rug.
+  
+  Further reading indicates that the statement above has a formal name
+  called ``Markov (stochastic, probability) kernel''. I am happier with the 
+  formalism of an adaptation rule as a particular stochastic
+  kernel. - Feras.}
 
-Linear regression (with a fixed model $p_o(.|.)$ for the output noise) can be viewed as a
-conditional adaptive GPM over the class of non-adaptive GPMs
-parameterized by the possible regression coefficients $\vec\beta$.
-For a given set of input columns, defining inputs $\vec x$, and output column $y$,
-the adaptation rule corresponding to maximum likelihood estimation would be
+\begin{example} Linear Regression with Maximum Likelihood Estimation
 
-\[ \vec\beta^*|\{\vec x_i, y_i\} = \argmax_{\vec\beta^*} \sum_i
-   p_o(y_i | \vec x_i^T \vec\beta^*). \]
+Linear regression (with a fixed model $y|(x,\beta) \sim p_o(\cdot|\beta^Tx)$ 
+for the output noise) can be viewed as a conditional adaptive GPM over the 
+class of non-adaptive conditional GPMs $\set{\G_\beta}$ parameterized 
+by the possible vector of regression coefficients $\beta \in \mathbb{R}^D$. The 
+associated statistical population $\mathbf{X}$ has input columns
+$\mathbf{X}_{(\cdot,1)} \dots \mathbf{X}_{(\cdot,D)}$,
+and output column $\mathbf{Y}_{(\cdot)}$.
 
-The {\tt simulate} and {\tt logpdf} methods would refer to the
-noise distribution around the predicted value for $y$, namely $p_o(.|\vec x^T \vec \beta)$.
+The adaptation rule for a collection of input and output observations
+$\set{\mathbf{X}_{(i,j)} = x_{(i,j)}}$ 
+first computes the maximum-likelihood estimate $\beta^*$
+
+    \[
+    \beta^* = \argmax_{\hat{\beta}} \sum_i
+    p_o(y_{(i)}|\hat{\beta}^Tx_{(i,\cdot)})
+    \].
+
+The conditional distribution
+$\Pi(\G_\beta|\set{\mathbf{X}_{(i,j)}= x_{(i,j)}}$ 
+is a Dirac measure on $\G_{\beta^*}$.
+
+The {\tt simulate} and {\tt logpdf} 
+methods for a row $r$ would refer to the conditional distribution
+$\mathbf{Y}_{(r)}|(\set{\mathbf{X}_{(r,\cdot)}=x_{(r,\cdot)}},\beta)$, 
+namely $p_o(.|\beta^Tx_{(r,\cdot)})$.
 \end{example}
 
 \begin{example} Exact Bayesian Adaptive GPMs
 
-For any GPM class $\{\G_\alpha\}$, an \emph{exact Bayesian adaptive
-  generative population model} is given by a prior
-$\Pi(\G_\alpha)$ over
-$\{\G_\alpha\}$, and adaptation by Bayes' rule
+For any GPM class $\{\G_\alpha\}$, an \emph{exact Bayesian adaptive generative 
+population model} is given by a prior $\Pi(\G_\alpha)$ over $\{\G_\alpha\}$,
+and adaptation by Bayes' rule
 
-\[ \Pi(\G_\alpha|\set{\mathbf{X}_{ij} = x_{ij}}) \propto \Pi(\G_\alpha)
- p(\set{\mathbf{X}_{ij} = x_{ij}}|\G_\alpha), \]
+\[ \Pi(\G_\alpha|\set{\mathbf{X}_{(i,j)} = x_{(i,j)}}) \propto \Pi(\G_\alpha)
+ p(\set{\mathbf{X}_{(i,j)} = x_{(i,j)}}|\G_\alpha), \]
 
-where $p(\cdot|\G_\alpha)$ is the probability of the observed data under
+where $p(\cdot|\G_\alpha)$ is the probability density of the observed data under
 the particular GPM $\G_\alpha$. \label{ex:exact-bayes}
 \end{example}
 
@@ -405,8 +478,8 @@ parameter to the adaptation rule:
 
 An \emph{Incremental Adaptive Generative Population Model} over a
 class of GPMs $\{\G_\alpha\}$ is a family of conditional probability
-distributions $\Pi_n(\G_\alpha|\set{\mathbf{X}_{ij} = x_{ij}})$, for all
-possible observation sets $\{x_{ij}\}$ and all positive integers $n$,
+distributions $\Pi^n(\G_\alpha|\set{\mathbf{X}_{(i,j)} = x_{(i,j)}})$, for all
+possible observation sets $\{x_{(i,j)}\}$ and all positive integers $n$,
 where increasing $n$ represents increasing computational
 cost.\footnote{In Section~\ref{sec:adaptive_gpm} we will specify a
   somewhat more flexible interface to learning than iterating a single
@@ -414,27 +487,30 @@ cost.\footnote{In Section~\ref{sec:adaptive_gpm} we will specify a
   needlessly notationally cumbersome.}
 \end{definition}
 
-\begin{example} Bayesian Markov Adaptive GPMs
+\begin{example} Bayesian Markov-Chain Adaptive GPMs
+\label{ex:markov-bayes}
 
-For any GPM class $\{\G_\alpha\}$, a \emph{Bayesian Markov adaptive
+For any GPM class $\{\G_\alpha\}$, a \emph{Bayesian Markov-Chain adaptive
   generative population model} is given by a prior
 $\Pi(\G_\alpha)$ over
 $\{\G_\alpha\}$, a data-dependent transition operator
-$\T_{\{x_{ij}\}}$ over $\{\G_\alpha\}$, and
+$\T_{\{x_{(i,j)}\}}$ over $\{\G_\alpha\}$, and
 an adaptation rule that consists of iterating $\T$:
 
-\[ \Pi_n(\G_\alpha|\set{\mathbf{X}_{ij} = x_{ij}}) = \T_{\set{x_{ij}}}^n 
-\Pi(\G_\alpha). \]
-\label{ex:markov-bayes}
+\[ \Pi^n(\G_\alpha|\set{\mathbf{X}_{(i,j)} = x_{(i,j)}}) = 
+\T_{\set{x_{(i,j)}}}^n \Pi(\G_\alpha). \]
 \end{example}
 
 This will be \emph{asymptotically Bayesian} if the transition operator
 converges to the true posterior, that is if
 
-\[ \lim_{n\to\infty}D_{KL}\Big(\Pi^*(\G_\alpha|\set{\mathbf{X}_{ij} = x_{ij}}) \Big\| \Pi_n(\G_\alpha|\set{\mathbf{X}_{ij} = x_{ij}})\Big) = 0, \]
+\[ \lim_{n\to\infty}D_{KL}\Big(\Pi^*(\G_\alpha|\set{\mathbf{X}_{(i,j)} = 
+x_{(i,j)}}) \Big\| \Pi_n(\G_\alpha|\set{\mathbf{X}_{(i,j)} = x_{(i,j)}})\Big) = 
+0, 
+\]
 
-where $\Pi^*(\G_\alpha|\set{\mathbf{X}_{ij}=x_{ij}}) \propto 
-\Pi(\G_\alpha) p(\set{\mathbf{X}_{ij}=x_{ij}}|\G_\alpha)$
+where $\Pi^*(\G_\alpha|\set{\mathbf{X}_{(i,j)}=x_{(i,j)}}) \propto 
+\Pi(\G_\alpha) p(\set{\mathbf{X}_{(i,j)}=x_{(i,j)}}|\G_\alpha)$
 as in the exact Bayes case (Example~\ref{ex:exact-bayes}).
 If the true data distribution falls into the hypothesis class given by
 the prior $\Pi$, this will also be \emph{asymptotically consistent} in
@@ -478,15 +554,15 @@ adapt over.
     $\Pi(\G_\alpha|\{\})$.  In the Bayesian case, this would be the prior.
 
 \item \texttt{$\vec{s}$ =
-    simulate($\G$, targets = $\set{(r_j,c_j)}_{j=1}^{|T|}$, givens
-    = $\set{(r_k, c_k, x_{r_kc_k})}_{k=1}^{|G|}$)}
+    simulate($\G$, targets = $\set{(r_t,c_t)}_{t=1}^{|T|}$, givens
+    = $\set{(r_g, c_g, x_{(r_g,c_g)})}_{g=1}^{|G|}$)}
 
     Generate a joint sample from the specified conditional
     distribution on cells.
-    $$
-    \vec{s} \sim p( \set{ \mathbf{X}_{r_jc_j} } |
-    \set{ \mathbf{X}_{r_kc_k} = x_{r_kc_k} }, \G)
-    $$
+    \[
+    \vec{s} \sim p( \set{ \mathbf{X}_{(r_t,c_t)} } |
+    \set{ \mathbf{X}_{(r_g,c_g)} = x_{(r_g,c_g)} }, \G)
+    \]
 
     Note that $\vec{s}$ is a $|T|$ dimensional vector of the simulated
     values for those cells.  As in the non-adaptive case
@@ -495,39 +571,39 @@ adapt over.
     on manifest structure is determined by the \texttt{givens}.
     
 \item \texttt{$\log p$ =
-    logpdf($\G$, targets = $\set{(r_j, c_j, x_{r_jc_j})}_{j=1}^{|T|}$,
-    givens = $\set{(r_k, c_k, x_{r_kc_k})}_{k=1}^{|G|}$)}
+    logpdf($\G$, targets = $\set{(r_t, c_t, x_{(r_t,c_t)})}_{t=1}^{|T|}$,
+    givens = $\set{(r_g, c_g, x_{(r_g,c_g)})}_{g=1}^{|G|}$)}
 
     Evaluate the log probability density of the specified conditional
     distribution on cells at a target point.
 
-    $$
-    \log p = \log p( \set{ \mathbf{X}_{r_jc_j} = x_{r_jc_j} } |
-    \set{ \mathbf{X}_{r_kc_k} = x_{r_kc_k} }, \G)
-    $$
+    \[
+    \log p = \log p( \set{ \mathbf{X}_{(r_t,c_t)} = x_{(r_t,c_t)} } |
+    \set{ \mathbf{X}_{(r_g,c_g)} = x_{(r_g,c_g)} }, \G)
+    \]
 
     As in the non-adaptive case, the density is with respect to a
-    product of counting and Lebesgue measures, correspoding to
+    product of counting and Lebesgue measures, corresponding to
     discrete and continuous statistical types for the relevant
     columns.  The distribution is interpreted as marginalizing out all
     random variables that are not mentioned.
 
-\item \texttt{$\G'$ = incorporate($\G$, value = $(i, j, x_{ij})$)}
+\item \texttt{$\G'$ = incorporate($\G$, value = $(r, c, x_{(r,c)})$)}
 
-    Record an observation $x_{ij}$ in the cell $\mathbf{X_{ij}}$.
-    If there is no row $i$, create a new one.
+    Record an observation $x_{(r,c)}$ in the cell $\mathbf{X}_{(r,c)}$.
+    If there is no row $r$, create a new one.
 
     It is an error for the client to overwrite existing cells, or to insert values
-    $x_{ij}$ incompatible with the schema $\Lambda$ (for example,
+    $x_{(r,c)}$ incompatible with the schema $\Lambda$ (for example,
     providing data of the wrong type).
 
     Consecutive calls to \texttt{incorporate} (and \texttt{remove})
     should commute.  In the case of incremental GPMs, intervening
     \texttt{infer} is permitted to break commutativity.
 
-\item \texttt{$\G'$ = remove($\G$, $(i, j)$)}
+\item \texttt{$\G'$ = remove($\G$, $(r,c)$)}
 
-    Remove the observation $x_{ij}$ from the in cell $\mathbf{X_{ij}}$.
+    Remove the observation $x_{(r,c)}$ from the in cell $\mathbf{X}_{(r,c)}$.
     Consecutive \texttt{remove} should exactly invert
     \texttt{incorporate} on the same cell.  In the case of incremental
     GPMs, intervening \texttt{infer} is permitted to change the
@@ -644,10 +720,10 @@ subtantially more efficient.
 
 \begin{definition} Conditional Mutual Information \todo{standard reference}
 
-The \emph{conditional mutual information} (CMI) of two random variables $A$
-and $B$ with respect to a third variable $C$ is the expectation, with
-respect to $C$, of the mutual information of the conditional variables
-$A|C$ and $B|C$.  In the discrete case this can be written as
+The \emph{conditional mutual information} (CMI) of two random vectors $A$
+and $B$ with respect to a third vector $C$ is the expectation, with
+respect to $C$, of the mutual information of the conditional distributions
+$p(A|C)$ and $p(B|C)$.  In the discrete case this can be written as
 
     \begin{eqnarray*}
     I(A;B|C) & := &
@@ -702,10 +778,11 @@ conditioned on given values $d$ for any fourth collection of cells $D$:
 
 \begin{example} Mutual Information
 
-The per-column mutual information available in BQL with the
-\texttt{MUTUAL INFORMATION} syntax is a special case of CMI with
-$C = D = \emptyset$ and $A = \set{*, c_1}$, $B = \set{*, c_2}$
-singleton collections of cells of (the same) fresh individual's
+The mutual information of two columns $\mathbf{X}_{(\cdot,c_1)}$ and 
+$\mathbf{X}_{(\cdot,c_2)}$
+available in BQL with the \texttt{MUTUAL INFORMATION} syntax is a special case 
+of CMI with $C = D = \emptyset$ and $A = \set{(r^*, c_1)}$, $B = \set{(r^*, 
+c_2)}$ singleton collections of cells of (the same) fresh individual's
 attributes corresponding to the desired columns.
 \end{example}
 
@@ -772,19 +849,23 @@ information'', but:
 
 If we do mean ``some normalized version of mutual information'', the
 default implementation is straightforward once we select a
-normalization mechanism.  One historical choice would be the Linfoot
-measure:\footnote{http://www.sciencedirect.com/science/article/pii/S001999585790116X}
+normalization mechanism.  One historical choice currently implemented in 
+BayesDB is the Linfoot measure:
+\footnote{http://www.sciencedirect.com/science/article/pii/S001999585790116X}
 
 \begin{align*}
 r^2 = \sqrt{1 - \exp{(-2I_0)}}
 \end{align*}
 
-Linfoot is normalized between 0 and 1, but there are some questionable
-properties.  For example, if $Y=g(X)$, Linfoot is not guaranteed to be
-1 (easy to construct an example in the discrete case).  Moreover, feedback
+\todo[inline]{Linfoot is normalized between 0 and 1, but there are some 
+questionable properties.  For example, if $Y=g(X)$, Linfoot is not guaranteed 
+to be 1 (easy to construct an example in the discrete case). On further thought,
+this might be desirble when $g(\cdot)$ is not bijective.
+
+Moreover, feedback
 from PPAML is that the z-matrices it produces are sparse and
 uninsightful, and give the implication that continuous variables are
-more dependent than categorical ones.
+more dependent than categorical ones.}
 
 \todo[inline]{Thought: If we already have probability of dependence,
   magnitude of dependence may naturally read as ``assuming there is a
@@ -835,7 +916,7 @@ The intent of imputation for some cell(s) $A$ is to return a single
 distribution on $A$, and the confidence that this summary is ``good''.
 
 If all of $A$ is discrete, this has a natural interpretation as
-``return the max a-posteriori value, with confidence its
+``return the maximum a-posteriori value, where the confidence is its
 probability.''  If continuous variables are involved, however, things
 get a bit fuzzier.
 
@@ -854,7 +935,7 @@ the set and request the location and the best confidence (impute with
 confidence), or constrain the confidence and request the location and
 the best size (impute with error estimate), or constrain both and
 request the location or failure.  (Constraining the location is
-assessment, not imputation).  In the multidimenional case, there is
+assessment, not imputation).  In the multidimensional case, there is
 also the issue of the shape of the set.  Natural choices for
 continuous variables include balls under $L_1$ (Manhattan distance,
 i.e. total error), $L_2$ (Euclidean distance), or $L_\infty$ (maximum
@@ -864,7 +945,7 @@ include singletons, boxes, or no shape restriction (a list of
 plausible tuples).
 
 All of these queries are approximately answerable in terms of
-\texttt{simulate}: draw a bunch of samples, find a set of the proper
+\texttt{simulate}: draw a collection of samples, find a set of the proper
 shape, and report the fraction of them that it covered as the
 confidence.  There may be some variations where one uses assessments
 of the sample points rather than their count for some information,
