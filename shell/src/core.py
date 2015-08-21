@@ -259,7 +259,7 @@ class Shell(cmd.Cmd):
                     if verbose:
                         self.stdout.write('bayeslite> ' + cmd_disp)
                     if interactive:
-                        input = raw_input('Enter to run, p for previous, n for next, q to stop.')
+                        input = raw_input('Enter to run, p for previous, n for next, c to enter a command, g to jump, q to stop.')
                         if input == '':
                             #nothing.
                             pass
@@ -268,6 +268,16 @@ class Shell(cmd.Cmd):
                             continue
                         elif input == 'p':
                             i -= 1
+                            continue
+                        elif input == 'g':
+                            i = int(raw_input("Enter a command number. Current is %d" % (i,)))
+                            continue
+                        elif input == 'c':
+                            cmd = raw_input("New command> ")
+                            cmds_disp.insert(i, cmd + "\n")
+                            cmds_exec.insert(i, cmd)
+                            self.onecmd(cmd)
+                            i += 1
                             continue
                         elif input == 'q':
                             return
