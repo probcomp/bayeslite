@@ -14,11 +14,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import contextlib
-
-import crosscat.LocalEngine
 import numpy as np
 import pytest
+from sqlite3 import IntegrityError
+
+import crosscat.LocalEngine
 
 import bayeslite
 import bayeslite.crosscat
@@ -27,7 +27,7 @@ import bayeslite.crosscat
 # the tests should pass independently of the generated dataset.
 
 def test_complex_dependencies():
-# Create real-valued data, such that DEP(x,y), DEP(y,z), and IND(x,z)
+    # Create real-valued data, such that DEP(x,y), DEP(y,z), and IND(x,z)
     mean = [4, -2, -11]
     cov = [[3., .7, 0.],
            [.7, 4., .6],
@@ -42,7 +42,6 @@ def test_complex_dependencies():
     # Create categorical data, independent of all other columns.
     w = np.random.choice(range(8), size=250)
 
-    # TODO: find better way to get lists of lists into bayesdb than this hack.
     data = np.vstack((x,y,z,w,v)).T
     data_csv = ['x,y,z,v,w']+[','.join(str(val) for val in row) for row in data]
 
@@ -81,19 +80,19 @@ def test_complex_dependencies():
             for row in bdb.execute(bql):
                 col1, col2, dep = row[1], row[2], row[3]
                 # test IND(x y)
-                if (col1,col2) in [('x','y'),('y','x')]:
+                if (col1, col2) in [('x','y'), ('y','x')]:
                     assert dep == 0
                     continue
                 # test IND(x v)
-                if (col1,col2) in [('x','v'),('v','x')]:
+                if (col1, col2) in [('x','v'), ('v','x')]:
                     assert dep == 0
                     continue
                 # test DEP(z v)
-                if (col1,col2) in [('z','v'),('v','z')]:
+                if (col1, col2) in [('z','v'), ('v','z')]:
                     assert dep == 1
                     continue
                 # test DEP(z w)
-                if (col1,col2) in [('z','w'),('w','z')]:
+                if (col1, col2) in [('z', 'w'), ('w', 'z')]:
                     assert dep == 1
                     continue
 
@@ -135,7 +134,7 @@ def test_impossible_duplicate_dependency():
         '''
 
         # An error should be thrown about impossible schema.
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             bdb.execute(bql)
 
 def test_impossible_nontransitive_dependency():
@@ -177,5 +176,5 @@ def test_impossible_nontransitive_dependency():
         bdb.execute(bql)
 
         # Error thrown when initializing since no initial state exists.
-        with pytest.raises(Exception):
+        with pytest.raises(RuntimeError):
             bdb.execute('INITIALIZE 10 MODELS FOR bar')
