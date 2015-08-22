@@ -198,7 +198,8 @@ CREATE TABLE bayesdb_crosscat_column_dependency (
     FOREIGN KEY(generator_id, colno0)
         REFERENCES bayesdb_generator_column(generator_id, colno),
     FOREIGN KEY(generator_id, colno1)
-        REFERENCES bayesdb_generator_column(generator_id, colno)
+        REFERENCES bayesdb_generator_column(generator_id, colno),
+    CHECK(colno0 < colno1)
 );
 '''
 
@@ -651,24 +652,18 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     (generator_id, colno0, colno1, dependent)
                     VALUES (?, ?, ?, ?)
             '''
-            if dep_constraints:
-                for constraint in dep_constraints:
-                    columns = constraint[0]
-                    dependent = constraint[1]
-                    for (col1, col2) in itertools.combinations(columns, 2):
-                        col1_id = core.bayesdb_generator_column_number(bdb,
-                            generator_id, col1)
-                        col2_id = core.bayesdb_generator_column_number(bdb,
-                            generator_id, col2)
-                        col_ids = min(col1_id, col2_id), max(col1_id, col2_id)
-                        try:
-                            bdb.sql_execute(insert_dep_constraint_sql,
-                                (generator_id, col_ids[0], col_ids[1],
-                                    dependent))
-                        except:
-                            raise BQLError(bdb, 'Dependency constraints for '\
-                                'columns {} and {} cannot be specified '\
-                                'multiple times.'.format(col1,col2))
+            for constraint in dep_constraints:
+                columns = constraint[0]
+                dependent = constraint[1]
+                for col1, col2 in itertools.combinations(columns, 2):
+                    col1_id = core.bayesdb_generator_column_number(bdb,
+                        generator_id, col1)
+                    col2_id = core.bayesdb_generator_column_number(bdb,
+                        generator_id, col2)
+                    col_ids = min(col1_id, col2_id), max(col1_id, col2_id)
+                    bdb.sql_execute(insert_dep_constraint_sql,
+                        (generator_id, col_ids[0], col_ids[1],
+                            dependent))
 
     def drop_generator(self, bdb, generator_id):
         with bdb.savepoint():
@@ -773,7 +768,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             X_L_list = [X_L_list]
             X_D_list = [X_D_list]
         # Ensure dependent columns if necessary.
-        dep_constraints = crosscat_gen_column_dependency(bdb, generator_id)
+        dep_constraints = crosscat_gen_column_dependencies(bdb, generator_id)
         if dep_constraints:
             X_L_list, X_D_list = self._crosscat.ensure_col_dep_constraints(
                 M_c=M_c,
@@ -1396,7 +1391,7 @@ def crosscat_gen_colno(bdb, generator_id, cc_colno):
         assert isinstance(row[0], int)
         return row[0]
 
-def crosscat_gen_column_dependency(bdb, generator_id):
+def crosscat_gen_column_dependencies(bdb, generator_id):
     sql = '''
         SELECT colno0, colno1, dependent
             FROM bayesdb_crosscat_column_dependency
