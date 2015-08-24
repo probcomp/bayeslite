@@ -16,7 +16,7 @@
 
 import numpy as np
 import pytest
-from sqlite3 import IntegrityError
+import sqlite3
 
 import crosscat.LocalEngine
 
@@ -134,7 +134,7 @@ def test_impossible_duplicate_dependency():
         '''
 
         # An error should be thrown about impossible schema.
-        with pytest.raises(IntegrityError):
+        with pytest.raises(sqlite3.IntegrityError):
             bdb.execute(bql)
 
 def test_impossible_nontransitive_dependency():
@@ -176,5 +176,7 @@ def test_impossible_nontransitive_dependency():
         bdb.execute(bql)
 
         # Error thrown when initializing since no initial state exists.
+        # XXX Currently CrossCat throws a RuntimeError, we should fix
+        # the CrossCat exception hierarchy.
         with pytest.raises(RuntimeError):
             bdb.execute('INITIALIZE 10 MODELS FOR bar')
