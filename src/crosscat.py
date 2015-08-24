@@ -660,10 +660,10 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                         generator_id, col1)
                     col2_id = core.bayesdb_generator_column_number(bdb,
                         generator_id, col2)
-                    col_ids = min(col1_id, col2_id), max(col1_id, col2_id)
+                    min_col_id = min(col1_id, col2_id)
+                    max_col_id = max(col1_id, col2_id)
                     bdb.sql_execute(insert_dep_constraint_sql,
-                        (generator_id, col_ids[0], col_ids[1],
-                            dependent))
+                        (generator_id, min_col_id, max_col_id, dependent))
 
     def drop_generator(self, bdb, generator_id):
         with bdb.savepoint():
