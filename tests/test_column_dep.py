@@ -52,9 +52,9 @@ def test_complex_dependencies():
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
 
         # Read the dataset.
-        table_name = 'foo'
-        bayeslite.bayesdb_read_csv(bdb, table_name, data_csv, header=True,
-            create=True)
+        bdb.sql_execute('CREATE TABLE foo(x,y,z,v,w)')
+        for row in data:
+            bdb.sql_execute('INSERT INTO foo VALUES(?,?,?,?,?)', row)
 
         # Create schema, we will force  IND(x y), IND(x v), and DEP(z v w).
         bql = '''
