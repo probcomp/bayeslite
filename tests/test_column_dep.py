@@ -43,7 +43,6 @@ def test_complex_dependencies():
     w = np.random.choice(range(8), size=250)
 
     data = np.vstack((x,y,z,w,v)).T
-    data_csv = ['x,y,z,v,w']+[','.join(str(val) for val in row) for row in data]
 
     # Create the database.
     with bayeslite.bayesdb_open() as bdb:
