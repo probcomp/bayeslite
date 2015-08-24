@@ -652,9 +652,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     (generator_id, colno0, colno1, dependent)
                     VALUES (?, ?, ?, ?)
             '''
-            for constraint in dep_constraints:
-                columns = constraint[0]
-                dependent = constraint[1]
+            for columns, dependent in dep_constraints:
                 for col1, col2 in itertools.combinations(columns, 2):
                     col1_id = core.bayesdb_generator_column_number(bdb,
                         generator_id, col1)
@@ -776,7 +774,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 T=self._crosscat_data(bdb, generator_id, M_c),
                 X_L=X_L_list,
                 X_D=X_D_list,
-                dep_constraints=dep_constraints
+                dep_constraints=dep_constraints,
             )
         insert_theta_sql = '''
             INSERT INTO bayesdb_crosscat_theta
