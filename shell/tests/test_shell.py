@@ -116,6 +116,13 @@ def test_shell_loads(spawnbdb):
     c = spawnbdb
 
 
+def test_shell_hyphen():
+    c = spawnjr('bayeslite -')
+    c.delaybeforesend = 0
+    c.expect_lines(['bayeslite: missing option?'])
+    return c
+
+
 def test_python_expression(spawnbdb):
     c = spawnbdb
     c.sendexpectcmd('.python 2 * 3')
