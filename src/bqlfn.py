@@ -37,7 +37,7 @@ def bayesdb_install_bql(db, cookie):
         bql_column_dependence_probability)
     function("bql_column_mutual_information", 5, bql_column_mutual_information)
     function("bql_column_typicality", 3, bql_column_typicality)
-    function("bql_column_value_probability", 4, bql_column_value_probability)
+    function("bql_column_value_probability", -1, bql_column_value_probability)
     function("bql_row_similarity", -1, bql_row_similarity)
     function("bql_row_typicality", 3, bql_row_typicality)
     function("bql_row_column_predictive_probability", 4,
@@ -259,10 +259,21 @@ def bql_column_typicality(bdb, generator_id, modelno, colno):
     return metamodel.column_typicality(bdb, generator_id, modelno, colno)
 
 # One-column function:  PROBABILITY OF <col>=<value>
-def bql_column_value_probability(bdb, generator_id, modelno, colno, value):
+def bql_column_value_probability(bdb, generator_id, modelno, colno, value,
+        *constraint_args):
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
+    constraints = []
+    i = 0
+    while i < len(constraint_args):
+        if i + 1 == len(constraint_args):
+            raise ValueError('Odd constraint arguments: %s' %
+                (constraint_args,))
+        colno = constraint_args[i]
+        value = constraint_args[i + 1]
+        constraints.append((colno, value))
+        i += 2
     return metamodel.column_value_probability(bdb, generator_id, modelno,
-        colno, value)
+        colno, value, constraints)
 
 ### BayesDB row functions
 

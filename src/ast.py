@@ -329,7 +329,7 @@ OP_NEGATE = 'NEGATE'
 OP_PLUSID = 'PLUSID'
 
 ExpBQLPredProb = namedtuple('ExpBQLPredProb', ['column'])
-ExpBQLProb = namedtuple('ExpBQLProb', ['column', 'value'])
+ExpBQLProb = namedtuple('ExpBQLProb', ['column', 'value', 'constraints'])
 ExpBQLTyp = namedtuple('ExpBQLTyp', ['column'])
 ExpBQLSim = namedtuple('ExpBQLSim', ['condition', 'column_lists'])
 ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
