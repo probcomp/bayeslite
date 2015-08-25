@@ -126,6 +126,8 @@ def is_query(phrase):
         return True
     if isinstance(phrase, Estimate):
         return True
+    if isinstance(phrase, EstBy):
+        return True
     if isinstance(phrase, EstCols):
         return True
     if isinstance(phrase, EstPairCols):
@@ -159,6 +161,13 @@ Estimate = namedtuple('Estimate', [
     'grouping',                 # Grouping or None
     'order',                    # [Ord] or None (unordered)
     'limit',                    # Lim or None (unlimited)
+])
+
+EstBy = namedtuple('EstBy', [
+    'quantifier',               # SELQUANT_*
+    'columns',                  # [(Exp*, XXX name)]
+    'generator',                # XXX name
+    'modelno',                  # modelno
 ])
 
 SELQUANT_DISTINCT = 'distinct'

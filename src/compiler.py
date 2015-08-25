@@ -211,6 +211,8 @@ def compile_query(bdb, query, out):
         compile_select(bdb, query, out)
     elif isinstance(query, ast.Estimate):
         compile_estimate(bdb, query, out)
+    elif isinstance(query, ast.EstBy):
+        compile_estimate_by(bdb, query, out)
     elif isinstance(query, ast.InferExplicit):
         if any(isinstance(c, ast.PredCol) for c in query.columns):
             compile_infer_explicit_predict(bdb, query, out)
@@ -462,6 +464,20 @@ def compile_estimate(bdb, estimate, out):
         if estimate.limit.offset is not None:
             out.write(' OFFSET ')
             compile_expression(bdb, estimate.limit.offset, bql_compiler, out)
+
+def compile_estimate_by(bdb, estby, out):
+    assert isinstance(estby, ast.EstBy)
+    out.write('SELECT ')
+    if estby.quantifier == ast.SELQUANT_DISTINCT:
+        out.write(' DISTINCT')
+    else:
+        assert estby.quantifier == ast.SELQUANT_ALL
+    if not core.bayesdb_has_generator_default(bdb, estby.generator):
+        raise BQLError(bdb, 'No such generator: %s' % (estimate.generator,))
+    generator_id = core.bayesdb_get_generator_default(bdb, estby.generator)
+    bql_compiler = BQLCompiler_Const(generator_id, estby.modelno)
+    named = True
+    compile_select_columns(bdb, estby.columns, named, bql_compiler, out)
 
 def compile_select_columns(bdb, columns, named, bql_compiler, out):
     first = True
@@ -788,7 +804,7 @@ class BQLCompiler_None(object):
         # XXX Report source location.
         raise BQLError(bdb, 'Invalid context for BQL!')
 
-class BQLCompiler_1Row(object):
+class BQLCompiler_Const(object):
     def __init__(self, generator_id, modelno):
         assert isinstance(generator_id, int)
         self.generator_id = generator_id
@@ -797,17 +813,8 @@ class BQLCompiler_1Row(object):
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
         generator_id = self.generator_id
-        rowid_col = '_rowid_'   # XXX Don't hard-code this.
         if isinstance(bql, ast.ExpBQLPredProb):
-            if bql.column is None:
-                raise BQLError(bdb, 'Predictive probability at row'
-                    ' needs column.')
-            colno = core.bayesdb_generator_column_number(bdb, generator_id,
-                bql.column)
-            out.write('bql_row_column_predictive_probability(%s, ' %
-                (generator_id,))
-            compile_expression(bdb, self.modelno, self, out)
-            out.write(', %s, %s)' % (rowid_col, colno))
+            raise BQLError('Predictive probability needs row.')
         elif isinstance(bql, ast.ExpBQLProb):
             # XXX Why is this independent of the row?  Can't we
             # condition on the values of the row?  Maybe need another
@@ -824,15 +831,55 @@ class BQLCompiler_1Row(object):
             out.write(')')
         elif isinstance(bql, ast.ExpBQLTyp):
             if bql.column is None:
-                out.write('bql_row_typicality(%s, ' % (generator_id,))
-                compile_expression(bdb, self.modelno, self, out)
-                out.write(', _rowid_)')
+                raise BQLError('Row typicality needs row.')
             else:
                 colno = core.bayesdb_generator_column_number(bdb, generator_id,
                     bql.column)
                 out.write('bql_column_typicality(%s, ' % (generator_id,))
                 compile_expression(bdb, self.modelno, self, out)
                 out.write(', %s)' % (colno,))
+        elif isinstance(bql, ast.ExpBQLSim):
+            raise BQLError('Row similarity needs row.')
+        elif isinstance(bql, ast.ExpBQLDepProb):
+            compile_bql_2col_2(bdb, generator_id, self.modelno,
+                'bql_column_dependence_probability',
+                'Dependence probability', None, bql, self, out)
+        elif isinstance(bql, ast.ExpBQLMutInf):
+            compile_bql_2col_2(bdb, generator_id, self.modelno,
+                'bql_column_mutual_information',
+                'Mutual information', compile_mutinf_extra, bql, self, out)
+        elif isinstance(bql, ast.ExpBQLCorrel):
+            compile_bql_2col_2(bdb, generator_id, None,
+                'bql_column_correlation',
+                'Column correlation', None, bql, self, out)
+        elif isinstance(bql, ast.ExpBQLCorrelPval):
+            compile_bql_2col_2(bdb, generator_id, None,
+                'bql_column_correlation_pvalue',
+                'Column correlation pvalue', None, bql, self, out)
+        elif isinstance(bql, (ast.ExpBQLPredict, ast.ExpBQLPredictConf)):
+            raise BQLError(bdb, 'PREDICT is not allowed outside INFER.')
+        else:
+            assert False, 'Invalid BQL function: %s' % (repr(bql),)
+
+class BQLCompiler_1Row(BQLCompiler_Const):
+    def compile_bql(self, bdb, bql, out):
+        assert ast.is_bql(bql)
+        generator_id = self.generator_id
+        rowid_col = '_rowid_'   # XXX Don't hard-code this.
+        if isinstance(bql, ast.ExpBQLPredProb):
+            if bql.column is None:
+                raise BQLError(bdb, 'Predictive probability at row'
+                    ' needs column.')
+            colno = core.bayesdb_generator_column_number(bdb, generator_id,
+                bql.column)
+            out.write('bql_row_column_predictive_probability(%s, ' %
+                (generator_id,))
+            compile_expression(bdb, self.modelno, self, out)
+            out.write(', %s, %s)' % (rowid_col, colno))
+        elif isinstance(bql, ast.ExpBQLTyp) and bql.column is None:
+            out.write('bql_row_typicality(%s, ' % (generator_id,))
+            compile_expression(bdb, self.modelno, self, out)
+            out.write(', _rowid_)')
         elif isinstance(bql, ast.ExpBQLSim):
             if bql.condition is None:
                 raise BQLError(bdb, 'Similarity as 1-row function needs row.')
@@ -855,26 +902,8 @@ class BQLCompiler_1Row(object):
                 compile_column_lists(bdb, generator_id, bql.column_lists, self,
                     out)
             out.write(')')
-        elif isinstance(bql, ast.ExpBQLDepProb):
-            compile_bql_2col_2(bdb, generator_id, self.modelno,
-                'bql_column_dependence_probability',
-                'Dependence probability', None, bql, self, out)
-        elif isinstance(bql, ast.ExpBQLMutInf):
-            compile_bql_2col_2(bdb, generator_id, self.modelno,
-                'bql_column_mutual_information',
-                'Mutual information', compile_mutinf_extra, bql, self, out)
-        elif isinstance(bql, ast.ExpBQLCorrel):
-            compile_bql_2col_2(bdb, generator_id, None,
-                'bql_column_correlation',
-                'Column correlation', None, bql, self, out)
-        elif isinstance(bql, ast.ExpBQLCorrelPval):
-            compile_bql_2col_2(bdb, generator_id, None,
-                'bql_column_correlation_pvalue',
-                'Column correlation pvalue', None, bql, self, out)
-        elif isinstance(bql, (ast.ExpBQLPredict, ast.ExpBQLPredictConf)):
-            raise BQLError(bdb, 'PREDICT is not allowed outside INFER.')
         else:
-            assert False, 'Invalid BQL function: %s' % (repr(bql),)
+            super(BQLCompiler_1Row, self).compile_bql(bdb, bql, out)
 
 class BQLCompiler_1Row_Infer(BQLCompiler_1Row):
     def compile_bql(self, bdb, bql, out):

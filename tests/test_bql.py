@@ -1634,3 +1634,23 @@ def test_infer_as_estimate():
         bdb.execute('analyze t1_cc for 1 iteration wait')
         list(bdb.execute('infer explicit predictive probability of age'
             ' from t1_cc'))
+
+def test_estimate_by():
+    with test_core.t1() as (bdb, _generator_id):
+        bdb.execute('initialize 1 model for t1_cc')
+        bdb.execute('analyze t1_cc for 1 iteration wait')
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('estimate predictive probability of age'
+                ' by t1_cc')
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('estimate typicality by t1_cc')
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('estimate similarity to (rowid=1) by t1_cc')
+        def check(x):
+            assert len(list(bdb.execute(x))) == 1
+        check('estimate probability of age = 42 by t1_cc')
+        check('estimate typicality of age by t1_cc')
+        check('estimate dependence probability of age with weight by t1_cc')
+        check('estimate mutual information of age with weight by t1_cc')
+        check('estimate correlation of age with weight by t1_cc')
+        check('estimate correlation pvalue of age with weight by t1_cc')

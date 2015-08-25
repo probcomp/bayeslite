@@ -154,6 +154,7 @@ constraint(c)		::= column_name(col) T_EQ expression(value).
  */
 query(select)		::= select(q).
 query(estimate)		::= estimate(q).
+query(estby)		::= estby(q).
 query(estcols)		::= estcols(q).
 query(estpaircols)	::= estpaircols(q).
 query(estpairrow)	::= estpairrow(q).
@@ -181,6 +182,10 @@ estimate(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
 				group_by(grouping)
 				order_by(ord)
 				limit_opt(lim).
+
+estby(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
+				K_BY generator_name(generator)
+				usingmodel_opt(modelno).
 
 /*
  * XXX Can we reformulate this elegantly as a SELECT on the columns of
