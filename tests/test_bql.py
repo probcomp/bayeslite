@@ -64,6 +64,18 @@ def bql2sqlparam(string):
 def bql_execute(bdb, string, bindings=()):
     return map(tuple, bdb.execute(string, bindings))
 
+def test_conditional_probability():
+    with test_core.t1() as (bdb, _generator_id):
+        bdb.execute('initialize 1 model for t1_cc')
+        bdb.execute('analyze t1_cc for 1 iteration wait')
+        q0 = 'estimate probability of age = 8 by t1_cc'
+        q1 = 'estimate probability of age = 8 given () by t1_cc'
+        assert bdb.execute(q0).next()[0] == bdb.execute(q1).next()[0]
+        q2 = 'estimate probability of age = 8 given (weight = 24) by t1_cc'
+        assert bdb.execute(q0).next()[0] > bdb.execute(q2).next()[0]
+        list(bdb.execute('estimate columns probability of value'
+            ' given (weight = 24) from t1_cc'))
+
 def test_badbql():
     with test_core.t1() as (bdb, _generator_id):
         with pytest.raises(ValueError):

@@ -148,6 +148,8 @@ given_opt(some)		::= K_GIVEN constraints(constraints).
 constraints(one)	::= constraint(c).
 constraints(many)	::= constraints(cs) T_COMMA constraint(c).
 constraint(c)		::= column_name(col) T_EQ expression(value).
+constraints_opt(none)	::= .
+constraints_opt(some)	::= constraints(cs).
 
 /*
  * Queries
@@ -493,7 +495,16 @@ unary(bql)		::= bqlfn(b).
 bqlfn(predprob_row)	::= K_PREDICTIVE K_PROBABILITY K_OF column_name(col).
 bqlfn(prob_const)	::= K_PROBABILITY K_OF column_name(col)
 				T_EQ unary(e).
+bqlfn(condprob_const)	::= K_PROBABILITY K_OF column_name(col)
+				T_EQ primary(e)
+				K_GIVEN T_LROUND constraints_opt(constraints)
+					T_RROUND.
+/* XXX Givens for PROBABILITY OF VALUE function of columns?  */
 bqlfn(prob_1col)	::= K_PROBABILITY K_OF K_VALUE unary(e).
+bqlfn(condprob_1col)	::= K_PROBABILITY K_OF K_VALUE
+				T_EQ primary(e)
+				K_GIVEN T_LROUND constraints_opt(constraints)
+					T_RROUND.
 bqlfn(typ_1col_or_row)	::= K_TYPICALITY.
 bqlfn(typ_const)	::= K_TYPICALITY K_OF column_name(col).
 bqlfn(sim_1row)		::= K_SIMILARITY K_TO

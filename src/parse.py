@@ -285,6 +285,8 @@ class BQLSemantics(object):
     def p_constraints_one(self, c):             return [c]
     def p_constraints_many(self, cs, c):        cs.append(c); return cs
     def p_constraint_c(self, col, value):       return (col, value)
+    def p_constraints_opt_none(self):           return []
+    def p_constraints_opt_some(self, cs):       return cs
 
     def p_query_action_none(self):              return None
     def p_query_action_freq(self):              return ast.QACT_FREQ
@@ -524,8 +526,16 @@ class BQLSemantics(object):
     def p_unary_bql(self, b):           return b
 
     def p_bqlfn_predprob_row(self, col):        return ast.ExpBQLPredProb(col)
-    def p_bqlfn_prob_const(self, col, e):       return ast.ExpBQLProb(col, e)
-    def p_bqlfn_prob_1col(self, e):             return ast.ExpBQLProb(None, e)
+    def p_bqlfn_prob_const(self, col, e):       return ast.ExpBQLProb(col, e,
+                                                    [])
+    def p_bqlfn_condprob_const(self, col, e, constraints):
+                                                return ast.ExpBQLProb(col, e,
+                                                    constraints)
+    def p_bqlfn_prob_1col(self, e):             return ast.ExpBQLProb(None, e,
+                                                    [])
+    def p_bqlfn_condprob_1col(self, e, constraints):
+                                                return ast.ExpBQLProb(None, e,
+                                                    constraints)
     def p_bqlfn_typ_1col_or_row(self):          return ast.ExpBQLTyp(None)
     def p_bqlfn_typ_const(self, col):           return ast.ExpBQLTyp(col)
     def p_bqlfn_sim_1row(self, cond, cols):     return ast.ExpBQLSim(cond,cols)

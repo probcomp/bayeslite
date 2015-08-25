@@ -145,8 +145,8 @@ class IBayesDBMetamodel(object):
         raise NotImplementedError
 
     def column_value_probability(self, bdb, generator_id, modelno, colno,
-            value):
-        """Compute ``PROBABILITY OF <col> = <value>``."""
+            value, constraints):
+        """Compute ``PROBABILITY OF <col> = <value> GIVEN <constraints>``."""
         raise NotImplementedError
 
     def row_similarity(self, bdb, generator_id, modelno, rowid, target_rowid,

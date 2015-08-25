@@ -934,7 +934,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         )
 
     def column_value_probability(self, bdb, generator_id, modelno, colno,
-            value):
+            value, constraints):
         M_c = self._crosscat_metadata(bdb, generator_id)
         try:
             code = crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
@@ -945,11 +945,17 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         # Fabricate a nonexistent (`unobserved') row id.
         fake_row_id = len(X_D_list[0][0])
         cc_colno = crosscat_cc_colno(bdb, generator_id, colno)
+        import sys
+        print >>sys.stderr, '%s' % (repr(constraints),)
         r = self._crosscat.simple_predictive_probability_multistate(
             M_c=M_c,
             X_L_list=X_L_list,
             X_D_list=X_D_list,
-            Y=[],
+            Y=[(fake_row_id,
+                    crosscat_cc_colno(bdb, generator_id, c_colno),
+                    crosscat_value_to_code(bdb, generator_id, M_c, c_colno,
+                        c_value))
+                for c_colno, c_value in constraints],
             Q=[(fake_row_id, cc_colno, code)]
         )
         return math.exp(r)
