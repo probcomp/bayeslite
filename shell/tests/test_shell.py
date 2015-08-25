@@ -174,6 +174,16 @@ def test_dot_csv(spawntable):
     _table, _c = spawntable
 
 
+def test_dot_csv_dup(spawnbdb):
+    c = spawnbdb
+    with tempfile.NamedTemporaryFile(prefix='bayeslite-shell') as t:
+        with open(t.name, 'w') as f:
+            f.write('x,X,y\n')
+        c.sendexpectcmd('.csv t %s' % (t.name,))
+        c.expect_lines(["Duplicate columns in CSV: [u'x']"])
+        c.expect_prompt()
+
+
 def test_describe_columns_without_generator(spawntable):
     table, c = spawntable
     c.sendexpectcmd('.describe columns %s' % (table,))
