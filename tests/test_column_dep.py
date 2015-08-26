@@ -76,8 +76,7 @@ def test_complex_dependencies():
             bql = '''
                 ESTIMATE PAIRWISE DEPENDENCE PROBABILITY FROM bar
             '''
-            for row in bdb.execute(bql):
-                col1, col2, dep = row[1], row[2], row[3]
+            for _id, col1, col2, dep in bdb.execute(bql):
                 # test IND(x y)
                 if (col1, col2) in [('x','y'), ('y','x')]:
                     assert dep == 0
