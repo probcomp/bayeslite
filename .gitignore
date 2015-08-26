@@ -1,4 +1,6 @@
+/bayeslite.egg-info/
 /build/
+/dist/
 /external/lemonade/dist/lemonade/*.pyc
 /notes/gpm/gpm.aux
 /notes/gpm/gpm.dvi
