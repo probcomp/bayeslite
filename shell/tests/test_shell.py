@@ -116,6 +116,13 @@ def test_shell_loads(spawnbdb):
     c = spawnbdb
 
 
+def test_shell_hyphen():
+    c = spawnjr('bayeslite -')
+    c.delaybeforesend = 0
+    c.expect_lines(['bayeslite: missing option?'])
+    return c
+
+
 def test_python_expression(spawnbdb):
     c = spawnbdb
     c.sendexpectcmd('.python 2 * 3')
@@ -165,6 +172,16 @@ def test_untrace_usage(spawnbdb):
 
 def test_dot_csv(spawntable):
     _table, _c = spawntable
+
+
+def test_dot_csv_dup(spawnbdb):
+    c = spawnbdb
+    with tempfile.NamedTemporaryFile(prefix='bayeslite-shell') as t:
+        with open(t.name, 'w') as f:
+            f.write('x,X,y\n')
+        c.sendexpectcmd('.csv t %s' % (t.name,))
+        c.expect_lines(["Duplicate columns in CSV: [u'x']"])
+        c.expect_prompt()
 
 
 def test_describe_columns_without_generator(spawntable):

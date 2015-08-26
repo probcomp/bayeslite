@@ -47,12 +47,15 @@ def parse_args(argv):
 
 def run(stdin, stdout, stderr, argv):
     args = parse_args(argv[1:])
+    progname = argv[0]
+    slash = progname.rfind('/')
+    if slash:
+        progname = progname[slash + 1:]
     if args.bdbpath is None and not args.memory:
-        progname = argv[0]
-        slash = progname.rfind('/')
-        if slash:
-            progname = progname[slash + 1:]
         stderr.write('%s: pass filename or -m/--memory\n' % (progname,))
+        return 1
+    if args.bdbpath == '-':
+        stderr.write('%s: missing option?\n' % (progname,))
         return 1
     bdb = bayeslite.bayesdb_open(pathname=args.bdbpath)
 

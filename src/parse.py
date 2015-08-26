@@ -294,6 +294,7 @@ class BQLSemantics(object):
 
     def p_query_select(self, q):                return q
     def p_query_estimate(self, q):              return q
+    def p_query_estby(self, q):                 return q
     def p_query_estcols(self, q):               return q
     def p_query_estpaircols(self, q):           return q
     def p_query_estpairrow(self, q):            return q
@@ -309,6 +310,9 @@ class BQLSemantics(object):
             ord, lim):
         return ast.Estimate(quant, cols, generator, modelno, cond, grouping,
             ord, lim)
+
+    def p_estby_e(self, quant, cols, generator, modelno):
+        return ast.EstBy(quant, cols, generator, modelno)
 
     def p_estcols_nocols(self, generator, modelno, cond, ord, lim):
         return ast.EstCols([], generator, modelno, cond, ord, lim)

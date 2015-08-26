@@ -72,8 +72,17 @@ def bayesdb_read_csv(bdb, table, f, header=False,
             column_names = [unicode(name, 'utf8').strip() for name in row]
             if len(column_names) == 0:
                 raise IOError('No columns in CSV file!')
-            if len(unique(map(casefold, column_names))) < len(column_names):
-                raise IOError('Duplicate columns in CSV file.')
+            column_name_map = {}
+            duplicates = set([])
+            for name in column_names:
+                name_folded = casefold(name)
+                if name_folded in column_name_map:
+                    duplicates.add(name_folded)
+                else:
+                    column_name_map[name_folded] = name
+            if 0 < len(duplicates):
+                raise IOError('Duplicate columns in CSV: %s' %
+                    (repr(list(duplicates)),))
             if create and not core.bayesdb_has_table(bdb, table):
                 qt = sqlite3_quote_name(table)
                 qcns = map(sqlite3_quote_name, column_names)

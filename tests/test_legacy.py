@@ -77,14 +77,14 @@ def test_legacy_models():
     with bdb.savepoint():
         assert list(bdb.execute(bql)) == [
             ('McAllen TX',),
-            ('Beaumont TX',),
             ('Worcester MA',),
-            ('Corpus Christi TX',),
+            ('Beaumont TX',),
             ('Temple TX',),
-            ('Kingsport TN',),
-            ('Lebanon NH',),
+            ('Corpus Christi TX',),
             ('Takoma Park MD',),
+            ('Kingsport TN',),
             ('Bangor ME',),
+            ('Lebanon NH',),
             ('Panama City FL',),
         ]
 
