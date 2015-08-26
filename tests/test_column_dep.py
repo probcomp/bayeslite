@@ -29,9 +29,9 @@ import bayeslite.crosscat
 def test_complex_dependencies():
     # Create real-valued data, such that DEP(x,y), DEP(y,z), and IND(x,z)
     mean = [4, -2, -11]
-    cov = [[3., .7, 0.],
-           [.7, 4., .6],
-           [0., .6, 2.]]
+    cov = [[3.0, 0.7, 0.0],
+           [0.7, 4.0, 0.6],
+           [0.0, 0.6, 2.0]]
     numerical_data = np.random.multivariate_normal(mean, cov, size=250)
     x, y, z = numerical_data[:,0], numerical_data[:,1], numerical_data[:,2]
 
