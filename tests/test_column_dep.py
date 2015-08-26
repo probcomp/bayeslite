@@ -16,7 +16,6 @@
 
 import numpy as np
 import pytest
-import sqlite3
 
 import crosscat.LocalEngine
 
@@ -132,7 +131,7 @@ def test_impossible_duplicate_dependency():
         '''
 
         # An error should be thrown about impossible schema.
-        with pytest.raises(sqlite3.IntegrityError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute(bql)
 
 def test_impossible_nontransitive_dependency():

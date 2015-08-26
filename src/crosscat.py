@@ -25,6 +25,7 @@ interface for Crosscat.
 import itertools
 import json
 import math
+import sqlite3
 import time
 
 import bayeslite.core as core
@@ -676,8 +677,14 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                         generator_id, col2)
                     min_col_id = min(col1_id, col2_id)
                     max_col_id = max(col1_id, col2_id)
-                    bdb.sql_execute(insert_dep_constraint_sql,
-                        (generator_id, min_col_id, max_col_id, dependent))
+                    try:
+                        bdb.sql_execute(insert_dep_constraint_sql,
+                            (generator_id, min_col_id, max_col_id, dependent))
+                    except sqlite3.IntegrityError:
+                        # XXX This is a cop-out -- we should validate
+                        # the relation ourselves (and show a more
+                        # helpful error message).
+                        raise BQLError(bdb, 'Invalid dependency constraints!')
 
     def drop_generator(self, bdb, generator_id):
         with bdb.savepoint():
