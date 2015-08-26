@@ -1,0 +1,22 @@
+-- Run me with cat test.bql | bayeslite -m
+
+-- For some reason, echo "" | bayeslite -m -f test.bql
+-- executes the create statements twice.
+
+.csv axch_test test.csv  -- One-column table whose column is named "column"
+
+.hook axch.py  -- Define a hook that will register the venture_script metamodel
+.axch          -- Register the venture_script metamodel
+
+CREATE DEFAULT GENERATOR axch_vs FOR axch_test USING venture_script(program "
+  define datum = proc(row) { pass };
+  define analyze = proc() { pass };
+  define obs_cell = proc(col, item) { pass };
+  define sim_cell = proc(col) { return(normal(0,1)) };
+  ",
+  column numerical);
+
+INITIALIZE 2 MODELS FOR axch_test;
+
+SIMULATE column FROM axch_vs USING MODEL 1 LIMIT 10;
+-- Produces 10 samples from standard Gaussian
