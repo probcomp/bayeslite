@@ -783,7 +783,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             X_D_list = [X_D_list]
         # Ensure dependent columns if necessary.
         dep_constraints = crosscat_gen_column_dependencies(bdb, generator_id)
-        if dep_constraints:
+        if 0 < len(dep_constraints):
             X_L_list, X_D_list = self._crosscat.ensure_col_dep_constraints(
                 M_c=M_c,
                 M_r=None,
@@ -1412,4 +1412,4 @@ def crosscat_gen_column_dependencies(bdb, generator_id):
             WHERE generator_id = ?
     '''
     cursor = bdb.sql_execute(sql, (generator_id,))
-    return cursor.fetchall()
+    return list(cursor)
