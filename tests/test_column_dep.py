@@ -74,7 +74,7 @@ def test_complex_dependencies():
         # Prepare the checker function.
         def check_dependencies():
             bql = '''
-                ESTIMATE PAIRWISE DEPENDENCE PROBABILITY FROM bar;
+                ESTIMATE PAIRWISE DEPENDENCE PROBABILITY FROM bar
             '''
             for row in bdb.execute(bql):
                 col1, col2, dep = row[1], row[2], row[3]
@@ -103,12 +103,12 @@ def test_complex_dependencies():
         bdb.execute('ANALYZE bar for 10 ITERATION WAIT')
         check_dependencies()
 
-
 def test_impossible_duplicate_dependency():
-# Throw exception when two columns X and Y are
-# both dependent and independent.
+    # Throw exception when two columns X and Y are both dependent and
+    # independent.
 
     data_csv = ['a,b,c','1,0,0','0,0,1']
+
     # Create the database.
     with bayeslite.bayesdb_open() as bdb:
         cc = crosscat.LocalEngine.LocalEngine(seed=0)
@@ -137,13 +137,14 @@ def test_impossible_duplicate_dependency():
             bdb.execute(bql)
 
 def test_impossible_nontransitive_dependency():
-# Test impossibility of non-transitive dependencies. While in the
-# general case, dependence is not transitive, crosscat assumes
-# transtivie closure under dependency constraints.
-# The test is valid since we are using a crosscat local engine.
-# Note that transitivity under independence is not forced by crosscat.
-# Changing the behavior of CrossCat to deal with impossible constraints
-# (such as random dropout) will require updating this test.
+    # Test impossibility of non-transitive dependencies. While in the
+    # general case, dependence is not transitive, crosscat assumes
+    # transitive closure under dependency constraints.  The test is
+    # valid since we are using a crosscat local engine.  Note that
+    # transitivity under independence is not forced by crosscat.
+    # Changing the behavior of CrossCat to deal with impossible
+    # constraints (such as random dropout) will require updating this
+    # test.
 
     data_csv = ['a,b,c','1,0,0','0,0,1']
     # Create the database.
