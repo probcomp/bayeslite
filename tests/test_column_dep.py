@@ -107,7 +107,7 @@ def test_impossible_duplicate_dependency():
     # Throw exception when two columns X and Y are both dependent and
     # independent.
 
-    data_csv = ['a,b,c','1,0,0','0,0,1']
+    data = [(1, 0, 0), (0, 0, 1)]
 
     # Create the database.
     with bayeslite.bayesdb_open() as bdb:
@@ -116,9 +116,9 @@ def test_impossible_duplicate_dependency():
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
 
         # Read the dataset.
-        table_name = 'foo'
-        bayeslite.bayesdb_read_csv(bdb, table_name, data_csv, header=True,
-            create=True)
+        bdb.sql_execute('CREATE TABLE foo(a,b,c)')
+        for row in data:
+            bdb.sql_execute('INSERT INTO foo VALUES(?,?,?)', row)
 
         # Create schema, we will force DEP(a c) and IND(a c).
         bql = '''
@@ -145,8 +145,8 @@ def test_impossible_nontransitive_dependency():
     # Changing the behavior of CrossCat to deal with impossible
     # constraints (such as random dropout) will require updating this
     # test.
+    data = [(1, 0, 0), (0, 0, 1)]
 
-    data_csv = ['a,b,c','1,0,0','0,0,1']
     # Create the database.
     with bayeslite.bayesdb_open() as bdb:
         cc = crosscat.LocalEngine.LocalEngine(seed=0)
@@ -154,9 +154,9 @@ def test_impossible_nontransitive_dependency():
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
 
         # Read the dataset.
-        table_name = 'foo'
-        bayeslite.bayesdb_read_csv(bdb, table_name, data_csv, header=True,
-            create=True)
+        bdb.sql_execute('CREATE TABLE foo(a,b,c)')
+        for row in data:
+            bdb.sql_execute('INSERT INTO foo VALUES(?,?,?)', row)
 
         # Create schema, we will force DEP(a b), DEP(b c), and IND(a c) which
         # is non-transitive.
