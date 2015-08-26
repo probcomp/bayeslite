@@ -977,8 +977,6 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             assignments = X_L['column_partition']['assignments']
             if assignments[cc_colno0] != assignments[cc_colno1]:
                 continue
-            if len(unique(X_D[assignments[cc_colno0]])) <= 1:
-                continue
             count += 1
         return float('NaN') if nmodels == 0 else (float(count)/float(nmodels))
 
