@@ -44,6 +44,9 @@ CREATE TABLE bayesdb_venture_script_ripl (
 '''
 
 class VSMetamodel(object): # TODO New metamodel
+    def __init__(self):
+        self.hack_in_memory_cache = {}
+
     def name(self):
         return 'venture_script'
 
@@ -101,6 +104,7 @@ class VSMetamodel(object): # TODO New metamodel
         return (program, columns)
 
     def _vs_cache(self, bdb):
+        return self.hack_in_memory_cache
         if bdb.cache is None:
             return None
         if 'venture_script' in bdb.cache:
@@ -179,7 +183,7 @@ class VSMetamodel(object): # TODO New metamodel
         return box.get() or box.set(self._vs_retrieve_ripl(bdb, generator_id, model_no))
 
     def _vs_save_ripl(self, bdb, generator_id, model_no, ripl):
-        string_ = ripl.serialize()
+        string_ = "" # ripl.serialize() # Can't actually serialize; rely on the in-memory cache
         insert_ripl_sql = '''
             INSERT INTO bayesdb_venture_script_ripl
                 (generator_id, modelno, ripl_str)
