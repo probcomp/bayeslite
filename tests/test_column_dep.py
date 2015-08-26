@@ -64,9 +64,9 @@ def test_complex_dependencies():
                 z NUMERICAL,
                 v CATEGORICAL,
                 w CATEGORICAL,
-                INDEPENDENT(x y),
-                INDEPENDENT(x v),
-                DEPENDENT(z v w)
+                INDEPENDENT(x, y),
+                INDEPENDENT(x, v),
+                DEPENDENT(z, v, w)
             );
         '''
         bdb.execute(bql)

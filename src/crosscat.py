@@ -527,17 +527,33 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                len(directive) == 2 and \
                isinstance(directive[0], (str, unicode)) and \
                casefold(directive[0]) == 'dependent':
-                while ',' in directive[1]:
-                    directive[1].remove(',')
-                dep_constraints.append((directive[1],True))
+                args = directive[1]
+                i = 0
+                dep_columns = []
+                while i < len(args):
+                    dep_columns.append(args[i])
+                    if i + 1 < len(args) and args[i + 1] != ',':
+                        # XXX Pretty-print the tokens.
+                        raise BQLError(bdb, 'Invalid dependent columns: %s' %
+                            (repr(args),))
+                    i += 2
+                dep_constraints.append((dep_columns, True))
                 continue
             if isinstance(directive, list) and \
                len(directive) == 2 and \
                isinstance(directive[0], (str, unicode)) and \
                casefold(directive[0]) == 'independent':
-                while ',' in directive[1]:
-                    directive[1].remove(',')
-                dep_constraints.append((directive[1],False))
+                args = directive[1]
+                i = 0
+                indep_columns = []
+                while i < len(args):
+                    indep_columns.append(args[i])
+                    if i + 1 < len(args) and args[i + 1] != ',':
+                        # XXX Pretty-print the tokens.
+                        raise BQLError(bdb, 'Invalid dependent columns: %s' %
+                            (repr(args),))
+                    i += 2
+                dep_constraints.append((indep_columns, False))
                 continue
             if isinstance(directive, list) and \
                len(directive) == 2 and \
