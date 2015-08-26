@@ -1,5 +1,9 @@
 /build/
 /external/lemonade/dist/lemonade/*.pyc
+/notes/gpm/gpm.aux
+/notes/gpm/gpm.dvi
+/notes/gpm/gpm.log
+/notes/gpm/gpm.pdf
 /src/grammar.out
 /src/grammar.py
 /src/version.py
