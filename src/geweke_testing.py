@@ -28,13 +28,13 @@ def create_empty_table(bdb, column_names):
     core.bayesdb_table_guarantee_columns(bdb, table)
     return table
 
-def create_generator(bdb, table, target_metamodel, columns):
+def create_generator(bdb, table, target_metamodel, schema):
     phrase = ast.CreateGen(default = True,
                            name = "frob",
                            ifnotexists = False,
                            table = table,
                            metamodel = target_metamodel.name(),
-                           schema = columns)
+                           schema = schema)
     instantiate = bql.mk_instantiate(bdb, target_metamodel, phrase)
     gen_id_box = [None]
     def new_instantiate(*args, **kwargs):
@@ -59,15 +59,16 @@ class Generator(object):
             return mm_attr(self.dbd, self.generator_id, *args, **kwargs)
         return f
 
-def create_prior_gen(bdb, target_metamodel, columns, prior_samples):
-    table = create_empty_table(bdb, columns)
-    prior_gen = create_generator(bdb, table, target_metamodel, columns)
+def create_prior_gen(bdb, target_metamodel, schema, column_names, prior_samples):
+    table = create_empty_table(bdb, column_names)
+    prior_gen = create_generator(bdb, table, target_metamodel, schema)
     prior_gen.initialize_models(range(prior_samples))
     return prior_gen
 
-def create_geweke_chain_generator(bdb, target_metamodel, columns, target_cells, geweke_samples, geweke_iterates):
-    table = create_empty_table(bdb, columns)
-    geweke_chain_gen = create_generator(bdb, table, target_metamodel, columns)
+def create_geweke_chain_generator(bdb, target_metamodel, schema, column_names,
+                                  target_cells, geweke_samples, geweke_iterates):
+    table = create_empty_table(bdb, column_names)
+    geweke_chain_gen = create_generator(bdb, table, target_metamodel, schema)
     geweke_chain_gen.initialize_models(range(geweke_samples))
     for _ in geweke_iterates:
         data = geweke_chain_gen.simulate_joint(target_cells, [])
@@ -87,7 +88,7 @@ def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples):
         total += from_assessment - of_assessment
     return total
 
-def geweke_kl(bdb, target_metamodel, columns, target_cells, prior_samples, geweke_samples, geweke_iterates, kl_samples):
-    prior_gen = create_prior_gen(bdb, target_metamodel, columns, prior_samples)
-    geweke_chain_gen = create_geweke_chain_generator(bdb, target_metamodel, columns, target_cells, geweke_samples, geweke_iterates)
+def geweke_kl(bdb, target_metamodel, schema, column_names, target_cells, prior_samples, geweke_samples, geweke_iterates, kl_samples):
+    prior_gen = create_prior_gen(bdb, target_metamodel, schema, column_names, prior_samples)
+    geweke_chain_gen = create_geweke_chain_generator(bdb, target_metamodel, schema, column_names, target_cells, geweke_samples, geweke_iterates)
     return estimate_kl(prior_gen, geweke_chain_gen, target_cells, [], kl_samples)
