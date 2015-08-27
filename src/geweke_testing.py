@@ -29,8 +29,9 @@ def create_empty_table(bdb, column_names):
     return table
 
 def create_generator(bdb, table, target_metamodel, schema):
+    gen_name = bdb.temp_table_name()
     phrase = ast.CreateGen(default = True,
-                           name = bdb.temp_table_name(),
+                           name = gen_name,
                            ifnotexists = False,
                            table = table,
                            metamodel = target_metamodel.name(),
@@ -45,13 +46,14 @@ def create_generator(bdb, table, target_metamodel, schema):
     with bdb.savepoint():
         target_metamodel.create_generator(bdb, phrase.table, phrase.schema,
             new_instantiate)
-    return Generator(bdb, target_metamodel, gen_id_box[0])
+    return Generator(bdb, target_metamodel, gen_id_box[0], gen_name)
 
 class Generator(object):
-    def __init__(self, bdb, metamodel, generator_id):
+    def __init__(self, bdb, metamodel, generator_id, name):
         self.bdb = bdb
         self.metamodel = metamodel
         self.generator_id = generator_id
+        self.name = name
 
     def __getattr__(self, name):
         mm_attr = getattr(self.metamodel, name)
