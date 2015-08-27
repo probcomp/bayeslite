@@ -14,18 +14,59 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-def create_empty_table(bdb, columns):
-    ...
+import bayeslite.core as core
+import bayeslite.ast as ast
+import bayeslite.bql as bql
+from bayeslite.sqlite3_util import sqlite3_quote_name
+
+def create_empty_table(bdb, column_names):
+    table = "frob"
+    qt = sqlite3_quote_name(table)
+    qcns = map(sqlite3_quote_name, column_names)
+    schema = ','.join('%s NUMERIC' % (qcn,) for qcn in qcns)
+    bdb.sql_execute('CREATE TABLE %s(%s)' % (qt, schema))
+    core.bayesdb_table_guarantee_columns(bdb, table)
+    return table
 
 def create_generator(bdb, table, target_metamodel, columns):
-    ...
+    phrase = ast.CreateGen(default = True,
+                           name = "frob",
+                           ifnotexists = False,
+                           table = table,
+                           metamodel = target_metamodel.name(),
+                           schema = columns)
+    instantiate = bql.mk_instantiate(bdb, target_metamodel, phrase)
+    gen_id_box = [None]
+    def new_instantiate(*args, **kwargs):
+        # Because there is no other way to capture the generator id
+        (new_gen_id, other) = instantiate(*args, **kwargs)
+        gen_id_box[0] = new_gen_id
+        return (new_gen_id, other)
+    with bdb.savepoint():
+        target_metamodel.create_generator(bdb, phrase.table, phrase.schema,
+            new_instantiate)
+    return Generator(bdb, target_metamodel, gen_id_box[0])
+
+class Generator(object):
+    def __init__(self, bdb, metamodel, generator_id):
+        self.bdb = bdb
+        self.metamodel = metamodel
+        self.generator_id = generator_id
+
+    def __getattr__(self, name):
+        mm_attr = getattr(self.metamodel, name)
+        def f(*args, **kwargs):
+            return mm_attr(self.dbd, self.generator_id, *args, **kwargs)
+        return f
 
 def create_prior_gen(bdb, target_metamodel, columns, prior_samples):
+    table = create_empty_table(bdb, columns)
     prior_gen = create_generator(bdb, table, target_metamodel, columns)
     prior_gen.initialize_models(range(prior_samples))
     return prior_gen
 
 def create_geweke_chain_generator(bdb, target_metamodel, columns, target_cells, geweke_samples, geweke_iterates):
+    table = create_empty_table(bdb, columns)
     geweke_chain_gen = create_generator(bdb, table, target_metamodel, columns)
     geweke_chain_gen.initialize_models(range(geweke_samples))
     for _ in geweke_iterates:
@@ -41,13 +82,12 @@ def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples):
     total = 0
     for _ in range(kl_samples):
         data = from_gen.simulate_joint(target_cells, constraints)
-        from_assessment = from_gen.logpdf(zip(target_cells, data))
-          of_assessment =   of_gen.logpdf(zip(target_cells, data))
+        from_assessment = from_gen.logpdf(zip(target_cells, data), constraints)
+        of_assessment   =   of_gen.logpdf(zip(target_cells, data), constraints)
         total += from_assessment - of_assessment
     return total
 
 def geweke_kl(bdb, target_metamodel, columns, target_cells, prior_samples, geweke_samples, geweke_iterates, kl_samples):
-    table = create_empty_table(bdb, columns)
-    prior_gen = create_prior_gen(bdb, table, target_metamodel, columns, prior_samples)
+    prior_gen = create_prior_gen(bdb, target_metamodel, columns, prior_samples)
     geweke_chain_gen = create_geweke_chain_generator(bdb, target_metamodel, columns, target_cells, geweke_samples, geweke_iterates)
     return estimate_kl(prior_gen, geweke_chain_gen, target_cells, [], kl_samples)
