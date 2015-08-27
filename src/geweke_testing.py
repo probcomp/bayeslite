@@ -56,7 +56,7 @@ class Generator(object):
     def __getattr__(self, name):
         mm_attr = getattr(self.metamodel, name)
         def f(*args, **kwargs):
-            return mm_attr(self.dbd, self.generator_id, *args, **kwargs)
+            return mm_attr(self.bdb, self.generator_id, *args, **kwargs)
         return f
 
 def create_prior_gen(bdb, target_metamodel, schema, column_names, prior_samples):
