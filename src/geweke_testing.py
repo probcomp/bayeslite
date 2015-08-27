@@ -78,7 +78,7 @@ def create_geweke_chain_generator(bdb, target_metamodel, schema, column_names,
     INITIALIZE %s MODELS FOR %s
     ''' % (geweke_samples, sqlite3_quote_name(geweke_chain_gen.name))
     bdb.execute(init_models_bql)
-    for _ in geweke_iterates:
+    for _ in range(geweke_iterates):
         data = geweke_chain_gen.simulate_joint(target_cells, [])
         for ((i, j), datum) in zip(target_cells, data):
             geweke_chain_gen.insert(i, j, datum)
