@@ -88,7 +88,8 @@ def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples):
         total += from_assessment - of_assessment
     return total
 
-def geweke_kl(bdb, target_metamodel, schema, column_names, target_cells, prior_samples, geweke_samples, geweke_iterates, kl_samples):
+def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells, prior_samples, geweke_samples, geweke_iterates, kl_samples):
+    target_metamodel = bdb.metamodels[metamodel_name]
     prior_gen = create_prior_gen(bdb, target_metamodel, schema, column_names, prior_samples)
     geweke_chain_gen = create_geweke_chain_generator(bdb, target_metamodel, schema, column_names, target_cells, geweke_samples, geweke_iterates)
     return estimate_kl(prior_gen, geweke_chain_gen, target_cells, [], kl_samples)
