@@ -20,7 +20,7 @@ import bayeslite.bql as bql
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
 def create_empty_table(bdb, column_names):
-    table = "frob"
+    table = bdb.temp_table_name()
     qt = sqlite3_quote_name(table)
     qcns = map(sqlite3_quote_name, column_names)
     schema = ','.join('%s NUMERIC' % (qcn,) for qcn in qcns)
@@ -30,7 +30,7 @@ def create_empty_table(bdb, column_names):
 
 def create_generator(bdb, table, target_metamodel, schema):
     phrase = ast.CreateGen(default = True,
-                           name = "frob",
+                           name = bdb.temp_table_name(),
                            ifnotexists = False,
                            table = table,
                            metamodel = target_metamodel.name(),
