@@ -64,14 +64,20 @@ class Generator(object):
 def create_prior_gen(bdb, target_metamodel, schema, column_names, prior_samples):
     table = create_empty_table(bdb, column_names)
     prior_gen = create_generator(bdb, table, target_metamodel, schema)
-    prior_gen.initialize_models(range(prior_samples))
+    init_models_bql = '''
+    INITIALIZE %s MODELS FOR %s
+    ''' % (prior_samples, sqlite3_quote_name(prior_gen.name))
+    bdb.execute(init_models_bql)
     return prior_gen
 
 def create_geweke_chain_generator(bdb, target_metamodel, schema, column_names,
                                   target_cells, geweke_samples, geweke_iterates):
     table = create_empty_table(bdb, column_names)
     geweke_chain_gen = create_generator(bdb, table, target_metamodel, schema)
-    geweke_chain_gen.initialize_models(range(geweke_samples))
+    init_models_bql = '''
+    INITIALIZE %s MODELS FOR %s
+    ''' % (geweke_samples, sqlite3_quote_name(geweke_chain_gen.name))
+    bdb.execute(init_models_bql)
     for _ in geweke_iterates:
         data = geweke_chain_gen.simulate_joint(target_cells, [])
         for ((i, j), datum) in zip(target_cells, data):
