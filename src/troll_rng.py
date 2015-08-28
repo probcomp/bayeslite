@@ -31,7 +31,7 @@ class TrollMetamodel(metamodel.IBayesDBMetamodel):
 
     The metamodel is named ``troll_rng`` in BQL::
 
-        CREATE GENERATOR t_cc FOR t USING troll_rng
+        CREATE GENERATOR t_troll FOR t USING troll_rng(..)
     """
 
     def __init__(self): pass
