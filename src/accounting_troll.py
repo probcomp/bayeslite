@@ -14,30 +14,30 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""The Accounting Troll Model posits that all data values are equal to 9.
+"""The Troll Model posits that all data values are equal to 9.
 
 Reference: http://dilbert.com/strip/2001-10-25
 
-This is an example of the simplest possible meta model.
+This is an example of the simplest possible population model.
 
 This module implements the :class:`bayeslite.IBayesDBMetamodel`
-interface for the Accounting Troll Model.
+interface for the Troll Model.
 """
 
 import bayeslite.metamodel as metamodel
 
 class TrollMetamodel(metamodel.IBayesDBMetamodel):
-    """Accounting Troll metamodel for BayesDB.
+    """Troll metamodel for BayesDB.
 
-    The metamodel is named ``accounting_troll`` in BQL::
+    The metamodel is named ``troll_rng`` in BQL::
 
-        CREATE GENERATOR t_cc FOR t USING accounting_troll
+        CREATE GENERATOR t_cc FOR t USING troll_rng
     """
 
     def __init__(self): pass
-    def name(self): return 'accounting_troll'
+    def name(self): return 'troll_rng'
     def register(self, bdb):
-        bdb.sql_execute("INSERT INTO bayesdb_metamodel (name, version) VALUES ('accounting_troll', 1)")
+        bdb.sql_execute("INSERT INTO bayesdb_metamodel (name, version) VALUES ('troll_rng', 1)")
     def create_generator(self, bdb, table, schema, instantiate):
         instantiate(schema)
     def drop_generator(self, *args): pass
