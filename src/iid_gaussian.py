@@ -24,7 +24,8 @@ interface for the IID Gaussian Model.
 
 """
 
-import scipy.stats as stats
+import math
+import random
 
 import bayeslite.metamodel as metamodel
 
@@ -36,7 +37,8 @@ class StdNormalMetamodel(metamodel.IBayesDBMetamodel):
         CREATE GENERATOR t_sn FOR t USING std_normal(..)
     """
 
-    def __init__(self): pass
+    def __init__(self, seed=0):
+        self.prng = random.Random(seed)
     def name(self): return 'std_normal'
     def register(self, bdb):
         bdb.sql_execute("INSERT INTO bayesdb_metamodel (name, version) VALUES ('std_normal', 1)")
@@ -48,11 +50,16 @@ class StdNormalMetamodel(metamodel.IBayesDBMetamodel):
     def drop_models(self, *args): pass
     def analyze_models(self, *args): pass
     def simulate_joint(self, _bdb, _generator_id, targets, _constraints):
-        return stats.norm(loc=0, scale=1).rvs(len(targets))
+        return [self.prng.gauss(0, 1) for _ in targets]
     def logpdf(self, _bdb, _generator_id, targets, _constraints):
-        vals = [value for (_, _, value) in targets]
-        anss = stats.norm(loc=0, scale=1).logpdf(vals)
-        return sum(anss)
+        return sum(logpdfOne(value, 0, 1) for (_, _, value) in targets)
     def insert(self, *args): pass
     def remove(self, *args): pass
     def infer(self, *args): pass
+
+HALF_LOG2PI = 0.5 * math.log(2 * math.pi)
+
+def logpdfOne(x, mu, sigma):
+    deviation = x - mu
+    return - math.log(sigma) - HALF_LOG2PI \
+        - (0.5 * deviation * deviation / (sigma * sigma))
