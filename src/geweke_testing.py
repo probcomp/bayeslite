@@ -91,8 +91,9 @@ def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples):
     total = 0
     for _ in range(kl_samples):
         data = from_gen.simulate_joint(target_cells, constraints)
-        from_assessment = from_gen.logpdf(zip(target_cells, data), constraints)
-        of_assessment   =   of_gen.logpdf(zip(target_cells, data), constraints)
+        targeted_data = [(i, j, x) for ((i, j), x) in zip(target_cells, data)]
+        from_assessment = from_gen.logpdf(targeted_data, constraints)
+        of_assessment   =   of_gen.logpdf(targeted_data, constraints)
         total += from_assessment - of_assessment
     return total
 
