@@ -16,7 +16,7 @@
 
 """The Accounting Troll Model posits that all data values are equal to 9.
 
-TODO Dilbert reference.
+Reference: http://dilbert.com/strip/2001-10-25
 
 This is an example of the simplest possible meta model.
 
