@@ -304,7 +304,7 @@ def data_suff_stats(bdb, table, column_name):
     qt = sqlite3_quote_name(table)
     qcn = sqlite3_quote_name(column_name)
     # TODO Do this computation inside the database?
-    gather_data_sql = gather_data_sql_pat % (qt, qcn)
+    gather_data_sql = gather_data_sql_pat % (qcn, qt)
     cursor = bdb.sql_execute(gather_data_sql)
     count = 0
     xsum = 0
