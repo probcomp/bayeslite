@@ -172,7 +172,37 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             for modelno in modelnos:
                 bdb.sql_execute(delete_models_sql, (generator_id, modelno))
 
-    def analyze_models(self, *args): pass
+    def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
+            max_seconds=None, ckpt_iterations=None, ckpt_seconds=None):
+        # Ignore analysis timing control, because one step reaches the
+        # posterior anyway.
+        # TODO This code is identical with "initialize" except for the
+        # SQL operation; abstract it. (e.g. by initializing to 0 and
+        # then taking a step)
+        update_sample_sql = '''
+            UPDATE bayesdb_nig_normal_models SET mu = :mu, sigma = :sigma
+                WHERE generator_id = :generator_id
+                    AND colno = :colno
+                    AND modelno = :modelno
+        '''
+        collect_stats_sql = '''
+            SELECT (colno, count, sum, sumsq) FROM
+                bayesdb_nig_normal_columns WHERE generator_id = ?
+        '''
+        with bdb.savepoint():
+            cursor = bdb.sql_execute(collect_stats_sql, (generator_id,))
+            for (colno, count, xsum, sumsq) in cursor:
+                stats = (count, xsum, sumsq)
+                for modelno in modelnos:
+                    (mu, sigma) = gibbs_step_params(self.prng, hardcoded_hypers, stats)
+                    bdb.sql_execute(update_sample_sql, {
+                        'generator_id': generator_id,
+                        'colno': colno,
+                        'modelno': modelno,
+                        'mu': mu,
+                        'sigma': sigma,
+                    })
+
     def simulate_joint(self, _bdb, _generator_id, targets, _constraints):
         return [self.prng.gauss(0, 1) for _ in targets]
     def logpdf(self, _bdb, _generator_id, targets, _constraints):
