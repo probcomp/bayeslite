@@ -213,8 +213,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
     def _model_mus_sigmas(self, bdb, generator_id, modelno):
         params_sql = '''
             SELECT colno, mu, sigma FROM bayesdb_nig_normal_models
-                WHERE generator_id = :generator_id
-                    AND modelno = :modelno
+                WHERE generator_id = ? AND modelno = ?
         ''' # TODO Filter in the database by the columns I will actually use?
         cursor = bdb.sql_execute(params_sql, (generator_id, modelno))
         mus = {}
