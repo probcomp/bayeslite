@@ -81,10 +81,10 @@ def create_geweke_chain_generator(bdb, target_metamodel, schema, column_names,
     for _ in range(geweke_iterates):
         data = geweke_chain_gen.simulate_joint(target_cells, [])
         for ((i, j), datum) in zip(target_cells, data):
-            geweke_chain_gen.insert(i, j, datum)
+            geweke_chain_gen.insert((i, j, datum))
         geweke_chain_gen.analyze_models()
-        for (i, j) in target_cells:
-            geweke_chain_gen.remove(i, j)
+        for ((i, j), datum) in zip(target_cells, data):
+            geweke_chain_gen.remove((i, j, datum))
     return geweke_chain_gen
 
 def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples):
