@@ -315,14 +315,20 @@ def data_suff_stats(bdb, table, column_name):
         sumsq += item * item
     return (count, xsum, sumsq)
 
-def gibbs_step_params(prng, hypers, stats):
-    # This is UNigNormalAAALKernel.simulate packaged differently.
+def posterior_hypers(hypers, stats):
+    # This is CNigNormalOutputPSP.posteriorHypersNumeric packaged
+    # differently.
     (m, V, a, b) = hypers
     [ctN, xsum, xsumsq] = stats
     Vn = 1 / (1/V + ctN)
     mn = Vn*(1/V*m + ctN * xsum/ctN)
     an = a + ctN / 2
     bn = b + 0.5*(m**2/V + xsumsq - mn**2/Vn)
+    return (mn, Vn, an, bn)
+
+def gibbs_step_params(prng, hypers, stats):
+    # This is UNigNormalAAALKernel.simulate packaged differently.
+    (mn, Vn, an, bn) = posterior_hypers(hypers, stats)
     newSigma2 = 1.0 / prng.gammavariate(an, bn) # shape, scale
     newMu = prng.gauss(mn, math.sqrt(newSigma2*Vn))
     return (newMu, math.sqrt(newSigma2))
