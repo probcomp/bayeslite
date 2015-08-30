@@ -199,6 +199,13 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         return list(bdb.sql_execute(modelnos_sql, (generator_id,)))
 
     def simulate_joint(self, bdb, generator_id, targets, _constraints):
+        # Note: The constraints are irrelevant because columns are
+        # independent in the true distribution (except in the case of
+        # shared, unknown hyperparameters), and cells in a column are
+        # independent conditioned on the latent parameters mu and
+        # sigma.  This method does not expose the inter-column
+        # dependence induced by approximating the true distribution
+        # with a finite number of full-table models.
         target_cols = set(colno for (_, colno) in targets)
         modelnos = self._modelnos(bdb, generator_id)
         modelno = self.prng.choice(modelnos)
