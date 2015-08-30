@@ -60,7 +60,9 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
 
     def __init__(self, seed=0):
         self.prng = random.Random(seed)
+
     def name(self): return 'nig_normal'
+
     def register(self, bdb):
         with bdb.savepoint():
             schema_sql = 'SELECT version FROM bayesdb_metamodel WHERE name = ?'
@@ -81,6 +83,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             if version != 1:
                 raise BQLError(bdb, 'NIG-Normal already installed'
                     ' with unknown schema version: %d' % (version,))
+
     def create_generator(self, bdb, table, schema, instantiate):
         # The schema is the column list. May want to change this later
         # to make room for specifying the hyperparameters, etc.
@@ -111,8 +114,15 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                     'mu': self.prng.gauss(m, math.sqrt(V) * sigma),
                     'sigma': sigma,
                 })
-    def drop_generator(self, *args): pass
-    def rename_column(self, *args): pass
+
+    def drop_generator(self, bdb, generator_id):
+        with bdb.savepoint():
+            delete_column_models_sql = '''
+                DELETE FROM bayesdb_nig_normal_column_models
+                    WHERE generator_id = ?
+            '''
+            bdb.sql_execute(delete_column_models_sql, (generator_id,))
+
     def initialize_models(self, *args): pass
     def drop_models(self, *args): pass
     def analyze_models(self, *args): pass
