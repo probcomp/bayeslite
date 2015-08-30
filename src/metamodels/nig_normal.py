@@ -29,6 +29,27 @@ import random
 
 import bayeslite.metamodel as metamodel
 
+from bayeslite.exception import BQLError
+from bayeslite.sqlite3_util import sqlite3_quote_name
+
+nig_normal_schema_1 = '''
+INSERT INTO bayesdb_metamodel (name, version) VALUES ('nig_normal', 1);
+
+CREATE TABLE bayesdb_nig_normal_column_models (
+    generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    colno       INTEGER NOT NULL,
+    count       INTEGER NOT NULL,
+    sum         REAL NOT NULL,
+    sumsq       REAL NOT NULL,
+    mu          REAL NOT NULL,
+    sigma       REAL NOT NULL,
+    PRIMARY KEY(generator_id, colno),
+    FOREIGN KEY(generator_id, colno)
+        REFERENCES bayesdb_generator_column(generator_id, colno),
+'''
+
+hardcoded_hypers = (0, 1, 1, 1)
+
 class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
     """Normal-Inverse-Gamma-Normal metamodel for BayesDB.
 
@@ -41,9 +62,55 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         self.prng = random.Random(seed)
     def name(self): return 'nig_normal'
     def register(self, bdb):
-        bdb.sql_execute("INSERT INTO bayesdb_metamodel (name, version) VALUES ('nig_normal', 1)")
+        with bdb.savepoint():
+            schema_sql = 'SELECT version FROM bayesdb_metamodel WHERE name = ?'
+            cursor = bdb.sql_execute(schema_sql, (self.name(),))
+            version = None
+            try:
+                row = cursor.next()
+            except StopIteration:
+                version = 0
+            else:
+                version = row[0]
+            assert version is not None
+            if version == 0:
+                # XXX WHATTAKLUDGE!
+                for stmt in nig_normal_schema_1.split(';'):
+                    bdb.sql_execute(stmt)
+                version = 1
+            if version != 1:
+                raise BQLError(bdb, 'NIG-Normal already installed'
+                    ' with unknown schema version: %d' % (version,))
     def create_generator(self, bdb, table, schema, instantiate):
-        instantiate(schema)
+        # The schema is the column list. May want to change this later
+        # to make room for specifying the hyperparameters, etc.
+        insert_column_sql = '''
+            INSERT INTO bayesdb_nig_normal_column_models
+                (generator_id, colno, count, sum, sumsq, mu, sigma)
+                VALUES (:generator_id, :colno,
+                        :count, :sum, :sumsq, :mu, :sigma)
+        '''
+        with bdb.savepoint():
+            generator_id, column_list = instantiate(schema)
+            (m, V, a, b) = hardcoded_hypers
+            for (colno, column_name, stattype) in column_list:
+                print stattype
+                if not stattype == 'numerical':
+                    raise BQLError(bdb, 'NIG-Normal only supports'
+                        ' numerical columns, but %s is %s'
+                        % (column_name, stattype))
+                (count, xsum, sumsq) = data_suff_stats(bdb, table, column_name)
+                prec = self.prng.gammavariate(a, b) # shape, scale
+                sigma = math.sqrt(1.0/prec)
+                bdb.sql_execute(insert_column_sql, {
+                    'generator_id': generator_id,
+                    'colno': colno,
+                    'count': count,
+                    'sum': xsum,
+                    'sumsq': sumsq,
+                    'mu': self.prng.gauss(m, math.sqrt(V) * sigma),
+                    'sigma': sigma,
+                })
     def drop_generator(self, *args): pass
     def rename_column(self, *args): pass
     def initialize_models(self, *args): pass
@@ -63,3 +130,21 @@ def logpdfOne(x, mu, sigma):
     deviation = x - mu
     return - math.log(sigma) - HALF_LOG2PI \
         - (0.5 * deviation * deviation / (sigma * sigma))
+
+def data_suff_stats(bdb, table, column_name):
+    gather_data_sql_pat = '''
+        SELECT %s FROM %s
+    '''
+    qt = sqlite3_quote_name(table)
+    qcn = sqlite3_quote_name(column_name)
+    # TODO Do this computation inside the database?
+    gather_data_sql = gather_data_sql_pat % (qt, qcn)
+    cursor = bdb.sql_execute(gather_data_sql)
+    count = 0
+    xsum = 0
+    sumsq = 0
+    for item in cursor:
+        count += 1
+        xsum += item
+        sumsq += item * item
+    return (count, xsum, sumsq)
