@@ -169,11 +169,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         if modelnos is None:
             # This assumes that models x columns forms a dense
             # rectangle in the database, which it should.
-            modelnos_sql = '''
-                SELECT DISTINCT modelno FROM bayesdb_nig_normal_models
-                    WHERE generator_id = ?
-            '''
-            modelnos = list(bdb.sql_execute(modelnos_sql, (generator_id,)))
+            modelnos = self._modelnos(bdb, generator_id)
         self._set_models(bdb, generator_id, modelnos, update_sample_sql)
 
     def _set_models(self, bdb, generator_id, modelnos, sql):
@@ -195,8 +191,34 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                         'sigma': sigma,
                     })
 
-    def simulate_joint(self, _bdb, _generator_id, targets, _constraints):
-        return [self.prng.gauss(0, 1) for _ in targets]
+    def _modelnos(self, bdb, generator_id):
+        modelnos_sql = '''
+            SELECT DISTINCT modelno FROM bayesdb_nig_normal_models
+                WHERE generator_id = ?
+        '''
+        return list(bdb.sql_execute(modelnos_sql, (generator_id,)))
+
+    def simulate_joint(self, bdb, generator_id, targets, _constraints):
+        target_cols = set(colno for (_, colno) in targets)
+        modelnos = self._modelnos(bdb, generator_id)
+        modelno = self.prng.choice(modelnos)
+        params_sql = '''
+            SELECT colno, mu, sigma FROM bayesdb_nig_normal_models
+                WHERE generator_id = :generator_id
+                    AND modelno = :modelno
+        ''' # TODO Filter in the database?
+        cursor = bdb.sql_execute(params_sql, (generator_id, modelno))
+        mus = {}
+        sigmas = {}
+        for (colno, mu, sigma) in cursor:
+            if colno not in target_cols:
+                continue
+            assert colno not in mus
+            mus[colno] = mu
+            assert colno not in sigmas
+            sigmas[colno] = sigma
+        return [self.prng.gauss(mus[colno], sigmas[colno]) for (_, colno) in targets]
+
     def logpdf(self, _bdb, _generator_id, targets, _constraints):
         return sum(logpdfOne(value, 0, 1) for (_, _, value) in targets)
     def insert(self, *args): pass
