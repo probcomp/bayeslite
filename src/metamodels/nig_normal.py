@@ -111,7 +111,6 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         with bdb.savepoint():
             generator_id, column_list = instantiate(schema)
             for (colno, column_name, stattype) in column_list:
-                print stattype
                 if not stattype == 'numerical':
                     raise BQLError(bdb, 'NIG-Normal only supports'
                         ' numerical columns, but %s is %s'
