@@ -173,7 +173,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
 
     def _set_models(self, bdb, generator_id, modelnos, sql):
         collect_stats_sql = '''
-            SELECT (colno, count, sum, sumsq) FROM
+            SELECT colno, count, sum, sumsq FROM
                 bayesdb_nig_normal_columns WHERE generator_id = ?
         '''
         with bdb.savepoint():
