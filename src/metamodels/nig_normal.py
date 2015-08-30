@@ -166,6 +166,14 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                     AND colno = :colno
                     AND modelno = :modelno
         '''
+        if modelnos is None:
+            # This assumes that models x columns forms a dense
+            # rectangle in the database, which it should.
+            modelnos_sql = '''
+                SELECT DISTINCT modelno FROM bayesdb_nig_normal_models
+                    WHERE generator_id = ?
+            '''
+            modelnos = list(bdb.sql_execute(modelnos_sql, (generator_id,)))
         self._set_models(bdb, generator_id, modelnos, update_sample_sql)
 
     def _set_models(self, bdb, generator_id, modelnos, sql):
