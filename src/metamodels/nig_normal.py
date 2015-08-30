@@ -65,6 +65,10 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
     The metamodel is named ``nig_normal`` in BQL::
 
         CREATE GENERATOR t_nig FOR t USING nig_normal(..)
+
+    Internally, the NIG Normal metamodel add SQL tables to the
+    database with names that begin with ``nig_normal_``.
+
     """
 
     def __init__(self, seed=0):
