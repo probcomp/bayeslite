@@ -35,14 +35,12 @@ from bayeslite.sqlite3_util import sqlite3_quote_name
 nig_normal_schema_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('nig_normal', 1);
 
-CREATE TABLE bayesdb_nig_normal_column_models (
+CREATE TABLE bayesdb_nig_normal_columns (
     generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
     colno       INTEGER NOT NULL,
     count       INTEGER NOT NULL,
     sum         REAL NOT NULL,
     sumsq       REAL NOT NULL,
-    mu          REAL NOT NULL,
-    sigma       REAL NOT NULL,
     PRIMARY KEY(generator_id, colno),
     FOREIGN KEY(generator_id, colno)
         REFERENCES bayesdb_generator_column(generator_id, colno)
@@ -99,14 +97,12 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # The schema is the column list. May want to change this later
         # to make room for specifying the hyperparameters, etc.
         insert_column_sql = '''
-            INSERT INTO bayesdb_nig_normal_column_models
-                (generator_id, colno, count, sum, sumsq, mu, sigma)
-                VALUES (:generator_id, :colno,
-                        :count, :sum, :sumsq, :mu, :sigma)
+            INSERT INTO bayesdb_nig_normal_columns
+                (generator_id, colno, count, sum, sumsq)
+                VALUES (:generator_id, :colno, :count, :sum, :sumsq)
         '''
         with bdb.savepoint():
             generator_id, column_list = instantiate(schema)
-            (m, V, a, b) = hardcoded_hypers
             for (colno, column_name, stattype) in column_list:
                 print stattype
                 if not stattype == 'numerical':
@@ -114,25 +110,22 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                         ' numerical columns, but %s is %s'
                         % (column_name, stattype))
                 (count, xsum, sumsq) = data_suff_stats(bdb, table, column_name)
-                prec = self.prng.gammavariate(a, b) # shape, scale
-                sigma = math.sqrt(1.0/prec)
                 bdb.sql_execute(insert_column_sql, {
                     'generator_id': generator_id,
                     'colno': colno,
                     'count': count,
                     'sum': xsum,
                     'sumsq': sumsq,
-                    'mu': self.prng.gauss(m, math.sqrt(V) * sigma),
-                    'sigma': sigma,
                 })
 
     def drop_generator(self, bdb, generator_id):
         with bdb.savepoint():
-            delete_column_models_sql = '''
-                DELETE FROM bayesdb_nig_normal_column_models
+            self.drop_models(bdb, generator_id)
+            delete_columns_sql = '''
+                DELETE FROM bayesdb_nig_normal_columns
                     WHERE generator_id = ?
             '''
-            bdb.sql_execute(delete_column_models_sql, (generator_id,))
+            bdb.sql_execute(delete_columns_sql, (generator_id,))
 
     def initialize_models(self, bdb, generator_id, modelnos, model_config):
         insert_sample_sql = '''
