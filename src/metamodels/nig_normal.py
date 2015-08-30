@@ -45,7 +45,18 @@ CREATE TABLE bayesdb_nig_normal_column_models (
     sigma       REAL NOT NULL,
     PRIMARY KEY(generator_id, colno),
     FOREIGN KEY(generator_id, colno)
-        REFERENCES bayesdb_generator_column(generator_id, colno),
+        REFERENCES bayesdb_generator_column(generator_id, colno)
+);
+
+CREATE TABLE bayesdb_nig_normal_models (
+    generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    modelno         INTEGER NOT NULL,
+    mu              REAL NOT NULL,
+    sigma           REAL NOT NULL,
+    PRIMARY KEY(generator_id, modelno),
+    FOREIGN KEY(generator_id, modelno)
+        REFERENCES bayesdb_generator_model(generator_id, modelno)
+);
 '''
 
 hardcoded_hypers = (0, 1, 1, 1)
@@ -123,8 +134,38 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             '''
             bdb.sql_execute(delete_column_models_sql, (generator_id,))
 
-    def initialize_models(self, *args): pass
-    def drop_models(self, *args): pass
+    def initialize_models(self, bdb, generator_id, modelnos, model_config):
+        insert_sample_sql = '''
+            INSERT INTO bayesdb_nig_normal_models
+                (generator_id, modelno, mu, sigma)
+                VALUES (:generator_id, :modelno, :mu, :sigma)
+        '''
+        (m, V, a, b) = hardcoded_hypers
+        with bdb.savepoint():
+            for modelno in modelnos:
+                prec = self.prng.gammavariate(a, b) # shape, scale
+                sigma = math.sqrt(1.0/prec)
+                bdb.sql_execute(insert_sample_sql, {
+                    'generator_id': generator_id,
+                    'modelno': modelno,
+                    'mu': self.prng.gauss(m, math.sqrt(V) * sigma),
+                    'sigma': sigma,
+                })
+
+    def drop_models(self, bdb, generator_id, modelnos=None):
+        if modelnos is None:
+            delete_models_sql = '''
+                DELETE FROM bayesdb_nig_normal_models WHERE generator_id = ?
+            '''
+            bdb.sql_execute(delete_models_sql, (generator_id,))
+        else:
+            delete_models_sql = '''
+                DELETE FROM bayesdb_nig_normal_models
+                    WHERE generator_id = ? AND modelno = ?
+            '''
+            for modelno in modelnos:
+                bdb.sql_execute(delete_models_sql, (generator_id, modelno))
+
     def analyze_models(self, *args): pass
     def simulate_joint(self, _bdb, _generator_id, targets, _constraints):
         return [self.prng.gauss(0, 1) for _ in targets]
