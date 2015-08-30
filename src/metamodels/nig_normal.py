@@ -289,7 +289,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             'xsq': value * value
         })
 
-    def infer(self, *args): pass
+    def infer(self, *args): return self.analyze_models(*args)
 
 HALF_LOG2PI = 0.5 * math.log(2 * math.pi)
 
