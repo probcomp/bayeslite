@@ -206,24 +206,21 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # sigma.  This method does not expose the inter-column
         # dependence induced by approximating the true distribution
         # with a finite number of full-table models.
-        target_cols = set(colno for (_, colno) in targets)
         modelnos = self._modelnos(bdb, generator_id)
         modelno = self.prng.choice(modelnos)
-        (mus, sigmas) = self._model_mus_sigmas(bdb, generator_id, modelno, target_cols)
+        (mus, sigmas) = self._model_mus_sigmas(bdb, generator_id, modelno)
         return [self.prng.gauss(mus[colno], sigmas[colno]) for (_, colno) in targets]
 
-    def _model_mus_sigmas(self, bdb, generator_id, modelno, target_cols):
+    def _model_mus_sigmas(self, bdb, generator_id, modelno):
         params_sql = '''
             SELECT colno, mu, sigma FROM bayesdb_nig_normal_models
                 WHERE generator_id = :generator_id
                     AND modelno = :modelno
-        ''' # TODO Filter in the database?
+        ''' # TODO Filter in the database by the columns I will actually use?
         cursor = bdb.sql_execute(params_sql, (generator_id, modelno))
         mus = {}
         sigmas = {}
         for (colno, mu, sigma) in cursor:
-            if colno not in target_cols:
-                continue
             assert colno not in mus
             mus[colno] = mu
             assert colno not in sigmas
@@ -233,24 +230,21 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
     def logpdf(self, bdb, generator_id, targets, _constraints):
         # Note: The constraints are irrelevant for the same reason as
         # in simulate_joint.
-        target_cols = set(colno for (_, colno, _) in targets)
-        (all_mus, all_sigmas) = self._all_mus_sigmas(bdb, generator_id, target_cols)
+        (all_mus, all_sigmas) = self._all_mus_sigmas(bdb, generator_id)
         return logsumexp([sum(logpdfOne(value, all_mus[modelno][colno],
                                         all_sigmas[modelno][colno])
                               for (_, colno, value) in targets)
                           for modelno in all_mus.keys()])
 
-    def _all_mus_sigmas(self, bdb, generator_id, target_cols):
+    def _all_mus_sigmas(self, bdb, generator_id):
         params_sql = '''
             SELECT colno, modelno, mu, sigma FROM bayesdb_nig_normal_models
                 WHERE generator_id = :generator_id
-        ''' # TODO Filter in the database?
+        ''' # TODO Filter in the database by the columns I will actually use?
         cursor = bdb.sql_execute(params_sql, (generator_id,))
         all_mus = {}
         all_sigmas = {}
         for (colno, modelno, mu, sigma) in cursor:
-            if colno not in target_cols:
-                continue
             if modelno not in all_mus:
                 all_mus[modelno] = {}
             if modelno not in all_sigmas:
