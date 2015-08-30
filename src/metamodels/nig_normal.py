@@ -255,8 +255,40 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             all_sigmas[modelno][colno] = sigma
         return (all_mus, all_sigmas)
 
-    def insert(self, *args): pass
-    def remove(self, *args): pass
+    def insert(self, bdb, generator_id, item):
+        (_, colno, value) = item
+        # Theoretically, I am supposed to detect and report attempted
+        # repeat observations of already-observed cells, but since
+        # there is no per-row latent structure, I will just treat all
+        # row ids as fresh and not keep track of it.
+        update_sql = '''
+        UPDATE bayesdb_nig_normal_columns
+            SET count = count + 1, sum = sum + :x, sumsq = sumsq + :xsq
+            WHERE generator_id = :generator_id
+                AND colno = :colno
+        '''
+        bdb.sql_execute(update_sql, {
+            'generator_id': generator_id,
+            'colno': colno,
+            'x': value,
+            'xsq': value * value
+        })
+
+    def remove(self, bdb, generator_id, item):
+        (_, colno, value) = item
+        update_sql = '''
+        UPDATE bayesdb_nig_normal_columns
+            SET count = count - 1, sum = sum - :x, sumsq = sumsq - :xsq
+            WHERE generator_id = :generator_id
+                AND colno = :colno
+        '''
+        bdb.sql_execute(update_sql, {
+            'generator_id': generator_id,
+            'colno': colno,
+            'x': value,
+            'xsq': value * value
+        })
+
     def infer(self, *args): pass
 
 HALF_LOG2PI = 0.5 * math.log(2 * math.pi)
