@@ -209,6 +209,10 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         target_cols = set(colno for (_, colno) in targets)
         modelnos = self._modelnos(bdb, generator_id)
         modelno = self.prng.choice(modelnos)
+        (mus, sigmas) = self._model_mus_sigmas(bdb, generator_id, modelno, target_cols)
+        return [self.prng.gauss(mus[colno], sigmas[colno]) for (_, colno) in targets]
+
+    def _model_mus_sigmas(self, bdb, generator_id, modelno, target_cols):
         params_sql = '''
             SELECT colno, mu, sigma FROM bayesdb_nig_normal_models
                 WHERE generator_id = :generator_id
@@ -224,10 +228,39 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             mus[colno] = mu
             assert colno not in sigmas
             sigmas[colno] = sigma
-        return [self.prng.gauss(mus[colno], sigmas[colno]) for (_, colno) in targets]
+        return (mus, sigmas)
 
-    def logpdf(self, _bdb, _generator_id, targets, _constraints):
-        return sum(logpdfOne(value, 0, 1) for (_, _, value) in targets)
+    def logpdf(self, bdb, generator_id, targets, _constraints):
+        # Note: The constraints are irrelevant for the same reason as
+        # in simulate_joint.
+        target_cols = set(colno for (_, colno, _) in targets)
+        (all_mus, all_sigmas) = self._all_mus_sigmas(bdb, generator_id, target_cols)
+        return logsumexp([sum(logpdfOne(value, all_mus[modelno][colno],
+                                        all_sigmas[modelno][colno])
+                              for (_, colno, value) in targets)
+                          for modelno in all_mus.keys()])
+
+    def _all_mus_sigmas(self, bdb, generator_id, target_cols):
+        params_sql = '''
+            SELECT colno, modelno, mu, sigma FROM bayesdb_nig_normal_models
+                WHERE generator_id = :generator_id
+        ''' # TODO Filter in the database?
+        cursor = bdb.sql_execute(params_sql, (generator_id,))
+        all_mus = {}
+        all_sigmas = {}
+        for (colno, modelno, mu, sigma) in cursor:
+            if colno not in target_cols:
+                continue
+            if modelno not in all_mus:
+                all_mus[modelno] = {}
+            if modelno not in all_sigmas:
+                all_sigmas[modelno] = {}
+            assert colno not in all_mus[modelno]
+            all_mus[modelno][colno] = mu
+            assert colno not in all_sigmas[modelno]
+            all_sigmas[modelno][colno] = sigma
+        return (all_mus, all_sigmas)
+
     def insert(self, *args): pass
     def remove(self, *args): pass
     def infer(self, *args): pass
@@ -268,3 +301,7 @@ def gibbs_step_params(prng, hypers, stats):
     newSigma2 = 1.0 / prng.gammavariate(an, bn) # shape, scale
     newMu = prng.gauss(mn, math.sqrt(newSigma2*Vn))
     return (newMu, math.sqrt(newSigma2))
+
+def logsumexp(array):
+    m = max(array)
+    return m + math.log(sum(math.exp(a - m) for a in array))
