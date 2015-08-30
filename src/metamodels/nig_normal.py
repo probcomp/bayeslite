@@ -195,7 +195,8 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             SELECT DISTINCT modelno FROM bayesdb_nig_normal_models
                 WHERE generator_id = ?
         '''
-        return list(bdb.sql_execute(modelnos_sql, (generator_id,)))
+        return [item[0] for item in bdb.sql_execute(modelnos_sql, \
+            (generator_id,))]
 
     def simulate_joint(self, bdb, generator_id, targets, _constraints):
         # Note: The constraints are irrelevant because columns are
