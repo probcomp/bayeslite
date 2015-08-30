@@ -48,12 +48,15 @@ CREATE TABLE bayesdb_nig_normal_columns (
 
 CREATE TABLE bayesdb_nig_normal_models (
     generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    colno           INTEGER NOT NULL,
     modelno         INTEGER NOT NULL,
     mu              REAL NOT NULL,
     sigma           REAL NOT NULL,
-    PRIMARY KEY(generator_id, modelno),
+    PRIMARY KEY(generator_id, colno, modelno),
     FOREIGN KEY(generator_id, modelno)
-        REFERENCES bayesdb_generator_model(generator_id, modelno)
+        REFERENCES bayesdb_generator_model(generator_id, modelno),
+    FOREIGN KEY(generator_id, colno)
+        REFERENCES bayesdb_nig_normal_columns(generator_id, colno)
 );
 '''
 
@@ -134,20 +137,26 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
     def initialize_models(self, bdb, generator_id, modelnos, model_config):
         insert_sample_sql = '''
             INSERT INTO bayesdb_nig_normal_models
-                (generator_id, modelno, mu, sigma)
-                VALUES (:generator_id, :modelno, :mu, :sigma)
+                (generator_id, colno, modelno, mu, sigma)
+                VALUES (:generator_id, :colno, :modelno, :mu, :sigma)
         '''
-        (m, V, a, b) = hardcoded_hypers
+        collect_stats_sql = '''
+            SELECT (colno, count, sum, sumsq) FROM
+                bayesdb_nig_normal_columns WHERE generator_id = ?
+        '''
         with bdb.savepoint():
-            for modelno in modelnos:
-                prec = self.prng.gammavariate(a, b) # shape, scale
-                sigma = math.sqrt(1.0/prec)
-                bdb.sql_execute(insert_sample_sql, {
-                    'generator_id': generator_id,
-                    'modelno': modelno,
-                    'mu': self.prng.gauss(m, math.sqrt(V) * sigma),
-                    'sigma': sigma,
-                })
+            cursor = bdb.sql_execute(collect_stats_sql, (generator_id,))
+            for (colno, count, xsum, sumsq) in cursor:
+                stats = (count, xsum, sumsq)
+                for modelno in modelnos:
+                    (mu, sigma) = gibbs_step_params(self.prng, hardcoded_hypers, stats)
+                    bdb.sql_execute(insert_sample_sql, {
+                        'generator_id': generator_id,
+                        'colno': colno,
+                        'modelno': modelno,
+                        'mu': mu,
+                        'sigma': sigma,
+                    })
 
     def drop_models(self, bdb, generator_id, modelnos=None):
         if modelnos is None:
@@ -196,3 +205,15 @@ def data_suff_stats(bdb, table, column_name):
         xsum += item
         sumsq += item * item
     return (count, xsum, sumsq)
+
+def gibbs_step_params(prng, hypers, stats):
+    # This is UNigNormalAAALKernel.simulate packaged differently.
+    (m, V, a, b) = hypers
+    [ctN, xsum, xsumsq] = stats
+    Vn = 1 / (1/V + ctN)
+    mn = Vn*(1/V*m + ctN * xsum/ctN)
+    an = a + ctN / 2
+    bn = b + 0.5*(m**2/V + xsumsq - mn**2/Vn)
+    newSigma2 = 1.0 / prng.gammavariate(an, bn) # shape, scale
+    newMu = prng.gauss(mn, math.sqrt(newSigma2*Vn))
+    return (newMu, math.sqrt(newSigma2))
