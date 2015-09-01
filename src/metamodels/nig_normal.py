@@ -294,8 +294,9 @@ HALF_LOG2PI = 0.5 * math.log(2 * math.pi)
 
 def logpdfOne(x, mu, sigma):
     deviation = x - mu
-    return - math.log(sigma) - HALF_LOG2PI \
+    ans = - math.log(sigma) - HALF_LOG2PI \
         - (0.5 * deviation * deviation / (sigma * sigma))
+    return ans
 
 def data_suff_stats(bdb, table, column_name):
     gather_data_sql_pat = '''
@@ -331,7 +332,8 @@ def gibbs_step_params(prng, hypers, stats):
     (mn, Vn, an, bn) = posterior_hypers(hypers, stats)
     newSigma2 = 1.0 / prng.gammavariate(an, bn) # shape, scale
     newMu = prng.gauss(mn, math.sqrt(newSigma2*Vn))
-    return (newMu, math.sqrt(newSigma2))
+    ans = (newMu, math.sqrt(newSigma2))
+    return ans
 
 def logsumexp(array):
     m = max(array)
