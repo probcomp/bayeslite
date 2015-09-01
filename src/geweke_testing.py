@@ -89,13 +89,12 @@ def create_geweke_chain_generator(bdb, target_metamodel, schema, column_names,
             geweke_chain_gen.remove((i, j, datum))
     return geweke_chain_gen
 
-def kl_est_samples(from_gen, of_gen, target_cells, constraints, count):
-    for _ in range(count):
-        data = from_gen.simulate_joint(target_cells, constraints)
-        targeted_data = [(i, j, x) for ((i, j), x) in zip(target_cells, data)]
-        from_assessment = from_gen.logpdf(targeted_data, constraints)
-        of_assessment   =   of_gen.logpdf(targeted_data, constraints)
-        yield from_assessment - of_assessment
+def kl_est_sample(from_gen, of_gen, target_cells, constraints):
+    data = from_gen.simulate_joint(target_cells, constraints)
+    targeted_data = [(i, j, x) for ((i, j), x) in zip(target_cells, data)]
+    from_assessment = from_gen.logpdf(targeted_data, constraints)
+    of_assessment   =   of_gen.logpdf(targeted_data, constraints)
+    return from_assessment - of_assessment
 
 def gauss_suff_stats(data):
     """From https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
@@ -117,7 +116,7 @@ def gauss_suff_stats(data):
         return (n, mean, math.sqrt(total_deviance / float(n)))
 
 def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples):
-    return gauss_suff_stats(list(kl_est_samples(from_gen, of_gen, target_cells, constraints, kl_samples)))
+    return gauss_suff_stats([kl_est_sample(from_gen, of_gen, target_cells, constraints) for _ in range(kl_samples)])
 
 def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells, prior_samples, geweke_samples, geweke_iterates, kl_samples):
     target_metamodel = bdb.metamodels[metamodel_name]
