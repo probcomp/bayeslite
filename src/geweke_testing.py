@@ -116,7 +116,24 @@ def gauss_suff_stats(data):
         return (n, mean, math.sqrt(total_deviance / float(n)))
 
 def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples):
-    return gauss_suff_stats([kl_est_sample(from_gen, of_gen, target_cells, constraints) for _ in range(kl_samples)])
+    """Estimate the K-L divergence from the first generator to the second.
+
+    Specifically, let P be the distribution over the given target
+    cells induced by the `from` generator conditioned on the
+    constraints, and let Q be same induced by the `of` generator.
+    This function computes and returns a `kl_samples`-point
+    Monte-Carlo estimate of the KL of Q from P, in the form of a
+    triple: (num_samples, estimate, estimated error of estimate).  The
+    error estimate is computed from the variance of the individual
+    point estimates of K-L, on the assumtion that `kl_samples` are
+    high enough that the distribution on the retuned `estimate` is
+    Gaussian (as it must become, by the Central Limit Theorem)
+    (provided the appropriate moments exist, which we hope is so)."""
+
+    estimates = [kl_est_sample(from_gen, of_gen, target_cells, constraints)
+                 for _ in range(kl_samples)]
+    (n, mean, stddev) = gauss_suff_stats(estimates)
+    return (n, mean, stddev / math.sqrt(n))
 
 def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells, prior_samples, geweke_samples, geweke_iterates, kl_samples):
     target_metamodel = bdb.metamodels[metamodel_name]
