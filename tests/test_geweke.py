@@ -23,7 +23,7 @@ def test_geweke_troll():
         bayeslite.bayesdb_register_metamodel(bdb, troll.TrollMetamodel())
         kl_est = geweke.geweke_kl(bdb, "troll_rng", [['column', 'numerical']],
             ['column'], [(1,1)], 2, 2, 2, 2)
-        assert kl_est == 0
+        assert kl_est == (2, 0, 0)
 
 def test_geweke_iid_gaussian():
     with bayeslite.bayesdb_open() as bdb:
@@ -31,4 +31,4 @@ def test_geweke_iid_gaussian():
         bayeslite.bayesdb_register_metamodel(bdb, gauss.StdNormalMetamodel())
         kl_est = geweke.geweke_kl(bdb, "std_normal", [['column', 'numerical']],
             ['column'], [(1,1), (1,2)], 2, 2, 2, 2)
-        assert kl_est == 0
+        assert kl_est == (2, 0, 0)
