@@ -181,7 +181,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             for (colno, count, xsum, sumsq) in cursor:
                 stats = (count, xsum, sumsq)
                 for modelno in modelnos:
-                    (mu, sigma) = gibbs_step_params(self.prng, hardcoded_hypers, stats)
+                    (mu, sigma) = self._gibbs_step_params(hardcoded_hypers, stats)
                     bdb.sql_execute(sql, {
                         'generator_id': generator_id,
                         'colno': colno,
@@ -291,6 +291,17 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
 
     def infer(self, *args): return self.analyze_models(*args)
 
+    def _gibbs_step_params(self, hypers, stats):
+        # This is UNigNormalAAALKernel.simulate packaged differently.
+        (mn, Vn, an, bn) = posterior_hypers(hypers, stats)
+        newSigma2 = self._inv_gamma(an, bn)
+        newMu = self.prng.gauss(mn, math.sqrt(newSigma2*Vn))
+        ans = (newMu, math.sqrt(newSigma2))
+        return ans
+
+    def _inv_gamma(self, shape, scale):
+        return float(scale) / self.prng.gammavariate(shape, 1.0)
+
 HALF_LOG2PI = 0.5 * math.log(2 * math.pi)
 
 def logpdfOne(x, mu, sigma):
@@ -328,17 +339,6 @@ def posterior_hypers(hypers, stats):
     bn = b + 0.5*(m**2/float(V) + xsumsq - mn**2/Vn)
     ans = (mn, Vn, an, bn)
     return ans
-
-def gibbs_step_params(prng, hypers, stats):
-    # This is UNigNormalAAALKernel.simulate packaged differently.
-    (mn, Vn, an, bn) = posterior_hypers(hypers, stats)
-    newSigma2 = inv_gamma(prng, an, bn)
-    newMu = prng.gauss(mn, math.sqrt(newSigma2*Vn))
-    ans = (newMu, math.sqrt(newSigma2))
-    return ans
-
-def inv_gamma(prng, shape, scale):
-    return float(scale) / prng.gammavariate(shape, 1.0)
 
 def logsumexp(array):
     m = max(array)
