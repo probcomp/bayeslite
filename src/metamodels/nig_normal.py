@@ -325,7 +325,8 @@ def posterior_hypers(hypers, stats):
     mn = Vn*((1.0/V)*m + xsum)
     an = a + ctN / 2.0
     bn = b + 0.5*(m**2/float(V) + xsumsq - mn**2/Vn)
-    return (mn, Vn, an, bn)
+    ans = (mn, Vn, an, bn)
+    return ans
 
 def gibbs_step_params(prng, hypers, stats):
     # This is UNigNormalAAALKernel.simulate packaged differently.
