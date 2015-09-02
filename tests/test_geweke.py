@@ -48,6 +48,12 @@ def test_geweke_nig_normal():
         assert kl_est[2] < 10
 
 def test_geweke_nig_normal_seriously():
+    # Note: The actual assertions in this test and the next one were
+    # dervied heuristically by inspecting a fuller (and costlier to
+    # compute) tableau of values of geweke.geweke_kl and deciding the
+    # aggregate impression was "probably no bug" (resp. "definitely
+    # bug").  The assertions constitute an attempt to capture the most
+    # salient features that give that impression.
     with bayeslite.bayesdb_open() as bdb:
         import bayeslite.metamodels.nig_normal as normal
         bayeslite.bayesdb_register_metamodel(bdb, normal.NIGNormalMetamodel(seed=1))
@@ -61,3 +67,28 @@ def test_geweke_nig_normal_seriously():
             assert kl_est[1] < 0.1
             assert kl_est[2] > 0
             assert kl_est[2] < 0.05
+
+def test_geweke_catches_nig_normal_bug():
+    with bayeslite.bayesdb_open() as bdb:
+        import bayeslite.metamodels.nig_normal as normal
+        class DoctoredNIGNormal(normal.NIGNormalMetamodel):
+            def _inv_gamma(self, shape, scale):
+                # We actually had a bug that amounted to this
+                return float(1.0/scale) / self.prng.gammavariate(shape, 1.0)
+        bayeslite.bayesdb_register_metamodel(bdb, DoctoredNIGNormal(seed=1))
+        cells = [(i,0) for i in range(4)]
+        for chain_ct in (0, 1, 5):
+            kl_est = geweke.geweke_kl(bdb, "nig_normal", \
+                [['column', 'numerical']], ['column'], cells, \
+                200, 200, chain_ct, 3000)
+            if chain_ct == 0:
+                assert kl_est[0] == 3000
+                assert kl_est[1] > 0
+                assert kl_est[1] < 0.1
+                assert kl_est[2] > 0
+                assert kl_est[2] < 0.05
+            else:
+                assert kl_est[0] == 3000
+                assert kl_est[1] > 5
+                assert kl_est[2] > 0
+                assert kl_est[2] < 4
