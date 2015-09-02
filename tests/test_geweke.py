@@ -32,3 +32,17 @@ def test_geweke_iid_gaussian():
         kl_est = geweke.geweke_kl(bdb, "std_normal", [['column', 'numerical']], \
             ['column'], [(1,0), (2,0)], 2, 2, 2, 2)
         assert kl_est == (2, 0, 0)
+
+def test_geweke_nig_normal():
+    with bayeslite.bayesdb_open() as bdb:
+        import bayeslite.metamodels.nig_normal as normal
+        bayeslite.bayesdb_register_metamodel(bdb, normal.NIGNormalMetamodel(seed=1))
+        kl_est = geweke.geweke_kl(bdb, "nig_normal", [['column', 'numerical']], \
+            ['column'], [(1,0), (2,0)], 2, 2, 2, 2)
+        assert kl_est
+        assert len(kl_est) == 3
+        assert kl_est[0] == 2
+        assert kl_est[1] > 0 # KL should be positive
+        assert kl_est[1] < 10
+        assert kl_est[2] > 0 # The KL error estimate should be positive too
+        assert kl_est[2] < 10
