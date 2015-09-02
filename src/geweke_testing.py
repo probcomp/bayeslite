@@ -47,7 +47,8 @@ distributions A and B should be the same for all K.  For a full
 discussion, see [1], and for more intuition, see [2].  In the
 documentation of this module, we will refer to B as a Geweke chain.
 
-[1] J. Geweke. Getting it right: joint distribution tests of posterior simulators. JASA, 2004.
+[1] J. Geweke. Getting it right: joint distribution tests of posterior
+simulators. JASA, 2004.
 http://qed.econ.queensu.ca/pub/faculty/ferrall/quant/papers/04_04_29_geweke.pdf
 
 [2] https://hips.seas.harvard.edu/blog/2013/06/10/testing-mcmc-code-part-2-integration-tests/
@@ -132,7 +133,8 @@ class Generator(object):
             return mm_attr(self.bdb, self.generator_id, *args, **kwargs)
         return f
 
-def create_prior_gen(bdb, target_metamodel, schema, column_names, prior_samples):
+def create_prior_gen(bdb, target_metamodel, schema, column_names,
+                     prior_samples):
     table = create_empty_table(bdb, column_names)
     prior_gen = create_generator(bdb, table, target_metamodel, schema)
     init_models_bql = '''
@@ -141,8 +143,8 @@ def create_prior_gen(bdb, target_metamodel, schema, column_names, prior_samples)
     bdb.execute(init_models_bql)
     return prior_gen
 
-def create_geweke_chain_generator(bdb, target_metamodel, schema, column_names,
-                                  target_cells, geweke_samples, geweke_iterates):
+def create_geweke_chain_gen(bdb, target_metamodel, schema, column_names,
+                            target_cells, geweke_samples, geweke_iterates):
     table = create_empty_table(bdb, column_names)
     geweke_chain_gen = create_generator(bdb, table, target_metamodel, schema)
     init_models_bql = '''
@@ -159,7 +161,8 @@ def create_geweke_chain_generator(bdb, target_metamodel, schema, column_names,
             # each with 1 model.  As of this writing, that feels
             # gottier, because I would need to adjust the KL
             # computation to aggregate them.
-            data = geweke_chain_gen.simulate_joint(target_cells, [], modelnos=[modelno])
+            data = geweke_chain_gen.simulate_joint(target_cells, [],
+                                                   modelnos=[modelno])
             for ((i, j), datum) in zip(target_cells, data):
                 geweke_chain_gen.insert((i, j, datum))
             geweke_chain_gen.analyze_models(modelnos=[modelno])
@@ -193,8 +196,9 @@ def gauss_suff_stats(data):
     else:
         return (n, mean, math.sqrt(total_deviance / float(n)))
 
-def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples, self_check=None):
-    """Estimate the Kullback-Liebler divergence from the first generator to the second.
+def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples,
+                self_check=None):
+    """Estimate Kullback-Liebler divergence from ``from_gen`` to ``to_gen``.
 
     Specifically, let P be the distribution over the given target
     cells induced by the generator ``from_gen`` conditioned on the
@@ -227,12 +231,14 @@ def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples, self_ch
             start = i * kl_samples / self_check
             stop = (i+1) * kl_samples / self_check
             (ni, meani, stddevi) = gauss_suff_stats(estimates[start:stop])
-            print "Monte Carlo self check: %4d samples estimate %9.5f with error %9.5f" % \
-                (ni, meani, stddevi / math.sqrt(ni))
+            print "Monte Carlo self check: %4d samples estimate %9.5f " \
+                "with error %9.5f" % (ni, meani, stddevi / math.sqrt(ni))
     return (n, mean, stddev / math.sqrt(n))
 
-def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells, prior_samples, geweke_samples, geweke_iterates, kl_samples, kl_self_check=None):
-    """Estimate the Kullback-Leibler divergence of a Geweke chain from the prior.
+def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells,
+              prior_samples, geweke_samples, geweke_iterates, kl_samples,
+              kl_self_check=None):
+    """The Kullback-Leibler divergence of a Geweke chain from the prior.
 
     :param BayesDB bdb: Bayeslite database handle where to do the
         test.
@@ -323,6 +329,9 @@ def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells, prior_sam
 
     """
     target_metamodel = bdb.metamodels[metamodel_name]
-    prior_gen = create_prior_gen(bdb, target_metamodel, schema, column_names, prior_samples)
-    geweke_chain_gen = create_geweke_chain_generator(bdb, target_metamodel, schema, column_names, target_cells, geweke_samples, geweke_iterates)
-    return estimate_kl(prior_gen, geweke_chain_gen, target_cells, [], kl_samples, self_check=kl_self_check)
+    prior_gen = create_prior_gen(bdb, target_metamodel, schema, column_names, \
+        prior_samples)
+    geweke_chain_gen = create_geweke_chain_gen(bdb, target_metamodel, schema, \
+        column_names, target_cells, geweke_samples, geweke_iterates)
+    return estimate_kl(prior_gen, geweke_chain_gen, target_cells, [], \
+        kl_samples, self_check=kl_self_check)
