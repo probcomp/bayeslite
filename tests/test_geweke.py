@@ -46,3 +46,18 @@ def test_geweke_nig_normal():
         assert kl_est[1] < 10
         assert kl_est[2] > 0 # The KL error estimate should be positive too
         assert kl_est[2] < 10
+
+def test_geweke_nig_normal_seriously():
+    with bayeslite.bayesdb_open() as bdb:
+        import bayeslite.metamodels.nig_normal as normal
+        bayeslite.bayesdb_register_metamodel(bdb, normal.NIGNormalMetamodel(seed=1))
+        cells = [(i,0) for i in range(4)]
+        for chain_ct in (0, 1, 5):
+            kl_est = geweke.geweke_kl(bdb, "nig_normal", \
+                [['column', 'numerical']], ['column'], cells, \
+                200, 200, chain_ct, 3000)
+            assert kl_est[0] == 3000
+            assert kl_est[1] > 0
+            assert kl_est[1] < 0.1
+            assert kl_est[2] > 0
+            assert kl_est[2] < 0.05
