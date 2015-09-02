@@ -81,12 +81,21 @@ def create_geweke_chain_generator(bdb, target_metamodel, schema, column_names,
     ''' % (geweke_samples, sqlite3_quote_name(geweke_chain_gen.name))
     bdb.execute(init_models_bql)
     for _ in range(geweke_iterates):
-        data = geweke_chain_gen.simulate_joint(target_cells, [])
-        for ((i, j), datum) in zip(target_cells, data):
-            geweke_chain_gen.insert((i, j, datum))
-        geweke_chain_gen.analyze_models()
-        for ((i, j), datum) in zip(target_cells, data):
-            geweke_chain_gen.remove((i, j, datum))
+        for modelno in range(geweke_samples):
+            # Need each Geweke chain to hallucinate its own data.
+            # Doing it by model-controlled simulation and inference in
+            # one generator.  This does rely on insert-remove
+            # invariance for the models that are not analyzed.
+            # An alternative would have been to create N generators,
+            # each with 1 model.  As of this writing, that feels
+            # gottier, because I would need to adjust the KL
+            # computation to aggregate them.
+            data = geweke_chain_gen.simulate_joint(target_cells, [], modelnos=[modelno])
+            for ((i, j), datum) in zip(target_cells, data):
+                geweke_chain_gen.insert((i, j, datum))
+            geweke_chain_gen.analyze_models(modelnos=[modelno])
+            for ((i, j), datum) in zip(target_cells, data):
+                geweke_chain_gen.remove((i, j, datum))
     return geweke_chain_gen
 
 def kl_est_sample(from_gen, of_gen, target_cells, constraints):
