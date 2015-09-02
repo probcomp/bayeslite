@@ -322,7 +322,7 @@ def posterior_hypers(hypers, stats):
     (m, V, a, b) = hypers
     [ctN, xsum, xsumsq] = stats
     Vn = 1 / (1.0/V + ctN)
-    mn = Vn*(1.0/V*m + xsum)
+    mn = Vn*((1.0/V)*m + xsum)
     an = a + ctN / 2.0
     bn = b + 0.5*(m**2/float(V) + xsumsq - mn**2/Vn)
     return (mn, Vn, an, bn)
