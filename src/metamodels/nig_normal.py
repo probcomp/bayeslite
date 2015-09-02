@@ -181,13 +181,13 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             for (colno, count, xsum, sumsq) in cursor:
                 stats = (count, xsum, sumsq)
                 for modelno in modelnos:
-                    (mu, sigma) = self._gibbs_step_params(hardcoded_hypers, stats)
+                    (mu, sig) = self._gibbs_step_params(hardcoded_hypers, stats)
                     bdb.sql_execute(sql, {
                         'generator_id': generator_id,
                         'colno': colno,
                         'modelno': modelno,
                         'mu': mu,
-                        'sigma': sigma,
+                        'sigma': sig,
                     })
 
     def _modelnos(self, bdb, generator_id):
@@ -198,7 +198,8 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         return [item[0] for item in bdb.sql_execute(modelnos_sql, \
             (generator_id,))]
 
-    def simulate_joint(self, bdb, generator_id, targets, _constraints, modelnos=None):
+    def simulate_joint(self, bdb, generator_id, targets, _constraints,
+                       modelnos=None):
         # Note: The constraints are irrelevant because columns are
         # independent in the true distribution (except in the case of
         # shared, unknown hyperparameters), and cells in a column are
@@ -210,7 +211,8 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             modelnos = self._modelnos(bdb, generator_id)
         modelno = self.prng.choice(modelnos)
         (mus, sigmas) = self._model_mus_sigmas(bdb, generator_id, modelno)
-        return [self.prng.gauss(mus[colno], sigmas[colno]) for (_, colno) in targets]
+        return [self.prng.gauss(mus[colno], sigmas[colno])
+                for (_, colno) in targets]
 
     def _model_mus_sigmas(self, bdb, generator_id, modelno):
         params_sql = '''
@@ -234,7 +236,8 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         return logsumexp([sum(logpdfOne(value, all_mus[modelno][colno],
                                         all_sigmas[modelno][colno])
                               for (_, colno, value) in targets)
-                          for modelno in all_mus.keys()]) - math.log(len(all_mus.keys()))
+                          for modelno in all_mus.keys()]) \
+               - math.log(len(all_mus.keys()))
 
     def _all_mus_sigmas(self, bdb, generator_id):
         params_sql = '''
