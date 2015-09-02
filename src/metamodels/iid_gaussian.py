@@ -44,18 +44,18 @@ class StdNormalMetamodel(metamodel.IBayesDBMetamodel):
         bdb.sql_execute("INSERT INTO bayesdb_metamodel (name, version) VALUES ('std_normal', 1)")
     def create_generator(self, bdb, table, schema, instantiate):
         instantiate(schema)
-    def drop_generator(self, *args): pass
-    def rename_column(self, *args): pass
-    def initialize_models(self, *args): pass
-    def drop_models(self, *args): pass
-    def analyze_models(self, *args): pass
-    def simulate_joint(self, _bdb, _generator_id, targets, _constraints):
+    def drop_generator(self, *args, **kwargs): pass
+    def rename_column(self, *args, **kwargs): pass
+    def initialize_models(self, *args, **kwargs): pass
+    def drop_models(self, *args, **kwargs): pass
+    def analyze_models(self, *args, **kwargs): pass
+    def simulate_joint(self, _bdb, _generator_id, targets, _constraints, modelnos=None):
         return [self.prng.gauss(0, 1) for _ in targets]
     def logpdf(self, _bdb, _generator_id, targets, _constraints):
         return sum(logpdfOne(value, 0, 1) for (_, _, value) in targets)
-    def insert(self, *args): pass
-    def remove(self, *args): pass
-    def infer(self, *args): pass
+    def insert(self, *args, **kwargs): pass
+    def remove(self, *args, **kwargs): pass
+    def infer(self, *args, **kwargs): pass
 
 HALF_LOG2PI = 0.5 * math.log(2 * math.pi)
 
