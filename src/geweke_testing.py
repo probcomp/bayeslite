@@ -115,7 +115,7 @@ def gauss_suff_stats(data):
     else:
         return (n, mean, math.sqrt(total_deviance / float(n)))
 
-def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples):
+def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples, self_check=None):
     """Estimate the K-L divergence from the first generator to the second.
 
     Specifically, let P be the distribution over the given target
@@ -133,10 +133,17 @@ def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples):
     estimates = [kl_est_sample(from_gen, of_gen, target_cells, constraints)
                  for _ in range(kl_samples)]
     (n, mean, stddev) = gauss_suff_stats(estimates)
+    if self_check is not None:
+        for i in range(self_check):
+            start = i * kl_samples / self_check
+            stop = (i+1) * kl_samples / self_check
+            (ni, meani, stddevi) = gauss_suff_stats(estimates[start:stop])
+            print "Monte Carlo self check: %4d samples estimate %9.5f with error %9.5f" % \
+                (ni, meani, stddevi / math.sqrt(ni))
     return (n, mean, stddev / math.sqrt(n))
 
-def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells, prior_samples, geweke_samples, geweke_iterates, kl_samples):
+def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells, prior_samples, geweke_samples, geweke_iterates, kl_samples, kl_self_check=None):
     target_metamodel = bdb.metamodels[metamodel_name]
     prior_gen = create_prior_gen(bdb, target_metamodel, schema, column_names, prior_samples)
     geweke_chain_gen = create_geweke_chain_generator(bdb, target_metamodel, schema, column_names, target_cells, geweke_samples, geweke_iterates)
-    return estimate_kl(prior_gen, geweke_chain_gen, target_cells, [], kl_samples)
+    return estimate_kl(prior_gen, geweke_chain_gen, target_cells, [], kl_samples, self_check=kl_self_check)
