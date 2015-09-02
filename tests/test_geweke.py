@@ -29,16 +29,19 @@ def test_geweke_iid_gaussian():
     with bayeslite.bayesdb_open() as bdb:
         import bayeslite.metamodels.iid_gaussian as gauss
         bayeslite.bayesdb_register_metamodel(bdb, gauss.StdNormalMetamodel())
-        kl_est = geweke.geweke_kl(bdb, "std_normal", [['column', 'numerical']], \
-            ['column'], [(1,0), (2,0)], 2, 2, 2, 2)
+        kl_est = geweke.geweke_kl(bdb, "std_normal", \
+            [['column', 'numerical']], ['column'], \
+            [(1,0), (2,0)], 2, 2, 2, 2)
         assert kl_est == (2, 0, 0)
 
 def test_geweke_nig_normal():
     with bayeslite.bayesdb_open() as bdb:
         import bayeslite.metamodels.nig_normal as normal
-        bayeslite.bayesdb_register_metamodel(bdb, normal.NIGNormalMetamodel(seed=1))
-        kl_est = geweke.geweke_kl(bdb, "nig_normal", [['column', 'numerical']], \
-            ['column'], [(1,0), (2,0)], 2, 2, 2, 2)
+        nig = normal.NIGNormalMetamodel(seed=1)
+        bayeslite.bayesdb_register_metamodel(bdb, nig)
+        kl_est = geweke.geweke_kl(bdb, "nig_normal", \
+            [['column', 'numerical']], ['column'], \
+            [(1,0), (2,0)], 2, 2, 2, 2)
         assert kl_est
         assert len(kl_est) == 3
         assert kl_est[0] == 2
@@ -56,7 +59,8 @@ def test_geweke_nig_normal_seriously():
     # salient features that give that impression.
     with bayeslite.bayesdb_open() as bdb:
         import bayeslite.metamodels.nig_normal as normal
-        bayeslite.bayesdb_register_metamodel(bdb, normal.NIGNormalMetamodel(seed=1))
+        nig = normal.NIGNormalMetamodel(seed=1)
+        bayeslite.bayesdb_register_metamodel(bdb, nig)
         cells = [(i,0) for i in range(4)]
         for chain_ct in (0, 1, 5):
             kl_est = geweke.geweke_kl(bdb, "nig_normal", \
