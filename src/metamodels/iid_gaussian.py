@@ -14,10 +14,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""The IID Gaussian Model posits that all data values are independently a standard Gaussian.
+"""The IID Gaussian Model posits that all data are independently Gaussian.
 
 This is an example of the simplest possible population model that's
-actually stochastic.
+actually stochastic.  The Gaussian has mean 0 and standard deviation
+1.
 
 This module implements the :class:`bayeslite.IBayesDBMetamodel`
 interface for the IID Gaussian Model.
@@ -41,7 +42,9 @@ class StdNormalMetamodel(metamodel.IBayesDBMetamodel):
         self.prng = random.Random(seed)
     def name(self): return 'std_normal'
     def register(self, bdb):
-        bdb.sql_execute("INSERT INTO bayesdb_metamodel (name, version) VALUES ('std_normal', 1)")
+        sql = '''INSERT INTO bayesdb_metamodel (name, version)
+                 VALUES ('std_normal', 1)'''
+        bdb.sql_execute(sql)
     def create_generator(self, bdb, table, schema, instantiate):
         instantiate(schema)
     def drop_generator(self, *args, **kwargs): pass
@@ -49,7 +52,8 @@ class StdNormalMetamodel(metamodel.IBayesDBMetamodel):
     def initialize_models(self, *args, **kwargs): pass
     def drop_models(self, *args, **kwargs): pass
     def analyze_models(self, *args, **kwargs): pass
-    def simulate_joint(self, _bdb, _generator_id, targets, _constraints, modelnos=None):
+    def simulate_joint(self, _bdb, _generator_id, targets, _constraints,
+                       modelnos=None):
         return [self.prng.gauss(0, 1) for _ in targets]
     def logpdf(self, _bdb, _generator_id, targets, _constraints):
         return sum(logpdfOne(value, 0, 1) for (_, _, value) in targets)
