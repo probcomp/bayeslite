@@ -142,18 +142,19 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         self._set_models(bdb, generator_id, modelnos, insert_sample_sql)
 
     def drop_models(self, bdb, generator_id, modelnos=None):
-        if modelnos is None:
-            delete_models_sql = '''
-                DELETE FROM bayesdb_nig_normal_models WHERE generator_id = ?
-            '''
-            bdb.sql_execute(delete_models_sql, (generator_id,))
-        else:
-            delete_models_sql = '''
-                DELETE FROM bayesdb_nig_normal_models
-                    WHERE generator_id = ? AND modelno = ?
-            '''
-            for modelno in modelnos:
-                bdb.sql_execute(delete_models_sql, (generator_id, modelno))
+        with bdb.savepoint():
+            if modelnos is None:
+                delete_models_sql = '''
+                    DELETE FROM bayesdb_nig_normal_models WHERE generator_id = ?
+                '''
+                bdb.sql_execute(delete_models_sql, (generator_id,))
+            else:
+                delete_models_sql = '''
+                    DELETE FROM bayesdb_nig_normal_models
+                        WHERE generator_id = ? AND modelno = ?
+                '''
+                for modelno in modelnos:
+                    bdb.sql_execute(delete_models_sql, (generator_id, modelno))
 
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
             max_seconds=None, ckpt_iterations=None, ckpt_seconds=None):
@@ -195,8 +196,9 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             SELECT DISTINCT modelno FROM bayesdb_nig_normal_models
                 WHERE generator_id = ?
         '''
-        return [item[0] for item in bdb.sql_execute(modelnos_sql, \
-            (generator_id,))]
+        with bdb.savepoint():
+            return [item[0] for item in bdb.sql_execute(modelnos_sql, \
+                (generator_id,))]
 
     def simulate_joint(self, bdb, generator_id, targets, _constraints,
                        modelnos=None):
@@ -207,12 +209,13 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # sigma.  This method does not expose the inter-column
         # dependence induced by approximating the true distribution
         # with a finite number of full-table models.
-        if modelnos is None:
-            modelnos = self._modelnos(bdb, generator_id)
-        modelno = self.prng.choice(modelnos)
-        (mus, sigmas) = self._model_mus_sigmas(bdb, generator_id, modelno)
-        return [self.prng.gauss(mus[colno], sigmas[colno])
-                for (_, colno) in targets]
+        with bdb.savepoint():
+            if modelnos is None:
+                modelnos = self._modelnos(bdb, generator_id)
+            modelno = self.prng.choice(modelnos)
+            (mus, sigmas) = self._model_mus_sigmas(bdb, generator_id, modelno)
+            return [self.prng.gauss(mus[colno], sigmas[colno])
+                    for (_, colno) in targets]
 
     def _model_mus_sigmas(self, bdb, generator_id, modelno):
         params_sql = '''
@@ -244,19 +247,20 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             SELECT colno, modelno, mu, sigma FROM bayesdb_nig_normal_models
                 WHERE generator_id = :generator_id
         ''' # TODO Filter in the database by the columns I will actually use?
-        cursor = bdb.sql_execute(params_sql, (generator_id,))
-        all_mus = {}
-        all_sigmas = {}
-        for (colno, modelno, mu, sigma) in cursor:
-            if modelno not in all_mus:
-                all_mus[modelno] = {}
-            if modelno not in all_sigmas:
-                all_sigmas[modelno] = {}
-            assert colno not in all_mus[modelno]
-            all_mus[modelno][colno] = mu
-            assert colno not in all_sigmas[modelno]
-            all_sigmas[modelno][colno] = sigma
-        return (all_mus, all_sigmas)
+        with bdb.savepoint():
+            cursor = bdb.sql_execute(params_sql, (generator_id,))
+            all_mus = {}
+            all_sigmas = {}
+            for (colno, modelno, mu, sigma) in cursor:
+                if modelno not in all_mus:
+                    all_mus[modelno] = {}
+                if modelno not in all_sigmas:
+                    all_sigmas[modelno] = {}
+                assert colno not in all_mus[modelno]
+                all_mus[modelno][colno] = mu
+                assert colno not in all_sigmas[modelno]
+                all_sigmas[modelno][colno] = sigma
+            return (all_mus, all_sigmas)
 
     def insert(self, bdb, generator_id, item):
         (_, colno, value) = item
@@ -270,12 +274,13 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             WHERE generator_id = :generator_id
                 AND colno = :colno
         '''
-        bdb.sql_execute(update_sql, {
-            'generator_id': generator_id,
-            'colno': colno,
-            'x': value,
-            'xsq': value * value
-        })
+        with bdb.savepoint():
+            bdb.sql_execute(update_sql, {
+                'generator_id': generator_id,
+                'colno': colno,
+                'x': value,
+                'xsq': value * value
+            })
 
     def remove(self, bdb, generator_id, item):
         (_, colno, value) = item
@@ -285,12 +290,13 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             WHERE generator_id = :generator_id
                 AND colno = :colno
         '''
-        bdb.sql_execute(update_sql, {
-            'generator_id': generator_id,
-            'colno': colno,
-            'x': value,
-            'xsq': value * value
-        })
+        with bdb.savepoint():
+            bdb.sql_execute(update_sql, {
+                'generator_id': generator_id,
+                'colno': colno,
+                'x': value,
+                'xsq': value * value
+            })
 
     def infer(self, *args): return self.analyze_models(*args)
 
