@@ -239,8 +239,7 @@ def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples,
     return estimate_mean(estimates)
 
 def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells,
-              prior_samples, geweke_samples, geweke_iterates, kl_samples,
-              kl_self_check=None):
+              prior_samples, geweke_samples, geweke_iterates, kl_samples):
     """The Kullback-Leibler divergence of a Geweke chain from the prior.
 
     :param BayesDB bdb: Bayeslite database handle where to do the
@@ -265,9 +264,6 @@ def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells,
         exposition.
     :param int kl_samples: The number of samples to use for the Monte
         Carlo estimate of the K-L divergence.
-    :param int kl_self_check: Granularity of self-checking of the
-        Monte Carlo estimate of the K-L divergence.  See
-        :func:`estimate_kl`.  Skip the self-check if None.
     :return: A 3-tuple giving information about the Monte Carlo
         estimate of the K-L divergence: The number of samples used to
         form the estimate, the estimate, and the predicted standard
@@ -317,10 +313,23 @@ def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells,
     from the pattern of reported K-L divergences.  Instrument your
     model, plot quantities of interest, turn off various parts, etc.
     """
+    ests = geweke_kl_samples(bdb, metamodel_name, schema, column_names,
+        target_cells, prior_samples, geweke_samples, geweke_iterates,
+        kl_samples)
+    return estimate_mean(ests)
+
+def geweke_kl_samples(bdb, metamodel_name, schema, column_names, target_cells,
+        prior_samples, geweke_samples, geweke_iterates, kl_samples):
+    """The raw samples for a Geweke K-L estimate.
+
+    See :func:`geweke_kl`.  This is useful for testing whether the
+    Central Limit Theorem dominates the error of Monte Carlo
+    estimation of the K-L.
+    """
     target_metamodel = bdb.metamodels[metamodel_name]
     prior_gen = create_prior_gen(bdb, target_metamodel, schema, column_names, \
         prior_samples)
     geweke_chain_gen = create_geweke_chain_gen(bdb, target_metamodel, schema, \
         column_names, target_cells, geweke_samples, geweke_iterates)
-    return estimate_kl(prior_gen, geweke_chain_gen, target_cells, [], \
-        kl_samples, self_check=kl_self_check)
+    return [kl_est_sample(prior_gen, geweke_chain_gen, target_cells, [])
+            for _ in range(kl_samples)]
