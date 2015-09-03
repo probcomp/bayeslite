@@ -78,21 +78,14 @@ def create_empty_table(bdb, column_names):
     return table
 
 def create_generator(bdb, table, target_metamodel, schema):
-    """Programmatically create a generator.
+    """Create a generator.
 
-    :param BayesDB bdb: The Bayeslite handle where to do this.
-
-    :param string table: The name (not quoted) of the table wherewith
-        this generator should be associated.
-
-    :param IBayesDBMetamodel target_metamodel: The metamodel object
-        for which to create a generator.
-
+    :param BayesDB bdb: The BayesDB instance.
+    :param string table: Name of table for generator.
+    :param IBayesDBMetamodel target_metamodel: Metamodel for generator.
     :param list schema: A valid schema for that metamodel.
-
     :return: A :class:`Generator` representing the resulting
         generator.
-
     """
     gen_name = bdb.temp_table_name()
     phrase = ast.CreateGen(default = True,
