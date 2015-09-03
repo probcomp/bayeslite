@@ -239,11 +239,10 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # Note: The constraints are irrelevant for the same reason as
         # in simulate_joint.
         (all_mus, all_sigmas) = self._all_mus_sigmas(bdb, generator_id)
-        return logsumexp([sum(logpdfOne(value, all_mus[modelno][colno],
-                                        all_sigmas[modelno][colno])
-                              for (_, colno, value) in targets)
-                          for modelno in all_mus.keys()]) \
-               - math.log(len(all_mus.keys()))
+        return logmeanexp([sum(logpdfOne(value, all_mus[modelno][colno],
+                                         all_sigmas[modelno][colno])
+                               for (_, colno, value) in targets)
+                           for modelno in all_mus.keys()])
 
     def _all_mus_sigmas(self, bdb, generator_id):
         params_sql = '''
@@ -355,3 +354,6 @@ def posterior_hypers(hypers, stats):
 def logsumexp(array):
     m = max(array)
     return m + math.log(sum(math.exp(a - m) for a in array))
+
+def logmeanexp(array):
+    return logsumexp(array) - math.log(len(array))
