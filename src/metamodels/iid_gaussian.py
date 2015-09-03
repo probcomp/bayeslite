@@ -57,14 +57,14 @@ class StdNormalMetamodel(metamodel.IBayesDBMetamodel):
             modelnos=None):
         return [self.prng.gauss(0, 1) for _ in targets]
     def logpdf(self, _bdb, _generator_id, targets, _constraints):
-        return sum(logpdfOne(value, 0, 1) for (_, _, value) in targets)
+        return sum(logpdf_gaussian(value, 0, 1) for (_, _, value) in targets)
     def insert(self, *args, **kwargs): pass
     def remove(self, *args, **kwargs): pass
     def infer(self, *args, **kwargs): pass
 
 HALF_LOG2PI = 0.5 * math.log(2 * math.pi)
 
-def logpdfOne(x, mu, sigma):
+def logpdf_gaussian(x, mu, sigma):
     deviation = x - mu
     return - math.log(sigma) - HALF_LOG2PI \
         - (0.5 * deviation * deviation / (sigma * sigma))

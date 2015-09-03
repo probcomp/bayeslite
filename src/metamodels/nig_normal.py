@@ -240,8 +240,8 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # in simulate_joint.
         (all_mus, all_sigmas) = self._all_mus_sigmas(bdb, generator_id)
         def model_log_pdf(modelno):
-            return sum(logpdfOne(value, all_mus[modelno][colno],
-                                 all_sigmas[modelno][colno])
+            return sum(logpdf_gaussian(value, all_mus[modelno][colno],
+                           all_sigmas[modelno][colno])
                        for (_, colno, value) in targets)
         return logmeanexp([model_log_pdf(m) for m in sorted(all_mus.keys())])
 
@@ -316,7 +316,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
 
 HALF_LOG2PI = 0.5 * math.log(2 * math.pi)
 
-def logpdfOne(x, mu, sigma):
+def logpdf_gaussian(x, mu, sigma):
     deviation = x - mu
     ans = - math.log(sigma) - HALF_LOG2PI \
         - (0.5 * deviation * deviation / (sigma * sigma))
