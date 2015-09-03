@@ -306,9 +306,9 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
     def _gibbs_step_params(self, hypers, stats):
         # This is UNigNormalAAALKernel.simulate packaged differently.
         (mn, Vn, an, bn) = posterior_hypers(hypers, stats)
-        newSigma2 = self._inv_gamma(an, bn)
-        newMu = self.prng.gauss(mn, math.sqrt(newSigma2*Vn))
-        ans = (newMu, math.sqrt(newSigma2))
+        new_var = self._inv_gamma(an, bn)
+        new_mu = self.prng.gauss(mn, math.sqrt(new_var*Vn))
+        ans = (new_mu, math.sqrt(new_var))
         return ans
 
     def _inv_gamma(self, shape, scale):
