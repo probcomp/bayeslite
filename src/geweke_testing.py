@@ -191,7 +191,7 @@ def gauss_suff_stats(data):
 
 def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples,
                 self_check=None):
-    """Estimate Kullback-Liebler divergence from ``from_gen`` to ``to_gen``.
+    """Estimate Kullback-Liebler divergence of ``of_gen`` from ``from_gen``.
 
     Specifically, let P be the distribution over the given target
     cells induced by the generator ``from_gen`` conditioned on the
