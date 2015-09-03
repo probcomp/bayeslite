@@ -54,7 +54,7 @@ class StdNormalMetamodel(metamodel.IBayesDBMetamodel):
     def drop_models(self, *args, **kwargs): pass
     def analyze_models(self, *args, **kwargs): pass
     def simulate_joint(self, _bdb, _generator_id, targets, _constraints,
-                       modelnos=None):
+            modelnos=None):
         return [self.prng.gauss(0, 1) for _ in targets]
     def logpdf(self, _bdb, _generator_id, targets, _constraints):
         return sum(logpdfOne(value, 0, 1) for (_, _, value) in targets)
