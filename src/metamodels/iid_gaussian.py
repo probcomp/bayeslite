@@ -42,9 +42,10 @@ class StdNormalMetamodel(metamodel.IBayesDBMetamodel):
         self.prng = random.Random(seed)
     def name(self): return 'std_normal'
     def register(self, bdb):
-        sql = '''INSERT INTO bayesdb_metamodel (name, version)
-                 VALUES ('std_normal', 1)'''
-        bdb.sql_execute(sql)
+        bdb.sql_execute('''
+            INSERT INTO bayesdb_metamodel (name, version)
+                VALUES ('std_normal', 1)
+        ''')
     def create_generator(self, bdb, table, schema, instantiate):
         instantiate(schema)
     def drop_generator(self, *args, **kwargs): pass
