@@ -220,6 +220,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
 
     def _model_mus_sigmas(self, bdb, generator_id, modelno):
         # TODO Filter in the database by the columns I will actually use?
+        # TODO Cache the results using bdb.cache?
         params_sql = '''
             SELECT colno, mu, sigma FROM bayesdb_nig_normal_models
                 WHERE generator_id = ? AND modelno = ?
