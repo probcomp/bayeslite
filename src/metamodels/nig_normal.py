@@ -243,7 +243,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             return sum(logpdfOne(value, all_mus[modelno][colno],
                                  all_sigmas[modelno][colno])
                        for (_, colno, value) in targets)
-        return logmeanexp([model_log_pdf(num) for num in all_mus.keys()])
+        return logmeanexp([model_log_pdf(m) for m in sorted(all_mus.keys())])
 
     def _all_mus_sigmas(self, bdb, generator_id):
         params_sql = '''
