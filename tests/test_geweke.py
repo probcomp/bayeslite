@@ -24,15 +24,15 @@ import bayeslite.metamodels.nig_normal as normal
 def test_geweke_troll():
     with bayeslite.bayesdb_open() as bdb:
         bayeslite.bayesdb_register_metamodel(bdb, troll.TrollMetamodel())
-        kl_est = geweke.geweke_kl(bdb, "troll_rng", [['column', 'numerical']], \
+        kl_est = geweke.geweke_kl(bdb, "troll_rng", [['column', 'numerical']],
             ['column'], [(1,0)], 2, 2, 2, 2)
         assert kl_est == (2, 0, 0)
 
 def test_geweke_iid_gaussian():
     with bayeslite.bayesdb_open() as bdb:
         bayeslite.bayesdb_register_metamodel(bdb, gauss.StdNormalMetamodel())
-        kl_est = geweke.geweke_kl(bdb, "std_normal", \
-            [['column', 'numerical']], ['column'], \
+        kl_est = geweke.geweke_kl(bdb, "std_normal",
+            [['column', 'numerical']], ['column'],
             [(1,0), (2,0)], 2, 2, 2, 2)
         assert kl_est == (2, 0, 0)
 
@@ -40,8 +40,8 @@ def test_geweke_nig_normal():
     with bayeslite.bayesdb_open() as bdb:
         nig = normal.NIGNormalMetamodel(seed=1)
         bayeslite.bayesdb_register_metamodel(bdb, nig)
-        kl_est = geweke.geweke_kl(bdb, "nig_normal", \
-            [['column', 'numerical']], ['column'], \
+        kl_est = geweke.geweke_kl(bdb, "nig_normal",
+            [['column', 'numerical']], ['column'],
             [(1,0), (2,0)], 2, 2, 2, 2)
         assert kl_est
         assert len(kl_est) == 3
@@ -63,8 +63,8 @@ def test_geweke_nig_normal_seriously():
         bayeslite.bayesdb_register_metamodel(bdb, nig)
         cells = [(i,0) for i in range(4)]
         for chain_ct in (0, 1, 5):
-            kl_est = geweke.geweke_kl(bdb, "nig_normal", \
-                [['column', 'numerical']], ['column'], cells, \
+            kl_est = geweke.geweke_kl(bdb, "nig_normal",
+                [['column', 'numerical']], ['column'], cells,
                 200, 200, chain_ct, 3000)
             assert kl_est[0] == 3000
             assert kl_est[1] > 0
@@ -82,8 +82,8 @@ def test_geweke_catches_nig_normal_bug():
         bayeslite.bayesdb_register_metamodel(bdb, DoctoredNIGNormal(seed=1))
         cells = [(i,0) for i in range(4)]
         for chain_ct in (0, 1, 5):
-            kl_est = geweke.geweke_kl(bdb, "nig_normal", \
-                [['column', 'numerical']], ['column'], cells, \
+            kl_est = geweke.geweke_kl(bdb, "nig_normal",
+                [['column', 'numerical']], ['column'], cells,
                 200, 200, chain_ct, 3000)
             if chain_ct == 0:
                 assert kl_est[0] == 3000
