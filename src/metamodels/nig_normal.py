@@ -145,7 +145,8 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         with bdb.savepoint():
             if modelnos is None:
                 delete_models_sql = '''
-                    DELETE FROM bayesdb_nig_normal_models WHERE generator_id = ?
+                    DELETE FROM bayesdb_nig_normal_models
+                        WHERE generator_id = ?
                 '''
                 bdb.sql_execute(delete_models_sql, (generator_id,))
             else:
