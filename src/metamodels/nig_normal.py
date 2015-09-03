@@ -198,7 +198,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                 WHERE generator_id = ?
         '''
         with bdb.savepoint():
-            return [item[0] for item in bdb.sql_execute(modelnos_sql, \
+            return [item[0] for item in bdb.sql_execute(modelnos_sql,
                 (generator_id,))]
 
     def simulate_joint(self, bdb, generator_id, targets, _constraints,
