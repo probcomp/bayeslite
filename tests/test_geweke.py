@@ -17,9 +17,12 @@
 import bayeslite
 import bayeslite.geweke_testing as geweke
 
+import bayeslite.metamodels.troll_rng as troll
+import bayeslite.metamodels.iid_gaussian as gauss
+import bayeslite.metamodels.nig_normal as normal
+
 def test_geweke_troll():
     with bayeslite.bayesdb_open() as bdb:
-        import bayeslite.metamodels.troll_rng as troll
         bayeslite.bayesdb_register_metamodel(bdb, troll.TrollMetamodel())
         kl_est = geweke.geweke_kl(bdb, "troll_rng", [['column', 'numerical']], \
             ['column'], [(1,0)], 2, 2, 2, 2)
@@ -27,7 +30,6 @@ def test_geweke_troll():
 
 def test_geweke_iid_gaussian():
     with bayeslite.bayesdb_open() as bdb:
-        import bayeslite.metamodels.iid_gaussian as gauss
         bayeslite.bayesdb_register_metamodel(bdb, gauss.StdNormalMetamodel())
         kl_est = geweke.geweke_kl(bdb, "std_normal", \
             [['column', 'numerical']], ['column'], \
@@ -36,7 +38,6 @@ def test_geweke_iid_gaussian():
 
 def test_geweke_nig_normal():
     with bayeslite.bayesdb_open() as bdb:
-        import bayeslite.metamodels.nig_normal as normal
         nig = normal.NIGNormalMetamodel(seed=1)
         bayeslite.bayesdb_register_metamodel(bdb, nig)
         kl_est = geweke.geweke_kl(bdb, "nig_normal", \
@@ -58,7 +59,6 @@ def test_geweke_nig_normal_seriously():
     # bug").  The assertions constitute an attempt to capture the most
     # salient features that give that impression.
     with bayeslite.bayesdb_open() as bdb:
-        import bayeslite.metamodels.nig_normal as normal
         nig = normal.NIGNormalMetamodel(seed=1)
         bayeslite.bayesdb_register_metamodel(bdb, nig)
         cells = [(i,0) for i in range(4)]
@@ -72,13 +72,13 @@ def test_geweke_nig_normal_seriously():
             assert kl_est[2] > 0
             assert kl_est[2] < 0.05
 
+class DoctoredNIGNormal(normal.NIGNormalMetamodel):
+    def _inv_gamma(self, shape, scale):
+        # We actually had a bug that amounted to this
+        return float(1.0/scale) / self.prng.gammavariate(shape, 1.0)
+
 def test_geweke_catches_nig_normal_bug():
     with bayeslite.bayesdb_open() as bdb:
-        import bayeslite.metamodels.nig_normal as normal
-        class DoctoredNIGNormal(normal.NIGNormalMetamodel):
-            def _inv_gamma(self, shape, scale):
-                # We actually had a bug that amounted to this
-                return float(1.0/scale) / self.prng.gammavariate(shape, 1.0)
         bayeslite.bayesdb_register_metamodel(bdb, DoctoredNIGNormal(seed=1))
         cells = [(i,0) for i in range(4)]
         for chain_ct in (0, 1, 5):
