@@ -161,6 +161,14 @@ def create_geweke_chain_gen(bdb, target_metamodel, schema, column_names,
     return geweke_chain_gen
 
 def kl_est_sample(from_gen, of_gen, target_cells, constraints):
+    """Estimate Kullback-Liebler divergence of ``of_gen`` from ``from_gen``.
+
+    Specifically, let P be the distribution over the given target
+    cells induced by the generator ``from_gen`` conditioned on the
+    constraints, and let Q be same induced by the ``of_gen`` generator.
+    This function computes and returns a one-point
+    Monte-Carlo estimate of the K-L of Q from P.
+    """
     data = from_gen.simulate_joint(target_cells, constraints)
     targeted_data = [(i, j, x) for ((i, j), x) in zip(target_cells, data)]
     from_assessment = from_gen.logpdf(targeted_data, constraints)
@@ -207,37 +215,6 @@ def estimate_mean(samples):
     (n, mean, stddev) = gauss_suff_stats(samples)
     return (n, mean, stddev / math.sqrt(n))
 
-def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples,
-                self_check=None):
-    """Estimate Kullback-Liebler divergence of ``of_gen`` from ``from_gen``.
-
-    Specifically, let P be the distribution over the given target
-    cells induced by the generator ``from_gen`` conditioned on the
-    constraints, and let Q be same induced by the ``of_gen`` generator.
-    This function computes and returns a ``kl_samples``-point
-    Monte-Carlo estimate of the K-L of Q from P, in the form produced
-    by :func:`estimate_mean`.
-
-    The ``self_check`` parameter, if supplied, requests a self-check
-    report, as follows: Break the ``kl_samples`` samples into
-    ``self_check`` independent batches (of size
-    ``kl_samples/self_check``), and compute and print the count, mean,
-    and error estimate for each batch.  If the resulting means differ
-    by significantly more than 2-3x their error estimates, the Central
-    Limit Theorem does not dominate yet, and more samples may be in
-    order.
-    """
-    estimates = [kl_est_sample(from_gen, of_gen, target_cells, constraints)
-                 for _ in range(kl_samples)]
-    if self_check is not None:
-        for i in range(self_check):
-            start = i * kl_samples / self_check
-            stop = (i+1) * kl_samples / self_check
-            (ni, meani, stddevi) = gauss_suff_stats(estimates[start:stop])
-            print "Monte Carlo self check: %4d samples estimate %9.5f " \
-                "with error %9.5f" % (ni, meani, stddevi / math.sqrt(ni))
-    return estimate_mean(estimates)
-
 def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells,
               prior_samples, geweke_samples, geweke_iterates, kl_samples):
     """The Kullback-Leibler divergence of a Geweke chain from the prior.
@@ -267,7 +244,7 @@ def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells,
     :return: A 3-tuple giving information about the Monte Carlo
         estimate of the K-L divergence: The number of samples used to
         form the estimate, the estimate, and the predicted standard
-        deviation of the estimate.  See :func:`estimate_kl`.
+        deviation of the estimate.  See :func:`estimate_mean`.
 
     The ``metamodel_name``, ``schema``, ``column_names``, and
     ``target_cells`` parameters define an exact probability
