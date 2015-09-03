@@ -239,10 +239,11 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # Note: The constraints are irrelevant for the same reason as
         # in simulate_joint.
         (all_mus, all_sigmas) = self._all_mus_sigmas(bdb, generator_id)
-        return logmeanexp([sum(logpdfOne(value, all_mus[modelno][colno],
-                                         all_sigmas[modelno][colno])
-                               for (_, colno, value) in targets)
-                           for modelno in all_mus.keys()])
+        def model_log_pdf(modelno):
+            return sum(logpdfOne(value, all_mus[modelno][colno],
+                                 all_sigmas[modelno][colno])
+                       for (_, colno, value) in targets)
+        return logmeanexp([model_log_pdf(num) for num in all_mus.keys()])
 
     def _all_mus_sigmas(self, bdb, generator_id):
         params_sql = '''
