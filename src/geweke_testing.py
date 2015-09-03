@@ -52,7 +52,6 @@ simulators. JASA, 2004.
 http://qed.econ.queensu.ca/pub/faculty/ferrall/quant/papers/04_04_29_geweke.pdf
 
 [2] https://hips.seas.harvard.edu/blog/2013/06/10/testing-mcmc-code-part-2-integration-tests/
-
 """
 
 import math
@@ -67,7 +66,6 @@ def create_empty_table(bdb, column_names):
 
     Give all the columns a NUMERIC data type in the underlying SQL.
     Return the name of the new table.
-
     """
     table = bdb.temp_table_name()
     qt = sqlite3_quote_name(table)
@@ -112,7 +110,6 @@ class Generator(object):
     Knows its Bayeslite handle, its metamodel, its generator_id, and
     its name, and forwards methods to its metamodel, supplying the
     former two as additional arguments.
-
     """
     def __init__(self, bdb, metamodel, generator_id, name):
         self.bdb = bdb
@@ -235,39 +232,29 @@ def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells,
 
     :param BayesDB bdb: Bayeslite database handle where to do the
         test.
-
     :param string metamodel_name: Name of the metamodel to test.  Must
         already be registered with ``bdb``.
-
     :param list schema: A valid parsed schema for the metamodel to
         test.  This will be used as the schema with which test
         generators are instantiated.
-
     :param list column_names: A list of the names to give to the
         columns of the test data table.  This is somewhat redundant
         with the schema, but cannot actually be derived from it in
         general.
-
     :param list target_cells: A list of (row_id, col_id) pairs, which
         are the cells to jointly synthesize during the test.
-
     :param int prior_samples: The number of models to instantiate for
         the prior distribution.
-
     :param int geweke_samples: The number of independent Geweke chains
         to instantiate.
-
     :param int geweke_iterates: The number of times to generate
         synthetic data and learn from it.  This is K from the main
         exposition.
-
     :param int kl_samples: The number of samples to use for the Monte
         Carlo estimate of the K-L divergence.
-
     :param int kl_self_check: Granularity of self-checking of the
         Monte Carlo estimate of the K-L divergence.  See
         :func:`estimate_kl`.  Skip the self-check if None.
-
     :return: A 3-tuple giving information about the Monte Carlo
         estimate of the K-L divergence: The number of samples used to
         form the estimate, the estimate, and the predicted standard
@@ -316,7 +303,6 @@ def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells,
     aid.  If a problem is indicated, do not try to divine what it is
     from the pattern of reported K-L divergences.  Instrument your
     model, plot quantities of interest, turn off various parts, etc.
-
     """
     target_metamodel = bdb.metamodels[metamodel_name]
     prior_gen = create_prior_gen(bdb, target_metamodel, schema, column_names, \
