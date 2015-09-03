@@ -168,9 +168,11 @@ def kl_est_sample(from_gen, of_gen, target_cells, constraints):
     return from_assessment - of_assessment
 
 def gauss_suff_stats(data):
-    """From https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+    """Summarize an array of data as (count, mean, standard deviation).
 
-    This is the "Online algorithm" by Knuth."""
+    The algorithm is the "Online algorithm" by Knuth, from
+    https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+    """
     n = 0
     mean = 0.0
     total_deviance = 0.0 # n * sigma^2
