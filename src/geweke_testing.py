@@ -186,6 +186,25 @@ def gauss_suff_stats(data):
     else:
         return (n, mean, math.sqrt(total_deviance / float(n)))
 
+def estimate_mean(samples):
+    """Estimate the mean of a distribution from samples.
+
+    Return the triple (count, mean, error).
+
+    ``count`` is the number of input samples.
+
+    ``mean`` is the mean of the samples, which estimates the true mean
+    of the distribution.
+
+    ``error`` is an estimate of the standard deviation of the returned
+    ``mean``.  This is computed from the variance of the input
+    samples, on the assumption that the Central Limit Theorem
+    applies.  This is will be so if the underlying distribution has
+    a finite variance, and enough samples were drawn.
+    """
+    (n, mean, stddev) = gauss_suff_stats(samples)
+    return (n, mean, stddev / math.sqrt(n))
+
 def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples,
                 self_check=None):
     """Estimate Kullback-Liebler divergence of ``of_gen`` from ``from_gen``.
@@ -194,13 +213,8 @@ def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples,
     cells induced by the generator ``from_gen`` conditioned on the
     constraints, and let Q be same induced by the ``of_gen`` generator.
     This function computes and returns a ``kl_samples``-point
-    Monte-Carlo estimate of the K-L of Q from P, in the form of a
-    triple: (num_samples, estimate, estimated error of estimate).  The
-    error estimate is computed from the variance of the individual
-    point estimates of K-L, on the assumtion that ``kl_samples`` are
-    high enough that the distribution on the retuned ``estimate`` is
-    Gaussian (as it must become, by the Central Limit Theorem)
-    (provided the appropriate moments exist, which we assume is so).
+    Monte-Carlo estimate of the K-L of Q from P, in the form produced
+    by :func:`estimate_mean`.
 
     The ``self_check`` parameter, if supplied, requests a self-check
     report, as follows: Break the ``kl_samples`` samples into
@@ -210,12 +224,9 @@ def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples,
     by significantly more than 2-3x their error estimates, the Central
     Limit Theorem does not dominate yet, and more samples may be in
     order.
-
     """
-
     estimates = [kl_est_sample(from_gen, of_gen, target_cells, constraints)
                  for _ in range(kl_samples)]
-    (n, mean, stddev) = gauss_suff_stats(estimates)
     if self_check is not None:
         for i in range(self_check):
             start = i * kl_samples / self_check
@@ -223,7 +234,7 @@ def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples,
             (ni, meani, stddevi) = gauss_suff_stats(estimates[start:stop])
             print "Monte Carlo self check: %4d samples estimate %9.5f " \
                 "with error %9.5f" % (ni, meani, stddevi / math.sqrt(ni))
-    return (n, mean, stddev / math.sqrt(n))
+    return estimate_mean(estimates)
 
 def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells,
               prior_samples, geweke_samples, geweke_iterates, kl_samples,
