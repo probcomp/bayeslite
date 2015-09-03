@@ -249,10 +249,7 @@ def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells,
         general.
 
     :param list target_cells: A list of (row_id, col_id) pairs, which
-        are the cells to synthesize during the test.  You might want
-        to specify more than one row to test the joint distribution
-        across rows, and to test consistency of inference in the
-        presence of larger amounts of (still synthetic) data.
+        are the cells to jointly synthesize during the test.
 
     :param int prior_samples: The number of models to instantiate for
         the prior distribution.
