@@ -76,7 +76,7 @@ def create_empty_table(bdb, column_names):
     core.bayesdb_table_guarantee_columns(bdb, table)
     return table
 
-def create_generator(bdb, table, target_metamodel, schema):
+def create_temp_gen(bdb, table, target_metamodel, schema):
     """Create a generator.
 
     :param BayesDB bdb: The BayesDB instance.
@@ -121,7 +121,7 @@ class Generator(object):
 def create_prior_gen(bdb, target_metamodel, schema, column_names,
                      prior_samples):
     table = create_empty_table(bdb, column_names)
-    prior_gen = create_generator(bdb, table, target_metamodel, schema)
+    prior_gen = create_temp_gen(bdb, table, target_metamodel, schema)
     init_models_bql = '''
     INITIALIZE %s MODELS FOR %s
     ''' % (prior_samples, sqlite3_quote_name(prior_gen.name))
@@ -131,7 +131,7 @@ def create_prior_gen(bdb, target_metamodel, schema, column_names,
 def create_geweke_chain_gen(bdb, target_metamodel, schema, column_names,
                             target_cells, geweke_samples, geweke_iterates):
     table = create_empty_table(bdb, column_names)
-    geweke_chain_gen = create_generator(bdb, table, target_metamodel, schema)
+    geweke_chain_gen = create_temp_gen(bdb, table, target_metamodel, schema)
     init_models_bql = '''
     INITIALIZE %s MODELS FOR %s
     ''' % (geweke_samples, sqlite3_quote_name(geweke_chain_gen.name))
