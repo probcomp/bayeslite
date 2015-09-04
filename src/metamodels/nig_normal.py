@@ -272,10 +272,10 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # there is no per-row latent structure, I will just treat all
         # row ids as fresh and not keep track of it.
         update_sql = '''
-        UPDATE bayesdb_nig_normal_columns
-            SET count = count + 1, sum = sum + :x, sumsq = sumsq + :xsq
-            WHERE generator_id = :generator_id
-                AND colno = :colno
+            UPDATE bayesdb_nig_normal_columns
+                SET count = count + 1, sum = sum + :x, sumsq = sumsq + :xsq
+                WHERE generator_id = :generator_id
+                    AND colno = :colno
         '''
         with bdb.savepoint():
             bdb.sql_execute(update_sql, {
@@ -288,10 +288,10 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
     def remove(self, bdb, generator_id, item):
         (_, colno, value) = item
         update_sql = '''
-        UPDATE bayesdb_nig_normal_columns
-            SET count = count - 1, sum = sum - :x, sumsq = sumsq - :xsq
-            WHERE generator_id = :generator_id
-                AND colno = :colno
+            UPDATE bayesdb_nig_normal_columns
+                SET count = count - 1, sum = sum - :x, sumsq = sumsq - :xsq
+                WHERE generator_id = :generator_id
+                    AND colno = :colno
         '''
         with bdb.savepoint():
             bdb.sql_execute(update_sql, {
