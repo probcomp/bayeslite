@@ -114,7 +114,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                 if not stattype == 'numerical':
                     raise BQLError(bdb, 'NIG-Normal only supports'
                         ' numerical columns, but %s is %s'
-                        % (column_name, stattype))
+                        % (repr(column_name), repr(stattype)))
                 (count, xsum, sumsq) = data_suff_stats(bdb, table, column_name)
                 bdb.sql_execute(insert_column_sql, {
                     'generator_id': generator_id,
