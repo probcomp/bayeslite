@@ -18,6 +18,7 @@ import StringIO
 import cmd
 import traceback
 import sqlite3
+import sys
 
 import bayeslite
 import bayeslite.bql as bql
@@ -36,11 +37,18 @@ class Shell(cmd.Cmd):
     sql_prompt    = '   sql...> '
     python_prompt = 'python...> '
 
-    def __init__(self, bdb, metamodel):
+    def __init__(self, bdb, metamodel, stdin=None, stdout=None, stderr=None):
+        if stdin is None:
+            stdin = sys.stdin
+        if stdout is None:
+            stdout = sys.stdout
+        if stderr is None:
+            stderr = sys.stderr
         self.prompt = self.def_prompt
         self.bql = StringIO.StringIO()
         self.identchars += '.'
-        cmd.Cmd.__init__(self, 'Tab')
+        self.stderr = stderr
+        cmd.Cmd.__init__(self, 'Tab', stdin, stdout)
 
         self._bdb = bdb
         self._metamodel = metamodel
