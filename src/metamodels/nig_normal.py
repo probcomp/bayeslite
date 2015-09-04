@@ -324,13 +324,12 @@ def logpdf_gaussian(x, mu, sigma):
     return ans
 
 def data_suff_stats(bdb, table, column_name):
-    gather_data_sql_pat = '''
-        SELECT %s FROM %s
-    '''
     qt = sqlite3_quote_name(table)
     qcn = sqlite3_quote_name(column_name)
     # TODO Do this computation inside the database?
-    gather_data_sql = gather_data_sql_pat % (qcn, qt)
+    gather_data_sql = '''
+        SELECT %s FROM %s
+    ''' % (qcn, qt)
     cursor = bdb.sql_execute(gather_data_sql)
     count = 0
     xsum = 0
