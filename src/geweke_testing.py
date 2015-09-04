@@ -87,22 +87,16 @@ def create_generator(bdb, table, target_metamodel, schema):
         generator.
     """
     gen_name = bdb.temp_table_name()
-    phrase = ast.CreateGen(default = True,
-                           name = gen_name,
-                           ifnotexists = False,
-                           table = table,
-                           metamodel = target_metamodel.name(),
-                           schema = schema)
-    instantiate = bql.mk_instantiate(bdb, target_metamodel, phrase)
     gen_id_box = [None]
-    def new_instantiate(*args, **kwargs):
-        # Because there is no other way to capture the generator id
-        (new_gen_id, other) = instantiate(*args, **kwargs)
-        gen_id_box[0] = new_gen_id
-        return (new_gen_id, other)
+    def instantiate(columns):
+        gen_id, column_list = bql.instantiate_generator(bdb, gen_name, table,
+            target_metamodel, columns,
+            ifnotexists=False,
+            default=True)
+        gen_id_box[0] = gen_id
+        return gen_id, column_list
     with bdb.savepoint():
-        target_metamodel.create_generator(bdb, phrase.table, phrase.schema,
-            new_instantiate)
+        target_metamodel.create_generator(bdb, table, schema, instantiate)
     return Generator(bdb, target_metamodel, gen_id_box[0], gen_name)
 
 class Generator(object):

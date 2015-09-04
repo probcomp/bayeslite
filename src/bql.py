@@ -303,11 +303,14 @@ def execute_phrase(bdb, phrase, bindings=()):
                 (repr(phrase.metamodel),))
         metamodel = bdb.metamodels[phrase.metamodel]
 
-        instantiate = mk_instantiate(bdb, metamodel, phrase)
-
         # Let the metamodel parse the schema itself and call
-        # instantiate with the modelled columns.
+        # create_generator with the modelled columns.
         with bdb.savepoint():
+            def instantiate(columns):
+                return instantiate_generator(bdb, phrase.name, phrase.table,
+                    metamodel, columns,
+                    ifnotexists=phrase.ifnotexists,
+                    default=phrase.default)
             metamodel.create_generator(bdb, phrase.table, phrase.schema,
                 instantiate)
 
@@ -496,108 +499,114 @@ def execute_phrase(bdb, phrase, bindings=()):
 
     assert False                # XXX
 
-def mk_instantiate(bdb, metamodel, phrase):
-    def instantiate(columns):
-        # Make sure there is no table by this name.
-        if core.bayesdb_has_table(bdb, phrase.name):
-            raise BQLError(bdb, 'Name already defined as table: %s' %
-                (repr(phrase.name),))
+# Metamodel-independent logic to create a generator.  Don't call this
+# directly yourself -- it must be called via the metamodel's
+# create_generator method.
+def instantiate_generator(bdb, gen_name, table, metamodel, columns,
+        ifnotexists=None, default=None):
+    if ifnotexists is None:
+        ifnotexists = False
+    if default is None:
+        default = False
 
-        # Make sure there's no generator by this name unless we
-        # were asked to redefine it in that case.
-        if not phrase.ifnotexists and \
-           core.bayesdb_has_generator(bdb, phrase.name):
-            raise BQLError(bdb, 'Name already defined as generator: %s' %
-                (repr(phrase.name),))
+    # Make sure there is no table by this name.
+    if core.bayesdb_has_table(bdb, gen_name):
+        raise BQLError(bdb, 'Name already defined as table: %s' %
+            (repr(gen_name),))
 
-        # Make sure the bayesdb_column table knows all the columns.
-        core.bayesdb_table_guarantee_columns(bdb, phrase.table)
+    # Make sure there's no generator by this name unless we were asked
+    # to redefine it in that case.
+    if not ifnotexists and core.bayesdb_has_generator(bdb, gen_name):
+        raise BQLError(bdb, 'Name already defined as generator: %s' %
+            (repr(gen_name),))
 
-        # Create the generator record.
-        generator_sql = '''
-            INSERT%s INTO bayesdb_generator
-                (name, tabname, metamodel, defaultp)
-                VALUES (:name, :table, :metamodel, :defaultp)
-        ''' % (' OR IGNORE' if phrase.ifnotexists else '',)
-        cursor = bdb.sql_execute(generator_sql, {
-            'name': phrase.name,
-            'table': phrase.table,
-            'metamodel': metamodel.name(),
-            'defaultp': phrase.default,
+    # Make sure the bayesdb_column table knows all the columns.
+    core.bayesdb_table_guarantee_columns(bdb, table)
+
+    # Create the generator record.
+    generator_sql = '''
+        INSERT%s INTO bayesdb_generator
+            (name, tabname, metamodel, defaultp)
+            VALUES (:name, :table, :metamodel, :defaultp)
+    ''' % (' OR IGNORE' if ifnotexists else '',)
+    cursor = bdb.sql_execute(generator_sql, {
+        'name': gen_name,
+        'table': table,
+        'metamodel': metamodel.name(),
+        'defaultp': default,
+    })
+    generator_id = cursor.lastrowid
+    assert generator_id
+    assert 0 < generator_id
+
+    # Get a map from column name to colno.  Check
+    # - for duplicates,
+    # - for nonexistent columns,
+    # - for invalid statistical types.
+    column_map = {}
+    duplicates = set()
+    missing = set()
+    invalid = set()
+    colno_sql = '''
+        SELECT colno FROM bayesdb_column
+            WHERE tabname = :table AND name = :column_name
+    '''
+    stattype_sql = '''
+        SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype
+    '''
+    for name, stattype in columns:
+        name_folded = casefold(name)
+        if name_folded in column_map:
+            duplicates.add(name)
+            continue
+        cursor = bdb.sql_execute(colno_sql, {
+            'table': table,
+            'column_name': name,
         })
-        generator_id = cursor.lastrowid
-        assert generator_id
-        assert 0 < generator_id
-
-        # Get a map from column name to colno.  Check
-        # - for duplicates,
-        # - for nonexistent columns,
-        # - for invalid statistical types.
-        column_map = {}
-        duplicates = set()
-        missing = set()
-        invalid = set()
-        colno_sql = '''
-            SELECT colno FROM bayesdb_column
-                WHERE tabname = :table AND name = :column_name
-        '''
-        stattype_sql = '''
-            SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype
-        '''
-        for name, stattype in columns:
-            name_folded = casefold(name)
-            if name_folded in column_map:
-                duplicates.add(name)
-                continue
-            cursor = bdb.sql_execute(colno_sql, {
-                'table': phrase.table,
-                'column_name': name,
-            })
-            try:
-                row = cursor.next()
-            except StopIteration:
-                missing.add(name)
-                continue
-            else:
-                colno = row[0]
-                assert isinstance(colno, int)
-                cursor = bdb.sql_execute(stattype_sql, {
-                    'stattype': stattype,
-                })
-                if cursor.next()[0] == 0:
-                    invalid.add(stattype)
-                    continue
-                column_map[casefold(name)] = colno
-        # XXX Would be nice to report these simultaneously.
-        if missing:
-            raise BQLError(bdb, 'No such columns in table %s: %s' %
-                (repr(phrase.table), repr(list(missing))))
-        if duplicates:
-            raise BQLError(bdb, 'Duplicate column names: %s' %
-                (repr(list(duplicates)),))
-        if invalid:
-            raise BQLError(bdb, 'Invalid statistical types: %s' %
-                (repr(list(invalid)),))
-
-        # Insert column records.
-        column_sql = '''
-            INSERT INTO bayesdb_generator_column
-                (generator_id, colno, stattype)
-                VALUES (:generator_id, :colno, :stattype)
-        '''
-        for name, stattype in columns:
-            colno = column_map[casefold(name)]
-            stattype = casefold(stattype)
-            bdb.sql_execute(column_sql, {
-                'generator_id': generator_id,
-                'colno': colno,
+        try:
+            row = cursor.next()
+        except StopIteration:
+            missing.add(name)
+            continue
+        else:
+            colno = row[0]
+            assert isinstance(colno, int)
+            cursor = bdb.sql_execute(stattype_sql, {
                 'stattype': stattype,
             })
+            if cursor.next()[0] == 0:
+                invalid.add(stattype)
+                continue
+            column_map[casefold(name)] = colno
+    # XXX Would be nice to report these simultaneously.
+    if missing:
+        raise BQLError(bdb, 'No such columns in table %s: %s' %
+            (repr(table), repr(list(missing))))
+    if duplicates:
+        raise BQLError(bdb, 'Duplicate column names: %s' %
+            (repr(list(duplicates)),))
+    if invalid:
+        raise BQLError(bdb, 'Invalid statistical types: %s' %
+            (repr(list(invalid)),))
 
-        column_list = sorted((column_map[casefold(name)], name, stattype)
-            for name, stattype in columns)
-        return generator_id, column_list
-    return instantiate
+    # Insert column records.
+    column_sql = '''
+        INSERT INTO bayesdb_generator_column
+            (generator_id, colno, stattype)
+            VALUES (:generator_id, :colno, :stattype)
+    '''
+    for name, stattype in columns:
+        colno = column_map[casefold(name)]
+        stattype = casefold(stattype)
+        bdb.sql_execute(column_sql, {
+            'generator_id': generator_id,
+            'colno': colno,
+            'stattype': stattype,
+        })
+
+    column_list = sorted((column_map[casefold(name)], name, stattype)
+        for name, stattype in columns)
+    return generator_id, column_list
 
 def rename_table(bdb, old, new):
     assert core.bayesdb_has_table(bdb, old)
