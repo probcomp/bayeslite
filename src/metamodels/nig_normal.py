@@ -28,6 +28,7 @@ import math
 import random
 
 import bayeslite.metamodel as metamodel
+import bayeslite.util as util
 
 from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
@@ -243,7 +244,8 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             return sum(logpdf_gaussian(value, all_mus[modelno][colno],
                            all_sigmas[modelno][colno])
                        for (_, colno, value) in targets)
-        return logmeanexp([model_log_pdf(m) for m in sorted(all_mus.keys())])
+        modelwise = [model_log_pdf(m) for m in sorted(all_mus.keys())]
+        return util.logmeanexp(modelwise)
 
     def _all_mus_sigmas(self, bdb, generator_id):
         params_sql = '''
@@ -351,10 +353,3 @@ def posterior_hypers(hypers, stats):
     bn = b + 0.5*(m**2/float(V) + xsumsq - mn**2/Vn)
     ans = (mn, Vn, an, bn)
     return ans
-
-def logsumexp(array):
-    m = max(array)
-    return m + math.log(sum(math.exp(a - m) for a in array))
-
-def logmeanexp(array):
-    return logsumexp(array) - math.log(len(array))

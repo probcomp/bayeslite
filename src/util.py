@@ -106,3 +106,10 @@ def gauss_suff_stats(data):
         return (n, mean, 0.0)
     else:
         return (n, mean, math.sqrt(M2 / float(n)))
+
+def logsumexp(array):
+    m = max(array)
+    return m + math.log(sum(math.exp(a - m) for a in array))
+
+def logmeanexp(array):
+    return logsumexp(array) - math.log(len(array))
