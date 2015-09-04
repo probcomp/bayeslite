@@ -236,6 +236,10 @@ def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells,
     approximating the true K-L divergence between the true test
     distributions.
 
+    Operates inside a savepoint, which it rolls back before returning
+    to avoid changing the database state.  If you want the intermediate
+    quantities persisted, use :func:`geweke_kl_persist`.
+
     What should you expect from calling this?  Raising the
     ``kl_samples`` should make the returned K-L estimates more
     accurate, but should not drive them to zero, because of
@@ -269,6 +273,19 @@ def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells,
     aid.  If a problem is indicated, do not try to divine what it is
     from the pattern of reported K-L divergences.  Instrument your
     model, plot quantities of interest, turn off various parts, etc.
+
+    """
+    with bdb.savepoint_rollback():
+        return geweke_kl_persist(bdb, metamodel_name, schema, column_names,
+            target_cells, prior_samples, geweke_samples, geweke_iterates,
+            kl_samples)
+
+def geweke_kl_persist(bdb, metamodel_name, schema, column_names, target_cells,
+        prior_samples, geweke_samples, geweke_iterates, kl_samples):
+    """As geweke_kl, but leave the intermediate products in the database.
+
+    This can be useful for initial exploration of casues of a test
+    failure.
     """
     ests = geweke_kl_samples(bdb, metamodel_name, schema, column_names,
         target_cells, prior_samples, geweke_samples, geweke_iterates,
@@ -282,6 +299,8 @@ def geweke_kl_samples(bdb, metamodel_name, schema, column_names, target_cells,
     See :func:`geweke_kl`.  This is useful for testing whether the
     Central Limit Theorem dominates the error of Monte Carlo
     estimation of the K-L.
+
+    Note: Intermediate database state is not automaticallly cleaned up.
     """
     target_metamodel = bdb.metamodels[metamodel_name]
     prior_gen = create_prior_gen(bdb, target_metamodel, schema, column_names, \
