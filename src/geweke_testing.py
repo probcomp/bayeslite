@@ -152,13 +152,13 @@ def create_geweke_chain_gen(bdb, target_metamodel, schema, column_names,
     return geweke_chain_gen
 
 def kl_est_sample(from_gen, of_gen, target_cells, constraints):
-    """Estimate Kullback-Liebler divergence of ``of_gen`` from ``from_gen``.
+    """Estimate Kullback-Liebler divergence of `of_gen` from `from_gen`.
 
     Specifically, let P be the distribution over the given target
-    cells induced by the generator ``from_gen`` conditioned on the
-    constraints, and let Q be same induced by the ``of_gen`` generator.
-    This function computes and returns a one-point
-    Monte-Carlo estimate of the K-L of Q from P.
+    cells induced by the generator `from_gen` conditioned on the
+    constraints, and let Q be same induced by the `of_gen` generator.
+    This function computes and returns a one-point Monte-Carlo
+    estimate of the K-L of Q from P.
     """
     data = from_gen.simulate_joint(target_cells, constraints)
     targeted_data = [(i, j, x) for ((i, j), x) in zip(target_cells, data)]
@@ -171,16 +171,16 @@ def estimate_mean(samples):
 
     Return the triple (count, mean, error).
 
-    ``count`` is the number of input samples.
+    `count` is the number of input samples.
 
-    ``mean`` is the mean of the samples, which estimates the true mean
+    `mean` is the mean of the samples, which estimates the true mean
     of the distribution.
 
-    ``error`` is an estimate of the standard deviation of the returned
-    ``mean``.  This is computed from the variance of the input
-    samples, on the assumption that the Central Limit Theorem
-    applies.  This is will be so if the underlying distribution has
-    a finite variance, and enough samples were drawn.
+    `error` is an estimate of the standard deviation of the returned
+    `mean`.  This is computed from the variance of the input samples,
+    on the assumption that the Central Limit Theorem applies.  This is
+    will be so if the underlying distribution has a finite variance,
+    and enough samples were drawn.
     """
     (n, mean, stddev) = util.gauss_suff_stats(samples)
     return (n, mean, stddev / math.sqrt(n))
@@ -189,10 +189,9 @@ def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells,
               prior_samples, geweke_samples, geweke_iterates, kl_samples):
     """The Kullback-Leibler divergence of a Geweke chain from the prior.
 
-    :param BayesDB bdb: Bayeslite database handle where to do the
-        test.
+    :param BayesDB bdb: BayesDB instance.
     :param string metamodel_name: Name of the metamodel to test.  Must
-        already be registered with ``bdb``.
+        already be registered with `bdb`.
     :param list schema: A valid parsed schema for the metamodel to
         test.  This will be used as the schema with which test
         generators are instantiated.
@@ -216,48 +215,46 @@ def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells,
         form the estimate, the estimate, and the predicted standard
         deviation of the estimate.  See :func:`estimate_mean`.
 
-    The ``metamodel_name``, ``schema``, ``column_names``, and
-    ``target_cells`` parameters define an exact probability
-    distribution that should satisfy the Geweke invariant if the
-    metamodel under test is Bayesian and correctly implemented.
+    `metamodel_name`, `schema`, `column_names`, and `target_cells`
+    specify an exact probability distribution that should satisfy the
+    Geweke invariant if the metamodel under test is Bayesian and
+    correctly implemented.
 
-    The ``prior_samples``, ``geweke_samples``, ``geweke_iterates``,
-    and ``kl_samples`` parameters specify cost-accuracy tradeoffs in
-    approximating the true K-L divergence between the true test
-    distributions.
+    `prior_samples`, `geweke_samples`, `geweke_iterates`, and
+    `kl_samples` specify cost-accuracy tradeoffs in approximating the
+    true K-L divergence between the true test distributions.
 
     Operates inside a savepoint, which it rolls back before returning
     to avoid changing the database state.  If you want the intermediate
     quantities persisted, use :func:`geweke_kl_persist`.
 
-    What should you expect from calling this?  Raising the
-    ``kl_samples`` should make the returned K-L estimates more
-    accurate, but should not drive them to zero, because of
-    approximation error from finite values of ``prior_samples`` and
-    ``geweke_samples``.  For the same reason, the K-L estimated by
-    repeated runs should vary more than the reported error estimate,
-    because that error estimate only takes into account Monte Carlo
-    integration error, not the actual variation in K-Ls of different
-    approximations to the same ideal distributions.
+    What should you expect from calling this?  Raising `kl_samples`
+    should make the returned K-L estimates more accurate, but should
+    not drive them to zero, because of approximation error from finite
+    values of `prior_samples` and `geweke_samples`.  For the same
+    reason, the K-L estimated by repeated runs should vary more than
+    the reported error estimate, because that error estimate only
+    takes into account Monte Carlo integration error, not the actual
+    variation in K-Ls of different approximations to the same ideal
+    distributions.
 
-    Raising ``prior_samples`` and ``geweke_samples`` should drive the
+    Raising `prior_samples` and `geweke_samples` should drive the
     reported K-L divergence toward zero, if the metamodel under test
     is implemented correctly.
 
-    Raising ``geweke_iterates`` should not affect the reported K-L
+    Raising `geweke_iterates` should not affect the reported K-L
     divergences if the metamodel under test is implemented correctly,
     but is likely to increase them if there is a bug that is amplified
     by repeated data synthesis.
 
     In general, we advise looking at a tableau of multiple runs
-    varying the ``prior_samples``, ``geweke_samples``,
-    ``geweke_iterates``, and ``kl_samples`` parameters to judge
-    whether a problem is indicated.  Particularly, it's a good idea to
-    include runs with 0 ``geweke_iterates`` in that tableau, as an
-    estimate of the approximation error induced by having finite
-    ``prior_samples`` and ``geweke_samples``.  We also advise testing
-    a metamodel in multiple different regimes (little data, much data,
-    various schemas).
+    varying the `prior_samples`, `geweke_samples`, `geweke_iterates`,
+    and `kl_samples` parameters to judge whether a problem is
+    indicated.  Particularly, it's a good idea to include runs with 0
+    `geweke_iterates` in that tableau, as an estimate of the
+    approximation error induced by having finite `prior_samples` and
+    `geweke_samples`.  We also advise testing a metamodel in multiple
+    different regimes (little data, much data, various schemas).
 
     Final word of caution: This is a diagnostic tool, not a debugging
     aid.  If a problem is indicated, do not try to divine what it is
