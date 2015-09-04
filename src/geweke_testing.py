@@ -59,7 +59,7 @@ import math
 import bayeslite.ast as ast
 import bayeslite.bql as bql
 import bayeslite.core as core
-import bayeslite.util as util
+import bayeslite.stats as stats
 
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
@@ -183,7 +183,7 @@ def estimate_mean(samples):
     will be so if the underlying distribution has a finite variance,
     and enough samples were drawn.
     """
-    (n, mean, stddev) = util.gauss_suff_stats(samples)
+    (n, mean, stddev) = stats.gauss_suff_stats(samples)
     return (n, mean, stddev / math.sqrt(n))
 
 def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells,
