@@ -192,18 +192,18 @@ def gauss_suff_stats(data):
     """
     n = 0
     mean = 0.0
-    total_deviance = 0.0 # n * sigma^2
+    M2 = 0.0 # n * sigma^2
 
     for x in data:
         n = n + 1
         delta = x - mean
         mean = mean + delta/n
-        total_deviance = total_deviance + delta*(x - mean)
+        M2 = M2 + delta*(x - mean)
 
     if n < 1:
         return (n, mean, 0.0)
     else:
-        return (n, mean, math.sqrt(total_deviance / float(n)))
+        return (n, mean, math.sqrt(M2 / float(n)))
 
 def estimate_mean(samples):
     """Estimate the mean of a distribution from samples.
