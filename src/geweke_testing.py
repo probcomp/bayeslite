@@ -178,8 +178,17 @@ def kl_est_sample(from_gen, of_gen, target_cells, constraints):
 def gauss_suff_stats(data):
     """Summarize an array of data as (count, mean, standard deviation).
 
-    The algorithm is the "Online algorithm" by Knuth, from
+    The algorithm is the "Online algorithm" presented in Knuth Volume
+    2, 3rd ed, p. 232, originally credited to "Note on a Method for
+    Calculating Corrected Sums of Squares and Products" B. P. Welford
+    Technometrics Vol. 4, No. 3 (Aug., 1962), pp. 419-420.  This has
+    the advantage over naively accumulating the sum and sum of squares
+    that it is less subject to precision loss through massive
+    cancellation.
+
+    This version collected 8/31/15 from
     https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+
     """
     n = 0
     mean = 0.0
