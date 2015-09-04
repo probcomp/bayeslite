@@ -56,10 +56,11 @@ http://qed.econ.queensu.ca/pub/faculty/ferrall/quant/papers/04_04_29_geweke.pdf
 
 import math
 
-import bayeslite.core as core
 import bayeslite.ast as ast
 import bayeslite.bql as bql
+import bayeslite.core as core
 import bayeslite.util as util
+
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
 def create_empty_table(bdb, column_names):
