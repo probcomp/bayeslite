@@ -30,6 +30,10 @@ import random
 
 import bayeslite.metamodel as metamodel
 
+std_normal_schema_1 = '''
+INSERT INTO bayesdb_metamodel (name, version) VALUES ('std_normal', 1);
+'''
+
 class StdNormalMetamodel(metamodel.IBayesDBMetamodel):
     """IID Gaussian metamodel for BayesDB.
 
@@ -42,10 +46,25 @@ class StdNormalMetamodel(metamodel.IBayesDBMetamodel):
         self.prng = random.Random(seed)
     def name(self): return 'std_normal'
     def register(self, bdb):
-        bdb.sql_execute('''
-            INSERT INTO bayesdb_metamodel (name, version)
-                VALUES ('std_normal', 1)
-        ''')
+        with bdb.savepoint():
+            schema_sql = 'SELECT version FROM bayesdb_metamodel WHERE name = ?'
+            cursor = bdb.sql_execute(schema_sql, (self.name(),))
+            version = None
+            try:
+                row = cursor.next()
+            except StopIteration:
+                version = 0
+            else:
+                version = row[0]
+            assert version is not None
+            if version == 0:
+                # XXX WHATTAKLUDGE!
+                for stmt in std_normal_schema_1.split(';'):
+                    bdb.sql_execute(stmt)
+                version = 1
+            if version != 1:
+                raise BQLError(bdb, 'IID-Gaussian already installed'
+                    ' with unknown schema version: %d' % (version,))
     def create_generator(self, bdb, table, schema, instantiate):
         instantiate(schema)
     def drop_generator(self, *args, **kwargs): pass
