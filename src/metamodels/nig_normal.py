@@ -28,10 +28,10 @@ import math
 import random
 
 import bayeslite.metamodel as metamodel
-import bayeslite.util as util
 
 from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
+from bayeslite.util import logmeanexp
 
 nig_normal_schema_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('nig_normal', 1);
@@ -244,7 +244,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                            all_sigmas[modelno][colno])
                        for (_, colno, value) in targets)
         modelwise = [model_log_pdf(m) for m in sorted(all_mus.keys())]
-        return util.logmeanexp(modelwise)
+        return logmeanexp(modelwise)
 
     def _all_mus_sigmas(self, bdb, generator_id):
         params_sql = '''
