@@ -122,20 +122,16 @@ def create_prior_gen(bdb, target_metamodel, schema, column_names,
                      prior_samples):
     table = create_empty_table(bdb, column_names)
     prior_gen = create_temp_gen(bdb, table, target_metamodel, schema)
-    init_models_bql = '''
-    INITIALIZE %s MODELS FOR %s
-    ''' % (prior_samples, sqlite3_quote_name(prior_gen.name))
-    bdb.execute(init_models_bql)
+    bdb.execute('INITIALIZE %s MODELS FOR %s' %
+        (prior_samples, sqlite3_quote_name(prior_gen.name)))
     return prior_gen
 
 def create_geweke_chain_gen(bdb, target_metamodel, schema, column_names,
                             target_cells, geweke_samples, geweke_iterates):
     table = create_empty_table(bdb, column_names)
     geweke_chain_gen = create_temp_gen(bdb, table, target_metamodel, schema)
-    init_models_bql = '''
-    INITIALIZE %s MODELS FOR %s
-    ''' % (geweke_samples, sqlite3_quote_name(geweke_chain_gen.name))
-    bdb.execute(init_models_bql)
+    bdb.execute('INITIALIZE %s MODELS FOR %s' %
+        (geweke_samples, sqlite3_quote_name(geweke_chain_gen.name)))
     for _ in range(geweke_iterates):
         for modelno in range(geweke_samples):
             # Need each Geweke chain to hallucinate its own data.
