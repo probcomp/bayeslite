@@ -71,7 +71,7 @@ def float_sum(iterable):
         else:
             c += ((xf - s1) + s)
         s = s1
-    return (s + c)
+    return s + c
 
 def casefold(string):
     # XXX Not really right, but it'll do for now.
