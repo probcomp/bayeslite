@@ -28,6 +28,7 @@ import math
 import random
 
 import bayeslite.metamodel as metamodel
+import bayeslite.util as util
 
 from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
@@ -35,7 +36,7 @@ from bayeslite.sqlite3_util import sqlite3_quote_name
 nig_normal_schema_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('nig_normal', 1);
 
-CREATE TABLE bayesdb_nig_normal_columns (
+CREATE TABLE bayesdb_nig_normal_column (
     generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
     colno       INTEGER NOT NULL,
     count       INTEGER NOT NULL,
@@ -46,7 +47,7 @@ CREATE TABLE bayesdb_nig_normal_columns (
         REFERENCES bayesdb_generator_column(generator_id, colno)
 );
 
-CREATE TABLE bayesdb_nig_normal_models (
+CREATE TABLE bayesdb_nig_normal_model (
     generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
     colno           INTEGER NOT NULL,
     modelno         INTEGER NOT NULL,
@@ -56,11 +57,9 @@ CREATE TABLE bayesdb_nig_normal_models (
     FOREIGN KEY(generator_id, modelno)
         REFERENCES bayesdb_generator_model(generator_id, modelno),
     FOREIGN KEY(generator_id, colno)
-        REFERENCES bayesdb_nig_normal_columns(generator_id, colno)
+        REFERENCES bayesdb_nig_normal_column(generator_id, colno)
 );
 '''
-
-hardcoded_hypers = (0, 1, 1, 1)
 
 class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
     """Normal-Inverse-Gamma-Normal metamodel for BayesDB.
@@ -74,7 +73,8 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
 
     """
 
-    def __init__(self, seed=0):
+    def __init__(self, hypers=(0, 1, 1, 1), seed=0):
+        self.hypers = hypers
         self.prng = random.Random(seed)
 
     def name(self): return 'nig_normal'
@@ -104,7 +104,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # The schema is the column list. May want to change this later
         # to make room for specifying the hyperparameters, etc.
         insert_column_sql = '''
-            INSERT INTO bayesdb_nig_normal_columns
+            INSERT INTO bayesdb_nig_normal_column
                 (generator_id, colno, count, sum, sumsq)
                 VALUES (:generator_id, :colno, :count, :sum, :sumsq)
         '''
@@ -114,7 +114,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                 if not stattype == 'numerical':
                     raise BQLError(bdb, 'NIG-Normal only supports'
                         ' numerical columns, but %s is %s'
-                        % (column_name, stattype))
+                        % (repr(column_name), repr(stattype)))
                 (count, xsum, sumsq) = data_suff_stats(bdb, table, column_name)
                 bdb.sql_execute(insert_column_sql, {
                     'generator_id': generator_id,
@@ -128,14 +128,14 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         with bdb.savepoint():
             self.drop_models(bdb, generator_id)
             delete_columns_sql = '''
-                DELETE FROM bayesdb_nig_normal_columns
+                DELETE FROM bayesdb_nig_normal_column
                     WHERE generator_id = ?
             '''
             bdb.sql_execute(delete_columns_sql, (generator_id,))
 
     def initialize_models(self, bdb, generator_id, modelnos, model_config):
         insert_sample_sql = '''
-            INSERT INTO bayesdb_nig_normal_models
+            INSERT INTO bayesdb_nig_normal_model
                 (generator_id, colno, modelno, mu, sigma)
                 VALUES (:generator_id, :colno, :modelno, :mu, :sigma)
         '''
@@ -145,12 +145,13 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         with bdb.savepoint():
             if modelnos is None:
                 delete_models_sql = '''
-                    DELETE FROM bayesdb_nig_normal_models WHERE generator_id = ?
+                    DELETE FROM bayesdb_nig_normal_model
+                        WHERE generator_id = ?
                 '''
                 bdb.sql_execute(delete_models_sql, (generator_id,))
             else:
                 delete_models_sql = '''
-                    DELETE FROM bayesdb_nig_normal_models
+                    DELETE FROM bayesdb_nig_normal_model
                         WHERE generator_id = ? AND modelno = ?
                 '''
                 for modelno in modelnos:
@@ -161,7 +162,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # Ignore analysis timing control, because one step reaches the
         # posterior anyway.
         update_sample_sql = '''
-            UPDATE bayesdb_nig_normal_models SET mu = :mu, sigma = :sigma
+            UPDATE bayesdb_nig_normal_model SET mu = :mu, sigma = :sigma
                 WHERE generator_id = :generator_id
                     AND colno = :colno
                     AND modelno = :modelno
@@ -175,14 +176,14 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
     def _set_models(self, bdb, generator_id, modelnos, sql):
         collect_stats_sql = '''
             SELECT colno, count, sum, sumsq FROM
-                bayesdb_nig_normal_columns WHERE generator_id = ?
+                bayesdb_nig_normal_column WHERE generator_id = ?
         '''
         with bdb.savepoint():
             cursor = bdb.sql_execute(collect_stats_sql, (generator_id,))
             for (colno, count, xsum, sumsq) in cursor:
                 stats = (count, xsum, sumsq)
                 for modelno in modelnos:
-                    (mu, sig) = self._gibbs_step_params(hardcoded_hypers, stats)
+                    (mu, sig) = self._gibbs_step_params(self.hypers, stats)
                     bdb.sql_execute(sql, {
                         'generator_id': generator_id,
                         'colno': colno,
@@ -193,11 +194,11 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
 
     def _modelnos(self, bdb, generator_id):
         modelnos_sql = '''
-            SELECT DISTINCT modelno FROM bayesdb_nig_normal_models
+            SELECT DISTINCT modelno FROM bayesdb_nig_normal_model
                 WHERE generator_id = ?
         '''
         with bdb.savepoint():
-            return [item[0] for item in bdb.sql_execute(modelnos_sql, \
+            return [modelno for (modelno,) in bdb.sql_execute(modelnos_sql,
                 (generator_id,))]
 
     def simulate_joint(self, bdb, generator_id, targets, _constraints,
@@ -218,10 +219,12 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                     for (_, colno) in targets]
 
     def _model_mus_sigmas(self, bdb, generator_id, modelno):
+        # TODO Filter in the database by the columns I will actually use?
+        # TODO Cache the results using bdb.cache?
         params_sql = '''
-            SELECT colno, mu, sigma FROM bayesdb_nig_normal_models
+            SELECT colno, mu, sigma FROM bayesdb_nig_normal_model
                 WHERE generator_id = ? AND modelno = ?
-        ''' # TODO Filter in the database by the columns I will actually use?
+        '''
         cursor = bdb.sql_execute(params_sql, (generator_id, modelno))
         mus = {}
         sigmas = {}
@@ -236,15 +239,16 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # Note: The constraints are irrelevant for the same reason as
         # in simulate_joint.
         (all_mus, all_sigmas) = self._all_mus_sigmas(bdb, generator_id)
-        return logsumexp([sum(logpdfOne(value, all_mus[modelno][colno],
-                                        all_sigmas[modelno][colno])
-                              for (_, colno, value) in targets)
-                          for modelno in all_mus.keys()]) \
-               - math.log(len(all_mus.keys()))
+        def model_log_pdf(modelno):
+            return sum(logpdf_gaussian(value, all_mus[modelno][colno],
+                           all_sigmas[modelno][colno])
+                       for (_, colno, value) in targets)
+        modelwise = [model_log_pdf(m) for m in sorted(all_mus.keys())]
+        return util.logmeanexp(modelwise)
 
     def _all_mus_sigmas(self, bdb, generator_id):
         params_sql = '''
-            SELECT colno, modelno, mu, sigma FROM bayesdb_nig_normal_models
+            SELECT colno, modelno, mu, sigma FROM bayesdb_nig_normal_model
                 WHERE generator_id = :generator_id
         ''' # TODO Filter in the database by the columns I will actually use?
         with bdb.savepoint():
@@ -269,10 +273,10 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # there is no per-row latent structure, I will just treat all
         # row ids as fresh and not keep track of it.
         update_sql = '''
-        UPDATE bayesdb_nig_normal_columns
-            SET count = count + 1, sum = sum + :x, sumsq = sumsq + :xsq
-            WHERE generator_id = :generator_id
-                AND colno = :colno
+            UPDATE bayesdb_nig_normal_column
+                SET count = count + 1, sum = sum + :x, sumsq = sumsq + :xsq
+                WHERE generator_id = :generator_id
+                    AND colno = :colno
         '''
         with bdb.savepoint():
             bdb.sql_execute(update_sql, {
@@ -285,10 +289,10 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
     def remove(self, bdb, generator_id, item):
         (_, colno, value) = item
         update_sql = '''
-        UPDATE bayesdb_nig_normal_columns
-            SET count = count - 1, sum = sum - :x, sumsq = sumsq - :xsq
-            WHERE generator_id = :generator_id
-                AND colno = :colno
+            UPDATE bayesdb_nig_normal_column
+                SET count = count - 1, sum = sum - :x, sumsq = sumsq - :xsq
+                WHERE generator_id = :generator_id
+                    AND colno = :colno
         '''
         with bdb.savepoint():
             bdb.sql_execute(update_sql, {
@@ -301,11 +305,11 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
     def infer(self, *args): return self.analyze_models(*args)
 
     def _gibbs_step_params(self, hypers, stats):
-        # This is UNigNormalAAALKernel.simulate packaged differently.
+        # This is Venture's UNigNormalAAALKernel.simulate packaged differently.
         (mn, Vn, an, bn) = posterior_hypers(hypers, stats)
-        newSigma2 = self._inv_gamma(an, bn)
-        newMu = self.prng.gauss(mn, math.sqrt(newSigma2*Vn))
-        ans = (newMu, math.sqrt(newSigma2))
+        new_var = self._inv_gamma(an, bn)
+        new_mu = self.prng.gauss(mn, math.sqrt(new_var*Vn))
+        ans = (new_mu, math.sqrt(new_var))
         return ans
 
     def _inv_gamma(self, shape, scale):
@@ -313,33 +317,32 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
 
 HALF_LOG2PI = 0.5 * math.log(2 * math.pi)
 
-def logpdfOne(x, mu, sigma):
+def logpdf_gaussian(x, mu, sigma):
     deviation = x - mu
     ans = - math.log(sigma) - HALF_LOG2PI \
         - (0.5 * deviation * deviation / (sigma * sigma))
     return ans
 
 def data_suff_stats(bdb, table, column_name):
-    gather_data_sql_pat = '''
-        SELECT %s FROM %s
-    '''
     qt = sqlite3_quote_name(table)
     qcn = sqlite3_quote_name(column_name)
     # TODO Do this computation inside the database?
-    gather_data_sql = gather_data_sql_pat % (qcn, qt)
+    gather_data_sql = '''
+        SELECT %s FROM %s
+    ''' % (qcn, qt)
     cursor = bdb.sql_execute(gather_data_sql)
     count = 0
     xsum = 0
     sumsq = 0
-    for item in cursor:
+    for (item,) in cursor:
         count += 1
         xsum += item
         sumsq += item * item
     return (count, xsum, sumsq)
 
 def posterior_hypers(hypers, stats):
-    # This is CNigNormalOutputPSP.posteriorHypersNumeric packaged
-    # differently.
+    # This is Venture's CNigNormalOutputPSP.posteriorHypersNumeric
+    # packaged differently.
     (m, V, a, b) = hypers
     [ctN, xsum, xsumsq] = stats
     Vn = 1 / (1.0/V + ctN)
@@ -348,7 +351,3 @@ def posterior_hypers(hypers, stats):
     bn = b + 0.5*(m**2/float(V) + xsumsq - mn**2/Vn)
     ans = (mn, Vn, an, bn)
     return ans
-
-def logsumexp(array):
-    m = max(array)
-    return m + math.log(sum(math.exp(a - m) for a in array))

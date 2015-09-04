@@ -42,9 +42,10 @@ class StdNormalMetamodel(metamodel.IBayesDBMetamodel):
         self.prng = random.Random(seed)
     def name(self): return 'std_normal'
     def register(self, bdb):
-        sql = '''INSERT INTO bayesdb_metamodel (name, version)
-                 VALUES ('std_normal', 1)'''
-        bdb.sql_execute(sql)
+        bdb.sql_execute('''
+            INSERT INTO bayesdb_metamodel (name, version)
+                VALUES ('std_normal', 1)
+        ''')
     def create_generator(self, bdb, table, schema, instantiate):
         instantiate(schema)
     def drop_generator(self, *args, **kwargs): pass
@@ -53,17 +54,17 @@ class StdNormalMetamodel(metamodel.IBayesDBMetamodel):
     def drop_models(self, *args, **kwargs): pass
     def analyze_models(self, *args, **kwargs): pass
     def simulate_joint(self, _bdb, _generator_id, targets, _constraints,
-                       modelnos=None):
+            modelnos=None):
         return [self.prng.gauss(0, 1) for _ in targets]
     def logpdf(self, _bdb, _generator_id, targets, _constraints):
-        return sum(logpdfOne(value, 0, 1) for (_, _, value) in targets)
+        return sum(logpdf_gaussian(value, 0, 1) for (_, _, value) in targets)
     def insert(self, *args, **kwargs): pass
     def remove(self, *args, **kwargs): pass
     def infer(self, *args, **kwargs): pass
 
 HALF_LOG2PI = 0.5 * math.log(2 * math.pi)
 
-def logpdfOne(x, mu, sigma):
+def logpdf_gaussian(x, mu, sigma):
     deviation = x - mu
     return - math.log(sigma) - HALF_LOG2PI \
         - (0.5 * deviation * deviation / (sigma * sigma))

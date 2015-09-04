@@ -52,7 +52,6 @@ simulators. JASA, 2004.
 http://qed.econ.queensu.ca/pub/faculty/ferrall/quant/papers/04_04_29_geweke.pdf
 
 [2] https://hips.seas.harvard.edu/blog/2013/06/10/testing-mcmc-code-part-2-integration-tests/
-
 """
 
 import math
@@ -60,6 +59,7 @@ import math
 import bayeslite.core as core
 import bayeslite.ast as ast
 import bayeslite.bql as bql
+import bayeslite.util as util
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
 def create_empty_table(bdb, column_names):
@@ -67,7 +67,6 @@ def create_empty_table(bdb, column_names):
 
     Give all the columns a NUMERIC data type in the underlying SQL.
     Return the name of the new table.
-
     """
     table = bdb.temp_table_name()
     qt = sqlite3_quote_name(table)
@@ -78,21 +77,14 @@ def create_empty_table(bdb, column_names):
     return table
 
 def create_generator(bdb, table, target_metamodel, schema):
-    """Programmatically create a generator.
+    """Create a generator.
 
-    :param BayesDB bdb: The Bayeslite handle where to do this.
-
-    :param string table: The name (not quoted) of the table wherewith
-        this generator should be associated.
-
-    :param IBayesDBMetamodel target_metamodel: The metamodel object
-        for which to create a generator.
-
+    :param BayesDB bdb: The BayesDB instance.
+    :param string table: Name of table for generator.
+    :param IBayesDBMetamodel target_metamodel: Metamodel for generator.
     :param list schema: A valid schema for that metamodel.
-
     :return: A :class:`Generator` representing the resulting
         generator.
-
     """
     gen_name = bdb.temp_table_name()
     phrase = ast.CreateGen(default = True,
@@ -119,7 +111,6 @@ class Generator(object):
     Knows its Bayeslite handle, its metamodel, its generator_id, and
     its name, and forwards methods to its metamodel, supplying the
     former two as additional arguments.
-
     """
     def __init__(self, bdb, metamodel, generator_id, name):
         self.bdb = bdb
@@ -171,117 +162,69 @@ def create_geweke_chain_gen(bdb, target_metamodel, schema, column_names,
     return geweke_chain_gen
 
 def kl_est_sample(from_gen, of_gen, target_cells, constraints):
+    """Estimate Kullback-Liebler divergence of ``of_gen`` from ``from_gen``.
+
+    Specifically, let P be the distribution over the given target
+    cells induced by the generator ``from_gen`` conditioned on the
+    constraints, and let Q be same induced by the ``of_gen`` generator.
+    This function computes and returns a one-point
+    Monte-Carlo estimate of the K-L of Q from P.
+    """
     data = from_gen.simulate_joint(target_cells, constraints)
     targeted_data = [(i, j, x) for ((i, j), x) in zip(target_cells, data)]
     from_assessment = from_gen.logpdf(targeted_data, constraints)
     of_assessment   =   of_gen.logpdf(targeted_data, constraints)
     return from_assessment - of_assessment
 
-def gauss_suff_stats(data):
-    """From https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+def estimate_mean(samples):
+    """Estimate the mean of a distribution from samples.
 
-    This is the "Online algorithm" by Knuth."""
-    n = 0
-    mean = 0.0
-    total_deviance = 0.0 # n * sigma^2
+    Return the triple (count, mean, error).
 
-    for x in data:
-        n = n + 1
-        delta = x - mean
-        mean = mean + delta/n
-        total_deviance = total_deviance + delta*(x - mean)
+    ``count`` is the number of input samples.
 
-    if n < 1:
-        return (n, mean, 0.0)
-    else:
-        return (n, mean, math.sqrt(total_deviance / float(n)))
+    ``mean`` is the mean of the samples, which estimates the true mean
+    of the distribution.
 
-def estimate_kl(from_gen, of_gen, target_cells, constraints, kl_samples,
-                self_check=None):
-    """Estimate Kullback-Liebler divergence from ``from_gen`` to ``to_gen``.
-
-    Specifically, let P be the distribution over the given target
-    cells induced by the generator ``from_gen`` conditioned on the
-    constraints, and let Q be same induced by the ``of_gen`` generator.
-    This function computes and returns a ``kl_samples``-point
-    Monte-Carlo estimate of the K-L of Q from P, in the form of a
-    triple: (num_samples, estimate, estimated error of estimate).  The
-    error estimate is computed from the variance of the individual
-    point estimates of K-L, on the assumtion that ``kl_samples`` are
-    high enough that the distribution on the retuned ``estimate`` is
-    Gaussian (as it must become, by the Central Limit Theorem)
-    (provided the appropriate moments exist, which we assume is so).
-
-    The ``self_check`` parameter, if supplied, requests a self-check
-    report, as follows: Break the ``kl_samples`` samples into
-    ``self_check`` independent batches (of size
-    ``kl_samples/self_check``), and compute and print the count, mean,
-    and error estimate for each batch.  If the resulting means differ
-    by significantly more than 2-3x their error estimates, the Central
-    Limit Theorem does not dominate yet, and more samples may be in
-    order.
-
+    ``error`` is an estimate of the standard deviation of the returned
+    ``mean``.  This is computed from the variance of the input
+    samples, on the assumption that the Central Limit Theorem
+    applies.  This is will be so if the underlying distribution has
+    a finite variance, and enough samples were drawn.
     """
-
-    estimates = [kl_est_sample(from_gen, of_gen, target_cells, constraints)
-                 for _ in range(kl_samples)]
-    (n, mean, stddev) = gauss_suff_stats(estimates)
-    if self_check is not None:
-        for i in range(self_check):
-            start = i * kl_samples / self_check
-            stop = (i+1) * kl_samples / self_check
-            (ni, meani, stddevi) = gauss_suff_stats(estimates[start:stop])
-            print "Monte Carlo self check: %4d samples estimate %9.5f " \
-                "with error %9.5f" % (ni, meani, stddevi / math.sqrt(ni))
+    (n, mean, stddev) = util.gauss_suff_stats(samples)
     return (n, mean, stddev / math.sqrt(n))
 
 def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells,
-              prior_samples, geweke_samples, geweke_iterates, kl_samples,
-              kl_self_check=None):
+              prior_samples, geweke_samples, geweke_iterates, kl_samples):
     """The Kullback-Leibler divergence of a Geweke chain from the prior.
 
     :param BayesDB bdb: Bayeslite database handle where to do the
         test.
-
     :param string metamodel_name: Name of the metamodel to test.  Must
         already be registered with ``bdb``.
-
     :param list schema: A valid parsed schema for the metamodel to
         test.  This will be used as the schema with which test
         generators are instantiated.
-
     :param list column_names: A list of the names to give to the
         columns of the test data table.  This is somewhat redundant
         with the schema, but cannot actually be derived from it in
         general.
-
     :param list target_cells: A list of (row_id, col_id) pairs, which
-        are the cells to synthesize during the test.  You might want
-        to specify more than one row to test the joint distribution
-        across rows, and to test consistency of inference in the
-        presence of larger amounts of (still synthetic) data.
-
+        are the cells to jointly synthesize during the test.
     :param int prior_samples: The number of models to instantiate for
         the prior distribution.
-
     :param int geweke_samples: The number of independent Geweke chains
         to instantiate.
-
     :param int geweke_iterates: The number of times to generate
         synthetic data and learn from it.  This is K from the main
         exposition.
-
     :param int kl_samples: The number of samples to use for the Monte
         Carlo estimate of the K-L divergence.
-
-    :param int kl_self_check: Granularity of self-checking of the
-        Monte Carlo estimate of the K-L divergence.  See
-        :func:`estimate_kl`.  Skip the self-check if None.
-
     :return: A 3-tuple giving information about the Monte Carlo
         estimate of the K-L divergence: The number of samples used to
         form the estimate, the estimate, and the predicted standard
-        deviation of the estimate.  See :func:`estimate_kl`.
+        deviation of the estimate.  See :func:`estimate_mean`.
 
     The ``metamodel_name``, ``schema``, ``column_names``, and
     ``target_cells`` parameters define an exact probability
@@ -326,12 +269,24 @@ def geweke_kl(bdb, metamodel_name, schema, column_names, target_cells,
     aid.  If a problem is indicated, do not try to divine what it is
     from the pattern of reported K-L divergences.  Instrument your
     model, plot quantities of interest, turn off various parts, etc.
+    """
+    ests = geweke_kl_samples(bdb, metamodel_name, schema, column_names,
+        target_cells, prior_samples, geweke_samples, geweke_iterates,
+        kl_samples)
+    return estimate_mean(ests)
 
+def geweke_kl_samples(bdb, metamodel_name, schema, column_names, target_cells,
+        prior_samples, geweke_samples, geweke_iterates, kl_samples):
+    """The raw samples for a Geweke K-L estimate.
+
+    See :func:`geweke_kl`.  This is useful for testing whether the
+    Central Limit Theorem dominates the error of Monte Carlo
+    estimation of the K-L.
     """
     target_metamodel = bdb.metamodels[metamodel_name]
     prior_gen = create_prior_gen(bdb, target_metamodel, schema, column_names, \
         prior_samples)
     geweke_chain_gen = create_geweke_chain_gen(bdb, target_metamodel, schema, \
         column_names, target_cells, geweke_samples, geweke_iterates)
-    return estimate_kl(prior_gen, geweke_chain_gen, target_cells, [], \
-        kl_samples, self_check=kl_self_check)
+    return [kl_est_sample(prior_gen, geweke_chain_gen, target_cells, [])
+            for _ in range(kl_samples)]
