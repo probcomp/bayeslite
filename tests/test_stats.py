@@ -160,3 +160,16 @@ def test_t_cdf():
     
     # Test against reference very close to zero.
     assert abserr(.346437e-4, stats.chi2_sf(193,121)) < .01
+
+def test_gauss_suff_stats():
+    # High mean, tiny variance would lead to catastrophic cancellation
+    # in a naive implementation that maintained the sum of squares.
+    big = 400
+    small = 0.0000001
+    data = [big - small, big, big + small]
+    true_sigma = math.sqrt(2 * small**2 / 3)
+    (ct, mean, sigma) = stats.gauss_suff_stats(data)
+    print sigma, true_sigma
+    assert ct == 3
+    assert mean == big
+    assert abs(sigma - true_sigma)/true_sigma < 1e-5
