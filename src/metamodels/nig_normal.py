@@ -36,7 +36,7 @@ from bayeslite.sqlite3_util import sqlite3_quote_name
 nig_normal_schema_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('nig_normal', 1);
 
-CREATE TABLE bayesdb_nig_normal_columns (
+CREATE TABLE bayesdb_nig_normal_column (
     generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
     colno       INTEGER NOT NULL,
     count       INTEGER NOT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE bayesdb_nig_normal_columns (
         REFERENCES bayesdb_generator_column(generator_id, colno)
 );
 
-CREATE TABLE bayesdb_nig_normal_models (
+CREATE TABLE bayesdb_nig_normal_model (
     generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
     colno           INTEGER NOT NULL,
     modelno         INTEGER NOT NULL,
@@ -57,7 +57,7 @@ CREATE TABLE bayesdb_nig_normal_models (
     FOREIGN KEY(generator_id, modelno)
         REFERENCES bayesdb_generator_model(generator_id, modelno),
     FOREIGN KEY(generator_id, colno)
-        REFERENCES bayesdb_nig_normal_columns(generator_id, colno)
+        REFERENCES bayesdb_nig_normal_column(generator_id, colno)
 );
 '''
 
@@ -105,7 +105,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # The schema is the column list. May want to change this later
         # to make room for specifying the hyperparameters, etc.
         insert_column_sql = '''
-            INSERT INTO bayesdb_nig_normal_columns
+            INSERT INTO bayesdb_nig_normal_column
                 (generator_id, colno, count, sum, sumsq)
                 VALUES (:generator_id, :colno, :count, :sum, :sumsq)
         '''
@@ -129,14 +129,14 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         with bdb.savepoint():
             self.drop_models(bdb, generator_id)
             delete_columns_sql = '''
-                DELETE FROM bayesdb_nig_normal_columns
+                DELETE FROM bayesdb_nig_normal_column
                     WHERE generator_id = ?
             '''
             bdb.sql_execute(delete_columns_sql, (generator_id,))
 
     def initialize_models(self, bdb, generator_id, modelnos, model_config):
         insert_sample_sql = '''
-            INSERT INTO bayesdb_nig_normal_models
+            INSERT INTO bayesdb_nig_normal_model
                 (generator_id, colno, modelno, mu, sigma)
                 VALUES (:generator_id, :colno, :modelno, :mu, :sigma)
         '''
@@ -146,13 +146,13 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         with bdb.savepoint():
             if modelnos is None:
                 delete_models_sql = '''
-                    DELETE FROM bayesdb_nig_normal_models
+                    DELETE FROM bayesdb_nig_normal_model
                         WHERE generator_id = ?
                 '''
                 bdb.sql_execute(delete_models_sql, (generator_id,))
             else:
                 delete_models_sql = '''
-                    DELETE FROM bayesdb_nig_normal_models
+                    DELETE FROM bayesdb_nig_normal_model
                         WHERE generator_id = ? AND modelno = ?
                 '''
                 for modelno in modelnos:
@@ -163,7 +163,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # Ignore analysis timing control, because one step reaches the
         # posterior anyway.
         update_sample_sql = '''
-            UPDATE bayesdb_nig_normal_models SET mu = :mu, sigma = :sigma
+            UPDATE bayesdb_nig_normal_model SET mu = :mu, sigma = :sigma
                 WHERE generator_id = :generator_id
                     AND colno = :colno
                     AND modelno = :modelno
@@ -177,7 +177,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
     def _set_models(self, bdb, generator_id, modelnos, sql):
         collect_stats_sql = '''
             SELECT colno, count, sum, sumsq FROM
-                bayesdb_nig_normal_columns WHERE generator_id = ?
+                bayesdb_nig_normal_column WHERE generator_id = ?
         '''
         with bdb.savepoint():
             cursor = bdb.sql_execute(collect_stats_sql, (generator_id,))
@@ -195,7 +195,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
 
     def _modelnos(self, bdb, generator_id):
         modelnos_sql = '''
-            SELECT DISTINCT modelno FROM bayesdb_nig_normal_models
+            SELECT DISTINCT modelno FROM bayesdb_nig_normal_model
                 WHERE generator_id = ?
         '''
         with bdb.savepoint():
@@ -223,7 +223,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # TODO Filter in the database by the columns I will actually use?
         # TODO Cache the results using bdb.cache?
         params_sql = '''
-            SELECT colno, mu, sigma FROM bayesdb_nig_normal_models
+            SELECT colno, mu, sigma FROM bayesdb_nig_normal_model
                 WHERE generator_id = ? AND modelno = ?
         '''
         cursor = bdb.sql_execute(params_sql, (generator_id, modelno))
@@ -249,7 +249,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
 
     def _all_mus_sigmas(self, bdb, generator_id):
         params_sql = '''
-            SELECT colno, modelno, mu, sigma FROM bayesdb_nig_normal_models
+            SELECT colno, modelno, mu, sigma FROM bayesdb_nig_normal_model
                 WHERE generator_id = :generator_id
         ''' # TODO Filter in the database by the columns I will actually use?
         with bdb.savepoint():
@@ -274,7 +274,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # there is no per-row latent structure, I will just treat all
         # row ids as fresh and not keep track of it.
         update_sql = '''
-            UPDATE bayesdb_nig_normal_columns
+            UPDATE bayesdb_nig_normal_column
                 SET count = count + 1, sum = sum + :x, sumsq = sumsq + :xsq
                 WHERE generator_id = :generator_id
                     AND colno = :colno
@@ -290,7 +290,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
     def remove(self, bdb, generator_id, item):
         (_, colno, value) = item
         update_sql = '''
-            UPDATE bayesdb_nig_normal_columns
+            UPDATE bayesdb_nig_normal_column
                 SET count = count - 1, sum = sum - :x, sumsq = sumsq - :xsq
                 WHERE generator_id = :generator_id
                     AND colno = :colno
