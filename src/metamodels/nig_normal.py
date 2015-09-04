@@ -334,7 +334,7 @@ def data_suff_stats(bdb, table, column_name):
     count = 0
     xsum = 0
     sumsq = 0
-    for item in cursor:
+    for (item,) in cursor:
         count += 1
         xsum += item
         sumsq += item * item
