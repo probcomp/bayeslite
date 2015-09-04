@@ -61,8 +61,6 @@ CREATE TABLE bayesdb_nig_normal_model (
 );
 '''
 
-fixed_hypers = (0, 1, 1, 1)
-
 class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
     """Normal-Inverse-Gamma-Normal metamodel for BayesDB.
 
@@ -75,7 +73,8 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
 
     """
 
-    def __init__(self, seed=0):
+    def __init__(self, hypers=(0, 1, 1, 1), seed=0):
+        self.hypers = hypers
         self.prng = random.Random(seed)
 
     def name(self): return 'nig_normal'
@@ -184,7 +183,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             for (colno, count, xsum, sumsq) in cursor:
                 stats = (count, xsum, sumsq)
                 for modelno in modelnos:
-                    (mu, sig) = self._gibbs_step_params(fixed_hypers, stats)
+                    (mu, sig) = self._gibbs_step_params(self.hypers, stats)
                     bdb.sql_execute(sql, {
                         'generator_id': generator_id,
                         'colno': colno,
