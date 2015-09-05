@@ -18,6 +18,7 @@
 
 import math
 
+from bayeslite.math_util import gamma_above
 from bayeslite.util import float_sum
 
 def arithmetic_mean(array):
@@ -133,21 +134,14 @@ def t_cdf(x, df):
     return numpy.sum(T < x) / MONTE_CARLO_SAMPLES
 
 def chi2_sf(x, df):
-    """Approximate survival function for chi^2 distribution.
-
-    ``chi2_sf(x, df) = P(chi^2_df > x)``
-    """
-    import numpy
-
+    """Survival function for chi^2 distribution."""
     if df <= 0:
-        raise ValueError('Degrees of freedom must be positive.')
-    if x <= 0:
-        return 1.0
-
-    MONTE_CARLO_SAMPLES = 5e5
-    random = numpy.random.RandomState(seed=0)
-    CHI = random.chisquare(df, size=MONTE_CARLO_SAMPLES)
-    return numpy.sum(CHI > x) / MONTE_CARLO_SAMPLES
+        raise ValueError('Nonpositive df: %f' % (df,))
+    if x < 0:
+        return 1.
+    x = float(x)
+    df = float(df)
+    return gamma_above(df/2., x/2.)
 
 def f_sf(x, df_num, df_den):
     """Approximate survival function for the F distribution.

@@ -71,7 +71,7 @@ def test_correlation():
         assert list(bdb.execute('ESTIMATE PAIRWISE CORRELATION, CORRELATION '
             'PVALUE from t_cc where name0 < name1')) == \
             [
-                (2, 'c0', 'c1', 1., 0.),
+                (2, 'c0', 'c1', 1., 2.900863120340446e-12),
                 (2, 'c0', 'cx', None, None),
                 (2, 'c0', 'cy', None, None),
                 (2, 'c0', 'n0', 1., 0.),
