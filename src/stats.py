@@ -61,16 +61,11 @@ def signum(x):
     else:
         return 0
 
-def chi2_contingency(contingency, correction=None):
+def chi2_contingency(contingency):
     """Pearson chi^2 test of independence statistic on contingency table.
 
     https://en.wikipedia.org/wiki/Pearson%27s_chi-squared_test#Test_of_independence
-
-    With ``correction=True``, apply Yates' correction: move each
-    observation count in the direction of the expectation by 1/2.
     """
-    if correction is None:
-        correction = False
     assert 0 < len(contingency)
     assert all(all(isinstance(v, int) for v in row) for row in contingency)
     n = float(sum(sum(row) for row in contingency))
@@ -84,8 +79,6 @@ def chi2_contingency(contingency, correction=None):
     def q(i0, i1):
         O = contingency[i0][i1]
         E = n*p0[i0]*p1[i1]
-        if correction:
-            O += 0.5*signum(E - O)
         return ((O - E)**2)/E
     return float_sum(q(i0, i1) for i0 in range(n0) for i1 in range(n1))
 
