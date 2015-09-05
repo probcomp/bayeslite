@@ -19,16 +19,7 @@ import pytest
 
 import bayeslite.stats as stats
 
-def relerr(expected, actual):
-    """Computes the absolute relative error between `expected` and `actual`.
-
-    :param float expected: The expected value.
-    :param float actual: The actual value.
-
-    :return: ``abs((actual-expected)/expected)``
-    :rtype: float
-    """
-    return abs((actual - expected)/expected)
+from bayeslite.math_util import relerr
 
 def abserr(expected, actual):
     """Computes the absolute error between `expected` and `actual`.
@@ -173,4 +164,4 @@ def test_gauss_suff_stats():
     print sigma, true_sigma
     assert ct == 3
     assert mean == big
-    assert abs(sigma - true_sigma)/true_sigma < 1e-5
+    assert relerr(true_sigma, sigma) < 1e-5
