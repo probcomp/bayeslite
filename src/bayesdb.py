@@ -35,8 +35,11 @@ def bayesdb_open(pathname=None, do_version_check=None):
     BayesDB instance is created.
     """
     if do_version_check is None:
-        raise ValueError('do_version_check must be set to true or false to check version online. We recommend setting to true and only running the latest software.')
-    # TODO: A way to be pleasant when the person wants to use the old version.
+        raise ValueError('''
+              do_version_check must be set explicitly to True or False.
+              We recommend setting to True to check your version is up to date,
+              and only running the latest version of BayesDB.
+        ''')
     if do_version_check:
         version_check()
     return BayesDB(bayesdb_open_cookie, pathname=pathname)
@@ -213,7 +216,6 @@ def version_check():
     try:
         r = requests.post(SERVICE, data=payload, timeout=1)
         if r.status_code == 200 and r.json.result != "current":
-            # TODO: Should we be throwing instead?
             print 'Bayeslite is not up to date. Version %s is available.\nSee %s' % (r.json.version, r.json.url)
     except:
         # Silently eat exceptions.
