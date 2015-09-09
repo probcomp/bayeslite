@@ -155,9 +155,6 @@ constraint(c)		::= column_name(col) T_EQ expression(value).
 query(select)		::= select(q).
 query(estimate)		::= estimate(q).
 query(estby)		::= estby(q).
-query(estcols)		::= estcols(q).
-query(estpaircols)	::= estpaircols(q).
-query(estpairrow)	::= estpairrow(q).
 query(infer)		::= infer(q).
 query(simulate)		::= simulate(q).
 /*
@@ -169,14 +166,14 @@ query(create_column_list)
 
 /* XXX Support WITH ... SELECT ... (i.e., common table expressions).  */
 select(s)		::= K_SELECT select_quant(quant) select_columns(cols)
-				from(tabs)
+				from_sel_opt(tabs)
 				where(cond)
 				group_by(grouping)
 				order_by(ord)
 				limit_opt(lim).
 
 estimate(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
-				K_FROM generator_name(generator)
+				from_est(tabs)
 				usingmodel_opt(modelno)
 				where(cond)
 				group_by(grouping)
@@ -186,56 +183,6 @@ estimate(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
 estby(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
 				K_BY generator_name(generator)
 				usingmodel_opt(modelno).
-
-/*
- * XXX Can we reformulate this elegantly as a SELECT on the columns of
- * the generator?
- *
- * XXX There are two rules for estcols, rather than an auxiliary
- * nonterminal estcols_columns_opt, to work around what appears to be
- * a bug in lemonade.  *@!&#^$!@&*
- */
-estcols(nocols)		::= K_ESTIMATE K_COLUMNS
-				K_FROM generator_name(generator)
-				usingmodel_opt(modelno)
-				where(cond) order_by(ord) limit_opt(lim).
-estcols(cols)		::= K_ESTIMATE K_COLUMNS estcols_columns(cols)
-				K_FROM generator_name(generator)
-				usingmodel_opt(modelno)
-				where(cond) order_by(ord) limit_opt(lim).
-
-estcols_columns(one)	::= estcols_column(col).
-estcols_columns(many)	::= estcols_columns(cols) T_COMMA estcols_column(col).
-
-estcols_column(ec)	::= expression(e) as(name).
-
-/*
- * XXX This is really just a SELECT on the join of the generator's
- * list of columns with itself.
- */
-estpaircols(e)		::= K_ESTIMATE K_PAIRWISE estpaircols_columns(cols)
-				K_FROM generator_name(generator) for(subcols)
-				usingmodel_opt(modelno)
-				where(cond) order_by(ord) limit_opt(lim).
-
-estpaircols_columns(one)	::= estpaircols_column(col).
-estpaircols_columns(many)	::= estpaircols_columns(cols) T_COMMA
-					estpaircols_column(col).
-
-estpaircols_column(epc)	::= expression(e) as(name).
-
-/*
- * XXX This is really just a SELECT on the join of the table with
- * itself.
- *
- * XXX Support multiple column output?  Not clear that's worthwhile at
- * the moment: the only thing it is sensible to do here right now is
- * SIMILARITY.
- */
-estpairrow(e)		::= K_ESTIMATE K_PAIRWISE K_ROW expression(e)
-				K_FROM generator_name(generator)
-				usingmodel_opt(modelno)
-				where(cond) order_by(ord) limit_opt(lim).
 
 infer(auto)		::= K_INFER infer_auto_columns(cols)
 				withconf_opt(conf)
@@ -284,8 +231,14 @@ select_column(exp)	::= expression(e) as(name).
 as(none)		::= .
 as(some)		::= K_AS L_NAME(name).
 
-from(empty)		::= .
-from(nonempty)		::= K_FROM select_tables(tables).
+from_sel_opt(empty)	::= .
+from_sel_opt(nonempty)	::= K_FROM select_tables(tables).
+
+from_est(row)		::= K_FROM generator_name(name).
+from_est(pairrow)	::= K_FROM K_PAIRWISE generator_name(name).
+from_est(col)		::= K_FROM K_COLUMNS K_OF generator_name(name).
+from_est(paircol)	::= K_FROM K_PAIRWISE K_COLUMNS K_OF
+				generator_name(name) for(subcols).
 
 /*
  * XXX This mechanism is completely wrong.  The set of models should
@@ -535,7 +488,7 @@ column_list(column)	::= column_name(col).
  * until we have that notion, are there any other kinds of subqueries
  * that make sense here?
  */
-column_list(subquery)	::= T_LROUND estcols(q) T_RROUND.
+column_list(subquery)	::= T_LROUND query(q) T_RROUND.
 
 primary(literal)	::= literal(v).
 primary(numpar)		::= L_NUMPAR(n).
