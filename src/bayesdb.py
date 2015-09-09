@@ -16,22 +16,29 @@
 
 import contextlib
 import sqlite3
+import requests
 
 import bayeslite.bql as bql
 import bayeslite.bqlfn as bqlfn
 import bayeslite.parse as parse
 import bayeslite.schema as schema
 import bayeslite.txn as txn
+import bayeslite.version
 
 bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
 
-def bayesdb_open(pathname=None):
+def bayesdb_open(pathname=None, do_version_check=None):
     """Open the BayesDB in the file at `pathname`.
 
     If there is no file at `pathname`, it is automatically created.
     If `pathname` is unspecified or ``None``, a temporary in-memory
     BayesDB instance is created.
     """
+    if do_version_check is None:
+        raise ValueError('do_version_check must be set to true or false to check version online. We recommend setting to true and only running the latest software.')
+    # TODO: A way to be pleasant when the person wants to use the old version.
+    if do_version_check:
+        version_check()
     return BayesDB(bayesdb_open_cookie, pathname=pathname)
 
 class BayesDB(object):
@@ -190,3 +197,24 @@ class BayesDB(object):
         n = self.temptable
         self.temptable += 1
         return 'bayesdb_temp_%u' % (n,)
+
+def version_check():
+    '''check the version online'''
+    SERVICE = 'https://2wh8htmfnj.execute-api.us-east-1.amazonaws.com/prod/bdbVersionCheck'
+    # arg: {'package':'bayeslite','version':'something','build':'something-else'}
+    # response: {'result':'current'} or
+    # {'result':'old', 'message':'A newer version of bayeslite is available',
+    #  'version':'0.5','url':'http://probcomp.org/bayesdb/release'}
+
+    payload = {'package': 'bayeslite',
+               'version': bayeslite.version.__version__
+               }
+    # TODO: It would be nice to be async about this. Set 1 second timeout.
+    try:
+        r = requests.post(SERVICE, data=payload, timeout=1)
+        if r.status_code == 200 and r.json.result != "current":
+            # TODO: Should we be throwing instead?
+            print 'Bayeslite is not up to date. Version %s is available.\nSee %s' % (r.json.version, r.json.url)
+    except:
+        # Silently eat exceptions.
+        pass
