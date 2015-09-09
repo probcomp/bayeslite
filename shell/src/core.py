@@ -17,7 +17,6 @@
 import StringIO
 import cmd
 import traceback
-import requests
 import sqlite3
 
 import bayeslite
@@ -67,12 +66,10 @@ class Shell(cmd.Cmd):
         self._installcmd('sql', self.dot_sql)
         self._installcmd('trace', self.dot_trace)
         self._installcmd('untrace', self.dot_untrace)
-        self._installcmd('versioncheck', self.dot_versioncheck)
 
         self._core_commands = set(self._cmds)
 
         self.hookvars = {}
-        self.done_version_check = False
 
     def _installcmd(self, name, method):
         assert not hasattr(self, 'do_.%s' % (name,))
@@ -646,57 +643,3 @@ class Shell(cmd.Cmd):
             self.stdout.write('       .describe generator(s) [<gen>...]\n')
             self.stdout.write('       .describe columns <gen>\n')
             self.stdout.write('       .describe model(s) <gen> [<model>...]\n')
-
-    def ask_default_yes(self, msg):
-        ans = raw_input(msg)
-        while ans not in ['', 'Y','y','N','n']:
-            ans = raw_input(msg)
-        return ans in ['','Y','y']
-
-    def dot_versioncheck(self, argsin):
-        '''check the version online
-        <yes/no/prompt> [rcfile]
-
-        Check the version, or don't check the version, or prompt and offer to
-        save in rcfile if this has not been called before'''
-        # XXX fails on filenames with spaces.
-        args = argsin.split()
-        if args[0] not in ['yes','no','prompt']:
-            self.stdout.write('Usage: .versioncheck <yes/no/prompt> [rcfile]')
-        if self.done_version_check and args[0] == 'prompt':
-            return
-        self.done_version_check = True
-        if args[0] == 'no':
-            return
-
-        if args[0] == 'prompt':
-            check = self.ask_default_yes('Check online if bayeslite is up to date (Y/n)? ')
-            self.do_version_check = check
-            remember = self.ask_default_yes('Save this setting in %s (Y/n)? ' % (args[1],))
-            if remember:
-                with open(args[1], 'a') as f:
-                    if check:
-                        f.write('.versioncheck yes\n')
-                    else:
-                        f.write('.versioncheck no\n')
-                        # And we are done, don't check.
-                        return
-
-        SERVICE = 'https://2wh8htmfnj.execute-api.us-east-1.amazonaws.com/prod/bdbVersionCheck'
-        # arg: {'package':'bayeslite','version':'something','build':'something-else'}
-        # response: {'result':'current'} or
-        # {'result':'old', 'message':'A newer version of bayeslite is available',
-        #  'version':'0.5','url':'http://probcomp.org/bayesdb/release'}
-
-        payload = {'package': 'bayeslite',
-                   'version': bayeslite.__version__
-                   }
-        # TODO: It would be nice to be async about this. Set 1 second timeout.
-        try:
-            r = requests.post(SERVICE, data=payload, timeout=1)
-            if r.status_code == 200 and r.json.result != "current":
-                self.stdout.write('Bayeslite is not up to date. Version %s is available.\n' % (r.json.version))
-                self.stdout.write('See %s' % (r.json.url,))
-        except:
-            # Silently eat exceptions.
-            pass

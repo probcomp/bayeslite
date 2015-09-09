@@ -34,10 +34,8 @@ def parse_args(argv):
     parser.add_argument('-f', '--file', type=str, nargs=1, default=None,
                         help="Path to commands file. May be used to specify a "
                         "project-specific init file.")
-    # XXX This -b thing seems to be ignored? Maybe delete it?
     parser.add_argument('-b', '--batch', action='store_true',
                         help="Exit after executing file specified with -f.")
-    # XXX Is that really what -q should mean? I would take away the short name.
     parser.add_argument('-q', '--no-init-file', action='store_true',
                         help="Do not load ~/.bayesliterc")
     parser.add_argument('-m', '--memory', action='store_true',
@@ -73,7 +71,6 @@ def run(stdin, stdout, stderr, argv):
             init_file = os.path.join(os.path.expanduser('~/.bayesliterc'))
             if os.path.isfile(init_file):
                 bdbshell.dot_read(init_file)
-            bdbshell.dot_versioncheck("prompt " + init_file)
 
         if args.file is not None:
             for path in args.file:
