@@ -56,7 +56,7 @@ def test_subsample():
             ' WHERE _rowid_ = 1 OR _rowid_ = 101'))
         list(bdb.execute('ESTIMATE PREDICTIVE PROBABILITY OF mdcr_spnd_amblnc'
             ' FROM dhacc WHERE _rowid_ = 1 OR _rowid_ = 101'))
-        list(bdb.execute('ESTIMATE PAIRWISE ROW SIMILARITY FROM dhacc'
+        list(bdb.execute('ESTIMATE SIMILARITY FROM PAIRWISE dhacc'
             ' WHERE (r0._rowid_ = 1 OR r0._rowid_ = 101) AND'
                 ' (r1._rowid_ = 1 OR r1._rowid_ = 101)'))
         list(bdb.execute('INFER mdcr_spnd_amblnc FROM dhacc'

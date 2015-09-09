@@ -295,9 +295,6 @@ class BQLSemantics(object):
     def p_query_select(self, q):                return q
     def p_query_estimate(self, q):              return q
     def p_query_estby(self, q):                 return q
-    def p_query_estcols(self, q):               return q
-    def p_query_estpaircols(self, q):           return q
-    def p_query_estpairrow(self, q):            return q
     def p_query_infer(self, q):                 return q
     def p_query_simulate(self, q):              return q
     def p_query_estimate_pairwise_row(self, q): return q
@@ -306,39 +303,13 @@ class BQLSemantics(object):
     def p_select_s(self, quant, cols, tabs, cond, grouping, ord, lim):
         return ast.Select(quant, cols, tabs, cond, grouping, ord, lim)
 
-    def p_estimate_e(self, quant, cols, generator, modelno, cond, grouping,
+    def p_estimate_e(self, quant, cols, tabs, modelno, cond, grouping,
             ord, lim):
-        return ast.Estimate(quant, cols, generator, modelno, cond, grouping,
-            ord, lim)
+        constructor = tabs
+        return constructor(quant, cols, modelno, cond, grouping, ord, lim)
 
     def p_estby_e(self, quant, cols, generator, modelno):
         return ast.EstBy(quant, cols, generator, modelno)
-
-    def p_estcols_nocols(self, generator, modelno, cond, ord, lim):
-        return ast.EstCols([], generator, modelno, cond, ord, lim)
-    def p_estcols_cols(self, cols, generator, modelno, cond, ord, lim):
-        return ast.EstCols(cols, generator, modelno, cond, ord, lim)
-
-    def p_estcols_columns_opt_none(self):       return []
-    def p_estcols_columns_opt_some(self, cols): return cols
-    def p_estcols_columns_one(self, col):       return [col]
-    def p_estcols_columns_many(self, cols, col): cols.append(col); return cols
-    def p_estcols_column_ec(self, e, name):     return (e, name)
-
-    def p_estpaircols_e(self, cols, generator, subcols, modelno, cond, ord,
-            lim):
-        return ast.EstPairCols(cols, generator, subcols, modelno, cond, ord,
-            lim)
-
-    def p_estpaircols_columns_one(self, col):
-        return [col]
-    def p_estpaircols_columns_many(self, cols, col):
-        cols.append(col); return cols
-    def p_estpaircols_column_epc(self, e, name):
-        return (e, name)
-
-    def p_estpairrow_e(self, e, generator, modelno, cond, ord, lim):
-        return ast.EstPairRow(e, generator, modelno, cond, ord, lim)
 
     def p_infer_auto(self, cols, conf, generator, modelno, cond, grouping,
             ord, lim):
@@ -386,8 +357,27 @@ class BQLSemantics(object):
     def p_as_none(self):                        return None
     def p_as_some(self, name):                  return name
 
-    def p_from_empty(self):                     return None
-    def p_from_nonempty(self, tables):          return tables
+    def p_from_sel_opt_empty(self):             return None
+    def p_from_sel_opt_nonempty(self, tables):  return tables
+
+    def p_from_est_row(self, name):
+        def c(quant, cols, modelno, cond, grouping, ord, lim):
+            return ast.Estimate(quant, cols, name, modelno, cond, grouping,
+                ord, lim)
+        return c
+    def p_from_est_pairrow(self, name):
+        def c(quant, cols, modelno, cond, grouping, ord, lim):
+            return ast.EstPairRow(cols, name, modelno, cond, ord, lim)
+        return c
+    def p_from_est_col(self, name):
+        def c(quant, cols, modelno, cond, grouping, ord, lim):
+            return ast.EstCols(cols, name, modelno, cond, ord, lim)
+        return c
+    def p_from_est_paircol(self, name, subcols):
+        def c(quant, cols, modelno, cond, grouping, ord, lim):
+            return ast.EstPairCols(cols, name, subcols, modelno, cond, ord,
+                lim)
+        return c
 
     def p_usingmodel_opt_all(self):
         return ast.ExpLit(ast.LitNull(None))

@@ -73,7 +73,7 @@ def test_complex_dependencies():
         # Prepare the checker function.
         def check_dependencies():
             bql = '''
-                ESTIMATE PAIRWISE DEPENDENCE PROBABILITY FROM bar
+                ESTIMATE DEPENDENCE PROBABILITY FROM PAIRWISE COLUMNS OF bar
             '''
             for _id, col1, col2, dep in bdb.execute(bql):
                 # test IND(x y)
