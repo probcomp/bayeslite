@@ -659,6 +659,7 @@ class Shell(cmd.Cmd):
 
         Check the version, or don't check the version, or prompt and offer to
         save in rcfile if this has not been called before'''
+        # XXX fails on filenames with spaces.
         args = argsin.split()
         if args[0] not in ['yes','no','prompt']:
             self.stdout.write('Usage: .versioncheck <yes/no/prompt> [rcfile]')
@@ -670,13 +671,14 @@ class Shell(cmd.Cmd):
 
         if args[0] == 'prompt':
             check = self.ask_default_yes('Check online if bayeslite is up to date (Y/n)? ')
+            self.do_version_check = check
             remember = self.ask_default_yes('Save this setting in %s (Y/n)? ' % (args[1],))
             if remember:
                 with open(args[1], 'a') as f:
                     if check:
-                        f.write('\n.versioncheck yes\n')
+                        f.write('.versioncheck yes\n')
                     else:
-                        f.write('\n.versioncheck no\n')
+                        f.write('.versioncheck no\n')
                         # And we are done, don't check.
                         return
 
