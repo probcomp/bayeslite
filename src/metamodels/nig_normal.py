@@ -278,6 +278,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                 WHERE generator_id = :generator_id
                     AND colno = :colno
         '''
+        # This is Venture's SuffNormalSPAux.incorporate
         with bdb.savepoint():
             bdb.sql_execute(update_sql, {
                 'generator_id': generator_id,
@@ -294,6 +295,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                 WHERE generator_id = :generator_id
                     AND colno = :colno
         '''
+        # This is Venture's SuffNormalSPAux.unincorporate
         with bdb.savepoint():
             bdb.sql_execute(update_sql, {
                 'generator_id': generator_id,
@@ -324,6 +326,7 @@ def logpdf_gaussian(x, mu, sigma):
     return ans
 
 def data_suff_stats(bdb, table, column_name):
+    # This is incorporate/remove in bulk, reading from the database.
     qt = sqlite3_quote_name(table)
     qcn = sqlite3_quote_name(column_name)
     # TODO Do this computation inside the database?
@@ -342,7 +345,6 @@ def data_suff_stats(bdb, table, column_name):
 
 def posterior_hypers(hypers, stats):
     # This is Venture's CNigNormalOutputPSP.posteriorHypersNumeric
-    # packaged differently.
     (m, V, a, b) = hypers
     [ctN, xsum, xsumsq] = stats
     Vn = 1 / (1.0/V + ctN)
