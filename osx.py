@@ -13,6 +13,31 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+
+# Requires boost pre-installed.
+# This is slightly special if you want to use Venture. The GNU c++
+# compilers use the standard library libstdc++, while Mac's c++
+# compiler on Mavericks uses libc++. In order for Venture to build,
+# you must build Boost using libstdc++, and then build Venture using
+# the same. This can be accomplished by building both Boost and
+# Venture using GNU gcc (installed via Homebrew) instead of Mac's
+# compiler. The correct version of gcc is set for Venture installation
+# in the setup.py file. To install Boost with the correct library,
+# call:
+#
+#    brew install boost --cc=gcc-4.9
+#    brew install boost-python --cc=gcc-4.9
+
+# Requires locate to be working, so we can find a pre-installed boost.
+# Requires virtualenv pre-installed.
+# Requires read access to the listed git repos.
+GIT_REPOS = ['crosscat', 'bdbcontrib', 'bayeslite']
+PEG = {  # None means head.
+  'crosscat': None,
+  'bdbcontrib': None,
+  'bayeslite': None
+  }
+
 import distutils.spawn
 import errno
 import os
@@ -24,13 +49,6 @@ import time
 import tempfile
 
 START_TIME = time.time()
-
-PEG = {  # None means head.
-  'crosscat': None,
-  'bdbcontrib': None,
-  'venturecxx': 'release-0.4.1',
-  'bayeslite': None
-  }
 
 try:
   from setuptools import setup
@@ -85,7 +103,7 @@ def get_version(project_dir):
   return version
 
 VERSION = ''
-for project in ['crosscat', 'bdbcontrib', 'venturecxx', 'bayeslite']:
+for project in GIT_REPOS:
   print "Checking out", project
   run("git clone git@github.com:mit-probabilistic-computing-project/%s.git %s"
       % (project, os.path.join(BUILD_DIR, project)))
@@ -119,56 +137,75 @@ venv_run("pip install numpy")
 venv_run("cp -R %s/bdbcontrib/bdbcontrib lib/python2.7/site-packages/bdbcontrib" % BUILD_DIR)
 print "Deps for BdbContrib"
 venv_run("pip install matplotlib seaborn==0.5.1 pandas markdown2 sphinx numpydoc")
-# Venture has a requirements.txt, so will get done below.
 print "Deps for BayesLite"
 # Assume that osx has sqlite3 already.
 # http://computechtips.com/619/upgrade-sqlite-os-x-mavericks-yosemite
 # which suggests that OS 10.10 and above have a sufficiently new sqlite.
 venv_run("pip install pytest sphinx cov-core dill ")
 
+BUILD_EXAMPLES = os.path.join(BUILD_DIR, "examples")
+run("mkdir -p '%s'" % BUILD_EXAMPLES)
+
 # Main installs:
-for project in ['crosscat', 'venturecxx', 'bayeslite']:
+for project in GIT_REPOS:
   reqfile = os.path.join(BUILD_DIR, project, "requirements.txt")
   if os.path.exists(reqfile):
     print "Installing dependencies for", project
     venv_run("pip install -r %s" % reqfile)
-  print "Installing", project, "into", BUILD_DIR
-  venv_run("cd %s; python setup.py install" % os.path.join(BUILD_DIR, project))
+  setupfile = os.path.join(BUILD_DIR, project, "setup.py")
+  if os.path.exists(setupfile):
+    print "Installing", project, "into", BUILD_DIR
+    venv_run("cd %s; python setup.py install" % os.path.join(BUILD_DIR, project))
+  examplesdir = os.path.join(BUILD_DIR, project, "examples")
+  if os.path.exists(examplesdir):
+    print "Copying examples from", examplesdir
+    run("/bin/cp -r '%s'/* '%s'/" % (examplesdir, BUILD_EXAMPLES))
 
 # This app's only other dependency:
 venv_run("pip install 'ipython[notebook]'")
 
 print "Ready to start packaging the app!"
 venv_run('virtualenv --relocatable %s' % VENV_DIR)
+# Sadly, that doesn't actually fix the most critical file, the activate script.
+relocable = '''VIRTUAL_ENV=$(dirname $( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd ))\n'''
+new_activate = tempfile.NamedTemporaryFile(delete=False)
+old_activate_path = os.path.join(VENV_DIR, "bin", "activate")
+with open(old_activate_path, "r") as old_activate:
+  for line in old_activate:
+    if line[:len("VIRTUAL_ENV=")] == "VIRTUAL_ENV=":
+      new_activate.write(relocable)
+    else:
+      new_activate.write(line)
+new_activate.close()
+run("mv '%s' '%s'" % (new_activate.name, old_activate_path))
 
 NAME="BayesDB%s" % VERSION
 DIST_DIR = os.path.join(BUILD_DIR, "BayesDB")
 MACOS_PATH = os.path.join(DIST_DIR, NAME + ".app", "Contents", "MacOS")
 os.makedirs(MACOS_PATH)
+run("/bin/cp -r '%s' '%s/'" % (BUILD_EXAMPLES, MACOS_PATH))
+run("/bin/ln -s /Applications '%s'" % DIST_DIR)
 
 STARTER = '''#!/bin/bash
 
 set -e
 wd=`dirname $0`
+cd $wd
+wd=`pwd -P`
+NAME=`basename $(dirname $(dirname $wd))`
+
 activate="$wd/venv/bin/activate"
 bdbcontrib="$wd/venv/lib/python2.7/site-packages/bdbcontrib"
 pypath="$bdbcontrib"
 ldpath="$wd/lib"
-blite="$wd/venv/bin/bayeslite"
-rcfile="$wd/bayesliterc"
-
-cat > $rcfile <<EOF
-.hook $bdbcontrib/facade.py
-.hook $bdbcontrib/contrib_math.py
-.hook $bdbcontrib/contrib_plot.py
-.hook $bdbcontrib/contrib_util.py
-EOF
 
 source $activate
 export PYTHONPATH="$pypath"
 export DYLD_LIBRARY_PATH="$ldpath"
-$blite -m -f $rcfile
-# Use .open to open a bdb, rather than using a command line arg.
+
+# Copy the examples to someplace writeable:
+rsync -r --ignore-existing "$wd/examples"/* "$HOME/Documents/$NAME"
+ipython notebook "$HOME/Documents/$NAME"
 '''
 
 startsh_path = os.path.join(MACOS_PATH, "start.sh")
