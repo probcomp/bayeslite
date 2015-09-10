@@ -14,8 +14,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import contextlib
 import pytest
 
+import bayeslite
 import bayeslite.ast as ast
 import bayeslite.parse as parse
 
@@ -751,3 +753,18 @@ def test_is_bql():
     assert ast.is_bql(ast.ExpBQLCorrel('c0', 'c1'))
     assert ast.is_bql(ast.ExpBQLPredict('c', ast.ExpLit(ast.LitInt(0.5))))
     assert ast.is_bql(ast.ExpBQLPredictConf('c'))
+
+@contextlib.contextmanager
+def raises_str(klass, string):
+    with pytest.raises(klass):
+        try:
+            yield
+        except klass as e:
+            assert string in str(e)
+            raise
+
+def test_estimate_pairwise_deprecation():
+    with raises_str(bayeslite.BQLParseError, "deprecated `ESTIMATE PAIRWISE'"):
+        parse_bql_string('estimate pairwise dependence probability from t')
+    with raises_str(bayeslite.BQLParseError, "deprecated `ESTIMATE PAIRWISE'"):
+        parse_bql_string('estimate pairwise row similarity from t')

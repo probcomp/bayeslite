@@ -294,6 +294,7 @@ class BQLSemantics(object):
 
     def p_query_select(self, q):                return q
     def p_query_estimate(self, q):              return q
+    def p_query_estpair(self, q):               return q
     def p_query_estby(self, q):                 return q
     def p_query_infer(self, q):                 return q
     def p_query_simulate(self, q):              return q
@@ -307,6 +308,10 @@ class BQLSemantics(object):
             ord, lim):
         constructor = tabs
         return constructor(quant, cols, modelno, cond, grouping, ord, lim)
+
+    def p_estpair_e(self):
+        self.errors.append("deprecated `ESTIMATE PAIRWISE'"
+            ": use `ESTIMATE ... FROM PAIRWISE (COLUMNS OF)'")
 
     def p_estby_e(self, quant, cols, generator, modelno):
         return ast.EstBy(quant, cols, generator, modelno)
