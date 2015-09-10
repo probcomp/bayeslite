@@ -1,0 +1,24 @@
+name,shortname,description,value_map
+Name,,Satellite name,NaN
+Country_of_Operator,,Country of satellite operator,NaN
+Operator_Owner,,Operator/owner of satellite,NaN
+Users,,Type of users of satellite,NaN
+Purpose,,Purpose of satellite,NaN
+Class_of_Orbit,,description,"{ ""LEO"": ""Low Earth orbit"",""MEO"": ""Medium Earth orbit"",""GEO"": ""Geostationary orbit"",""Elliptical"": ""Elliptical orbit"" }"
+Type_of_Orbit,,Orbit type,NaN
+Perigee_km,,Distance of perigee (kilometers),NaN
+Apogee_km,,Distance of apogee (kilometers),NaN
+Eccentricity,,"Eccentricity of orbit (low values mean more circular, high values less circular)",NaN
+Period_minutes,,Orbit period in minutes,NaN
+Launch_Mass_kg,,Mass of satellite at launch (kilograms),NaN
+Dry_Mass_kg,,Dry mass of satellite at launch (kilograms),NaN
+Power_watts,,Power (watts),NaN
+Date_of_Launch,,Launch date,NaN
+Anticipated_Lifetime,,Expected lifetime of satellite (years),NaN
+Contractor,,Contractor,NaN
+Country_of_Contractor,,Contractor country,NaN
+Launch_Site,,Site of launch,NaN
+Launch_Vehicle,,Launch vehicle,NaN
+Source_Used_for_Orbital_Data,,Orbit data source,NaN
+longitude_radians_of_geo,,Longitude (radians),NaN
+Inclination_radians,,Inclination (radians),NaN
