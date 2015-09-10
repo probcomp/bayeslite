@@ -83,7 +83,9 @@ def run(stdin, stdout, stderr, argv):
                     bdbshell.stdout.write('%s is not a file.  Aborting.\n' %
                         (str(path),))
                     break
-        bdbshell.cmdloop()
+
+        if not args.batch:
+            bdbshell.cmdloop()
     return 0
 
 
