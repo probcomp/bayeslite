@@ -152,7 +152,7 @@ def cramerphi_chi2(data0, data1):
                     c += 1
             ct[i0][i1] = c
     # Compute observed chi^2 statistic.
-    chi2 = stats.chi2_contingency(ct, correction=False)
+    chi2 = stats.chi2_contingency(ct)
     return chi2, n0, n1
 
 def correlation_anovar2(data_group, data_y):

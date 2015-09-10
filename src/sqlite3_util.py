@@ -59,6 +59,17 @@ def sqlite3_savepoint(db):
         if not ok:
             db.execute("ROLLBACK TO x%s" % (savepoint,))
         db.execute("RELEASE x%s" % (savepoint,))
+
+@contextlib.contextmanager
+def sqlite3_savepoint_rollback(db):
+    """Savepoint context manager that always rolls back."""
+    savepoint = binascii.b2a_hex(os.urandom(32))
+    db.execute("SAVEPOINT x%s" % (savepoint,))
+    try:
+        yield
+    finally:
+        db.execute("ROLLBACK TO x%s" % (savepoint,))
+        db.execute("RELEASE x%s" % (savepoint,))
 
 def sqlite3_exec_1(db, query, *args):
     """Execute a query returning a 1x1 table, and return its one value.

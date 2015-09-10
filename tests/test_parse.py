@@ -14,8 +14,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import contextlib
 import pytest
 
+import bayeslite
 import bayeslite.ast as ast
 import bayeslite.parse as parse
 
@@ -378,7 +380,7 @@ def test_select_bql():
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select similarity to (rowid=8) with respect to' +
-            ' (estimate columns from t order by typicality limit 1)' +
+            ' (estimate * from columns of t order by typicality limit 1)' +
             ' from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
@@ -388,7 +390,8 @@ def test_select_bql():
                         ast.ExpLit(ast.LitInt(8)),
                     )),
                     [ast.ColListSub(
-                        ast.EstCols([], 't', ast.ExpLit(ast.LitNull(None)),
+                        ast.EstCols([ast.SelColAll(None)], 't',
+                            ast.ExpLit(ast.LitNull(None)),
                             None,
                             [ast.Ord(ast.ExpBQLTyp(None), ast.ORD_ASC)],
                             ast.Lim(ast.ExpLit(ast.LitInt(1)), None))
@@ -459,13 +462,14 @@ def test_select_bql():
                     []),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
-    assert parse_bql_string('select key, t.(estimate columns from t'
+    assert parse_bql_string('select key, t.(estimate * from columns of t'
             ' order by dependence probability with c desc limit 4)'
             ' from t order by key asc') == \
         [ast.Select(ast.SELQUANT_ALL, [
                 ast.SelColExp(ast.ExpCol(None, 'key'), None),
                 ast.SelColSub('t',
-                    ast.EstCols([], 't', ast.ExpLit(ast.LitNull(None)), None,
+                    ast.EstCols([ast.SelColAll(None)], 't',
+                        ast.ExpLit(ast.LitNull(None)), None,
                         [ast.Ord(ast.ExpBQLDepProb('c', None), ast.ORD_DESC)],
                         ast.Lim(ast.ExpLit(ast.LitInt(4)), None)))
             ],
@@ -708,22 +712,25 @@ def test_using_model():
                 ast.ExpLit(ast.LitInt(2)),
             )),
             None, None, None, None)]
-    assert parse_bql_string('estimate columns from t using model modelno') == \
-        [ast.EstCols([], 't', ast.ExpCol(None, 'modelno'), None, None, None)]
-    assert parse_bql_string('estimate columns 42 from t'
+    assert parse_bql_string('estimate * from columns of t'
+            ' using model modelno') == \
+        [ast.EstCols([ast.SelColAll(None)], 't', ast.ExpCol(None, 'modelno'),
+            None, None, None)]
+    assert parse_bql_string('estimate 42 from columns of t'
             ' using model modelno') == \
         [ast.EstCols([(ast.ExpLit(ast.LitInt(42)), None)], 't',
             ast.ExpCol(None, 'modelno'),
             None, None, None)]
-    assert parse_bql_string('estimate pairwise 42 from t'
+    assert parse_bql_string('estimate 42 from pairwise columns of t'
             ' using model modelno') == \
         [ast.EstPairCols([(ast.ExpLit(ast.LitInt(42)), None)], 't', None,
             ast.ExpCol(None, 'modelno'),
             None, None, None)]
-    assert parse_bql_string('estimate pairwise row similarity from t'
+    assert parse_bql_string('estimate similarity from pairwise t'
             ' using model modelno') == \
-        [ast.EstPairRow(ast.ExpBQLSim(None, [ast.ColListAll()]), 't',
-            ast.ExpCol(None, 'modelno'),
+        [ast.EstPairRow([ast.SelColExp(ast.ExpBQLSim(None, [ast.ColListAll()]),
+                None)],
+            't', ast.ExpCol(None, 'modelno'),
             None, None, None)]
     assert parse_bql_string('infer x from t using model modelno') == \
         [ast.InferAuto([ast.InfColOne('x', None)], ast.ExpLit(ast.LitInt(0)),
@@ -749,3 +756,21 @@ def test_is_bql():
     assert ast.is_bql(ast.ExpBQLCorrel('c0', 'c1'))
     assert ast.is_bql(ast.ExpBQLPredict('c', ast.ExpLit(ast.LitInt(0.5))))
     assert ast.is_bql(ast.ExpBQLPredictConf('c'))
+
+@contextlib.contextmanager
+def raises_str(klass, string):
+    with pytest.raises(klass):
+        try:
+            yield
+        except klass as e:
+            assert string in str(e)
+            raise
+
+def test_estimate_pairwise_deprecation():
+    with raises_str(bayeslite.BQLParseError, "deprecated `ESTIMATE COLUMNS'"):
+        parse_bql_string('estimate columns from t')
+    with raises_str(bayeslite.BQLParseError, "deprecated `ESTIMATE PAIRWISE'"):
+        parse_bql_string('estimate pairwise dependence probability from t')
+    with raises_str(bayeslite.BQLParseError,
+            "deprecated `ESTIMATE PAIRWISE ROW'"):
+        parse_bql_string('estimate pairwise row similarity from t')

@@ -647,12 +647,33 @@ def compile_estcols(bdb, estcols, out):
     generator_id = core.bayesdb_get_generator_default(bdb, estcols.generator)
     colno_exp = 'c.colno'       # XXX
     bql_compiler = BQLCompiler_1Col(generator_id, estcols.modelno, colno_exp)
-    out.write('SELECT c.name AS name')
-    for exp, name in estcols.columns:
-        out.write(', ')
-        compile_expression(bdb, exp, bql_compiler, out)
-        if name is not None:
-            out.write(' AS %s' % (sqlite3_quote_name(name),))
+    out.write('SELECT')
+    first = True
+    for col in estcols.columns:
+        if first:
+            first = False
+        else:
+            out.write(',')
+        out.write(' ')
+        if isinstance(col, ast.SelColAll):
+            # XXX Whattakludge!  Should we not also include colno,
+            # generator id?  Main reason for using * at all for this
+            # is we don't have a mechanism for automatically
+            # qualifying all input-column references with `c.', and
+            # unqualified `name' is ambiguous in the FROM context
+            # given below.
+            out.write('c.name AS name') # XXX Colno?  Generator id?  ...?
+        elif isinstance(col, ast.SelColSub):
+            raise NotImplementedError('No subqueries for COLUMNS OF columns!')
+        elif isinstance(col, ast.SelColExp):
+            compile_expression(bdb, col.expression, bql_compiler, out)
+            if col.name is not None:
+                out.write(' AS ')
+                compile_name(bdb, col.name, out)
+        elif isinstance(col, ast.PredCol):
+            raise NotImplementedError('No PREDICT on column queries!')
+        else:
+            assert False, 'Invalid ESTIMATE column: %s' % (repr(col),)
     out.write(' FROM bayesdb_generator AS g,'
         ' bayesdb_generator_column AS gc,'
         ' bayesdb_column AS c'
@@ -767,8 +788,9 @@ def compile_estpairrow(bdb, estpairrow, out):
     rowid1_exp = 'r1._rowid_'
     bql_compiler = BQLCompiler_2Row(generator_id, estpairrow.modelno,
         rowid0_exp, rowid1_exp)
-    out.write('SELECT %s AS rowid0, %s AS rowid1, ' % (rowid0_exp, rowid1_exp))
-    compile_expression(bdb, estpairrow.expression, bql_compiler, out)
+    out.write('SELECT %s AS rowid0, %s AS rowid1,' % (rowid0_exp, rowid1_exp))
+    named = True
+    compile_select_columns(bdb, estpairrow.columns, named, bql_compiler, out)
     out.write(' AS value')
     table_name = core.bayesdb_generator_table(bdb, generator_id)
     qt = sqlite3_quote_name(table_name)

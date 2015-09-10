@@ -86,6 +86,7 @@ setup(
     version=version,
     packages=[
         'bayeslite',
+        'bayeslite.metamodels',
         'bayeslite.plex',
         'bayeslite.shell',
     ],

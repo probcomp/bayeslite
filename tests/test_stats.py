@@ -19,16 +19,7 @@ import pytest
 
 import bayeslite.stats as stats
 
-def relerr(expected, actual):
-    """Computes the absolute relative error between `expected` and `actual`.
-
-    :param float expected: The expected value.
-    :param float actual: The actual value.
-
-    :return: ``abs((actual-expected)/expected)``
-    :rtype: float
-    """
-    return abs((actual - expected)/expected)
+from bayeslite.math_util import relerr
 
 def abserr(expected, actual):
     """Computes the absolute error between `expected` and `actual`.
@@ -81,7 +72,7 @@ def test_chi2_sf():
     # Test x >= 1, x > df against reference values.
     assert relerr(.3325939, stats.chi2_sf(8,7)) < .05
     assert relerr(.0482861, stats.chi2_sf(3.9,1)) < .05
-    assert abserr(.3464377e-4, stats.chi2_sf(193,121)) < .05
+    assert relerr(.3464377e-4, stats.chi2_sf(193,121)) < .05
 
 def test_f_sf():
     # Non-positive degrees of freedom should throw an error.
@@ -159,4 +150,18 @@ def test_t_cdf():
     assert relerr(.30899158341328747, stats.t_cdf(-0.5, 121)) < .05
     
     # Test against reference very close to zero.
-    assert abserr(.346437e-4, stats.chi2_sf(193,121)) < .01
+    # XXX Why are we testing chi2_sf here?
+    assert relerr(.346437e-4, stats.chi2_sf(193,121)) < .01
+
+def test_gauss_suff_stats():
+    # High mean, tiny variance would lead to catastrophic cancellation
+    # in a naive implementation that maintained the sum of squares.
+    big = 400
+    small = 0.0000001
+    data = [big - small, big, big + small]
+    true_sigma = math.sqrt(2 * small**2 / 3)
+    (ct, mean, sigma) = stats.gauss_suff_stats(data)
+    print sigma, true_sigma
+    assert ct == 3
+    assert mean == big
+    assert relerr(true_sigma, sigma) < 1e-5

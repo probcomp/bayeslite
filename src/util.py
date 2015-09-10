@@ -71,8 +71,15 @@ def float_sum(iterable):
         else:
             c += ((xf - s1) + s)
         s = s1
-    return (s + c)
+    return s + c
 
 def casefold(string):
     # XXX Not really right, but it'll do for now.
     return string.upper().lower()
+
+def logsumexp(array):
+    m = max(array)
+    return m + math.log(sum(math.exp(a - m) for a in array))
+
+def logmeanexp(array):
+    return logsumexp(array) - math.log(len(array))

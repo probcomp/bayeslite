@@ -224,7 +224,7 @@ InfColOne = namedtuple('InfColOne', [
 ])
 
 EstCols = namedtuple('EstCols', [
-    'columns',                  # [(Exp*, XXX name)]
+    'columns',                  # [SelCol*]
     'generator',                # XXX name
     'modelno',                  # modelno
     'condition',                # Exp* or None (unconditional)
@@ -233,7 +233,7 @@ EstCols = namedtuple('EstCols', [
 ])
 
 EstPairCols = namedtuple('EstPairCols', [
-    'columns',                  # Exp*
+    'columns',                  # [SelCol*]
     'generator',                # XXX name
     'subcolumns',               # ColList* or None
     'modelno',                  # modelno
@@ -243,7 +243,7 @@ EstPairCols = namedtuple('EstPairCols', [
 ])
 
 EstPairRow = namedtuple('EstPairRow', [
-    'expression',               # Exp*
+    'columns',                  # [SelCol*]
     'generator',                # XXX name
     'modelno',                  # modelno
     'condition',                # Exp* or None (unconditional)

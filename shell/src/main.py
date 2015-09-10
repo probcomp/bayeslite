@@ -68,7 +68,7 @@ def run(stdin, stdout, stderr, argv):
         crosscat = ccle.LocalEngine(seed=args.seed)
     metamodel = bayeslite.crosscat.CrosscatMetamodel(crosscat)
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)
-    bdbshell = shell.Shell(bdb, 'crosscat')
+    bdbshell = shell.Shell(bdb, 'crosscat', stdin, stdout, stderr)
     with hook.set_current_shell(bdbshell):
         if not args.no_init_file:
             init_file = os.path.join(os.path.expanduser('~/.bayesliterc'))

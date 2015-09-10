@@ -22,8 +22,10 @@ This module implements the :class:`bayeslite.IBayesDBMetamodel`
 interface for Crosscat.
 """
 
+import itertools
 import json
 import math
+import sqlite3
 import time
 
 import bayeslite.core as core
@@ -183,6 +185,23 @@ CREATE TABLE bayesdb_crosscat_diagnostics (
 INSERT INTO bayesdb_crosscat_diagnostics
     SELECT * FROM bayesdb_crosscat_diagnostics_temp;
 DROP TABLE bayesdb_crosscat_diagnostics_temp;
+'''
+
+crosscat_schema_5to6 = '''
+UPDATE bayesdb_metamodel SET version = 6 WHERE name = 'crosscat';
+
+CREATE TABLE bayesdb_crosscat_column_dependency (
+    generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    colno0      INTEGER NOT NULL,
+    colno1      INTEGER NOT NULL,
+    dependent   BOOLEAN NOT NULL,
+    PRIMARY KEY(generator_id, colno0, colno1),
+    FOREIGN KEY(generator_id, colno0)
+        REFERENCES bayesdb_generator_column(generator_id, colno),
+    FOREIGN KEY(generator_id, colno1)
+        REFERENCES bayesdb_generator_column(generator_id, colno),
+    CHECK(colno0 < colno1)
+);
 '''
 
 class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
@@ -467,7 +486,11 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 for stmt in crosscat_schema_4to5.split(';'):
                     bdb.sql_execute(stmt)
                 version = 5
-            if version != 5:
+            if version == 5:
+                for stmt in crosscat_schema_5to6.split(';'):
+                    bdb.sql_execute(stmt)
+                version = 6
+            if version != 6:
                 raise BQLError(bdb, 'Crosscat already installed'
                     ' with unknown schema version: %d' % (version,))
 
@@ -475,6 +498,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         do_guess = False
         do_subsample = self._subsample
         columns = []
+        dep_constraints = []
         for directive in schema:
             # XXX Whattakludge.  Invent a better parsing scheme for
             # these things, please.
@@ -499,6 +523,38 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 else:
                     raise BQLError(bdb, 'Invalid subsampling: %s' %
                         (repr(directive[1][0]),))
+                continue
+            if isinstance(directive, list) and \
+               len(directive) == 2 and \
+               isinstance(directive[0], (str, unicode)) and \
+               casefold(directive[0]) == 'dependent':
+                args = directive[1]
+                i = 0
+                dep_columns = []
+                while i < len(args):
+                    dep_columns.append(args[i])
+                    if i + 1 < len(args) and args[i + 1] != ',':
+                        # XXX Pretty-print the tokens.
+                        raise BQLError(bdb, 'Invalid dependent columns: %s' %
+                            (repr(args),))
+                    i += 2
+                dep_constraints.append((dep_columns, True))
+                continue
+            if isinstance(directive, list) and \
+               len(directive) == 2 and \
+               isinstance(directive[0], (str, unicode)) and \
+               casefold(directive[0]) == 'independent':
+                args = directive[1]
+                i = 0
+                indep_columns = []
+                while i < len(args):
+                    indep_columns.append(args[i])
+                    if i + 1 < len(args) and args[i + 1] != ',':
+                        # XXX Pretty-print the tokens.
+                        raise BQLError(bdb, 'Invalid dependent columns: %s' %
+                            (repr(args),))
+                    i += 2
+                dep_constraints.append((indep_columns, False))
                 continue
             if isinstance(directive, list) and \
                len(directive) == 2 and \
@@ -607,6 +663,29 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 bdb.sql_execute(insert_subsample_sql,
                     (generator_id, sql_rowid, cc_row_id))
 
+            # Store dependence constraints, if necessary.
+            insert_dep_constraint_sql = '''
+                INSERT INTO bayesdb_crosscat_column_dependency
+                    (generator_id, colno0, colno1, dependent)
+                    VALUES (?, ?, ?, ?)
+            '''
+            for columns, dependent in dep_constraints:
+                for col1, col2 in itertools.combinations(columns, 2):
+                    col1_id = core.bayesdb_generator_column_number(bdb,
+                        generator_id, col1)
+                    col2_id = core.bayesdb_generator_column_number(bdb,
+                        generator_id, col2)
+                    min_col_id = min(col1_id, col2_id)
+                    max_col_id = max(col1_id, col2_id)
+                    try:
+                        bdb.sql_execute(insert_dep_constraint_sql,
+                            (generator_id, min_col_id, max_col_id, dependent))
+                    except sqlite3.IntegrityError:
+                        # XXX This is a cop-out -- we should validate
+                        # the relation ourselves (and show a more
+                        # helpful error message).
+                        raise BQLError(bdb, 'Invalid dependency constraints!')
+
     def drop_generator(self, bdb, generator_id):
         with bdb.savepoint():
             # Remove the metadata from the cache.
@@ -619,6 +698,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
 
             # Delete all the things referring to the generator:
             # - diagnostics
+            # - column depedencies
             # - models
             # - subsample
             # - codemap
@@ -629,6 +709,11 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     WHERE generator_id = ?
             '''
             bdb.sql_execute(delete_diagnostics_sql, (generator_id,))
+            delete_column_dependency_sql = '''
+                DELETE FROM bayesdb_crosscat_column_dependency
+                    WHERE generator_id = ?
+            '''
+            bdb.sql_execute(delete_column_dependency_sql, (generator_id,))
             delete_models_sql = '''
                 DELETE FROM bayesdb_crosscat_theta
                     WHERE generator_id = ?
@@ -703,6 +788,17 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         if len(modelnos) == 1:  # XXX Ugh.  Fix crosscat so it doesn't do this.
             X_L_list = [X_L_list]
             X_D_list = [X_D_list]
+        # Ensure dependent columns if necessary.
+        dep_constraints = crosscat_gen_column_dependencies(bdb, generator_id)
+        if 0 < len(dep_constraints):
+            X_L_list, X_D_list = self._crosscat.ensure_col_dep_constraints(
+                M_c=M_c,
+                M_r=None,
+                T=self._crosscat_data(bdb, generator_id, M_c),
+                X_L=X_L_list,
+                X_D=X_D_list,
+                dep_constraints=dep_constraints,
+            )
         insert_theta_sql = '''
             INSERT INTO bayesdb_crosscat_theta
                 (generator_id, modelno, theta_json)
@@ -1319,3 +1415,12 @@ def crosscat_gen_colno(bdb, generator_id, cc_colno):
         assert len(row) == 1
         assert isinstance(row[0], int)
         return row[0]
+
+def crosscat_gen_column_dependencies(bdb, generator_id):
+    sql = '''
+        SELECT colno0, colno1, dependent
+            FROM bayesdb_crosscat_column_dependency
+            WHERE generator_id = ?
+    '''
+    cursor = bdb.sql_execute(sql, (generator_id,))
+    return list(cursor)

@@ -18,6 +18,7 @@ import contextlib
 
 from bayeslite.exception import BayesDBException
 from bayeslite.sqlite3_util import sqlite3_savepoint
+from bayeslite.sqlite3_util import sqlite3_savepoint_rollback
 from bayeslite.sqlite3_util import sqlite3_transaction
 
 # XXX Can't do this simultaneously in multiple threads.  Need
@@ -28,6 +29,15 @@ def bayesdb_savepoint(bdb):
     bayesdb_txn_push(bdb)
     try:
         with sqlite3_savepoint(bdb.sqlite3):
+            yield
+    finally:
+        bayesdb_txn_pop(bdb)
+
+@contextlib.contextmanager
+def bayesdb_savepoint_rollback(bdb):
+    bayesdb_txn_push(bdb)
+    try:
+        with sqlite3_savepoint_rollback(bdb.sqlite3):
             yield
     finally:
         bayesdb_txn_pop(bdb)

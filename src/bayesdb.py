@@ -176,6 +176,13 @@ class BayesDB(object):
             yield
 
     @contextlib.contextmanager
+    def savepoint_rollback(self):
+        """Auto-rollback savepoint context.  Roll back on return or exception.
+        """
+        with txn.bayesdb_savepoint_rollback(self):
+            yield
+
+    @contextlib.contextmanager
     def transaction(self):
         """Transaction context.  On return, commit; on exception, roll back.
 
