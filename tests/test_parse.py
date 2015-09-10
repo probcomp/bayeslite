@@ -297,7 +297,7 @@ def test_select_bql():
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select probability of c = 42 from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLProb('c', ast.ExpLit(ast.LitInt(42))),
+            [ast.SelColExp(ast.ExpBQLProb('c', ast.ExpLit(ast.LitInt(42)), []),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select typicality from t;') == \
@@ -449,14 +449,17 @@ def test_select_bql():
     #             [ast.SelColExp(ast.ExpBQLProb('x',
     #                     ast.ExpOp(ast.OP_SUB, (
     #                         ast.ExpLit(ast.LitInt(1)),
-    #                         ast.ExpBQLProb('y', ast.ExpLit(ast.LitInt(0))),
-    #                     ))),
+    #                         ast.ExpBQLProb('y', ast.ExpLit(ast.LitInt(0)),
+    #                             []),
+    #                     )),
+    #                     []),
     #                 None)],
     #             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select probability of c1 = f(c2) from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(ast.ExpBQLProb('c1',
-                    ast.ExpApp(False, 'f', [ast.ExpCol(None, 'c2')])),
+                    ast.ExpApp(False, 'f', [ast.ExpCol(None, 'c2')]),
+                    []),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select key, t.(estimate * from columns of t'
@@ -745,7 +748,7 @@ def test_is_bql():
     assert ast.is_bql(ast.ExpCol('t', 'c')) == False
     # ...
     assert ast.is_bql(ast.ExpBQLPredProb('c'))
-    assert ast.is_bql(ast.ExpBQLProb('c', 0))
+    assert ast.is_bql(ast.ExpBQLProb('c', 0, []))
     assert ast.is_bql(ast.ExpBQLTyp('c'))
     assert ast.is_bql(ast.ExpBQLSim(ast.ExpLit(ast.LitInt(0)), []))
     assert ast.is_bql(ast.ExpBQLDepProb('c0', 'c1'))

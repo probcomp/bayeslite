@@ -838,9 +838,6 @@ class BQLCompiler_Const(object):
         if isinstance(bql, ast.ExpBQLPredProb):
             raise BQLError('Predictive probability needs row.')
         elif isinstance(bql, ast.ExpBQLProb):
-            # XXX Why is this independent of the row?  Can't we
-            # condition on the values of the row?  Maybe need another
-            # notation; PROBABILITY OF X = V GIVEN ...?
             if bql.column is None:
                 raise BQLError(bdb, 'Probability of value at row'
                     ' needs column.')
@@ -850,6 +847,11 @@ class BQLCompiler_Const(object):
             compile_expression(bdb, self.modelno, self, out)
             out.write(', %s, ' % (colno,))
             compile_expression(bdb, bql.value, self, out)
+            for c_col, c_exp in bql.constraints:
+                c_colno = core.bayesdb_generator_column_number(bdb,
+                    generator_id, c_col)
+                out.write(', %d, ' % (c_colno,))
+                compile_expression(bdb, c_exp, self, out)
             out.write(')')
         elif isinstance(bql, ast.ExpBQLTyp):
             if bql.column is None:
