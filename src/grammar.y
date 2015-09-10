@@ -155,7 +155,9 @@ constraint(c)		::= column_name(col) T_EQ expression(value).
 query(select)		::= select(q).
 query(estimate)		::= estimate(q).
 query(estby)		::= estby(q).
-query(estpair)		::= estpair(q).		/* Legacy syntax.  */
+query(estcol)		::= estcol(q).		/* Legacy syntax.  */
+query(estpairrow)	::= estpairrow(q).	/* Legacy syntax.  */
+query(estpaircol)	::= estpaircol(q).	/* Legacy syntax.  */
 query(infer)		::= infer(q).
 query(simulate)		::= simulate(q).
 /*
@@ -181,7 +183,9 @@ estimate(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
 				order_by(ord)
 				limit_opt(lim).
 
-estpair(e)		::= K_ESTIMATE K_PAIRWISE error T_SEMI.
+estcol(e)		::= K_ESTIMATE K_COLUMNS error T_SEMI.
+estpairrow(e)		::= K_ESTIMATE K_PAIRWISE K_ROW error T_SEMI.
+estpaircol(e)		::= K_ESTIMATE K_PAIRWISE error T_SEMI.
 
 estby(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
 				K_BY generator_name(generator)

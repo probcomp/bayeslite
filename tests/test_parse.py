@@ -764,7 +764,10 @@ def raises_str(klass, string):
             raise
 
 def test_estimate_pairwise_deprecation():
+    with raises_str(bayeslite.BQLParseError, "deprecated `ESTIMATE COLUMNS'"):
+        parse_bql_string('estimate columns from t')
     with raises_str(bayeslite.BQLParseError, "deprecated `ESTIMATE PAIRWISE'"):
         parse_bql_string('estimate pairwise dependence probability from t')
-    with raises_str(bayeslite.BQLParseError, "deprecated `ESTIMATE PAIRWISE'"):
+    with raises_str(bayeslite.BQLParseError,
+            "deprecated `ESTIMATE PAIRWISE ROW'"):
         parse_bql_string('estimate pairwise row similarity from t')
