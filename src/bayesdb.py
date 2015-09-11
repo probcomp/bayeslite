@@ -31,7 +31,7 @@ bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
 
 FAIL_VERSION_CHECK = True
 
-def bayesdb_open(pathname=None, do_version_check=None):
+def bayesdb_open(pathname=None, do_version_check=False):
     """Open the BayesDB in the file at `pathname`.
 
     If there is no file at `pathname`, it is automatically created.
