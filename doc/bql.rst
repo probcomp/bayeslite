@@ -52,6 +52,7 @@ FUTURE: BQL will additionally support savepoints (Github issue #36),
 which are like transactions but may be named and nested.
 
 .. index:: ``BEGIN``
+
 ``BEGIN``
 
    Begin a transaction.  Subsequent commands take effect within the
@@ -59,12 +60,14 @@ which are like transactions but may be named and nested.
    may be undone with ``ROLLBACK``.
 
 .. index:: ``COMMIT``
+
 ``COMMIT``
 
    End a transaction, and commit to all changes made since the last
    ``BEGIN``.
 
 .. index:: ``ROLLBACK``
+
 ``ROLLBACK``
 
    End a transaction, and discard all changes made since the last
@@ -81,12 +84,14 @@ BQL (Github issue #37).  Until then, one can always fall back to
 executing SQL instead of BQL in Bayeslite.
 
 .. index:: ``CREATE TABLE``
+
 ``CREATE [TEMP|TEMPORARY] TABLE [IF NOT EXISTS] <name> AS <query>``
 
    Create a table named *name* to hold the results of the query
    *query*.
 
 .. index:: ``DROP TABLE``
+
 ``DROP TABLE [IF EXISTS] <name>``
 
    Drop the table *name* and all its contents.
@@ -95,6 +100,7 @@ executing SQL instead of BQL in Bayeslite.
    table.
 
 .. index:: ``ALTER TABLE``
+
 ``ALTER TABLE <name> <alterations>``
 
    Alter the specified properties of the table *name*.  *Alterations*
@@ -102,6 +108,7 @@ executing SQL instead of BQL in Bayeslite.
    alterations are supported:
 
    .. index:: ``RENAME TO``
+
    ``RENAME TO <newname>``
 
       Change the table's name to *newname*.  Foreign key constraints
@@ -109,11 +116,13 @@ executing SQL instead of BQL in Bayeslite.
       and recreated separately, due to limitations in sqlite3.
 
    .. index:: ``SET DEFAULT GENERATOR``
+
    ``SET DEFAULT GENERATOR TO <generator>``
 
       Set the default generator of the table to be *generator*.
 
    .. index:: ``UNSET DEFAULT GENERATOR``
+
    ``UNSET DEFAULT GENERATOR``
 
       Remove any default generator associated with the table.
@@ -124,6 +133,7 @@ Data Modelling Language
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 .. index:: ``CREATE GENERATOR``
+
 ``CREATE [DEFAULT] GENERATOR <name> [IF NOT EXISTS] FOR <table> USING <metamodel> (<schema>)``
 
    Create a generative model named *name* for the table named *table*
@@ -152,11 +162,13 @@ Data Modelling Language
    :index:`SET DEFAULT GENERATOR` or :index:`UNSET DEFAULT GENERATOR`.
 
 .. index:: ``DROP GENERATOR``
+
 ``DROP GENERATOR [IF EXISTS] <name>``
 
    Drop the generator named *name* and all its models.
 
 .. index:: ``ALTER GENERATOR``
+
 ``ALTER GENERATOR <name> <alterations>``
 
    Alter the specified properties of the generator named *name*, or of
@@ -165,11 +177,13 @@ Data Modelling Language
    are supported:
 
    .. index:: ``RENAME TO``
+
    ``RENAME TO <newname>``
 
       Change the generator's name to *newname*.
 
 .. index:: ``INITIALIZE MODELS``
+
 ``INITIALIZE <n> MODEL[S] [IF NOT EXISTS] FOR <name>``
 
    Perform metamodel-specific initialization of up to *n* models for
@@ -178,6 +192,7 @@ Data Modelling Language
    already had models, the ones it had are unchanged.
 
 .. index:: ``DROP MODELS``
+
 ``DROP MODELS <modelset> FROM <name>``
 
    Drop the specified models from the generator named *name*, or the
@@ -194,6 +209,7 @@ Data Modelling Language
       ``DROP MODEL 1 FROM t_cc; DROP MODEL 2 FROM t_cc; DROP MODEL 3 FROM t_cc``
 
 .. index:: ``ANALYZE MODELS``
+
 ``ANALYZE <name> [MODEL[S] <modelset>] [FOR <duration>] [CHECKPOINT <duration>] WAIT``
 
    Perform metamodel-specific analysis of the specified models of the
@@ -216,6 +232,7 @@ BQL Queries
 -----------
 
 .. index:: ``SELECT``
+
 ``SELECT [DISTINCT|ALL] <columns> FROM <table> [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Standard SQL ``SELECT``.  Model estimators are not allowed, except
@@ -256,6 +273,7 @@ BQL Queries
       starting at *offset* from the beginning.
 
 .. index:: ``ESTIMATE``
+
 ``ESTIMATE [DISTINCT|ALL] <columns> FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the table associated with *generator*, extended
@@ -268,12 +286,14 @@ BQL Queries
       not specified.
 
 .. index:: ``ESTIMATE COLUMNS``
+
 ``ESTIMATE COLUMNS [<columns>] FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the modelled columns of *generator*, extended
    with model estimators of one implied column.
 
 .. index:: ``ESTIMATE PAIRWISE``
+
 ``ESTIMATE PAIRWISE <columns> FROM <generator> [FOR <subcolumns>] [USING MODEL <modelno>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the modelled columns of
@@ -283,6 +303,7 @@ BQL Queries
    subcolumns may be an ``ESTIMATE COLUMNS`` subquery.
 
 .. index:: ``ESTIMATE PAIRWISE ROW``
+
 ``ESTIMATE PAIRWISE ROW <expression> FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the table assocated with
@@ -292,6 +313,7 @@ BQL Queries
    ``SIMILARITY`` and ``SIMILARITY WITH RESPECT TO (...)``.)
 
 .. index:: ``INFER``
+
 ``INFER <colnames> [WITH CONFIDENCE <conf>] FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Select the specified *colnames* from *generator*, filling in
@@ -311,6 +333,7 @@ BQL Queries
    missing.
 
 .. index:: ``INFER EXPLICIT``
+
 ``INFER EXPLICIT <columns> FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the table associated with *generator*, extended
@@ -329,6 +352,7 @@ BQL Queries
    XXX: What about values and confidences of model predictions?
 
 .. index:: ``SIMULATE``
+
 ``SIMULATE <colnames> FROM <generator> [USING MODEL <modelno>] [GIVEN <constraints>] [LIMIT <limit>]``
 
    Select the requested *colnames* from rows sampled from *generator*.
@@ -362,6 +386,7 @@ Model Estimators
 Model estimators are functions of a model, up to two columns, and up to one row.
 
 .. index:: ``PREDICTIVE PROBABILITY``
+
 ``PREDICTIVE PROBABILITY OF <column>``
 
    Function of one implied row.  Returns the predictive probability of
@@ -370,6 +395,7 @@ Model estimators are functions of a model, up to two columns, and up to one row.
    XXX: Rewrite this description!
 
 .. index:: ``PROBABILITY OF``
+
 ``PROBABILITY OF <column> = <value>``
 
    Constant.  Returns the probability that the column named *column*
@@ -386,12 +412,14 @@ Model estimators are functions of a model, up to two columns, and up to one row.
    implied column has the value of the BQL expression *value*.
 
 .. index:: ``TYPICALITY`` (row)
+
 ``TYPICALITY``
 
    Function of one implied row.  Returns a measure of the typicality
    of the row, i.e. how much it shares in common with many other rows.
 
 .. index:: ``TYPICALITY`` (column)
+
 ``TYPICALITY [OF <column>]``
 
    Constant, or function of one implied column.  Returns a measure of
@@ -399,6 +427,7 @@ Model estimators are functions of a model, up to two columns, and up to one row.
    with many other columns.
 
 .. index:: ``SIMILARITY``
+
 ``SIMILARITY [TO (<expression>)] [WITH RESPECT TO (<columns>)]``
 
    Function of one or two implied rows.  If given ``TO``, returns a
@@ -411,6 +440,7 @@ Model estimators are functions of a model, up to two columns, and up to one row.
    ``ESTIMATE COLUMNS`` subqueries.
 
 .. index:: ``CORRELATION``
+
 ``CORRELATION [[OF <column1>] WITH <column2>]``
 
    Constant, or function of one or two implied columns.  Returns
@@ -423,12 +453,14 @@ Model estimators are functions of a model, up to two columns, and up to one row.
    Cyclic columns are not supported.
 
 .. index:: ``DEPENDENCE PROBABILITY``
+
 ``DEPENDENCE PROBABILITY [[OF <column1>] WITH <column2>]``
 
    Constant, or function of one or two implied columns.  Returns the
    probability (density) that the two columns are dependent.
 
 .. index:: ``MUTUAL INFORMATION``
+
 ``MUTUAL INFORMATION [[OF <column1>] WITH <column2>]``
 
    Constant, or function of one or two implied columns.  Returns the
@@ -438,6 +470,7 @@ Model Predictions
 ^^^^^^^^^^^^^^^^^
 
 .. index:: ``PREDICT``
+
 ``PREDICT <column> [WITH CONFIDENCE <confidence>]``
 
    Function of one implied row.  Samples a value for the column named
