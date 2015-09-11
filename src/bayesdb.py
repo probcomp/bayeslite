@@ -21,26 +21,17 @@ import bayeslite.bql as bql
 import bayeslite.bqlfn as bqlfn
 import bayeslite.parse as parse
 import bayeslite.schema as schema
-import bayeslite.surveillance as surveillance
 import bayeslite.txn as txn
 
 bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
 
-def bayesdb_open(pathname=None, do_version_check=False):
+def bayesdb_open(pathname=None):
     """Open the BayesDB in the file at `pathname`.
 
     If there is no file at `pathname`, it is automatically created.
     If `pathname` is unspecified or ``None``, a temporary in-memory
     BayesDB instance is created.
     """
-    if do_version_check is None:
-        raise ValueError('''
-              do_version_check must be set explicitly to True or False.
-              We recommend setting to True to check your version is up to date,
-              and only running the latest version of BayesDB.
-        ''')
-    if do_version_check:
-        surveillance.version_check()
     return BayesDB(bayesdb_open_cookie, pathname=pathname)
 
 class BayesDB(object):
