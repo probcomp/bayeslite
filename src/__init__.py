@@ -35,16 +35,19 @@ The contents of ``memdb`` will be forgotten when it is closed or when
 the Python process exists.  The contents of ``filedb`` will be stored
 durably on disk in ``foo.bdb``.
 
-You can execute BQL on a BayesDB handle `bdb` with the
-:meth:`~BayesDB.execute` method::
+You can execute normal SQL on a BayesDB handle `bdb` with the
+:meth:`~BayesDB.sql_execute` method::
 
-   bdb.execute('create table t(x int, y text, z real)')
-   bdb.execute("insert into t values(1, 'xyz', 42.5)")
-   bdb.execute("insert into t values(1, 'pqr', 83.7)")
-   bdb.execute("insert into t values(2, 'xyz', 1000)")
+   bdb.sql_execute('create table t(x int, y text, z real)')
+   bdb.sql_execute("insert into t values(1, 'xyz', 42.5)")
+   bdb.sql_execute("insert into t values(1, 'pqr', 83.7)")
+   bdb.sql_execute("insert into t values(2, 'xyz', 1000)")
 
-However, before you can use BQL modelling for your data, you must use
-register a metamodel, such as the Crosscat metamodel::
+(BQL does not yet support CREATE TABLE and INSERT directly, so you
+must use :meth:`~BayesDB.sql_execute` for those.)
+
+To model your data and ask probabilistic BQL queries about it, you
+must first register a metamodel, such as the Crosscat metamodel::
 
    import crosscat.LocalEngine
    import bayeslite.crosscat
