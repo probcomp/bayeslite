@@ -17,6 +17,8 @@
 import contextlib
 import sqlite3
 import requests
+import json
+import warnings
 
 import bayeslite.bql as bql
 import bayeslite.bqlfn as bqlfn
@@ -26,6 +28,8 @@ import bayeslite.txn as txn
 import bayeslite.version
 
 bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
+
+FAIL_VERSION_CHECK = True
 
 def bayesdb_open(pathname=None, do_version_check=None):
     """Open the BayesDB in the file at `pathname`.
@@ -214,9 +218,9 @@ def version_check():
                }
     # TODO: It would be nice to be async about this. Set 1 second timeout.
     try:
-        r = requests.post(SERVICE, data=payload, timeout=1)
-        if r.status_code == 200 and r.json.result != "current":
-            print 'Bayeslite is not up to date. Version %s is available.\nSee %s' % (r.json.version, r.json.url)
+        r = requests.post(SERVICE, data=json.dumps(payload), timeout=1)
+        if FAIL_VERSION_CHECK or r.status_code == 200 and r.json.result != "current":
+            warnings.warn('Bayeslite is not up to date. Version %s is available.\nSee %s' % (r.json.version, r.json.url))
     except:
         # Silently eat exceptions.
         pass
