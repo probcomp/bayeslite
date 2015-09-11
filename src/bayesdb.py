@@ -16,20 +16,15 @@
 
 import contextlib
 import sqlite3
-import requests
-import json
-import warnings
 
 import bayeslite.bql as bql
 import bayeslite.bqlfn as bqlfn
 import bayeslite.parse as parse
 import bayeslite.schema as schema
+import bayeslite.surveillance as surveillance
 import bayeslite.txn as txn
-import bayeslite.version
 
 bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
-
-FAIL_VERSION_CHECK = True
 
 def bayesdb_open(pathname=None, do_version_check=False):
     """Open the BayesDB in the file at `pathname`.
@@ -45,7 +40,7 @@ def bayesdb_open(pathname=None, do_version_check=False):
               and only running the latest version of BayesDB.
         ''')
     if do_version_check:
-        version_check()
+        surveillance.version_check()
     return BayesDB(bayesdb_open_cookie, pathname=pathname)
 
 class BayesDB(object):
@@ -204,23 +199,3 @@ class BayesDB(object):
         n = self.temptable
         self.temptable += 1
         return 'bayesdb_temp_%u' % (n,)
-
-def version_check():
-    '''check the version online'''
-    SERVICE = 'https://2wh8htmfnj.execute-api.us-east-1.amazonaws.com/prod/bdbVersionCheck'
-    # arg: {'package':'bayeslite','version':'something','build':'something-else'}
-    # response: {'result':'current'} or
-    # {'result':'old', 'message':'A newer version of bayeslite is available',
-    #  'version':'0.5','url':'http://probcomp.org/bayesdb/release'}
-
-    payload = {'package': 'bayeslite',
-               'version': bayeslite.version.__version__
-               }
-    # TODO: It would be nice to be async about this. Set 1 second timeout.
-    try:
-        r = requests.post(SERVICE, data=json.dumps(payload), timeout=1)
-        if FAIL_VERSION_CHECK or r.status_code == 200 and r.json.result != "current":
-            warnings.warn('Bayeslite is not up to date. Version %s is available.\nSee %s' % (r.json.version, r.json.url))
-    except:
-        # Silently eat exceptions.
-        pass
