@@ -18,8 +18,8 @@ root=`cd -- "$(dirname -- "$0")" && pwd`
     rm -rf build
     ./pythenv.sh "$PYTHON" setup.py build
     if [ $# -eq 0 ]; then
-        ./pythenv.sh "$PYTHON" "$PY_TEST" tests shell/tests
+        WIZARD_MODE=1 ./pythenv.sh "$PYTHON" "$PY_TEST" tests shell/tests
     else
-        ./pythenv.sh "$PYTHON" "$PY_TEST" "$@"
+        WIZARD_MODE=1 ./pythenv.sh "$PYTHON" "$PY_TEST" "$@"
     fi
 )
