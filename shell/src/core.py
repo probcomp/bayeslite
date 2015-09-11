@@ -23,7 +23,6 @@ import sys
 import bayeslite
 import bayeslite.bql as bql
 import bayeslite.core as core
-import bayeslite.crosscat
 import bayeslite.guess as guess
 import bayeslite.parse as parse
 import bayeslite.shell.pretty as pretty
