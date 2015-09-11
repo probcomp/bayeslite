@@ -42,11 +42,12 @@ def version_check():
     # TODO: It would be nice to be async about this. Set 1 second timeout.
     try:
         r = requests.post(SERVICE, data=json.dumps(payload), timeout=1)
+    except Exception:
+        # Silently eat exceptions.
+        pass
+    else:
         if FAIL_VERSION_CHECK or \
            (r.status_code == 200 and r.json.result != "current"):
             warnings.warn('Bayeslite is not up to date.'
                 '  Version %s is available.\nSee %s'
                 % (r.json.version, r.json.url))
-    except:
-        # Silently eat exceptions.
-        pass
