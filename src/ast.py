@@ -224,7 +224,7 @@ InfColOne = namedtuple('InfColOne', [
 ])
 
 EstCols = namedtuple('EstCols', [
-    'columns',                  # [(Exp*, XXX name)]
+    'columns',                  # [SelCol*]
     'generator',                # XXX name
     'modelno',                  # modelno
     'condition',                # Exp* or None (unconditional)
@@ -233,7 +233,7 @@ EstCols = namedtuple('EstCols', [
 ])
 
 EstPairCols = namedtuple('EstPairCols', [
-    'columns',                  # Exp*
+    'columns',                  # [SelCol*]
     'generator',                # XXX name
     'subcolumns',               # ColList* or None
     'modelno',                  # modelno
@@ -243,7 +243,7 @@ EstPairCols = namedtuple('EstPairCols', [
 ])
 
 EstPairRow = namedtuple('EstPairRow', [
-    'expression',               # Exp*
+    'columns',                  # [SelCol*]
     'generator',                # XXX name
     'modelno',                  # modelno
     'condition',                # Exp* or None (unconditional)
@@ -329,7 +329,7 @@ OP_NEGATE = 'NEGATE'
 OP_PLUSID = 'PLUSID'
 
 ExpBQLPredProb = namedtuple('ExpBQLPredProb', ['column'])
-ExpBQLProb = namedtuple('ExpBQLProb', ['column', 'value'])
+ExpBQLProb = namedtuple('ExpBQLProb', ['column', 'value', 'constraints'])
 ExpBQLTyp = namedtuple('ExpBQLTyp', ['column'])
 ExpBQLSim = namedtuple('ExpBQLSim', ['condition', 'column_lists'])
 ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])

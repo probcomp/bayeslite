@@ -27,7 +27,7 @@ def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('bdbpath', type=str, nargs='?', default=None,
                         help="bayesdb database file")
-    parser.add_argument('-j', '--jobs', type=int, default=0,
+    parser.add_argument('-j', '--jobs', type=int, default=1,
                         help="Max number of jobs (processes) useable.")
     parser.add_argument('-s', '--seed', type=int, default=None,
                         help="Random seed for the default generator.")
@@ -83,7 +83,9 @@ def run(stdin, stdout, stderr, argv):
                     bdbshell.stdout.write('%s is not a file.  Aborting.\n' %
                         (str(path),))
                     break
-        bdbshell.cmdloop()
+
+        if not args.batch:
+            bdbshell.cmdloop()
     return 0
 
 

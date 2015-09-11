@@ -474,3 +474,26 @@ def test_exception(spawnbdb):
     c.sendexpectcmd('BEGIN;')
     c.expect_lines(['Already in a transaction!'])
     c.expect_prompt()
+
+
+def test_batch():
+    c = spawnjr('bayeslite -b -m')
+    c.delaybeforesend = 0
+    c.expect(pexpect.EOF)
+    assert c.before == ''
+
+
+def test_batch_file():
+    with tempfile.NamedTemporaryFile(prefix='bayeslite-shell') as temp:
+        with open(temp.name, 'w') as f:
+            f.write('select 0;')
+        # XXX Hope no ' in temp.name...
+        c = spawnjr("bayeslite -f '%s' -b -m" % (temp.name,))
+        c.delaybeforesend = 0
+        c.expect_lines([
+            '0',
+            '-',
+            '0',
+        ])
+        c.expect(pexpect.EOF)
+        assert c.before == ''

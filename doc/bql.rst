@@ -285,26 +285,26 @@ BQL Queries
       estimators are averaged over all models if ``USING MODEL`` is
       not specified.
 
-.. index:: ``ESTIMATE COLUMNS``
+.. index:: ``ESTIMATE FROM COLUMNS OF``
 
-``ESTIMATE COLUMNS [<columns>] FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <columns> FROM COLUMNS OF <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the modelled columns of *generator*, extended
    with model estimators of one implied column.
 
-.. index:: ``ESTIMATE PAIRWISE``
+.. index:: ``ESTIMATE FROM PAIRWISE COLUMNS OF``
 
-``ESTIMATE PAIRWISE <columns> FROM <generator> [FOR <subcolumns>] [USING MODEL <modelno>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <columns> FROM PAIRWISE COLUMNS OF <generator> [FOR <subcolumns>] [USING MODEL <modelno>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the modelled columns of
    *generator*, extended with model estimators of two implied columns.
 
    In addition to a literal list of column names, the list of
-   subcolumns may be an ``ESTIMATE COLUMNS`` subquery.
+   subcolumns may be an ``ESTIMATE * FROM COLUMNS OF`` subquery.
 
-.. index:: ``ESTIMATE PAIRWISE ROW``
+.. index:: ``ESTIMATE, PAIRWISE``
 
-``ESTIMATE PAIRWISE ROW <expression> FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <expression> FROM PAIRWISE <generator> [USING MODEL <modelno>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the table assocated with
    *generator*, extended with model estimators of two implied rows.
