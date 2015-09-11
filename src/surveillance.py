@@ -38,10 +38,14 @@ def version_check():
         'package': 'bayeslite',
         'version': bayeslite.version.__version__,
     }
+    headers = {
+        'User-Agent': 'bayeslite %s' % (bayeslite.version.__version__,),
+    }
 
     # TODO: It would be nice to be async about this. Set 1 second timeout.
     try:
-        r = requests.post(SERVICE, data=json.dumps(payload), timeout=1)
+        r = requests.post(SERVICE, data=json.dumps(payload), timeout=1,
+            headers=headers)
     except Exception:
         # Silently eat exceptions.
         pass
