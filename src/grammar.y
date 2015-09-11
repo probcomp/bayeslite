@@ -399,19 +399,20 @@ unary(bql)		::= bqlfn(b).
  * should be named in the expression), any context for an expression
  * makes sense with only one flavour of functions.  For example:
  *
- * (1) ESTIMATE PAIRWISE DEPENDENCE PROBABILITY FROM T;
- * (2) ESTIMATE COLUMNS ORDER BY DEPENDENCE PROBABILITY WITH C;
+ * (1) ESTIMATE DEPENDENCE PROBABILITY PAIRWISE COLUMNS OF FROM T;
+ * (2) ESTIMATE * FROM COLUMNS OF T ORDER BY DEPENDENCE PROBABILITY WITH C;
  * (3) SELECT SIMILARITY TO 5 WITH RESPECT TO C FROM T;
  *
  * It makes no sense to say
  *
- *	ESTIMATE COLUMNS FROM T WHERE DEPENDENCE PROBABILITY > 5,
+ *	ESTIMATE * FROM COLUMNS OF T WHERE DEPENDENCE PROBABILITY > 5,
  *
  * because WHERE filters a single set of columns, so there's no second
  * argument for DEPENDENCE PROBABILITY.  Similarly, it makes no sense
  * to say
  *
- *	ESTIMATE COLUMNS FROM T WHERE SIMILARITY TO 5 WITH RESPECT TO C > 5,
+ *	ESTIMATE * FROM COLUMNS OF T
+ *	    WHERE SIMILARITY TO 5 WITH RESPECT TO C > 5,
  *
  * because SIMILARITY TO 5 WITH RESPECT TO C is a function of a row,
  * not a function of a column.

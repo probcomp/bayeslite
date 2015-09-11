@@ -1157,11 +1157,11 @@ def compile_column_lists(bdb, generator_id, column_lists, _bql_compiler, out):
                 else:
                     out.write(', ')
                 if len(column) != 1:
-                    raise BQLError(bdb, 'ESTIMATE COLUMNS subquery returned' +
-                        ' multi-cell rows.')
+                    raise BQLError(bdb, 'ESTIMATE * FROM COLUMNS OF subquery'
+                        ' returned multi-cell rows.')
                 if not isinstance(column[0], unicode):
-                    raise BQLError(bdb, 'ESTIMATE COLUMNS subquery returned' +
-                        ' non-string.')
+                    raise BQLError(bdb, 'ESTIMATE * FROM COLUMNS OF subquery'
+                        ' returned non-string.')
                 colno = core.bayesdb_generator_column_number(bdb, generator_id,
                     column[0])
                 out.write('%d' % (colno,))

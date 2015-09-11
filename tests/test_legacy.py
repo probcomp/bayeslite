@@ -91,7 +91,7 @@ def test_legacy_models():
 if False:
     bql = '''
         SELECT gc0.name, gc0.shortname, gc1.name, gc1.shortname, e.value
-            FROM (ESTIMATE PAIRWISE DEPENDENCE PROBABILITY FROM DHA
+            FROM (ESTIMATE DEPENDENCE PROBABILITY FROM PAIRWISE COLUMNS OF dha
                     WHERE name0 != \'name\' AND name1 != \'name\'
                     ORDER BY name0 ASC, name1 ASC
                     LIMIT 10) AS e,

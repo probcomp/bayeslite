@@ -962,7 +962,7 @@ def test_parametrized():
                 ' WHERE name = :name OR (defaultp AND tabname = :name)',
             'SELECT id FROM bayesdb_generator'
                 ' WHERE name = :name OR (defaultp AND tabname = :name)',
-            # ESTIMATE COLUMNS:
+            # ESTIMATE * FROM COLUMNS OF:
             'SELECT c.name AS name'
                 ' FROM bayesdb_generator AS g,'
                     ' bayesdb_generator_column AS gc,'
@@ -1008,7 +1008,7 @@ def test_parametrized():
                 ' WHERE name = :name OR (defaultp AND tabname = :name)',
             'SELECT id FROM bayesdb_generator'
                 ' WHERE name = :name OR (defaultp AND tabname = :name)',
-            # ESTIMATE COLUMNS:
+            # ESTIMATE * FROM COLUMNS OF:
             'SELECT c.name AS name'
                 ' FROM bayesdb_generator AS g,'
                     ' bayesdb_generator_column AS gc,'

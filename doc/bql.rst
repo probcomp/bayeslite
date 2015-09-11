@@ -437,7 +437,7 @@ Model estimators are functions of a model, up to two columns, and up to one row.
    considered with respect to a subset of columns.
 
    *Columns* is a comma-separated list of column names or
-   ``ESTIMATE COLUMNS`` subqueries.
+   ``ESTIMATE * FROM COLUMNS OF ...`` subqueries.
 
 .. index:: ``CORRELATION``
 
