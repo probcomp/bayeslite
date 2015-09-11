@@ -23,7 +23,11 @@ import bayeslite.version
 FAIL_VERSION_CHECK = True
 
 def version_check():
-    """check the version online"""
+    """Send bayeslite version tracking bug to a remote server.
+
+    Warn, with `warnings.warn`, if the server reports the version not
+    current.
+    """
     SERVICE = 'https://2wh8htmfnj.execute-api.us-east-1.amazonaws.com/prod/bdbVersionCheck'
 
     # arg: {'package':'bayeslite','version':'something','build':'something-else'}
