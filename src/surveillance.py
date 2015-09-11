@@ -23,21 +23,26 @@ import bayeslite.version
 FAIL_VERSION_CHECK = True
 
 def version_check():
-    '''check the version online'''
+    """check the version online"""
     SERVICE = 'https://2wh8htmfnj.execute-api.us-east-1.amazonaws.com/prod/bdbVersionCheck'
+
     # arg: {'package':'bayeslite','version':'something','build':'something-else'}
     # response: {'result':'current'} or
     # {'result':'old', 'message':'A newer version of bayeslite is available',
     #  'version':'0.5','url':'http://probcomp.org/bayesdb/release'}
+    payload = {
+        'package': 'bayeslite',
+        'version': bayeslite.version.__version__,
+    }
 
-    payload = {'package': 'bayeslite',
-               'version': bayeslite.version.__version__
-               }
     # TODO: It would be nice to be async about this. Set 1 second timeout.
     try:
         r = requests.post(SERVICE, data=json.dumps(payload), timeout=1)
-        if FAIL_VERSION_CHECK or r.status_code == 200 and r.json.result != "current":
-            warnings.warn('Bayeslite is not up to date. Version %s is available.\nSee %s' % (r.json.version, r.json.url))
+        if FAIL_VERSION_CHECK or \
+           (r.status_code == 200 and r.json.result != "current"):
+            warnings.warn('Bayeslite is not up to date.'
+                '  Version %s is available.\nSee %s'
+                % (r.json.version, r.json.url))
     except:
         # Silently eat exceptions.
         pass
