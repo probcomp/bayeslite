@@ -199,6 +199,7 @@ class BQLSemantics(object):
     # BQL Model Definition Language
     def p_command_creategen(self, defaultp, name, ifnotexists, table,
             metamodel, schema):
+        self._ensure_wizard_mode(name)
         return ast.CreateGen(defaultp, name, ifnotexists, table,
             metamodel, schema)
     def p_command_dropgen(self, ifexists, name):
@@ -227,9 +228,11 @@ class BQLSemantics(object):
     # BQL Model Analysis Language
     def p_command_init_models(self, n, ifnotexists, generator):
         # XXX model config
+        self._ensure_wizard_mode(n)
         return ast.InitModels(ifnotexists, generator, n, config=None)
     def p_command_analyze_models(self, generator, models, anlimit, anckpt,
             wait):
+        self._ensure_wizard_mode(generator)
         iterations = anlimit[1] if anlimit[0] == 'iterations' else None
         seconds = anlimit[1] if anlimit[0] == 'seconds' else None
         ckpt_iterations = None
@@ -607,3 +610,11 @@ class BQLSemantics(object):
     def p_typearg_unsigned(self, i):            return i
     def p_typearg_positive(self, i):            return i
     def p_typearg_negative(self, i):            return -i
+
+    def _ensure_wizard_mode(self, text):
+        import os
+        if "BAYESDB_WIZARD_MODE" not in os.environ:
+            self.syntax_error((0, str(text)))
+            self.errors.append("""\
+If you would like to analyze your own data with BayesDB, please contact
+  bayesdb@mit.edu to participate in our research project.""")
