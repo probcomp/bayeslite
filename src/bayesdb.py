@@ -16,6 +16,8 @@
 
 import contextlib
 import sqlite3
+import time
+import json
 
 import bayeslite.bql as bql
 import bayeslite.bqlfn as bqlfn
@@ -26,16 +28,19 @@ import bayeslite.txn as txn
 
 bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
 
-def bayesdb_open(pathname=None, builtin_metamodels=None):
+def bayesdb_open(pathname=None, builtin_metamodels=None, save_sessions=True):
     """Open the BayesDB in the file at `pathname`.
 
     If there is no file at `pathname`, it is automatically created.
     If `pathname` is unspecified or ``None``, a temporary in-memory
     BayesDB instance is created.
+    If save_sessions is true or unspecified, query trace logging
+    information is saved in the database.
     """
     if builtin_metamodels is None:
         builtin_metamodels = True
-    bdb = BayesDB(bayesdb_open_cookie, pathname=pathname)
+    bdb = BayesDB(bayesdb_open_cookie, pathname=pathname,
+                   save_sessions=save_sessions)
     if builtin_metamodels:
         metamodel.bayesdb_register_builtin_metamodels(bdb)
     return bdb
@@ -52,7 +57,7 @@ class BayesDB(object):
             ...
     """
 
-    def __init__(self, cookie, pathname=None):
+    def __init__(self, cookie, pathname=None, save_sessions=True):
         if cookie != bayesdb_open_cookie:
             raise ValueError('Do not construct BayesDB objects directly!')
         if pathname is None:
@@ -65,6 +70,9 @@ class BayesDB(object):
         self.metamodels = {}
         self.tracer = None
         self.sql_tracer = None
+        self.save_sessions = save_sessions
+        if save_sessions:
+            self.session_id =
         self.cache = None
         self.temptable = 0
         schema.bayesdb_install_schema(self.sqlite3)
@@ -128,6 +136,19 @@ class BayesDB(object):
         assert self.sql_tracer == tracer
         self.sql_tracer = None
 
+    def session_entry(self, type, data, extra=None):
+        '''Save a session entry into the database, if we are doing that.'''
+        if not self.save_sessions:
+            return
+        if extra:
+            data += json.dumps(extra)
+        t = time.time()
+        self.sqlite3.execute('''INSERT INTO bayesdb_session_entries
+                                (session_id, time, type, data)
+                                VALUES (?,?,?,?)
+                             ''',
+                             (self.session_id, t, type, data))
+
     def execute(self, string, bindings=None):
         """Execute a BQL query and return a cursor for its results.
 
@@ -143,6 +164,7 @@ class BayesDB(object):
             bindings = ()
         if self.tracer:
             self.tracer(string, bindings)
+        self.session_entry("bql", string, bindings)
         phrases = parse.parse_bql_string(string)
         phrase = None
         try:
@@ -173,6 +195,7 @@ class BayesDB(object):
             bindings = ()
         if self.sql_tracer:
             self.sql_tracer(string, bindings)
+        self.session_entry("sql", string, bindings)
         return bql.BayesDBCursor(self, self.sqlite3.execute(string, bindings))
 
     @contextlib.contextmanager
