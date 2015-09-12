@@ -615,6 +615,5 @@ class BQLSemantics(object):
         import os
         if "WIZARD_MODE" not in os.environ:
             self.errors.append("""\
-We cannot yet guarantee the quality of results from BayesDB's automatic
-model building machinery.  If you would like to analyze your own data
-with BayesDB, please contact bayesdb@mit.edu.""")
+If you would like to analyze your own data with BayesDB, please contact
+bayesdb@mit.edu to participate in our research project.""")
