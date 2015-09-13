@@ -17,42 +17,38 @@
 import requests
 import json
 import warnings
+from pkg_resources import parse_version
 
-import bayeslite.version
-
-FAIL_VERSION_CHECK = True
+from bayeslite.version import __version__
 
 def version_check():
-    """Send bayeslite version tracking bug to a remote server.
+    """Check bayeslite version against remote server.
 
     Warn, with `warnings.warn`, if the server reports the version not
     current.
     """
-    SERVICE = 'https://2wh8htmfnj.execute-api.us-east-1.amazonaws.com/prod/bdbVersionCheck'
+    SERVICE = 'https://projects.csail.mit.edu/probcomp/bayesdb/bayeslite.version'
 
     # arg: {'package':'bayeslite','version':'something','build':'something-else'}
-    # response: {'result':'current'} or
-    # {'result':'old', 'message':'A newer version of bayeslite is available',
-    #  'version':'0.5','url':'http://probcomp.org/bayesdb/release'}
+    # response: {'version':'0.5','url':'http://probcomp.org/bayesdb/release'}
     payload = {
         'package': 'bayeslite',
-        'version': bayeslite.version.__version__,
+        'version': __version__,
     }
     headers = {
-        'User-Agent': 'bayeslite %s' % (bayeslite.version.__version__,),
+        'User-Agent': 'bayeslite %s' % (__version__,),
     }
 
-    payload_json = json.dumps(payload, sort_keys=True)
     try:
         # TODO: It would be nice to be async about this. Set 1 second timeout.
-        r = requests.post(SERVICE, data=payload_json, timeout=1,
-            headers=headers)
+        r = requests.get(SERVICE, params=payload, timeout=1, headers=headers)
+        if (r.status_code == 200 and
+            parse_version(__version__) < parse_version(r.json()['version'])):
+            msg = '''
+                Bayeslite is not up to date. You are running %s, version %s is available.
+                See %s
+                ''' % (__version__, r.json()['version'], r.json()['url'])
+            warnings.warn(msg)
     except Exception:
         # Silently eat exceptions.
         pass
-    else:
-        if FAIL_VERSION_CHECK or \
-           (r.status_code == 200 and r.json.result != "current"):
-            warnings.warn('Bayeslite is not up to date.'
-                '  Version %s is available.\nSee %s'
-                % (r.json.version, r.json.url))
