@@ -17,12 +17,12 @@
 import crosscat.LocalEngine
 
 import bayeslite
-import bayeslite.crosscat
+from bayeslite.metamodels.crosscat import CrosscatMetamodel
 
 def test_correlation():
-    with bayeslite.bayesdb_open() as bdb:
+    with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
         cc = crosscat.LocalEngine.LocalEngine(seed=0)
-        ccme = bayeslite.crosscat.CrosscatMetamodel(cc)
+        ccme = CrosscatMetamodel(cc)
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
         bdb.sql_execute('CREATE TABLE u(id, c0, c1, n0, n1)')
         bdb.execute('''

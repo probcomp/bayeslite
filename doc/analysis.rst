@@ -110,10 +110,10 @@ BQL Data Modelling Commands
 .. automodule:: bayeslite.metamodel
    :members:
 
-:mod:`bayeslite.crosscat`: Crosscat metamodel
+:mod:`bayeslite.metamodels.crosscat`: Crosscat metamodel
 ---------------------------------------------
 
-.. automodule:: bayeslite.crosscat
+.. automodule:: bayeslite.metamodels.crosscat
    :members:
 
 :mod:`bayeslite.guess`: Heuristics for statistical types
