@@ -68,6 +68,12 @@ class spawnjr(pexpect.spawn):
         assert self.before == ''
 
 
+BAYESLITE = os.path.join(ROOT, '..', 'scripts', 'bayeslite')
+
+def spawn_bayeslite(options):
+    return spawnjr(BAYESLITE + ' ' + options)
+
+
 @contextlib.contextmanager
 def read_data():
     with tempfile.NamedTemporaryFile(prefix='bayeslite-shell') as temp:
@@ -78,7 +84,7 @@ def read_data():
 
 @pytest.fixture
 def spawnbdb():
-    c = spawnjr('bayeslite --no-init-file --memory')
+    c = spawn_bayeslite('--no-init-file --memory')
     c.delaybeforesend = 0
     c.expect_lines([
         'Welcome to the Bayeslite %s shell.' % (bayeslite_version,),
@@ -117,7 +123,7 @@ def test_shell_loads(spawnbdb):
 
 
 def test_shell_hyphen():
-    c = spawnjr('bayeslite -')
+    c = spawn_bayeslite('-')
     c.delaybeforesend = 0
     c.expect_lines(['bayeslite: missing option?'])
     return c
@@ -477,7 +483,7 @@ def test_exception(spawnbdb):
 
 
 def test_batch():
-    c = spawnjr('bayeslite -b -m')
+    c = spawn_bayeslite('-b -m')
     c.delaybeforesend = 0
     c.expect(pexpect.EOF)
     assert c.before == ''
