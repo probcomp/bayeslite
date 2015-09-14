@@ -1023,12 +1023,6 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         # the mean.
         return arithmetic_mean(mi)
 
-    def column_typicality(self, bdb, generator_id, modelno, colno):
-        return self._crosscat.column_structural_typicality(
-            X_L_list=self._crosscat_latent_state(bdb, generator_id, modelno),
-            col_id=crosscat_cc_colno(bdb, generator_id, colno),
-        )
-
     def column_value_probability(self, bdb, generator_id, modelno, colno,
             value, constraints):
         M_c = self._crosscat_metadata(bdb, generator_id)
@@ -1069,18 +1063,6 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             target_row_id=target_row_id,
             target_columns=[crosscat_cc_colno(bdb, generator_id, colno)
                 for colno in colnos],
-        )
-
-    def row_typicality(self, bdb, generator_id, modelno, rowid):
-        X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
-        X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
-        row_id, X_L_list, X_D_list = \
-            self._crosscat_get_row(bdb, generator_id, rowid, X_L_list,
-                X_D_list)
-        return self._crosscat.row_structural_typicality(
-            X_L_list=X_L_list,
-            X_D_list=X_D_list,
-            row_id=row_id,
         )
 
     def row_column_predictive_probability(self, bdb, generator_id, modelno,
