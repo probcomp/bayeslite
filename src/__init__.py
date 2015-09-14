@@ -60,7 +60,6 @@ contact bayesdb@mit.edu to participate in our research project.
 
 from bayeslite.bayesdb import BayesDB
 from bayeslite.bayesdb import bayesdb_open
-from bayeslite.bqlfn import bayesdb_simulate
 from bayeslite.codebook import bayesdb_load_codebook_csv_file
 from bayeslite.exception import BayesDBException
 from bayeslite.exception import BQLError
@@ -88,7 +87,6 @@ __all__ = [
     'bayesdb_read_csv',
     'bayesdb_read_csv_file',
     'bayesdb_register_metamodel',
-    'bayesdb_simulate',
     'IBayesDBMetamodel',
     '__version__',
 ]
