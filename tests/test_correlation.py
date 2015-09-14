@@ -20,7 +20,7 @@ import bayeslite
 from bayeslite.metamodels.crosscat import CrosscatMetamodel
 
 def test_correlation():
-    with bayeslite.bayesdb_open() as bdb:
+    with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
         cc = crosscat.LocalEngine.LocalEngine(seed=0)
         ccme = CrosscatMetamodel(cc)
         bayeslite.bayesdb_register_metamodel(bdb, ccme)

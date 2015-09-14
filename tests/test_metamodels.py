@@ -72,12 +72,14 @@ examples = {
 def test_example(persist, exname):
     if persist:
         with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
-            with bayeslite.bayesdb_open(pathname=f.name) as bdb:
+            with bayeslite.bayesdb_open(pathname=f.name,
+                    builtin_metamodels=False) as bdb:
                 _test_example(bdb, exname)
-            with bayeslite.bayesdb_open(pathname=f.name) as bdb:
+            with bayeslite.bayesdb_open(pathname=f.name,
+                    builtin_metamodels=False) as bdb:
                 _retest_example(bdb, exname)
     else:
-        with bayeslite.bayesdb_open() as bdb:
+        with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
             _test_example(bdb, exname)
 
 def _test_example(bdb, exname):

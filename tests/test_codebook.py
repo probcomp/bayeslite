@@ -52,7 +52,7 @@ def test_codebook_value_map():
         SIMULATE specifying `city` = `LA` (throws KeyError)
     '''
     
-    with bayeslite.bayesdb_open() as bdb:
+    with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
         cc = crosscat.LocalEngine.LocalEngine(seed=0)
         ccme = CrosscatMetamodel(cc)
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
@@ -88,7 +88,7 @@ def test_codebook_value_map():
             bdb.execute('SIMULATE age FROM dummy_cc GIVEN city = LA LIMIT 5')
 
 def test_empty_codebook():
-    with bayeslite.bayesdb_open() as bdb:
+    with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
         bdb.sql_execute('create table t(x, y)')
         with tempfile.NamedTemporaryFile(prefix='bayeslite') as tf:
             with pytest.raises(IOError):

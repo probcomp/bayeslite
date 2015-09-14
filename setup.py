@@ -84,6 +84,9 @@ for grammar in grammars:
 setup(
     name='bayeslite',
     version=version,
+    install_requires=[
+        'crosscat>=0.1.24',
+    ],
     packages=[
         'bayeslite',
         'bayeslite.metamodels',

@@ -44,7 +44,7 @@ def test_complex_dependencies():
     data = np.vstack((x,y,z,w,v)).T
 
     # Create the database.
-    with bayeslite.bayesdb_open() as bdb:
+    with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
         cc = crosscat.LocalEngine.LocalEngine(seed=0)
         ccme = CrosscatMetamodel(cc)
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
@@ -108,7 +108,7 @@ def test_impossible_duplicate_dependency():
     data = [(1, 0, 0), (0, 0, 1)]
 
     # Create the database.
-    with bayeslite.bayesdb_open() as bdb:
+    with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
         cc = crosscat.LocalEngine.LocalEngine(seed=0)
         ccme = CrosscatMetamodel(cc)
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
@@ -146,7 +146,7 @@ def test_impossible_nontransitive_dependency():
     data = [(1, 0, 0), (0, 0, 1)]
 
     # Create the database.
-    with bayeslite.bayesdb_open() as bdb:
+    with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
         cc = crosscat.LocalEngine.LocalEngine(seed=0)
         ccme = CrosscatMetamodel(cc)
         bayeslite.bayesdb_register_metamodel(bdb, ccme)

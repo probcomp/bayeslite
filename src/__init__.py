@@ -73,6 +73,7 @@ from bayeslite.exception import BayesDBException
 from bayeslite.exception import BQLError
 from bayeslite.legacy_models import bayesdb_load_legacy_models
 from bayeslite.metamodel import IBayesDBMetamodel
+from bayeslite.metamodel import bayesdb_builtin_metamodel
 from bayeslite.metamodel import bayesdb_deregister_metamodel
 from bayeslite.metamodel import bayesdb_register_metamodel
 from bayeslite.parse import BQLParseError
@@ -98,3 +99,8 @@ __all__ = [
     'IBayesDBMetamodel',
     '__version__',
 ]
+
+from bayeslite.metamodels.crosscat import CrosscatMetamodel
+from crosscat.LocalEngine import LocalEngine as CrosscatLocalEngine
+
+bayesdb_builtin_metamodel(CrosscatMetamodel(CrosscatLocalEngine(seed=0)))

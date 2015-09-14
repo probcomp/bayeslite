@@ -57,7 +57,8 @@ def run(stdin, stdout, stderr, argv):
     if args.bdbpath == '-':
         stderr.write('%s: missing option?\n' % (progname,))
         return 1
-    bdb = bayeslite.bayesdb_open(pathname=args.bdbpath)
+    bdb = bayeslite.bayesdb_open(pathname=args.bdbpath,
+        builtin_metamodels=False)
 
     if args.jobs != 1:
         import crosscat.MultiprocessingEngine as ccme
