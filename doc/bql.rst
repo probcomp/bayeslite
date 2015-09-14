@@ -135,8 +135,6 @@ BQL Queries
    *Colnames* is a comma-separated list of column names, **not**
    arbitrary BQL expressions.
 
-   XXX: What about values and confidences of model predictions?
-
    FUTURE: *Colnames* will be allowed to have arbitrary expressions,
    with any references to columns inside automatically filled in if
    missing.
@@ -157,8 +155,6 @@ BQL Queries
    *name* if *rename* is not supplied, holding a predicted value of
    the column *name*, and one named *confname* holding the confidence
    of the prediction.
-
-   XXX: What about values and confidences of model predictions?
 
 .. index:: ``SIMULATE``
 
