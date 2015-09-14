@@ -399,21 +399,6 @@ def test_t1_simulate(colnos, constraints, numpredictions):
         bqlfn.bayesdb_simulate(bdb, generator_id, constraints, colnos,
             numpredictions=numpredictions)
 
-@pytest.mark.parametrize('exname,colno',
-    [(exname, colno)
-        for exname in examples.keys()
-        for colno in range(1,3)])
-def test_onecolumn(exname, colno):
-    if exname == 't0' and colno > 0:
-        pytest.skip('Not enough columns in %s.' % (exname,))
-    if exname.startswith('t1_sub') and colno > 1:
-        pytest.skip('Not enough columns in %s.' % (exname,))
-    with analyzed_bayesdb_generator(examples[exname](), 1, 1) \
-            as (bdb, generator_id):
-        bqlfn.bql_column_typicality(bdb, generator_id, None, colno)
-        list(bdb.sql_execute('select bql_column_typicality(?, NULL, ?)',
-            (generator_id, colno)))
-
 @pytest.mark.parametrize('exname,colno0,colno1',
     [(exname, colno0, colno1)
         for exname in examples.keys()
@@ -488,20 +473,6 @@ def test_row_similarity(exname, source, target, colnos):
         sql = 'select bql_row_similarity(?, NULL, ?, ?%s%s)' % \
             ('' if 0 == len(colnos) else ', ', ', '.join(map(str, colnos)))
         list(bdb.sql_execute(sql, (generator_id, source, target)))
-
-@pytest.mark.parametrize('exname,rowid',
-    [(exname, rowid)
-        for exname in examples.keys()
-        for rowid in range(4)])
-def test_row_typicality(exname, rowid):
-    if exname == 't0' and colnos != [] and colnos != [0]:
-        pytest.skip('Not enough columns in t0.')
-    with analyzed_bayesdb_generator(examples[exname](), 1, 1) \
-            as (bdb, generator_id):
-        if rowid == 0: rowid = bayesdb_maxrowid(bdb, generator_id)
-        bqlfn.bql_row_typicality(bdb, generator_id, None, rowid)
-        list(bdb.sql_execute('select bql_row_typicality(?, NULL, ?)',
-            (generator_id, rowid)))
 
 @pytest.mark.parametrize('exname,rowid,colno',
     [(exname, rowid, colno)
