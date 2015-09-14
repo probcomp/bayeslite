@@ -232,7 +232,7 @@ def bayesdb_generator_name(bdb, id):
         return row[0]
 
 def bayesdb_generator_metamodel(bdb, id):
-    """Return the name of the metamodel of the generator with id `id`."""
+    """Return the metamodel of the generator with id `id`."""
     sql = 'SELECT metamodel FROM bayesdb_generator WHERE id = ?'
     cursor = bdb.sql_execute(sql, (id,))
     try:
