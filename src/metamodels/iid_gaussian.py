@@ -30,6 +30,8 @@ import random
 
 import bayeslite.metamodel as metamodel
 
+from bayeslite.exception import BQLError
+
 std_normal_schema_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('std_normal', 1);
 '''
