@@ -151,8 +151,8 @@ class BayesDB(object):
     def sql_execute(self, string, bindings=None):
         """Execute a SQL query on the underlying SQLite database.
 
-        The argument `string` is a string parsed into a single BQL
-        query.  It must contain exactly one BQL phrase, optionally
+        The argument `string` is a string parsed into a single SQL
+        query.  It must contain exactly one SQL phrase, optionally
         terminated by a semicolon.
 
         The argument `bindings` is a sequence or dictionary of
