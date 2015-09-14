@@ -20,7 +20,7 @@ import pytest
 import crosscat.LocalEngine
 
 import bayeslite
-import bayeslite.crosscat
+from bayeslite.metamodels.crosscat import CrosscatMetamodel
 
 # Synthetic dataset (x,y,z,v,w) for the tests. Fixed seed is not used since
 # the tests should pass independently of the generated dataset.
@@ -46,7 +46,7 @@ def test_complex_dependencies():
     # Create the database.
     with bayeslite.bayesdb_open() as bdb:
         cc = crosscat.LocalEngine.LocalEngine(seed=0)
-        ccme = bayeslite.crosscat.CrosscatMetamodel(cc)
+        ccme = CrosscatMetamodel(cc)
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
 
         # Read the dataset.
@@ -110,7 +110,7 @@ def test_impossible_duplicate_dependency():
     # Create the database.
     with bayeslite.bayesdb_open() as bdb:
         cc = crosscat.LocalEngine.LocalEngine(seed=0)
-        ccme = bayeslite.crosscat.CrosscatMetamodel(cc)
+        ccme = CrosscatMetamodel(cc)
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
 
         # Read the dataset.
@@ -148,7 +148,7 @@ def test_impossible_nontransitive_dependency():
     # Create the database.
     with bayeslite.bayesdb_open() as bdb:
         cc = crosscat.LocalEngine.LocalEngine(seed=0)
-        ccme = bayeslite.crosscat.CrosscatMetamodel(cc)
+        ccme = CrosscatMetamodel(cc)
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
 
         # Read the dataset.

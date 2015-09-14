@@ -19,7 +19,7 @@ import math
 import pytest
 
 import bayeslite
-import bayeslite.crosscat
+from bayeslite.metamodels.crosscat import CrosscatMetamodel
 from bayeslite.guess import bayesdb_guess_stattypes
 from bayeslite.guess import bayesdb_guess_generator
 
@@ -97,7 +97,7 @@ def test_guess_generator():
     for row in data:
         bdb.sql_execute('INSERT INTO t (x, y, z) VALUES (?, ?, ?)', row)
     cc = crosscat.LocalEngine.LocalEngine(seed=0)
-    metamodel = bayeslite.crosscat.CrosscatMetamodel(cc)
+    metamodel = CrosscatMetamodel(cc)
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)
     with pytest.raises(ValueError):
         # No modelled columns.  (x is key.)

@@ -23,7 +23,7 @@ import bayeslite
 
 import bayeslite.core as core
 
-from bayeslite.crosscat import CrosscatMetamodel
+from bayeslite.metamodels.crosscat import CrosscatMetamodel
 from bayeslite.metamodels.iid_gaussian import StdNormalMetamodel
 from bayeslite.sqlite3_util import sqlite3_quote_name
 

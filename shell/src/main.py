@@ -18,7 +18,7 @@ import argparse
 import os
 
 import bayeslite
-import bayeslite.crosscat
+from bayeslite.metamodels.crosscat import CrosscatMetamodel
 import bayeslite.shell.core as shell
 import bayeslite.shell.hook as hook
 
@@ -66,7 +66,7 @@ def run(stdin, stdout, stderr, argv):
     else:
         import crosscat.LocalEngine as ccle
         crosscat = ccle.LocalEngine(seed=args.seed)
-    metamodel = bayeslite.crosscat.CrosscatMetamodel(crosscat)
+    metamodel = CrosscatMetamodel(crosscat)
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)
     bdbshell = shell.Shell(bdb, 'crosscat', stdin, stdout, stderr)
     with hook.set_current_shell(bdbshell):

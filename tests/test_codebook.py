@@ -22,7 +22,7 @@ import tempfile
 import crosscat.LocalEngine
 
 import bayeslite
-import bayeslite.crosscat
+from bayeslite.metamodels.crosscat import CrosscatMetamodel
 
 
 dummy_data = iter(['kerberos,age,city',
@@ -54,7 +54,7 @@ def test_codebook_value_map():
     
     with bayeslite.bayesdb_open() as bdb:
         cc = crosscat.LocalEngine.LocalEngine(seed=0)
-        ccme = bayeslite.crosscat.CrosscatMetamodel(cc)
+        ccme = CrosscatMetamodel(cc)
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
         
         bayeslite.bayesdb_read_csv(bdb,'dummy', dummy_data,
