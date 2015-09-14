@@ -722,7 +722,6 @@ def test_is_bql():
     # ...
     assert ast.is_bql(ast.ExpBQLPredProb('c'))
     assert ast.is_bql(ast.ExpBQLProb('c', 0, []))
-    assert ast.is_bql(ast.ExpBQLTyp('c'))
     assert ast.is_bql(ast.ExpBQLSim(ast.ExpLit(ast.LitInt(0)), []))
     assert ast.is_bql(ast.ExpBQLDepProb('c0', 'c1'))
     assert ast.is_bql(ast.ExpBQLMutInf('c0', 'c1', 100))
