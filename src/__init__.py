@@ -31,11 +31,19 @@ When done, close it with the :meth:`~BayesDB.close` method::
    filedb.close()
    memdb.close()
 
-The contents of ``memdb`` will be forgotten when it is closed or when
-the Python process exists.  The contents of ``filedb`` will be stored
-durably on disk in ``foo.bdb``.
+The ``filedb`` will read data and any saved generators from the given
+database file, and save any modifications durably in that same file.
+The ``memdb`` is an initially-empty in-memory database whose contents
+will be forgotten when it is closed or when the Python process exists.
 
-You can execute normal SQL on a BayesDB handle `bdb` with the
+You can query the probable (according to the analyses stored in
+the database) implications of the data by passing BQL queries
+to the :meth:`~BayesDB.execute` method::
+
+   for x in bdb.execute('estimate pairwise dependence probablity from foo_gen'):
+       print x
+
+You can also execute normal SQL on a BayesDB handle `bdb` with the
 :meth:`~BayesDB.sql_execute` method::
 
    bdb.sql_execute('create table t(x int, y text, z real)')
@@ -46,23 +54,8 @@ You can execute normal SQL on a BayesDB handle `bdb` with the
 (BQL does not yet support CREATE TABLE and INSERT directly, so you
 must use :meth:`~BayesDB.sql_execute` for those.)
 
-To model your data and ask probabilistic BQL queries about it, you
-must first register a metamodel, such as the Crosscat metamodel::
-
-   import crosscat.LocalEngine
-   from bayeslite.metamodels.crosscat import CrosscatMetamodel
-
-   cc = crosscat.LocalEngine.LocalEngine(seed=0)
-   bayeslite.bayesdb_register_metamodel(bdb, CrosscatMetamodel(cc))
-
-Then you can model a table with Crosscat and query the probable
-implications of the data in the table::
-
-   bdb.execute('create generator t_cc for t using crosscat(guess(*))')
-   bdb.execute('initialize 10 models for t_cc')
-   bdb.execute('analyze t_cc for 10 iterations wait')
-   for x in bdb.execute('estimate pairwise dependence probablity from t_cc'):
-       print x
+If you would like to analyze your own data with BayesDB, please
+contact bayesdb@mit.edu to participate in our research project.
 """
 
 from bayeslite.bayesdb import BayesDB
