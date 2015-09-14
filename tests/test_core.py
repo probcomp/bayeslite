@@ -396,7 +396,7 @@ def test_t1_simulate(colnos, constraints, numpredictions):
             constraints = \
                 [(i, bayesdb_generator_cell_value(bdb, generator_id, i, rowid))
                     for i in constraints]
-        bayeslite.bayesdb_simulate(bdb, generator_id, constraints, colnos,
+        bqlfn.bayesdb_simulate(bdb, generator_id, constraints, colnos,
             numpredictions=numpredictions)
 
 @pytest.mark.parametrize('exname,colno',

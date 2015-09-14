@@ -69,7 +69,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         CREATE GENERATOR t_nig FOR t USING nig_normal(..)
 
     Internally, the NIG Normal metamodel add SQL tables to the
-    database with names that begin with ``nig_normal_``.
+    database with names that begin with ``bayesdb_nig_normal_``.
 
     """
 
