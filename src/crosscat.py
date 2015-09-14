@@ -214,7 +214,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         CREATE GENERATOR t_cc FOR t USING crosscat(...)
 
     Internally, the Crosscat metamodel adds SQL tables to the database
-    with names that begin ``crosscat_``.
+    with names that begin with ``bayesdb_crosscat_``.
     """
 
     def __init__(self, crosscat, subsample=None):
