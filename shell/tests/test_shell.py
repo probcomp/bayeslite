@@ -494,7 +494,7 @@ def test_batch_file():
         with open(temp.name, 'w') as f:
             f.write('select 0;')
         # XXX Hope no ' in temp.name...
-        c = spawnjr("bayeslite -f '%s' -b -m" % (temp.name,))
+        c = spawn_bayeslite("-f '%s' -b -m" % (temp.name,))
         c.delaybeforesend = 0
         c.expect_lines([
             '0',
