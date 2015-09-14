@@ -195,9 +195,8 @@ Model estimators are functions of a model, up to two columns, and up to one row.
 ``PREDICTIVE PROBABILITY OF <column>``
 
    Function of one implied row.  Returns the predictive probability of
-   the column named *column* for this row.
-
-   XXX: Rewrite this description!
+   the row's value for the column named *column*, given all the other
+   data in the row.
 
 .. index:: ``PROBABILITY OF``
 
