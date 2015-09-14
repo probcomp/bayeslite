@@ -83,6 +83,7 @@ from bayeslite.txn import BayesDBTxnError
 from bayeslite.version import __version__
 
 __all__ = [
+    'BQLError',
     'BQLParseError',
     'BayesDB',
     'BayesDBException',
