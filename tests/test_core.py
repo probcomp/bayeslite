@@ -26,7 +26,7 @@ import crosscat.MultiprocessingEngine
 import bayeslite
 import bayeslite.bqlfn as bqlfn
 import bayeslite.core as core
-import bayeslite.crosscat
+from bayeslite.metamodels.crosscat import CrosscatMetamodel
 import bayeslite.guess as guess
 import bayeslite.metamodel as metamodel
 
@@ -50,8 +50,8 @@ def multiprocessing_crosscat():
 def bayesdb(metamodel=None, **kwargs):
     if metamodel is None:
         crosscat = local_crosscat()
-        metamodel = bayeslite.crosscat.CrosscatMetamodel(crosscat)
-    bdb = bayeslite.bayesdb_open(**kwargs)
+        metamodel = CrosscatMetamodel(crosscat)
+    bdb = bayeslite.bayesdb_open(builtin_metamodels=False, **kwargs)
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)
     try:
         yield bdb
@@ -102,7 +102,7 @@ class DotdogMetamodel(metamodel.IBayesDBMetamodel):
         instantiate(schema)
 
 def test_hackmetamodel():
-    bdb = bayeslite.bayesdb_open()
+    bdb = bayeslite.bayesdb_open(builtin_metamodels=False)
     bdb.sql_execute('CREATE TABLE t(a INTEGER, b TEXT)')
     bdb.sql_execute("INSERT INTO t (a, b) VALUES (42, 'fnord')")
     bdb.sql_execute('CREATE TABLE u AS SELECT * FROM t')
@@ -111,7 +111,7 @@ def test_hackmetamodel():
     with pytest.raises(bayeslite.BQLError):
         bdb.execute('CREATE GENERATOR t_dd FOR t USING dotdog(a NUMERICAL)')
     crosscat = local_crosscat()
-    crosscat_metamodel = bayeslite.crosscat.CrosscatMetamodel(crosscat)
+    crosscat_metamodel = CrosscatMetamodel(crosscat)
     dotdog_metamodel = DotdogMetamodel()
     bayeslite.bayesdb_register_metamodel(bdb, dotdog_metamodel)
     bayeslite.bayesdb_deregister_metamodel(bdb, dotdog_metamodel)
@@ -288,7 +288,7 @@ def t1_subcat():
 
 # def t1_mp():
 #     crosscat = multiprocessing_crosscat()
-#     metamodel = bayeslite.crosscat.CrosscatMetamodel(crosscat)
+#     metamodel = CrosscatMetamodel(crosscat)
 #     return bayesdb_generator(bayesdb(metamodel=metamodel),
 #         't1', 't1_cc', t1_schema, t1_data,
 #         columns=['label CATEGORICAL', 'age NUMERICAL', 'weight NUMERICAL'])

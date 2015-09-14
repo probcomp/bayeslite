@@ -50,11 +50,10 @@ To model your data and ask probabilistic BQL queries about it, you
 must first register a metamodel, such as the Crosscat metamodel::
 
    import crosscat.LocalEngine
-   import bayeslite.crosscat
+   from bayeslite.metamodels.crosscat import CrosscatMetamodel
 
    cc = crosscat.LocalEngine.LocalEngine(seed=0)
-   ccmm = bayeslite.crosscat.CrosscatMetamodel(cc)
-   bayeslite.bayesdb_register_metamodel(bdb, ccmm)
+   bayeslite.bayesdb_register_metamodel(bdb, CrosscatMetamodel(cc))
 
 Then you can model a table with Crosscat and query the probable
 implications of the data in the table::
@@ -74,6 +73,7 @@ from bayeslite.exception import BayesDBException
 from bayeslite.exception import BQLError
 from bayeslite.legacy_models import bayesdb_load_legacy_models
 from bayeslite.metamodel import IBayesDBMetamodel
+from bayeslite.metamodel import bayesdb_builtin_metamodel
 from bayeslite.metamodel import bayesdb_deregister_metamodel
 from bayeslite.metamodel import bayesdb_register_metamodel
 from bayeslite.parse import BQLParseError
@@ -99,3 +99,8 @@ __all__ = [
     'IBayesDBMetamodel',
     '__version__',
 ]
+
+from bayeslite.metamodels.crosscat import CrosscatMetamodel
+from crosscat.LocalEngine import LocalEngine as CrosscatLocalEngine
+
+bayesdb_builtin_metamodel(CrosscatMetamodel(CrosscatLocalEngine(seed=0)))

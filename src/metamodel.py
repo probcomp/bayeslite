@@ -18,6 +18,20 @@
 
 import bayeslite.core as core
 
+builtin_metamodels = []
+builtin_metamodel_names = set()
+
+def bayesdb_builtin_metamodel(metamodel):
+    name = metamodel.name()
+    assert name not in builtin_metamodel_names
+    builtin_metamodels.append(metamodel)
+    builtin_metamodel_names.add(name)
+
+def bayesdb_register_builtin_metamodels(bdb):
+    """Register all builtin metamodels in `bdb`."""
+    for metamodel in builtin_metamodels:
+        bayesdb_register_metamodel(bdb, metamodel)
+
 def bayesdb_register_metamodel(bdb, metamodel):
     """Register `metamodel` in `bdb`, creating any necessary tables.
 
