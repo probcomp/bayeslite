@@ -9,9 +9,17 @@ generative models for data in a table.
 .. toctree::
    :maxdepth: 2
 
-   bql
    api
+   bql
    internals
+
+If you would like to analyze your own data with BayesDB, please
+contact bayesdb@mit.edu to participate in our research project.
+
+.. toctree::
+   :maxdepth: 1
+
+   analysis
 
 Indices and tables
 ==================
