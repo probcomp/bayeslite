@@ -71,7 +71,7 @@ class spawnjr(pexpect.spawn):
 BAYESLITE = os.path.join(ROOT, '..', 'scripts', 'bayeslite')
 
 def spawn_bayeslite(options):
-    return spawnjr(BAYESLITE + ' ' + options)
+    return spawnjr(BAYESLITE + ' -q ' + options)
 
 
 @contextlib.contextmanager
