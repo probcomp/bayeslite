@@ -76,9 +76,9 @@ print cmd
 bdb.execute(cmd)
 
 # create a diagnostics plot
-#fig = bdbcontrib.plot_crosscat_chain_diagnostics(bdb, 'logscore',
-    #'satellites_cc')
-#plt.savefig('output/satellites_logscores.pdf')
+fig = bdbcontrib.plot_crosscat_chain_diagnostics(bdb, 'logscore',
+    'satellites_cc')
+plt.savefig('output/satellites_logscores.pdf')
 
 print 'closing bdb', bdb_file
 bdb.close()
