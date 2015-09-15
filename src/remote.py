@@ -42,13 +42,14 @@ def version_check():
     try:
         # TODO: It would be nice to be async about this. Set 1 second timeout.
         r = requests.get(SERVICE, params=payload, timeout=1, headers=headers)
-        if (r.status_code == 200 and
-            parse_version(__version__) < parse_version(r.json()['version'])):
-            msg = '''
-                Bayeslite is not up to date. You are running %s, version %s is available.
-                See %s
-                ''' % (__version__, r.json()['version'], r.json()['url'])
-            warnings.warn(msg)
+        if r.status_code != 200:
+            return
+        d = r.json()
+        if parse_version(__version__) < parse_version(d['version']):
+            warnings.warn('Bayeslite is not up to date.'
+                '\nYou are running %s; the latest version is %s.'
+                '\nSee %s.'
+                % (__version__, d['version'], d['url']))
     except Exception:
         # Silently eat exceptions.
         pass
