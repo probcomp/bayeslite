@@ -56,13 +56,13 @@ must use :meth:`~BayesDB.sql_execute` for those.)
 
 This module will check for version being up to date against a remote
 server on load. To disable remote communication, set the environment
-variable BAYESDB_DISABLE_VERSION_CHECK before import, such as with::
+variable ``BAYESDB_DISABLE_VERSION_CHECK`` before import, such as
+with::
 
-   os.environ[BAYESDB_DISABLE_VERSION_CHECK] = 1
+   os.environ['BAYESDB_DISABLE_VERSION_CHECK'] = '1'
 
 If you would like to analyze your own data with BayesDB, please
 contact bayesdb@mit.edu to participate in our research project.
-
 """
 
 from bayeslite.bayesdb import BayesDB
@@ -112,4 +112,4 @@ if not 'BAYESDB_DISABLE_VERSION_CHECK' in os.environ:
 # Notebooks should contain comment lines documenting this behavior and
 # offering a solution, like so:
 # Please keep BayesDB up to date. To disable remote version checking:
-# import os; os.environ[BAYESDB_DISABLE_VERSION_CHECK]
+# import os; os.environ['BAYESDB_DISABLE_VERSION_CHECK'] = '1'
