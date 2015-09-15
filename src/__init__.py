@@ -54,12 +54,15 @@ You can also execute normal SQL on a BayesDB handle `bdb` with the
 (BQL does not yet support CREATE TABLE and INSERT directly, so you
 must use :meth:`~BayesDB.sql_execute` for those.)
 
-This module will check for version being up to date against a remote
-server on load. To disable remote communication, set the environment
-variable ``BAYESDB_DISABLE_VERSION_CHECK`` before import, such as
-with::
+When imported, the :mod:`bayeslite` module will notify the MIT
+Probabilistic Computing Project over the internet of the software
+version you are using, and warn if it is out-of-date.  To disable
+this, set the environment variable ``BAYESDB_DISABLE_VERSION_CHECK``
+before import, such as with::
 
+   import os
    os.environ['BAYESDB_DISABLE_VERSION_CHECK'] = '1'
+   import bayeslite
 
 If you would like to analyze your own data with BayesDB, please
 contact bayesdb@mit.edu to participate in our research project.
