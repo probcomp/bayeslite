@@ -8,5 +8,5 @@ python build_satellites_bdb.py
 A pre-analyzed bdb with 64 models and 60 minutes of fully parallel analyze is
 available at the following location:
 
-http://people.csail.mit.edu/marcoct/probcomp/data/satellites_bdb/satellites.bdb
+http://probcomp.csail.mit.edu/bayesdb/analyses/satellites.bdb
 
