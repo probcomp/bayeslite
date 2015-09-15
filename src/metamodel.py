@@ -178,10 +178,6 @@ class IBayesDBMetamodel(object):
         """Compute ``MUTUAL INFORMATION OF <col0> WITH <col1>``."""
         raise NotImplementedError
 
-    def column_typicality(self, bdb, generator_id, modelno, colno):
-        """Compute ``TYPICALITY OF <col>``."""
-        raise NotImplementedError
-
     def column_value_probability(self, bdb, generator_id, modelno, colno,
             value, constraints):
         """Compute ``PROBABILITY OF <col> = <value> GIVEN <constraints>``."""
@@ -190,10 +186,6 @@ class IBayesDBMetamodel(object):
     def row_similarity(self, bdb, generator_id, modelno, rowid, target_rowid,
             colnos):
         """Compute ``SIMILARITY TO <target_row>`` for given `rowid`."""
-        raise NotImplementedError
-
-    def row_typicality(self, bdb, generator_id, modelno, rowid):
-        """Compute ``TYPICALITY`` for given `rowid`."""
         raise NotImplementedError
 
     def row_column_predictive_probability(self, bdb, generator_id, modelno,

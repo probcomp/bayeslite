@@ -853,15 +853,6 @@ class BQLCompiler_Const(object):
                 out.write(', %d, ' % (c_colno,))
                 compile_expression(bdb, c_exp, self, out)
             out.write(')')
-        elif isinstance(bql, ast.ExpBQLTyp):
-            if bql.column is None:
-                raise BQLError('Row typicality needs row.')
-            else:
-                colno = core.bayesdb_generator_column_number(bdb, generator_id,
-                    bql.column)
-                out.write('bql_column_typicality(%s, ' % (generator_id,))
-                compile_expression(bdb, self.modelno, self, out)
-                out.write(', %s)' % (colno,))
         elif isinstance(bql, ast.ExpBQLSim):
             raise BQLError('Row similarity needs row.')
         elif isinstance(bql, ast.ExpBQLDepProb):
@@ -900,10 +891,6 @@ class BQLCompiler_1Row(BQLCompiler_Const):
                 (generator_id,))
             compile_expression(bdb, self.modelno, self, out)
             out.write(', %s, %s)' % (rowid_col, colno))
-        elif isinstance(bql, ast.ExpBQLTyp) and bql.column is None:
-            out.write('bql_row_typicality(%s, ' % (generator_id,))
-            compile_expression(bdb, self.modelno, self, out)
-            out.write(', _rowid_)')
         elif isinstance(bql, ast.ExpBQLSim):
             if bql.condition is None:
                 raise BQLError(bdb, 'Similarity as 1-row function needs row.')
@@ -977,8 +964,6 @@ class BQLCompiler_2Row(object):
             raise BQLError(bdb, 'Probability of value is 1-row function.')
         elif isinstance(bql, ast.ExpBQLPredProb):
             raise BQLError(bdb, 'Predictive probability is 1-row function.')
-        elif isinstance(bql, ast.ExpBQLTyp):
-            raise BQLError(bdb, 'Typicality is 1-row function.')
         elif isinstance(bql, ast.ExpBQLSim):
             if bql.condition is not None:
                 raise BQLError(bdb, 'Similarity needs no row'
@@ -1039,12 +1024,6 @@ class BQLCompiler_1Col(object):
         elif isinstance(bql, ast.ExpBQLPredProb):
             raise BQLError(bdb, 'Predictive probability makes sense'
                 ' only at row.')
-        elif isinstance(bql, ast.ExpBQLTyp):
-            if bql.column is not None:
-                raise BQLError(bdb, 'Typicality of column needs no column.')
-            out.write('bql_column_typicality(%d, ' % (generator_id,))
-            compile_expression(bdb, self.modelno, self, out)
-            out.write(', %s)' % (self.colno_exp,))
         elif isinstance(bql, ast.ExpBQLSim):
             raise BQLError(bdb, 'Similarity to row makes sense only at row.')
         elif isinstance(bql, ast.ExpBQLDepProb):
@@ -1089,8 +1068,6 @@ class BQLCompiler_2Col(object):
         elif isinstance(bql, ast.ExpBQLPredProb):
             raise BQLError(bdb, 'Predictive probability'
                 ' is one-column function.')
-        elif isinstance(bql, ast.ExpBQLTyp):
-            raise BQLError(bdb, 'Typicality is one-column function.')
         elif isinstance(bql, ast.ExpBQLSim):
             raise BQLError(bdb, 'Similarity to row makes sense only at row.')
         elif isinstance(bql, ast.ExpBQLDepProb):

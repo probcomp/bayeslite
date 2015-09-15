@@ -36,10 +36,8 @@ def bayesdb_install_bql(db, cookie):
     function("bql_column_dependence_probability", 4,
         bql_column_dependence_probability)
     function("bql_column_mutual_information", 5, bql_column_mutual_information)
-    function("bql_column_typicality", 3, bql_column_typicality)
     function("bql_column_value_probability", -1, bql_column_value_probability)
     function("bql_row_similarity", -1, bql_row_similarity)
-    function("bql_row_typicality", 3, bql_row_typicality)
     function("bql_row_column_predictive_probability", 4,
         bql_row_column_predictive_probability)
     function("bql_predict", 5, bql_predict)
@@ -253,11 +251,6 @@ def bql_column_mutual_information(bdb, generator_id, modelno, colno0, colno1,
     return metamodel.column_mutual_information(bdb, generator_id, modelno,
         colno0, colno1, numsamples=numsamples)
 
-# One-column function:  TYPICALITY OF <col>
-def bql_column_typicality(bdb, generator_id, modelno, colno):
-    metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    return metamodel.column_typicality(bdb, generator_id, modelno, colno)
-
 # One-column function:  PROBABILITY OF <col>=<value>
 def bql_column_value_probability(bdb, generator_id, modelno, colno, value,
         *constraint_args):
@@ -287,11 +280,6 @@ def bql_row_similarity(bdb, generator_id, modelno, rowid, target_rowid,
         colnos = core.bayesdb_generator_column_numbers(bdb, generator_id)
     return metamodel.row_similarity(bdb, generator_id, modelno, rowid,
         target_rowid, colnos)
-
-# Row function:  TYPICALITY
-def bql_row_typicality(bdb, generator_id, modelno, rowid):
-    metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    return metamodel.row_typicality(bdb, generator_id, modelno, rowid)
 
 # Row function:  PREDICTIVE PROBABILITY OF <column>
 def bql_row_column_predictive_probability(bdb, generator_id, modelno, rowid,

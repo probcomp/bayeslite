@@ -215,21 +215,6 @@ Model estimators are functions of a model, up to two columns, and up to one row.
    Function of one implied column.  Returns the probability that the
    implied column has the value of the BQL expression *value*.
 
-.. index:: ``TYPICALITY`` (row)
-
-``TYPICALITY``
-
-   Function of one implied row.  Returns a measure of the typicality
-   of the row, i.e. how much it shares in common with many other rows.
-
-.. index:: ``TYPICALITY`` (column)
-
-``TYPICALITY [OF <column>]``
-
-   Constant, or function of one implied column.  Returns a measure of
-   the typicality of the column, i.e. how much it shares in common
-   with many other columns.
-
 .. index:: ``SIMILARITY``
 
 ``SIMILARITY [TO (<expression>)] [WITH RESPECT TO (<columns>)]``
