@@ -29,7 +29,7 @@ def version_check():
     """
     SERVICE = 'https://projects.csail.mit.edu/probcomp/bayesdb/bayeslite.version'
 
-    # arg: {'package':'bayeslite','version':'something','build':'something-else'}
+    # arg: {'package':'bayeslite','version':'something'}
     # response: {'version':'0.5','url':'http://probcomp.org/bayesdb/release'}
     payload = [
         ('package', 'bayeslite'),
