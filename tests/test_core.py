@@ -399,6 +399,22 @@ def test_t1_simulate(colnos, constraints, numpredictions):
         bqlfn.bayesdb_simulate(bdb, generator_id, constraints, colnos,
             numpredictions=numpredictions)
 
+@pytest.mark.parametrize('exname,colno',
+    [(exname, colno)
+        for exname in examples.keys()
+        for colno in range(1,3)])
+def test_onecolumn(exname, colno):
+    if exname == 't0' and colno > 0:
+        pytest.skip('Not enough columns in %s.' % (exname,))
+    if exname.startswith('t1_sub') and colno > 1:
+        pytest.skip('Not enough columns in %s.' % (exname,))
+    with analyzed_bayesdb_generator(examples[exname](), 1, 1) \
+            as (bdb, generator_id):
+        bqlfn.bql_column_value_probability(bdb, generator_id, None, colno, 4)
+        list(bdb.sql_execute(
+            'select bql_column_value_probability(?, NULL, ?, 4)',
+            (generator_id, colno)))
+
 @pytest.mark.parametrize('exname,colno0,colno1',
     [(exname, colno0, colno1)
         for exname in examples.keys()
