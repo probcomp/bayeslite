@@ -17,9 +17,11 @@ root=`cd -- "$(dirname -- "$0")" && pwd`
     cd -- "${root}"
     rm -rf build
     ./pythenv.sh "$PYTHON" setup.py build
+    export BAYESDB_WIZARD_MODE=1
+    export BAYESDB_DISABLE_VERSION_CHECK=1
     if [ $# -eq 0 ]; then
-        BAYESDB_WIZARD_MODE=1 ./pythenv.sh "$PYTHON" "$PY_TEST" tests shell/tests
+        ./pythenv.sh "$PYTHON" "$PY_TEST" tests shell/tests
     else
-        BAYESDB_WIZARD_MODE=1 ./pythenv.sh "$PYTHON" "$PY_TEST" "$@"
+        ./pythenv.sh "$PYTHON" "$PY_TEST" "$@"
     fi
 )
