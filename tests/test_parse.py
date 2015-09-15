@@ -371,6 +371,27 @@ def test_select_bql():
                     [ast.ColListLit(['c']), ast.ColListLit(['d'])]),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select similarity to (rowid=8) with respect to' +
+            ' (estimate * from columns of t order by ' +
+            '  probability of value 4 limit 1)' +
+            ' from t;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(
+                ast.ExpBQLSim(
+                    ast.ExpOp(ast.OP_EQ, (
+                        ast.ExpCol(None, 'rowid'),
+                        ast.ExpLit(ast.LitInt(8)),
+                    )),
+                    [ast.ColListSub(
+                        ast.EstCols([ast.SelColAll(None)], 't',
+                            ast.ExpLit(ast.LitNull(None)),
+                            None,
+                            [ast.Ord(ast.ExpBQLProb(None,
+                                ast.ExpLit(ast.LitInt(4)), []), ast.ORD_ASC)],
+                            ast.Lim(ast.ExpLit(ast.LitInt(1)), None))
+                    )]),
+                None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select dependence probability with c from t;') ==\
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(ast.ExpBQLDepProb('c', None), None)],
