@@ -26,7 +26,7 @@ import crosscat.MultiprocessingEngine
 import bayeslite
 import bayeslite.bqlfn as bqlfn
 import bayeslite.core as core
-import bayeslite.crosscat
+from bayeslite.metamodels.crosscat import CrosscatMetamodel
 import bayeslite.guess as guess
 import bayeslite.metamodel as metamodel
 
@@ -50,8 +50,8 @@ def multiprocessing_crosscat():
 def bayesdb(metamodel=None, **kwargs):
     if metamodel is None:
         crosscat = local_crosscat()
-        metamodel = bayeslite.crosscat.CrosscatMetamodel(crosscat)
-    bdb = bayeslite.bayesdb_open(**kwargs)
+        metamodel = CrosscatMetamodel(crosscat)
+    bdb = bayeslite.bayesdb_open(builtin_metamodels=False, **kwargs)
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)
     try:
         yield bdb
@@ -102,7 +102,7 @@ class DotdogMetamodel(metamodel.IBayesDBMetamodel):
         instantiate(schema)
 
 def test_hackmetamodel():
-    bdb = bayeslite.bayesdb_open()
+    bdb = bayeslite.bayesdb_open(builtin_metamodels=False)
     bdb.sql_execute('CREATE TABLE t(a INTEGER, b TEXT)')
     bdb.sql_execute("INSERT INTO t (a, b) VALUES (42, 'fnord')")
     bdb.sql_execute('CREATE TABLE u AS SELECT * FROM t')
@@ -111,7 +111,7 @@ def test_hackmetamodel():
     with pytest.raises(bayeslite.BQLError):
         bdb.execute('CREATE GENERATOR t_dd FOR t USING dotdog(a NUMERICAL)')
     crosscat = local_crosscat()
-    crosscat_metamodel = bayeslite.crosscat.CrosscatMetamodel(crosscat)
+    crosscat_metamodel = CrosscatMetamodel(crosscat)
     dotdog_metamodel = DotdogMetamodel()
     bayeslite.bayesdb_register_metamodel(bdb, dotdog_metamodel)
     bayeslite.bayesdb_deregister_metamodel(bdb, dotdog_metamodel)
@@ -288,7 +288,7 @@ def t1_subcat():
 
 # def t1_mp():
 #     crosscat = multiprocessing_crosscat()
-#     metamodel = bayeslite.crosscat.CrosscatMetamodel(crosscat)
+#     metamodel = CrosscatMetamodel(crosscat)
 #     return bayesdb_generator(bayesdb(metamodel=metamodel),
 #         't1', 't1_cc', t1_schema, t1_data,
 #         columns=['label CATEGORICAL', 'age NUMERICAL', 'weight NUMERICAL'])
@@ -396,7 +396,7 @@ def test_t1_simulate(colnos, constraints, numpredictions):
             constraints = \
                 [(i, bayesdb_generator_cell_value(bdb, generator_id, i, rowid))
                     for i in constraints]
-        bayeslite.bayesdb_simulate(bdb, generator_id, constraints, colnos,
+        bqlfn.bayesdb_simulate(bdb, generator_id, constraints, colnos,
             numpredictions=numpredictions)
 
 @pytest.mark.parametrize('exname,colno',
@@ -410,8 +410,9 @@ def test_onecolumn(exname, colno):
         pytest.skip('Not enough columns in %s.' % (exname,))
     with analyzed_bayesdb_generator(examples[exname](), 1, 1) \
             as (bdb, generator_id):
-        bqlfn.bql_column_typicality(bdb, generator_id, None, colno)
-        list(bdb.sql_execute('select bql_column_typicality(?, NULL, ?)',
+        bqlfn.bql_column_value_probability(bdb, generator_id, None, colno, 4)
+        list(bdb.sql_execute(
+            'select bql_column_value_probability(?, NULL, ?, 4)',
             (generator_id, colno)))
 
 @pytest.mark.parametrize('exname,colno0,colno1',
@@ -488,20 +489,6 @@ def test_row_similarity(exname, source, target, colnos):
         sql = 'select bql_row_similarity(?, NULL, ?, ?%s%s)' % \
             ('' if 0 == len(colnos) else ', ', ', '.join(map(str, colnos)))
         list(bdb.sql_execute(sql, (generator_id, source, target)))
-
-@pytest.mark.parametrize('exname,rowid',
-    [(exname, rowid)
-        for exname in examples.keys()
-        for rowid in range(4)])
-def test_row_typicality(exname, rowid):
-    if exname == 't0' and colnos != [] and colnos != [0]:
-        pytest.skip('Not enough columns in t0.')
-    with analyzed_bayesdb_generator(examples[exname](), 1, 1) \
-            as (bdb, generator_id):
-        if rowid == 0: rowid = bayesdb_maxrowid(bdb, generator_id)
-        bqlfn.bql_row_typicality(bdb, generator_id, None, rowid)
-        list(bdb.sql_execute('select bql_row_typicality(?, NULL, ?)',
-            (generator_id, rowid)))
 
 @pytest.mark.parametrize('exname,rowid,colno',
     [(exname, rowid, colno)

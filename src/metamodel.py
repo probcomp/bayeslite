@@ -14,9 +14,47 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""Metamodel interface."""
+"""Metamodel interface.
+
+To be used to model data in a :class:`bayeslite.BayesDB` handle, a metamodel
+must first be registered with :func:`bayesdb_register_metamodel`.
+
+The Crosscat metamodel is registered by default, but we can suppress
+that for illustration::
+
+   import bayeslite
+   import crosscat.LocalEngine
+   from bayeslite.metamodels.crosscat import CrosscatMetamodel
+
+   bdb = bayeslite.bayesdb_open(pathname='foo.bdb', builtin_metamodels=False)
+   cc = crosscat.LocalEngine.LocalEngine(seed=0)
+   bayeslite.bayesdb_register_metamodel(bdb, CrosscatMetamodel(cc))
+
+Then you can model a table with Crosscat and query the probable
+implications of the data in the table::
+
+   bdb.execute('create generator t_cc for t using crosscat(guess(*))')
+   bdb.execute('initialize 10 models for t_cc')
+   bdb.execute('analyze t_cc for 10 iterations wait')
+   for x in bdb.execute('estimate pairwise dependence probablity from t_cc'):
+       print x
+"""
 
 import bayeslite.core as core
+
+builtin_metamodels = []
+builtin_metamodel_names = set()
+
+def bayesdb_builtin_metamodel(metamodel):
+    name = metamodel.name()
+    assert name not in builtin_metamodel_names
+    builtin_metamodels.append(metamodel)
+    builtin_metamodel_names.add(name)
+
+def bayesdb_register_builtin_metamodels(bdb):
+    """Register all builtin metamodels in `bdb`."""
+    for metamodel in builtin_metamodels:
+        bayesdb_register_metamodel(bdb, metamodel)
 
 def bayesdb_register_metamodel(bdb, metamodel):
     """Register `metamodel` in `bdb`, creating any necessary tables.
@@ -140,10 +178,6 @@ class IBayesDBMetamodel(object):
         """Compute ``MUTUAL INFORMATION OF <col0> WITH <col1>``."""
         raise NotImplementedError
 
-    def column_typicality(self, bdb, generator_id, modelno, colno):
-        """Compute ``TYPICALITY OF <col>``."""
-        raise NotImplementedError
-
     def column_value_probability(self, bdb, generator_id, modelno, colno,
             value, constraints):
         """Compute ``PROBABILITY OF <col> = <value> GIVEN <constraints>``."""
@@ -152,10 +186,6 @@ class IBayesDBMetamodel(object):
     def row_similarity(self, bdb, generator_id, modelno, rowid, target_rowid,
             colnos):
         """Compute ``SIMILARITY TO <target_row>`` for given `rowid`."""
-        raise NotImplementedError
-
-    def row_typicality(self, bdb, generator_id, modelno, rowid):
-        """Compute ``TYPICALITY`` for given `rowid`."""
         raise NotImplementedError
 
     def row_column_predictive_probability(self, bdb, generator_id, modelno,

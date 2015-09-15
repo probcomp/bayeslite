@@ -330,7 +330,6 @@ OP_PLUSID = 'PLUSID'
 
 ExpBQLPredProb = namedtuple('ExpBQLPredProb', ['column'])
 ExpBQLProb = namedtuple('ExpBQLProb', ['column', 'value', 'constraints'])
-ExpBQLTyp = namedtuple('ExpBQLTyp', ['column'])
 ExpBQLSim = namedtuple('ExpBQLSim', ['condition', 'column_lists'])
 ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
 ExpBQLMutInf = namedtuple('ExpBQLMutInf', ['column0', 'column1', 'nsamples'])
@@ -343,8 +342,6 @@ def is_bql(exp):
     if isinstance(exp, ExpBQLPredProb):
         return True
     if isinstance(exp, ExpBQLProb):
-        return True
-    if isinstance(exp, ExpBQLTyp):
         return True
     if isinstance(exp, ExpBQLSim):
         return True

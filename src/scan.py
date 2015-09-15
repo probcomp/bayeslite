@@ -115,7 +115,6 @@ keywords = {
     "temporary": grammar.K_TEMPORARY,
     "then": grammar.K_THEN,
     "to": grammar.K_TO,
-    "typicality": grammar.K_TYPICALITY,
     "unset": grammar.K_UNSET,
     "using": grammar.K_USING,
     "value": grammar.K_VALUE,

@@ -347,7 +347,8 @@ class Shell(cmd.Cmd):
         # Need a completely new bdb object. Hope no one aliased it.
         if line == '-m':
             line = None
-        self._bdb = bayeslite.bayesdb_open(pathname=line)
+        self._bdb = bayeslite.bayesdb_open(pathname=line,
+            builtin_metamodels=False)
 
     def dot_python(self, line):
         '''evaluate a Python expression

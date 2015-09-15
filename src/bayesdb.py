@@ -19,6 +19,7 @@ import sqlite3
 
 import bayeslite.bql as bql
 import bayeslite.bqlfn as bqlfn
+import bayeslite.metamodel as metamodel
 import bayeslite.parse as parse
 import bayeslite.schema as schema
 import bayeslite.txn as txn
@@ -26,7 +27,7 @@ import bayeslite.remote as remote
 
 bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
 
-def bayesdb_open(pathname=None, check_version=True):
+def bayesdb_open(pathname=None, builtin_metamodels=None, check_version=True):
     """Open the BayesDB in the file at `pathname`.
 
     If there is no file at `pathname`, it is automatically created.
@@ -35,7 +36,12 @@ def bayesdb_open(pathname=None, check_version=True):
     """
     if check_version:
         remote.version_check()
-    return BayesDB(bayesdb_open_cookie, pathname=pathname)
+    if builtin_metamodels is None:
+        builtin_metamodels = True
+    bdb = BayesDB(bayesdb_open_cookie, pathname=pathname)
+    if builtin_metamodels:
+        metamodel.bayesdb_register_builtin_metamodels(bdb)
+    return bdb
 
 class BayesDB(object):
     """A handle for a Bayesian database in memory or on disk.
@@ -154,8 +160,8 @@ class BayesDB(object):
     def sql_execute(self, string, bindings=None):
         """Execute a SQL query on the underlying SQLite database.
 
-        The argument `string` is a string parsed into a single BQL
-        query.  It must contain exactly one BQL phrase, optionally
+        The argument `string` is a string parsed into a single SQL
+        query.  It must contain exactly one SQL phrase, optionally
         terminated by a semicolon.
 
         The argument `bindings` is a sequence or dictionary of

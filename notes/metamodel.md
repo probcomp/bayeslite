@@ -269,11 +269,4 @@ Ideas: Just a `similarity` between `A` and `B`. The current invocation can be
 achieved using `A=[(rowid,colnos1),(rowid,colnos2),...]` and using
 `B=[(target_rowid,colnos1),(target_rowid,colnos2),...]`.
 
-### Column Typicality
-```python
-def column_typicality(self, bdb, generator_id, modelno, colno)
-```
-This one seems very CrossCat specific, need to think about what `TYPICALITY`
-means in a general context.
-
 ### Feedback, iterations, comments, updates.

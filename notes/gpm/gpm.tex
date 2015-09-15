@@ -1019,13 +1019,6 @@ those cells).  I don't know whether those are different for CrossCat,
 but it's not hard to compute with examples of general distributions
 where those two questions have different answers.
 
-\subsection{Typicality}
-
-There is no consensus in the field on what this ought to be, or on
-what this ought to be useful for.  Decision: remove row and column
-typicality for the public release, and possibly reconsider it in light
-of reception and time.
-
 \section{Open Issues}
 
 \subsection{Identity Remapping}
@@ -1150,7 +1143,8 @@ expressly undone.
 
 \paragraph{Row/column typicality}
 We might try to see whether early users want this, and whether it can
-be defined sensibly.
+be defined sensibly.  It is implemented as
+\texttt{\{row/column\}\_structural\_typicality} in crosscat.
 
 \paragraph{Column similarity}
 Idea: column similarity might usefully be the probability that those

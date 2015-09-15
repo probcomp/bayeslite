@@ -23,8 +23,7 @@ import bayeslite
 
 import bayeslite.core as core
 
-from bayeslite.crosscat import CrosscatMetamodel
-from bayeslite.exception import BQLError
+from bayeslite.metamodels.crosscat import CrosscatMetamodel
 from bayeslite.metamodels.iid_gaussian import StdNormalMetamodel
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
@@ -73,12 +72,14 @@ examples = {
 def test_example(persist, exname):
     if persist:
         with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
-            with bayeslite.bayesdb_open(pathname=f.name) as bdb:
+            with bayeslite.bayesdb_open(pathname=f.name,
+                    builtin_metamodels=False) as bdb:
                 _test_example(bdb, exname)
-            with bayeslite.bayesdb_open(pathname=f.name) as bdb:
+            with bayeslite.bayesdb_open(pathname=f.name,
+                    builtin_metamodels=False) as bdb:
                 _retest_example(bdb, exname)
     else:
-        with bayeslite.bayesdb_open() as bdb:
+        with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
             _test_example(bdb, exname)
 
 def _test_example(bdb, exname):
@@ -137,7 +138,7 @@ def _test_example(bdb, exname):
     bdb.execute('INITIALIZE 2 MODELS FOR %s' % (qg,))
 
     # Test dropping things.
-    with pytest.raises(BQLError):
+    with pytest.raises(bayeslite.BQLError):
         bdb.execute('DROP TABLE %s' % (qt,))
     with bdb.savepoint_rollback():
         # Note that sql_execute does not protect us!
@@ -148,7 +149,7 @@ def _test_example(bdb, exname):
     # models?  Should we not reject dropping a table when there remain
     # generators?  A table can be dropped when there remain indices.
     #
-    # with pytest.raises(BQLError):
+    # with pytest.raises(bayeslite.BQLError):
     #     # Models remain.
     #     bdb.execute('DROP GENERATOR %s' % (qg,))
     with bdb.savepoint_rollback():
