@@ -14,10 +14,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import requests
 import json
-import warnings
 from pkg_resources import parse_version
+import requests
+import warnings
 
 from bayeslite.version import __version__
 
