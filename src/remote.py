@@ -31,10 +31,10 @@ def version_check():
 
     # arg: {'package':'bayeslite','version':'something','build':'something-else'}
     # response: {'version':'0.5','url':'http://probcomp.org/bayesdb/release'}
-    payload = {
-        'package': 'bayeslite',
-        'version': __version__,
-    }
+    payload = [
+        ('package', 'bayeslite'),
+        ('version', __version__),
+    ]
     headers = {
         'User-Agent': 'bayeslite %s' % (__version__,),
     }
