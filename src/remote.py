@@ -51,5 +51,6 @@ def version_check():
                 '\nSee %s.'
                 % (__version__, d['version'], d['url']))
     except Exception:
-        # Silently eat exceptions.
+        # Silently eat exceptions -- in the request and in parsing the
+        # result, in case it is ill-formed.
         pass
