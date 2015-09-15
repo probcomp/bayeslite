@@ -424,8 +424,8 @@ unary(bql)		::= bqlfn(b).
  * such mistakes as the above.
  *
  * It is tempting to split the `bqlfn' nonterminal into `bql2colfn',
- * `bql1colfn', `bqlrowfn', `bqlconstfn', but that could lead to
- * ambiguous rules.
+ * `bql1colfn', `bqlrowfn', `bqlconstfn', but we used to have an
+ * ambiguity here.
  *
  * XXX It would be nice if
  *
