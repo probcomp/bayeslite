@@ -81,7 +81,6 @@ from bayeslite.metamodel import bayesdb_register_metamodel
 from bayeslite.parse import BQLParseError
 from bayeslite.read_csv import bayesdb_read_csv
 from bayeslite.read_csv import bayesdb_read_csv_file
-from bayeslite.remote import version_check
 from bayeslite.txn import BayesDBTxnError
 from bayeslite.version import __version__
 
@@ -99,7 +98,6 @@ __all__ = [
     'bayesdb_read_csv_file',
     'bayesdb_register_metamodel',
     'IBayesDBMetamodel',
-    'version_check'
     '__version__',
 ]
 
@@ -108,9 +106,10 @@ from crosscat.LocalEngine import LocalEngine as CrosscatLocalEngine
 
 bayesdb_builtin_metamodel(CrosscatMetamodel(CrosscatLocalEngine(seed=0)))
 
+import bayeslite.remote
 import os
 if not 'BAYESDB_DISABLE_VERSION_CHECK' in os.environ:
-    version_check()
+    bayeslite.remote.version_check()
 
 # Notebooks should contain comment lines documenting this behavior and
 # offering a solution, like so:
