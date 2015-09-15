@@ -1,14 +1,17 @@
+import sys
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import bayeslite
 import bdbcontrib
 import os
-import sys
+
+# so we can build bdb models
+os.environ['BAYESDB_WIZARD_MODE']='1'
 
 out_dir = 'output'
 
-csv_file = 'satellites.utf8.csv'
+csv_file = 'satellites.csv'
 bdb_file = out_dir + '/satellites.bdb'
 num_models = 64
 time_minutes = 60
@@ -21,7 +24,7 @@ if os.path.exists(bdb_file):
 
 # create database mapped to filesystem
 print 'opening bdb on disk:', bdb_file
-bdb = bayeslite.bayesdb_open(pathname=bdb_file)
+bdb = bayeslite.bayesdb_open(pathname=bdb_file, builtin_metamodels=False)
 
 # read csv into table
 bayeslite.bayesdb_read_csv_file(bdb, "satellites", csv_file,
@@ -29,10 +32,9 @@ bayeslite.bayesdb_read_csv_file(bdb, "satellites", csv_file,
 
 # register crosscat metamodel
 import crosscat.MultiprocessingEngine as ccme
-import crosscat.LocalEngine
-import bayeslite.crosscat
+import bayeslite.metamodels.crosscat
 cc = ccme.MultiprocessingEngine(seed=0, cpu_count=num_models)
-ccmm = bayeslite.crosscat.CrosscatMetamodel(cc)
+ccmm = bayeslite.metamodels.crosscat.CrosscatMetamodel(cc)
 bayeslite.bayesdb_register_metamodel(bdb, ccmm)
 
 # create the crosscat generator using
@@ -60,12 +62,12 @@ bdb.execute('''
             Launch_Site CATEGORICAL,
             Launch_Vehicle CATEGORICAL,
             Source_Used_for_Orbital_Data CATEGORICAL,
-            longitude_radians_of_geo CYCLIC,
-            Inclination_radians CYCLIC
+            longitude_radians_of_geo NUMERICAL,
+            Inclination_radians NUMERICAL
         )
 ''')
 
-cmd = 'initialize %d models for satellites_cc' % num_models
+cmd = 'initialize %d models for satellites_cc' % (num_models,)
 print cmd
 bdb.execute(cmd)
 
@@ -74,9 +76,9 @@ print cmd
 bdb.execute(cmd)
 
 # create a diagnostics plot
-fig = bdbcontrib.plot_crosscat_chain_diagnostics(bdb, 'logscore',
-    'satellites_cc')
-plt.savefig('output/satellites_logscores.pdf')
+#fig = bdbcontrib.plot_crosscat_chain_diagnostics(bdb, 'logscore',
+    #'satellites_cc')
+#plt.savefig('output/satellites_logscores.pdf')
 
 print 'closing bdb', bdb_file
 bdb.close()
