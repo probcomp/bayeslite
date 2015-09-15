@@ -23,19 +23,16 @@ import bayeslite.metamodel as metamodel
 import bayeslite.parse as parse
 import bayeslite.schema as schema
 import bayeslite.txn as txn
-import bayeslite.remote as remote
 
 bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
 
-def bayesdb_open(pathname=None, builtin_metamodels=None, check_version=True):
+def bayesdb_open(pathname=None, builtin_metamodels=None):
     """Open the BayesDB in the file at `pathname`.
 
     If there is no file at `pathname`, it is automatically created.
     If `pathname` is unspecified or ``None``, a temporary in-memory
     BayesDB instance is created.
     """
-    if check_version:
-        remote.version_check()
     if builtin_metamodels is None:
         builtin_metamodels = True
     bdb = BayesDB(bayesdb_open_cookie, pathname=pathname)
