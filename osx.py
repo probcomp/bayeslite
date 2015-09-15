@@ -37,6 +37,7 @@ PEG = {  # None means head.
   'bdbcontrib': None,
   'bayeslite': None
   }
+PAUSE_TO_MODIFY = False
 
 import distutils.spawn
 import errno
@@ -108,7 +109,7 @@ for project in GIT_REPOS:
   run("git clone git@github.com:mit-probabilistic-computing-project/%s.git %s"
       % (project, os.path.join(BUILD_DIR, project)))
   if PEG[project]:
-    run('cd %s; git checkout %s' % (os.path.join(BUILD_DIR, project), PEG[project]))
+    run('cd %s && git checkout %s' % (os.path.join(BUILD_DIR, project), PEG[project]))
   if os.path.exists(os.path.join(project, 'VERSION')):
     project_version = get_version(project)
     if project_version:
@@ -125,13 +126,13 @@ def venv_run(cmd):
   print cmd
   assert not os.system('source bin/activate; %s' % cmd)
 
-# DEPENDENCIES
+# Preprocessing
+# =============
 print "Deps for BdbContrib"
 LIBBOOST_DIR = os.path.dirname(outputof("locate -l 1 libboost_atomic-mt.dylib", shell=True))
 assert os.path.exists(LIBBOOST_DIR), ("We need libboost-dev already installed: %s" %
                                       LIBBOOST_DIR)
-venv_run("cp %s/libboost_* lib/" % LIBBOOST_DIR)
-os.environ['DYLD_LIBRARY_PATH']=os.path.join(VENV_DIR, "lib")
+
 venv_run("pip install cython")  # If we don't, crosscat's setup tries and fails.
 venv_run("pip install numpy")
 venv_run("cp -R %s/bdbcontrib/bdbcontrib lib/python2.7/site-packages/bdbcontrib" % BUILD_DIR)
@@ -146,7 +147,8 @@ venv_run("pip install pytest sphinx cov-core dill ")
 BUILD_EXAMPLES = os.path.join(BUILD_DIR, "examples")
 run("mkdir -p '%s'" % BUILD_EXAMPLES)
 
-# Main installs:
+# Main installs
+# =============
 for project in GIT_REPOS:
   reqfile = os.path.join(BUILD_DIR, project, "requirements.txt")
   if os.path.exists(reqfile):
@@ -155,11 +157,17 @@ for project in GIT_REPOS:
   setupfile = os.path.join(BUILD_DIR, project, "setup.py")
   if os.path.exists(setupfile):
     print "Installing", project, "into", BUILD_DIR
-    venv_run("cd %s; python setup.py install" % os.path.join(BUILD_DIR, project))
+    venv_run("cd %s && python setup.py install" % os.path.join(BUILD_DIR, project))
   examplesdir = os.path.join(BUILD_DIR, project, "examples")
   if os.path.exists(examplesdir):
     print "Copying examples from", examplesdir
     run("/bin/cp -r '%s'/* '%s'/" % (examplesdir, BUILD_EXAMPLES))
+
+
+# Postprocessing
+# ==============
+venv_run("cd lib/python2.7/site-packages && unzip bayeslite*.egg")
+
 
 # This app's only other dependency:
 venv_run("pip install 'ipython[notebook]' runipy")
@@ -184,6 +192,11 @@ run("mv '%s' '%s'" % (new_activate.name, old_activate_path))
 PYTHON_DYLIB_LINK = os.path.join(VENV_DIR, ".Python")
 run("ln -fs /System/Library/Frameworks/Python.framework/Versions/2.7/Python %s" %
     PYTHON_DYLIB_LINK)
+# And we still have a copy of python that my otherwise reference its
+# own dependencies, rather than relying on the built-in python. So
+# remove that.
+run("rm -f %s" % os.path.join(VENV_DIR, "bin", "python"))
+run("ln -s /usr/bin/python %s" % os.path.join(VENV_DIR, "bin", "python"))
 
 NAME="BayesDB%s" % VERSION
 DIST_DIR = os.path.join(BUILD_DIR, "BayesDB")
@@ -202,7 +215,8 @@ NAME=`basename $(dirname $(dirname $wd)) .app`
 
 activate="$wd/venv/bin/activate"
 sitepkgs="$wd/venv/lib/python2.7/site-packages"
-pypath="$sitepkgs:$sitepkgs/bdbcontrib"
+crosscategg=`ls -d $sitepkgs/CrossCat*.egg`
+pypath="$sitepkgs:$sitepkgs/bdbcontrib:$crosscategg"
 ldpath="$wd/lib"
 
 source $activate
@@ -238,6 +252,12 @@ run("mv -f '%s' '%s'" % (VENV_DIR, MACOS_PATH))
 
 # Basic sanity check.
 venv_run("runipy '%s'" % os.path.join(MACOS_PATH, "examples", "Satellites.ipynb"))
+
+if [ -n "$PAUSE_TO_MODIFY" ]; then
+  echo "Pausing to let you modify $MACOS_PATH before packaging it up."
+  read -p "Continue? [Yn] " response
+  [ "$response" == "n" -o "$response" == "N" -o "$response" == "no" ] && exit 1
+fi
 
 DMG_PATH = os.path.join(os.environ['HOME'], 'Desktop', '%s.dmg' % NAME)
 naming_attempt = 0
