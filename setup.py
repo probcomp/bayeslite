@@ -112,6 +112,7 @@ setup(
     version=version,
     install_requires=[
         'crosscat>=0.1.24',
+        'requests',
     ],
     packages=[
         'bayeslite',
