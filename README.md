@@ -41,14 +41,6 @@ $ python setup.py install
 Import the `bayeslite` module.  See the documentation for details on
 the Python API.
 
-## Run
-
-To enter the interactive bayeslite shell, storing data in `foo.bdb`:
-
-```
-$ bayeslite foo.bdb
-```
-
 ## Documentation
 
 To build the documentation (requires sphinx):
