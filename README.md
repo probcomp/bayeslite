@@ -18,13 +18,18 @@ Bayeslite depends on:
 - [requests](http://www.python-requests.org/), an HTTP/HTTPS library,
   which we use to track users.
 
+The bayeslite automatic tests depend on:
+
+- [numpy](http://www.numpy.org)
+- [pytest](https://pytest.org/)
+
 The bayeslite documentation depends on:
 
 - [Sphinx](http://sphinx-doc.org/)
 
 ## Test
 
-To check that everything is working (requires pytest and Crosscat):
+To check that everything will work, before installing:
 
 ```
 $ ./check.sh
