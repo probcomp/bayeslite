@@ -8,14 +8,16 @@ SQL that supports queries about the probable implications of data.
 Bayeslite is written in Python 2.7, using the sqlite3 module with
 SQLite3 >=3.7.17.
 
-Bayeslite is most useful in conjunction with
-[Crosscat](https://github.com/mit-probabilistic-computing-project/crosscat),
-which provides a general-purpose metamodel.
+Bayeslite depends on:
 
-Running the automatic tests requires [pytest](http://pytest.org/) and
-Crosscat.
+- [Crosscat](https://github.com/mit-probabilistic-computing-project/crosscat),
+  a general-purpose generative model for populations.
+- [requests](http://www.python-requests.org/), an HTTP/HTTPS library,
+  which we use to track users.
 
-Building the documentation requires [Sphinx](http://sphinx-doc.org/).
+The bayeslite documentation depends on:
+
+- [Sphinx](http://sphinx-doc.org/)
 
 ## Test
 
