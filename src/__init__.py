@@ -17,42 +17,40 @@
 """Main bayeslite API.
 
 The focus of the bayeslite API is the *BayesDB*, a handle for a
-database in memory or on disk.  To obtain a BayesDB handle, either
-creating one in memory or opening or creating one on disk, use
-:func:`bayesdb_open`::
+database.  To obtain a BayesDB handle, use :func:`bayesdb_open`::
 
-   import bayeslite
+    import bayeslite
 
-   memdb = bayeslite.bayesdb_open()
-   filedb = bayeslite.bayesdb_open(pathname='foo.bdb')
+    bdb = bayeslite.bayesdb_open(pathname='foo.bdb')
 
 When done, close it with the :meth:`~BayesDB.close` method::
 
-   filedb.close()
-   memdb.close()
+    bdb.close()
 
-The ``filedb`` will read data and any saved generators from the given
-database file, and save any modifications durably in that same file.
-The ``memdb`` is an initially-empty in-memory database whose contents
-will be forgotten when it is closed or when the Python process exists.
+BayesDB handles also serve as context managers, so you can do:
+
+    with bayeslite.bayesdb_open(pathname='foo.bdb') as bdb:
+        bdb.execute('SELECT 42')
+        ...
 
 You can query the probable (according to the analyses stored in
 the database) implications of the data by passing BQL queries
 to the :meth:`~BayesDB.execute` method::
 
-   for x in bdb.execute('estimate pairwise dependence probablity from foo_gen'):
+    bql = 'ESTIMATE DEPENDENCE PROBABILITY FROM PAIRWISE COLUMNS OF foo'
+    for x in bdb.execute(bql):
        print x
 
 You can also execute normal SQL on a BayesDB handle `bdb` with the
 :meth:`~BayesDB.sql_execute` method::
 
-   bdb.sql_execute('create table t(x int, y text, z real)')
-   bdb.sql_execute("insert into t values(1, 'xyz', 42.5)")
-   bdb.sql_execute("insert into t values(1, 'pqr', 83.7)")
-   bdb.sql_execute("insert into t values(2, 'xyz', 1000)")
+    bdb.sql_execute('CREATE TABLE t(x INT, y TEXT, z REAL)')
+    bdb.sql_execute("INSERT INTO t VALUES(1, 'xyz', 42.5)")
+    bdb.sql_execute("INSERT INTO t VALUES(1, 'pqr', 83.7)")
+    bdb.sql_execute("INSERT INTO t VALUES(2, 'xyz', 1000)")
 
-(BQL does not yet support CREATE TABLE and INSERT directly, so you
-must use :meth:`~BayesDB.sql_execute` for those.)
+(BQL does not yet support ``CREATE TABLE`` and ``INSERT`` directly, so
+you must use :meth:`~BayesDB.sql_execute` for those.)
 
 When imported, the :mod:`bayeslite` module will notify the MIT
 Probabilistic Computing Project over the internet of the software
@@ -60,9 +58,9 @@ version you are using, and warn if it is out-of-date.  To disable
 this, set the environment variable ``BAYESDB_DISABLE_VERSION_CHECK``
 before import, such as with::
 
-   import os
-   os.environ['BAYESDB_DISABLE_VERSION_CHECK'] = '1'
-   import bayeslite
+    import os
+    os.environ['BAYESDB_DISABLE_VERSION_CHECK'] = '1'
+    import bayeslite
 
 If you would like to analyze your own data with BayesDB, please
 contact bayesdb@mit.edu to participate in our research project.
