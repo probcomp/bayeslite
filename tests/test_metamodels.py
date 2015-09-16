@@ -23,9 +23,9 @@ import bayeslite
 
 import bayeslite.core as core
 
+from bayeslite import bql_quote_name
 from bayeslite.metamodels.crosscat import CrosscatMetamodel
 from bayeslite.metamodels.iid_gaussian import StdNormalMetamodel
-from bayeslite.sqlite3_util import sqlite3_quote_name
 
 examples = {
     'crosscat': (
@@ -85,8 +85,8 @@ def test_example(persist, exname):
 def _test_example(bdb, exname):
     mm, t, t_sql, data_sql, data, g, g_bql, g_bqlbad0, g_bqlbad1 = \
         examples[exname]
-    qt = sqlite3_quote_name(t)
-    qg = sqlite3_quote_name(g)
+    qt = bql_quote_name(t)
+    qg = bql_quote_name(g)
 
     bayeslite.bayesdb_register_metamodel(bdb, mm())
 
@@ -178,8 +178,8 @@ def _test_example(bdb, exname):
 def _retest_example(bdb, exname):
     mm, t, t_sql, data_sql, data, g, g_bql, g_bqlbad0, g_bqlbad1 = \
         examples[exname]
-    qt = sqlite3_quote_name(t)
-    qg = sqlite3_quote_name(g)
+    qt = bql_quote_name(t)
+    qg = bql_quote_name(g)
 
     bayeslite.bayesdb_register_metamodel(bdb, mm())
 

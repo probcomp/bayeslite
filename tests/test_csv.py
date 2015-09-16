@@ -23,7 +23,7 @@ import tempfile
 import bayeslite
 import bayeslite.guess
 
-from bayeslite.sqlite3_util import sqlite3_quote_name
+from bayeslite import bql_quote_name
 
 import test_core
 
@@ -201,7 +201,7 @@ def test_csv_missing():
         bdb.sql_execute('CREATE TABLE t(a REAL, b REAL, c REAL)')
         bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=False)
         def clean(column_name):
-            qcn = sqlite3_quote_name(column_name)
+            qcn = bql_quote_name(column_name)
             sql = "UPDATE t SET %s = NULL WHERE %s = '' OR %s LIKE 'NaN'" % \
                 (qcn, qcn, qcn)
             bdb.sql_execute(sql)

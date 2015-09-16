@@ -30,8 +30,7 @@ from bayeslite.metamodels.crosscat import CrosscatMetamodel
 import bayeslite.guess as guess
 import bayeslite.metamodel as metamodel
 
-from bayeslite.sqlite3_util import sqlite3_exec_1
-from bayeslite.sqlite3_util import sqlite3_quote_name
+from bayeslite import bql_quote_name
 
 import test_csv
 
@@ -137,9 +136,9 @@ def bayesdb_generator(mkbdb, tab, gen, table_schema, data, columns,
     with mkbdb as bdb:
         table_schema(bdb)
         data(bdb)
-        qt = sqlite3_quote_name(tab)
-        qg = sqlite3_quote_name(gen)
-        qmm = sqlite3_quote_name(metamodel_name)
+        qt = bql_quote_name(tab)
+        qg = bql_quote_name(gen)
+        qmm = bql_quote_name(metamodel_name)
         bdb.execute('CREATE GENERATOR %s FOR %s USING %s(%s)' %
             (qg, qt, qmm, ','.join(columns)))
         sql = 'SELECT id FROM bayesdb_generator WHERE name = ?'
@@ -158,7 +157,7 @@ def bayesdb_generator(mkbdb, tab, gen, table_schema, data, columns,
 def analyzed_bayesdb_generator(mkbdb, nmodels, nsteps, max_seconds=None):
     with mkbdb as (bdb, generator_id):
         generator = core.bayesdb_generator_name(bdb, generator_id)
-        qg = sqlite3_quote_name(generator)
+        qg = bql_quote_name(generator)
         bql = 'INITIALIZE %d MODELS FOR %s' % (nmodels, qg)
         bdb.execute(bql)
         # XXX Syntax currently doesn't support both nsteps and
@@ -174,7 +173,7 @@ def analyzed_bayesdb_generator(mkbdb, nmodels, nsteps, max_seconds=None):
 
 def bayesdb_maxrowid(bdb, generator_id):
     table_name = core.bayesdb_generator_table(bdb, generator_id)
-    qt = sqlite3_quote_name(table_name)
+    qt = bql_quote_name(table_name)
     sql = 'SELECT MAX(_rowid_) FROM %s' % (qt,)
     return bdb.sql_execute(sql).next()[0]
 
@@ -463,8 +462,8 @@ def test_t1_column_value_probability(colno, rowid):
             value)
         table_name = core.bayesdb_generator_table(bdb, generator_id)
         colname = core.bayesdb_generator_column_name(bdb, generator_id, colno)
-        qt = sqlite3_quote_name(table_name)
-        qc = sqlite3_quote_name(colname)
+        qt = bql_quote_name(table_name)
+        qc = bql_quote_name(colname)
         sql = '''
             select bql_column_value_probability(?, NULL, ?,
                 (select %s from %s where rowid = ?))
@@ -520,9 +519,9 @@ def test_insert():
 
 def bayesdb_generator_cell_value(bdb, generator_id, colno, rowid):
     table_name = core.bayesdb_generator_table(bdb, generator_id)
-    qt = sqlite3_quote_name(table_name)
+    qt = bql_quote_name(table_name)
     colname = core.bayesdb_generator_column_name(bdb, generator_id, colno)
-    qcn = sqlite3_quote_name(colname)
+    qcn = bql_quote_name(colname)
     sql = 'SELECT %s FROM %s WHERE _rowid_ = ?' % (qcn, qt)
     cursor = bdb.sql_execute(sql, (rowid,))
     try:
