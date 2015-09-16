@@ -75,9 +75,10 @@ def sha256_file(pathname):
 def uptodate(path_in, path_out, path_sha256):
     try:
         with open(path_sha256, 'r') as file_sha256:
-            if file_sha256.next() != sha256_file(path_in).hexdigest():
+            # Strip newlines and compare.
+            if file_sha256.next()[:-1] != sha256_file(path_in).hexdigest():
                 return False
-            if file_sha256.next() != sha256_file(path_out).hexdigest():
+            if file_sha256.next()[:-1] != sha256_file(path_out).hexdigest():
                 return False
     except IOError as e:
         if e.errno != errno.ENOENT:
