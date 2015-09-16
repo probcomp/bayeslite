@@ -3,6 +3,9 @@
 Bayeslite is a BQL database built on SQLite3.  BQL is an extension to
 SQL that supports queries about the probable implications of data.
 
+Bayeslite is part of an ongoing research project.  For more
+information, contact bayesdb@mit.edu.
+
 ## Dependencies
 
 Bayeslite is written in Python 2.7, using the sqlite3 module with
