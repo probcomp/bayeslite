@@ -15,13 +15,14 @@
 #   limitations under the License.
 
 def pp_cursor(out, cursor):
-    if cursor.description is None:
+    if not cursor.description:
         return
     labels = [d[0] for d in cursor.description]
     table = list(cursor)
     pp_list(out, table, labels)
 
 def pp_list(out, table, labels):
+    assert 0 < len(labels)
     # XXX Consider quotation/escapes.
     colwidths = [len(label) for label in labels]
     for row in table:

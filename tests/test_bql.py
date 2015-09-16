@@ -1658,3 +1658,18 @@ def test_estimate_by():
         check('estimate mutual information of age with weight by t1_cc')
         check('estimate correlation of age with weight by t1_cc')
         check('estimate correlation pvalue of age with weight by t1_cc')
+
+def test_empty_cursor():
+    with bayeslite.bayesdb_open() as bdb:
+        cursor = bdb.execute('BEGIN')
+        assert cursor is not None
+        assert cursor.description is not None
+        assert len(cursor.description) == 0
+        with pytest.raises(StopIteration):
+            cursor.next()
+        cursor = bdb.execute('COMMIT')
+        assert cursor is not None
+        assert cursor.description is not None
+        assert len(cursor.description) == 0
+        with pytest.raises(StopIteration):
+            cursor.next()
