@@ -399,19 +399,20 @@ unary(bql)		::= bqlfn(b).
  * should be named in the expression), any context for an expression
  * makes sense with only one flavour of functions.  For example:
  *
- * (1) ESTIMATE PAIRWISE DEPENDENCE PROBABILITY FROM T;
- * (2) ESTIMATE COLUMNS ORDER BY DEPENDENCE PROBABILITY WITH C;
+ * (1) ESTIMATE DEPENDENCE PROBABILITY PAIRWISE COLUMNS OF FROM T;
+ * (2) ESTIMATE * FROM COLUMNS OF T ORDER BY DEPENDENCE PROBABILITY WITH C;
  * (3) SELECT SIMILARITY TO 5 WITH RESPECT TO C FROM T;
  *
  * It makes no sense to say
  *
- *	ESTIMATE COLUMNS FROM T WHERE DEPENDENCE PROBABILITY > 5,
+ *	ESTIMATE * FROM COLUMNS OF T WHERE DEPENDENCE PROBABILITY > 5,
  *
  * because WHERE filters a single set of columns, so there's no second
  * argument for DEPENDENCE PROBABILITY.  Similarly, it makes no sense
  * to say
  *
- *	ESTIMATE COLUMNS FROM T WHERE SIMILARITY TO 5 WITH RESPECT TO C > 5,
+ *	ESTIMATE * FROM COLUMNS OF T
+ *	    WHERE SIMILARITY TO 5 WITH RESPECT TO C > 5,
  *
  * because SIMILARITY TO 5 WITH RESPECT TO C is a function of a row,
  * not a function of a column.
@@ -423,9 +424,8 @@ unary(bql)		::= bqlfn(b).
  * such mistakes as the above.
  *
  * It is tempting to split the `bqlfn' nonterminal into `bql2colfn',
- * `bql1colfn', `bqlrowfn', `bqlconstfn', but that would lead to
- * ambiguous rules: for example, TYPICALITY can be a function of a row
- * or a function of a column.
+ * `bql1colfn', `bqlrowfn', `bqlconstfn', but we used to have an
+ * ambiguity here.
  *
  * XXX It would be nice if
  *
@@ -464,8 +464,6 @@ bqlfn(prob_1col)	::= K_PROBABILITY K_OF K_VALUE unary(e).
 bqlfn(condprob_1col)	::= K_PROBABILITY K_OF K_VALUE primary(e)
 				K_GIVEN T_LROUND constraints_opt(constraints)
 					T_RROUND.
-bqlfn(typ_1col_or_row)	::= K_TYPICALITY.
-bqlfn(typ_const)	::= K_TYPICALITY K_OF column_name(col).
 bqlfn(sim_1row)		::= K_SIMILARITY K_TO
 				T_LROUND expression(cond) T_RROUND
 				wrt(cols).
@@ -646,7 +644,6 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 	K_TEMPORARY
 	K_THEN
 	K_TO
-	K_TYPICALITY
 	K_UNSET
 	K_USING
 	K_VALUE

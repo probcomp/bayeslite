@@ -243,10 +243,6 @@ def test_estimate_bql():
         'SELECT bql_column_value_probability(1, NULL, 3, ("c" + 1)) FROM "t1";'
     assert bql2sql('estimate probability of weight = f(c) from t1_cc;') == \
         'SELECT bql_column_value_probability(1, NULL, 3, "f"("c")) FROM "t1";'
-    assert bql2sql('estimate typicality from t1_cc;') == \
-        'SELECT bql_row_typicality(1, NULL, _rowid_) FROM "t1";'
-    assert bql2sql('estimate typicality of age from t1_cc;') == \
-        'SELECT bql_column_typicality(1, NULL, 2) FROM "t1";'
     assert bql2sql('estimate similarity to (rowid = 5) from t1_cc;') == \
         'SELECT bql_row_similarity(1, NULL, _rowid_,' \
         ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5))) FROM "t1";'
@@ -389,13 +385,6 @@ def test_estimate_columns_trivial():
         # PREDICTIVE PROBABILITY makes no sense without row.
         bql2sql('estimate * from columns of t1_cc where' +
             ' predictive probability of x > 0;')
-    assert bql2sql('estimate * from columns of t1_cc'
-            ' where typicality > 0.5;') == \
-        prefix + ' AND (bql_column_typicality(1, NULL, c.colno) > 0.5);'
-    with pytest.raises(bayeslite.BQLError):
-        # Must omit column.
-        bql2sql('estimate * from columns of t1_cc'
-            ' where typicality of c > 0.5;')
     with pytest.raises(bayeslite.BQLError):
         # SIMILARITY makes no sense without row.
         bql2sql('estimate * from columns of t1_cc where' +
@@ -499,18 +488,6 @@ def test_estimate_pairwise_trivial():
         bql2sql('estimate dependence probability'
             ' from pairwise columns of t1_cc' +
             ' where predictive probability of x > 0.5;')
-    with pytest.raises(bayeslite.BQLError):
-        # TYPICALITY OF is a row function.
-        bql2sql('estimate mutual information from pairwise columns of t1_cc' +
-            ' where typicality of x > 0.5;')
-    with pytest.raises(bayeslite.BQLError):
-        # TYPICALITY OF is a row function.
-        bql2sql('estimate mutual information using 42 samples'
-            ' from pairwise columns of t1_cc where typicality of x > 0.5;')
-    with pytest.raises(bayeslite.BQLError):
-        # TYPICALITY is 1-column.
-        bql2sql('estimate correlation from pairwise columns of t1_cc'
-            ' where typicality > 0.5;')
     with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
         bql2sql('estimate dependence probability'
@@ -962,7 +939,7 @@ def test_parametrized():
                 ' WHERE name = :name OR (defaultp AND tabname = :name)',
             'SELECT id FROM bayesdb_generator'
                 ' WHERE name = :name OR (defaultp AND tabname = :name)',
-            # ESTIMATE COLUMNS:
+            # ESTIMATE * FROM COLUMNS OF:
             'SELECT c.name AS name'
                 ' FROM bayesdb_generator AS g,'
                     ' bayesdb_generator_column AS gc,'
@@ -1008,7 +985,7 @@ def test_parametrized():
                 ' WHERE name = :name OR (defaultp AND tabname = :name)',
             'SELECT id FROM bayesdb_generator'
                 ' WHERE name = :name OR (defaultp AND tabname = :name)',
-            # ESTIMATE COLUMNS:
+            # ESTIMATE * FROM COLUMNS OF:
             'SELECT c.name AS name'
                 ' FROM bayesdb_generator AS g,'
                     ' bayesdb_generator_column AS gc,'
@@ -1673,13 +1650,10 @@ def test_estimate_by():
             bdb.execute('estimate predictive probability of age'
                 ' by t1_cc')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate typicality by t1_cc')
-        with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate similarity to (rowid=1) by t1_cc')
         def check(x):
             assert len(list(bdb.execute(x))) == 1
         check('estimate probability of age = 42 by t1_cc')
-        check('estimate typicality of age by t1_cc')
         check('estimate dependence probability of age with weight by t1_cc')
         check('estimate mutual information of age with weight by t1_cc')
         check('estimate correlation of age with weight by t1_cc')

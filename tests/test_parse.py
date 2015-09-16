@@ -300,14 +300,6 @@ def test_select_bql():
             [ast.SelColExp(ast.ExpBQLProb('c', ast.ExpLit(ast.LitInt(42)), []),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
-    assert parse_bql_string('select typicality from t;') == \
-        [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLTyp(None), None)],
-            [ast.SelTab('t', None)], None, None, None, None)]
-    assert parse_bql_string('select typicality of c from t;') == \
-        [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLTyp('c'), None)],
-            [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select similarity from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(ast.ExpBQLSim(None, [ast.ColListAll()]), None)],
@@ -380,7 +372,8 @@ def test_select_bql():
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select similarity to (rowid=8) with respect to' +
-            ' (estimate * from columns of t order by typicality limit 1)' +
+            ' (estimate * from columns of t order by ' +
+            '  probability of value 4 limit 1)' +
             ' from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
@@ -393,7 +386,8 @@ def test_select_bql():
                         ast.EstCols([ast.SelColAll(None)], 't',
                             ast.ExpLit(ast.LitNull(None)),
                             None,
-                            [ast.Ord(ast.ExpBQLTyp(None), ast.ORD_ASC)],
+                            [ast.Ord(ast.ExpBQLProb(None,
+                                ast.ExpLit(ast.LitInt(4)), []), ast.ORD_ASC)],
                             ast.Lim(ast.ExpLit(ast.LitInt(1)), None))
                     )]),
                 None)],
@@ -749,7 +743,6 @@ def test_is_bql():
     # ...
     assert ast.is_bql(ast.ExpBQLPredProb('c'))
     assert ast.is_bql(ast.ExpBQLProb('c', 0, []))
-    assert ast.is_bql(ast.ExpBQLTyp('c'))
     assert ast.is_bql(ast.ExpBQLSim(ast.ExpLit(ast.LitInt(0)), []))
     assert ast.is_bql(ast.ExpBQLDepProb('c0', 'c1'))
     assert ast.is_bql(ast.ExpBQLMutInf('c0', 'c1', 100))

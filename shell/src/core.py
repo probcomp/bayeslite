@@ -23,7 +23,6 @@ import sys
 import bayeslite
 import bayeslite.bql as bql
 import bayeslite.core as core
-import bayeslite.crosscat
 import bayeslite.guess as guess
 import bayeslite.parse as parse
 import bayeslite.shell.pretty as pretty
@@ -348,7 +347,8 @@ class Shell(cmd.Cmd):
         # Need a completely new bdb object. Hope no one aliased it.
         if line == '-m':
             line = None
-        self._bdb = bayeslite.bayesdb_open(pathname=line)
+        self._bdb = bayeslite.bayesdb_open(pathname=line,
+            builtin_metamodels=False)
 
     def dot_python(self, line):
         '''evaluate a Python expression

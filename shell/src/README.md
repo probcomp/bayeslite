@@ -33,7 +33,7 @@ bayeslite> .hook contrib.py
 added command ".zmatrix"
 added command ".pairplot"
 added command ".ccstate"
-bayeslite> .zmatrix ESTIMATE PAIRWISE DEPENDENCE PROBABILITY FROM mytable_cc -f zmat.png
+bayeslite> .zmatrix ESTIMATE DEPENDENCE PROBABILITY FROM PAIRWISE COLUMNS OF mytable_cc -f zmat.png
 ```
 
 ## Adding your own commands with `.hook`

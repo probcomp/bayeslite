@@ -22,14 +22,14 @@ import bayeslite.metamodels.iid_gaussian as gauss
 import bayeslite.metamodels.nig_normal as normal
 
 def test_geweke_troll():
-    with bayeslite.bayesdb_open() as bdb:
+    with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
         bayeslite.bayesdb_register_metamodel(bdb, troll.TrollMetamodel())
         kl_est = geweke.geweke_kl(bdb, "troll_rng", [['column', 'numerical']],
             ['column'], [(1,0)], 2, 2, 2, 2)
         assert kl_est == (2, 0, 0)
 
 def test_geweke_iid_gaussian():
-    with bayeslite.bayesdb_open() as bdb:
+    with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
         bayeslite.bayesdb_register_metamodel(bdb, gauss.StdNormalMetamodel())
         kl_est = geweke.geweke_kl(bdb, "std_normal",
             [['column', 'numerical']], ['column'],
@@ -37,7 +37,7 @@ def test_geweke_iid_gaussian():
         assert kl_est == (2, 0, 0)
 
 def test_geweke_nig_normal():
-    with bayeslite.bayesdb_open() as bdb:
+    with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
         nig = normal.NIGNormalMetamodel(seed=1)
         bayeslite.bayesdb_register_metamodel(bdb, nig)
         (ct, kl, error) = geweke.geweke_kl(bdb, "nig_normal",
@@ -54,7 +54,7 @@ def test_geweke_nig_normal_seriously():
     # aggregate impression was "probably no bug" (resp. "definitely
     # bug").  The assertions constitute an attempt to capture the most
     # salient features that give that impression.
-    with bayeslite.bayesdb_open() as bdb:
+    with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
         nig = normal.NIGNormalMetamodel(seed=1)
         bayeslite.bayesdb_register_metamodel(bdb, nig)
         cells = [(i,0) for i in range(4)]
@@ -72,7 +72,7 @@ class DoctoredNIGNormal(normal.NIGNormalMetamodel):
         return float(1.0/scale) / self.prng.gammavariate(shape, 1.0)
 
 def test_geweke_catches_nig_normal_bug():
-    with bayeslite.bayesdb_open() as bdb:
+    with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
         bayeslite.bayesdb_register_metamodel(bdb, DoctoredNIGNormal(seed=1))
         cells = [(i,0) for i in range(4)]
         for chain_ct in (0, 1, 5):

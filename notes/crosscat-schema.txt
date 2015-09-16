@@ -1,4 +1,4 @@
-* Current BayesDB schema
+* Current schema of crosscat data
 
 Table metadata is a record with three fields, stored in a JSON blob:
 

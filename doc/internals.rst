@@ -19,12 +19,6 @@ Bayeslite API internals
 .. automodule:: bayeslite.core
    :members:
 
-:mod:`bayeslite.metamodel`: Bayeslite metamodel interface
----------------------------------------------------------
-
-.. automodule:: bayeslite.metamodel
-   :members:
-
 :mod:`bayeslite.parse`: BQL parser
 ----------------------------------
 

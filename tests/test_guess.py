@@ -19,7 +19,7 @@ import math
 import pytest
 
 import bayeslite
-import bayeslite.crosscat
+from bayeslite.metamodels.crosscat import CrosscatMetamodel
 from bayeslite.guess import bayesdb_guess_stattypes
 from bayeslite.guess import bayesdb_guess_generator
 
@@ -89,7 +89,7 @@ def test_guess_stattypes():
         ['numerical', 'key']
 
 def test_guess_generator():
-    bdb = bayeslite.bayesdb_open()
+    bdb = bayeslite.bayesdb_open(builtin_metamodels=False)
     bdb.sql_execute('CREATE TABLE t(x NUMERIC, y NUMERIC, z NUMERIC)')
     a_z = range(ord('a'), ord('z') + 1)
     aa_zz = ((c, d) for c in a_z for d in a_z)
@@ -97,7 +97,7 @@ def test_guess_generator():
     for row in data:
         bdb.sql_execute('INSERT INTO t (x, y, z) VALUES (?, ?, ?)', row)
     cc = crosscat.LocalEngine.LocalEngine(seed=0)
-    metamodel = bayeslite.crosscat.CrosscatMetamodel(cc)
+    metamodel = CrosscatMetamodel(cc)
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)
     with pytest.raises(ValueError):
         # No modelled columns.  (x is key.)

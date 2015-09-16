@@ -31,7 +31,7 @@ csv_hdr = 'a,b,c,name,nick,age,muppet,animal\n'
 csv_hdrdata = csv_hdr + csv_data
 
 def test_read_csv():
-    with bayeslite.bayesdb_open() as bdb:
+    with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
         f = StringIO.StringIO(csv_data)
         with pytest.raises(ValueError):
             # Table must already exist for create=False.
