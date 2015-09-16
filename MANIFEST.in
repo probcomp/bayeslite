@@ -1,2 +1,3 @@
+include COPYING
 include VERSION
 include src/grammar.y
