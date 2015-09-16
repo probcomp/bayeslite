@@ -6,8 +6,7 @@ SQL that supports queries about the probable implications of data.
 ## Dependencies
 
 Bayeslite is written in Python 2.7, using the sqlite3 module with
-SQLite3 >=3.7.17, and does not itself depend on any external software
-beyond that.
+SQLite3 >=3.7.17.
 
 Bayeslite is most useful in conjunction with
 [Crosscat](https://github.com/mit-probabilistic-computing-project/crosscat),
