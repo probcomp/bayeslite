@@ -57,29 +57,54 @@ grammars = [
 ]
 
 import distutils.spawn
+import hashlib
 import errno
 import os
 import os.path
+
 root = os.path.dirname(os.path.abspath(__file__))
 lemonade = root + '/external/lemonade/dist'
-for grammar in grammars:
-    parser = os.path.splitext(grammar)[0] + '.py'
-    parser_mtime = None
+
+def sha256_file(pathname):
+    sha256 = hashlib.sha256()
+    with open(pathname, 'r') as f:
+        for block in iter(lambda: f.read(65536), ''):
+            sha256.update(block)
+    return sha256
+
+def uptodate(path_in, path_out, path_sha256):
     try:
-        parser_mtime = os.path.getmtime(parser)
-    except OSError as e:
+        with open(path_sha256, 'r') as file_sha256:
+            if file_sha256.next() != sha256_file(path_in).hexdigest():
+                return False
+            if file_sha256.next() != sha256_file(path_out).hexdigest():
+                return False
+    except IOError as e:
         if e.errno != errno.ENOENT:
             raise
-    if parser_mtime is not None:
-        if os.path.getmtime(grammar) < parser_mtime:
-            continue
-    print 'generating %s -> %s' % (grammar, parser)
+        return False
+    return True
+
+def commit(path_in, path_out, path_sha256):
+    with open(path_sha256 + '.tmp', 'w') as file_sha256:
+        file_sha256.write('%s\n' % (sha256_file(path_in).hexdigest(),))
+        file_sha256.write('%s\n' % (sha256_file(path_out).hexdigest(),))
+    os.rename(path_sha256 + '.tmp', path_sha256)
+
+for path_y in grammars:
+    path = os.path.splitext(path_y)[0]
+    path_py = path + '.py'
+    path_sha256 = path + '.sha256'
+    if uptodate(path_y, path_py, path_sha256):
+        continue
+    print 'generating %s -> %s' % (path_y, path_py)
     distutils.spawn.spawn([
         '/usr/bin/env', 'PYTHONPATH=' + lemonade,
         lemonade + '/bin/lemonade',
         '-s',                   # Write statistics to stdout.
-        grammar,
+        path_y,
     ])
+    commit(path_y, path_py, path_sha256)
 
 setup(
     name='bayeslite',

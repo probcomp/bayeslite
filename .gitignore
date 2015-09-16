@@ -10,5 +10,7 @@
 /shell/tests/thooks.pyc
 /src/grammar.out
 /src/grammar.py
+/src/grammar.sha256
+/src/grammar.sha256.tmp
 /src/version.py
 __pycache__/

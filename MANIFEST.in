@@ -117,4 +117,5 @@ include external/plex/dist/tests/test9.in
 include external/plex/dist/tests/test9.out
 include external/plex/dist/tests/test9.py
 include external/plex/prepare.sh
+include src/grammar.sha256
 include src/grammar.y
