@@ -211,30 +211,30 @@ class BayesDB(object):
 class BayesDBCursor(object):
     """Cursor for a BQL or SQL query from a BayesDB."""
     def __init__(self, bdb, cursor):
-        self.bdb = bdb
-        self.cursor = cursor
+        self._bdb = bdb
+        self._cursor = cursor
     def __iter__(self):
         return self
     def next(self):
-        return self.cursor.next()
+        return self._cursor.next()
     def fetchone(self):
-        return self.cursor.fetchone()
+        return self._cursor.fetchone()
     def fetchmany(self, size=1):
-        with txn.bayesdb_caching(self.bdb):
-            return self.cursor.fetchmany(size=size)
+        with txn.bayesdb_caching(self._bdb):
+            return self._cursor.fetchmany(size=size)
     def fetchall(self):
-        with txn.bayesdb_caching(self.bdb):
-            return self.cursor.fetchall()
+        with txn.bayesdb_caching(self._bdb):
+            return self._cursor.fetchall()
     @property
     def connection(self):
-        return self.bdb
+        return self._bdb
     @property
     def rowcount(self):
-        return self.cursor.rowcount
+        return self._cursor.rowcount
     @property
     def lastrowid(self):
-        return self.cursor.lastrowid
+        return self._cursor.lastrowid
     @property
     def description(self):
-        desc = self.cursor.description
+        desc = self._cursor.description
         return [] if desc is None else desc
