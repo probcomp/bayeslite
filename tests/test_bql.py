@@ -1575,6 +1575,13 @@ def test_misc_errors():
         with pytest.raises(NotImplementedError):
             bdb.execute('infer explicit predict age confidence ac,'
                 ' t1.(select age from t1 limit 1) from t1_cc')
+        with pytest.raises(bayeslite.BQLError):
+            try:
+                bdb.execute('estimate similarity to (rowid=1)'
+                    ' with respect to (agee) from t1_cc')
+            except bayeslite.BQLError as e:
+                assert 'No such columns in generator:' in str(e)
+                raise
 
 def test_nested_simulate():
     with test_core.t1() as (bdb, _table_id):

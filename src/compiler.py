@@ -1112,6 +1112,14 @@ def compile_column_lists(bdb, generator_id, column_lists, _bql_compiler, out):
             colnos = core.bayesdb_generator_column_numbers(bdb, generator_id)
             out.write(', '.join(str(colno) for colno in colnos))
         elif isinstance(collist, ast.ColListLit):
+            unknown = set()
+            for column in collist.columns:
+                if not core.bayesdb_generator_has_column(bdb, generator_id,
+                        column):
+                    unknown.add(column)
+            if 0 < len(unknown):
+                raise BQLError(bdb, 'No such columns in generator: %s' %
+                    (repr(list(unknown)),))
             colnos = (core.bayesdb_generator_column_number(bdb, generator_id,
                     column)
                 for column in collist.columns)
