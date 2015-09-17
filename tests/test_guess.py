@@ -107,7 +107,8 @@ def test_guess_generator():
     with pytest.raises(ValueError):
         # Generator already exists.
         bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
-    assert list(bdb.sql_execute('SELECT * FROM bayesdb_generator_column')) == [
+    assert bdb.sql_execute('SELECT *'
+            ' FROM bayesdb_generator_column').fetchall() == [
         (1, 1, 'categorical'),
         (1, 2, 'numerical'),
     ]

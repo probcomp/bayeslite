@@ -33,8 +33,9 @@ def test_correlation():
                 n1 NUMERICAL,
             )
         ''')
-        assert list(bdb.execute('ESTIMATE CORRELATION, CORRELATION PVALUE'
-            ' FROM PAIRWISE COLUMNS OF u_cc WHERE name0 < name1')) == \
+        assert bdb.execute('ESTIMATE CORRELATION, CORRELATION PVALUE'
+                ' FROM PAIRWISE COLUMNS OF u_cc'
+                ' WHERE name0 < name1').fetchall() == \
             [
                 (1, 'c0', 'c1', None, None),
                 (1, 'c0', 'n0', None, None),
@@ -68,8 +69,9 @@ def test_correlation():
                 ny NUMERICAL
             )
         ''')
-        assert list(bdb.execute('ESTIMATE CORRELATION, CORRELATION PVALUE'
-            ' FROM PAIRWISE COLUMNS OF t_cc WHERE name0 < name1')) == \
+        assert bdb.execute('ESTIMATE CORRELATION, CORRELATION PVALUE'
+                ' FROM PAIRWISE COLUMNS OF t_cc'
+                ' WHERE name0 < name1').fetchall() == \
             [
                 (2, 'c0', 'c1', 1., 2.900863120340446e-12),
                 (2, 'c0', 'cx', None, None),

@@ -48,15 +48,15 @@ def test_subsample():
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR dhacc')
         bdb.execute('ANALYZE dhacc FOR 1 ITERATION WAIT')
-        list(bdb.execute('ESTIMATE SIMILARITY TO (_rowid_=2) FROM dhacc'
-            ' WHERE _rowid_ = 1 OR _rowid_ = 101'))
-        list(bdb.execute('ESTIMATE SIMILARITY TO (_rowid_=102) FROM dhacc'
-            ' WHERE _rowid_ = 1 OR _rowid_ = 101'))
-        list(bdb.execute('ESTIMATE PREDICTIVE PROBABILITY OF mdcr_spnd_amblnc'
-            ' FROM dhacc WHERE _rowid_ = 1 OR _rowid_ = 101'))
-        list(bdb.execute('ESTIMATE SIMILARITY FROM PAIRWISE dhacc'
+        bdb.execute('ESTIMATE SIMILARITY TO (_rowid_=2) FROM dhacc'
+            ' WHERE _rowid_ = 1 OR _rowid_ = 101').fetchall()
+        bdb.execute('ESTIMATE SIMILARITY TO (_rowid_=102) FROM dhacc'
+            ' WHERE _rowid_ = 1 OR _rowid_ = 101').fetchall()
+        bdb.execute('ESTIMATE PREDICTIVE PROBABILITY OF mdcr_spnd_amblnc'
+            ' FROM dhacc WHERE _rowid_ = 1 OR _rowid_ = 101').fetchall()
+        bdb.execute('ESTIMATE SIMILARITY FROM PAIRWISE dhacc'
             ' WHERE (r0._rowid_ = 1 OR r0._rowid_ = 101) AND'
-                ' (r1._rowid_ = 1 OR r1._rowid_ = 101)'))
-        list(bdb.execute('INFER mdcr_spnd_amblnc FROM dhacc'
-            ' WHERE _rowid_ = 1 OR _rowid_ = 101'))
+                ' (r1._rowid_ = 1 OR r1._rowid_ = 101)').fetchall()
+        bdb.execute('INFER mdcr_spnd_amblnc FROM dhacc'
+            ' WHERE _rowid_ = 1 OR _rowid_ = 101').fetchall()
         bdb.execute('DROP GENERATOR dhacc')

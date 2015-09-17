@@ -275,7 +275,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     AND gc.generator_id = g.id
                 ORDER BY c.colno ASC
         '''
-        columns = list(bdb.sql_execute(columns_sql, (generator_id,)))
+        columns = bdb.sql_execute(columns_sql, (generator_id,)).fetchall()
         colnames = [name for name, _colno in columns]
         qcns = map(sqlite3_quote_name, colnames)
         cursor = bdb.sql_execute('''
@@ -584,7 +584,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             if do_guess:
                 column_names = core.bayesdb_table_column_names(bdb, table)
                 qt = sqlite3_quote_name(table)
-                rows = list(bdb.sql_execute('SELECT * FROM %s' % (qt,)))
+                rows = bdb.sql_execute('SELECT * FROM %s' % (qt,)).fetchall()
                 stattypes = guess.bayesdb_guess_stattypes(column_names, rows,
                     overrides=columns)
                 columns = zip(column_names, stattypes)
@@ -1235,7 +1235,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                         AND m.modelno = ct.modelno
                     ORDER BY m.modelno
             '''
-            models = list(bdb.sql_execute(models_sql, (generator_id,)))
+            models = bdb.sql_execute(models_sql, (generator_id,)).fetchall()
             modelnos = [modelno for modelno, _theta_json in models]
             thetas = [json.loads(theta_json)
                 for _modelno, theta_json in models]
@@ -1404,5 +1404,4 @@ def crosscat_gen_column_dependencies(bdb, generator_id):
             FROM bayesdb_crosscat_column_dependency
             WHERE generator_id = ?
     '''
-    cursor = bdb.sql_execute(sql, (generator_id,))
-    return list(cursor)
+    return bdb.sql_execute(sql, (generator_id,)).fetchall()

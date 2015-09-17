@@ -69,7 +69,7 @@ def bql_column_stattypes_and_data(bdb, generator_id, colno0, colno1):
     data_sql = '''
         SELECT %s, %s FROM %s WHERE %s IS NOT NULL AND %s IS NOT NULL
     ''' % (qcn0, qcn1, qt, qcn0, qcn1)
-    data = list(bdb.sql_execute(data_sql))
+    data = bdb.sql_execute(data_sql).fetchall()
     data0 = [row[0] for row in data]
     data1 = [row[1] for row in data]
     return (st0, st1, data0, data1)

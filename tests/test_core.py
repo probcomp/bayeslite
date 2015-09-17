@@ -305,14 +305,14 @@ def test_t1_nocase():
                 'weight NUMERICAL',
             ]) \
             as (bdb, generator_id):
-        list(bdb.execute('select id from t1'))
-        list(bdb.execute('select ID from T1'))
-        list(bdb.execute('select iD from T1'))
-        list(bdb.execute('select Id from T1'))
-        # list(bdb.execute('select id from t1_cc'))
-        # list(bdb.execute('select ID from T1_cC'))
-        # list(bdb.execute('select iD from T1_Cc'))
-        # list(bdb.execute('select Id from T1_CC'))
+        bdb.execute('select id from t1').fetchall()
+        bdb.execute('select ID from T1').fetchall()
+        bdb.execute('select iD from T1').fetchall()
+        bdb.execute('select Id from T1').fetchall()
+        # bdb.execute('select id from t1_cc').fetchall()
+        # bdb.execute('select ID from T1_cC').fetchall()
+        # bdb.execute('select iD from T1_Cc').fetchall()
+        # bdb.execute('select Id from T1_CC').fetchall()
 
 examples = {
     't0': t0,
@@ -410,9 +410,8 @@ def test_onecolumn(exname, colno):
     with analyzed_bayesdb_generator(examples[exname](), 1, 1) \
             as (bdb, generator_id):
         bqlfn.bql_column_value_probability(bdb, generator_id, None, colno, 4)
-        list(bdb.sql_execute(
-            'select bql_column_value_probability(?, NULL, ?, 4)',
-            (generator_id, colno)))
+        bdb.sql_execute('select bql_column_value_probability(?, NULL, ?, 4)',
+            (generator_id, colno)).fetchall()
 
 @pytest.mark.parametrize('exname,colno0,colno1',
     [(exname, colno0, colno1)
@@ -427,28 +426,28 @@ def test_twocolumn(exname, colno0, colno1):
     with analyzed_bayesdb_generator(examples[exname](), 1, 1) \
             as (bdb, generator_id):
         bqlfn.bql_column_correlation(bdb, generator_id, colno0, colno1)
-        list(bdb.sql_execute('select bql_column_correlation(?, ?, ?)',
-            (generator_id, colno0, colno1)))
+        bdb.sql_execute('select bql_column_correlation(?, ?, ?)',
+            (generator_id, colno0, colno1)).fetchall()
         bqlfn.bql_column_dependence_probability(bdb, generator_id, None,
             colno0, colno1)
-        list(bdb.sql_execute('select'
+        bdb.sql_execute('select'
             ' bql_column_dependence_probability(?, NULL, ?, ?)',
-            (generator_id, colno0, colno1)))
+            (generator_id, colno0, colno1)).fetchall()
         bqlfn.bql_column_mutual_information(bdb, generator_id, None, colno0,
             colno1)
         bqlfn.bql_column_mutual_information(bdb, generator_id, None, colno0,
             colno1, numsamples=None)
         bqlfn.bql_column_mutual_information(bdb, generator_id, None, colno0,
             colno1, numsamples=1)
-        list(bdb.sql_execute('select'
+        bdb.sql_execute('select'
             ' bql_column_mutual_information(?, NULL, ?, ?, NULL)',
-            (generator_id, colno0, colno1)))
-        list(bdb.sql_execute('select'
+            (generator_id, colno0, colno1)).fetchall()
+        bdb.sql_execute('select'
             ' bql_column_mutual_information(?, NULL, ?, ?, 1)',
-            (generator_id, colno0, colno1)))
-        list(bdb.sql_execute('select'
+            (generator_id, colno0, colno1)).fetchall()
+        bdb.sql_execute('select'
             ' bql_column_mutual_information(?, NULL, ?, ?, 100)',
-            (generator_id, colno0, colno1)))
+            (generator_id, colno0, colno1)).fetchall()
 
 @pytest.mark.parametrize('colno,rowid',
     [(colno, rowid)
@@ -468,7 +467,7 @@ def test_t1_column_value_probability(colno, rowid):
             select bql_column_value_probability(?, NULL, ?,
                 (select %s from %s where rowid = ?))
         ''' % (qc, qt)
-        list(bdb.sql_execute(sql, (generator_id, colno, rowid)))
+        bdb.sql_execute(sql, (generator_id, colno, rowid)).fetchall()
 
 @pytest.mark.parametrize('exname,source,target,colnos',
     [(exname, source, target, list(colnos))
@@ -487,7 +486,7 @@ def test_row_similarity(exname, source, target, colnos):
             *colnos)
         sql = 'select bql_row_similarity(?, NULL, ?, ?%s%s)' % \
             ('' if 0 == len(colnos) else ', ', ', '.join(map(str, colnos)))
-        list(bdb.sql_execute(sql, (generator_id, source, target)))
+        bdb.sql_execute(sql, (generator_id, source, target)).fetchall()
 
 @pytest.mark.parametrize('exname,rowid,colno',
     [(exname, rowid, colno)
@@ -505,7 +504,7 @@ def test_row_column_predictive_probability(exname, rowid, colno):
         bqlfn.bql_row_column_predictive_probability(bdb, generator_id, None,
             rowid, colno)
         sql = 'select bql_row_column_predictive_probability(?, NULL, ?, ?)'
-        list(bdb.sql_execute(sql, (generator_id, rowid, colno)))
+        bdb.sql_execute(sql, (generator_id, rowid, colno)).fetchall()
 
 def test_insert():
     with test_csv.bayesdb_csv_stream(test_csv.csv_data) as (bdb, f):

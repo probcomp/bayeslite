@@ -115,7 +115,7 @@ def test_csv_import_schema():
         ''')
         bayeslite.bayesdb_read_csv(bdb, 'employees', f, header=True,
             create=False)
-        list(bdb.execute('select height from employees'))
+        bdb.execute('select height from employees').fetchall()
         # XXX Currently this test fails because we compile the query
         # into `SELECT "idontexist" FROM "employees"', and for
         # compatibility with MySQL idiocy or something, SQLite treats
@@ -134,7 +134,7 @@ def test_csv_import_schema():
                 rank CATEGORICAL
             )
         ''')
-        list(bdb.execute('estimate height from employees_cc'))
+        bdb.execute('estimate height from employees_cc').fetchall()
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate predict height with confidence 0.9'
                 ' from employees_cc')
@@ -208,7 +208,7 @@ def test_csv_missing():
         clean('a')
         clean('b')
         clean('c')
-        assert list(bdb.execute('select * from t')) == [
+        assert bdb.execute('select * from t').fetchall() == [
             (1.0, 2.0, 3.0),
             (10.0, None, 30.0),
             (100.0, 200.0, None),

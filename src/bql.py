@@ -142,8 +142,8 @@ def execute_phrase(bdb, phrase, bindings=()):
                 compiler.compile_nobql_expression(bdb, expression, out)
             winders, unwinders = out.getwindings()
             with compiler.bayesdb_wind(bdb, winders, unwinders):
-                cursor = list(bdb.sql_execute(out.getvalue(),
-                        out.getbindings()))
+                cursor = bdb.sql_execute(out.getvalue(),
+                    out.getbindings()).fetchall()
             assert len(cursor) == 1
             nsamples = cursor[0][0]
             assert isinstance(nsamples, int)

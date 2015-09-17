@@ -72,7 +72,7 @@ def test_read_csv():
         f = StringIO.StringIO(csv_hdrdata)
         bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True,
             ifnotexists=False)
-        data = list(bdb.sql_execute('SELECT * FROM t'))
+        data = bdb.sql_execute('SELECT * FROM t').fetchall()
         assert data == [
             # XXX Would be nice if the NaN could actually be that, or
             # at least None/NULL.
@@ -83,7 +83,7 @@ def test_read_csv():
         f = StringIO.StringIO(csv_hdr)
         bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True,
             ifnotexists=True)
-        assert list(bdb.sql_execute('SELECT * FROM t')) == data
+        assert bdb.sql_execute('SELECT * FROM t').fetchall() == data
         assert bdb.sql_execute('SELECT sql FROM sqlite_master WHERE name = ?',
                 ('t',)).next()[0] == \
             'CREATE TABLE "t"' \
@@ -92,15 +92,16 @@ def test_read_csv():
         f = StringIO.StringIO(csv_data)
         bayeslite.bayesdb_read_csv(bdb, 't', f, header=False, create=False,
             ifnotexists=False)
-        assert list(bdb.sql_execute('SELECT * FROM t')) == data + data
+        assert bdb.sql_execute('SELECT * FROM t').fetchall() == data + data
         f = StringIO.StringIO(csv_hdrdata)
         bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=False,
             ifnotexists=False)
-        assert list(bdb.sql_execute('SELECT * FROM t')) == data + data + data
+        assert bdb.sql_execute('SELECT * FROM t').fetchall() == \
+            data + data + data
         with tempfile.NamedTemporaryFile(prefix='bayeslite') as temp:
             with open(temp.name, 'w') as f:
                 f.write(csv_hdrdata)
             bayeslite.bayesdb_read_csv_file(bdb, 't', temp.name, header=True,
                 create=False, ifnotexists=False)
-        assert list(bdb.sql_execute('SELECT * FROM t')) == \
+        assert bdb.sql_execute('SELECT * FROM t').fetchall() == \
             data + data + data + data

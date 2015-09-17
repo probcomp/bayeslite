@@ -71,7 +71,7 @@ def bayesdb_guess_generator(bdb, generator, table, metamodel,
         qt = sqlite3_quote_name(table)
         cursor = bdb.sql_execute('SELECT * FROM %s' % (qt,))
         column_names = [d[0] for d in cursor.description]
-        rows = list(cursor)
+        rows = cursor.fetchall()
         stattypes = bayesdb_guess_stattypes(column_names, rows,
             count_cutoff=count_cutoff, ratio_cutoff=ratio_cutoff,
             overrides=overrides)

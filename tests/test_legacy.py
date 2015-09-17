@@ -55,7 +55,7 @@ def test_legacy_models():
             LIMIT 10
     '''
     with bdb.savepoint():
-        assert list(bdb.execute(bql, ('Albany NY',))) == [
+        assert bdb.execute(bql, ('Albany NY',)).fetchall() == [
             ('Albany NY',),
             ('Scranton PA',),
             ('United States US',),
@@ -75,7 +75,7 @@ def test_legacy_models():
             LIMIT 10
     '''
     with bdb.savepoint():
-        assert list(bdb.execute(bql)) == [
+        assert bdb.execute(bql).fetchall() == [
             ('McAllen TX',),
             ('Worcester MA',),
             ('Beaumont TX',),
@@ -104,7 +104,7 @@ if False:
                 AND gc0.generator_id = e.generator_id
                 AND gc1.generator_id = e.generator_id
     '''
-    assert list(bdb.execute(bql)) == [
+    assert bdb.execute(bql).fetchall() == [
         ('AMI_SCORE', 'Myocardial infarction score',
          'AMI_SCORE', 'Myocardial infarction score',
          1),

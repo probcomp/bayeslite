@@ -602,8 +602,8 @@ def compile_simulate(bdb, simulate, out):
             compile_nobql_expression(bdb, expression, subout)
         winders, unwinders = subout.getwindings()
         with bayesdb_wind(bdb, winders, unwinders):
-            cursor = list(bdb.sql_execute(subout.getvalue(),
-                    subout.getbindings()))
+            cursor = bdb.sql_execute(subout.getvalue(),
+                subout.getbindings()).fetchall()
         assert len(cursor) == 1
         nsamples = cursor[0][0]
         assert isinstance(nsamples, int)

@@ -18,7 +18,7 @@ def pp_cursor(out, cursor):
     if not cursor.description:
         return
     labels = [d[0] for d in cursor.description]
-    table = list(cursor)
+    table = cursor.fetchall()
     pp_list(out, table, labels)
 
 def pp_list(out, table, labels):
