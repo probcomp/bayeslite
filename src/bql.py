@@ -652,20 +652,43 @@ def execute_wound(bdb, winders, unwinders, sql, bindings):
                 bdb.sql_execute(usql, ubindings)
             raise
 
-class WoundCursor(object):
-    def __init__(self, bdb, cursor, unwinders):
-        self.bdb = bdb
-        self.cursor = cursor
-        self.unwinders = unwinders
+class BayesDBCursor(object):
+    """Cursor for a BQL or SQL query from a BayesDB."""
+    def __init__(self, bdb, cursor):
+        self._bdb = bdb
+        self._cursor = cursor
     def __iter__(self):
         return self
     def next(self):
-        return self.cursor.next()
-    rowcount = property(lambda self: self.cursor.rowcount)
-    lastrowid = property(lambda self: self.cursor.lastrowid)
-    description = property(lambda self: self.cursor.description)
+        return self._cursor.next()
+    def fetchone(self):
+        return self._cursor.fetchone()
+    def fetchmany(self, size=1):
+        with txn.bayesdb_caching(self._bdb):
+            return self._cursor.fetchmany(size=size)
+    def fetchall(self):
+        with txn.bayesdb_caching(self._bdb):
+            return self._cursor.fetchall()
+    @property
+    def connection(self):
+        return self._bdb
+    @property
+    def rowcount(self):
+        return self._cursor.rowcount
+    @property
+    def lastrowid(self):
+        return self._cursor.lastrowid
+    @property
+    def description(self):
+        desc = self._cursor.description
+        return [] if desc is None else desc
+
+class WoundCursor(BayesDBCursor):
+    def __init__(self, bdb, cursor, unwinders):
+        self._unwinders = unwinders
+        super(WoundCursor, self).__init__(bdb, cursor)
     def __del__(self):
-        del self.cursor
+        del self._cursor
         # If the database is still open, we need to undo the effects
         # of the cursor when done.  But the effects are (intended to
         # be) in-memory only, so otherwise, if the database is closed,
@@ -674,8 +697,8 @@ class WoundCursor(object):
         # XXX Name the question of whether it's closed a little less
         # kludgily.  (But that might encourage people outside to
         # depend on that, which is not such a great idea.)
-        if self.bdb.sqlite3 is not None:
-            for (sql, bindings) in reversed(self.unwinders):
-                self.bdb.sql_execute(sql, bindings)
+        if self._bdb.sqlite3 is not None:
+            for sql, bindings in reversed(self._unwinders):
+                self._bdb.sql_execute(sql, bindings)
         # Apparently object doesn't have a __del__ method.
-        #super(WoundCursor, self).__del__()
+        super(WoundCursor, self).__del__()

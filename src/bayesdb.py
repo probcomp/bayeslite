@@ -71,7 +71,7 @@ class BayesDB(object):
         bqlfn.bayesdb_install_bql(self.sqlite3, self)
 
         # Cache an empty cursor for convenience.
-        self.empty_cursor = BayesDBCursor(self, self.sqlite3.execute(''))
+        self.empty_cursor = bql.BayesDBCursor(self, self.sqlite3.execute(''))
 
     def __enter__(self):
         return self
@@ -173,7 +173,7 @@ class BayesDB(object):
             bindings = ()
         if self.sql_tracer:
             self.sql_tracer(string, bindings)
-        return BayesDBCursor(self, self.sqlite3.execute(string, bindings))
+        return bql.BayesDBCursor(self, self.sqlite3.execute(string, bindings))
 
     @contextlib.contextmanager
     def savepoint(self):
@@ -207,34 +207,3 @@ class BayesDB(object):
         n = self.temptable
         self.temptable += 1
         return 'bayesdb_temp_%u' % (n,)
-
-class BayesDBCursor(object):
-    """Cursor for a BQL or SQL query from a BayesDB."""
-    def __init__(self, bdb, cursor):
-        self._bdb = bdb
-        self._cursor = cursor
-    def __iter__(self):
-        return self
-    def next(self):
-        return self._cursor.next()
-    def fetchone(self):
-        return self._cursor.fetchone()
-    def fetchmany(self, size=1):
-        with txn.bayesdb_caching(self._bdb):
-            return self._cursor.fetchmany(size=size)
-    def fetchall(self):
-        with txn.bayesdb_caching(self._bdb):
-            return self._cursor.fetchall()
-    @property
-    def connection(self):
-        return self._bdb
-    @property
-    def rowcount(self):
-        return self._cursor.rowcount
-    @property
-    def lastrowid(self):
-        return self._cursor.lastrowid
-    @property
-    def description(self):
-        desc = self._cursor.description
-        return [] if desc is None else desc
