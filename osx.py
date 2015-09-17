@@ -135,14 +135,14 @@ assert os.path.exists(LIBBOOST_DIR), ("We need libboost-dev already installed: %
 
 venv_run("pip install cython")  # If we don't, crosscat's setup tries and fails.
 venv_run("pip install numpy")
-venv_run("cp -R %s/bdbcontrib/bdbcontrib lib/python2.7/site-packages/bdbcontrib" % BUILD_DIR)
+venv_run("cp -R %s/bdbcontrib/src lib/python2.7/site-packages/bdbcontrib" % BUILD_DIR)
 print "Deps for BdbContrib"
 venv_run("pip install matplotlib seaborn==0.5.1 pandas markdown2 sphinx numpydoc")
 print "Deps for BayesLite"
 # Assume that osx has sqlite3 already.
 # http://computechtips.com/619/upgrade-sqlite-os-x-mavericks-yosemite
 # which suggests that OS 10.10 and above have a sufficiently new sqlite.
-venv_run("pip install pytest sphinx cov-core dill ")
+venv_run("pip install pytest requests sphinx cov-core dill ")
 
 BUILD_EXAMPLES = os.path.join(BUILD_DIR, "examples")
 run("mkdir -p '%s'" % BUILD_EXAMPLES)
@@ -167,7 +167,8 @@ for project in GIT_REPOS:
 # Postprocessing
 # ==============
 venv_run("cd lib/python2.7/site-packages && unzip bayeslite*.egg")
-
+run("curl http://probcomp.csail.mit.edu/bayesdb/analyses/satellites.bdb > %s/satellites.bdb"
+    % BUILD_EXAMPLES)
 
 # This app's only other dependency:
 venv_run("pip install 'ipython[notebook]' runipy")
@@ -253,11 +254,9 @@ run("mv -f '%s' '%s'" % (VENV_DIR, MACOS_PATH))
 # Basic sanity check.
 venv_run("runipy '%s'" % os.path.join(MACOS_PATH, "examples", "Satellites.ipynb"))
 
-if [ -n "$PAUSE_TO_MODIFY" ]; then
-  echo "Pausing to let you modify $MACOS_PATH before packaging it up."
-  read -p "Continue? [Yn] " response
-  [ "$response" == "n" -o "$response" == "N" -o "$response" == "no" ] && exit 1
-fi
+if PAUSE_TO_MODIFY:
+  print "Pausing to let you modify %s before packaging it up." % MACOS_PATH
+  os.system('read -s -n 1 -p "Press any key to continue..."')
 
 DMG_PATH = os.path.join(os.environ['HOME'], 'Desktop', '%s.dmg' % NAME)
 naming_attempt = 0
