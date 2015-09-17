@@ -26,6 +26,7 @@ import bayeslite.core as core
 import bayeslite.guess as guess
 import bayeslite.parse as parse
 import bayeslite.shell.pretty as pretty
+import bayeslite.txn as txn
 
 from bayeslite.util import casefold
 
@@ -130,9 +131,7 @@ class Shell(cmd.Cmd):
                 first = True
                 for phrase in parse.parse_bql_string(string):
                     cursor = bql.execute_phrase(self._bdb, phrase)
-                    # Savepoint outside the execute so the execute can
-                    # begin/rollback/commit transactions.
-                    with self._bdb.savepoint():
+                    with txn.bayesdb_caching(self._bdb):
                         # Separate the output tables by a blank line.
                         if first:
                             first = False
