@@ -1668,6 +1668,7 @@ def test_estimate_by():
 
 def test_empty_cursor():
     with bayeslite.bayesdb_open() as bdb:
+        assert bdb.execute('SELECT 0').connection == bdb
         empty(bdb.execute('BEGIN'))
         empty(bdb.execute('COMMIT'))
         empty(bdb.sql_execute('CREATE TABLE t(x, y, z)'))

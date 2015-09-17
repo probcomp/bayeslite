@@ -226,6 +226,9 @@ class BayesDBCursor(object):
         with txn.bayesdb_caching(self.bdb):
             return self.cursor.fetchall()
     @property
+    def connection(self):
+        return self.bdb
+    @property
     def rowcount(self):
         return self.cursor.rowcount
     @property
