@@ -64,6 +64,13 @@ def bql2sqlparam(string):
 def bql_execute(bdb, string, bindings=()):
     return map(tuple, bdb.execute(string, bindings))
 
+def empty(cursor):
+    assert cursor is not None
+    assert cursor.description is not None
+    assert len(cursor.description) == 0
+    with pytest.raises(StopIteration):
+        cursor.next()
+
 def test_conditional_probability():
     with test_core.t1() as (bdb, _generator_id):
         bdb.execute('initialize 1 model for t1_cc')
@@ -1661,15 +1668,13 @@ def test_estimate_by():
 
 def test_empty_cursor():
     with bayeslite.bayesdb_open() as bdb:
-        cursor = bdb.execute('BEGIN')
-        assert cursor is not None
-        assert cursor.description is not None
-        assert len(cursor.description) == 0
-        with pytest.raises(StopIteration):
-            cursor.next()
-        cursor = bdb.execute('COMMIT')
-        assert cursor is not None
-        assert cursor.description is not None
-        assert len(cursor.description) == 0
-        with pytest.raises(StopIteration):
-            cursor.next()
+        empty(bdb.execute('BEGIN'))
+        empty(bdb.execute('COMMIT'))
+        empty(bdb.sql_execute('CREATE TABLE t(x, y, z)'))
+        empty(bdb.sql_execute('INSERT INTO t VALUES(1,2,3)'))
+        empty(bdb.execute('''
+            CREATE GENERATOR t_cc FOR t USING crosscat(GUESS(*))
+        '''))
+        empty(bdb.execute('INITIALIZE 1 MODEL FOR t_cc'))
+        empty(bdb.execute('DROP GENERATOR t_cc'))
+        empty(bdb.execute('DROP TABLE t'))

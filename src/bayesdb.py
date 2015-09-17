@@ -70,6 +70,9 @@ class BayesDB(object):
         schema.bayesdb_install_schema(self.sqlite3)
         bqlfn.bayesdb_install_bql(self.sqlite3, self)
 
+        # Cache an empty cursor for convenience.
+        self.empty_cursor = BayesDBCursor(self, self.sqlite3.execute(''))
+
     def __enter__(self):
         return self
     def __exit__(self, *_exc_info):
@@ -152,7 +155,8 @@ class BayesDB(object):
             pass
         else:
             raise ValueError('>1 phrase in string')
-        return bql.execute_phrase(self, phrase, bindings)
+        cursor = bql.execute_phrase(self, phrase, bindings)
+        return self.empty_cursor if cursor is None else cursor
 
     def sql_execute(self, string, bindings=None):
         """Execute a SQL query on the underlying SQLite database.
@@ -169,7 +173,7 @@ class BayesDB(object):
             bindings = ()
         if self.sql_tracer:
             self.sql_tracer(string, bindings)
-        return self.sqlite3.execute(string, bindings)
+        return BayesDBCursor(self, self.sqlite3.execute(string, bindings))
 
     @contextlib.contextmanager
     def savepoint(self):
@@ -203,3 +207,31 @@ class BayesDB(object):
         n = self.temptable
         self.temptable += 1
         return 'bayesdb_temp_%u' % (n,)
+
+class BayesDBCursor(object):
+    """Cursor for a BQL or SQL query from a BayesDB."""
+    def __init__(self, bdb, cursor):
+        self.bdb = bdb
+        self.cursor = cursor
+    def __iter__(self):
+        return self
+    def next(self):
+        return self.cursor.next()
+    def fetchone(self):
+        return self.cursor.fetchone()
+    def fetchmany(self, size=1):
+        with txn.bayesdb_caching(self.bdb):
+            return self.cursor.fetchmany(size=size)
+    def fetchall(self):
+        with txn.bayesdb_caching(self.bdb):
+            return self.cursor.fetchall()
+    @property
+    def rowcount(self):
+        return self.cursor.rowcount
+    @property
+    def lastrowid(self):
+        return self.cursor.lastrowid
+    @property
+    def description(self):
+        desc = self.cursor.description
+        return [] if desc is None else desc

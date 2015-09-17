@@ -25,6 +25,14 @@ from bayeslite.sqlite3_util import sqlite3_transaction
 # lightweight per-thread state.
 
 @contextlib.contextmanager
+def bayesdb_caching(bdb):
+    bayesdb_txn_push(bdb)
+    try:
+        yield
+    finally:
+        bayesdb_txn_pop(bdb)
+
+@contextlib.contextmanager
 def bayesdb_savepoint(bdb):
     bayesdb_txn_push(bdb)
     try:

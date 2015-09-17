@@ -138,7 +138,8 @@ class Shell(cmd.Cmd):
                             first = False
                         else:
                             self.stdout.write('\n')
-                        pretty.pp_cursor(self.stdout, cursor)
+                        if cursor is not None:
+                            pretty.pp_cursor(self.stdout, cursor)
             except (bayeslite.BayesDBException, bayeslite.BQLParseError) as e:
                 self.stdout.write('%s\n' % (e,))
             except Exception:

@@ -636,21 +636,8 @@ def rename_table(bdb, old, new):
     '''
     bdb.sql_execute(update_generators_sql, (new, old))
 
-# XXX Temporary kludge until we get BQL cursors proper, with, e.g.,
-# declared modelled column types in cursor.description.  We go through
-# sqlite3 directly to avoid cluttering the trace.
-#
-# XXX For whatever reason, a Python sqlite3 cursor for an empty query
-# has None, not [], for cursor.description.  This makes it harder to
-# use than necessary.  So instead of executing an empty statement, we
-# subclass sqlite3.Cursor and override the description to return []
-# instead of None.
-class empty_cursor(sqlite3.Cursor):
-    def __init__(self, bdb):
-        super(empty_cursor, self).__init__(bdb.sqlite3)
-    @property
-    def description(self):
-        return []
+def empty_cursor(bdb):
+    return None
 
 def execute_wound(bdb, winders, unwinders, sql, bindings):
     if len(winders) == 0 and len(unwinders) == 0:
