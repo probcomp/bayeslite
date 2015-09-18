@@ -122,16 +122,21 @@ log('closing bdb %s' % bdb_file)
 bdb.close()
 
 metadata_file = out_file_name('satellites', '-meta.txt')
-with open(metadata_file, 'w') as f:
+sha_sum = subprocess.check_output(["sha256sum", bdb_file])
+total_time = time.time() - then
+def record_metadata(f):
     f.write("DB file " + bdb_file + "\n")
-    sha_sum = subprocess.check_output(["sha256sum", bdb_file])
     f.write(sha_sum)
     f.write("built from " + csv_file + "\n")
     f.write("by %s@%s" % (user, host))
     f.write("at seed %s\n" % seed)
-    f.write("in %3.2f seconds\n" % (time.time() - then))
+    f.write("in %3.2f seconds\n" % total_time)
     f.write("with %s models analyzed for %s iterations\n"
             % (num_models, num_iters))
     f.write("by bayeslite %s, with crosscat %s and bdbcontrib %s\n",
             (bayeslite.__version__, crosscat.__version__, bdbcontrib.__version__))
     f.write("diagnostics recorded to %s\n" % plot_file_name)
+
+with open(metadata_file, 'w') as fname:
+    record_metadata(fname)
+record_metadata(sys.stdout)
