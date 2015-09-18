@@ -37,7 +37,6 @@ def out_file_name(base, ext):
 
 num_models = 64
 num_iters = 1
-time_minutes = 60
 seed = 0
 
 csv_file = 'satellites.csv'
@@ -108,8 +107,8 @@ execute('''
 
 execute('INITIALIZE %d MODELS FOR satellites_cc' % (num_models,))
 
-execute('ANALYZE satellites_cc FOR %d MINUTES CHECKPOINT 60 SECONDS WAIT'
-        % time_minutes)
+execute('ANALYZE satellites_cc FOR %d ITERATIONS CHECKPOINT 60 SECONDS WAIT'
+        % num_iters)
 
 # create a diagnostics plot
 plot_file_name = out_file_name('satellites', '-logscores.pdf')
