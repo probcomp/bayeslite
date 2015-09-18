@@ -13,7 +13,7 @@ SQLite3 >=3.7.17.
 
 Bayeslite depends on:
 
-- [Crosscat](https://github.com/mit-probabilistic-computing-project/crosscat),
+- [Crosscat](https://github.com/probcomp/crosscat),
   a general-purpose nonparametric Bayesian population model which
   serves as a default in the absence of a domain-specific model.
 - [requests](http://www.python-requests.org/), an HTTP/HTTPS library,
