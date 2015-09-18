@@ -37,7 +37,7 @@ def out_file_name(base, ext):
     return out_dir + '/' + base + filestamp + ext
 
 num_models = 64
-num_iters = 1
+num_iters = 16 * 15 # Expect this to run for ~15 minutes on probcomp
 seed = 0
 
 csv_file = 'satellites.csv'
@@ -108,7 +108,7 @@ execute('''
 
 execute('INITIALIZE %d MODELS FOR satellites_cc' % (num_models,))
 
-execute('ANALYZE satellites_cc FOR %d ITERATIONS CHECKPOINT 60 SECONDS WAIT'
+execute('ANALYZE satellites_cc FOR %d ITERATIONS CHECKPOINT 5 ITERATIONS WAIT'
         % num_iters)
 
 # create a diagnostics plot
