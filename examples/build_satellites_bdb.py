@@ -68,6 +68,10 @@ log('reading data from %s' % csv_file)
 bayeslite.bayesdb_read_csv_file(bdb, 'satellites', csv_file,
         header=True, create=True, ifnotexists=True)
 
+# nullify "NaN"
+log('nullifying NaN')
+bdbcontrib.nullify(bdb, 'satellites', 'NaN')
+
 # register crosscat metamodel
 import crosscat
 import crosscat.MultiprocessingEngine as ccme
