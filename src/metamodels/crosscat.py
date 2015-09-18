@@ -916,6 +916,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 # Python and C++ more often than is necessary, but it
                 # doesn't report back to us the number of iterations
                 # actually performed.
+                iterations_done = 0
                 while (ckpt_iterations is None or 0 < ckpt_counter) and \
                       (ckpt_seconds is None or time.time() < ckpt_deadline):
                     X_L_list, X_D_list, diagnostics = self._crosscat.analyze(
@@ -928,6 +929,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                         X_D=X_D_list,
                         n_steps=n_steps,
                     )
+                    iterations_done += n_steps
                     if iterations is not None:
                         iterations -= n_steps
                     if ckpt_iterations is not None:
@@ -938,14 +940,14 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 for i, (modelno, theta, X_L, X_D) \
                         in enumerate(
                             zip(update_modelnos, thetas, X_L_list, X_D_list)):
-                    theta['iterations'] += n_steps
+                    theta['iterations'] += iterations_done
                     theta['X_L'] = X_L
                     theta['X_D'] = X_D
                     total_changes = bdb.sqlite3.total_changes
                     bdb.sql_execute(update_iterations_sql, {
                         'generator_id': generator_id,
                         'modelno': modelno,
-                        'iterations': n_steps,
+                        'iterations': iterations_done,
                     })
                     assert bdb.sqlite3.total_changes - total_changes == 1
                     total_changes = bdb.sqlite3.total_changes

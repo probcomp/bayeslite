@@ -1646,12 +1646,19 @@ def test_using_models():
         ' FROM "t1";'
 
 def test_checkpoint():
-    with test_core.t1() as (bdb, _generator_id):
+    with test_core.t1() as (bdb, generator_id):
         bdb.execute('initialize 1 model for t1_cc')
         bdb.execute('analyze t1_cc for 10 iterations checkpoint 1 iteration'
             ' wait')
         bdb.execute('analyze t1_cc for 5 seconds checkpoint 1 second wait')
         bdb.execute('drop models from t1_cc')
+        bdb.execute('initialize 1 model for t1_cc')
+        bdb.execute('analyze t1_cc for 5 iterations checkpoint 1 second wait')
+        sql = '''
+            select iterations from bayesdb_generator_model
+                where generator_id = ?
+        '''
+        assert 1 < bdb.execute(sql, (generator_id,)).next()[0]
 
 def test_infer_confidence():
     with test_core.t1() as (bdb, _generator_id):
