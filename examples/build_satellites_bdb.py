@@ -113,8 +113,8 @@ execute('''
         Launch_Site CATEGORICAL,
         Launch_Vehicle CATEGORICAL,
         Source_Used_for_Orbital_Data CATEGORICAL,
-        longitude_radians_of_geo NUMERICAL,
-        Inclination_radians NUMERICAL
+        longitude_radians_of_geo CYCLIC,
+        Inclination_radians CYCLIC
     )
 ''')
 
