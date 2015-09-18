@@ -1550,15 +1550,6 @@ def test_misc_errors():
             with pytest.raises(sqlite3.OperationalError):
                 bdb.execute('select'
                     ' nonexistent((simulate age from t1_cc limit 1));')
-        with bdb.savepoint():
-            bdb.sql_execute('create table t(x, y)')
-            bdb.execute('create generator tcc for t'
-                ' using crosscat(x cyclic, y cyclic)')
-            # XXX Should be NotImplementedError, but sqlite3 doesn't
-            # pass this through!
-            with pytest.raises(sqlite3.OperationalError):
-                bdb.execute('estimate correlation'
-                    ' from pairwise columns of tcc')
         with pytest.raises(ValueError):
             bdb.execute('select :x', {'y': 42})
         with pytest.raises(ValueError):

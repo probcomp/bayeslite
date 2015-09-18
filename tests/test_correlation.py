@@ -24,13 +24,15 @@ def test_correlation():
         cc = crosscat.LocalEngine.LocalEngine(seed=0)
         ccme = CrosscatMetamodel(cc)
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
-        bdb.sql_execute('CREATE TABLE u(id, c0, c1, n0, n1)')
+        bdb.sql_execute('CREATE TABLE u(id, c0, c1, n0, n1, r0, r1)')
         bdb.execute('''
             CREATE GENERATOR u_cc FOR u USING crosscat (
                 c0 CATEGORICAL,
                 c1 CATEGORICAL,
                 n0 NUMERICAL,
                 n1 NUMERICAL,
+                r0 CYCLIC,
+                r1 CYCLIC,
             )
         ''')
         assert bdb.execute('ESTIMATE CORRELATION, CORRELATION PVALUE'
@@ -40,9 +42,18 @@ def test_correlation():
                 (1, 'c0', 'c1', None, None),
                 (1, 'c0', 'n0', None, None),
                 (1, 'c0', 'n1', None, None),
+                (1, 'c0', 'r0', None, None),
+                (1, 'c0', 'r1', None, None),
                 (1, 'c1', 'n0', None, None),
                 (1, 'c1', 'n1', None, None),
+                (1, 'c1', 'r0', None, None),
+                (1, 'c1', 'r1', None, None),
                 (1, 'n0', 'n1', None, None),
+                (1, 'n0', 'r0', None, None),
+                (1, 'n0', 'r1', None, None),
+                (1, 'n1', 'r0', None, None),
+                (1, 'n1', 'r1', None, None),
+                (1, 'r0', 'r1', None, None),
             ]
         bdb.sql_execute('CREATE TABLE t'
             '(id, c0, c1, cx, cy, n0, n1, nc, nl, nx, ny)')
