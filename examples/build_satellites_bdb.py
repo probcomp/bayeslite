@@ -133,8 +133,8 @@ def record_metadata(f):
     f.write("in %3.2f seconds\n" % total_time)
     f.write("with %s models analyzed for %s iterations\n"
             % (num_models, num_iters))
-    f.write("by bayeslite %s, with crosscat %s and bdbcontrib %s\n",
-            (bayeslite.__version__, crosscat.__version__, bdbcontrib.__version__))
+    f.write("by bayeslite %s, with crosscat %s and bdbcontrib %s\n"
+            % (bayeslite.__version__, crosscat.__version__, bdbcontrib.__version__))
     f.write("diagnostics recorded to %s\n" % plot_file_name)
 
 with open(metadata_file, 'w') as fd:
@@ -142,6 +142,6 @@ with open(metadata_file, 'w') as fd:
     fd.write('using script ')
     fd.write('-' * 57)
     fd.write('\n')
-    os.system("cat %s >> %s", (__file__, metadata_file))
+    os.system("cat %s >> %s" % (__file__, metadata_file))
 
 record_metadata(sys.stdout)
