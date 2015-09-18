@@ -106,7 +106,7 @@ def get_version(project_dir):
 VERSION = ''
 for project in GIT_REPOS:
   print "Checking out", project
-  run("git clone git@github.com:mit-probabilistic-computing-project/%s.git %s"
+  run("git clone git@github.com:probcomp/%s.git %s"
       % (project, os.path.join(BUILD_DIR, project)))
   if PEG[project]:
     run('cd %s && git checkout %s' % (os.path.join(BUILD_DIR, project), PEG[project]))

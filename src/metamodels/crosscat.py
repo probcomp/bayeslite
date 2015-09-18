@@ -829,17 +829,26 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             if cc_cache is not None:
                 if generator_id in cc_cache.thetas:
                     del cc_cache.thetas[generator_id]
-            sql = '''
+            delete_theta_sql = '''
                 DELETE FROM bayesdb_crosscat_theta WHERE generator_id = ?
             '''
-            bdb.sql_execute(sql, (generator_id,))
+            delete_diag_sql = '''
+                DELETE FROM bayesdb_crosscat_diagnostics WHERE generator_id = ?
+            '''
+            bdb.sql_execute(delete_theta_sql, (generator_id,))
+            bdb.sql_execute(delete_diag_sql, (generator_id,))
         else:
-            sql = '''
+            delete_theta_sql = '''
                 DELETE FROM bayesdb_crosscat_theta
                     WHERE generator_id = ? AND modelno = ?
             '''
+            delete_diag_sql = '''
+                DELETE FROM bayesdb_crosscat_diagnostics
+                    WHERE generator_id = ? AND modelno = ?
+            '''
             for modelno in modelnos:
-                bdb.sql_execute(sql, (generator_id, modelno))
+                bdb.sql_execute(delete_theta_sql, (generator_id, modelno))
+                bdb.sql_execute(delete_diag_sql, (generator_id, modelno))
             if cc_cache is not None and generator_id in cc_cache.thetas:
                 for modelno in modelnos:
                     if modelno in cc_cache.thetas[generator_id]:
@@ -873,8 +882,12 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             deadline = time.time() + max_seconds
         if ckpt_seconds is not None:
             ckpt_deadline = time.time() + ckpt_seconds
+            if max_seconds is not None:
+                ckpt_deadline = min(ckpt_deadline, deadline)
         if ckpt_iterations is not None:
             ckpt_counter = ckpt_iterations
+            if iterations is not None:
+                ckpt_counter = min(ckpt_counter, iterations)
         while (iterations is None or 0 < iterations) and \
               (max_seconds is None or time.time() < deadline):
             n_steps = 1
@@ -883,6 +896,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             elif ckpt_iterations is not None:
                 assert 0 < ckpt_iterations
                 n_steps = ckpt_iterations
+                if iterations is not None:
+                    n_steps = min(n_steps, iterations)
             elif iterations is not None and max_seconds is None:
                 n_steps = iterations
             with bdb.savepoint():
@@ -907,6 +922,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 # Python and C++ more often than is necessary, but it
                 # doesn't report back to us the number of iterations
                 # actually performed.
+                iterations_done = 0
                 while (ckpt_iterations is None or 0 < ckpt_counter) and \
                       (ckpt_seconds is None or time.time() < ckpt_deadline):
                     X_L_list, X_D_list, diagnostics = self._crosscat.analyze(
@@ -919,8 +935,12 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                         X_D=X_D_list,
                         n_steps=n_steps,
                     )
+                    iterations_done += n_steps
                     if iterations is not None:
+                        assert n_steps <= iterations
                         iterations -= n_steps
+                        if iterations == 0:
+                            break
                     if ckpt_iterations is not None:
                         ckpt_counter -= n_steps
                     if ckpt_iterations is None and ckpt_seconds is None:
@@ -929,14 +949,14 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 for i, (modelno, theta, X_L, X_D) \
                         in enumerate(
                             zip(update_modelnos, thetas, X_L_list, X_D_list)):
-                    theta['iterations'] += n_steps
+                    theta['iterations'] += iterations_done
                     theta['X_L'] = X_L
                     theta['X_D'] = X_D
                     total_changes = bdb.sqlite3.total_changes
                     bdb.sql_execute(update_iterations_sql, {
                         'generator_id': generator_id,
                         'modelno': modelno,
-                        'iterations': n_steps,
+                        'iterations': iterations_done,
                     })
                     assert bdb.sqlite3.total_changes - total_changes == 1
                     total_changes = bdb.sqlite3.total_changes

@@ -80,7 +80,7 @@ def uptodate(path_in, path_out, path_sha256):
                 return False
             if file_sha256.next()[:-1] != sha256_file(path_out).hexdigest():
                 return False
-    except IOError as e:
+    except (IOError, OSError) as e:
         if e.errno != errno.ENOENT:
             raise
         return False
@@ -109,8 +109,12 @@ for path_y in grammars:
 
 setup(
     name='bayeslite',
-    description='BQL database built on SQLite3',
     version=version,
+    description='BQL database built on SQLite3',
+    url='http://probcomp.csail.mit.edu/bayesdb',
+    author='MIT Probabilistic Computing Project',
+    author_email='bayesdb@mit.edu',
+    license='Apache License, Version 2.0',
     install_requires=[
         'crosscat>=0.1.24',
         'requests',
@@ -128,8 +132,4 @@ setup(
     },
     # Not in this release, perhaps later.
     #scripts=['shell/scripts/bayeslite'],
-    license='Apache License, Version 2.0',
-    url='http://probcomp.csail.mit.edu/bayesdb',
-    author='MIT Probabilistic Computing Project',
-    author_email='bayesdb@mit.edu',
 )
