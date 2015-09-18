@@ -80,7 +80,7 @@ def uptodate(path_in, path_out, path_sha256):
                 return False
             if file_sha256.next()[:-1] != sha256_file(path_out).hexdigest():
                 return False
-    except IOError as e:
+    except (IOError, OSError) as e:
         if e.errno != errno.ENOENT:
             raise
         return False
