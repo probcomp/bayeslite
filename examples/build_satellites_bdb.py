@@ -31,6 +31,7 @@ out_dir = 'output'
 
 timestamp = datetime.datetime.fromtimestamp(then).strftime('%Y-%m-%d')
 user = subprocess.check_output(["whoami"]).strip()
+host = subprocess.check_output(["hostname"]).strip()
 filestamp = '-' + timestamp + '-' + user
 def out_file_name(base, ext):
     return out_dir + '/' + base + filestamp + ext
@@ -126,6 +127,7 @@ with open(metadata_file, 'w') as f:
     sha_sum = subprocess.check_output(["sha256sum", bdb_file])
     f.write(sha_sum)
     f.write("built from " + csv_file + "\n")
+    f.write("by %s@%s" % (user, host))
     f.write("at seed %s\n" % seed)
     f.write("in %3.2f seconds\n" % (time.time() - then))
     f.write("with %s models analyzed for %s iterations\n"
