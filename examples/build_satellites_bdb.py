@@ -30,7 +30,7 @@ then = time.time()
 out_dir = 'output'
 
 timestamp = datetime.datetime.fromtimestamp(then).strftime('%Y-%m-%d')
-user = subprocess.check_output(["whoami"])
+user = subprocess.check_output(["whoami"]).strip()
 filestamp = '-' + timestamp + '-' + user
 def out_file_name(base, ext):
     return out_dir + '/' + base + filestamp + ext
