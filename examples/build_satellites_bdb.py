@@ -137,6 +137,11 @@ def record_metadata(f):
             (bayeslite.__version__, crosscat.__version__, bdbcontrib.__version__))
     f.write("diagnostics recorded to %s\n" % plot_file_name)
 
-with open(metadata_file, 'w') as fname:
-    record_metadata(fname)
+with open(metadata_file, 'w') as fd:
+    record_metadata(fd)
+    fd.write('using script ')
+    fd.write('-' * 57)
+    fd.write('\n')
+    os.system("cat %s >> %s", (__file__, metadata_file))
+
 record_metadata(sys.stdout)
