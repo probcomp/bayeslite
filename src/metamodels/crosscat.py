@@ -882,8 +882,12 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             deadline = time.time() + max_seconds
         if ckpt_seconds is not None:
             ckpt_deadline = time.time() + ckpt_seconds
+            if max_seconds is not None:
+                ckpt_deadline = min(ckpt_deadline, deadline)
         if ckpt_iterations is not None:
             ckpt_counter = ckpt_iterations
+            if iterations is not None:
+                ckpt_counter = min(ckpt_counter, iterations)
         while (iterations is None or 0 < iterations) and \
               (max_seconds is None or time.time() < deadline):
             n_steps = 1
@@ -892,6 +896,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             elif ckpt_iterations is not None:
                 assert 0 < ckpt_iterations
                 n_steps = ckpt_iterations
+                if iterations is not None:
+                    n_steps = min(n_steps, iterations)
             elif iterations is not None and max_seconds is None:
                 n_steps = iterations
             with bdb.savepoint():
@@ -931,7 +937,10 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     )
                     iterations_done += n_steps
                     if iterations is not None:
+                        assert n_steps <= iterations
                         iterations -= n_steps
+                        if iterations == 0:
+                            break
                     if ckpt_iterations is not None:
                         ckpt_counter -= n_steps
                     if ckpt_iterations is None and ckpt_seconds is None:
