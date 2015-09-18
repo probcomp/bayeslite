@@ -48,7 +48,7 @@ os.environ['BAYESDB_WIZARD_MODE']='1'
 if not os.path.isdir(out_dir):
     os.makedirs(out_dir)
 if os.path.exists(bdb_file):
-    print 'Error. file', bdb_file, 'already exists. Please remove it.'
+    print 'Error: File', bdb_file, 'already exists. Please remove it.'
     sys.exit(1)
 
 def log(msg):
