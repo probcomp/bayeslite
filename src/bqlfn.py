@@ -237,6 +237,22 @@ define_correlation_p('categorical', 'numerical', correlation_p_anovar2_dc)
 define_correlation_p('numerical', 'categorical', correlation_p_anovar2_cd)
 define_correlation_p('numerical', 'numerical', correlation_p_pearsonr2)
 
+# XXX Pretend CYCLIC is NUMERICAL for the purposes of correlation.  To
+# do this properly we ought to implement a standard statistical notion
+# of circular/linear correlation, as noted in Github issue #146
+# <https://github.com/probcomp/bayeslite/issues/146>.
+define_correlation('categorical', 'cyclic', correlation_anovar2_dc)
+define_correlation('cyclic', 'categorical', correlation_anovar2_cd)
+define_correlation('cyclic', 'cyclic', correlation_pearsonr2)
+define_correlation('cyclic', 'numerical', correlation_pearsonr2)
+define_correlation('numerical', 'cyclic', correlation_pearsonr2)
+
+define_correlation_p('categorical', 'cyclic', correlation_p_anovar2_dc)
+define_correlation_p('cyclic', 'categorical', correlation_p_anovar2_cd)
+define_correlation_p('cyclic', 'cyclic', correlation_p_pearsonr2)
+define_correlation_p('cyclic', 'numerical', correlation_p_pearsonr2)
+define_correlation_p('numerical', 'cyclic', correlation_p_pearsonr2)
+
 # Two-column function:  DEPENDENCE PROBABILITY [OF <col0> WITH <col1>]
 def bql_column_dependence_probability(bdb, generator_id, modelno, colno0,
         colno1):
