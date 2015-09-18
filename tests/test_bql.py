@@ -1651,6 +1651,7 @@ def test_checkpoint():
         bdb.execute('analyze t1_cc for 10 iterations checkpoint 1 iteration'
             ' wait')
         bdb.execute('analyze t1_cc for 5 seconds checkpoint 1 second wait')
+        bdb.execute('drop models from t1_cc')
 
 def test_infer_confidence():
     with test_core.t1() as (bdb, _generator_id):

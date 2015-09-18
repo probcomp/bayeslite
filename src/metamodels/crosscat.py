@@ -829,17 +829,26 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             if cc_cache is not None:
                 if generator_id in cc_cache.thetas:
                     del cc_cache.thetas[generator_id]
-            sql = '''
+            delete_theta_sql = '''
                 DELETE FROM bayesdb_crosscat_theta WHERE generator_id = ?
             '''
-            bdb.sql_execute(sql, (generator_id,))
+            delete_diag_sql = '''
+                DELETE FROM bayesdb_crosscat_diagnostics WHERE generator_id = ?
+            '''
+            bdb.sql_execute(delete_theta_sql, (generator_id,))
+            bdb.sql_execute(delete_diag_sql, (generator_id,))
         else:
-            sql = '''
+            delete_theta_sql = '''
                 DELETE FROM bayesdb_crosscat_theta
                     WHERE generator_id = ? AND modelno = ?
             '''
+            delete_diag_sql = '''
+                DELETE FROM bayesdb_crosscat_diagnostics
+                    WHERE generator_id = ? AND modelno = ?
+            '''
             for modelno in modelnos:
-                bdb.sql_execute(sql, (generator_id, modelno))
+                bdb.sql_execute(delete_theta_sql, (generator_id, modelno))
+                bdb.sql_execute(delete_diag_sql, (generator_id, modelno))
             if cc_cache is not None and generator_id in cc_cache.thetas:
                 for modelno in modelnos:
                     if modelno in cc_cache.thetas[generator_id]:
