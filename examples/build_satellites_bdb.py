@@ -68,6 +68,14 @@ log('reading data from %s' % csv_file)
 bayeslite.bayesdb_read_csv_file(bdb, 'satellites', csv_file,
         header=True, create=True, ifnotexists=True)
 
+# Add a "not applicable" orbit sub-type
+log('adding "not applicable" orbit sub-type')
+bdbcontrib.sql_execute('''UPDATE satellites
+    SET type_of_orbit = 'N/A'
+    WHERE (class_of_orbit = 'GEO' OR class_of_orbit = 'MEO')
+      AND type_of_orbit = 'NaN'
+''')
+
 # nullify "NaN"
 log('nullifying NaN')
 bdbcontrib.nullify(bdb, 'satellites', 'NaN')
