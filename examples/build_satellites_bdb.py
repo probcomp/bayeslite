@@ -128,7 +128,7 @@ def record_metadata(f):
     f.write("DB file " + bdb_file + "\n")
     f.write(sha_sum)
     f.write("built from " + csv_file + "\n")
-    f.write("by %s@%s" % (user, host))
+    f.write("by %s@%s\n" % (user, host))
     f.write("at seed %s\n" % seed)
     f.write("in %3.2f seconds\n" % total_time)
     f.write("with %s models analyzed for %s iterations\n"
