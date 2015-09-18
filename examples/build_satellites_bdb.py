@@ -127,7 +127,7 @@ with open(metadata_file, 'w') as f:
     f.write(sha_sum)
     f.write("built from " + csv_file + "\n")
     f.write("at seed %s\n" % seed)
-    f.write("in %3.2f seconds\n" % time.time() - then)
+    f.write("in %3.2f seconds\n" % (time.time() - then))
     f.write("with %s models analyzed for %s iterations\n"
             % (num_models, num_iters))
     f.write("by bayeslite %s, with crosscat %s and bdbcontrib %s\n",
