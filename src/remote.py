@@ -48,7 +48,7 @@ def version_check():
         if parse_version(__version__) < parse_version(d['version']):
             warnings.warn('Bayeslite is not up to date.'
                 '\nYou are running %s; the latest version is %s.'
-                '\nSee %s.'
+                '\nSee <%s>.'
                 % (__version__, d['version'], d['url']))
     except Exception:
         # Silently eat exceptions -- in the request and in parsing the
