@@ -34,7 +34,17 @@ if version.endswith('+'):
         version += 'unknown'
     else:
         assert desc.startswith(tag)
-        version = desc[1:].strip()
+        import re
+        match = re.match(r'v([^-]*)-([0-9]+)-(.*)$', desc)
+        if match is None:       # paranoia
+            version += 'unknown'
+        else:
+            ver, rev, local = match.groups()
+            version = '%s.%s+%s' % (ver, rev, local)
+            # No hyphens before the local version (`+' fragment), per
+            # PEP 440.
+            assert version.find('-') is None or \
+                version.find('+') < version.find('-')
 
 # XXX Mega-kludge.  See below about grammars for details.
 try:
