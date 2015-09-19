@@ -40,7 +40,7 @@ if version.endswith('+'):
             version += 'unknown'
         else:
             ver, rev, local = match.groups()
-            version = '%s.%s+%s' % (ver, rev, local.replace('-', '.'))
+            version = '%s.post%s+%s' % (ver, rev, local.replace('-', '.'))
             assert '-' not in version
 
 # XXX Mega-kludge.  See below about grammars for details.
