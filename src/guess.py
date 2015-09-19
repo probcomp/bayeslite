@@ -31,8 +31,8 @@ from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 from bayeslite.util import unique
 
-def bayesdb_guess_generator(bdb, generator, table, metamodel,
-        ifnotexists=None, count_cutoff=None, ratio_cutoff=None,
+def bayesdb_guess_generator(bdb, generator, table, metamodel, ifnotexists=None,
+        count_cutoff=None, ratio_cutoff=None, categorical_limit=None,
         default=None, overrides=None):
     """Heuristically guess a generator for `table` using `metamodel`.
 
@@ -47,6 +47,8 @@ def bayesdb_guess_generator(bdb, generator, table, metamodel,
     :param real ratio_cutoff: ratio of distinct values to total values
         below which columns whose values can all be parsed as numbers
         will be considered categorical anyway
+    :param int categorical_limit: number of categorical values beyond
+        which we decide to ignore the column rather than model it
     :param list overrides: list of ``(name, stattype)``, overriding
         any guessed statistical type for columns by those names
 
@@ -74,7 +76,7 @@ def bayesdb_guess_generator(bdb, generator, table, metamodel,
         rows = cursor.fetchall()
         stattypes = bayesdb_guess_stattypes(column_names, rows,
             count_cutoff=count_cutoff, ratio_cutoff=ratio_cutoff,
-            overrides=overrides)
+            categorical_limit=categorical_limit, overrides=overrides)
         # Skip the key column.
         column_names, stattypes = \
             unzip([(cn, st) for cn, st in zip(column_names, stattypes)
@@ -99,7 +101,8 @@ def unzip(l):                   # ???
     return xs, ys
 
 def bayesdb_guess_stattypes(column_names, rows,
-        count_cutoff=None, ratio_cutoff=None, overrides=None):
+        count_cutoff=None, ratio_cutoff=None, categorical_limit=None,
+        overrides=None):
     """Heuristically guess statistical types for the data in `rows`.
 
     Return a list of statistical types corresponding to the columns
@@ -111,6 +114,8 @@ def bayesdb_guess_stattypes(column_names, rows,
     :param real ratio_cutoff: ratio of distinct values to total values
         below which columns whose values can all be parsed as numbers
         will be considered categorical anyway
+    :param int categorical_limit: number of categorical values beyond
+        which we decide to ignore the column rather than model it
     :param list overrides: list of ``(name, stattype)``, overriding
         any guessed statistical type for columns by those names
 
@@ -123,6 +128,8 @@ def bayesdb_guess_stattypes(column_names, rows,
         count_cutoff = 20
     if ratio_cutoff is None:
         ratio_cutoff = 0.02
+    if categorical_limit is None:
+        categorical_limit = 1000
     if overrides is None:
         overrides = []
 
@@ -210,8 +217,10 @@ def bayesdb_guess_stattypes(column_names, rows,
             elif numericable and \
                  numerical_p(column, count_cutoff, ratio_cutoff):
                 stattype = 'numerical'
-            else:
+            elif categoricable_p(column, categorical_limit):
                 stattype = 'categorical'
+            else:
+                stattype = 'ignore'
         stattypes.append(stattype)
     return stattypes
 
@@ -252,3 +261,8 @@ def numerical_p(column, count_cutoff, ratio_cutoff):
     if float(nu) / float(len(column)) <= ratio_cutoff:
         return False
     return True
+
+def categoricable_p(column, categorical_limit):
+    column = [v for v in column
+        if not (isinstance(v, float) and math.isnan(v))]
+    return len(unique(column)) <= categorical_limit
