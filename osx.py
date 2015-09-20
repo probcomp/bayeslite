@@ -135,14 +135,11 @@ assert os.path.exists(LIBBOOST_DIR), ("We need libboost-dev already installed: %
 
 venv_run("pip install cython")  # If we don't, crosscat's setup tries and fails.
 venv_run("pip install numpy")
-venv_run("cp -R %s/bdbcontrib/src lib/python2.7/site-packages/bdbcontrib" % BUILD_DIR)
-print "Deps for BdbContrib"
-venv_run("pip install matplotlib seaborn==0.5.1 pandas markdown2 sphinx numpydoc")
 print "Deps for BayesLite"
 # Assume that osx has sqlite3 already.
 # http://computechtips.com/619/upgrade-sqlite-os-x-mavericks-yosemite
 # which suggests that OS 10.10 and above have a sufficiently new sqlite.
-venv_run("pip install pytest requests sphinx cov-core dill ")
+venv_run("pip install pytest sphinx cov-core dill ")
 
 BUILD_EXAMPLES = os.path.join(BUILD_DIR, "examples")
 run("mkdir -p '%s'" % BUILD_EXAMPLES)
@@ -157,7 +154,7 @@ for project in GIT_REPOS:
   setupfile = os.path.join(BUILD_DIR, project, "setup.py")
   if os.path.exists(setupfile):
     print "Installing", project, "into", BUILD_DIR
-    venv_run("cd %s && python setup.py install" % os.path.join(BUILD_DIR, project))
+    venv_run("cd %s && pip install ." % os.path.join(BUILD_DIR, project))
   examplesdir = os.path.join(BUILD_DIR, project, "examples")
   if os.path.exists(examplesdir):
     print "Copying examples from", examplesdir
@@ -166,7 +163,6 @@ for project in GIT_REPOS:
 
 # Postprocessing
 # ==============
-venv_run("cd lib/python2.7/site-packages && unzip bayeslite*.egg")
 run("curl http://probcomp.csail.mit.edu/bayesdb/analyses/satellites.bdb > %s/satellites.bdb"
     % BUILD_EXAMPLES)
 
