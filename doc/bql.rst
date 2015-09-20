@@ -42,6 +42,11 @@ BQL Queries
 
 .. index:: ``SELECT``
 
+``SELECT <columns>``
+
+   Standard SQL constant ``SELECT``: yield a single row by evaluating
+   the specified columns.
+
 ``SELECT [DISTINCT|ALL] <columns> FROM <table> [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Standard SQL ``SELECT``.  Model estimators are not allowed, except
@@ -80,6 +85,19 @@ BQL Queries
       *N* and *offset* are BQL expressions.  Only up to *n*
       (inclusive) rows are returned after grouping and ordering,
       starting at *offset* from the beginning.
+
+.. index:: ``ESTIMATE BY``
+
+``ESTIMATE <columns> BY <generator> [USING MODEL <modelno>]``
+
+   Like constant ``SELECT``, extended with model estimators of one
+   implied row.
+
+   ``USING MODEL <modelno>``
+      *Modelno* is a BQL expression specifying the number of the model
+      of *generator* to use in model estimators.  Values of model
+      estimators are averaged over all models if ``USING MODEL`` is
+      not specified.
 
 .. index:: ``ESTIMATE``
 
