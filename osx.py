@@ -212,8 +212,7 @@ NAME=`basename $(dirname $(dirname $wd)) .app`
 
 activate="$wd/venv/bin/activate"
 sitepkgs="$wd/venv/lib/python2.7/site-packages"
-crosscategg=`ls -d $sitepkgs/CrossCat*.egg`
-pypath="$sitepkgs:$sitepkgs/bdbcontrib:$crosscategg"
+pypath="$sitepkgs:$sitepkgs/bdbcontrib"
 ldpath="$wd/lib"
 
 source $activate
