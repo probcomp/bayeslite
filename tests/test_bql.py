@@ -78,10 +78,10 @@ def test_conditional_probability():
         q0 = 'estimate probability of age = 8 by t1_cc'
         q1 = 'estimate probability of age = 8 given () by t1_cc'
         assert bdb.execute(q0).next()[0] == bdb.execute(q1).next()[0]
-        q2 = 'estimate probability of age = 8 given (weight = 24) by t1_cc'
-        assert bdb.execute(q0).next()[0] > bdb.execute(q2).next()[0]
+        q2 = 'estimate probability of age = 8 given (weight = 16) by t1_cc'
+        assert bdb.execute(q0).next()[0] < bdb.execute(q2).next()[0]
         bdb.execute('estimate probability of value 8'
-            ' given (weight = 24) from columns of t1_cc').fetchall()
+            ' given (weight = 16) from columns of t1_cc').fetchall()
 
 def test_badbql():
     with test_core.t1() as (bdb, _generator_id):
