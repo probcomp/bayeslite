@@ -1192,7 +1192,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         # XXX Why special-case empty constraints?
         Y = None
         if constraints is not None:
-            Y = [(fake_row_id, colno,
+            Y = [(fake_row_id, crosscat_cc_colno(bdb, generator_id, colno),
                   crosscat_value_to_code(bdb, generator_id, M_c, colno, value))
                  for colno, value in constraints]
         raw_outputs = self._crosscat.simple_predictive_sample(
