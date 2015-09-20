@@ -135,7 +135,6 @@ assert os.path.exists(LIBBOOST_DIR), ("We need libboost-dev already installed: %
 
 venv_run("pip install cython")  # If we don't, crosscat's setup tries and fails.
 venv_run("pip install numpy")
-venv_run("cp -R %s/bdbcontrib/src lib/python2.7/site-packages/bdbcontrib" % BUILD_DIR)
 print "Deps for BayesLite"
 # Assume that osx has sqlite3 already.
 # http://computechtips.com/619/upgrade-sqlite-os-x-mavericks-yosemite
