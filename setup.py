@@ -126,6 +126,10 @@ setup(
         'crosscat>=0.1.24',
         'requests',
     ],
+    tests_require=[
+        'numpy',
+        'pytest',
+    ],
     packages=[
         'bayeslite',
         'bayeslite.metamodels',
