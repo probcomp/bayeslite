@@ -1586,6 +1586,22 @@ def test_nested_simulate():
         bdb.execute('simulate weight from t1_cc'
             ' given age = (simulate age from t1_cc limit 1)'
             ' limit 1').fetchall()
+        # Make sure unwinding doesn't raise an exception.  Calling
+        # __del__ directly, rather than via del(), has two effects:
+        #
+        # (a) It actually raises any exceptions in the method, unlike
+        # del(), which suppresses them.
+        #
+        # (b) It may cause a subsequent __del__ to fail and raise an
+        # exception, so that a subsequent del(), including an implicit
+        # one at the end of a scope, may print a message to stderr.
+        #
+        # Effect (a) is what we are actually trying to test.  Effect
+        # (b) is a harmless consequence as far as pytest is concerned,
+        # as long as the test otherwise passes.
+        bdb.execute('simulate weight from t1_cc'
+            ' given age = (simulate age from t1_cc limit 1)'
+            ' limit 1').__del__()
 
 def test_using_models():
     def setup(bdb):

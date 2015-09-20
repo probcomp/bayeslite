@@ -701,4 +701,4 @@ class WoundCursor(BayesDBCursor):
             for sql, bindings in reversed(self._unwinders):
                 self._bdb.sql_execute(sql, bindings)
         # Apparently object doesn't have a __del__ method.
-        super(WoundCursor, self).__del__()
+        #super(WoundCursor, self).__del__()
