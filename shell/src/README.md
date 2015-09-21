@@ -6,7 +6,7 @@ in the shell to see a list of commands.
 ## Arguments
 - `--no-init-file`: do not source `~/.bayesliterc`
 - `-f <path>`: source a file of commands
-    + Ex: `$ bayeslite mydatabase.bdb -f hooks/myhooks.bql` 
+    + Ex: `$ bayeslite mydatabase.bdb -f hooks/myhooks.bql`
 
 
 ## Dot command reference
@@ -39,7 +39,7 @@ bayeslite> .zmatrix ESTIMATE DEPENDENCE PROBABILITY FROM PAIRWISE COLUMNS OF myt
 ## Adding your own commands with `.hook`
 
 Simply define a python function that takes a `self` argument and an `args`
-argument. 
+argument.
 
 `args` is the string of text that follows the dot command. For
 example, in
@@ -120,7 +120,7 @@ Bye-bye, Nathan.
 You are free to `.hook` a file multiple times. Re-hooking a file will reload the contents of the file. This can be especially useful for development. If you try to re-hook a file, you must confirm that you want to re-hook the file and confirm that you want to re-hook each function in that file for which `autorehook=False`.
 
 ## The `.bayesliterc`
-Manually hooking the utilities you frequently use every time you open the shell is annoying. To address this, the BayesLite shell looks for a `.bayesliterc` file in your home directory, which it runs on startup. Any file or path names in `.bayesliterc` should be absolute (this is subject to change, to allow paths relative to the rc file). Local, project-specific init files can be used using the `-f` option. 
+Manually hooking the utilities you frequently use every time you open the shell is annoying. To address this, the Bayeslite shell looks for a `.bayesliterc` file in your home directory, which it runs on startup. Any file or path names in `.bayesliterc` should be absolute (this is subject to change, to allow paths relative to the rc file). Local, project-specific init files can be used using the `-f` option.
 
 For example, we may have a small set of utilities in our `~/.bayesliterc`:
 
@@ -131,4 +131,3 @@ For example, we may have a small set of utilities in our `~/.bayesliterc`:
 ```
 
 You can prevent the shell from loading `~/.bayesliterc` with the `--no-init-file` argument.
-

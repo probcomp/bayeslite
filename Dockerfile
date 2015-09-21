@@ -19,10 +19,10 @@ RUN         ssh-keyscan -v -t rsa github.com >> /root/.ssh/known_hosts
 WORKDIR     /home/bayeslite
 RUN         cd /home/bayeslite && git clone git@github.com:probcomp/crosscat.git
 
-# git clone Bayeslite
+# git clone bayeslite
 RUN         cd /home/bayeslite && git clone git@github.com:probcomp/bayeslite.git
 
-# install crosscat and BayesLite
+# install crosscat and bayeslite
 RUN         cd /home/bayeslite/crosscat && python setup.py develop
 RUN         cd /home/bayeslite/bayeslite && python setup.py install
 
