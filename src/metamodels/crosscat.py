@@ -1161,7 +1161,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             X_L=X_L_list,
             X_D=X_D_list,
             Y=[(row_id,
-                crosscat_gen_colno(bdb, generator_id, cc_colno_),
+                cc_colno_,
                 crosscat_value_to_code(bdb, generator_id, M_c,
                     crosscat_gen_colno(bdb, generator_id, cc_colno_), value))
                for cc_colno_, value in enumerate(row)
@@ -1192,7 +1192,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         # XXX Why special-case empty constraints?
         Y = None
         if constraints is not None:
-            Y = [(fake_row_id, colno,
+            Y = [(fake_row_id, crosscat_cc_colno(bdb, generator_id, colno),
                   crosscat_value_to_code(bdb, generator_id, M_c, colno, value))
                  for colno, value in constraints]
         raw_outputs = self._crosscat.simple_predictive_sample(

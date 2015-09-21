@@ -1081,6 +1081,8 @@ def test_parametrized():
                 ' WHERE generator_id = ?',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
             'SELECT MAX(_rowid_) FROM "t"',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
             'SELECT stattype FROM bayesdb_generator_column'
                 ' WHERE generator_id = ? AND colno = ?',
             'SELECT cc_colno FROM bayesdb_crosscat_column'
@@ -1181,6 +1183,8 @@ def test_parametrized():
                 ' WHERE generator_id = ?',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
             'SELECT MAX(_rowid_) FROM "t"',
+            'SELECT cc_colno FROM bayesdb_crosscat_column' \
+                ' WHERE generator_id = ? AND colno = ?',
             'SELECT stattype FROM bayesdb_generator_column' \
                 ' WHERE generator_id = ? AND colno = ?',
             'SELECT cc_colno FROM bayesdb_crosscat_column' \

@@ -529,3 +529,50 @@ def bayesdb_generator_cell_value(bdb, generator_id, colno, rowid):
         assert False, 'Missing row at %d!' % (rowid,)
     else:
         return row[0]
+
+def test_crosscat_constraints():
+    class FakeEngine(crosscat.LocalEngine.LocalEngine):
+        def simple_predictive_probability_multistate(self, M_c, X_L_list,
+                X_D_list, Y, Q):
+            self._last_Y = Y
+            sup = super(FakeEngine, self)
+            return sup.simple_predictive_probability_multistate(M_c=M_c,
+                X_L_list=X_L_list, X_D_list=X_D_list, Y=Y, Q=Q)
+        def simple_predictive_sample(self, M_c, X_L, X_D, Y, Q, n):
+            self._last_Y = Y
+            return super(FakeEngine, self).simple_predictive_sample(M_c=M_c,
+                X_L=X_L, X_D=X_D, Y=Y, Q=Q, n=n)
+        def impute_and_confidence(self, M_c, X_L, X_D, Y, Q, n):
+            self._last_Y = Y
+            return super(FakeEngine, self).impute_and_confidence(M_c=M_c,
+                X_L=X_L, X_D=X_D, Y=Y, Q=Q, n=n)
+    engine = FakeEngine(seed=0)
+    mm = CrosscatMetamodel(engine)
+    with bayesdb(metamodel=mm) as bdb:
+        t1_schema(bdb)
+        t1_data(bdb)
+        bdb.execute('''
+            CREATE GENERATOR t1_cc FOR t1 USING crosscat(
+                label CATEGORICAL,
+                age NUMERICAL,
+                weight NUMERICAL
+            )
+        ''')
+        gid = core.bayesdb_get_generator(bdb, 't1_cc')
+        assert core.bayesdb_generator_column_number(bdb, gid, 'label') == 1
+        assert core.bayesdb_generator_column_number(bdb, gid, 'age') == 2
+        assert core.bayesdb_generator_column_number(bdb, gid, 'weight') == 3
+        from bayeslite.metamodels.crosscat import crosscat_cc_colno
+        assert crosscat_cc_colno(bdb, gid, 1) == 0
+        assert crosscat_cc_colno(bdb, gid, 2) == 1
+        assert crosscat_cc_colno(bdb, gid, 3) == 2
+        bdb.execute('INITIALIZE 1 MODEL FOR t1_cc')
+        bdb.execute('ANALYZE t1_cc FOR 1 ITERATION WAIT')
+        bdb.execute('ESTIMATE PROBABILITY OF age = 8 GIVEN (weight = 16)'
+            ' BY t1_cc').next()
+        assert engine._last_Y == [(28, 2, 16)]
+        bdb.execute("SELECT age FROM t1 WHERE label = 'baz'").next()
+        bdb.execute("INFER age FROM t1_cc WHERE label = 'baz'").next()
+        assert engine._last_Y == [(3, 0, 1), (3, 2, 32)]
+        bdb.execute('SIMULATE weight FROM t1_cc GIVEN age = 8 LIMIT 1').next()
+        assert engine._last_Y == [(28, 1, 8)]
