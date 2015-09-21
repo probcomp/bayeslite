@@ -115,7 +115,8 @@ for project in GIT_REPOS:
   if PEG[project]:
     repodir = os.path.join(BUILD_DIR, project)
     branch = PEG[project]
-    run('cd %s && git checkout %s' % (shellquote(repodir), shellquote(branch)))
+    run('cd -- %s && git checkout %s' %
+        (shellquote(repodir), shellquote(branch)))
   if os.path.exists(os.path.join(project, 'VERSION')):
     project_version = get_version(project)
     if project_version:
@@ -130,14 +131,14 @@ run('virtualenv %s' % (shellquote(VENV_DIR),))
 os.chdir(VENV_DIR)
 def venv_run(cmd):
   print cmd
-  assert not os.system('source bin/activate; %s' % cmd)
+  assert not os.system('source bin/activate; %s' % (cmd,))
 
 # Preprocessing
 # =============
 print "Deps for BdbContrib"
 LIBBOOST_DIR = os.path.dirname(outputof("locate -l 1 libboost_atomic-mt.dylib", shell=True))
-assert os.path.exists(LIBBOOST_DIR), ("We need libboost-dev already installed: %s" %
-                                      LIBBOOST_DIR)
+assert os.path.exists(LIBBOOST_DIR), \
+  ("We need libboost-dev already installed: %s" % (LIBBOOST_DIR,))
 
 venv_run("pip install cython")  # If we don't, crosscat's setup tries and fails.
 venv_run("pip install numpy")
@@ -161,7 +162,7 @@ for project in GIT_REPOS:
   if os.path.exists(setupfile):
     print "Installing", project, "into", BUILD_DIR
     repodir = os.path.join(BUILD_DIR, project)
-    venv_run("cd %s && pip install ." % (shellquote(repodir),))
+    venv_run("cd -- %s && pip install ." % (shellquote(repodir),))
   examplesdir = os.path.join(BUILD_DIR, project, "examples")
   if os.path.exists(examplesdir):
     print "Copying examples from", examplesdir
@@ -171,8 +172,8 @@ for project in GIT_REPOS:
 
 # Postprocessing
 # ==============
-run("curl http://probcomp.csail.mit.edu/bayesdb/analyses/satellites.bdb > %s/satellites.bdb"
-    % (shellquote(BUILD_EXAMPLES),))
+run("curl http://probcomp.csail.mit.edu/bayesdb/analyses/satellites.bdb > %s"
+    % (shellquote(os.path.join(BUILD_EXAMPLES, "satellites", "satellites.bdb"),)))
 
 # This app's only other dependency:
 venv_run("pip install 'ipython[notebook]' runipy")
@@ -180,7 +181,7 @@ venv_run("pip install 'ipython[notebook]' runipy")
 print "Ready to start packaging the app!"
 venv_run('virtualenv --relocatable %s' % (shellquote(VENV_DIR),))
 # Sadly, that doesn't actually fix the most critical file, the activate script.
-relocable = '''VIRTUAL_ENV=$(dirname $( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd ))\n'''
+relocable = '''VIRTUAL_ENV=$(dirname -- "$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" && pwd )")\n'''
 new_activate = tempfile.NamedTemporaryFile(delete=False)
 old_activate_path = os.path.join(VENV_DIR, "bin", "activate")
 with open(old_activate_path, "r") as old_activate:
@@ -202,10 +203,10 @@ run("ln -fs /System/Library/Frameworks/Python.framework/Versions/2.7/Python %s" 
 # own dependencies, rather than relying on the built-in python. So
 # remove that.
 run("rm -f %s" % (shellquote(os.path.join(VENV_DIR, "bin", "python")),))
-run("ln -s /usr/bin/python %s" %
+run("ln -s /usr/bin/python2.7 %s" %
     (shellquote(os.path.join(VENV_DIR, "bin", "python")),))
 
-NAME="Bayeslite%s" % VERSION
+NAME="Bayeslite%s" % (VERSION,)
 DIST_DIR = os.path.join(BUILD_DIR, "Bayeslite")
 MACOS_PATH = os.path.join(DIST_DIR, NAME + ".app", "Contents", "MacOS")
 os.makedirs(MACOS_PATH)
@@ -218,7 +219,7 @@ set -e
 wd=`dirname -- "$0"`
 cd -- "$wd"
 wd=`pwd -P`
-NAME=`basename -- "$(dirname "$(dirname -- "$wd")")".app`
+NAME=`basename -- "$(dirname -- "$(dirname -- "$wd")")" .app`
 
 activate="$wd/venv/bin/activate"
 ldpath="$wd/lib"
@@ -234,7 +235,7 @@ ipython notebook "$HOME/Documents/$NAME"
 startsh_path = os.path.join(MACOS_PATH, "start.sh")
 with open(startsh_path, "w") as startsh:
   startsh.write(STARTER)
-run("chmod +x '%s'" % startsh_path)
+run("chmod +x %s" % (shellquote(startsh_path),))
 
 LAUNCHER = '''#!/bin/bash
 
@@ -242,9 +243,13 @@ wd=`dirname -- "$0"`
 cd -- "$wd"
 wd=`pwd -P`
 
-osacmd="tell application \\"Terminal\\" to do script"
-script='/bin/bash -- "$wd/start.sh"'
-osascript -e "$osacmd \\"$script\\""
+osascript -e '
+    on run argv
+        set wd to item 1 of argv
+        set cmd to "/bin/bash -- " & quoted form of wd & "/start.sh"
+        tell application "Terminal" to do shell script cmd
+    end run
+' -- "$wd"
 '''
 
 launchsh_path = os.path.join(MACOS_PATH, NAME)  # Must be the same as NAME in MACOS_PATH
@@ -254,7 +259,7 @@ run("chmod +x %s" % (shellquote(launchsh_path),))
 run("mv -f %s %s" % (shellquote(VENV_DIR), shellquote(MACOS_PATH)))
 
 # Basic sanity check.
-ipynb = os.path.join(MACOS_PATH, "examples", "Satellites.ipynb")
+ipynb = os.path.join(MACOS_PATH, "examples", "satellites", "Satellites.ipynb")
 venv_run("runipy %s" % (shellquote(ipynb),))
 
 if PAUSE_TO_MODIFY:
@@ -271,4 +276,4 @@ run("hdiutil create -format UDBZ -size 1g -srcfolder %s %s" %
     (shellquote(DIST_DIR), shellquote(DMG_PATH)))
 run("/bin/rm -fr %s" % (shellquote(BUILD_DIR),))
 
-print "Done. %d seconds elapsed" % (time.time() - START_TIME)
+print "Done. %d seconds elapsed" % (time.time() - START_TIME,)
