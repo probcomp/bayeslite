@@ -31,7 +31,7 @@
 # Requires locate to be working, so we can find a pre-installed boost.
 # Requires virtualenv pre-installed.
 # Requires read access to the listed git repos.
-GIT_REPOS = ['crosscat', 'bdbcontrib', 'bayeslite']
+GIT_REPOS = ['crosscat', 'bayeslite', 'bdbcontrib']
 PEG = {  # None means head.
   'crosscat': None,
   'bdbcontrib': None,
@@ -211,13 +211,9 @@ wd=`pwd -P`
 NAME=`basename $(dirname $(dirname $wd)) .app`
 
 activate="$wd/venv/bin/activate"
-sitepkgs="$wd/venv/lib/python2.7/site-packages"
-crosscategg=`ls -d $sitepkgs/CrossCat*.egg`
-pypath="$sitepkgs:$sitepkgs/bdbcontrib:$crosscategg"
 ldpath="$wd/lib"
 
 source $activate
-export PYTHONPATH="$pypath"
 export DYLD_LIBRARY_PATH="$ldpath"
 
 # Copy the examples to someplace writeable:
