@@ -206,7 +206,7 @@ run("rm -f %s" % (shellquote(os.path.join(VENV_DIR, "bin", "python")),))
 run("ln -s /usr/bin/python2.7 %s" %
     (shellquote(os.path.join(VENV_DIR, "bin", "python")),))
 
-NAME="Bayeslite%s" % VERSION
+NAME="Bayeslite%s" % (VERSION,)
 DIST_DIR = os.path.join(BUILD_DIR, "Bayeslite")
 MACOS_PATH = os.path.join(DIST_DIR, NAME + ".app", "Contents", "MacOS")
 os.makedirs(MACOS_PATH)
