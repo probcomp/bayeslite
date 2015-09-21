@@ -70,6 +70,10 @@ def outputof(cmd, **kwargs):
   print "OUTPUT:", output
   return output
 
+def shellquote(s):
+  """Return `s`, quoted appropriately for use in a shell script."""
+  return "'" + s.replace("'", "'\\''") + "'"
+
 # Do not specify --python to virtualenv, bc eg python27 is a 32-bit version that
 # will produce a .app that osx will not open.
 # You get errors like:
@@ -109,7 +113,9 @@ for project in GIT_REPOS:
   run("git clone git@github.com:probcomp/%s.git %s"
       % (project, os.path.join(BUILD_DIR, project)))
   if PEG[project]:
-    run('cd %s && git checkout %s' % (os.path.join(BUILD_DIR, project), PEG[project]))
+    repodir = os.path.join(BUILD_DIR, project)
+    branch = PEG[project]
+    run('cd %s && git checkout %s' % (shellquote(repodir), shellquote(branch)))
   if os.path.exists(os.path.join(project, 'VERSION')):
     project_version = get_version(project)
     if project_version:
@@ -119,7 +125,7 @@ for project in GIT_REPOS:
 VENV_DIR=os.path.join(BUILD_DIR, "venv")
 
 # Do not specify --python version here. See explanation where we fail fast above.
-run('virtualenv %s' % VENV_DIR)
+run('virtualenv %s' % (shellquote(VENV_DIR),))
 
 os.chdir(VENV_DIR)
 def venv_run(cmd):
@@ -142,7 +148,7 @@ print "Deps for BayesLite"
 venv_run("pip install pytest sphinx cov-core dill ")
 
 BUILD_EXAMPLES = os.path.join(BUILD_DIR, "examples")
-run("mkdir -p '%s'" % BUILD_EXAMPLES)
+run("mkdir -p %s" % (shellquote(BUILD_EXAMPLES),))
 
 # Main installs
 # =============
@@ -150,27 +156,29 @@ for project in GIT_REPOS:
   reqfile = os.path.join(BUILD_DIR, project, "requirements.txt")
   if os.path.exists(reqfile):
     print "Installing dependencies for", project
-    venv_run("pip install -r %s" % reqfile)
+    venv_run("pip install -r %s" % (shellquote(reqfile),))
   setupfile = os.path.join(BUILD_DIR, project, "setup.py")
   if os.path.exists(setupfile):
     print "Installing", project, "into", BUILD_DIR
-    venv_run("cd %s && pip install ." % os.path.join(BUILD_DIR, project))
+    repodir = os.path.join(BUILD_DIR, project)
+    venv_run("cd %s && pip install ." % (shellquote(repodir),))
   examplesdir = os.path.join(BUILD_DIR, project, "examples")
   if os.path.exists(examplesdir):
     print "Copying examples from", examplesdir
-    run("/bin/cp -r '%s'/* '%s'/" % (examplesdir, BUILD_EXAMPLES))
+    run("/bin/cp -r %s/* %s/" %
+        (shellquote(examplesdir), shellquote(BUILD_EXAMPLES)))
 
 
 # Postprocessing
 # ==============
 run("curl http://probcomp.csail.mit.edu/bayesdb/analyses/satellites.bdb > %s/satellites.bdb"
-    % BUILD_EXAMPLES)
+    % (shellquote(BUILD_EXAMPLES),))
 
 # This app's only other dependency:
 venv_run("pip install 'ipython[notebook]' runipy")
 
 print "Ready to start packaging the app!"
-venv_run('virtualenv --relocatable %s' % VENV_DIR)
+venv_run('virtualenv --relocatable %s' % (shellquote(VENV_DIR),))
 # Sadly, that doesn't actually fix the most critical file, the activate script.
 relocable = '''VIRTUAL_ENV=$(dirname $( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd ))\n'''
 new_activate = tempfile.NamedTemporaryFile(delete=False)
@@ -182,42 +190,44 @@ with open(old_activate_path, "r") as old_activate:
     else:
       new_activate.write(line)
 new_activate.close()
-run("mv '%s' '%s'" % (new_activate.name, old_activate_path))
+run("mv %s %s" %
+    (shellquote(new_activate.name), shellquote(old_activate_path)))
 # Also, we are hard linking to the python that we were built with, which may be different
 # than the python that we want the client to execute. Let's just assume that on the client,
 # we want to use the generic /System/Library py2.7, rather than a special one.
 PYTHON_DYLIB_LINK = os.path.join(VENV_DIR, ".Python")
 run("ln -fs /System/Library/Frameworks/Python.framework/Versions/2.7/Python %s" %
-    PYTHON_DYLIB_LINK)
+    (shellquote(PYTHON_DYLIB_LINK),))
 # And we still have a copy of python that my otherwise reference its
 # own dependencies, rather than relying on the built-in python. So
 # remove that.
-run("rm -f %s" % os.path.join(VENV_DIR, "bin", "python"))
-run("ln -s /usr/bin/python %s" % os.path.join(VENV_DIR, "bin", "python"))
+run("rm -f %s" % (shellquote(os.path.join(VENV_DIR, "bin", "python")),))
+run("ln -s /usr/bin/python %s" %
+    (shellquote(os.path.join(VENV_DIR, "bin", "python")),))
 
 NAME="BayesDB%s" % VERSION
 DIST_DIR = os.path.join(BUILD_DIR, "BayesDB")
 MACOS_PATH = os.path.join(DIST_DIR, NAME + ".app", "Contents", "MacOS")
 os.makedirs(MACOS_PATH)
-run("/bin/cp -r '%s' '%s/'" % (BUILD_EXAMPLES, MACOS_PATH))
-run("/bin/ln -s /Applications '%s'" % DIST_DIR)
+run("/bin/cp -r %s %s/" % (shellquote(BUILD_EXAMPLES), shellquote(MACOS_PATH)))
+run("/bin/ln -s /Applications %s" % (shellquote(DIST_DIR),))
 
 STARTER = '''#!/bin/bash
 
 set -e
-wd=`dirname $0`
-cd $wd
+wd=`dirname -- "$0"`
+cd -- "$wd"
 wd=`pwd -P`
-NAME=`basename $(dirname $(dirname $wd)) .app`
+NAME=`basename -- "$(dirname "$(dirname -- "$wd")")".app`
 
 activate="$wd/venv/bin/activate"
 ldpath="$wd/lib"
 
-source $activate
+source "$activate"
 export DYLD_LIBRARY_PATH="$ldpath"
 
 # Copy the examples to someplace writeable:
-rsync -r --ignore-existing "$wd/examples"/* "$HOME/Documents/$NAME"
+rsync -r --ignore-existing -- "$wd/examples"/* "$HOME/Documents/$NAME"
 ipython notebook "$HOME/Documents/$NAME"
 '''
 
@@ -228,35 +238,37 @@ run("chmod +x '%s'" % startsh_path)
 
 LAUNCHER = '''#!/bin/bash
 
-wd=`dirname $0`
-cd $wd
+wd=`dirname -- "$0"`
+cd -- "$wd"
 wd=`pwd -P`
 
 osacmd="tell application \\"Terminal\\" to do script"
-script="/bin/bash $wd/start.sh"
+script='/bin/bash -- "$wd/start.sh"'
 osascript -e "$osacmd \\"$script\\""
 '''
 
 launchsh_path = os.path.join(MACOS_PATH, NAME)  # Must be the same as NAME in MACOS_PATH
 with open(launchsh_path, "w") as launchsh:
   launchsh.write(LAUNCHER)
-run("chmod +x '%s'" % launchsh_path)
-run("mv -f '%s' '%s'" % (VENV_DIR, MACOS_PATH))
+run("chmod +x %s" % (shellquote(launchsh_path),))
+run("mv -f %s %s" % (shellquote(VENV_DIR), shellquote(MACOS_PATH)))
 
 # Basic sanity check.
-venv_run("runipy '%s'" % os.path.join(MACOS_PATH, "examples", "Satellites.ipynb"))
+ipynb = os.path.join(MACOS_PATH, "examples", "Satellites.ipynb")
+venv_run("runipy %s" % (shellquote(ipynb),))
 
 if PAUSE_TO_MODIFY:
-  print "Pausing to let you modify %s before packaging it up." % MACOS_PATH
+  print "Pausing to let you modify %s before packaging it up." % (MACOS_PATH,)
   os.system('read -s -n 1 -p "Press any key to continue..."')
 
-DMG_PATH = os.path.join(os.environ['HOME'], 'Desktop', '%s.dmg' % NAME)
+DMG_PATH = os.path.join(os.environ['HOME'], 'Desktop', '%s.dmg' % (NAME,))
 naming_attempt = 0
 while os.path.exists(DMG_PATH):
   naming_attempt += 1
   DMG_PATH = os.path.join(os.environ['HOME'], 'Desktop',
                           "%s (%d).dmg" % (NAME, naming_attempt))
-run("hdiutil create -format UDBZ -size 1g -srcfolder '%s' '%s'" % (DIST_DIR, DMG_PATH))
-run("/bin/rm -fr '%s'" % BUILD_DIR)
+run("hdiutil create -format UDBZ -size 1g -srcfolder %s %s" %
+    (shellquote(DIST_DIR), shellquote(DMG_PATH)))
+run("/bin/rm -fr %s" % (shellquote(BUILD_DIR),))
 
 print "Done. %d seconds elapsed" % (time.time() - START_TIME)
