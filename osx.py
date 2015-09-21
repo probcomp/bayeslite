@@ -242,9 +242,13 @@ wd=`dirname -- "$0"`
 cd -- "$wd"
 wd=`pwd -P`
 
-osacmd="tell application \\"Terminal\\" to do script"
-script="/bin/bash -- '$wd/start.sh'"
-osascript -e "$osacmd \\"$script\\""
+osascript -e '
+    on run argv
+        set wd to item 1 of argv
+        set cmd to "/bin/bash -- " & quoted form of wd & "/start.sh"
+        tell application "Terminal" to do shell script cmd
+    end run
+' -- "$wd"
 '''
 
 launchsh_path = os.path.join(MACOS_PATH, NAME)  # Must be the same as NAME in MACOS_PATH
