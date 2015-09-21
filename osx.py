@@ -180,7 +180,7 @@ venv_run("pip install 'ipython[notebook]' runipy")
 print "Ready to start packaging the app!"
 venv_run('virtualenv --relocatable %s' % (shellquote(VENV_DIR),))
 # Sadly, that doesn't actually fix the most critical file, the activate script.
-relocable = '''VIRTUAL_ENV=$(dirname "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )")\n'''
+relocable = '''VIRTUAL_ENV=$(dirname -- "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)")\n'''
 new_activate = tempfile.NamedTemporaryFile(delete=False)
 old_activate_path = os.path.join(VENV_DIR, "bin", "activate")
 with open(old_activate_path, "r") as old_activate:
