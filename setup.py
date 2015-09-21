@@ -16,8 +16,15 @@
 
 try:
     from setuptools import setup
+    from setuptools.command.test import test as TestCommand
 except ImportError:
     from distutils.core import setup
+    from distutils.cmd import Command
+    class TestCommand(Command):
+        user_options = []
+        def initialize_options(self): pass
+        def finalize_options(self): pass
+        def run(self): self.run_tests()
 
 with open('VERSION', 'rU') as f:
     version = f.readline().strip()
@@ -114,6 +121,25 @@ for path_y in grammars:
     ])
     commit(path_y, path_py, path_sha256)
 
+class cmd_pytest(TestCommand):
+    def __init__(self, *args, **kwargs):
+        TestCommand.__init__(self, *args, **kwargs)
+        self.test_suite = 'tests shell/tests'
+        self.build_lib = None
+    def finalize_options(self):
+        TestCommand.finalize_options(self)
+        self.set_undefined_options('build', ('build_lib', 'build_lib'))
+    def run_tests(self):
+        import pytest
+        import os
+        import os.path
+        import sys
+        sys.path = [os.path.join(os.getcwd(), self.build_lib)] + sys.path
+        os.environ['BAYESDB_WIZARD_MODE'] = '1'
+        os.environ['BAYESDB_DISABLE_VERSION_CHECK'] = '1'
+        os.environ['PYTHONPATH'] = ':'.join(sys.path)
+        sys.exit(pytest.main(['tests', 'shell/tests']))
+
 setup(
     name='bayeslite',
     version=version,
@@ -143,4 +169,7 @@ setup(
     },
     # Not in this release, perhaps later.
     #scripts=['shell/scripts/bayeslite'],
+    cmdclass={
+        'test': cmd_pytest,
+    },
 )
