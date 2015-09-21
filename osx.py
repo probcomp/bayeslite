@@ -218,7 +218,7 @@ set -e
 wd=`dirname -- "$0"`
 cd -- "$wd"
 wd=`pwd -P`
-NAME=`basename -- "$(dirname "$(dirname -- "$wd")")" .app`
+NAME=`basename -- "$(dirname -- "$(dirname -- "$wd")")" .app`
 
 activate="$wd/venv/bin/activate"
 ldpath="$wd/lib"
