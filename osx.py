@@ -171,7 +171,7 @@ for project in GIT_REPOS:
 
 # Postprocessing
 # ==============
-run("curl http://probcomp.csail.mit.edu/bayesdb/analyses/satellites.bdb > %s/satellites.bdb"
+run("curl http://probcomp.csail.mit.edu/bayesdb/analyses/satellites.bdb > %s/satellites/satellites.bdb"
     % (shellquote(BUILD_EXAMPLES),))
 
 # This app's only other dependency:
@@ -258,7 +258,7 @@ run("chmod +x %s" % (shellquote(launchsh_path),))
 run("mv -f %s %s" % (shellquote(VENV_DIR), shellquote(MACOS_PATH)))
 
 # Basic sanity check.
-ipynb = os.path.join(MACOS_PATH, "examples", "Satellites.ipynb")
+ipynb = os.path.join(MACOS_PATH, "examples", "satellites", "Satellites.ipynb")
 venv_run("runipy %s" % (shellquote(ipynb),))
 
 if PAUSE_TO_MODIFY:
