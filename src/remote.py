@@ -46,10 +46,11 @@ def version_check():
             return
         d = r.json()
         if parse_version(__version__) < parse_version(d['version']):
-            warnings.warn('Bayeslite is not up to date.'
-                '\nYou are running %s; the latest version is %s.'
-                '\nSee <%s>.'
-                % (__version__, d['version'], d['url']))
+            outofdate_warning = 'Bayeslite is not up to date.' \
+                '\nYou are running %s; the latest version is %s.' \
+                '\nSee <%s>.' \
+                % (__version__, d['version'], d['url'])
+            warnings.warn(outofdate_warning)
     except Exception:
         # Silently eat exceptions -- in the request and in parsing the
         # result, in case it is ill-formed.
