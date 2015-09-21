@@ -203,7 +203,7 @@ run("ln -fs /System/Library/Frameworks/Python.framework/Versions/2.7/Python %s" 
 # own dependencies, rather than relying on the built-in python. So
 # remove that.
 run("rm -f %s" % (shellquote(os.path.join(VENV_DIR, "bin", "python")),))
-run("ln -s /usr/bin/python %s" %
+run("ln -s /usr/bin/python2.7 %s" %
     (shellquote(os.path.join(VENV_DIR, "bin", "python")),))
 
 NAME="BayesDB%s" % (VERSION,)
