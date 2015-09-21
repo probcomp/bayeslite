@@ -115,7 +115,8 @@ for project in GIT_REPOS:
   if PEG[project]:
     repodir = os.path.join(BUILD_DIR, project)
     branch = PEG[project]
-    run('cd %s && git checkout %s' % (shellquote(repodir), shellquote(branch)))
+    run('cd -- %s && git checkout %s' %
+        (shellquote(repodir), shellquote(branch)))
   if os.path.exists(os.path.join(project, 'VERSION')):
     project_version = get_version(project)
     if project_version:
@@ -161,7 +162,7 @@ for project in GIT_REPOS:
   if os.path.exists(setupfile):
     print "Installing", project, "into", BUILD_DIR
     repodir = os.path.join(BUILD_DIR, project)
-    venv_run("cd %s && pip install ." % (shellquote(repodir),))
+    venv_run("cd -- %s && pip install ." % (shellquote(repodir),))
   examplesdir = os.path.join(BUILD_DIR, project, "examples")
   if os.path.exists(examplesdir):
     print "Copying examples from", examplesdir
