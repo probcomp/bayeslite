@@ -218,7 +218,7 @@ export DYLD_LIBRARY_PATH="$ldpath"
 
 # Copy the examples to someplace writeable:
 rsync -r --ignore-existing "$wd/examples"/* "$HOME/Documents/$NAME"
-ipython notebook "$HOME/Documents/$NAME"
+ipython notebook --script "$HOME/Documents/$NAME"
 '''
 
 startsh_path = os.path.join(MACOS_PATH, "start.sh")
