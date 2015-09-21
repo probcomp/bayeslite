@@ -130,14 +130,14 @@ run('virtualenv %s' % (shellquote(VENV_DIR),))
 os.chdir(VENV_DIR)
 def venv_run(cmd):
   print cmd
-  assert not os.system('source bin/activate; %s' % cmd)
+  assert not os.system('source bin/activate; %s' % (cmd,))
 
 # Preprocessing
 # =============
 print "Deps for BdbContrib"
 LIBBOOST_DIR = os.path.dirname(outputof("locate -l 1 libboost_atomic-mt.dylib", shell=True))
-assert os.path.exists(LIBBOOST_DIR), ("We need libboost-dev already installed: %s" %
-                                      LIBBOOST_DIR)
+assert os.path.exists(LIBBOOST_DIR), \
+  ("We need libboost-dev already installed: %s" % (LIBBOOST_DIR,))
 
 venv_run("pip install cython")  # If we don't, crosscat's setup tries and fails.
 venv_run("pip install numpy")
@@ -205,7 +205,7 @@ run("rm -f %s" % (shellquote(os.path.join(VENV_DIR, "bin", "python")),))
 run("ln -s /usr/bin/python %s" %
     (shellquote(os.path.join(VENV_DIR, "bin", "python")),))
 
-NAME="BayesDB%s" % VERSION
+NAME="BayesDB%s" % (VERSION,)
 DIST_DIR = os.path.join(BUILD_DIR, "BayesDB")
 MACOS_PATH = os.path.join(DIST_DIR, NAME + ".app", "Contents", "MacOS")
 os.makedirs(MACOS_PATH)
@@ -234,7 +234,7 @@ ipython notebook "$HOME/Documents/$NAME"
 startsh_path = os.path.join(MACOS_PATH, "start.sh")
 with open(startsh_path, "w") as startsh:
   startsh.write(STARTER)
-run("chmod +x '%s'" % startsh_path)
+run("chmod +x %s" % (shellquote(startsh_path),))
 
 LAUNCHER = '''#!/bin/bash
 
@@ -275,4 +275,4 @@ run("hdiutil create -format UDBZ -size 1g -srcfolder %s %s" %
     (shellquote(DIST_DIR), shellquote(DMG_PATH)))
 run("/bin/rm -fr %s" % (shellquote(BUILD_DIR),))
 
-print "Done. %d seconds elapsed" % (time.time() - START_TIME)
+print "Done. %d seconds elapsed" % (time.time() - START_TIME,)
