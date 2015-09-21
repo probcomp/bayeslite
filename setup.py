@@ -121,6 +121,20 @@ for path_y in grammars:
     ])
     commit(path_y, path_py, path_sha256)
 
+# XXX Several horrible kludges here to make `python setup.py test' work:
+#
+# - Standard setputools test command searches for unittest, not
+#   pytest.
+#
+# - pytest suggested copypasta assumes . works in sys.path; we
+#   deliberately make . not work in sys.path and require ./build/lib
+#   instead, in order to force a clean build.
+#
+# - Must set PYTHONPATH too for shell tests, which fork and exec a
+#   subprocess which inherits PYTHONPATH but not sys.path.
+#
+# - build command's build_lib variable is relative to source
+#   directory, so we must assume os.getcwd() gives that.
 class cmd_pytest(TestCommand):
     def __init__(self, *args, **kwargs):
         TestCommand.__init__(self, *args, **kwargs)
@@ -128,6 +142,7 @@ class cmd_pytest(TestCommand):
         self.build_lib = None
     def finalize_options(self):
         TestCommand.finalize_options(self)
+        # self.build_lib = ...
         self.set_undefined_options('build', ('build_lib', 'build_lib'))
     def run_tests(self):
         import pytest
