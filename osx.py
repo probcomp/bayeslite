@@ -115,7 +115,8 @@ for project in GIT_REPOS:
   if PEG[project]:
     repodir = os.path.join(BUILD_DIR, project)
     branch = PEG[project]
-    run('cd %s && git checkout %s' % (shellquote(repodir), shellquote(branch)))
+    run('cd -- %s && git checkout %s' %
+        (shellquote(repodir), shellquote(branch)))
   if os.path.exists(os.path.join(project, 'VERSION')):
     project_version = get_version(project)
     if project_version:
@@ -161,7 +162,7 @@ for project in GIT_REPOS:
   if os.path.exists(setupfile):
     print "Installing", project, "into", BUILD_DIR
     repodir = os.path.join(BUILD_DIR, project)
-    venv_run("cd %s && pip install ." % (shellquote(repodir),))
+    venv_run("cd -- %s && pip install ." % (shellquote(repodir),))
   examplesdir = os.path.join(BUILD_DIR, project, "examples")
   if os.path.exists(examplesdir):
     print "Copying examples from", examplesdir
@@ -202,7 +203,7 @@ run("ln -fs /System/Library/Frameworks/Python.framework/Versions/2.7/Python %s" 
 # own dependencies, rather than relying on the built-in python. So
 # remove that.
 run("rm -f %s" % (shellquote(os.path.join(VENV_DIR, "bin", "python")),))
-run("ln -s /usr/bin/python %s" %
+run("ln -s /usr/bin/python2.7 %s" %
     (shellquote(os.path.join(VENV_DIR, "bin", "python")),))
 
 NAME="Bayeslite%s" % VERSION
