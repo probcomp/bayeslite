@@ -202,12 +202,23 @@ run("ln -fs /System/Library/Frameworks/Python.framework/Versions/2.7/Python %s" 
 # And we still have a copy of python that my otherwise reference its
 # own dependencies, rather than relying on the built-in python. So
 # remove that.
-run("rm -f %s" % (shellquote(os.path.join(VENV_DIR, "bin", "python")),))
-run("ln -s /usr/bin/python2.7 %s" %
-    (shellquote(os.path.join(VENV_DIR, "bin", "python")),))
+#
+# XXX Actually, this doesn't work at all -- it altogether defeats the
+# mechanism by which Python discovers what should be in sys.path for a
+# virtualenv.
+#
+# If it really turns out to be necessary to do this, we can replace
+# the $VENV_DIR/bin/python by the following two-line shell script:
+#
+#       #!/bin/bash
+#       exec -a "$0" /usr/bin/python2.7 ${1+"$@"}
+#
+#run("rm -f %s" % (shellquote(os.path.join(VENV_DIR, "bin", "python")),))
+#run("ln -s /usr/bin/python2.7 %s" %
+#    (shellquote(os.path.join(VENV_DIR, "bin", "python")),))
 
 NAME="Bayeslite%s" % (VERSION,)
-DIST_DIR = os.path.join(BUILD_DIR, "Bayeslite")
+DIST_DIR = os.path.join(BUILD_DIR, "dmgroot")
 MACOS_PATH = os.path.join(DIST_DIR, NAME + ".app", "Contents", "MacOS")
 os.makedirs(MACOS_PATH)
 run("/bin/cp -r %s %s/" % (shellquote(BUILD_EXAMPLES), shellquote(MACOS_PATH)))
