@@ -163,18 +163,9 @@ for project in GIT_REPOS:
     print "Installing", project, "into", BUILD_DIR
     repodir = os.path.join(BUILD_DIR, project)
     venv_run("cd -- %s && pip install ." % (shellquote(repodir),))
-  examplesdir = os.path.join(BUILD_DIR, project, "examples")
-  if os.path.exists(examplesdir):
-    print "Copying examples from", examplesdir
-    run("/bin/cp -r %s/* %s/" %
-        (shellquote(examplesdir), shellquote(BUILD_EXAMPLES)))
-
 
 # Postprocessing
 # ==============
-run("curl http://probcomp.csail.mit.edu/bayesdb/analyses/satellites.bdb > %s"
-    % (shellquote(os.path.join(BUILD_EXAMPLES, "satellites", "satellites.bdb"),)))
-
 # This app's only other dependency:
 venv_run("pip install 'ipython[notebook]' runipy")
 
@@ -239,8 +230,12 @@ source "$activate"
 export DYLD_LIBRARY_PATH="$ldpath"
 
 # Copy the examples to someplace writeable:
-rsync -r --ignore-existing -- "$wd/examples"/* "$HOME/Documents/$NAME"
-ipython notebook "$HOME/Documents/$NAME"
+if [ -d "$HOME/Documents/$NAME" ]; then
+    cd -- "$HOME/Documents/$NAME" && "$wd/venv/bin/bayesdb-demo" launch
+else
+    mkdir -- "$HOME/Documents/$NAME"
+    cd -- "$HOME/Documents/$NAME" && "$wd/venv/bin/bayesdb-demo"
+fi
 '''
 
 startsh_path = os.path.join(MACOS_PATH, "start.sh")
@@ -258,7 +253,7 @@ osascript -e '
     on run argv
         set wd to item 1 of argv
         set cmd to "/bin/bash -- " & quoted form of wd & "/start.sh"
-        tell application "Terminal" to do shell script cmd
+        tell application "Terminal" to do script cmd
     end run
 ' -- "$wd"
 '''
@@ -270,8 +265,12 @@ run("chmod +x %s" % (shellquote(launchsh_path),))
 run("mv -f %s %s" % (shellquote(VENV_DIR), shellquote(MACOS_PATH)))
 
 # Basic sanity check.
-ipynb = os.path.join(MACOS_PATH, "examples", "satellites", "Satellites.ipynb")
-venv_run("runipy %s" % (shellquote(ipynb),))
+test_dir = tempfile.mkdtemp('bayeslite-test')
+try:
+  venv_run("cd -- %s && bayesdb-demo fetch" % (shellquote(test_dir),))
+  venv_run("cd -- %s && runipy Satellites.ipynb" % (shellquote(test_dir),))
+finally:
+  run("rm -rf -- %s" % (shellquote(test_dir),))
 
 if PAUSE_TO_MODIFY:
   print "Pausing to let you modify %s before packaging it up." % (MACOS_PATH,)
