@@ -56,7 +56,7 @@ try:
 except ImportError:
   from distutils.core import setup
 
-BUILD_DIR = tempfile.mkdtemp(prefix='BayesLite-app-')
+BUILD_DIR = tempfile.mkdtemp(prefix='Bayeslite-app-')
 os.chdir(BUILD_DIR)
 print "Building in", BUILD_DIR
 
@@ -142,7 +142,7 @@ assert os.path.exists(LIBBOOST_DIR), \
 
 venv_run("pip install cython")  # If we don't, crosscat's setup tries and fails.
 venv_run("pip install numpy")
-print "Deps for BayesLite"
+print "Deps for Bayeslite"
 # Assume that osx has sqlite3 already.
 # http://computechtips.com/619/upgrade-sqlite-os-x-mavericks-yosemite
 # which suggests that OS 10.10 and above have a sufficiently new sqlite.
