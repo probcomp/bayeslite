@@ -265,8 +265,9 @@ run("chmod +x %s" % (shellquote(launchsh_path),))
 run("mv -f %s %s" % (shellquote(VENV_DIR), shellquote(MACOS_PATH)))
 
 # Basic sanity check.
-ipynb = os.path.join(MACOS_PATH, "examples", "satellites", "Satellites.ipynb")
-venv_run("runipy %s" % (shellquote(ipynb),))
+# Put this back with bayesdb-demo somehow.
+# ipynb = os.path.join(MACOS_PATH, "examples", "satellites", "Satellites.ipynb")
+# venv_run("runipy %s" % (shellquote(ipynb),))
 
 if PAUSE_TO_MODIFY:
   print "Pausing to let you modify %s before packaging it up." % (MACOS_PATH,)
