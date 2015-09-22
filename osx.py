@@ -226,6 +226,10 @@ NAME=`basename -- "$(dirname -- "$(dirname -- "$wd")")" .app`
 activate="$wd/venv/bin/activate"
 ldpath="$wd/lib"
 
+# Clear any user's PYTHONPATH setting, which may interfere with what
+# we need.
+unset PYTHONPATH
+
 source "$activate"
 export DYLD_LIBRARY_PATH="$ldpath"
 
