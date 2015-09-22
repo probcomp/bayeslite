@@ -218,7 +218,7 @@ run("ln -fs /System/Library/Frameworks/Python.framework/Versions/2.7/Python %s" 
 #    (shellquote(os.path.join(VENV_DIR, "bin", "python")),))
 
 NAME="Bayeslite%s" % (VERSION,)
-DIST_DIR = os.path.join(BUILD_DIR, "Bayeslite")
+DIST_DIR = os.path.join(BUILD_DIR, "dmgroot")
 MACOS_PATH = os.path.join(DIST_DIR, NAME + ".app", "Contents", "MacOS")
 os.makedirs(MACOS_PATH)
 run("/bin/cp -r %s %s/" % (shellquote(BUILD_EXAMPLES), shellquote(MACOS_PATH)))
