@@ -265,9 +265,12 @@ run("chmod +x %s" % (shellquote(launchsh_path),))
 run("mv -f %s %s" % (shellquote(VENV_DIR), shellquote(MACOS_PATH)))
 
 # Basic sanity check.
-# Put this back with bayesdb-demo somehow.
-# ipynb = os.path.join(MACOS_PATH, "examples", "satellites", "Satellites.ipynb")
-# venv_run("runipy %s" % (shellquote(ipynb),))
+test_dir = tempfile.mkdtemp('bayeslite-test')
+try:
+  venv_run("cd -- %s && bayesdb-demo fetch" % (shellquote(test_dir),))
+  venv_run("cd -- %s && runipy Satellites.ipynb" % (shellquote(test_dir),))
+finally:
+  run("rm -rf -- %s" % (shellquote(test_dir),))
 
 if PAUSE_TO_MODIFY:
   print "Pausing to let you modify %s before packaging it up." % (MACOS_PATH,)
