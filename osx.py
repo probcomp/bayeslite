@@ -283,8 +283,8 @@ while os.path.exists(DMG_PATH):
   naming_attempt += 1
   DMG_PATH = os.path.join(os.environ['HOME'], 'Desktop',
                           "%s (%d).dmg" % (NAME, naming_attempt))
-run("hdiutil create -format UDBZ -size 1g -srcfolder %s %s" %
-    (shellquote(DIST_DIR), shellquote(DMG_PATH)))
+run("hdiutil create -volname Bayeslite -format UDBZ -size 1g -srcfolder %s %s"
+    % (shellquote(DIST_DIR), shellquote(DMG_PATH)))
 run("/bin/rm -fr %s" % (shellquote(BUILD_DIR),))
 
 print "Done. %d seconds elapsed" % (time.time() - START_TIME,)
