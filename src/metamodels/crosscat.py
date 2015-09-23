@@ -26,16 +26,19 @@ import itertools
 import json
 import math
 import sqlite3
+import struct
 import time
 
 import bayeslite.core as core
 import bayeslite.guess as guess
 import bayeslite.metamodel as metamodel
+import bayeslite.weakprng as weakprng
 
 from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.stats import arithmetic_mean
 from bayeslite.util import casefold
+from bayeslite.util import randomly_permute
 from bayeslite.util import unique
 
 crosscat_schema_1 = '''
@@ -645,9 +648,22 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             qt = sqlite3_quote_name(table)
             cursor = None
             if do_subsample:
-                cursor = bdb.sql_execute('''
-                    SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC LIMIT ?
-                ''' % (qt,), (do_subsample,))
+                # Compute the first k of a randomly chosen permutation
+                # of the n rowids.
+                #
+                # XXX Can we do this in O(k) rather than O(n) space?
+                #
+                # XXX Let the user pass in a seed.
+                k = do_subsample
+                sql = 'SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC' % (qt,)
+                cursor = bdb.sql_execute(sql)
+                rowids = [row[0] for row in cursor]
+                n = len(rowids)
+                seed = struct.pack('<QQQQ', 0, 0, k, n)
+                uniform = weakprng.weakprng(seed).weakrandom_uniform
+                randomly_permute(rowids, uniform)
+                rowids = rowids[:k]
+                cursor = ((rowid,) for rowid in rowids)
             else:
                 cursor = bdb.sql_execute('''
                      SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC

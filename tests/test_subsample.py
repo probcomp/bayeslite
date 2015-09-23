@@ -17,6 +17,7 @@
 import os
 
 import bayeslite
+from bayeslite.core import bayesdb_get_generator
 from bayeslite.metamodels.crosscat import CrosscatMetamodel
 import bayeslite.read_csv as read_csv
 import crosscat.LocalEngine
@@ -38,7 +39,6 @@ def test_subsample():
                 name IGNORE
             )
         ''')
-        bdb.execute('DROP GENERATOR dhacc_full')
         bdb.execute('''
             CREATE GENERATOR dhacc FOR dha USING crosscat (
                 SUBSAMPLE(100),
@@ -59,4 +59,17 @@ def test_subsample():
                 ' (r1._rowid_ = 1 OR r1._rowid_ = 101)').fetchall()
         bdb.execute('INFER mdcr_spnd_amblnc FROM dhacc'
             ' WHERE _rowid_ = 1 OR _rowid_ = 101').fetchall()
+        sql = '''
+            SELECT sql_rowid FROM bayesdb_crosscat_subsample
+                WHERE generator_id = ?
+                ORDER BY cc_row_id ASC
+                LIMIT 100
+        '''
+        gid_full = bayesdb_get_generator(bdb, 'dhacc_full')
+        cursor = bdb.sql_execute(sql, (gid_full,))
+        assert [row[0] for row in cursor] == range(1, 100 + 1)
+        gid = bayesdb_get_generator(bdb, 'dhacc')
+        cursor = bdb.sql_execute(sql, (gid,))
+        assert [row[0] for row in cursor] != range(1, 100 + 1)
         bdb.execute('DROP GENERATOR dhacc')
+        bdb.execute('DROP GENERATOR dhacc_full')

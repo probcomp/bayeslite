@@ -83,3 +83,15 @@ def logsumexp(array):
 
 def logmeanexp(array):
     return logsumexp(array) - math.log(len(array))
+
+def random_permutation(n, uniform):
+    p = range(n)
+    randomly_permute(p, uniform)
+    return p
+
+def randomly_permute(array, uniform):
+    n = len(array)
+    for n_i in xrange(n):
+        i = n - n_i - 1
+        j = uniform(i + 1)
+        array[i], array[j] = array[j], array[i]
