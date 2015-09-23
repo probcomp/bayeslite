@@ -1,0 +1,1 @@
+from weakprng import *
