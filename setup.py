@@ -176,11 +176,13 @@ setup(
         'bayeslite.metamodels',
         'bayeslite.plex',
         'bayeslite.shell',
+        'bayeslite.weakprng',
     ],
     package_dir={
         'bayeslite': 'src',
         'bayeslite.plex': 'external/plex/dist/Plex',
         'bayeslite.shell': 'shell/src',
+        'bayeslite.weakprng': 'external/weakprng/dist',
     },
     # Not in this release, perhaps later.
     #scripts=['shell/scripts/bayeslite'],
