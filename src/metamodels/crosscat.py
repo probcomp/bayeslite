@@ -655,15 +655,19 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 #
                 # XXX Let the user pass in a seed.
                 k = do_subsample
+                sql = 'SELECT COUNT(*) FROM %s' % (qt,)
+                cursor = bdb.sql_execute(sql)
+                n = cursor.next()[0]
                 sql = 'SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC' % (qt,)
                 cursor = bdb.sql_execute(sql)
-                rowids = [row[0] for row in cursor]
-                n = len(rowids)
                 seed = struct.pack('<QQQQ', 0, 0, k, n)
                 uniform = weakprng.weakprng(seed).weakrandom_uniform
-                randomly_permute(rowids, uniform)
-                rowids = rowids[:k]
-                cursor = ((rowid,) for rowid in rowids)
+                samples = [None] * k
+                for i, row in enumerate(cursor):
+                    r = uniform(i + 1)
+                    if r < k:
+                        samples[r] = row
+                cursor = [s for s in samples if s is not None]
             else:
                 cursor = bdb.sql_execute('''
                      SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC
