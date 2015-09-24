@@ -665,12 +665,13 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 # https://en.wikipedia.org/wiki/Reservoir_sampling
                 samples = []
                 for i, row in enumerate(cursor):
-                    r = uniform(i + 1)
                     if i < k:
                         samples.append(row)
-                    elif r < k:
-                        samples[r] = row
-                cursor = [s for s in samples if s is not None]
+                    else:
+                        r = uniform(i + 1)
+                        if r < k:
+                            samples[r] = row
+                cursor = samples
             else:
                 cursor = bdb.sql_execute('''
                      SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC
