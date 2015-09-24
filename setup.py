@@ -164,7 +164,7 @@ setup(
     author_email='bayesdb@mit.edu',
     license='Apache License, Version 2.0',
     install_requires=[
-        'crosscat>=0.1.24',
+        'crosscat>=0.1.29',
         'requests',
     ],
     tests_require=[
