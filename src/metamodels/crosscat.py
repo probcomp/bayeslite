@@ -653,15 +653,23 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 #
                 # XXX Let the user pass in a seed.
                 k = do_subsample
+                sql = 'SELECT COUNT(*) FROM %s' % (qt,)
+                cursor = bdb.sql_execute(sql)
+                n = cursor.next()[0]
                 sql = 'SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC' % (qt,)
                 cursor = bdb.sql_execute(sql)
-                rowids = [row[0] for row in cursor]
-                n = len(rowids)
                 seed = struct.pack('<QQQQ', 0, 0, k, n)
                 uniform = weakprng.weakprng(seed).weakrandom_uniform
-                randomly_permute(rowids, uniform)
-                rowids = rowids[:k]
-                cursor = ((rowid,) for rowid in rowids)
+                # https://en.wikipedia.org/wiki/Reservoir_sampling
+                samples = []
+                for i, row in enumerate(cursor):
+                    if i < k:
+                        samples.append(row)
+                    else:
+                        r = uniform(i + 1)
+                        if r < k:
+                            samples[r] = row
+                cursor = samples
             else:
                 cursor = bdb.sql_execute('''
                      SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC
