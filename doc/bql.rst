@@ -97,7 +97,7 @@ BQL Queries
       *Modelno* is a BQL expression specifying the number of the model
       of *generator* to use in model estimators.  Values of model
       estimators are averaged over all models if ``USING MODEL`` is
-      not specified.
+      not specified.  Models are zero-indexed.
 
 .. index:: ``ESTIMATE``
 
@@ -110,7 +110,7 @@ BQL Queries
       *Modelno* is a BQL expression specifying the number of the model
       of *generator* to use in model estimators.  Values of model
       estimators are averaged over all models if ``USING MODEL`` is
-      not specified.
+      not specified.  Models are zero-indexed.
 
 .. index:: ``ESTIMATE FROM COLUMNS OF``
 

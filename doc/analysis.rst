@@ -64,7 +64,8 @@ BQL Data Modelling Commands
    Perform metamodel-specific initialization of up to *n* models for
    the generator named *name*, or the default generator of the table
    named *name*.  *n* must be a literal integer.  If the generator
-   already had models, the ones it had are unchanged.
+   already had models, the ones it had are unchanged.  Models are
+   zero-indexed.
 
 .. index:: ``DROP MODELS``
 
