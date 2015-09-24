@@ -36,14 +36,14 @@ def test_subsample():
             CREATE GENERATOR dhacc_full FOR dha USING crosscat (
                 SUBSAMPLE(OFF),
                 GUESS(*),
-                name IGNORE
+                name KEY
             )
         ''')
         bdb.execute('''
             CREATE GENERATOR dhacc FOR dha USING crosscat (
                 SUBSAMPLE(100),
                 GUESS(*),
-                name IGNORE
+                name KEY
             )
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR dhacc')
