@@ -135,18 +135,14 @@ def venv_run(cmd):
 
 # Preprocessing
 # =============
-print "Deps for BdbContrib"
-LIBBOOST_DIR = os.path.dirname(outputof("locate -l 1 libboost_atomic-mt.dylib", shell=True))
+print "Deps for CrossCat"
+LIBBOOST_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
+  outputof("locate -l 1 boost/random/mersenne_twister.hpp", shell=True)))))
 assert os.path.exists(LIBBOOST_DIR), \
-  ("We need libboost-dev already installed: %s" % (LIBBOOST_DIR,))
-
+  ("We need boost headers already installed for CrossCat: %s" % (LIBBOOST_DIR,))
+os.environ["BOOST_ROOT"] = LIBBOOST_DIR
 venv_run("pip install cython")  # If we don't, crosscat's setup tries and fails.
 venv_run("pip install numpy")
-print "Deps for BayesLite"
-# Assume that osx has sqlite3 already.
-# http://computechtips.com/619/upgrade-sqlite-os-x-mavericks-yosemite
-# which suggests that OS 10.10 and above have a sufficiently new sqlite.
-venv_run("pip install pytest sphinx cov-core dill ")
 
 BUILD_EXAMPLES = os.path.join(BUILD_DIR, "examples")
 run("mkdir -p %s" % (shellquote(BUILD_EXAMPLES),))
