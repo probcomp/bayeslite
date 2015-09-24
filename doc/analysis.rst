@@ -69,12 +69,13 @@ BQL Data Modelling Commands
 
 .. index:: ``DROP MODELS``
 
-``DROP MODELS <modelset> FROM <name>``
+``DROP MODELS [<modelset>] FROM <name>``
 
    Drop the specified models from the generator named *name*, or the
    default generator of the table named *name*.  *Modelset* is a
    comma-separated list of model numbers or hyphenated model number
-   ranges, inclusive on both bounds.
+   ranges, inclusive on both bounds.  If *modelset* is omitted, all
+   models are dropped from the generator.
 
    Example:
 
