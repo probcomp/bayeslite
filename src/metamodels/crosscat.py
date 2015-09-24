@@ -662,10 +662,13 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 cursor = bdb.sql_execute(sql)
                 seed = struct.pack('<QQQQ', 0, 0, k, n)
                 uniform = weakprng.weakprng(seed).weakrandom_uniform
-                samples = [None] * k
+                # https://en.wikipedia.org/wiki/Reservoir_sampling
+                samples = []
                 for i, row in enumerate(cursor):
                     r = uniform(i + 1)
-                    if r < k:
+                    if i < k:
+                        samples.append(row)
+                    elif r < k:
                         samples[r] = row
                 cursor = [s for s in samples if s is not None]
             else:
