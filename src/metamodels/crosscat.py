@@ -651,8 +651,6 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 # Compute the first k of a randomly chosen permutation
                 # of the n rowids.
                 #
-                # XXX Can we do this in O(k) rather than O(n) space?
-                #
                 # XXX Let the user pass in a seed.
                 k = do_subsample
                 sql = 'SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC' % (qt,)
