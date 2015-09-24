@@ -648,8 +648,9 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             qt = sqlite3_quote_name(table)
             cursor = None
             if do_subsample:
-                # Compute the first k of a randomly chosen permutation
-                # of the n rowids.
+                # Sample k of the n rowids without replacement,
+                # choosing from all the k-of-n combinations uniformly
+                # at random.
                 #
                 # XXX Let the user pass in a seed.
                 k = do_subsample
