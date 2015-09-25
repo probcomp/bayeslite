@@ -26,12 +26,18 @@ from bayeslite.metamodels.crosscat import CrosscatMetamodel
 # the tests should pass independently of the generated dataset.
 
 def test_complex_dependencies():
+    # Parameterize number of rows in synthetic dataset.
+    n_rows = 250
+
+    # Add an id column to ensure generator and cc colnos are different.
+    ids = np.arange(n_rows)
+
     # Create real-valued data, such that DEP(x,y), DEP(y,z), and IND(x,z)
     mean = [4, -2, -11]
     cov = [[3.0, 0.7, 0.0],
            [0.7, 4.0, 0.6],
            [0.0, 0.6, 2.0]]
-    numerical_data = np.random.multivariate_normal(mean, cov, size=250)
+    numerical_data = np.random.multivariate_normal(mean, cov, size=n_rows)
     x, y, z = numerical_data[:,0], numerical_data[:,1], numerical_data[:,2]
 
     # Create categorical data v, highly dependent on x.
@@ -39,9 +45,9 @@ def test_complex_dependencies():
     v = np.digitize(x, bins)
 
     # Create categorical data, independent of all other columns.
-    w = np.random.choice(range(8), size=250)
+    w = np.random.choice(range(8), size=n_rows)
 
-    data = np.vstack((x,y,z,w,v)).T
+    data = np.vstack((ids,x,y,z,w,v)).T
 
     # Create the database.
     with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
@@ -50,14 +56,15 @@ def test_complex_dependencies():
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
 
         # Read the dataset.
-        bdb.sql_execute('CREATE TABLE foo(x,y,z,v,w)')
+        bdb.sql_execute('CREATE TABLE foo(id,x,y,z,v,w)')
         for row in data:
-            bdb.sql_execute('INSERT INTO foo VALUES(?,?,?,?,?)', row)
+            bdb.sql_execute('INSERT INTO foo VALUES(?,?,?,?,?,?)', row)
 
         # Create schema, we will force  IND(x y), IND(x v), and DEP(z v w).
         bql = '''
             CREATE GENERATOR bar FOR foo USING crosscat(
                 GUESS(*),
+                id IGNORE,
                 x NUMERICAL,
                 y NUMERICAL,
                 z NUMERICAL,
@@ -105,7 +112,7 @@ def test_impossible_duplicate_dependency():
     # Throw exception when two columns X and Y are both dependent and
     # independent.
 
-    data = [(1, 0, 0), (0, 0, 1)]
+    data = [(0, 1, 0, 0), (1, 0, 0, 1)]
 
     # Create the database.
     with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
@@ -114,14 +121,15 @@ def test_impossible_duplicate_dependency():
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
 
         # Read the dataset.
-        bdb.sql_execute('CREATE TABLE foo(a,b,c)')
+        bdb.sql_execute('CREATE TABLE foo(id,a,b,c)')
         for row in data:
-            bdb.sql_execute('INSERT INTO foo VALUES(?,?,?)', row)
+            bdb.sql_execute('INSERT INTO foo VALUES(?,?,?,?)', row)
 
         # Create schema, we will force DEP(a c) and IND(a c).
         bql = '''
             CREATE GENERATOR bar FOR foo USING crosscat(
                 GUESS(*),
+                id IGNORE,
                 a CATEGORICAL,
                 b CATEGORICAL,
                 c CATEGORICAL,
@@ -143,7 +151,7 @@ def test_impossible_nontransitive_dependency():
     # Changing the behavior of CrossCat to deal with impossible
     # constraints (such as random dropout) will require updating this
     # test.
-    data = [(1, 0, 0), (0, 0, 1)]
+    data = [(0, 1, 0, 0), (1, 0, 0, 1)]
 
     # Create the database.
     with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
@@ -152,15 +160,16 @@ def test_impossible_nontransitive_dependency():
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
 
         # Read the dataset.
-        bdb.sql_execute('CREATE TABLE foo(a,b,c)')
+        bdb.sql_execute('CREATE TABLE foo(id,a,b,c)')
         for row in data:
-            bdb.sql_execute('INSERT INTO foo VALUES(?,?,?)', row)
+            bdb.sql_execute('INSERT INTO foo VALUES(?,?,?,?)', row)
 
         # Create schema, we will force DEP(a b), DEP(b c), and IND(a c) which
         # is non-transitive.
         bql = '''
             CREATE GENERATOR bar FOR foo USING crosscat(
                 GUESS(*),
+                id IGNORE,
                 a CATEGORICAL,
                 b CATEGORICAL,
                 c CATEGORICAL,
