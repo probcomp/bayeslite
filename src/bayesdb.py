@@ -76,6 +76,7 @@ class BayesDB(object):
         self.temptable = 0
         schema.bayesdb_install_schema(self.sqlite3)
         bqlfn.bayesdb_install_bql(self.sqlite3, self)
+        # warn about previous uncompleted commands
         if save_sessions:
             self.sqlite3.execute('INSERT INTO bayesdb_session DEFAULT VALUES')
             curs = self.sqlite3.execute('SELECT last_insert_rowid()')
@@ -139,7 +140,18 @@ class BayesDB(object):
         assert self.sql_tracer == tracer
         self.sql_tracer = None
 
-    def session_entry(self, type, data, extra=None):
+    def check_uncompleted_session_entries(self):
+        '''Check if the previous session ended with a failed command and
+        suggest sending the session'''
+        cursor = self.sqlite3.execute('''SELECT COUNT(*) FROM
+        bayesdb_session_entries WHERE session_id=?''', (self.session_id-1,))
+        uncompleted_entries = int([row[0] for row in curs][0])
+        if uncompleted_entries > 0:
+            print '''Previous session contains uncompleted entries. This may
+            be due to a bad termination or crash of the previous session.
+            Consider uploading the session.'''
+
+    def create_session_entry(self, type, data, extra=None):
         '''Save a session entry into the database, if we are doing that.'''
         if not self.save_sessions:
             return
@@ -151,6 +163,15 @@ class BayesDB(object):
                                 VALUES (?,?,?,?)
                              ''',
                              (self.session_id, t, type, data))
+        # the entry is initially in the not-completed state. return the new
+        # entry's id so that it can be set to completed when appropriate
+        curs = self.sqlite3.execute('SELECT last_insert_rowid()')
+        return int([row[0] for row in curs][0])
+
+    def set_entry_completed(self, entry_id):
+        self.sqlite3.execute('''UPDATE bayesdb_session_entries
+        SET completed=1 WHERE id=?
+        ''', (entry_id,))
 
     def execute(self, string, bindings=None):
         """Execute a BQL query and return a cursor for its results.
@@ -167,7 +188,7 @@ class BayesDB(object):
             bindings = ()
         if self.tracer:
             self.tracer(string, bindings)
-        self.session_entry("bql", string, bindings)
+        entry_id = self.create_session_entry("bql", string, bindings)
         phrases = parse.parse_bql_string(string)
         phrase = None
         try:
@@ -181,6 +202,7 @@ class BayesDB(object):
         else:
             raise ValueError('>1 phrase in string')
         cursor = bql.execute_phrase(self, phrase, bindings)
+        self.set_entry_completed(entry_id)
         return self.empty_cursor if cursor is None else cursor
 
     def sql_execute(self, string, bindings=None):
@@ -198,8 +220,10 @@ class BayesDB(object):
             bindings = ()
         if self.sql_tracer:
             self.sql_tracer(string, bindings)
-        self.session_entry("sql", string, bindings)
-        return bql.BayesDBCursor(self, self.sqlite3.execute(string, bindings))
+        entry_id = self.create_session_entry("sql", string, bindings)
+        cursor = self.sqlite3.execute(string, bindings)
+        self.set_entry_completed(entry_id)
+        return bql.BayesDBCursor(self, cursor)
 
     @contextlib.contextmanager
     def savepoint(self):

@@ -98,13 +98,16 @@ CREATE TABLE bayesdb_session (
 	sent		BOOLEAN DEFAULT 0
 );
 CREATE TABLE bayesdb_session_entries (
+	id		INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
+				CHECK (0 < id),
 	session_id	INTEGER NOT NULL REFERENCES bayesdb_session(id),
 	time		INTEGER NOT NULL, -- Unix time.
 	type		TEXT,
-	data		TEXT
+	data		TEXT,
+	completed	BOOLEAN DEFAULT 0
 );
 '''
-
+
 ### BayesDB SQLite setup
 
 def bayesdb_install_schema(db):
