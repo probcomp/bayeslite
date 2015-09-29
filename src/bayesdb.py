@@ -18,6 +18,9 @@ import contextlib
 import sqlite3
 import time
 import json
+import datetime
+import string
+import random
 
 import bayeslite.bql as bql
 import bayeslite.bqlfn as bqlfn
@@ -25,8 +28,13 @@ import bayeslite.metamodel as metamodel
 import bayeslite.parse as parse
 import bayeslite.schema as schema
 import bayeslite.txn as txn
-
+
 bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
+
+def _make_session_id():
+    size = 16
+    random_string = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(size))
+    return datetime.datetime.now().isoformat() + '-' + random_string
 
 def bayesdb_open(pathname=None, builtin_metamodels=None, save_sessions=True):
     """Open the BayesDB in the file at `pathname`.
@@ -72,7 +80,7 @@ class BayesDB(object):
         self.sql_tracer = None
         self.save_sessions = save_sessions
         if save_sessions:
-            self.session_id =
+            self.session_id = _make_session_id()
         self.cache = None
         self.temptable = 0
         schema.bayesdb_install_schema(self.sqlite3)
