@@ -18,9 +18,7 @@ import contextlib
 import sqlite3
 import time
 import json
-import datetime
 import string
-import random
 
 import bayeslite.bql as bql
 import bayeslite.bqlfn as bqlfn
@@ -30,11 +28,6 @@ import bayeslite.schema as schema
 import bayeslite.txn as txn
 
 bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
-
-def _make_session_id():
-    size = 16
-    random_string = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(size))
-    return datetime.datetime.now().isoformat() + '-' + random_string
 
 def bayesdb_open(pathname=None, builtin_metamodels=None, save_sessions=True):
     """Open the BayesDB in the file at `pathname`.
@@ -79,12 +72,14 @@ class BayesDB(object):
         self.tracer = None
         self.sql_tracer = None
         self.save_sessions = save_sessions
-        if save_sessions:
-            self.session_id = _make_session_id()
         self.cache = None
         self.temptable = 0
         schema.bayesdb_install_schema(self.sqlite3)
         bqlfn.bayesdb_install_bql(self.sqlite3, self)
+        if save_sessions:
+            self.sqlite3.execute('INSERT INTO bayesdb_session DEFAULT VALUES')
+            curs = self.sqlite3.execute('SELECT last_insert_rowid()')
+            self.session_id = int([row[0] for row in curs][0])
 
         # Cache an empty cursor for convenience.
         self.empty_cursor = bql.BayesDBCursor(self, self.sqlite3.execute(''))
