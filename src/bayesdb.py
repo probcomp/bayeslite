@@ -76,7 +76,6 @@ class BayesDB(object):
         self.temptable = 0
         schema.bayesdb_install_schema(self.sqlite3)
         bqlfn.bayesdb_install_bql(self.sqlite3, self)
-        # warn about previous uncompleted commands
         if save_sessions:
             self.sqlite3.execute('INSERT INTO bayesdb_session DEFAULT VALUES')
             curs = self.sqlite3.execute('SELECT last_insert_rowid()')
