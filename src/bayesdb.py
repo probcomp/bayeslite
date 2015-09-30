@@ -77,9 +77,7 @@ class BayesDB(object):
         schema.bayesdb_install_schema(self.sqlite3)
         bqlfn.bayesdb_install_bql(self.sqlite3, self)
         if save_sessions:
-            self.sqlite3.execute('INSERT INTO bayesdb_session DEFAULT VALUES')
-            curs = self.sqlite3.execute('SELECT last_insert_rowid()')
-            self.session_id = int([row[0] for row in curs][0])
+            self.__start_new_session__()
             self.check_uncompleted_session_entries()
         # Cache an empty cursor for convenience.
         self.empty_cursor = bql.BayesDBCursor(self, self.sqlite3.execute(''))
@@ -88,6 +86,11 @@ class BayesDB(object):
         return self
     def __exit__(self, *_exc_info):
         self.close()
+
+    def __start_new_session__(self):
+        self.sqlite3.execute('INSERT INTO bayesdb_session DEFAULT VALUES')
+        curs = self.sqlite3.execute('SELECT last_insert_rowid()')
+        self.session_id = int(curs.next()[0])
 
     def close(self):
         """Close the database.  Further use is not allowed."""
@@ -168,6 +171,19 @@ class BayesDB(object):
     def set_entry_completed(self, entry_id):
         self.sqlite3.execute('''UPDATE bayesdb_session_entries
         SET completed=1 WHERE id=?''', (entry_id,))
+
+    def unset_save_sessions(self):
+        self.save_sessions = False
+
+    def set_save_sessions(self):
+        self.save_sessions = True
+
+    def clear_all_sessions(self):
+        self.sqlite3.execute('DELETE FROM bayesdb_session_entries;')
+        self.sqlite3.execute('DELETE FROM bayesdb_session;')
+        self.sqlite3.execute('''DELETE FROM sqlite_sequence
+                WHERE name="bayesdb_session" OR name="bayesdb_session_entries"''');
+        self.__start_new_session__()
 
     def execute(self, string, bindings=None):
         """Execute a BQL query and return a cursor for its results.
