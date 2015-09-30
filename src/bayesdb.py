@@ -81,7 +81,7 @@ class BayesDB(object):
             self.sqlite3.execute('INSERT INTO bayesdb_session DEFAULT VALUES')
             curs = self.sqlite3.execute('SELECT last_insert_rowid()')
             self.session_id = int([row[0] for row in curs][0])
-
+            self.check_uncompleted_session_entries()
         # Cache an empty cursor for convenience.
         self.empty_cursor = bql.BayesDBCursor(self, self.sqlite3.execute(''))
 
@@ -144,12 +144,10 @@ class BayesDB(object):
         '''Check if the previous session ended with a failed command and
         suggest sending the session'''
         cursor = self.sqlite3.execute('''SELECT COUNT(*) FROM
-        bayesdb_session_entries WHERE session_id=?''', (self.session_id-1,))
-        uncompleted_entries = int([row[0] for row in curs][0])
+        bayesdb_session_entries WHERE completed=0 AND session_id=?''', (self.session_id-1,))
+        uncompleted_entries = int([row[0] for row in cursor][0])
         if uncompleted_entries > 0:
-            print '''Previous session contains uncompleted entries. This may
-            be due to a bad termination or crash of the previous session.
-            Consider uploading the session.'''
+            print '''WARNING: Previous session contains uncompleted entries. This may be due to a bad termination or crash of the previous session. Consider uploading the session.'''
 
     def create_session_entry(self, type, data, extra=None):
         '''Save a session entry into the database, if we are doing that.'''
@@ -170,8 +168,7 @@ class BayesDB(object):
 
     def set_entry_completed(self, entry_id):
         self.sqlite3.execute('''UPDATE bayesdb_session_entries
-        SET completed=1 WHERE id=?
-        ''', (entry_id,))
+        SET completed=1 WHERE id=?''', (entry_id,))
 
     def execute(self, string, bindings=None):
         """Execute a BQL query and return a cursor for its results.
