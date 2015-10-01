@@ -358,8 +358,7 @@ def test_t1_analysis_time_deadline():
     with analyzed_bayesdb_generator(t1(), 10, None, max_seconds=1):
         pass
 
-def test_t1_analysis_iter_deadline():
-    pytest.skip('XXX TAKES TOO LONG FOR NOW')
+def test_t1_analysis_iter_deadline_slow():
     with analyzed_bayesdb_generator(t1(), 10, 1, max_seconds=10):
         pass
 
