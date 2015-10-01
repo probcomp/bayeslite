@@ -285,12 +285,12 @@ def t1_subcat():
         t1_schema, t1_data,
         columns=['label CATEGORICAL', 'weight CATEGORICAL'])
 
-# def t1_mp():
-#     crosscat = multiprocessing_crosscat()
-#     metamodel = CrosscatMetamodel(crosscat)
-#     return bayesdb_generator(bayesdb(metamodel=metamodel),
-#         't1', 't1_cc', t1_schema, t1_data,
-#         columns=['label CATEGORICAL', 'age NUMERICAL', 'weight NUMERICAL'])
+def t1_mp():
+    crosscat = multiprocessing_crosscat()
+    metamodel = CrosscatMetamodel(crosscat)
+    return bayesdb_generator(bayesdb(metamodel=metamodel),
+        't1', 't1_cc', t1_schema, t1_data,
+         columns=['label CATEGORICAL', 'age NUMERICAL', 'weight NUMERICAL'])
 
 def test_t1_nokey():
     with bayesdb_generator(bayesdb(), 't1', 't1_cc', t1_schema, t1_data,
@@ -317,6 +317,7 @@ def test_t1_nocase():
 examples = {
     't0': t0,
     't1': t1,
+#    't1_mp': t1_mp,
     't1_sub': t1_sub,
     't1_subcat': t1_subcat,
 }
@@ -341,17 +342,17 @@ def test_example_analysis1(exname):
 # The multiprocessing engine has a large overhead, too much to try
 # every normal test with it, so we'll just run this one test to make
 # sure it doesn't crash and burn with ten models.
-# def test_t1_mp_analysis():
-#     with analyzed_bayesdb_generator(t1_mp(), 10, 2):
-#         pass
+def test_t1_mp_analysis_slow():
+    with analyzed_bayesdb_generator(t1_mp(), 10, 2):
+        pass
 
-# def test_t1_mp_analysis_time_deadline():
-#     with analyzed_bayesdb_generator(t1_mp(), 10, None, max_seconds=1):
-#         pass
+def test_t1_mp_analysis_time_deadline_slow():
+    with analyzed_bayesdb_generator(t1_mp(), 10, None, max_seconds=1):
+        pass
 
-# def test_t1_mp_analysis_iter_deadline():
-#     with analyzed_bayesdb_generator(t1_mp(), 10, 1, max_seconds=10):
-#         pass
+def test_t1_mp_analysis_iter_deadline_slow():
+    with analyzed_bayesdb_generator(t1_mp(), 10, 1, max_seconds=10):
+        pass
 
 def test_t1_analysis_time_deadline():
     with analyzed_bayesdb_generator(t1(), 10, None, max_seconds=1):
@@ -362,9 +363,9 @@ def test_t1_analysis_iter_deadline():
     with analyzed_bayesdb_generator(t1(), 10, 1, max_seconds=10):
         pass
 
-# def test_t1_mp_analysis_iter_deadline():
-#     with analyzed_bayesdb_generator(t1_mp(), 10, 1, max_seconds=10):
-#         pass
+def test_t1_mp_analysis_iter_deadline_slow():
+    with analyzed_bayesdb_generator(t1_mp(), 10, 1, max_seconds=10):
+        pass
 
 @pytest.mark.parametrize('rowid,colno,confidence',
     [(i+1, j, conf)
