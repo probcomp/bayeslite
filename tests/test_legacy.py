@@ -29,7 +29,7 @@ dha_csv = os.path.join(root, 'dha.csv')
 dha_models = os.path.join(root, 'dha_models.pkl.gz')
 dha_codebook = os.path.join(root, 'dha_codebook.csv')
 
-def test_legacy_models():
+def test_legacy_models_slow():
     bdb = bayeslite.bayesdb_open(builtin_metamodels=False)
     cc = crosscat.LocalEngine.LocalEngine(seed=0)
     metamodel = CrosscatMetamodel(cc)
