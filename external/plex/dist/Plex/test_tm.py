@@ -1,7 +1,7 @@
 import sys
 sys.stderr = sys.stdout
 
-from TransitionMaps import TransitionMap
+from Transitions import TransitionMap
 
 m = TransitionMap()
 print m
@@ -19,6 +19,3 @@ add('f', 'foo')
 add('i', 'iota')
 add('i', 'imp')
 add('eol', 'elephant')
-
-
-
