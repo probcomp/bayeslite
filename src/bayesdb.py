@@ -72,16 +72,10 @@ class BayesDB(object):
         self.metamodels = {}
         self.tracer = None
         self.sql_tracer = None
-        self.save_sessions = save_sessions
         self.cache = None
         self.temptable = 0
         schema.bayesdb_install_schema(self.sqlite3)
         bqlfn.bayesdb_install_bql(self.sqlite3, self)
-        # use the session tracer as default
-        if save_sessions:
-            session_tracer = SessionTracer(self, save_sessions)
-            trace(session_tracer.bql_trace)
-            sql_trace(session_tracer.sql_trace)
         # Cache an empty cursor for convenience.
         self.empty_cursor = bql.BayesDBCursor(self, self.sqlite3.execute(''))
 
@@ -154,7 +148,7 @@ class BayesDB(object):
         if bindings is None:
             bindings = ()
         if self.tracer:
-            finished_thunk = self.tracer(string, bindings)
+            finish_thunk = self.tracer(string, bindings)
         phrases = parse.parse_bql_string(string)
         phrase = None
         try:
@@ -186,7 +180,7 @@ class BayesDB(object):
         if bindings is None:
             bindings = ()
         if self.tracer:
-            finished_thunk = self.sql_tracer(string, bindings)
+            finish_thunk = self.sql_tracer(string, bindings)
         entry_id = self.create_session_entry("sql", string, bindings)
         cursor = self.sqlite3.execute(string, bindings)
         if self.tracer and finish_thunk:
