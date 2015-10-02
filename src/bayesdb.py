@@ -30,19 +30,16 @@ import bayeslite.sessions as sessions
 
 bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
 
-def bayesdb_open(pathname=None, builtin_metamodels=None, save_sessions=True):
+def bayesdb_open(pathname=None, builtin_metamodels=None):
     """Open the BayesDB in the file at `pathname`.
 
     If there is no file at `pathname`, it is automatically created.
     If `pathname` is unspecified or ``None``, a temporary in-memory
     BayesDB instance is created.
-    If save_sessions is true or unspecified, query trace logging
-    information is saved in the database.
     """
     if builtin_metamodels is None:
         builtin_metamodels = True
-    bdb = BayesDB(bayesdb_open_cookie, pathname=pathname,
-                   save_sessions=save_sessions)
+    bdb = BayesDB(bayesdb_open_cookie, pathname=pathname)
     if builtin_metamodels:
         metamodel.bayesdb_register_builtin_metamodels(bdb)
     return bdb
@@ -59,7 +56,7 @@ class BayesDB(object):
             ...
     """
 
-    def __init__(self, cookie, pathname=None, save_sessions=True):
+    def __init__(self, cookie, pathname=None):
         if cookie != bayesdb_open_cookie:
             raise ValueError('Do not construct BayesDB objects directly!')
         if pathname is None:
@@ -179,11 +176,10 @@ class BayesDB(object):
         """
         if bindings is None:
             bindings = ()
-        if self.tracer:
+        if self.sql_tracer:
             finish_thunk = self.sql_tracer(string, bindings)
-        entry_id = self.create_session_entry("sql", string, bindings)
         cursor = self.sqlite3.execute(string, bindings)
-        if self.tracer and finish_thunk:
+        if self.sql_tracer and finish_thunk:
             finish_thunk()
         return bql.BayesDBCursor(self, cursor)
 

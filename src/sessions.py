@@ -14,26 +14,31 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from __future__ import print_function
 import bayeslite
 import time
 import sys
-from __future__ import print_function
+import json
+import requests
 
 class SessionTracer(object):
 
     def __init__(self, bdb):
+        self.out = sys.stderr
         self.bdb = bdb
+        self.bql_tracer = lambda q, b: self._bql_trace(q, b)
+        self.sql_tracer = lambda q, b: self._sql_trace(q, b)
         self.start_saving_sessions()
         self._start_new_session()
         self._check_unfinished_entries()
-        self.sql_exec = self.bdb.sqlite3.execute
-        self.out = sys.stderr
 
     def _print(self, content):
-        print(content, self.out)
+        print(content, file=self.out)
 
-    def _sql(self, query):
-        self._sql(query)
+    def _sql(self, query, bindings=None):
+        if bindings == None:
+            bindings = ()
+        return self.bdb.sqlite3.execute(query, bindings)
 
     def _start_new_session(self):
         self._sql('INSERT INTO bayesdb_session DEFAULT VALUES;')
@@ -47,10 +52,9 @@ class SessionTracer(object):
         ''', (entry_id,))
 
     def _trace(self, type, query, bindings):
-         '''Save a session entry into the database.'''
-        if bindings:
-            data += json.dumps(bindings)
+        '''Save a session entry into the database.'''
         t = time.time()
+        data = query + json.dumps(bindings)
         self._sql('''
             INSERT INTO bayesdb_session_entries
                 (session_id, time, type, data)
@@ -60,7 +64,7 @@ class SessionTracer(object):
         # entry's id so that it can be set to completed when appropriate
         curs = self._sql('SELECT last_insert_rowid();')
         entry_id = int(curs.next()[0])
-        return lambda : _finish(entry_id)
+        return lambda : self._finish(entry_id)
         # TODO test with returning None
 
     def _check_unfinished_entries(self):
@@ -72,14 +76,14 @@ class SessionTracer(object):
         ''', (self.session_id-1,))
         uncompleted_entries = int(cursor.next()[0])
         if uncompleted_entries > 0:
-            _print('WARNING: Previous session contains uncompleted entries.' +
+            self._print('WARNING: Previous session contains uncompleted entries.' +
                     'This may be due to a bad termination or crash of the ' +
                     'previous session. Consider uploading the session.')
 
-    def bql_trace(query, bindings):
+    def _bql_trace(self, query, bindings):
         return self._trace("bql", query, bindings)
 
-    def sql_trace(query, bindings):
+    def _sql_trace(self, query, bindings):
         return self._trace("sql", query, bindings)
 
     def clear_all_sessions(self):
@@ -106,7 +110,7 @@ class SessionTracer(object):
         (e.g.  queries) executed within session `session_id`."""
         if session_id > self.session_id or session_id < 1:
             raise ValueError('No such session (%d)' % session_id)
-        entries = bdb.sql_execute('''
+        entries = self._sql('''
             SELECT * FROM bayesdb_session_entries
                 WHERE session_id == ?
                 ORDER BY time DESC''', (session_id,))
@@ -115,24 +119,24 @@ class SessionTracer(object):
     def dump_current_session_as_json(self):
         """Returns a JSON string representing the current sesion (see
         `dump_session_as_json`)"""
-        return dump_session_as_json(bdb, self.session_id)
+        return self.dump_session_as_json(self.session_id)
     
     def send_session_data(self):
         """Send all saved session history."""
         probcomp_url = 'http://probcomp.csail.mit.edu/bayesdb/save_sessions.cgi'
         for id in range(1, self.session_id+1):
-            print_('Sending session %d to %s ...' % (id, probcomp_url))
+            self._print('Sending session %d to %s ...' % (id, probcomp_url))
             json_string = self.dump_session_as_json(id)
-            print_(json_string)
+            self._print(json_string)
             r = requests.post(probcomp_url,
                     data={'session_json' : json_string})
-            print_('Response: %s' % (r.text,))
+            self._print('Response: %s' % (r.text,))
 
     def start_saving_sessions(self):
-        self.bdb.trace(self.bql_trace)
-        self.bdb.sql_trace(self.sql_trace)
+        self.bdb.trace(self.bql_tracer)
+        self.bdb.sql_trace(self.sql_tracer)
 
     def stop_saving_sessions(self):
-        self.bdb.untrace(self.bql_trace)
-        self.bdb.sql_untrace(self.sql_trace)
+        self.bdb.untrace(self.bql_tracer)
+        self.bdb.sql_untrace(self.sql_tracer)
 
