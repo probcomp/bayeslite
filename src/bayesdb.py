@@ -16,6 +16,9 @@
 
 import contextlib
 import sqlite3
+import time
+import json
+import string
 
 import bayeslite.bql as bql
 import bayeslite.bqlfn as bqlfn
@@ -23,7 +26,8 @@ import bayeslite.metamodel as metamodel
 import bayeslite.parse as parse
 import bayeslite.schema as schema
 import bayeslite.txn as txn
-
+import bayeslite.sessions as sessions
+
 bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
 
 def bayesdb_open(pathname=None, builtin_metamodels=None):
@@ -69,7 +73,6 @@ class BayesDB(object):
         self.temptable = 0
         schema.bayesdb_install_schema(self.sqlite3)
         bqlfn.bayesdb_install_bql(self.sqlite3, self)
-
         # Cache an empty cursor for convenience.
         self.empty_cursor = bql.BayesDBCursor(self, self.sqlite3.execute(''))
 
@@ -142,7 +145,7 @@ class BayesDB(object):
         if bindings is None:
             bindings = ()
         if self.tracer:
-            self.tracer(string, bindings)
+            finish_thunk = self.tracer(string, bindings)
         phrases = parse.parse_bql_string(string)
         phrase = None
         try:
@@ -156,6 +159,8 @@ class BayesDB(object):
         else:
             raise ValueError('>1 phrase in string')
         cursor = bql.execute_phrase(self, phrase, bindings)
+        if self.tracer and finish_thunk:
+            finish_thunk()
         return self.empty_cursor if cursor is None else cursor
 
     def sql_execute(self, string, bindings=None):
@@ -172,8 +177,11 @@ class BayesDB(object):
         if bindings is None:
             bindings = ()
         if self.sql_tracer:
-            self.sql_tracer(string, bindings)
-        return bql.BayesDBCursor(self, self.sqlite3.execute(string, bindings))
+            finish_thunk = self.sql_tracer(string, bindings)
+        cursor = self.sqlite3.execute(string, bindings)
+        if self.sql_tracer and finish_thunk:
+            finish_thunk()
+        return bql.BayesDBCursor(self, cursor)
 
     @contextlib.contextmanager
     def savepoint(self):

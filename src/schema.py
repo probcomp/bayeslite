@@ -78,7 +78,8 @@ CREATE TABLE bayesdb_generator_model (
 );
 '''
 
-bayesdb_schema_5to6 = '''
+bayesdb_schema_upgrade = ['']*7
+bayesdb_schema_upgrade[5] = '''
 PRAGMA user_version = 6;
 
 ALTER TABLE bayesdb_generator
@@ -87,7 +88,26 @@ ALTER TABLE bayesdb_generator
 CREATE UNIQUE INDEX bayesdb_generator_i_default ON bayesdb_generator (tabname)
     WHERE defaultp;
 '''
-
+
+bayesdb_schema_upgrade[6] = '''
+PRAGMA user_version = 7;
+
+CREATE TABLE bayesdb_session (
+	id		INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
+				CHECK (0 < id),
+	sent		BOOLEAN DEFAULT 0
+);
+CREATE TABLE bayesdb_session_entries (
+	id		INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
+				CHECK (0 < id),
+	session_id	INTEGER NOT NULL REFERENCES bayesdb_session(id),
+	time		INTEGER NOT NULL, -- Unix time.
+	type		TEXT,
+	data		TEXT,
+	completed	BOOLEAN DEFAULT 0
+);
+'''
+
 ### BayesDB SQLite setup
 
 def bayesdb_install_schema(db):
@@ -144,13 +164,13 @@ def bayesdb_install_schema(db):
             user_version = 5
     elif application_id != 0x42594442:
         raise IOError('Wrong application id: 0x%08x' % (application_id,))
-    if user_version == 5:
+    while user_version < 7:
         # XXX One of these days, we'll have to consider making the
         # upgrade something to be explicitly requested by the user
         # when old versions persist.
-        db.executescript('BEGIN; %s; COMMIT;' % (bayesdb_schema_5to6,))
-        user_version = 6
-    if user_version != 6:
+        db.executescript('BEGIN; %s; COMMIT;' % (bayesdb_schema_upgrade[user_version],))
+        user_version += 1
+    if user_version != 7:
         raise IOError('Unknown bayeslite format version: %d' % (user_version,))
     db.execute('PRAGMA foreign_keys = ON')
     db.execute('PRAGMA integrity_check')
