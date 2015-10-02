@@ -26,6 +26,7 @@ import bayeslite.metamodel as metamodel
 import bayeslite.parse as parse
 import bayeslite.schema as schema
 import bayeslite.txn as txn
+import bayeslite.sessions as sessions
 
 bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
 
@@ -76,9 +77,11 @@ class BayesDB(object):
         self.temptable = 0
         schema.bayesdb_install_schema(self.sqlite3)
         bqlfn.bayesdb_install_bql(self.sqlite3, self)
+        # use the session tracer as default
         if save_sessions:
-            self.__start_new_session__()
-            self.check_uncompleted_session_entries()
+            session_tracer = SessionTracer(self, save_sessions)
+            trace(session_tracer.bql_trace)
+            sql_trace(session_tracer.sql_trace)
         # Cache an empty cursor for convenience.
         self.empty_cursor = bql.BayesDBCursor(self, self.sqlite3.execute(''))
 
@@ -86,11 +89,6 @@ class BayesDB(object):
         return self
     def __exit__(self, *_exc_info):
         self.close()
-
-    def __start_new_session__(self):
-        self.sqlite3.execute('INSERT INTO bayesdb_session DEFAULT VALUES')
-        curs = self.sqlite3.execute('SELECT last_insert_rowid()')
-        self.session_id = int(curs.next()[0])
 
     def close(self):
         """Close the database.  Further use is not allowed."""
@@ -142,49 +140,6 @@ class BayesDB(object):
         assert self.sql_tracer == tracer
         self.sql_tracer = None
 
-    def check_uncompleted_session_entries(self):
-        '''Check if the previous session ended with a failed command and
-        suggest sending the session'''
-        cursor = self.sqlite3.execute('''SELECT COUNT(*) FROM
-        bayesdb_session_entries WHERE completed=0 AND session_id=?''', (self.session_id-1,))
-        uncompleted_entries = int([row[0] for row in cursor][0])
-        if uncompleted_entries > 0:
-            print '''WARNING: Previous session contains uncompleted entries. This may be due to a bad termination or crash of the previous session. Consider uploading the session.'''
-
-    def create_session_entry(self, type, data, extra=None):
-        '''Save a session entry into the database, if we are doing that.'''
-        if not self.save_sessions:
-            return
-        if extra:
-            data += json.dumps(extra)
-        t = time.time()
-        self.sqlite3.execute('''INSERT INTO bayesdb_session_entries
-                                (session_id, time, type, data)
-                                VALUES (?,?,?,?)
-                             ''',
-                             (self.session_id, t, type, data))
-        # the entry is initially in the not-completed state. return the new
-        # entry's id so that it can be set to completed when appropriate
-        curs = self.sqlite3.execute('SELECT last_insert_rowid()')
-        return int([row[0] for row in curs][0])
-
-    def set_entry_completed(self, entry_id):
-        self.sqlite3.execute('''UPDATE bayesdb_session_entries
-        SET completed=1 WHERE id=?''', (entry_id,))
-
-    def unset_save_sessions(self):
-        self.save_sessions = False
-
-    def set_save_sessions(self):
-        self.save_sessions = True
-
-    def clear_all_sessions(self):
-        self.sqlite3.execute('DELETE FROM bayesdb_session_entries;')
-        self.sqlite3.execute('DELETE FROM bayesdb_session;')
-        self.sqlite3.execute('''DELETE FROM sqlite_sequence
-                WHERE name="bayesdb_session" OR name="bayesdb_session_entries"''');
-        self.__start_new_session__()
-
     def execute(self, string, bindings=None):
         """Execute a BQL query and return a cursor for its results.
 
@@ -199,8 +154,7 @@ class BayesDB(object):
         if bindings is None:
             bindings = ()
         if self.tracer:
-            self.tracer(string, bindings)
-        entry_id = self.create_session_entry("bql", string, bindings)
+            finished_thunk = self.tracer(string, bindings)
         phrases = parse.parse_bql_string(string)
         phrase = None
         try:
@@ -214,7 +168,8 @@ class BayesDB(object):
         else:
             raise ValueError('>1 phrase in string')
         cursor = bql.execute_phrase(self, phrase, bindings)
-        self.set_entry_completed(entry_id)
+        if self.tracer and finish_thunk:
+            finish_thunk()
         return self.empty_cursor if cursor is None else cursor
 
     def sql_execute(self, string, bindings=None):
@@ -230,11 +185,12 @@ class BayesDB(object):
         """
         if bindings is None:
             bindings = ()
-        if self.sql_tracer:
-            self.sql_tracer(string, bindings)
+        if self.tracer:
+            finished_thunk = self.sql_tracer(string, bindings)
         entry_id = self.create_session_entry("sql", string, bindings)
         cursor = self.sqlite3.execute(string, bindings)
-        self.set_entry_completed(entry_id)
+        if self.tracer and finish_thunk:
+            finish_thunk()
         return bql.BayesDBCursor(self, cursor)
 
     @contextlib.contextmanager
