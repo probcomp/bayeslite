@@ -4,10 +4,17 @@ Every commit on long-term branches including master should pass
 
    % ./check.sh
 
-which builds bayeslite and runs the automatic tests.  Please run this
-in your .git/hooks/pre-commit script during development, and in each
-commit please add or update automatic tests for any bugs you add or
-features you fix in the that commit.
+which builds bayeslite and runs most of the automatic tests.  Please
+run this in your .git/hooks/pre-commit script during development.
+An example pre-commit file is provided:
+   % ln -s `pwd`/tests/pre-commit .git/hooks/pre-commit
+
+We also recommend:
+   % ./check.sh lint
+   % ./check.sh cov
+and of course please add tests in tests/ or shell/tests
+
+
 
 check.sh does a clean build of bayeslite into the build/ directory and
 then either runs `py.test tests shell', if you pass it no arguments;
@@ -16,10 +23,18 @@ or runs py.test with the arguments supplied.
 Thus, if you're hacking a limited part of bayeslite, you can, e.g.,
 run a subset of tests, and stop at the first failure, with
 
+   % ./check.sh lint src/frobnitz.py tests/test_frobnitz.py
    % ./check.sh -x tests/test_frobnitz.py
 
 However, please double-check that every commit you have made passes
-all tests before publishing the commits.
+all tests before publishing the commits.  Because check.sh skips slow
+tests, we may contact you after you commit if your change caused our
+continuous integration to fail.
+
+We recommend creating a pull request and if we haven't reviewed it in
+a day or so, pinging someone you know on the team, or sending mail to
+probcomp@csail.mit.edu.  Thanks!
+
 
 * Randomization
 
@@ -100,6 +115,5 @@ Additional guidelines:
   => Legibility is more important than extensibility.
 - Prefer single-quoted strings, except use """ for docstrings.
 - unicode for user data; str for SQL/BQL text.
-- Don't bother with pylint.  It will waste your time.
 - Prefer clarity over boilerplate.
   => No need to clutter every docstring with a sphinx template.

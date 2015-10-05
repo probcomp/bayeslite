@@ -27,10 +27,10 @@ root=`cd -- "$(dirname -- "$0")" && pwd`
     elif [ "$1" == "lint" ]; then
         if [ $# -eq 1 ]; then
             pyfiles=`find . -name "*.py" -and -not -path "./external/*" -and -not -path "./build/*"`
-            pythenv.sh "$PYTHON" "$PY_LINT" -E $pyfiles
+            ./pythenv.sh "$PYTHON" "$PY_LINT" --rcfile=tests/pylintrc -E $pyfiles
         else
             shift
-            pythenv.sh "$PYTHON" "$PY_LINT" "$@"
+            pythenv.sh "$PYTHON" "$PY_LINT" --rcfile=tests/pylintrc "$@"
         fi
     else
         ./pythenv.sh "$PYTHON" "$PY_TEST" "$@"
