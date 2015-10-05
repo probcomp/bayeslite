@@ -4,6 +4,7 @@ set -Ceu
 
 : ${PYTHON:=python}
 : ${PY_TEST:=`which py.test`}
+: ${PY_LINT:=`which pylint`}
 
 if [ ! -x "${PY_TEST}" ]; then
     printf >&2 'unable to find pytest\n'
@@ -21,6 +22,16 @@ root=`cd -- "$(dirname -- "$0")" && pwd`
     export BAYESDB_DISABLE_VERSION_CHECK=1
     if [ $# -eq 0 ]; then
         ./pythenv.sh "$PYTHON" "$PY_TEST" -k "not _slow" tests shell/tests
+    elif [ "$1" == "cov" ]; then
+        ./pythenv.sh "$PYTHON" "$PY_TEST" --cov=bayeslite tests shell/tests
+    elif [ "$1" == "lint" ]; then
+        if [ $# -eq 1 ]; then
+            pyfiles=`find . -name "*.py" -and -not -path "./external/*" -and -not -path "./build/*"`
+            pythenv.sh "$PYTHON" "$PY_LINT" -E $pyfiles
+        else
+            shift
+            pythenv.sh "$PYTHON" "$PY_LINT" "$@"
+        fi
     else
         ./pythenv.sh "$PYTHON" "$PY_TEST" "$@"
     fi
