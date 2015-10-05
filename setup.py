@@ -14,6 +14,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+# If some modules are not found, we use others, so no need to warn:
+# pylint: disable=import-error
 try:
     from setuptools import setup
     from setuptools.command.test import test as TestCommand
@@ -21,7 +23,8 @@ except ImportError:
     from distutils.core import setup
     from distutils.cmd import Command
     class TestCommand(Command):
-        user_options = []
+        def __init__(self, *args, **kwargs):
+            Command.__init__(self, *args, **kwargs)
         def initialize_options(self): pass
         def finalize_options(self): pass
         def run(self): self.run_tests()
@@ -30,8 +33,8 @@ except ImportError:
             Command.set_undefined_options(self, opt, val)
 
 
-with open('VERSION', 'rU') as f:
-    version = f.readline().strip()
+with open('VERSION', 'rU') as version_file:
+    version = version_file.readline().strip()
 
 # Append the Git commit id if this is a development version.
 if version.endswith('+'):
@@ -56,14 +59,14 @@ if version.endswith('+'):
 
 # XXX Mega-kludge.  See below about grammars for details.
 try:
-    with open('src/version.py', 'rU') as f:
-        version_old = f.readlines()
+    with open('src/version.py', 'rU') as version_pyfile:
+        version_old = version_pyfile.readlines()
 except IOError:
     version_old = None
 version_new = ['__version__ = %s\n' % (repr(version),)]
 if version_old != version_new:
-    with open('src/version.py', 'w') as f:
-        f.writelines(version_new)
+    with open('src/version.py', 'w') as version_pyfile:
+        version_pyfile.writelines(version_new)
 
 # XXX This is a mega-kludge.  Since distutils/setuptools has no way to
 # order dependencies (what kind of brain-dead build system can't do
@@ -85,8 +88,8 @@ lemonade = root + '/external/lemonade/dist'
 
 def sha256_file(pathname):
     sha256 = hashlib.sha256()
-    with open(pathname, 'r') as f:
-        for block in iter(lambda: f.read(65536), ''):
+    with open(pathname, 'r') as source_file:
+        for block in iter(lambda: source_file.read(65536), ''):
             sha256.update(block)
     return sha256
 
@@ -110,20 +113,23 @@ def commit(path_in, path_out, path_sha256):
         file_sha256.write('%s\n' % (sha256_file(path_out).hexdigest(),))
     os.rename(path_sha256 + '.tmp', path_sha256)
 
-for path_y in grammars:
-    path = os.path.splitext(path_y)[0]
-    path_py = path + '.py'
-    path_sha256 = path + '.sha256'
-    if uptodate(path_y, path_py, path_sha256):
-        continue
-    print 'generating %s -> %s' % (path_y, path_py)
-    distutils.spawn.spawn([
-        '/usr/bin/env', 'PYTHONPATH=' + lemonade,
-        lemonade + '/bin/lemonade',
-        '-s',                   # Write statistics to stdout.
-        path_y,
-    ])
-    commit(path_y, path_py, path_sha256)
+def run_lemonade_on_grammars(grammar_paths):
+    for path_y in grammar_paths:
+        path = os.path.splitext(path_y)[0]
+        path_py = path + '.py'
+        path_sha256 = path + '.sha256'
+        if uptodate(path_y, path_py, path_sha256):
+            continue
+        print 'generating %s -> %s' % (path_y, path_py)
+        distutils.spawn.spawn([
+            '/usr/bin/env', 'PYTHONPATH=' + lemonade,
+            lemonade + '/bin/lemonade',
+            '-s',                   # Write statistics to stdout.
+            path_y,
+        ])
+        commit(path_y, path_py, path_sha256)
+
+run_lemonade_on_grammars(grammars)
 
 # XXX Several horrible kludges here to make `python setup.py test' work:
 #
@@ -150,8 +156,6 @@ class cmd_pytest(TestCommand):
         self.set_undefined_options('build', ('build_lib', 'build_lib'))
     def run_tests(self):
         import pytest
-        import os
-        import os.path
         import sys
         sys.path = [os.path.join(os.getcwd(), self.build_lib)] + sys.path
         os.environ['BAYESDB_WIZARD_MODE'] = '1'
