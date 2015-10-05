@@ -17,7 +17,7 @@ root=`cd -- "$(dirname -- "$0")" && pwd`
     set -Ceu
     cd -- "${root}"
     rm -rf build
-    "$PYTHON" setup.py build
+    "$PYTHON" setup.py build > /dev/null
     export BAYESDB_WIZARD_MODE=1
     export BAYESDB_DISABLE_VERSION_CHECK=1
     if [ $# -eq 0 ]; then
