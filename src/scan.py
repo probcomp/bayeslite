@@ -207,20 +207,6 @@ def scan_quoted_end(scanner, text, token):
     scanner.produce(token, string)
     scanner.begin("")
 
-def scan_blob(scanner, text):
-    assert text[0] == "x" or text[0] == "X"
-    assert text[1] == text[-1] == "'"
-    nhexits = len(text) - len("x''")
-    assert (nhexits % 2) == 0
-    blob = bytearray.fromhex(buffer(hexbuf, 1, nhexits))
-    scanner.produce(grammar.L_BLOB, blob)
-
-def scan_badblob(scanner, text):
-    assert text[0] == "x" or text[0] == "X"
-    assert text[1] == text[-1] == "'"
-    # XXX Report a clearer syntax error.
-    scanner.produce(-1, text)   # error
-
 class BQLScanner(Plex.Scanner):
     line_comment = Plex.Str("--") + Plex.Rep(Plex.AnyBut("\n"))
     whitespace = Plex.Any("\f\n\r\t ")
@@ -241,8 +227,6 @@ class BQLScanner(Plex.Scanner):
     exponent = expmark + optsign + digits1
     optexp = Plex.Opt(exponent)
     float_dec = ((intfrac | fraconly) + optexp) | (digits1 + exponent)
-    blob = Plex.Str("x'", "X'") + Plex.Rep(hexit + hexit) + Plex.Str("'")
-    badblob = Plex.Str("x'", "X'") + Plex.AnyBut("'") + Plex.Str("'")
     name_special = Plex.Any("_$")
     name = (letter | name_special) + Plex.Rep(letter | digit | name_special)
 
@@ -281,8 +265,6 @@ class BQLScanner(Plex.Scanner):
         (Plex.Str("$") + name,  scan_nampar),
         (Plex.Str("'"),         scan_string_start),
         (Plex.Str('"'),         scan_qname_start),
-        (blob,                  scan_blob),
-        (badblob,               scan_badblob),
         (name,                  scan_name),
         (integer_dec,           scan_integer),
         (integer_hex,           scan_integer),
