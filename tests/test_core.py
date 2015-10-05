@@ -60,7 +60,7 @@ def bayesdb(metamodel=None, **kwargs):
 def test_bayesdb_instantiation():
     # Use bayesdb_open -- don't instantiate directly.
     with pytest.raises(TypeError):
-        bayeslite.BayesDB()
+        bayeslite.BayesDB()  # pylint: disable=no-value-for-parameter
     with pytest.raises(ValueError):
         bayeslite.BayesDB(':memory:', 0xdeadbeef)
 
@@ -490,9 +490,9 @@ def test_row_similarity(exname, source, target, colnos):
         for rowid in range(4)
         for colno in range(1,3)])
 def test_row_column_predictive_probability(exname, rowid, colno):
-    if exname == 't0' and colnos != [] and colnos != [0]:
+    if exname == 't0' and colno > 1:
         pytest.skip('Not enough columns in t0.')
-    if exname.startswith('t1_sub') and any(colno > 1 for colno in colnos):
+    if exname.startswith('t1_sub') and colno > 1:
         pytest.skip('Not enough columns in %s.' % (exname,))
     with analyzed_bayesdb_generator(examples[exname](), 1, 1) \
             as (bdb, generator_id):
