@@ -48,34 +48,26 @@ def bayesdb_load_codebook_csv_file(bdb, table, pathname):
                     (repr(table), repr(column_name)))
             colno = core.bayesdb_table_column_number(bdb, table, column_name)
             try:
-                value_map = json.loads(value_map_json)
-            except ValueError:
-                if value_map_json == '':
-                    value_map = float('NaN')
+                value_map = dict(json.loads(value_map_json))
+            except (ValueError, TypeError):
+                if value_map_json == '' or value_map_json.lower() == 'nan':
+                    value_map = {}
                 else:
-                    raise IOError('Invalid value map for column %s' %
-                        (column_name,))
-            if isinstance(value_map, float) and math.isnan(value_map):
-                # No value map.
-                pass
-            elif isinstance(value_map, dict):
-                sql = '''
-                    DELETE FROM bayesdb_column_map
-                        WHERE tabname = ? AND colno = ?
-                '''
-                bdb.sql_execute(sql, (table, colno))
-                sql = '''
-                    INSERT INTO bayesdb_column_map
-                        (tabname, colno, key, value)
-                        VALUES (?, ?, ?, ?)
-                '''
-                for key in sorted(value_map.keys()):
-                    value = value_map[key]
-                    bdb.sql_execute(sql, (table, colno, key, value))
-            else:
-                # XXX Arbitrary input in error message...
-                raise IOError('Invalid value map for column: %s' %
-                    (repr(column_name),))
+                    raise IOError('Invalid value map for column %r: %r' %
+                                  (column_name, value_map_json))
+            sql = '''
+                DELETE FROM bayesdb_column_map
+                    WHERE tabname = ? AND colno = ?
+            '''
+            bdb.sql_execute(sql, (table, colno))
+            sql = '''
+                INSERT INTO bayesdb_column_map
+                    (tabname, colno, key, value)
+                    VALUES (?, ?, ?, ?)
+            '''
+            for key in sorted(value_map.keys()):
+                value = value_map[key]
+                bdb.sql_execute(sql, (table, colno, key, value))
             sql = '''
                 UPDATE bayesdb_column
                     SET shortname = :shortname, description = :description
