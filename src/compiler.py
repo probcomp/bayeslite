@@ -473,7 +473,7 @@ def compile_estimate_by(bdb, estby, out):
     else:
         assert estby.quantifier == ast.SELQUANT_ALL
     if not core.bayesdb_has_generator_default(bdb, estby.generator):
-        raise BQLError(bdb, 'No such generator: %s' % (estimate.generator,))
+        raise BQLError(bdb, 'No such generator: %s' % (estby.generator,))
     generator_id = core.bayesdb_get_generator_default(bdb, estby.generator)
     bql_compiler = BQLCompiler_Const(generator_id, estby.modelno)
     named = True
@@ -1150,8 +1150,6 @@ def compile_column_lists(bdb, generator_id, column_lists, _bql_compiler, out):
                 colno = core.bayesdb_generator_column_number(bdb, generator_id,
                     column[0])
                 out.write('%d' % (colno,))
-        elif isinstance(collist, ast.ColListSav):
-            raise NotImplementedError('saved column lists')
         else:
             assert False, 'Invalid column list: %s' % (repr(collist),)
 
