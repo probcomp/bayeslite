@@ -25,6 +25,10 @@ except ImportError:
         def initialize_options(self): pass
         def finalize_options(self): pass
         def run(self): self.run_tests()
+        def run_tests(self): Command.run_tests(self)
+        def set_undefined_options(self, opt, val):
+            Command.set_undefined_options(self, opt, val)
+
 
 with open('VERSION', 'rU') as f:
     version = f.readline().strip()
