@@ -291,12 +291,6 @@ class BQLSemantics(object):
     def p_constraints_opt_none(self):           return []
     def p_constraints_opt_some(self, cs):       return cs
 
-    def p_query_action_none(self):              return None
-    def p_query_action_freq(self):              return ast.QACT_FREQ
-    def p_query_action_hist(self):              return ast.QACT_HIST
-    def p_query_action_summarize(self):         return ast.QACT_SUMMARIZE
-    def p_query_action_plot(self):              return ast.QACT_PLOT
-
     def p_query_select(self, q):                return q
     def p_query_estimate(self, q):              return q
     def p_query_estcol(self, q):                return q
