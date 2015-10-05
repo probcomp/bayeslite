@@ -124,18 +124,20 @@ def bayesdb_load_legacy_models(bdb, generator, table, metamodel, pathname,
             if create and not ifnotexists:
                 raise ValueError('Generator already exists: %s' %
                     (repr(generator),))
-            if casefold(table) != \
-               core.bayesdb_generator_table(bdb, generator_id):
-                raise ValueError('Generator %s is not for table: %s' %
-                    (repr(generator), repr(table)))
+            generator_id = core.bayesdb_get_generator(bdb, generator)
+            generator_table = core.bayesdb_generator_table(bdb, generator_id)
+            if casefold(table) != generator_table:
+                raise ValueError(
+                    'Generator %r is for table %r, not for table: %r' %
+                    (generator, generator_table, table))
             # Generator exists.  If the schema differs and there are
             # existing models, fail.  If the schema differs and there
             # are no existing models, change the schema.
             #
             # XXX Not clear changing the schema is really appropriate.
             generator_id = core.bayesdb_get_generator(bdb, generator)
-            if column_types != \
-               bayesdb_generator_column_types(bdb, generator_id):
+            old_types = bayesdb_generator_column_stattypes(bdb, generator_id)
+            if column_stattypes != old_types:
                 sql = '''
                     SELECT COUNT(*) FROM bayesdb_generator_model
                         WHERE generator_id = ?
