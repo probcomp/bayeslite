@@ -85,20 +85,27 @@ class BayesDB(object):
         self.sqlite3 = None
 
     def trace(self, tracer):
-        """Call `tracer` for each BQL query executed.
+        """Trace execution of BQL queries.
 
-        `tracer` will be called with two arguments: the query to be
-        executed, as a string; and the sequence or dictionary of
+        For simple tracing, pass a function or arbitrary Python
+        callable as the `tracer`.  It will be called at the start of
+        execution of each BQL query, with two arguments: the query to
+        be executed, as a string; and the sequence or dictionary of
         bindings.
+
+        For articulated tracing, pass an instance of
+        :class:`~IBayesDBTracer`, whose methods will be called in the
+        pattern described in its documentation.
 
         Only one tracer can be established at a time.  To remove it,
         use :meth:`~BayesDB.untrace`.
+
         """
         assert self.tracer is None
         self.tracer = tracer
 
     def untrace(self, tracer):
-        """Stop calling `tracer` for each BQL query executed.
+        """Stop tracing execution of BQL queries.
 
         `tracer` must have been previously established with
         :meth:`~BayesDB.trace`.
@@ -107,20 +114,27 @@ class BayesDB(object):
         self.tracer = None
 
     def sql_trace(self, tracer):
-        """Call `tracer` for each SQL query executed.
+        """Trace execution of SQL queries.
 
-        `tracer` will be called with two arguments: the query to be
-        executed, as a string; and the sequence or dictionary of
+        For simple tracing, pass a function or arbitrary Python
+        callable as the `tracer`.  It will be called at the start of
+        execution of each SQL query, with two arguments: the query to
+        be executed, as a string; and the sequence or dictionary of
         bindings.
+
+        For articulated tracing, pass an instance of
+        :class:`~IBayesDBTracer`, whose methods will be called in the
+        pattern described in its documentation.
 
         Only one tracer can be established at a time.  To remove it,
         use :meth:`~BayesDB.sql_untrace`.
+
         """
         assert self.sql_tracer is None
         self.sql_tracer = tracer
 
     def sql_untrace(self, tracer):
-        """Stop calling `tracer` for each SQL query executed.
+        """Stop tracing execution of SQL queries.
 
         `tracer` must have been previously established with
         :meth:`~BayesDB.sql_trace`.

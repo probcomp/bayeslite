@@ -68,6 +68,7 @@ contact bayesdb@mit.edu to participate in our research project.
 
 from bayeslite.bayesdb import BayesDB
 from bayeslite.bayesdb import bayesdb_open
+from bayeslite.bayesdb import IBayesDBTracer
 from bayeslite.codebook import bayesdb_load_codebook_csv_file
 from bayeslite.exception import BayesDBException
 from bayeslite.exception import BQLError
@@ -107,6 +108,7 @@ __all__ = [
     'bayesdb_register_metamodel',
     'bql_quote_name',
     'IBayesDBMetamodel',
+    'IBayesDBTracer',
     '__version__',
 ]
 
