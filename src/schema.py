@@ -102,7 +102,7 @@ CREATE TABLE bayesdb_session_entries (
 				CHECK (0 < id),
 	session_id	INTEGER NOT NULL REFERENCES bayesdb_session(id),
 	time		INTEGER NOT NULL, -- Unix time.
-	type		TEXT,
+	type		TEXT CHECK (type IN ('bql','sql')) NOT NULL,
 	data		TEXT,
 	completed	BOOLEAN DEFAULT 0
 );

@@ -16,10 +16,11 @@
 
 import pytest
 import bayeslite
-import bayeslite.sessions as ss
+import bayeslite.sessions as sescap
 import test_core
 import json
 import sqlite3
+from collections import namedtuple
 
 def make_bdb():
     crosscat = test_core.local_crosscat()
@@ -30,38 +31,28 @@ def make_bdb():
 
 def make_bdb_with_sessions():
     bdb = make_bdb()
-    t = ss.SessionTracer(bdb)
-    return (bdb, t)
+    tr = sescap.SessionTracer(bdb)
+    return (bdb, tr)
 
-def get_id(entry):
-    return entry[0]
-
-def get_session(entry):
-    return entry[1]
-
-def get_time(entry):
-    return entry[2]
-
-def get_type(entry):
-    return entry[3]
-
-def get_data(entry):
-    return entry[4]
+def query_scalar_int(executor, query):
+    return int(executor(query).next()[0])
 
 def get_num_sessions(executor):
-    return int(executor('''
+    return query_scalar_int(executor, '''
         SELECT COUNT(*) FROM bayesdb_session;
-    ''').next()[0])
+    ''')
 
 def get_num_entries(executor):
-    return int(executor('''
+    return query_scalar_int(executor, '''
         SELECT COUNT(*) FROM bayesdb_session_entries;
-    ''').next()[0])
+    ''')
 
 def get_entries(executor):
-    return list(executor('''
+    entries = list(executor('''
         SELECT * FROM bayesdb_session_entries ORDER BY id;
     '''))
+    SessionEntry = namedtuple('SessionEntry', ['id', 'session', 'time', 'type', 'data'])
+    return [SessionEntry(e[0], e[1], e[2], e[3], e[4]) for e in entries]
 
 def _basic_test_trace(executor):
 
@@ -69,22 +60,22 @@ def _basic_test_trace(executor):
     assert get_num_sessions(executor) == 1
 
     # the above select query counts should become one or more entries
-    num_entries = int(executor('''
+    num_entries = query_scalar_int(executor, '''
         SELECT COUNT(*) FROM bayesdb_session_entries;
-    ''').next()[0])
+    ''')
     assert num_entries > 0
 
     # entries are ordered starting from 1
     for id, entry in enumerate(get_entries(executor)):
-        assert get_session(entry) == 1
-        assert get_id(entry) == id + 1
+        assert entry.session == 1
+        assert entry.id == id + 1
 
 def test_sessions_basic_bql():
-    bdb, t = make_bdb_with_sessions()
+    (bdb, tr) = make_bdb_with_sessions()
     _basic_test_trace(bdb.execute)
 
 def test_sessions_basic_sql():
-    bdb, t = make_bdb_with_sessions()
+    (bdb, tr) = make_bdb_with_sessions()
     _basic_test_trace(bdb.sql_execute)
 
 def _simple_bql_query(bdb):
@@ -93,22 +84,22 @@ def _simple_bql_query(bdb):
     ''')
 
 def test_sessions_session_id_and_clear_sessions():
-    bdb, t = make_bdb_with_sessions()
+    (bdb, tr) = make_bdb_with_sessions()
     _simple_bql_query(bdb)
 
     # create two more sessions
-    t._start_new_session()
-    t._start_new_session()
-    assert t.current_session_id() == 3
+    tr._start_new_session()
+    tr._start_new_session()
+    assert tr.current_session_id() == 3
     assert get_num_sessions(bdb.execute) == 3
 
     # there should now be one session (the current session)
-    t.clear_all_sessions()
-    assert t.current_session_id() == 1
+    tr.clear_all_sessions()
+    assert tr.current_session_id() == 1
     assert get_num_sessions(bdb.execute) == 1
 
     # the entry ids in the current session should start from 1
-    assert min(map(get_id, get_entries(bdb.execute))) == 1
+    assert min(entry.id for entry in get_entries(bdb.execute)) == 1
 
 def test_sessions_start_stop():
     bdb = make_bdb()
@@ -120,42 +111,49 @@ def test_sessions_start_stop():
     assert get_num_entries(bdb.execute) == 0
 
     # registering the tracer starts recording of sessions
-    t = ss.SessionTracer(bdb)
+    tr = sescap.SessionTracer(bdb)
     _simple_bql_query(bdb)
     num = get_num_entries(bdb.execute)
     assert num > 0
 
     # stopping the tracer
-    t.stop_saving_sessions()
+    tr.stop_saving_sessions()
     _simple_bql_query(bdb)
     assert get_num_entries(bdb.execute) == num
 
     # restarting the tracer
-    t.start_saving_sessions()
+    tr.start_saving_sessions()
     _simple_bql_query(bdb)
     assert get_num_entries(bdb.execute) > num
 
 def test_sessions_json_dump():
-    bdb, t = make_bdb_with_sessions()
+    (bdb, tr) = make_bdb_with_sessions()
     _simple_bql_query(bdb)
-    t.stop_saving_sessions()
-    json_str = t.dump_current_session_as_json()
+    tr.stop_saving_sessions()
+    json_str = tr.dump_current_session_as_json()
     entries = json.loads(json_str)
     assert len(entries) == get_num_entries(bdb.execute)
 
 def test_sessions_unfinished_entry():
-    bdb, t = make_bdb_with_sessions()
+    (bdb, tr) = make_bdb_with_sessions()
     bql = 'SELECT * FROM nonexistent_table'
     try:
         bdb.execute(bql)
         assert False
     except sqlite3.OperationalError:
-        t._start_new_session()
+        tr._start_new_session()
         # check for unfinished queries in the previous session
-        assert t._check_unfinished_entries() > 0
+        assert tr._check_unfinished_entries() > 0
 
-@pytest.mark.skipif(True, reason="Not test network session upload")
 def test_sessions_send_data():
-    bdb, t = make_bdb_with_sessions()
+    (bdb, tr) = make_bdb_with_sessions()
     _simple_bql_query(bdb)
-    t.send_session_data()
+    tr.send_session_data()
+
+test_sessions_basic_bql()
+test_sessions_basic_sql()
+test_sessions_session_id_and_clear_sessions()
+test_sessions_start_stop()
+test_sessions_json_dump()
+test_sessions_unfinished_entry()
+test_sessions_send_data()
