@@ -207,3 +207,87 @@ class BayesDB(object):
         n = self.temptable
         self.temptable += 1
         return 'bayesdb_temp_%u' % (n,)
+
+class IBayesDBTracer(object):
+    """BayesDB articulated tracing interface.
+
+    If you just want to trace start of queries, pass a function to
+    :meth:`~BayesDB.trace` or :meth:`~BayesDB.sql_trace`.  If you want
+    finer-grained event tracing, pass an instance of this interface.
+
+    A successful execution of a BayesDB query goes through the
+    following stages:
+
+    0. Not started
+    1. Preparing cursor
+    2. Result available
+    3. All results consumed
+
+    Preparing the cursor and consuming results may both be fast or
+    slow, and may succeed or fail, depending on the query.  Also, the
+    client may abandon some queries without consuming all the results.
+
+    Thus, a query may experience the following transitions:
+
+    - start: 0 --> 1
+    - ready: 1 --> 2
+    - error: 1 --> 0 or 2 --> 0
+    - finished: 2 --> 3
+    - abandoned: 2 --> 0 or 3 --> 0
+
+    To receive notifications of any of those events for BQL or SQL
+    queries, override the corresponding method(s) of this interface,
+    and install the tracer object using :meth:`~BayesDB.trace` or
+    :meth:`~BayesDB.sql_trace` respectively.
+
+    Note 1: The client may run multiple cursors at the same time, so
+    queries in the "Result available" state may overlap.
+
+    Note 2: Abandonment of a query is detected when the cursor object
+    is garbage collected, so the timing cannot be relied upon.
+
+    """
+
+    def start(self, qid, query, bindings):
+        """Called when a query is started.
+
+        The arguments are a unique query id, the query string, and the
+        tuple or dictionary of bindings.
+
+        """
+        pass
+
+    def ready(self, qid, cursor):
+        """Called when a query is ready for consumption of results.
+
+        The arguments are the query id and the BayesDB cursor.
+
+        Note for garbage collector wonks: the passed `cursor` is the
+        one wrapped in the :class:`~TracingCursor`, not the
+        TracingCursor instance itself, so a tracer retaining a
+        reference to `cursor` will not create a reference cycle or
+        prevent the :meth:`abandoned` method from being called.
+
+        """
+        pass
+
+    def error(self, qid, e):
+        """Called when query preparation or result consumption fails.
+
+        The arguments are the query id and the exception object.
+
+        """
+        pass
+
+    def finished(self, qid):
+        """Called when all query results are consumed."""
+        pass
+
+    def abandoned(self, qid):
+        """Called when a query is abandoned.
+
+        This is detected when the cursor object is garbage collected,
+        so its timing cannot be relied upon.
+
+        """
+        pass
