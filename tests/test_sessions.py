@@ -149,11 +149,3 @@ def test_sessions_send_data():
     (bdb, tr) = make_bdb_with_sessions()
     _simple_bql_query(bdb)
     tr.send_session_data()
-
-test_sessions_basic_bql()
-test_sessions_basic_sql()
-test_sessions_session_id_and_clear_sessions()
-test_sessions_start_stop()
-test_sessions_json_dump()
-test_sessions_unfinished_entry()
-test_sessions_send_data()
