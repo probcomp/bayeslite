@@ -67,6 +67,7 @@ class BayesDB(object):
         self.sql_tracer = None
         self.cache = None
         self.temptable = 0
+        self.qid = 0
         schema.bayesdb_install_schema(self.sqlite3)
         bqlfn.bayesdb_install_bql(self.sqlite3, self)
 
@@ -163,9 +164,31 @@ class BayesDB(object):
         """
         if bindings is None:
             bindings = ()
-        if self.tracer:
-            self.tracer(string, bindings)
-        return self._do_execute(string, bindings)
+        return self._maybe_trace(
+            self.tracer, self._do_execute, string, bindings)
+
+    def _maybe_trace(self, tracer, meth, string, bindings):
+        if tracer and isinstance(tracer, IBayesDBTracer):
+            return self._trace_articulately(
+                tracer, meth, string, bindings)
+        if tracer:
+            tracer(string, bindings)
+        return meth(string, bindings)
+
+    def _qid(self):
+        self.qid += 1
+        return self.qid
+
+    def _trace_articulately(self, tracer, meth, string, bindings):
+        qid = self._qid()
+        tracer.start(qid, string, bindings)
+        try:
+            cursor = meth(string, bindings)
+            tracer.ready(qid, cursor)
+            return TracingCursor(tracer, qid, cursor)
+        except Exception as e:
+            tracer.error(qid, e)
+            raise e
 
     def _do_execute(self, string, bindings):
         phrases = parse.parse_bql_string(string)
@@ -196,8 +219,10 @@ class BayesDB(object):
         """
         if bindings is None:
             bindings = ()
-        if self.sql_tracer:
-            self.sql_tracer(string, bindings)
+        return self._maybe_trace(
+            self.sql_tracer, self._do_sql_execute, string, bindings)
+
+    def _do_sql_execute(self, string, bindings):
         return bql.BayesDBCursor(self, self.sqlite3.execute(string, bindings))
 
     @contextlib.contextmanager
