@@ -109,6 +109,10 @@ class BayesDB(object):
 
         `tracer` must have been previously established with
         :meth:`~BayesDB.trace`.
+
+        Any queries currently in progress will continue to be traced
+        until completion.
+
         """
         assert self.tracer == tracer
         self.tracer = None
@@ -138,6 +142,10 @@ class BayesDB(object):
 
         `tracer` must have been previously established with
         :meth:`~BayesDB.sql_trace`.
+
+        Any queries currently in progress will continue to be traced
+        until completion.
+
         """
         assert self.sql_tracer == tracer
         self.sql_tracer = None
