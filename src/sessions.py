@@ -15,18 +15,19 @@
 #   limitations under the License.
 
 import bayeslite
+from bayeslite import IBayesDBTracer
 import time
 import sys
 import json
 import requests
 
-class SessionTracer(object):
+class SessionOrchestrator(object):
 
     def __init__(self, bdb, logger=None):
-        self.out = sys.stderr
         self.bdb = bdb
-        self.bql_tracer = lambda q, b: self._bql_trace(q, b)
-        self.sql_tracer = lambda q, b: self._sql_trace(q, b)
+        self._qid_to_entry_id = {}
+        self._sql_tracer = _SessionTracer("sql", self)
+        self._bql_tracer = _SessionTracer("bql", self)
         self.start_saving_sessions()
         self._start_new_session()
         self._check_unfinished_entries()
@@ -55,18 +56,7 @@ class SessionTracer(object):
             bindings = ()
         return self.bdb.sqlite3.execute(query, bindings)
 
-    def _start_new_session(self):
-        self._sql('INSERT INTO bayesdb_session DEFAULT VALUES;')
-        curs = self._sql('SELECT last_insert_rowid();')
-        self.session_id = int(curs.next()[0])
-
-    def _finish(self, entry_id):
-        self._sql('''
-            UPDATE bayesdb_session_entries
-                SET completed=1 WHERE id=?;
-        ''', (entry_id,))
-
-    def _trace(self, type, query, bindings):
+    def _add_entry(self, qid, type, query, bindings):
         '''Save a session entry into the database. The entry is initially in
         the not-completed state. Return the new entry's id so that it can be
         set to completed when appropriate.'''
@@ -79,7 +69,19 @@ class SessionTracer(object):
         ''', (self.session_id, t, type, data))
         curs = self._sql('SELECT last_insert_rowid();')
         entry_id = int(curs.next()[0])
-        return lambda : self._finish(entry_id)
+        self._qid_to_entry_id[qid] = entry_id
+ 
+    def _mark_entry_completed(self, qid):
+        entry_id = self._qid_to_entry_id[qid]
+        self._sql('''
+            UPDATE bayesdb_session_entries
+                SET completed=1 WHERE id=?;
+        ''', (entry_id,))
+
+    def _start_new_session(self):
+        self._sql('INSERT INTO bayesdb_session DEFAULT VALUES;')
+        curs = self._sql('SELECT last_insert_rowid();')
+        self.session_id = int(curs.next()[0])
 
     def _check_unfinished_entries(self):
         '''Check if the previous session ended with a failed command and
@@ -94,12 +96,6 @@ class SessionTracer(object):
                     'This may be due to a bad termination or crash of the ' +
                     'previous session. Consider uploading the session with send_session_data().')
         return uncompleted_entries
-
-    def _bql_trace(self, query, bindings):
-        return self._trace("bql", query, bindings)
-
-    def _sql_trace(self, query, bindings):
-        return self._trace("sql", query, bindings)
 
     def clear_all_sessions(self):
         self._sql('DELETE FROM bayesdb_session_entries;')
@@ -149,10 +145,21 @@ class SessionTracer(object):
             self._info('Response: %s' % (r.text,))
 
     def start_saving_sessions(self):
-        self.bdb.trace(self.bql_tracer)
-        self.bdb.sql_trace(self.sql_tracer)
+        self.bdb.trace(self._bql_tracer)
+        self.bdb.sql_trace(self._sql_tracer)
 
     def stop_saving_sessions(self):
-        self.bdb.untrace(self.bql_tracer)
-        self.bdb.sql_untrace(self.sql_tracer)
+        self.bdb.untrace(self._bql_tracer)
+        self.bdb.sql_untrace(self._sql_tracer)
 
+class _SessionTracer(IBayesDBTracer):
+
+    def __init__(self, type, orchestrator):
+        self._type = type
+        self._orchestrator = orchestrator
+
+    def start(self, qid, query, bindings):
+        self._orchestrator._add_entry(qid, self._type, query, bindings)
+
+    def finished(self, qid):
+        self._orchestrator._mark_entry_completed(qid)

@@ -31,7 +31,7 @@ def make_bdb():
 
 def make_bdb_with_sessions():
     bdb = make_bdb()
-    tr = sescap.SessionTracer(bdb)
+    tr = sescap.SessionOrchestrator(bdb)
     return (bdb, tr)
 
 def query_scalar_int(executor, query):
@@ -111,7 +111,7 @@ def test_sessions_start_stop():
     assert get_num_entries(bdb.execute) == 0
 
     # registering the tracer starts recording of sessions
-    tr = sescap.SessionTracer(bdb)
+    tr = sescap.SessionOrchestrator(bdb)
     _simple_bql_query(bdb)
     num = get_num_entries(bdb.execute)
     assert num > 0
