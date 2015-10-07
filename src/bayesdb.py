@@ -199,7 +199,7 @@ class BayesDB(object):
                 return TracingCursor(tracer, qid, cursor)
         except Exception as e:
             tracer.error(qid, e)
-            raise e
+            raise
 
     def _do_execute(self, string, bindings):
         phrases = parse.parse_bql_string(string)
