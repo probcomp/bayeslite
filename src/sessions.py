@@ -32,8 +32,8 @@ class SessionOrchestrator(object):
         self._bql_tracer = _SessionTracer("bql", self)
         self.start_saving_sessions()
         self._suggested_send = False
-        self._start_new_session()
         self._logger = logger
+        self._start_new_session()
 
     def _info(self, msg):
         if self._logger:
