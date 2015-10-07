@@ -185,7 +185,18 @@ class BayesDB(object):
         try:
             cursor = meth(string, bindings)
             tracer.ready(qid, cursor)
-            return TracingCursor(tracer, qid, cursor)
+            if cursor == self.empty_cursor:
+                tracer.finished(qid)
+                # Calling abandoned here is a choice.  On the one
+                # hand, I know the client can't get anything out of
+                # the cursor; on the other hand, returning a
+                # TracingCursor would let the tracer detect when the
+                # client had released their null result cursor.  Why
+                # would the tracer care about that?
+                tracer.abandoned(qid)
+                return cursor
+            else:
+                return TracingCursor(tracer, qid, cursor)
         except Exception as e:
             tracer.error(qid, e)
             raise e
