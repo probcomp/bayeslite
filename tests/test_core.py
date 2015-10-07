@@ -60,7 +60,7 @@ def bayesdb(metamodel=None, **kwargs):
 def test_bayesdb_instantiation():
     # Use bayesdb_open -- don't instantiate directly.
     with pytest.raises(TypeError):
-        bayeslite.BayesDB()
+        bayeslite.BayesDB()  # pylint: disable=no-value-for-parameter
     with pytest.raises(ValueError):
         bayeslite.BayesDB(':memory:', 0xdeadbeef)
 
@@ -285,12 +285,12 @@ def t1_subcat():
         t1_schema, t1_data,
         columns=['label CATEGORICAL', 'weight CATEGORICAL'])
 
-# def t1_mp():
-#     crosscat = multiprocessing_crosscat()
-#     metamodel = CrosscatMetamodel(crosscat)
-#     return bayesdb_generator(bayesdb(metamodel=metamodel),
-#         't1', 't1_cc', t1_schema, t1_data,
-#         columns=['label CATEGORICAL', 'age NUMERICAL', 'weight NUMERICAL'])
+def t1_mp():
+    crosscat = multiprocessing_crosscat()
+    metamodel = CrosscatMetamodel(crosscat)
+    return bayesdb_generator(bayesdb(metamodel=metamodel),
+        't1', 't1_cc', t1_schema, t1_data,
+         columns=['label CATEGORICAL', 'age NUMERICAL', 'weight NUMERICAL'])
 
 def test_t1_nokey():
     with bayesdb_generator(bayesdb(), 't1', 't1_cc', t1_schema, t1_data,
@@ -317,6 +317,7 @@ def test_t1_nocase():
 examples = {
     't0': t0,
     't1': t1,
+#    't1_mp': t1_mp,
     't1_sub': t1_sub,
     't1_subcat': t1_subcat,
 }
@@ -341,30 +342,25 @@ def test_example_analysis1(exname):
 # The multiprocessing engine has a large overhead, too much to try
 # every normal test with it, so we'll just run this one test to make
 # sure it doesn't crash and burn with ten models.
-# def test_t1_mp_analysis():
-#     with analyzed_bayesdb_generator(t1_mp(), 10, 2):
-#         pass
+def test_t1_mp_analysis():
+    with analyzed_bayesdb_generator(t1_mp(), 10, 2):
+        pass
 
-# def test_t1_mp_analysis_time_deadline():
-#     with analyzed_bayesdb_generator(t1_mp(), 10, None, max_seconds=1):
-#         pass
+def test_t1_mp_analysis_time_deadline():
+    with analyzed_bayesdb_generator(t1_mp(), 10, None, max_seconds=1):
+        pass
 
-# def test_t1_mp_analysis_iter_deadline():
-#     with analyzed_bayesdb_generator(t1_mp(), 10, 1, max_seconds=10):
-#         pass
+def test_t1_mp_analysis_iter_deadline_slow():
+    with analyzed_bayesdb_generator(t1_mp(), 10, 1, max_seconds=10):
+        pass
 
 def test_t1_analysis_time_deadline():
     with analyzed_bayesdb_generator(t1(), 10, None, max_seconds=1):
         pass
 
-def test_t1_analysis_iter_deadline():
-    pytest.skip('XXX TAKES TOO LONG FOR NOW')
+def test_t1_analysis_iter_deadline_slow():
     with analyzed_bayesdb_generator(t1(), 10, 1, max_seconds=10):
         pass
-
-# def test_t1_mp_analysis_iter_deadline():
-#     with analyzed_bayesdb_generator(t1_mp(), 10, 1, max_seconds=10):
-#         pass
 
 @pytest.mark.parametrize('rowid,colno,confidence',
     [(i+1, j, conf)
@@ -494,9 +490,9 @@ def test_row_similarity(exname, source, target, colnos):
         for rowid in range(4)
         for colno in range(1,3)])
 def test_row_column_predictive_probability(exname, rowid, colno):
-    if exname == 't0' and colnos != [] and colnos != [0]:
+    if exname == 't0' and colno > 1:
         pytest.skip('Not enough columns in t0.')
-    if exname.startswith('t1_sub') and any(colno > 1 for colno in colnos):
+    if exname.startswith('t1_sub') and colno > 1:
         pytest.skip('Not enough columns in %s.' % (exname,))
     with analyzed_bayesdb_generator(examples[exname](), 1, 1) \
             as (bdb, generator_id):

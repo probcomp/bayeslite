@@ -24,6 +24,7 @@ import bayeslite.compiler as compiler
 import bayeslite.core as core
 import bayeslite.guess as guess
 import bayeslite.parse as parse
+import bayeslite.metamodels.troll_rng as troll
 
 import test_core
 import test_csv
@@ -1656,7 +1657,7 @@ def test_using_models():
             ' "ifnull"("weight", bql_predict(1, 42, 3, _rowid_, 0.9))' \
         ' FROM "t1";'
 
-def test_checkpoint():
+def test_checkpoint_slow():
     with test_core.t1() as (bdb, generator_id):
         bdb.execute('initialize 1 model for t1_cc')
         bdb.execute('analyze t1_cc for 10 iterations checkpoint 1 iteration'
@@ -1680,7 +1681,7 @@ def test_checkpoint():
         '''
         assert bdb.execute(sql, (generator_id,)).next()[0] == 1
 
-def test_infer_confidence():
+def test_infer_confidence_slow():
     with test_core.t1() as (bdb, _generator_id):
         bdb.execute('initialize 1 model for t1_cc')
         bdb.execute('analyze t1_cc for 1 iteration wait')
@@ -1725,3 +1726,99 @@ def test_empty_cursor():
         empty(bdb.execute('INITIALIZE 1 MODEL FOR t_cc'))
         empty(bdb.execute('DROP GENERATOR t_cc'))
         empty(bdb.execute('DROP TABLE t'))
+
+class MockTracerOneQuery(bayeslite.IBayesDBTracer):
+    def __init__(self, q):
+        self.q = q
+        self.start_calls = 0
+        self.ready_calls = 0
+        self.error_calls = 0
+        self.finished_calls = 0
+        self.abandoned_calls = 0
+    def start(self, qid, query, bindings):
+        assert qid == 1
+        assert query == self.q
+        assert bindings == ()
+        self.start_calls += 1
+    def ready(self, qid, _cursor):
+        assert qid == 1
+        self.ready_calls += 1
+    def error(self, qid, _e):
+        assert qid == 1
+        self.error_calls += 1
+    def finished(self, qid):
+        assert qid == 1
+        self.finished_calls += 1
+    def abandoned(self, qid):
+        assert qid == 1
+        self.abandoned_calls += 1
+
+def test_tracing_smoke():
+    with test_core.t1() as (bdb, _generator_id):
+        q = 'SELECT * FROM t1'
+        tracer = MockTracerOneQuery(q)
+        bdb.trace(tracer)
+        cursor = bdb.execute(q)
+        assert tracer.start_calls == 1
+        assert tracer.ready_calls == 1
+        assert tracer.error_calls == 0
+        assert tracer.finished_calls == 0
+        assert tracer.abandoned_calls == 0
+        cursor.fetchall()
+        assert tracer.start_calls == 1
+        assert tracer.ready_calls == 1
+        assert tracer.error_calls == 0
+        assert tracer.finished_calls == 1
+        assert tracer.abandoned_calls == 0
+        del cursor
+        assert tracer.start_calls == 1
+        assert tracer.ready_calls == 1
+        assert tracer.error_calls == 0
+        assert tracer.finished_calls == 1
+        assert tracer.abandoned_calls == 1
+
+def test_tracing_error_smoke():
+    with test_core.t1() as (bdb, _generator_id):
+        q = 'SELECT * FROM wrong'
+        tracer = MockTracerOneQuery(q)
+        bdb.trace(tracer)
+        with pytest.raises(sqlite3.OperationalError):
+            bdb.execute(q)
+        assert tracer.start_calls == 1
+        assert tracer.ready_calls == 0
+        assert tracer.error_calls == 1
+        assert tracer.finished_calls == 0
+        assert tracer.abandoned_calls == 0
+
+class Boom(Exception): pass
+class ErroneousMetamodel(troll.TrollMetamodel):
+    def __init__(self):
+        self.call_ct = 0
+    def name(self): return 'erroneous'
+    def row_column_predictive_probability(self, *_args, **_kwargs):
+        if self.call_ct > 10: # Wait to avoid raising during sqlite's prefetch
+            raise Boom()
+        self.call_ct += 1
+        return 0
+
+def test_tracing_execution_error_smoke():
+    with test_core.t1() as (bdb, _generator_id):
+        bayeslite.bayesdb_register_metamodel(bdb, ErroneousMetamodel())
+        bdb.execute('''
+            CREATE GENERATOR t1_err FOR t1 USING erroneous(age NUMERICAL)''')
+        q = 'ESTIMATE PREDICTIVE PROBABILITY OF age FROM t1_err'
+        tracer = MockTracerOneQuery(q)
+        bdb.trace(tracer)
+        cursor = bdb.execute(q)
+        assert tracer.start_calls == 1
+        assert tracer.ready_calls == 1
+        assert tracer.error_calls == 0
+        assert tracer.finished_calls == 0
+        assert tracer.abandoned_calls == 0
+        with pytest.raises(sqlite3.OperationalError):
+            cursor.fetchall()
+        assert tracer.start_calls == 1
+        assert tracer.ready_calls == 1
+        assert tracer.error_calls == 1
+        assert tracer.finished_calls == 0
+        assert tracer.abandoned_calls == 0

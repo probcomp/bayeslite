@@ -29,7 +29,7 @@ dha_csv = os.path.join(root, 'dha.csv')
 dha_models = os.path.join(root, 'dha_models.pkl.gz')
 dha_codebook = os.path.join(root, 'dha_codebook.csv')
 
-def test_legacy_models():
+def test_legacy_models_slow():
     bdb = bayeslite.bayesdb_open(builtin_metamodels=False)
     cc = crosscat.LocalEngine.LocalEngine(seed=0)
     metamodel = CrosscatMetamodel(cc)
@@ -87,52 +87,3 @@ def test_legacy_models():
             ('Lebanon NH',),
             ('Panama City FL',),
         ]
-
-if False:
-    bql = '''
-        SELECT gc0.name, gc0.shortname, gc1.name, gc1.shortname, e.value
-            FROM (ESTIMATE DEPENDENCE PROBABILITY FROM PAIRWISE COLUMNS OF dha
-                    WHERE name0 != \'name\' AND name1 != \'name\'
-                    ORDER BY name0 ASC, name1 ASC
-                    LIMIT 10) AS e,
-                bayesdb_generator AS g,
-                (bayesdb_generator_column JOIN bayesdb_column USING (colno))
-                    AS gc0,
-                (bayesdb_generator_column JOIN bayesdb_column USING (colno))
-                    AS gc1
-            WHERE g.id = e.generator_id
-                AND gc0.generator_id = e.generator_id
-                AND gc1.generator_id = e.generator_id
-    '''
-    assert bdb.execute(bql).fetchall() == [
-        ('AMI_SCORE', 'Myocardial infarction score',
-         'AMI_SCORE', 'Myocardial infarction score',
-         1),
-        ('AMI_SCORE', 'Myocardial infarction score',
-         'CHF_SCORE', 'Cong heart failure score',
-         1.0),
-        ('AMI_SCORE', 'Myocardial infarction score',
-         'EQP_COPAY_P_DCD', 'Equipment co-pay/dcd',
-         0.2),
-        ('AMI_SCORE', 'Myocardial infarction score',
-         'HHA_VISIT_P_DCD', 'Home health visits/dcd',
-         0.1),
-        ('AMI_SCORE', 'Myocardial infarction score',
-         'HI_IC_BEDS', 'High-intensity IC beds',
-         0.0),
-        ('AMI_SCORE', 'Myocardial infarction score',
-         'HI_IC_DAYS_P_DCD', 'High-intensity IC days/dcd',
-         0.0),
-        ('AMI_SCORE', 'Myocardial infarction score',
-         'HOSP_BEDS', 'Hospital beds',
-         0.0),
-        ('AMI_SCORE', 'Myocardial infarction score',
-         'HOSP_DAY_RATIO', 'Hospital day ratio to US avg',
-         0.0),
-        ('AMI_SCORE', 'Myocardial infarction score',
-         'HOSP_DAYS_P_DCD', 'Hospital days/dcd',
-         0.0),
-        ('AMI_SCORE', 'Myocardial infarction score',
-         'HOSP_DAYS_P_DCD2', 'Hospital days/dcd, end-of-life',
-         0.0),
-    ]
