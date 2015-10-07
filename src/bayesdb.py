@@ -352,3 +352,72 @@ class IBayesDBTracer(object):
 
         """
         pass
+
+class TracingCursor(object):
+    """Cursor wrapper for tracing interaction with an underlying cursor."""
+    def __init__(self, tracer, qid, cursor):
+        self._tracer = tracer
+        self._qid = qid
+        self._cursor = cursor
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        try:
+            return self._cursor.next()
+        except StopIteration:
+            self._tracer.finished(self._qid)
+            raise
+        except Exception as e:
+            self._tracer.error(self._qid, e)
+            raise
+
+    def fetchone(self):
+        try:
+            ans = self._cursor.fetchone()
+            if ans is None:
+                self._tracer.finished(self._qid)
+            return ans
+        except Exception as e:
+            self._tracer.error(self._qid, e)
+            raise
+
+    def fetchmany(self, size=1):
+        try:
+            ans = self._cursor.fetchmany(size=size)
+            if len(ans) < size:
+                self._tracer.finished(self._qid)
+            return ans
+        except Exception as e:
+            self._tracer.error(self._qid, e)
+            raise
+
+    def fetchall(self):
+        try:
+            ans = self._cursor.fetchall()
+            self._tracer.finished(self._qid)
+            return ans
+        except Exception as e:
+            self._tracer.error(self._qid, e)
+            raise
+
+    @property
+    def connection(self):
+        return self._cursor.connection
+    @property
+    def rowcount(self):
+        return self._cursor.rowcount
+    @property
+    def lastrowid(self):
+        return self._cursor.lastrowid
+    @property
+    def description(self):
+        desc = self._cursor.description
+        return [] if desc is None else desc
+
+    def __del__(self):
+        self._tracer.abandoned(self._qid)
+        del self._tracer
+        del self._qid
+        del self._cursor
