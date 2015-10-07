@@ -157,6 +157,9 @@ class BayesDB(object):
             bindings = ()
         if self.tracer:
             self.tracer(string, bindings)
+        return self._do_execute(string, bindings)
+
+    def _do_execute(self, string, bindings):
         phrases = parse.parse_bql_string(string)
         phrase = None
         try:
