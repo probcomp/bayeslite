@@ -21,6 +21,8 @@ import sys
 import json
 import requests
 
+_error_previous_session_msg = 'WARNING: Previous session contains queries that resulted in errors or exceptions. Consider uploading the session with send_session_data().'
+
 class SessionOrchestrator(object):
 
     def __init__(self, bdb, logger=None):
@@ -30,7 +32,7 @@ class SessionOrchestrator(object):
         self._bql_tracer = _SessionTracer("bql", self)
         self.start_saving_sessions()
         self._start_new_session()
-        self._check_unfinished_entries()
+        self._check_error_entries()
         self._logger = logger
 
     def _info(self, msg):
@@ -78,24 +80,29 @@ class SessionOrchestrator(object):
                 SET completed=1 WHERE id=?;
         ''', (entry_id,))
 
+    def _mark_entry_error(self, qid):
+        entry_id = self._qid_to_entry_id[qid]
+        self._sql('''
+            UPDATE bayesdb_session_entries
+                SET error=1 WHERE id=?;
+        ''', (entry_id,))
+
     def _start_new_session(self):
         self._sql('INSERT INTO bayesdb_session DEFAULT VALUES;')
         curs = self._sql('SELECT last_insert_rowid();')
         self.session_id = int(curs.next()[0])
 
-    def _check_unfinished_entries(self):
-        '''Check if the previous session ended with a failed command and
-        suggest sending the session'''
+    def _check_error_entries(self):
+        '''Check if the previous session contains queries that resulted in
+        errors and suggest sending the session'''
         cursor = self._sql('''
             SELECT COUNT(*) FROM bayesdb_session_entries
-                WHERE completed=0 AND session_id=?;
+                WHERE error=1 AND session_id=?;
         ''', (self.session_id-1,))
-        uncompleted_entries = int(cursor.next()[0])
-        if uncompleted_entries > 0:
-            self._warn('WARNING: Previous session contains uncompleted entries. ' +
-                    'This may be due to a bad termination or crash of the ' +
-                    'previous session. Consider uploading the session with send_session_data().')
-        return uncompleted_entries
+        error_entries = int(cursor.next()[0])
+        if error_entries > 0:
+            self._warn(_error_previous_session_msg)
+        return error_entries
 
     def clear_all_sessions(self):
         self._sql('DELETE FROM bayesdb_session_entries;')
@@ -162,4 +169,8 @@ class _SessionTracer(IBayesDBTracer):
         self._orchestrator._add_entry(qid, self._type, query, bindings)
 
     def finished(self, qid):
+        # TODO: currently appears unreliable, error is being used instead
         self._orchestrator._mark_entry_completed(qid)
+
+    def error(self, qid, e):
+        self._orchestrator._mark_entry_error(qid)

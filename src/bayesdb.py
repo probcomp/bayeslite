@@ -204,7 +204,6 @@ class BayesDB(object):
             raise
 
     def _do_execute(self, string, bindings):
->>>>>>> axch-articulated-tracing
         phrases = parse.parse_bql_string(string)
         phrase = None
         try:
@@ -218,8 +217,6 @@ class BayesDB(object):
         else:
             raise ValueError('>1 phrase in string')
         cursor = bql.execute_phrase(self, phrase, bindings)
-        if self.tracer and finish_thunk:
-            finish_thunk()
         return self.empty_cursor if cursor is None else cursor
 
     def sql_execute(self, string, bindings=None):

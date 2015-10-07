@@ -17,6 +17,7 @@
 import pytest
 import bayeslite
 import bayeslite.sessions as sescap
+import bayeslite.metamodels.troll_rng as troll
 import test_core
 import json
 import sqlite3
@@ -51,8 +52,8 @@ def get_entries(executor):
     entries = list(executor('''
         SELECT * FROM bayesdb_session_entries ORDER BY id;
     '''))
-    SessionEntry = namedtuple('SessionEntry', ['id', 'session', 'time', 'type', 'data'])
-    return [SessionEntry(e[0], e[1], e[2], e[3], e[4]) for e in entries]
+    SessionEntry = namedtuple('SessionEntry', ['id', 'session', 'time', 'type', 'data', 'completed'])
+    return [SessionEntry(e[0], e[1], e[2], e[3], e[4], e[5]) for e in entries]
 
 def _basic_test_trace(executor):
 
@@ -134,16 +135,66 @@ def test_sessions_json_dump():
     entries = json.loads(json_str)
     assert len(entries) == get_num_entries(bdb.execute)
 
-def test_sessions_unfinished_entry():
-    (bdb, tr) = make_bdb_with_sessions()
-    bql = 'SELECT * FROM nonexistent_table'
+def _nonexistent_table_helper(executor, tr):
+    query = 'SELECT * FROM nonexistent_table'
     try:
-        bdb.execute(bql)
+        executor(query)
         assert False
     except sqlite3.OperationalError:
         tr._start_new_session()
-        # check for unfinished queries in the previous session
-        assert tr._check_unfinished_entries() > 0
+        assert tr._check_error_entries() > 0
+
+def test_sessions_error_entry_bql():
+    (bdb, tr) = make_bdb_with_sessions()
+    _nonexistent_table_helper(bdb.execute, tr)
+
+def test_sessions_error_entry_sql():
+    (bdb, tr) = make_bdb_with_sessions()
+    _nonexistent_table_helper(bdb.sql_execute, tr)
+
+def test_sessions_no_errors():
+    with test_core.analyzed_bayesdb_generator(test_core.t1(), 
+            10, None, max_seconds=1) as (bdb, generator_id):
+        tr = sescap.SessionOrchestrator(bdb)
+        # simple query
+        cursor = bdb.execute('''
+            SELECT age, weight FROM t1
+                WHERE label = "frotz"
+                ORDER BY weight''')
+        cursor.fetchall()
+        # add a metamodel and do a query
+        cursor = bdb.execute('''
+            ESTIMATE PREDICTIVE PROBABILITY OF age FROM t1_cc''')
+        cursor.fetchall()
+        # there should be no error entries in the previous session
+        tr._start_new_session()
+        assert tr._check_error_entries() == 0
+
+class Boom(Exception): pass
+
+class ErroneousMetamodel(troll.TrollMetamodel):
+    def __init__(self):
+        self.call_ct = 0
+    def name(self):
+        return 'erroneous'
+    def row_column_predictive_probability(self, *_args, **_kwargs):
+        if self.call_ct > 10: # Wait to avoid raising during sqlite's prefetch
+            raise Boom()
+        self.call_ct += 1
+        return 0
+
+def test_sessions_error_metamodel():
+    with test_core.t1() as (bdb, _generator_id):
+        bayeslite.bayesdb_register_metamodel(bdb, ErroneousMetamodel())
+        bdb.execute('''CREATE GENERATOR t1_err FOR t1
+                USING erroneous(age NUMERICAL)''')
+        tr = sescap.SessionOrchestrator(bdb)
+        cursor = bdb.execute('''
+            ESTIMATE PREDICTIVE PROBABILITY OF age FROM t1_err''')
+        with pytest.raises(sqlite3.OperationalError):
+            cursor.fetchall()
+        tr._start_new_session()
+        assert tr._check_error_entries() > 0
 
 def test_sessions_send_data():
     (bdb, tr) = make_bdb_with_sessions()

@@ -104,7 +104,8 @@ CREATE TABLE bayesdb_session_entries (
 	time		INTEGER NOT NULL, -- Unix time.
 	type		TEXT CHECK (type IN ('bql','sql')) NOT NULL,
 	data		TEXT,
-	completed	BOOLEAN DEFAULT 0
+	completed	BOOLEAN DEFAULT 0,
+	error		BOOLEAN DEFAULT 0
 );
 '''
 
