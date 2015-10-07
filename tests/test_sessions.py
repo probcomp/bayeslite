@@ -141,8 +141,8 @@ def _nonexistent_table_helper(executor, tr):
         executor(query)
         assert False
     except sqlite3.OperationalError:
-        tr._start_new_session()
-        assert tr._check_error_entries() > 0
+        #tr._start_new_session()
+        assert tr._check_error_entries(tr.session_id) > 0
 
 def test_sessions_error_entry_bql():
     (bdb, tr) = make_bdb_with_sessions()
@@ -167,8 +167,8 @@ def test_sessions_no_errors():
             ESTIMATE PREDICTIVE PROBABILITY OF age FROM t1_cc''')
         cursor.fetchall()
         # there should be no error entries in the previous session
-        tr._start_new_session()
-        assert tr._check_error_entries() == 0
+        #tr._start_new_session()
+        assert tr._check_error_entries(tr.session_id) == 0
 
 class Boom(Exception): pass
 
@@ -193,10 +193,11 @@ def test_sessions_error_metamodel():
             ESTIMATE PREDICTIVE PROBABILITY OF age FROM t1_err''')
         with pytest.raises(sqlite3.OperationalError):
             cursor.fetchall()
-        tr._start_new_session()
-        assert tr._check_error_entries() > 0
+        #tr._start_new_session()
+        assert tr._check_error_entries(tr.session_id) > 0
 
 def test_sessions_send_data():
     (bdb, tr) = make_bdb_with_sessions()
     _simple_bql_query(bdb)
     tr.send_session_data()
+

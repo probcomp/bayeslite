@@ -21,7 +21,7 @@ import sys
 import json
 import requests
 
-_error_previous_session_msg = 'WARNING: Previous session contains queries that resulted in errors or exceptions. Consider uploading the session with send_session_data().'
+_error_previous_session_msg = 'WARNING: Current or previous session contains queries that resulted in errors or exceptions. Consider uploading the session with send_session_data().'
 
 class SessionOrchestrator(object):
 
@@ -31,8 +31,8 @@ class SessionOrchestrator(object):
         self._sql_tracer = _SessionTracer("sql", self)
         self._bql_tracer = _SessionTracer("bql", self)
         self.start_saving_sessions()
+        self._suggested_send = False
         self._start_new_session()
-        self._check_error_entries()
         self._logger = logger
 
     def _info(self, msg):
@@ -62,6 +62,9 @@ class SessionOrchestrator(object):
         '''Save a session entry into the database. The entry is initially in
         the not-completed state. Return the new entry's id so that it can be
         set to completed when appropriate.'''
+        # check for errors on this session and suggest if we haven't already
+        if not self._suggested_send:
+            self._check_error_entries(self.session_id)
         t = time.time()
         data = query + json.dumps(bindings)
         self._sql('''
@@ -91,17 +94,21 @@ class SessionOrchestrator(object):
         self._sql('INSERT INTO bayesdb_session DEFAULT VALUES;')
         curs = self._sql('SELECT last_insert_rowid();')
         self.session_id = int(curs.next()[0])
+        # check for errors on the previous session
+        self._check_error_entries(self.session_id - 1)
 
-    def _check_error_entries(self):
+    def _check_error_entries(self, session_id):
         '''Check if the previous session contains queries that resulted in
         errors and suggest sending the session'''
         cursor = self._sql('''
             SELECT COUNT(*) FROM bayesdb_session_entries
                 WHERE error=1 AND session_id=?;
-        ''', (self.session_id-1,))
+        ''', (session_id,))
         error_entries = int(cursor.next()[0])
-        if error_entries > 0:
+        # suggest sending sessions but don't suggest more than once
+        if error_entries > 0 and not self._suggested_send:
             self._warn(_error_previous_session_msg)
+            self._suggested_send = True
         return error_entries
 
     def clear_all_sessions(self):
