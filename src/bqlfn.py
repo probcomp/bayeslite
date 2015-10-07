@@ -278,8 +278,8 @@ def bql_column_value_probability(bdb, generator_id, modelno, colno, value,
             raise ValueError('Odd constraint arguments: %s' %
                 (constraint_args,))
         col = constraint_args[i]
-        value = constraint_args[i + 1]
-        constraints.append((col, value))
+        val = constraint_args[i + 1]
+        constraints.append((col, val))
         i += 2
     return metamodel.column_value_probability(bdb, generator_id, modelno,
         colno, value, constraints)
