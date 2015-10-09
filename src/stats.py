@@ -17,6 +17,7 @@
 """Miscellaneous statistics utilities."""
 
 import math
+import numpy
 
 from bayeslite.math_util import gamma_above
 from bayeslite.util import float_sum
@@ -37,11 +38,13 @@ def pearsonr(a0, a1):
     if n == 0:
         # No data, so no notion of correlation.
         return float('NaN')
-    m0 = arithmetic_mean(a0)
-    m1 = arithmetic_mean(a1)
-    num = float_sum((x0 - m0)*(x1 - m1) for x0, x1 in zip(a0, a1))
-    den0_sq = float_sum((x0 - m0)**2 for x0 in a0)
-    den1_sq = float_sum((x1 - m1)**2 for x1 in a1)
+    a0 = numpy.array(a0)
+    a1 = numpy.array(a1)
+    m0 = numpy.mean(a0)
+    m1 = numpy.mean(a1)
+    num = numpy.sum((a0 - m0)*(a1 - m1))
+    den0_sq = numpy.sum((a0 - m0)**2)
+    den1_sq = numpy.sum((a1 - m1)**2)
     den = math.sqrt(den0_sq*den1_sq)
     if den == 0.0:
         # No variation in at least one column, so no notion of
@@ -67,21 +70,17 @@ def chi2_contingency(contingency):
 
     https://en.wikipedia.org/wiki/Pearson%27s_chi-squared_test#Test_of_independence
     """
-    assert 0 < len(contingency)
-    assert all(all(isinstance(v, int) for v in row) for row in contingency)
-    n = float(sum(sum(row) for row in contingency))
-    n0 = len(contingency)
-    n1 = len(contingency[0])
-    assert all(n1 == len(row) for row in contingency)
-    p0 = [float_sum(contingency[i0][i1]/n for i1 in range(n1))
-        for i0 in range(n0)]
-    p1 = [float_sum(contingency[i0][i1]/n for i0 in range(n0))
-        for i1 in range(n1)]
-    def q(i0, i1):
-        O = contingency[i0][i1]
-        E = n*p0[i0]*p1[i1]
-        return ((O - E)**2)/E
-    return float_sum(q(i0, i1) for i0 in range(n0) for i1 in range(n1))
+    contingency = numpy.array(contingency, dtype=int, ndmin=2)
+    assert contingency.ndim == 2
+    n = float(numpy.sum(contingency))
+    n0 = contingency.shape[0]
+    n1 = contingency.shape[1]
+    assert 0 < n0
+    assert 0 < n1
+    p0 = numpy.sum(contingency, axis=1)/n
+    p1 = numpy.sum(contingency, axis=0)/n
+    expected = n * numpy.outer(p0, p1)
+    return numpy.sum(((contingency - expected)**2)/expected)
 
 def f_oneway(groups):
     """F-test statistic for one-way analysis of variance (ANOVA).
@@ -90,15 +89,20 @@ def f_oneway(groups):
 
     ``groups[i][j]`` is jth observation in ith group.
     """
+    # We turn groups into a list of numpy 1d-arrays, not into a numpy
+    # 2d-array, because the lengths are heterogeneous.
+    groups = [numpy.array(group, dtype=float, ndmin=1) for group in groups]
+    assert all(group.ndim == 1 for group in groups)
     K = len(groups)
     N = sum(len(group) for group in groups)
-    means = [arithmetic_mean(group) for group in groups]
-    overall_mean = float_sum(x for group in groups for x in group) / N
-    bgv = float_sum(len(group) * (mean - overall_mean)**2 / (K - 1)
+    means = [numpy.mean(group) for group in groups]
+    overall_mean = numpy.sum(numpy.sum(group) for group in groups) / N
+    bgv = numpy.sum(len(group) * (mean - overall_mean)**2 / (K - 1)
         for group, mean in zip(groups, means))
-    wgv = float_sum(float((x - mean)**2)/float(N - K)
-        for group, mean in zip(groups, means)
-        for x in group)
+    wgv = numpy.sum(numpy.sum((group - mean)**2)/float(N - K)
+        for group, mean in zip(groups, means))
+    # Special cases for which Python wants to raise an error rather
+    # than giving the sensible IEEE 754 result.
     if wgv == 0.0:
         if bgv == 0.0:
             # No variation between or within groups, so we cannot
@@ -121,8 +125,6 @@ def t_cdf(x, df):
 
     ``t_cdf(x, df) = P(T_df < x)``
     """
-    import numpy
-
     if df <= 0:
         raise ValueError('Degrees of freedom must be positive.')
     if x == 0:
@@ -148,8 +150,6 @@ def f_sf(x, df_num, df_den):
 
     ``f_sf(x, df_num, df_den) = P(F_{df_num, df_den} > x)``
     """
-    import numpy
-
     if df_num <= 0 or df_den <= 0:
         raise ValueError('Degrees of freedom must be positive.')
     if x <= 0:
