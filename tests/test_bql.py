@@ -1679,6 +1679,7 @@ def test_checkpoint_slow():
                 where generator_id = ?
         '''
         assert bdb.execute(sql, (generator_id,)).next()[0] == 1
+        bdb.execute('analyze t1_cc for 1 iteration checkpoint 0 seconds wait')
 
 def test_infer_confidence_slow():
     with test_core.t1() as (bdb, _generator_id):

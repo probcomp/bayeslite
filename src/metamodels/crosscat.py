@@ -909,10 +909,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             ckpt_deadline = time.time() + ckpt_seconds
             if max_seconds is not None:
                 ckpt_deadline = min(ckpt_deadline, deadline)
-        if ckpt_iterations is not None:
-            ckpt_counter = ckpt_iterations
-            if iterations is not None:
-                ckpt_counter = min(ckpt_counter, iterations)
+        if ckpt_iterations is not None and iterations is not None:
+            ckpt_iterations = min(ckpt_iterations, iterations)
         while (iterations is None or 0 < iterations) and \
               (max_seconds is None or time.time() < deadline):
             n_steps = 1
@@ -947,9 +945,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 # Python and C++ more often than is necessary, but it
                 # doesn't report back to us the number of iterations
                 # actually performed.
-                iterations_done = 0
-                while (ckpt_iterations is None or 0 < ckpt_counter) and \
-                      (ckpt_seconds is None or time.time() < ckpt_deadline):
+                iterations_in_ckpt = 0
+                while True:
                     X_L_list, X_D_list, diagnostics = self._crosscat.analyze(
                         M_c=M_c,
                         T=T,
@@ -960,28 +957,32 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                         X_D=X_D_list,
                         n_steps=n_steps,
                     )
-                    iterations_done += n_steps
+                    iterations_in_ckpt += n_steps
                     if iterations is not None:
                         assert n_steps <= iterations
                         iterations -= n_steps
                         if iterations == 0:
                             break
                     if ckpt_iterations is not None:
-                        ckpt_counter -= n_steps
-                    if ckpt_iterations is None and ckpt_seconds is None:
+                        if ckpt_iterations <= iterations_in_ckpt:
+                            break
+                    elif ckpt_seconds is not None:
+                        if ckpt_deadline < time.time():
+                            break
+                    else:
                         break
                 cc_cache = self._crosscat_cache(bdb)
                 for i, (modelno, theta, X_L, X_D) \
                         in enumerate(
                             zip(update_modelnos, thetas, X_L_list, X_D_list)):
-                    theta['iterations'] += iterations_done
+                    theta['iterations'] += iterations_in_ckpt
                     theta['X_L'] = X_L
                     theta['X_D'] = X_D
                     total_changes = bdb.sqlite3.total_changes
                     bdb.sql_execute(update_iterations_sql, {
                         'generator_id': generator_id,
                         'modelno': modelno,
-                        'iterations': iterations_done,
+                        'iterations': iterations_in_ckpt,
                     })
                     assert bdb.sqlite3.total_changes - total_changes == 1
                     total_changes = bdb.sqlite3.total_changes
