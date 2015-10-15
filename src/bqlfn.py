@@ -16,6 +16,7 @@
 
 import json
 import math
+import numpy
 
 import bayeslite.core as core
 import bayeslite.stats as stats
@@ -131,8 +132,14 @@ def cramerphi_chi2(data0, data1):
     assert n == len(data1)
     if n == 0:
         return float('NaN'), 0, 0
-    unique0 = unique_indices(data0)
-    unique1 = unique_indices(data1)
+    index0 = dict((x, i) for i, x in enumerate(sorted(set(data0))))
+    index1 = dict((x, i) for i, x in enumerate(sorted(set(data1))))
+    data0 = numpy.array([index0[d] for d in data0])
+    data1 = numpy.array([index1[d] for d in data1])
+    assert data0.ndim == 1
+    assert data1.ndim == 1
+    unique0 = numpy.unique(data0)
+    unique1 = numpy.unique(data1)
     n0 = len(unique0)
     n1 = len(unique1)
     min_levels = min(n0, n1)
@@ -140,15 +147,12 @@ def cramerphi_chi2(data0, data1):
         # No variation in at least one column, so no notion of
         # correlation.
         return float('NaN'), n0, n1
-    ct = [0] * n0
-    for i0, j0 in enumerate(unique0):
-        ct[i0] = [0] * n1
-        for i1, j1 in enumerate(unique1):
-            c = 0
-            for i in range(n):
-                if data0[i] == data0[j0] and data1[i] == data1[j1]:
-                    c += 1
-            ct[i0][i1] = c
+    ct = numpy.zeros((n0, n1), dtype=int)
+    for i0, x0 in enumerate(unique0):
+        for i1, x1 in enumerate(unique1):
+            matches0 = numpy.array(data0 == x0, dtype=int)
+            matches1 = numpy.array(data1 == x1, dtype=int)
+            ct[i0][i1] = numpy.dot(matches0, matches1)
     # Compute observed chi^2 statistic.
     chi2 = stats.chi2_contingency(ct)
     return chi2, n0, n1
