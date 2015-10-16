@@ -144,7 +144,7 @@ def create_geweke_chain_gen(bdb, target_metamodel, schema, column_names,
             # gottier, because I would need to adjust the KL
             # computation to aggregate them.
             data = geweke_chain_gen.simulate_joint(target_cells, [],
-                                                   modelnos=[modelno])
+                                                   modelno=modelno)
             for ((i, j), datum) in zip(target_cells, data):
                 geweke_chain_gen.insert((i, j, datum))
             geweke_chain_gen.analyze_models(modelnos=[modelno])
