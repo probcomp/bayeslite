@@ -231,6 +231,19 @@ class IBayesDBMetamodel(object):
         """
         raise NotImplementedError
 
+    def logpdf_joint(self, bdb, generator_id, targets, constraints, modelno):
+        """Evalute the joint probability of `targets` subject to `constraints`.
+
+        Returns the probability density of the targets (in log domain).
+
+        `modelno` may be `None`, meaning "all models"
+
+        `targets` is a list of ``(rowid, colno, value)`` triples.
+
+        `constraints` is a list of ``(rowid, colno, value)`` triples.
+        """
+        raise NotImplementedError
+
     def insertmany(self, bdb, generator_id, rows):
         """Insert `rows` into a generator, updating analyses accordingly.
 
