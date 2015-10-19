@@ -429,6 +429,20 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                for row_id, item in zip(row_ids, items)]
         return res, X_L_list, X_D_list
 
+    def _crosscat_remap_two(self, bdb, generator_id, X_L_list, X_D_list,
+        first, second):
+        if first is None:
+            new_second, X_L_list, X_D_list = self._crosscat_remap_mixed(
+                bdb, generator_id, X_L_list, X_D_list, second)
+            return None, new_second, X_L_list, X_D_list
+        if second is None:
+            new_first, X_L_list, X_D_list = self._crosscat_remap_mixed(
+                bdb, generator_id, X_L_list, X_D_list, first)
+            return new_first, None, X_L_list, X_D_list
+        new, X_L_list, X_D_list = self._crosscat_remap_mixed(
+            bdb, generator_id, X_L_list, X_D_list, first + second)
+        return new[:len(first)], new[len(first):], X_L_list, X_D_list
+
     def name(self):
         return 'crosscat'
 
@@ -1229,15 +1243,14 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         M_c = self._crosscat_metadata(bdb, generator_id)
         X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
         X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
-        Y, X_L_list, X_D_list = self._crosscat_remap_mixed(
-            bdb, generator_id, X_L_list, X_D_list, constraints)
+        Q, Y, X_L_list, X_D_list = self._crosscat_remap_two(
+            bdb, generator_id, X_L_list, X_D_list, targets, constraints)
         raw_outputs = self._crosscat.simple_predictive_sample(
             M_c=M_c,
             X_L=X_L_list,
             X_D=X_D_list,
             Y=Y,
-            Q=[(rowid-1, crosscat_cc_colno(bdb, generator_id, colno))
-                for rowid, colno in targets],
+            Q=Q,
             n=num_predictions
         )
         return [[crosscat_code_to_value(bdb, generator_id, M_c, colno, code)
