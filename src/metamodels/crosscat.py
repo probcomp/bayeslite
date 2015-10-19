@@ -406,6 +406,21 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         assert all(row_id is not None for row_id in row_ids)
         return row_ids, X_L_list, X_D_list
 
+    def _crosscat_remap_constraints(self, bdb, generator_id, X_L_list,
+        X_D_list, constraints):
+        # XXX Why special-case empty constraints?
+        if constraints is None:
+            return None, X_L_list, X_D_list
+        M_c = self._crosscat_metadata(bdb, generator_id)
+        rowids = [rowid for rowid, _, _ in constraints]
+        row_ids, X_L_list, X_D_list = self._crosscat_get_rows(
+            bdb, generator_id, rowids, X_L_list, X_D_list)
+        res = [(row_id,
+                crosscat_cc_colno(bdb, generator_id, colno),
+                crosscat_value_to_code(bdb, generator_id, M_c, colno, value))
+               for (row_id, (_, colno, value)) in zip(row_ids, constraints)]
+        return res, X_L_list, X_D_list,
+
     def name(self):
         return 'crosscat'
 
@@ -1204,17 +1219,14 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
     def simulate_joint_many(self, bdb, generator_id, targets, constraints,
             modelno, num_predictions=1):
         M_c = self._crosscat_metadata(bdb, generator_id)
-        # XXX Why special-case empty constraints?
-        Y = None
-        if constraints is not None:
-            Y = [(rowid-1, # Crosscat rowids are zero-indexed
-                  crosscat_cc_colno(bdb, generator_id, colno),
-                  crosscat_value_to_code(bdb, generator_id, M_c, colno, value))
-                 for rowid, colno, value in constraints]
+        X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
+        X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
+        Y, X_L_list, X_D_list = self._crosscat_remap_constraints(
+            bdb, generator_id, X_L_list, X_D_list, constraints)
         raw_outputs = self._crosscat.simple_predictive_sample(
             M_c=M_c,
-            X_L=self._crosscat_latent_state(bdb, generator_id, modelno),
-            X_D=self._crosscat_latent_data(bdb, generator_id, modelno),
+            X_L=X_L_list,
+            X_D=X_D_list,
             Y=Y,
             Q=[(rowid-1, crosscat_cc_colno(bdb, generator_id, colno))
                 for rowid, colno in targets],
