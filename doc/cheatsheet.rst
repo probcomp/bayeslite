@@ -7,7 +7,7 @@ and are not guaranteed to persist for any period of time.
 Intended Semantics of BQL Keywords
 ---------------------------------
 
-The logic behind the structure the top-level BQL keywords are discussed below:
+The logic behind the structure the BQL keywords are discussed below:
 
 ``ESTIMATE``
 ^^^^^^^^^^^
@@ -74,27 +74,38 @@ type to a collection of indices of the appropritae type. Specifically:
     that are indexed by a single variable index on a collection of variable
     indices. The fields available to select from are:
 
-    -    foo
+    -    TODO
 
 -   ``ESTIMATE .. FROM PAIRWISE COLUMNS OF <generator>`` evaluates model
     estimators that are indexed by pairs of variable indices on a collection of
     pairs of variable indices. The fields available to select from are:
 
-    -   bar
+    -   TODO
+
+
+``PREDICT``
+^^^^^^^^^^
+
+Evaluate functions of the predictive distribution that is obtained by averaging
+over a set of models. Note that this is not necessarily the same as averaging
+across models the result of evaluations of a function of the each model, which
+is the semantics of 'model estimators' used by ``ESTIMATE``.
+
+One common class of such function are point summaries associated with the
+predictive distribution, such as the median or mode. These are the functions
+implemented by predict currently.
 
 
 ``INFER``
 ^^^^^^^^
 
+TODO
+
 
 ``SIMULATE``
 ^^^^^^^^^^^^
-alskjdf
 
-
-Using BQL Keywords
------------------
-
+TODO
 
 
 
