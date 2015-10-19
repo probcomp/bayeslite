@@ -1125,25 +1125,17 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             value, constraints):
         M_c = self._crosscat_metadata(bdb, generator_id)
         try:
-            code = crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
+            crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
         except KeyError:
+            # Probability of value with no code
             return 0
-        X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
         X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
         # Fabricate a nonexistent (`unobserved') row id.
-        fake_row_id = len(X_D_list[0][0])
-        cc_colno = crosscat_cc_colno(bdb, generator_id, colno)
-        r = self._crosscat.simple_predictive_probability_multistate(
-            M_c=M_c,
-            X_L_list=X_L_list,
-            X_D_list=X_D_list,
-            Y=[(fake_row_id,
-                    crosscat_cc_colno(bdb, generator_id, c_colno),
-                    crosscat_value_to_code(bdb, generator_id, M_c, c_colno,
-                        c_value))
-                for c_colno, c_value in constraints],
-            Q=[(fake_row_id, cc_colno, code)]
-        )
+        fake_row_id = len(X_D_list[0][0]) + 1
+        targets = [(fake_row_id, colno, value)]
+        constraints = [(fake_row_id, c_colno, c_value)
+                       for c_colno, c_value in constraints]
+        r = self.logpdf_joint(bdb, generator_id, targets, constraints, modelno)
         return math.exp(r)
 
     def row_similarity(self, bdb, generator_id, modelno, rowid, target_rowid,
