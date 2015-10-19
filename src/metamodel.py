@@ -225,7 +225,6 @@ class IBayesDBMetamodel(object):
         The result is a sample from the distribution on targets
         conditioned on (the latent state of the metamodel) and the
         constraints.
-
         """
         [ans] = self.simulate_joint_many(bdb, generator_id, targets,
             constraints, modelno, num_predictions=1)
@@ -242,7 +241,6 @@ class IBayesDBMetamodel(object):
         The other arguments are per `simulate_joint`.  The returned
         results are (conditionally) independent samples from the
         distribution of `simulate_joint`.
-
         """
         return [self.simulate_joint_one(bdb, generator_id, targets,
                                         constraints, modelno)
