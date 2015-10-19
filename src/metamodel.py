@@ -211,38 +211,6 @@ class IBayesDBMetamodel(object):
         """Predict a value for a column and return confidence."""
         raise NotImplementedError
 
-    def simulate(self, bdb, generator_id, modelno, constraints, colnos,
-            numpredictions=1):
-        """Simulate `colnos` from a generator, subject to `constraints`.
-
-        Returns a list of rows with values for the specified columns.
-
-        `colnos` is a list of column numbers.
-
-        `constraints` is a list of ``(colno, value)`` pairs.
-
-        `numpredictions` is the number of results to return.
-        """
-        from bayeslite.sqlite3_util import sqlite3_quote_name
-        table_name = core.bayesdb_generator_table(bdb, generator_id)
-        qt = sqlite3_quote_name(table_name)
-        cursor = bdb.sql_execute('SELECT MAX(_rowid_) FROM %s' % (qt,))
-        max_rowid = None
-        try:
-            row = cursor.next()
-        except StopIteration:
-            assert False, 'SELECT MAX(rowid) returned no results!'
-        else:
-            assert len(row) == 1
-            max_rowid = row[0]
-        fake_rowid = max_rowid + 1   # Synthesize a non-existent SQLite row id
-        targets = [(fake_rowid, colno) for colno in colnos]
-        if constraints is not None:
-            constraints = [(fake_rowid, colno, val)
-                           for colno, val in constraints]
-        return self.simulate_joint_many(bdb, generator_id, targets,
-            constraints, modelno, num_predictions=numpredictions)
-
     def simulate_joint(self, bdb, generator_id, targets, constraints, modelno):
         """Simulate `targets` from a generator, subject to `constraints`.
 
