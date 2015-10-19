@@ -1270,6 +1270,21 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 for ((_, colno), code) in zip(targets, raw_output)]
             for raw_output in raw_outputs]
 
+    def logpdf_joint(self, bdb, generator_id, targets, constraints, modelno):
+        M_c = self._crosscat_metadata(bdb, generator_id)
+        X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
+        X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
+        Q, Y, X_L_list, X_D_list = self._crosscat_remap_two(
+            bdb, generator_id, X_L_list, X_D_list, targets, constraints)
+        r = self._crosscat.simple_predictive_probability_multistate(
+            M_c=M_c,
+            X_L_list=X_L_list,
+            X_D_list=X_D_list,
+            Y=Y,
+            Q=Q,
+        )
+        return r
+
     def insertmany(self, bdb, generator_id, rows):
         with bdb.savepoint():
             # Insert the data into the table.
