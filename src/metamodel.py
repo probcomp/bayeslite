@@ -241,7 +241,9 @@ class IBayesDBMetamodel(object):
         constraints.
 
         """
-        raise NotImplementedError
+        [ans] = self.simulate_joint_many(bdb, generator_id, targets,
+            constraints, modelno, num_predictions=1)
+        return ans
 
     def simulate_joint_many(self, bdb, generator_id, targets, constraints,
             modelno, num_predictions=1):
