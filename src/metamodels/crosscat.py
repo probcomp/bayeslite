@@ -382,18 +382,20 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             rows = [[crosscat_value_to_code(bdb, generator_id, M_c, colno, x)
                     for colno, x in zip(colnos, row)]
                 for row in cursor]
-            T = self._crosscat_data(bdb, generator_id, M_c)
-            X_L_list, X_D_list, T = self._crosscat.insert(
-                M_c=M_c,
-                T=T,
-                X_L_list=X_L_list,
-                X_D_list=X_D_list,
-                new_rows=rows,
-            )
-            for r0, r1 in \
-                zip(T, self._crosscat_data(bdb, generator_id, M_c) + rows):
-                assert all(x0 == x1 or (math.isnan(x0) and math.isnan(x1))
-                    for x0, x1 in zip(r0, r1))
+            if len(rows) > 0:
+                # Need to put more stuff into the subsample temporarily
+                T = self._crosscat_data(bdb, generator_id, M_c)
+                X_L_list, X_D_list, T = self._crosscat.insert(
+                    M_c=M_c,
+                    T=T,
+                    X_L_list=X_L_list,
+                    X_D_list=X_D_list,
+                    new_rows=rows,
+                )
+                for r0, r1 in \
+                    zip(T, self._crosscat_data(bdb, generator_id, M_c) + rows):
+                    assert all(x0 == x1 or (math.isnan(x0) and math.isnan(x1))
+                               for x0, x1 in zip(r0, r1))
             next_row_id = bdb.sql_execute('''
                 SELECT MAX(cc_row_id) + 1 FROM bayesdb_crosscat_subsample
                     WHERE generator_id = ?
