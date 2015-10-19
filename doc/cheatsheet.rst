@@ -1,9 +1,102 @@
 BayesDB Cheat Sheet
-============================
+===================
 
 NOTE: Not all of the details below are part of the BQL language specification,
 and are not guaranteed to persist for any period of time.
 
+
+The BayesDB World
+-----------------
+
+These are definitions for types objects that are used in BayesDB.
+
+-   **data-table**
+  
+    A table of user data that may contain missing values. The
+    user wishes to learn about the process that generated the data, as well as
+    unobserved properties of specific data-points.
+
+-   **model**
+  
+    A hypothesis for the process that generated a **data-table**.
+    Associated with every model is a single **model distribution** (see below). A
+    model may also possess **model properties** (see below).
+
+-   **model distribution**
+  
+    A probability distribution over a random data table
+    of dimension equal to the size of the **data-table** plus one hypothetical
+    next data-point. This distribution must support evaluation of probability
+    (densities) and sampling from conditional and marginal distributions.  The
+    set of conditioning and marginalization operations that are supported by a
+    **model**\'s model distribution limit the set of **model properties** that
+    it can possess.
+    
+-   **model property**
+  
+    A function of a **model** and an associated **data-table**. There are
+    sub-types of model properties:
+
+    -   **data-independent model property**
+      
+        A model property that is independent of the **data-table** given the
+        model. Examples include any function of the marginal distribution over
+        the next hypothetical data point, such as the mututal information
+        between two variables under this marginal.
+
+    -   **data-dependent model property**
+      
+        A model property that requires the **data-table** to be evaluated.
+        Examples include any function that involves conditioning on observed
+        values in the data table, such as the probability of an observed value,
+        or any unknown variable that is specific to an observed data-point.
+      
+    Also known as a **model estimator**.
+
+-   **meta-model**
+  
+    A set of **models** associated with a **data-table**. Also known
+    as a **generator**. The existence of more than one model indicates
+    uncertainty about the correct model.
+
+-   **predictive distribution**
+  
+    The average of a set of **model distributions** induced by a
+    **meta-model**. 
+
+-   **predictive property**
+  
+    A function of a **predictive distribution**.  Examples include the value of
+    a missing cell and some measure of confidence associated with such a
+    prediction. Also known as a **model prediction**.
+
+-   **estimation**
+
+    The operation of averaging the value of a **model property** across the
+    **models** in  a **meta-model**
+
+-   **inference**
+
+    The operation of evaluating a **predictive property** given a
+    **meta-model**.
+
+-   **simulation**
+
+    The operation of sampling data from a **model distribution** or from a
+    **predictive distribution**.
+
+-   **BQL (Bayesian Query Language)**
+  
+    An extension of **SQL** that includes functionality for **estimation**,
+    **inference**, and **simulation** given a **meta model**.
+   
+-   **MML (Meta Modeling Language)**
+  
+    A language for creating **meta-models** for
+    **data-tables**. Previously part of **BQL**.
+
+
+  
 Intended Semantics of BQL Keywords
 ---------------------------------
 
