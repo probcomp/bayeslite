@@ -981,7 +981,7 @@ def test_parametrized():
             'SELECT modelno FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ?',
             'SELECT sql_rowid, cc_row_id FROM bayesdb_crosscat_subsample'
-                ' WHERE generator_id = ? AND sql_rowid IN (1,1)',
+                ' WHERE generator_id = ? AND sql_rowid IN (1)',
             'SELECT metadata_json FROM bayesdb_crosscat_metadata'
                 ' WHERE generator_id = ?',
             'SELECT cc_colno FROM bayesdb_crosscat_column'
@@ -1027,7 +1027,7 @@ def test_parametrized():
             'SELECT modelno FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ?',
             'SELECT sql_rowid, cc_row_id FROM bayesdb_crosscat_subsample'
-                ' WHERE generator_id = ? AND sql_rowid IN (1,1)',
+                ' WHERE generator_id = ? AND sql_rowid IN (1)',
             'SELECT metadata_json FROM bayesdb_crosscat_metadata'
                 ' WHERE generator_id = ?',
             'SELECT cc_colno FROM bayesdb_crosscat_column'

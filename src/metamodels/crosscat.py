@@ -360,14 +360,14 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             SELECT sql_rowid, cc_row_id FROM bayesdb_crosscat_subsample
                 WHERE generator_id = ?
                     AND sql_rowid IN (%s)
-        ''' % (','.join('%d' % (rowid,) for rowid in rowids)),
+        ''' % (','.join('%d' % (rowid,) for rowid in sorted(set(rowids)))),
             (generator_id,))
         for rowid, row_id in cursor:
             for i in index[rowid]:
                 row_ids[i] = row_id
             del index[rowid]
         if 0 < len(index):
-            rowids = sorted(index.keys())
+            rowids = sorted(set(index.keys()))
             table_name = core.bayesdb_generator_table(bdb, generator_id)
             qt = sqlite3_quote_name(table_name)
             modelled_column_names = \
