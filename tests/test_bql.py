@@ -1077,10 +1077,10 @@ def test_parametrized():
             'CREATE TEMP TABLE IF NOT EXISTS "sim"'
                 ' ("age" NUMERIC,"RANK" NUMERIC,"division" NUMERIC)',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
-            'SELECT metadata_json FROM bayesdb_crosscat_metadata'
-                ' WHERE generator_id = ?',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
             'SELECT MAX(_rowid_) FROM "t"',
+            'SELECT metadata_json FROM bayesdb_crosscat_metadata'
+                ' WHERE generator_id = ?',
             'SELECT cc_colno FROM bayesdb_crosscat_column'
                 ' WHERE generator_id = ? AND colno = ?',
             'SELECT stattype FROM bayesdb_generator_column'
@@ -1179,10 +1179,10 @@ def test_parametrized():
                     ' AND g.tabname = c.tabname' \
                     ' AND gc.colno = c.colno',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
-            'SELECT metadata_json FROM bayesdb_crosscat_metadata' \
-                ' WHERE generator_id = ?',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
             'SELECT MAX(_rowid_) FROM "t"',
+            'SELECT metadata_json FROM bayesdb_crosscat_metadata' \
+                ' WHERE generator_id = ?',
             'SELECT cc_colno FROM bayesdb_crosscat_column' \
                 ' WHERE generator_id = ? AND colno = ?',
             'SELECT stattype FROM bayesdb_generator_column' \

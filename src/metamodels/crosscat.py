@@ -1199,41 +1199,6 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         value = crosscat_code_to_value(bdb, generator_id, M_c, colno, code)
         return value, confidence
 
-    def simulate(self, bdb, generator_id, modelno, constraints, colnos,
-            numpredictions=1):
-        M_c = self._crosscat_metadata(bdb, generator_id)
-        table_name = core.bayesdb_generator_table(bdb, generator_id)
-        qt = sqlite3_quote_name(table_name)
-        cursor = bdb.sql_execute('SELECT MAX(_rowid_) FROM %s' % (qt,))
-        max_rowid = None
-        try:
-            row = cursor.next()
-        except StopIteration:
-            assert False, 'SELECT MAX(rowid) returned no results!'
-        else:
-            assert len(row) == 1
-            max_rowid = row[0]
-        fake_rowid = max_rowid + 1   # Synthesize a non-existent SQLite row id
-        fake_row_id = fake_rowid - 1 # Crosscat row ids are 0-indexed
-        # XXX Why special-case empty constraints?
-        Y = None
-        if constraints is not None:
-            Y = [(fake_row_id, crosscat_cc_colno(bdb, generator_id, colno),
-                  crosscat_value_to_code(bdb, generator_id, M_c, colno, value))
-                 for colno, value in constraints]
-        raw_outputs = self._crosscat.simple_predictive_sample(
-            M_c=M_c,
-            X_L=self._crosscat_latent_state(bdb, generator_id, modelno),
-            X_D=self._crosscat_latent_data(bdb, generator_id, modelno),
-            Y=Y,
-            Q=[(fake_row_id, crosscat_cc_colno(bdb, generator_id, colno))
-                for colno in colnos],
-            n=numpredictions
-        )
-        return [[crosscat_code_to_value(bdb, generator_id, M_c, colno, code)
-                for (colno, code) in zip(colnos, raw_output)]
-            for raw_output in raw_outputs]
-
     def simulate_joint_many(self, bdb, generator_id, targets, constraints,
             modelno, num_predictions=1):
         M_c = self._crosscat_metadata(bdb, generator_id)
