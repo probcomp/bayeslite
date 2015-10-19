@@ -412,14 +412,22 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         if constraints is None:
             return None, X_L_list, X_D_list
         M_c = self._crosscat_metadata(bdb, generator_id)
-        rowids = [rowid for rowid, _, _ in constraints]
+        rowids = [item[0] for item in constraints]
         row_ids, X_L_list, X_D_list = self._crosscat_get_rows(
             bdb, generator_id, rowids, X_L_list, X_D_list)
-        res = [(row_id,
-                crosscat_cc_colno(bdb, generator_id, colno),
-                crosscat_value_to_code(bdb, generator_id, M_c, colno, value))
-               for (row_id, (_, colno, value)) in zip(row_ids, constraints)]
-        return res, X_L_list, X_D_list,
+        def remap_tuple(row_id, item):
+            if len(item) == 2:
+                (_, colno) = item
+                return (row_id, crosscat_cc_colno(bdb, generator_id, colno))
+            if len(item) == 3:
+                (_, colno, value) = item
+                new_colno = crosscat_cc_colno(bdb, generator_id, colno)
+                new_value = crosscat_value_to_code(
+                    bdb, generator_id, M_c, colno, value)
+                return (row_id, new_colno, new_value)
+        res = [remap_tuple(row_id, item)
+               for row_id, item in zip(row_ids, constraints)]
+        return res, X_L_list, X_D_list
 
     def name(self):
         return 'crosscat'
