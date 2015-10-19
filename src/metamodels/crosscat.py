@@ -1234,6 +1234,29 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 for (colno, code) in zip(colnos, raw_output)]
             for raw_output in raw_outputs]
 
+    def simulate_joint_many(self, bdb, generator_id, targets, constraints,
+            modelno, num_predictions=1):
+        M_c = self._crosscat_metadata(bdb, generator_id)
+        # XXX Why special-case empty constraints?
+        Y = None
+        if constraints is not None:
+            Y = [(rowid-1, # Crosscat rowids are zero-indexed
+                  crosscat_cc_colno(bdb, generator_id, colno),
+                  crosscat_value_to_code(bdb, generator_id, M_c, colno, value))
+                 for rowid, colno, value in constraints]
+        raw_outputs = self._crosscat.simple_predictive_sample(
+            M_c=M_c,
+            X_L=self._crosscat_latent_state(bdb, generator_id, modelno),
+            X_D=self._crosscat_latent_data(bdb, generator_id, modelno),
+            Y=Y,
+            Q=[(rowid-1, crosscat_cc_colno(bdb, generator_id, colno))
+                for rowid, colno in targets],
+            n=num_predictions
+        )
+        return [[crosscat_code_to_value(bdb, generator_id, M_c, colno, code)
+                for ((_, colno), code) in zip(targets, raw_output)]
+            for raw_output in raw_outputs]
+
     def insertmany(self, bdb, generator_id, rows):
         with bdb.savepoint():
             # Insert the data into the table.
