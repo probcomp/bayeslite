@@ -406,13 +406,13 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         assert all(row_id is not None for row_id in row_ids)
         return row_ids, X_L_list, X_D_list
 
-    def _crosscat_remap_constraints(self, bdb, generator_id, X_L_list,
-        X_D_list, constraints):
-        # XXX Why special-case empty constraints?
-        if constraints is None:
+    def _crosscat_remap_mixed(self, bdb, generator_id, X_L_list,
+        X_D_list, items):
+        # XXX Why special-case empty items?
+        if items is None:
             return None, X_L_list, X_D_list
         M_c = self._crosscat_metadata(bdb, generator_id)
-        rowids = [item[0] for item in constraints]
+        rowids = [item[0] for item in items]
         row_ids, X_L_list, X_D_list = self._crosscat_get_rows(
             bdb, generator_id, rowids, X_L_list, X_D_list)
         def remap_tuple(row_id, item):
@@ -426,7 +426,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     bdb, generator_id, M_c, colno, value)
                 return (row_id, new_colno, new_value)
         res = [remap_tuple(row_id, item)
-               for row_id, item in zip(row_ids, constraints)]
+               for row_id, item in zip(row_ids, items)]
         return res, X_L_list, X_D_list
 
     def name(self):
@@ -1229,7 +1229,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         M_c = self._crosscat_metadata(bdb, generator_id)
         X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
         X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
-        Y, X_L_list, X_D_list = self._crosscat_remap_constraints(
+        Y, X_L_list, X_D_list = self._crosscat_remap_mixed(
             bdb, generator_id, X_L_list, X_D_list, constraints)
         raw_outputs = self._crosscat.simple_predictive_sample(
             M_c=M_c,
