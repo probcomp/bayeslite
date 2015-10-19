@@ -163,8 +163,8 @@ def kl_est_sample(from_gen, of_gen, target_cells, constraints):
     """
     [data] = from_gen.simulate_joint(target_cells, constraints)
     targeted_data = [(i, j, x) for ((i, j), x) in zip(target_cells, data)]
-    from_assessment = from_gen.logpdf(targeted_data, constraints)
-    of_assessment   =   of_gen.logpdf(targeted_data, constraints)
+    from_assessment = from_gen.logpdf_joint(targeted_data, constraints)
+    of_assessment   =   of_gen.logpdf_joint(targeted_data, constraints)
     return from_assessment - of_assessment
 
 def estimate_mean(samples):
