@@ -211,10 +211,11 @@ class IBayesDBMetamodel(object):
         """Predict a value for a column and return confidence."""
         raise NotImplementedError
 
-    def simulate_joint(self, bdb, generator_id, targets, constraints, modelno):
+    def simulate_joint(self, bdb, generator_id, targets, constraints, modelno,
+            num_predictions=1):
         """Simulate `targets` from a generator, subject to `constraints`.
 
-        Returns a list of values for the specified targets.
+        Returns a list of lists of values for the specified targets.
 
         `modelno` may be `None`, meaning "all models"
 
@@ -222,29 +223,13 @@ class IBayesDBMetamodel(object):
 
         `constraints` is a list of ``(rowid, colno, value)`` triples.
 
-        The result is a sample from the distribution on targets
-        conditioned on (the latent state of the metamodel) and the
-        constraints.
+        `num_predictions` is the number of results to return.
+
+        The results are samples from the distribution on targets,
+        independent conditioned on (the latent state of the metamodel
+        and) the constraints.
         """
-        [ans] = self.simulate_joint_many(bdb, generator_id, targets,
-            constraints, modelno, num_predictions=1)
-        return ans
-
-    def simulate_joint_many(self, bdb, generator_id, targets, constraints,
-            modelno, num_predictions=1):
-        """Bulk simulate `targets` from a generator, subject to `constraints`.
-
-        Returns a list of lists of values for the specified targets.
-
-        `numpredictions` is the number of results to return.
-
-        The other arguments are per `simulate_joint`.  The returned
-        results are (conditionally) independent samples from the
-        distribution of `simulate_joint`.
-        """
-        return [self.simulate_joint_one(bdb, generator_id, targets,
-                                        constraints, modelno)
-                for _ in num_predictions]
+        raise NotImplementedError
 
     def insertmany(self, bdb, generator_id, rows):
         """Insert `rows` into a generator, updating analyses accordingly.

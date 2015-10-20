@@ -143,8 +143,8 @@ def create_geweke_chain_gen(bdb, target_metamodel, schema, column_names,
             # each with 1 model.  As of this writing, that feels
             # gottier, because I would need to adjust the KL
             # computation to aggregate them.
-            data = geweke_chain_gen.simulate_joint(target_cells, [],
-                                                   modelno=modelno)
+            [data] = geweke_chain_gen.simulate_joint(
+                target_cells, [], modelno=modelno, num_predictions=1)
             for ((i, j), datum) in zip(target_cells, data):
                 geweke_chain_gen.insert((i, j, datum))
             geweke_chain_gen.analyze_models(modelnos=[modelno])
@@ -161,7 +161,7 @@ def kl_est_sample(from_gen, of_gen, target_cells, constraints):
     This function computes and returns a one-point Monte-Carlo
     estimate of the K-L of Q from P.
     """
-    data = from_gen.simulate_joint(target_cells, constraints)
+    [data] = from_gen.simulate_joint(target_cells, constraints)
     targeted_data = [(i, j, x) for ((i, j), x) in zip(target_cells, data)]
     from_assessment = from_gen.logpdf(targeted_data, constraints)
     of_assessment   =   of_gen.logpdf(targeted_data, constraints)

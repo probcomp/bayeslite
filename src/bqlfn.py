@@ -358,7 +358,7 @@ def bayesdb_simulate(bdb, generator_id, constraints, colnos,
     if constraints is not None:
         constraints = [(fake_rowid, colno, val)
                        for colno, val in constraints]
-    return metamodel.simulate_joint_many(bdb, generator_id, targets,
+    return metamodel.simulate_joint(bdb, generator_id, targets,
         constraints, modelno, num_predictions=numpredictions)
 
 def bayesdb_insert(bdb, generator_id, row):
