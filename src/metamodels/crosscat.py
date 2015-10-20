@@ -1123,12 +1123,6 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
 
     def column_value_probability(self, bdb, generator_id, modelno, colno,
             value, constraints):
-        M_c = self._crosscat_metadata(bdb, generator_id)
-        try:
-            crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
-        except KeyError:
-            # Probability of value with no code
-            return 0
         # Fabricate a nonexistent (`unobserved') row id.
         fake_row_id = core.bayesdb_generator_fresh_row_id(bdb, generator_id)
         targets = [(fake_row_id, colno, value)]
@@ -1226,6 +1220,18 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
 
     def logpdf_joint(self, bdb, generator_id, targets, constraints, modelno):
         M_c = self._crosscat_metadata(bdb, generator_id)
+        try:
+            for _, colno, value in constraints:
+                crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
+        except KeyError:
+            # Probability with constraint that has no code
+            return float("nan")
+        try:
+            for _, colno, value in targets:
+                crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
+        except KeyError:
+            # Probability of value that has no code
+            return float("-inf")
         X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
         X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
         Q, Y, X_L_list, X_D_list = self._crosscat_remap_two(
