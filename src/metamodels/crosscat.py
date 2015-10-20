@@ -1129,9 +1129,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         except KeyError:
             # Probability of value with no code
             return 0
-        X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
         # Fabricate a nonexistent (`unobserved') row id.
-        fake_row_id = len(X_D_list[0][0]) + 1
+        fake_row_id = core.bayesdb_generator_fresh_row_id(bdb, generator_id)
         targets = [(fake_row_id, colno, value)]
         constraints = [(fake_row_id, c_colno, c_value)
                        for c_colno, c_value in constraints]
