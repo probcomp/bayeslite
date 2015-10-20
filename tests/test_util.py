@@ -14,9 +14,24 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import math
 import pytest
 
+from bayeslite.math_util import relerr
 from bayeslite.util import cursor_value
+from bayeslite.util import logmeanexp
+from bayeslite.util import logsumexp
+
+def test_logsumexp():
+    assert logsumexp([-1000.]) == -1000.
+    assert logsumexp([-1000., -1000.]) == -1000. + math.log(2.)
+    assert relerr(math.log(2.), logsumexp([0., 0.])) < 1e-15
+
+def test_logmeanexp():
+    assert logmeanexp([-1000., -1000.]) == -1000.
+    assert relerr(math.log(0.5 * (1 + math.exp(-1.))), logmeanexp([0., -1.])) \
+        < 1e-15
+    assert relerr(math.log(0.5), logmeanexp([0., -1000.])) < 1e-15
 
 def test_cursor_value():
     with pytest.raises(ValueError):
