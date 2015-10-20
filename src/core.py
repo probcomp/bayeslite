@@ -415,3 +415,17 @@ def bayesdb_generator_cell_value(bdb, generator_id, rowid, colno):
         assert len(row) == 1
         value = row[0]
     return value
+
+def bayesdb_generator_fresh_row_id(bdb, generator_id):
+    table_name = bayesdb_generator_table(bdb, generator_id)
+    qt = sqlite3_quote_name(table_name)
+    cursor = bdb.sql_execute('SELECT MAX(_rowid_) FROM %s' % (qt,))
+    max_rowid = None
+    try:
+        row = cursor.next()
+    except StopIteration:
+        assert False, 'SELECT MAX(rowid) returned no results!'
+    else:
+        assert len(row) == 1
+        max_rowid = row[0]
+    return max_rowid + 1   # Synthesize a non-existent SQLite row id
