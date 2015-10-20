@@ -1215,13 +1215,13 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
         except KeyError:
             # Probability with constraint that has no code
-            return float("nan")
+            return float('nan')
         try:
             for _, colno, value in targets:
                 crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
         except KeyError:
             # Probability of value that has no code
-            return float("-inf")
+            return float('-inf')
         X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
         X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
         Q, Y, X_L_list, X_D_list = self._crosscat_remap_two(
