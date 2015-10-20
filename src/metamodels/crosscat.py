@@ -1157,7 +1157,6 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
 
     def row_column_predictive_probability(self, bdb, generator_id, modelno,
             rowid, colno):
-        M_c = self._crosscat_metadata(bdb, generator_id)
         table_name = core.bayesdb_generator_table(bdb, generator_id)
         colname = core.bayesdb_generator_column_name(bdb, generator_id, colno)
         qt = sqlite3_quote_name(table_name)
@@ -1176,20 +1175,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             value = row[0]
         if value is None:
             return None
-        code = crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
-        cc_colno = crosscat_cc_colno(bdb, generator_id, colno)
-        X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
-        X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
-        row_id, X_L_list, X_D_list = \
-            self._crosscat_get_row(bdb, generator_id, rowid, X_L_list,
-                X_D_list)
-        r = self._crosscat.simple_predictive_probability_multistate(
-            M_c=M_c,
-            X_L_list=X_L_list,
-            X_D_list=X_D_list,
-            Y=[],
-            Q=[(row_id, cc_colno, code)],
-        )
+        r = self.logpdf_joint(
+            bdb, generator_id, [(rowid, colno, value)], [], modelno)
         return math.exp(r)
 
     def predict_confidence(self, bdb, generator_id, modelno, colno, rowid,
