@@ -271,10 +271,12 @@ def bql_column_mutual_information(bdb, generator_id, modelno, colno0, colno1,
     return metamodel.column_mutual_information(bdb, generator_id, modelno,
         colno0, colno1, numsamples=numsamples)
 
-# One-column function:  PROBABILITY OF <col>=<value>
+# One-column function:  PROBABILITY OF <col>=<value> GIVEN <constraints>
 def bql_column_value_probability(bdb, generator_id, modelno, colno, value,
         *constraint_args):
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
+    # A nonexistent (`unobserved') row id.
+    fake_row_id = core.bayesdb_generator_fresh_row_id(bdb, generator_id)
     constraints = []
     i = 0
     while i < len(constraint_args):
@@ -283,10 +285,12 @@ def bql_column_value_probability(bdb, generator_id, modelno, colno, value,
                 (constraint_args,))
         constraint_colno = constraint_args[i]
         constraint_value = constraint_args[i + 1]
-        constraints.append((constraint_colno, constraint_value))
+        constraints.append((fake_row_id, constraint_colno, constraint_value))
         i += 2
-    return metamodel.column_value_probability(bdb, generator_id, modelno,
-        colno, value, constraints)
+    targets = [(fake_row_id, colno, value)]
+    r = metamodel.logpdf_joint(
+        bdb, generator_id, targets, constraints, modelno)
+    return math.exp(r)
 
 ### BayesDB row functions
 

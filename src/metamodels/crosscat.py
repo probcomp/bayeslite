@@ -1121,16 +1121,6 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         # the mean.
         return arithmetic_mean(mi)
 
-    def column_value_probability(self, bdb, generator_id, modelno, colno,
-            value, constraints):
-        # Fabricate a nonexistent (`unobserved') row id.
-        fake_row_id = core.bayesdb_generator_fresh_row_id(bdb, generator_id)
-        targets = [(fake_row_id, colno, value)]
-        constraints = [(fake_row_id, c_colno, c_value)
-                       for c_colno, c_value in constraints]
-        r = self.logpdf_joint(bdb, generator_id, targets, constraints, modelno)
-        return math.exp(r)
-
     def row_similarity(self, bdb, generator_id, modelno, rowid, target_rowid,
             colnos):
         X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
