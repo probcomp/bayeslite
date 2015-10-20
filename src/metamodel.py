@@ -178,23 +178,9 @@ class IBayesDBMetamodel(object):
         """Compute ``MUTUAL INFORMATION OF <col0> WITH <col1>``."""
         raise NotImplementedError
 
-    def column_value_probability(self, bdb, generator_id, modelno, colno,
-            value, constraints):
-        """Compute ``PROBABILITY OF <col> = <value> GIVEN <constraints>``."""
-        raise NotImplementedError
-
     def row_similarity(self, bdb, generator_id, modelno, rowid, target_rowid,
             colnos):
         """Compute ``SIMILARITY TO <target_row>`` for given `rowid`."""
-        raise NotImplementedError
-
-    def row_column_predictive_probability(self, bdb, generator_id, modelno,
-            rowid, colno):
-        """Compute ``PREDICTIVE PROBABILITY OF <col>`` for given `rowid`.
-
-        If the row's value for that column is null, the result should
-        be null (i.e., Python `None`).
-        """
         raise NotImplementedError
 
     def predict(self, bdb, generator_id, modelno, colno, rowid, threshold,
@@ -228,6 +214,19 @@ class IBayesDBMetamodel(object):
         The results are samples from the distribution on targets,
         independent conditioned on (the latent state of the metamodel
         and) the constraints.
+        """
+        raise NotImplementedError
+
+    def logpdf_joint(self, bdb, generator_id, targets, constraints, modelno):
+        """Evalute the joint probability of `targets` subject to `constraints`.
+
+        Returns the probability density of the targets (in log domain).
+
+        `modelno` may be `None`, meaning "all models"
+
+        `targets` is a list of ``(rowid, colno, value)`` triples.
+
+        `constraints` is a list of ``(rowid, colno, value)`` triples.
         """
         raise NotImplementedError
 

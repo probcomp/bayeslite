@@ -271,10 +271,12 @@ def bql_column_mutual_information(bdb, generator_id, modelno, colno0, colno1,
     return metamodel.column_mutual_information(bdb, generator_id, modelno,
         colno0, colno1, numsamples=numsamples)
 
-# One-column function:  PROBABILITY OF <col>=<value>
+# One-column function:  PROBABILITY OF <col>=<value> GIVEN <constraints>
 def bql_column_value_probability(bdb, generator_id, modelno, colno, value,
         *constraint_args):
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
+    # A nonexistent (`unobserved') row id.
+    fake_row_id = core.bayesdb_generator_fresh_row_id(bdb, generator_id)
     constraints = []
     i = 0
     while i < len(constraint_args):
@@ -283,10 +285,12 @@ def bql_column_value_probability(bdb, generator_id, modelno, colno, value,
                 (constraint_args,))
         constraint_colno = constraint_args[i]
         constraint_value = constraint_args[i + 1]
-        constraints.append((constraint_colno, constraint_value))
+        constraints.append((fake_row_id, constraint_colno, constraint_value))
         i += 2
-    return metamodel.column_value_probability(bdb, generator_id, modelno,
-        colno, value, constraints)
+    targets = [(fake_row_id, colno, value)]
+    r = metamodel.logpdf_joint(
+        bdb, generator_id, targets, constraints, modelno)
+    return math.exp(r)
 
 ### BayesDB row functions
 
@@ -305,8 +309,13 @@ def bql_row_similarity(bdb, generator_id, modelno, rowid, target_rowid,
 def bql_row_column_predictive_probability(bdb, generator_id, modelno, rowid,
         colno):
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    return metamodel.row_column_predictive_probability(bdb, generator_id,
-        modelno, rowid, colno)
+    value = core.bayesdb_generator_cell_value(
+        bdb, generator_id, rowid, colno)
+    if value is None:
+        return None
+    r = metamodel.logpdf_joint(
+        bdb, generator_id, [(rowid, colno, value)], [], modelno)
+    return math.exp(r)
 
 ### Predict and simulate
 
@@ -342,18 +351,7 @@ def bayesdb_simulate(bdb, generator_id, constraints, colnos,
 
     """
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    table_name = core.bayesdb_generator_table(bdb, generator_id)
-    qt = sqlite3_quote_name(table_name)
-    cursor = bdb.sql_execute('SELECT MAX(_rowid_) FROM %s' % (qt,))
-    max_rowid = None
-    try:
-        row = cursor.next()
-    except StopIteration:
-        assert False, 'SELECT MAX(rowid) returned no results!'
-    else:
-        assert len(row) == 1
-        max_rowid = row[0]
-    fake_rowid = max_rowid + 1   # Synthesize a non-existent SQLite row id
+    fake_rowid = core.bayesdb_generator_fresh_row_id(bdb, generator_id)
     targets = [(fake_rowid, colno) for colno in colnos]
     if constraints is not None:
         constraints = [(fake_rowid, colno, val)

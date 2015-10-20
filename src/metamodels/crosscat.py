@@ -1121,31 +1121,6 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         # the mean.
         return arithmetic_mean(mi)
 
-    def column_value_probability(self, bdb, generator_id, modelno, colno,
-            value, constraints):
-        M_c = self._crosscat_metadata(bdb, generator_id)
-        try:
-            code = crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
-        except KeyError:
-            return 0
-        X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
-        X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
-        # Fabricate a nonexistent (`unobserved') row id.
-        fake_row_id = len(X_D_list[0][0])
-        cc_colno = crosscat_cc_colno(bdb, generator_id, colno)
-        r = self._crosscat.simple_predictive_probability_multistate(
-            M_c=M_c,
-            X_L_list=X_L_list,
-            X_D_list=X_D_list,
-            Y=[(fake_row_id,
-                    crosscat_cc_colno(bdb, generator_id, c_colno),
-                    crosscat_value_to_code(bdb, generator_id, M_c, c_colno,
-                        c_value))
-                for c_colno, c_value in constraints],
-            Q=[(fake_row_id, cc_colno, code)]
-        )
-        return math.exp(r)
-
     def row_similarity(self, bdb, generator_id, modelno, rowid, target_rowid,
             colnos):
         X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
@@ -1162,43 +1137,6 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             target_columns=[crosscat_cc_colno(bdb, generator_id, colno)
                 for colno in colnos],
         )
-
-    def row_column_predictive_probability(self, bdb, generator_id, modelno,
-            rowid, colno):
-        M_c = self._crosscat_metadata(bdb, generator_id)
-        table_name = core.bayesdb_generator_table(bdb, generator_id)
-        colname = core.bayesdb_generator_column_name(bdb, generator_id, colno)
-        qt = sqlite3_quote_name(table_name)
-        qcn = sqlite3_quote_name(colname)
-        value_sql = 'SELECT %s FROM %s WHERE _rowid_ = ?' % (qcn, qt)
-        value_cursor = bdb.sql_execute(value_sql, (rowid,))
-        value = None
-        try:
-            row = value_cursor.next()
-        except StopIteration:
-            generator = core.bayesdb_generator_name(bdb, generator_id)
-            raise BQLError(bdb, 'No such row in %s: %d' %
-                (repr(generator), rowid))
-        else:
-            assert len(row) == 1
-            value = row[0]
-        if value is None:
-            return None
-        code = crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
-        cc_colno = crosscat_cc_colno(bdb, generator_id, colno)
-        X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
-        X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
-        row_id, X_L_list, X_D_list = \
-            self._crosscat_get_row(bdb, generator_id, rowid, X_L_list,
-                X_D_list)
-        r = self._crosscat.simple_predictive_probability_multistate(
-            M_c=M_c,
-            X_L_list=X_L_list,
-            X_D_list=X_D_list,
-            Y=[],
-            Q=[(row_id, cc_colno, code)],
-        )
-        return math.exp(r)
 
     def predict_confidence(self, bdb, generator_id, modelno, colno, rowid,
             numsamples=None):
@@ -1269,6 +1207,33 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         return [[crosscat_code_to_value(bdb, generator_id, M_c, colno, code)
                 for ((_, colno), code) in zip(targets, raw_output)]
             for raw_output in raw_outputs]
+
+    def logpdf_joint(self, bdb, generator_id, targets, constraints, modelno):
+        M_c = self._crosscat_metadata(bdb, generator_id)
+        try:
+            for _, colno, value in constraints:
+                crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
+        except KeyError:
+            # Probability with constraint that has no code
+            return float("nan")
+        try:
+            for _, colno, value in targets:
+                crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
+        except KeyError:
+            # Probability of value that has no code
+            return float("-inf")
+        X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
+        X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
+        Q, Y, X_L_list, X_D_list = self._crosscat_remap_two(
+            bdb, generator_id, X_L_list, X_D_list, targets, constraints)
+        r = self._crosscat.simple_predictive_probability_multistate(
+            M_c=M_c,
+            X_L_list=X_L_list,
+            X_D_list=X_D_list,
+            Y=Y,
+            Q=Q,
+        )
+        return r
 
     def insertmany(self, bdb, generator_id, rows):
         with bdb.savepoint():
