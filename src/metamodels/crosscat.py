@@ -360,14 +360,14 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             SELECT sql_rowid, cc_row_id FROM bayesdb_crosscat_subsample
                 WHERE generator_id = ?
                     AND sql_rowid IN (%s)
-        ''' % (','.join('%d' % (rowid,) for rowid in rowids)),
+        ''' % (','.join('%d' % (rowid,) for rowid in sorted(set(rowids)))),
             (generator_id,))
         for rowid, row_id in cursor:
             for i in index[rowid]:
                 row_ids[i] = row_id
             del index[rowid]
         if 0 < len(index):
-            rowids = sorted(index.keys())
+            rowids = sorted(set(index.keys()))
             table_name = core.bayesdb_generator_table(bdb, generator_id)
             qt = sqlite3_quote_name(table_name)
             modelled_column_names = \
@@ -382,18 +382,20 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             rows = [[crosscat_value_to_code(bdb, generator_id, M_c, colno, x)
                     for colno, x in zip(colnos, row)]
                 for row in cursor]
-            T = self._crosscat_data(bdb, generator_id, M_c)
-            X_L_list, X_D_list, T = self._crosscat.insert(
-                M_c=M_c,
-                T=T,
-                X_L_list=X_L_list,
-                X_D_list=X_D_list,
-                new_rows=rows,
-            )
-            for r0, r1 in \
-                zip(T, self._crosscat_data(bdb, generator_id, M_c) + rows):
-                assert all(x0 == x1 or (math.isnan(x0) and math.isnan(x1))
-                    for x0, x1 in zip(r0, r1))
+            if len(rows) > 0:
+                # Need to put more stuff into the subsample temporarily
+                T = self._crosscat_data(bdb, generator_id, M_c)
+                X_L_list, X_D_list, T = self._crosscat.insert(
+                    M_c=M_c,
+                    T=T,
+                    X_L_list=X_L_list,
+                    X_D_list=X_D_list,
+                    new_rows=rows,
+                )
+                for r0, r1 in \
+                    zip(T, self._crosscat_data(bdb, generator_id, M_c) + rows):
+                    assert all(x0 == x1 or (math.isnan(x0) and math.isnan(x1))
+                               for x0, x1 in zip(r0, r1))
             next_row_id = bdb.sql_execute('''
                 SELECT MAX(cc_row_id) + 1 FROM bayesdb_crosscat_subsample
                     WHERE generator_id = ?
@@ -403,6 +405,56 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     row_ids[i] = next_row_id + n
         assert all(row_id is not None for row_id in row_ids)
         return row_ids, X_L_list, X_D_list
+
+    def _crosscat_remap_mixed(self, bdb, generator_id, X_L_list,
+            X_D_list, items):
+        # XXX Why special-case empty items?
+        if items is None:
+            return None, X_L_list, X_D_list
+        M_c = self._crosscat_metadata(bdb, generator_id)
+        rowids = [item[0] for item in items]
+        row_ids, X_L_list, X_D_list = self._crosscat_get_rows(
+            bdb, generator_id, rowids, X_L_list, X_D_list)
+        def remap_tuple(row_id, item):
+            # XXX See the comment on _crosscat_remap_two below for an
+            # explanation of this horrible type dispatch.
+            if len(item) == 2:
+                (_, colno) = item
+                return (row_id, crosscat_cc_colno(bdb, generator_id, colno))
+            if len(item) == 3:
+                (_, colno, value) = item
+                new_colno = crosscat_cc_colno(bdb, generator_id, colno)
+                new_value = crosscat_value_to_code(
+                    bdb, generator_id, M_c, colno, value)
+                return (row_id, new_colno, new_value)
+        res = [remap_tuple(row_id, item)
+               for row_id, item in zip(row_ids, items)]
+        return res, X_L_list, X_D_list
+
+    def _crosscat_remap_two(self, bdb, generator_id, X_L_list, X_D_list,
+            first, second):
+        # XXX This kludgerosity (together with the tuple size dispatch
+        # in _crosscat_remap_mixed) is trying to apply a consistent
+        # row id mapping to both the targets and the constraints.  In
+        # retrospect, it may have been better to do that by making a
+        # routine that explicitly constructs a row id mapping table
+        # and separately applying it to the targets and the
+        # constraints.  As it is, said mapping table is more or less
+        # implicit in the behavior of _crosscat_get_rows (and
+        # intertwined with possibly extending the input crosscat
+        # states in the case that the requested rows are added to the
+        # effective subsample).
+        if first is None:
+            new_second, X_L_list, X_D_list = self._crosscat_remap_mixed(
+                bdb, generator_id, X_L_list, X_D_list, second)
+            return None, new_second, X_L_list, X_D_list
+        if second is None:
+            new_first, X_L_list, X_D_list = self._crosscat_remap_mixed(
+                bdb, generator_id, X_L_list, X_D_list, first)
+            return new_first, None, X_L_list, X_D_list
+        new, X_L_list, X_D_list = self._crosscat_remap_mixed(
+            bdb, generator_id, X_L_list, X_D_list, first + second)
+        return new[:len(first)], new[len(first):], X_L_list, X_D_list
 
     def name(self):
         return 'crosscat'
@@ -1199,39 +1251,23 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         value = crosscat_code_to_value(bdb, generator_id, M_c, colno, code)
         return value, confidence
 
-    def simulate(self, bdb, generator_id, modelno, constraints, colnos,
-            numpredictions=1):
+    def simulate_joint(self, bdb, generator_id, targets, constraints,
+            modelno, num_predictions=1):
         M_c = self._crosscat_metadata(bdb, generator_id)
-        table_name = core.bayesdb_generator_table(bdb, generator_id)
-        qt = sqlite3_quote_name(table_name)
-        cursor = bdb.sql_execute('SELECT MAX(_rowid_) FROM %s' % (qt,))
-        max_rowid = None
-        try:
-            row = cursor.next()
-        except StopIteration:
-            assert False, 'SELECT MAX(rowid) returned no results!'
-        else:
-            assert len(row) == 1
-            max_rowid = row[0]
-        fake_rowid = max_rowid + 1   # Synthesize a non-existent SQLite row id
-        fake_row_id = fake_rowid - 1 # Crosscat row ids are 0-indexed
-        # XXX Why special-case empty constraints?
-        Y = None
-        if constraints is not None:
-            Y = [(fake_row_id, crosscat_cc_colno(bdb, generator_id, colno),
-                  crosscat_value_to_code(bdb, generator_id, M_c, colno, value))
-                 for colno, value in constraints]
+        X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
+        X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
+        Q, Y, X_L_list, X_D_list = self._crosscat_remap_two(
+            bdb, generator_id, X_L_list, X_D_list, targets, constraints)
         raw_outputs = self._crosscat.simple_predictive_sample(
             M_c=M_c,
-            X_L=self._crosscat_latent_state(bdb, generator_id, modelno),
-            X_D=self._crosscat_latent_data(bdb, generator_id, modelno),
+            X_L=X_L_list,
+            X_D=X_D_list,
             Y=Y,
-            Q=[(fake_row_id, crosscat_cc_colno(bdb, generator_id, colno))
-                for colno in colnos],
-            n=numpredictions
+            Q=Q,
+            n=num_predictions
         )
         return [[crosscat_code_to_value(bdb, generator_id, M_c, colno, code)
-                for (colno, code) in zip(colnos, raw_output)]
+                for ((_, colno), code) in zip(targets, raw_output)]
             for raw_output in raw_outputs]
 
     def insertmany(self, bdb, generator_id, rows):

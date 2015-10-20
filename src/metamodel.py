@@ -211,17 +211,23 @@ class IBayesDBMetamodel(object):
         """Predict a value for a column and return confidence."""
         raise NotImplementedError
 
-    def simulate(self, bdb, generator_id, modelno, constraints, colnos,
-            numpredictions=1):
-        """Simulate `colnos` from a generator, subject to `constraints`.
+    def simulate_joint(self, bdb, generator_id, targets, constraints, modelno,
+            num_predictions=1):
+        """Simulate `targets` from a generator, subject to `constraints`.
 
-        Returns a list of rows with values for the specified columns.
+        Returns a list of lists of values for the specified targets.
 
-        `colnos` is a list of column numbers.
+        `modelno` may be `None`, meaning "all models"
 
-        `constraints` is a list of ``(colno, value)`` pairs.
+        `targets` is a list of ``(rowid, colno)`` pairs.
 
-        `numpredictions` is the number of results to return.
+        `constraints` is a list of ``(rowid, colno, value)`` triples.
+
+        `num_predictions` is the number of results to return.
+
+        The results are samples from the distribution on targets,
+        independent conditioned on (the latent state of the metamodel
+        and) the constraints.
         """
         raise NotImplementedError
 

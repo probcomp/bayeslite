@@ -202,7 +202,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                 (generator_id,))]
 
     def simulate_joint(self, bdb, generator_id, targets, _constraints,
-                       modelnos=None):
+                       modelno=None, num_predictions=1):
         # Note: The constraints are irrelevant because columns are
         # independent in the true distribution (except in the case of
         # shared, unknown hyperparameters), and cells in a column are
@@ -211,12 +211,13 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # dependence induced by approximating the true distribution
         # with a finite number of full-table models.
         with bdb.savepoint():
-            if modelnos is None:
+            if modelno is None:
                 modelnos = self._modelnos(bdb, generator_id)
-            modelno = self.prng.choice(modelnos)
+                modelno = self.prng.choice(modelnos)
             (mus, sigmas) = self._model_mus_sigmas(bdb, generator_id, modelno)
-            return [self.prng.gauss(mus[colno], sigmas[colno])
-                    for (_, colno) in targets]
+            return [[self.prng.gauss(mus[colno], sigmas[colno])
+                     for (_, colno) in targets]
+                    for _ in range(num_predictions)]
 
     def _model_mus_sigmas(self, bdb, generator_id, modelno):
         # TODO Filter in the database by the columns I will actually use?
