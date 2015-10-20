@@ -407,7 +407,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         return row_ids, X_L_list, X_D_list
 
     def _crosscat_remap_mixed(self, bdb, generator_id, X_L_list,
-        X_D_list, items):
+            X_D_list, items):
         # XXX Why special-case empty items?
         if items is None:
             return None, X_L_list, X_D_list
@@ -430,7 +430,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         return res, X_L_list, X_D_list
 
     def _crosscat_remap_two(self, bdb, generator_id, X_L_list, X_D_list,
-        first, second):
+            first, second):
         if first is None:
             new_second, X_L_list, X_D_list = self._crosscat_remap_mixed(
                 bdb, generator_id, X_L_list, X_D_list, second)
