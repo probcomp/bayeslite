@@ -23,6 +23,8 @@ import bayeslite.metamodel as metamodel
 import bayeslite.parse as parse
 import bayeslite.schema as schema
 import bayeslite.txn as txn
+
+from bayeslite.util import cursor_value
 
 bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
 
@@ -372,6 +374,9 @@ class TracingCursor(object):
         except Exception as e:
             self._tracer.error(self._qid, e)
             raise
+
+    def fetchvalue(self):
+        return cursor_value(self)
 
     def fetchone(self):
         try:
