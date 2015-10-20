@@ -47,6 +47,7 @@ generator may be substituted.
 
 """
 
+from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
 def bayesdb_has_table(bdb, name):
@@ -395,3 +396,22 @@ def bayesdb_generator_has_model(bdb, generator_id, modelno):
     '''
     cursor = bdb.sql_execute(sql, (generator_id, modelno))
     return cursor.next()[0] != 0
+
+def bayesdb_generator_cell_value(bdb, generator_id, rowid, colno):
+    table_name = bayesdb_generator_table(bdb, generator_id)
+    colname = bayesdb_generator_column_name(bdb, generator_id, colno)
+    qt = sqlite3_quote_name(table_name)
+    qcn = sqlite3_quote_name(colname)
+    value_sql = 'SELECT %s FROM %s WHERE _rowid_ = ?' % (qcn, qt)
+    value_cursor = bdb.sql_execute(value_sql, (rowid,))
+    value = None
+    try:
+        row = value_cursor.next()
+    except StopIteration:
+        generator = bayesdb_generator_name(bdb, generator_id)
+        raise BQLError(bdb, 'No such row in %s: %d' %
+            (repr(generator), rowid))
+    else:
+        assert len(row) == 1
+        value = row[0]
+    return value

@@ -1157,22 +1157,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
 
     def row_column_predictive_probability(self, bdb, generator_id, modelno,
             rowid, colno):
-        table_name = core.bayesdb_generator_table(bdb, generator_id)
-        colname = core.bayesdb_generator_column_name(bdb, generator_id, colno)
-        qt = sqlite3_quote_name(table_name)
-        qcn = sqlite3_quote_name(colname)
-        value_sql = 'SELECT %s FROM %s WHERE _rowid_ = ?' % (qcn, qt)
-        value_cursor = bdb.sql_execute(value_sql, (rowid,))
-        value = None
-        try:
-            row = value_cursor.next()
-        except StopIteration:
-            generator = core.bayesdb_generator_name(bdb, generator_id)
-            raise BQLError(bdb, 'No such row in %s: %d' %
-                (repr(generator), rowid))
-        else:
-            assert len(row) == 1
-            value = row[0]
+        value = core.bayesdb_generator_cell_value(
+            bdb, generator_id, rowid, colno)
         if value is None:
             return None
         r = self.logpdf_joint(
