@@ -222,11 +222,11 @@ class IBayesDBMetamodel(object):
 
         Returns the probability density of the targets (in log domain).
 
-        `modelno` may be `None`, meaning "all models"
-
         `targets` is a list of ``(rowid, colno, value)`` triples.
 
         `constraints` is a list of ``(rowid, colno, value)`` triples.
+
+        `modelno` is a model number or `None`, meaning all models.
         """
         raise NotImplementedError
 
