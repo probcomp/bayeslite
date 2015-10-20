@@ -188,15 +188,6 @@ class IBayesDBMetamodel(object):
         """Compute ``SIMILARITY TO <target_row>`` for given `rowid`."""
         raise NotImplementedError
 
-    def row_column_predictive_probability(self, bdb, generator_id, modelno,
-            rowid, colno):
-        """Compute ``PREDICTIVE PROBABILITY OF <col>`` for given `rowid`.
-
-        If the row's value for that column is null, the result should
-        be null (i.e., Python `None`).
-        """
-        raise NotImplementedError
-
     def predict(self, bdb, generator_id, modelno, colno, rowid, threshold,
             numsamples=None):
         """Predict a value for a column, if confidence is high enough."""

@@ -305,8 +305,13 @@ def bql_row_similarity(bdb, generator_id, modelno, rowid, target_rowid,
 def bql_row_column_predictive_probability(bdb, generator_id, modelno, rowid,
         colno):
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    return metamodel.row_column_predictive_probability(bdb, generator_id,
-        modelno, rowid, colno)
+    value = core.bayesdb_generator_cell_value(
+        bdb, generator_id, rowid, colno)
+    if value is None:
+        return None
+    r = metamodel.logpdf_joint(
+        bdb, generator_id, [(rowid, colno, value)], [], modelno)
+    return math.exp(r)
 
 ### Predict and simulate
 

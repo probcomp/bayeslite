@@ -1155,16 +1155,6 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 for colno in colnos],
         )
 
-    def row_column_predictive_probability(self, bdb, generator_id, modelno,
-            rowid, colno):
-        value = core.bayesdb_generator_cell_value(
-            bdb, generator_id, rowid, colno)
-        if value is None:
-            return None
-        r = self.logpdf_joint(
-            bdb, generator_id, [(rowid, colno, value)], [], modelno)
-        return math.exp(r)
-
     def predict_confidence(self, bdb, generator_id, modelno, colno, rowid,
             numsamples=None):
         if numsamples is None:
