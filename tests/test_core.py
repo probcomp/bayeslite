@@ -31,6 +31,7 @@ import bayeslite.guess as guess
 import bayeslite.metamodel as metamodel
 
 from bayeslite import bql_quote_name
+from bayeslite.util import cursor_value
 
 import test_csv
 
@@ -175,7 +176,7 @@ def bayesdb_maxrowid(bdb, generator_id):
     table_name = core.bayesdb_generator_table(bdb, generator_id)
     qt = bql_quote_name(table_name)
     sql = 'SELECT MAX(_rowid_) FROM %s' % (qt,)
-    return bdb.sql_execute(sql).next()[0]
+    return cursor_value(bdb.sql_execute(sql))
 
 def test_casefold_colname():
     def t(tname, gname, sql, *args, **kwargs):

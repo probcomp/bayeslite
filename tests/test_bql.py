@@ -26,6 +26,8 @@ import bayeslite.guess as guess
 import bayeslite.parse as parse
 import bayeslite.metamodels.troll_rng as troll
 
+from bayeslite.util import cursor_value
+
 import test_core
 import test_csv
 
@@ -78,9 +80,9 @@ def test_conditional_probability():
         bdb.execute('analyze t1_cc for 1 iteration wait')
         q0 = 'estimate probability of age = 8 by t1_cc'
         q1 = 'estimate probability of age = 8 given () by t1_cc'
-        assert bdb.execute(q0).next()[0] == bdb.execute(q1).next()[0]
+        assert bdb.execute(q0).fetchvalue() == bdb.execute(q1).fetchvalue()
         q2 = 'estimate probability of age = 8 given (weight = 16) by t1_cc'
-        assert bdb.execute(q0).next()[0] < bdb.execute(q2).next()[0]
+        assert bdb.execute(q0).fetchvalue() < bdb.execute(q2).fetchvalue()
         bdb.execute('estimate probability of value 8'
             ' given (weight = 16) from columns of t1_cc').fetchall()
 
@@ -730,8 +732,8 @@ def test_trivial_commands():
         bdb.execute('alter table t rename to T0')               # XXX
         bdb.sql_execute('create table t0_temp(x)')
         bdb.execute('alter table T0 rename to t0')
-        assert bdb.execute('select count(*) from t0_temp').next()[0] == 0
-        assert bdb.execute('select count(*) from t0').next()[0] > 0
+        assert bdb.execute('select count(*) from t0_temp').fetchvalue() == 0
+        assert bdb.execute('select count(*) from t0').fetchvalue() > 0
         bdb.execute('drop table T0_TEMP')
         bdb.execute('analyze t_cc model 0 for 1 iteration wait')
         bdb.execute('analyze t_cc model 1 for 1 iteration wait')
@@ -1701,7 +1703,7 @@ def test_checkpoint_slow():
             select iterations from bayesdb_generator_model
                 where generator_id = ?
         '''
-        assert bdb.execute(sql, (generator_id,)).next()[0] == 5
+        assert bdb.execute(sql, (generator_id,)).fetchvalue() == 5
         bdb.execute('drop models from t1_cc')
         bdb.execute('initialize 1 model for t1_cc')
         bdb.execute('analyze t1_cc for 1 iteration checkpoint 2 iterations'
@@ -1710,7 +1712,7 @@ def test_checkpoint_slow():
             select iterations from bayesdb_generator_model
                 where generator_id = ?
         '''
-        assert bdb.execute(sql, (generator_id,)).next()[0] == 1
+        assert bdb.execute(sql, (generator_id,)).fetchvalue() == 1
         bdb.execute('analyze t1_cc for 1 iteration checkpoint 0 seconds wait')
 
 def test_infer_confidence_slow():

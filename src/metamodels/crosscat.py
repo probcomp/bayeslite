@@ -38,6 +38,7 @@ from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.stats import arithmetic_mean
 from bayeslite.util import casefold
+from bayeslite.util import cursor_value
 from bayeslite.util import unique
 
 crosscat_schema_1 = '''
@@ -396,10 +397,11 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     zip(T, self._crosscat_data(bdb, generator_id, M_c) + rows):
                     assert all(x0 == x1 or (math.isnan(x0) and math.isnan(x1))
                                for x0, x1 in zip(r0, r1))
-            next_row_id = bdb.sql_execute('''
+            cursor = bdb.sql_execute('''
                 SELECT MAX(cc_row_id) + 1 FROM bayesdb_crosscat_subsample
                     WHERE generator_id = ?
-            ''', (generator_id,)).next()[0]
+            ''', (generator_id,))
+            next_row_id = cursor_value(cursor)
             for n, rowid in enumerate(rowids):
                 for i in index[rowid]:
                     row_ids[i] = next_row_id + n
@@ -706,8 +708,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 # XXX Let the user pass in a seed.
                 k = do_subsample
                 sql = 'SELECT COUNT(*) FROM %s' % (qt,)
-                cursor = bdb.sql_execute(sql)
-                n = cursor.next()[0]
+                n = cursor_value(bdb.sql_execute(sql))
                 sql = 'SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC' % (qt,)
                 cursor = bdb.sql_execute(sql)
                 seed = struct.pack('<QQQQ', 0, 0, k, n)
@@ -1054,7 +1055,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                         'generator_id': generator_id,
                         'modelno': modelno,
                     })
-                    checkpoint = cursor.next()[0]
+                    checkpoint = cursor_value(cursor)
                     if checkpoint is None:
                         checkpoint = 0
                     assert isinstance(checkpoint, int)

@@ -100,11 +100,11 @@ def _test_example(bdb, exname):
     assert core.bayesdb_has_table(bdb, t)
 
     # Insert data into the table.
-    assert bdb.execute('SELECT COUNT(*) FROM %s' % (qt,)).next()[0] == 0
+    assert bdb.execute('SELECT COUNT(*) FROM %s' % (qt,)).fetchvalue() == 0
     for row in data:
         bdb.sql_execute(data_sql, row)
     n = len(data)
-    assert bdb.execute('SELECT COUNT(*) FROM %s' % (qt,)).next()[0] == n
+    assert bdb.execute('SELECT COUNT(*) FROM %s' % (qt,)).fetchvalue() == n
 
     # Create a generator.  Make sure savepoints work for this.
     assert not core.bayesdb_has_generator(bdb, g)

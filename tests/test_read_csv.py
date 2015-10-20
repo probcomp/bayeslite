@@ -21,6 +21,8 @@ import tempfile
 
 import bayeslite
 
+from bayeslite.util import cursor_value
+
 csv_data = '''1,2,3,foo,bar,nan,"",quagga
 4,5,6,baz,quux,42.0,"",eland
 7,8,6,zot,mumble,87.0,"zoot",caribou
@@ -84,8 +86,8 @@ def test_read_csv():
         bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True,
             ifnotexists=True)
         assert bdb.sql_execute('SELECT * FROM t').fetchall() == data
-        assert bdb.sql_execute('SELECT sql FROM sqlite_master WHERE name = ?',
-                ('t',)).next()[0] == \
+        assert cursor_value(bdb.sql_execute('SELECT sql FROM sqlite_master'
+                    ' WHERE name = ?', ('t',))) == \
             'CREATE TABLE "t"' \
             '("a" NUMERIC,"b" NUMERIC,"c" NUMERIC,"name" NUMERIC,' \
             '"nick" NUMERIC,"age" NUMERIC,"muppet" NUMERIC,"animal" NUMERIC)'
