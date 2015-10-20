@@ -39,8 +39,8 @@ class TrollMetamodel(metamodel.IBayesDBMetamodel):
     def register(self, bdb):
         bdb.sql_execute('''
             INSERT INTO bayesdb_metamodel (name, version)
-                VALUES ('troll_rng', 1)
-        ''')
+                VALUES (?, 1)
+        ''', (self.name(),))
     def create_generator(self, bdb, table, schema, instantiate):
         instantiate(schema)
     def drop_generator(self, *args, **kwargs): pass
