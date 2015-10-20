@@ -83,3 +83,20 @@ def logsumexp(array):
 
 def logmeanexp(array):
     return logsumexp(array) - math.log(len(array))
+
+def cursor_value(cursor):
+    try:
+        row = cursor.next()
+    except StopIteration:
+        raise ValueError('Empty cursor')
+    try:
+        cursor.next()
+    except StopIteration:
+        pass
+    else:
+        raise ValueError('Cursor with >1 result')
+    if len(row) == 0:
+        raise ValueError('Empty cursor result')
+    if 1 < len(row):
+        raise ValueError('Excessive cursor result')
+    return row[0]
