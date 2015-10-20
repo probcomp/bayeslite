@@ -416,6 +416,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         row_ids, X_L_list, X_D_list = self._crosscat_get_rows(
             bdb, generator_id, rowids, X_L_list, X_D_list)
         def remap_tuple(row_id, item):
+            # XXX See the comment on _crosscat_remap_two below for an
+            # explanation of this horrible type dispatch.
             if len(item) == 2:
                 (_, colno) = item
                 return (row_id, crosscat_cc_colno(bdb, generator_id, colno))
@@ -431,6 +433,17 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
 
     def _crosscat_remap_two(self, bdb, generator_id, X_L_list, X_D_list,
             first, second):
+        # XXX This kludgerosity (together with the tuple size dispatch
+        # in _crosscat_remap_mixed) is trying to apply a consistent
+        # row id mapping to both the targets and the constraints.  In
+        # retrospect, it may have been better to do that by making a
+        # routine that explicitly constructs a row id mapping table
+        # and separately applying it to the targets and the
+        # constraints.  As it is, said mapping table is more or less
+        # implicit in the behavior of _crosscat_get_rows (and
+        # intertwined with possibly extending the input crosscat
+        # states in the case that the requested rows are added to the
+        # effective subsample).
         if first is None:
             new_second, X_L_list, X_D_list = self._crosscat_remap_mixed(
                 bdb, generator_id, X_L_list, X_D_list, second)
