@@ -21,7 +21,7 @@ import warnings
 
 from bayeslite.version import __version__
 
-def version_check():
+def version_check(warn_only=True):
     """Check bayeslite version against remote server.
 
     Warn, with `warnings.warn`, if the server reports the version not
@@ -51,7 +51,12 @@ def version_check():
                 '\nSee <%s>.' \
                 % (__version__, d['version'], d['url'])
             warnings.warn(outofdate_warning)
+            if not warn_only:
+                raise ValueError(outofdate_warning)
     except Exception:
-        # Silently eat exceptions -- in the request and in parsing the
-        # result, in case it is ill-formed.
-        pass
+        if warn_only:
+            # Silently eat exceptions -- in the request and in parsing the
+            # result, in case it is ill-formed.
+            pass
+        else:
+            raise
