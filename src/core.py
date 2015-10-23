@@ -394,6 +394,14 @@ def bayesdb_generator_has_model(bdb, generator_id, modelno):
     '''
     return cursor_value(bdb.sql_execute(sql, (generator_id, modelno)))
 
+def bayesdb_generator_modelnos(bdb, generator_id):
+    sql = '''
+        SELECT modelno FROM bayesdb_generator_model AS m
+            WHERE generator_id = ?
+            ORDER BY modelno ASC
+    '''
+    return [row[0] for row in bdb.sql_execute(sql, (generator_id,))]
+
 def bayesdb_generator_cell_value(bdb, generator_id, rowid, colno):
     table_name = bayesdb_generator_table(bdb, generator_id)
     colname = bayesdb_generator_column_name(bdb, generator_id, colno)
