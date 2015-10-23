@@ -91,6 +91,8 @@ Generally follow PEP 8, with these exceptions:
 
 - Single line between top-level definitions.
   => Two blank lines are needlessly verbose.
+- Four spaces, instead of alignment, for continuation lines.
+  => Using alignment penalizes descriptive function names and renaming.
 
 Additional guidelines:
 
