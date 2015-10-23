@@ -21,18 +21,6 @@ run a subset of tests, and stop at the first failure, with
 However, please double-check that every commit you have made passes
 all tests before publishing the commits.
 
-* Randomization
-
-Avoid indiscriminate nondeterminism.
-
-All random choices should be made from PRNGs with seeds that the user
-can control, via the normal Python API and the bayeslite shell.  Any
-actual nondeterminism should be clearly labelled as such, e.g. a
-future shell command to choose a seed from /dev/urandom.
-
-(Crosscat is currently nondeterministc, but this is a bug in
-Crosscat.)
-
 * SQL/BQL parameters
 
 Use SQL/BQL parameters to pass strings and other values into SQL/BQL.
@@ -72,18 +60,17 @@ DO:     qt = sqlite3_quote_name(table)
 DON'T:  db.execute('SELECT %s FROM %s WHERE x = ?' % (column, table), (x,))
 DON'T:  db.execute('SELECT %s FROM %s WHERE x = %d' % (qc, qt, x))
 
-* SQL updates
+* Randomization
 
-When issuing an UPDATE command to sqlite3, if you can count the number
-of rows it should affect, do so and assert that it affected that many
-rows:
+Avoid indiscriminate nondeterminism.
 
-    total_changes = bdb.sqlite3.total_changes
-    bdb.sql_execute('UPDATE ...', (...))
-    assert bdb.sqlite3.total_changes - total_changes == 1
+All random choices should be made from PRNGs with seeds that the user
+can control, via the normal Python API and the bayeslite shell.  Any
+actual nondeterminism should be clearly labelled as such, e.g. a
+future shell command to choose a seed from /dev/urandom.
 
-XXX Should not use bdb.sqlite3 explicitly here.
-XXX Not every use is so marked.
+(Crosscat is currently nondeterministc, but this is a bug in
+Crosscat.)
 
 * Python coding style
 
@@ -105,3 +92,16 @@ Additional guidelines:
 - Don't bother with pylint.  It will waste your time.
 - Prefer clarity over boilerplate.
   => No need to clutter every docstring with a sphinx template.
+
+* SQL updates
+
+When issuing an UPDATE command to sqlite3, if you can count the number
+of rows it should affect, do so and assert that it affected that many
+rows:
+
+    total_changes = bdb.sqlite3.total_changes
+    bdb.sql_execute('UPDATE ...', (...))
+    assert bdb.sqlite3.total_changes - total_changes == 1
+
+XXX Should not use bdb.sqlite3 explicitly here.
+XXX Not every use is so marked.
