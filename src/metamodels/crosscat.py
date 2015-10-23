@@ -1227,7 +1227,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
         Q, Y, X_L_list, X_D_list = self._crosscat_remap_two(
             bdb, generator_id, X_L_list, X_D_list, targets, constraints)
-        r = self._crosscat.simple_predictive_probability_multistate(
+        r = self._crosscat.predictive_probability_multistate(
             M_c=M_c,
             X_L_list=X_L_list,
             X_D_list=X_D_list,
