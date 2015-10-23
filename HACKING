@@ -51,12 +51,13 @@ covers multiple lines:
         })
 
 If the tables and columns in the query are determined dynamically,
-then use sqlite3_quote_name and format strings to assemble SQL/BQL
+then use bql_quote_name and format strings to assemble SQL/BQL
 queries.  But prefer to avoid this by writing different queries or
 reusing subroutines that already do it, such as in bayeslite.core.
 
-DO:     qt = sqlite3_quote_name(table)
-        qc = sqlite3_quote_name(column)
+DO:     from bayeslite import bql_quote_name
+        qt = bql_quote_name(table)
+        qc = bql_quote_name(column)
         db.execute('SELECT %s FROM %s WHERE x = ?' % (qc, qt), (x,))
 
 DON'T:  db.execute('SELECT %s FROM %s WHERE x = ?' % (column, table), (x,))
