@@ -79,6 +79,10 @@ def casefold(string):
 
 def logsumexp(array):
     m = max(array)
+    if m == float('inf'):
+        return float('inf')
+    elif m == float('-inf'):
+        return -float('inf')
     return m + math.log(sum(math.exp(a - m) for a in array))
 
 def logmeanexp(array):
