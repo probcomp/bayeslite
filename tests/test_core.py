@@ -529,7 +529,7 @@ def bayesdb_generator_cell_value(bdb, generator_id, colno, rowid):
 
 def test_crosscat_constraints():
     class FakeEngine(crosscat.LocalEngine.LocalEngine):
-        def simple_predictive_probability_multistate(self, M_c, X_L_list,
+        def predictive_probability_multistate(self, M_c, X_L_list,
                 X_D_list, Y, Q):
             self._last_Y = Y
             sup = super(FakeEngine, self)
