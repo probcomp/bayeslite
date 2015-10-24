@@ -1144,29 +1144,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         if numsamples is None:
             numsamples = 100    # XXXWARGHWTF
         M_c = self._crosscat_metadata(bdb, generator_id)
-        column_names = core.bayesdb_generator_column_names(bdb, generator_id)
-        table_name = core.bayesdb_generator_table(bdb, generator_id)
-        qt = sqlite3_quote_name(table_name)
-        qcns = ','.join(map(sqlite3_quote_name, column_names))
-        select_sql = ('SELECT %s FROM %s WHERE _rowid_ = ?' % (qcns, qt))
-        cursor = bdb.sql_execute(select_sql, (rowid,))
-        row = None
-        try:
-            row = cursor.next()
-        except StopIteration:
-            generator = core.bayesdb_generator_table(bdb, generator_id)
-            raise BQLError(bdb, 'No such row in table %s'
-                ' for generator %d: %d' %
-                (repr(table_name), repr(generator), repr(rowid)))
-        try:
-            cursor.next()
-        except StopIteration:
-            pass
-        else:
-            generator = core.bayesdb_generator_table(bdb, generator_id)
-            raise BQLError(bdb, 'More than one such row'
-                ' in table %s for generator %s: %d' %
-                (repr(table_name), repr(generator), repr(rowid)))
+        row = core.bayesdb_generator_row_values(bdb, generator_id, rowid)
         X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
         X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
         row_id, X_L_list, X_D_list = \

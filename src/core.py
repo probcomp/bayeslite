@@ -421,6 +421,32 @@ def bayesdb_generator_cell_value(bdb, generator_id, rowid, colno):
         value = row[0]
     return value
 
+def bayesdb_generator_row_values(bdb, generator_id, rowid):
+    table_name = bayesdb_generator_table(bdb, generator_id)
+    column_names = bayesdb_generator_column_names(bdb, generator_id)
+    qt = sqlite3_quote_name(table_name)
+    qcns = ','.join(map(sqlite3_quote_name, column_names))
+    select_sql = ('SELECT %s FROM %s WHERE _rowid_ = ?' % (qcns, qt))
+    cursor = bdb.sql_execute(select_sql, (rowid,))
+    row = None
+    try:
+        row = cursor.next()
+    except StopIteration:
+        generator = bayesdb_generator_table(bdb, generator_id)
+        raise BQLError(bdb, 'No such row in table %s'
+            ' for generator %d: %d' %
+            (repr(table_name), repr(generator), repr(rowid)))
+    try:
+        cursor.next()
+    except StopIteration:
+        pass
+    else:
+        generator = bayesdb_generator_table(bdb, generator_id)
+        raise BQLError(bdb, 'More than one such row'
+            ' in table %s for generator %s: %d' %
+            (repr(table_name), repr(generator), repr(rowid)))
+    return row
+
 def bayesdb_generator_fresh_row_id(bdb, generator_id):
     table_name = bayesdb_generator_table(bdb, generator_id)
     qt = sqlite3_quote_name(table_name)
