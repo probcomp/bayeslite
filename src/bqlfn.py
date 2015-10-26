@@ -26,6 +26,7 @@ from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
 from bayeslite.util import casefold
+from bayeslite.util import ieee_exp
 from bayeslite.util import unique_indices
 
 def bayesdb_install_bql(db, cookie):
@@ -290,7 +291,7 @@ def bql_column_value_probability(bdb, generator_id, modelno, colno, value,
     targets = [(fake_row_id, colno, value)]
     r = metamodel.logpdf_joint(
         bdb, generator_id, targets, constraints, modelno)
-    return math.exp(r)
+    return ieee_exp(r)
 
 ### BayesDB row functions
 
@@ -315,7 +316,7 @@ def bql_row_column_predictive_probability(bdb, generator_id, modelno, rowid,
         return None
     r = metamodel.logpdf_joint(
         bdb, generator_id, [(rowid, colno, value)], [], modelno)
-    return math.exp(r)
+    return ieee_exp(r)
 
 ### Predict and simulate
 
