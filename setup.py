@@ -173,10 +173,10 @@ setup(
     license='Apache License, Version 2.0',
     install_requires=[
         'crosscat>=0.1.29',
+        'numpy',
         'requests',
     ],
     tests_require=[
-        'numpy',
         'pytest',
     ],
     packages=[
