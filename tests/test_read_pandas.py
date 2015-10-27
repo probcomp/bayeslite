@@ -28,33 +28,21 @@ def do_test(bdb, t, df, index=None):
     countem = 'select count(*) from %s' % (qt,)
     assert not bayesdb_has_table(bdb, t)
 
-    try:
+    with pytest.raises(ValueError):
         bayesdb_read_pandas_df(bdb, t, df, index=index)
-    except ValueError:
-        pass
-    else:
-        assert False, 'no exception'
 
     bayesdb_read_pandas_df(bdb, t, df, create=True, ifnotexists=False,
         index=index)
     assert len(df.index) == bdb.execute(countem).fetchvalue()
 
-    try:
+    with pytest.raises(ValueError):
         bayesdb_read_pandas_df(bdb, t, df, create=True, ifnotexists=False,
             index=index)
-    except ValueError:
-        pass
-    else:
-        assert False, 'no exception'
     assert 4 == bdb.execute(countem).fetchvalue()
 
-    try:
+    with pytest.raises(sqlite3.IntegrityError):
         bayesdb_read_pandas_df(bdb, t, df, create=True, ifnotexists=True,
             index=index)
-    except sqlite3.IntegrityError:
-        pass
-    else:
-        assert False, 'no exception'
     assert 4 == bdb.execute(countem).fetchvalue()
 
 def test_integral_noindex():
