@@ -15,7 +15,10 @@
 #   limitations under the License.
 
 import contextlib
+import numpy.random
+import random
 import sqlite3
+import struct
 
 import bayeslite.bql as bql
 import bayeslite.bqlfn as bqlfn
@@ -23,21 +26,24 @@ import bayeslite.metamodel as metamodel
 import bayeslite.parse as parse
 import bayeslite.schema as schema
 import bayeslite.txn as txn
+import bayeslite.weakprng as weakprng
 
 from bayeslite.util import cursor_value
 
 bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
 
-def bayesdb_open(pathname=None, builtin_metamodels=None):
+def bayesdb_open(pathname=None, builtin_metamodels=None, seed=None):
     """Open the BayesDB in the file at `pathname`.
 
     If there is no file at `pathname`, it is automatically created.
     If `pathname` is unspecified or ``None``, a temporary in-memory
     BayesDB instance is created.
+
+    If no `seed` is given, a deterministic one is used.
     """
     if builtin_metamodels is None:
         builtin_metamodels = True
-    bdb = BayesDB(bayesdb_open_cookie, pathname=pathname)
+    bdb = BayesDB(bayesdb_open_cookie, pathname=pathname, seed=seed)
     if builtin_metamodels:
         metamodel.bayesdb_register_builtin_metamodels(bdb)
     return bdb
@@ -54,7 +60,7 @@ class BayesDB(object):
             ...
     """
 
-    def __init__(self, cookie, pathname=None):
+    def __init__(self, cookie, pathname=None, seed=None):
         if cookie != bayesdb_open_cookie:
             raise ValueError('Do not construct BayesDB objects directly!')
         if pathname is None:
@@ -70,6 +76,13 @@ class BayesDB(object):
         self.cache = None
         self.temptable = 0
         self.qid = 0
+        if seed is None:
+            seed = struct.pack('<QQQQ', 0, 0, 0, 0)
+        self._prng = weakprng.weakprng(seed)
+        pyrseed = self.prng.weakrandom32()
+        self._py_prng = random.Random(pyrseed)
+        nprseed = [self.prng.weakrandom32() for _ in range(4)]
+        self._np_prng = numpy.random.RandomState(nprseed)
         schema.bayesdb_install_schema(self.sqlite3)
         bqlfn.bayesdb_install_bql(self.sqlite3, self)
 
@@ -86,6 +99,42 @@ class BayesDB(object):
         assert self.txn_depth == 0, "pending BayesDB transactions"
         self.sqlite3.close()
         self.sqlite3 = None
+
+    @property
+    def prng(self):
+        """A pseudo-random number generator local to this BayesDB instance.
+
+        This PRNG is deterministically initialized from the seed
+        supplied to :func:`bayesdb_open`.  Use it to conserve
+        reproducibility of results.
+        """
+        return self._prng
+
+    @property
+    def py_prng(self):
+        """A :class:`random.Random` object local to this BayesDB instance.
+
+        This pseudo-random number generator is deterministically
+        initialized from the seed supplied to :func:`bayesdb_open`.
+        Use it to conserve reproducibility of results.
+
+        Provided as an alternative to :meth:`.BayesDB.prng` that has a
+        more familiar interface but lower quality randomness.
+        """
+        return self._py_prng
+
+    @property
+    def np_prng(self):
+        """A Numpy RandomState object local to this BayesDB instance.
+
+        This pseudo-random number generator is deterministically
+        initialized from the seed supplied to :func:`bayesdb_open`.
+        Use it to conserve reproducibility of results.
+
+        Provided as an alternative to :meth:`.BayesDB.prng` that has a
+        more familiar interface but lower quality randomness.
+        """
+        return self._np_prng
 
     def trace(self, tracer):
         """Trace execution of BQL queries.
