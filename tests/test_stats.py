@@ -161,7 +161,6 @@ def test_gauss_suff_stats():
     data = [big - small, big, big + small]
     true_sigma = math.sqrt(2 * small**2 / 3)
     (ct, mean, sigma) = stats.gauss_suff_stats(data)
-    print sigma, true_sigma
     assert ct == 3
     assert mean == big
     assert relerr(true_sigma, sigma) < 1e-5
