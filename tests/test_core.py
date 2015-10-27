@@ -67,7 +67,7 @@ def test_bayesdb_instantiation():
 
 def test_prng_determinism():
     bdb = bayeslite.bayesdb_open(builtin_metamodels=False)
-    assert bdb.prng.weakrandom_uniform(1000) == 303
+    assert bdb._prng.weakrandom_uniform(1000) == 303
     assert bdb.py_prng.uniform(0, 1) == 0.6156331606142532
     assert bdb.np_prng.uniform(0, 1) == 0.28348770982811367
 

@@ -80,9 +80,9 @@ class BayesDB(object):
         if seed is None:
             seed = struct.pack('<QQQQ', 0, 0, 0, 0)
         self._prng = weakprng.weakprng(seed)
-        pyrseed = self.prng.weakrandom32()
+        pyrseed = self._prng.weakrandom32()
         self._py_prng = random.Random(pyrseed)
-        nprseed = [self.prng.weakrandom32() for _ in range(4)]
+        nprseed = [self._prng.weakrandom32() for _ in range(4)]
         self._np_prng = numpy.random.RandomState(nprseed)
         schema.bayesdb_install_schema(self.sqlite3)
         bqlfn.bayesdb_install_bql(self.sqlite3, self)
@@ -102,25 +102,12 @@ class BayesDB(object):
         self.sqlite3 = None
 
     @property
-    def prng(self):
-        """A pseudo-random number generator local to this BayesDB instance.
-
-        This PRNG is deterministically initialized from the seed
-        supplied to :func:`bayesdb_open`.  Use it to conserve
-        reproducibility of results.
-        """
-        return self._prng
-
-    @property
     def py_prng(self):
         """A :class:`random.Random` object local to this BayesDB instance.
 
         This pseudo-random number generator is deterministically
         initialized from the seed supplied to :func:`bayesdb_open`.
         Use it to conserve reproducibility of results.
-
-        Provided as an alternative to :meth:`.BayesDB.prng` that has a
-        more familiar interface but lower quality randomness.
         """
         return self._py_prng
 
@@ -131,9 +118,6 @@ class BayesDB(object):
         This pseudo-random number generator is deterministically
         initialized from the seed supplied to :func:`bayesdb_open`.
         Use it to conserve reproducibility of results.
-
-        Provided as an alternative to :meth:`.BayesDB.prng` that has a
-        more familiar interface but lower quality randomness.
         """
         return self._np_prng
 
