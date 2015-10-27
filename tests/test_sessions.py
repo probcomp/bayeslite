@@ -159,7 +159,7 @@ def test_sessions_no_errors():
         # simple query
         cursor = bdb.execute('''
             SELECT age, weight FROM t1
-                WHERE label = "frotz"
+                WHERE label = 'frotz'
                 ORDER BY weight''')
         cursor.fetchall()
         # add a metamodel and do a query

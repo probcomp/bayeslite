@@ -116,8 +116,8 @@ class SessionOrchestrator(object):
         self._sql('DELETE FROM bayesdb_session;')
         self._sql('''
             DELETE FROM sqlite_sequence
-                WHERE name="bayesdb_session"
-                OR name="bayesdb_session_entries";
+                WHERE name='bayesdb_session'
+                OR name='bayesdb_session_entries';
         ''')
         self._start_new_session()
 
