@@ -24,6 +24,8 @@ import bayeslite
 import bayeslite.metamodels.troll_rng as troll
 import bayeslite.sessions as sescap
 
+from bayeslite.util import cursor_value
+
 import test_core
 
 def make_bdb():
@@ -38,18 +40,15 @@ def make_bdb_with_sessions():
     tr = sescap.SessionOrchestrator(bdb)
     return (bdb, tr)
 
-def query_scalar_int(executor, query):
-    return int(executor(query).next()[0])
-
 def get_num_sessions(executor):
-    return query_scalar_int(executor, '''
+    return cursor_value(executor('''
         SELECT COUNT(*) FROM bayesdb_session;
-    ''')
+    '''))
 
 def get_num_entries(executor):
-    return query_scalar_int(executor, '''
+    return cursor_value(executor('''
         SELECT COUNT(*) FROM bayesdb_session_entries;
-    ''')
+    '''))
 
 def get_entries(executor):
     entries = list(executor('''
@@ -64,9 +63,9 @@ def _basic_test_trace(executor):
     assert get_num_sessions(executor) == 1
 
     # the above select query counts should become one or more entries
-    num_entries = query_scalar_int(executor, '''
+    num_entries = cursor_value(executor('''
         SELECT COUNT(*) FROM bayesdb_session_entries;
-    ''')
+    '''))
     assert num_entries > 0
 
     # entries are ordered starting from 1

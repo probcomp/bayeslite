@@ -22,6 +22,7 @@ import time
 import bayeslite
 
 from bayeslite import IBayesDBTracer
+from bayeslite.util import cursor_value
 
 _error_previous_session_msg = 'WARNING: Current or previous session contains queries that resulted in errors or exceptions. Consider uploading the session with send_session_data().'
 
@@ -76,8 +77,7 @@ class SessionOrchestrator(object):
                 (session_id, time, type, data)
                 VALUES (?,?,?,?);
         ''', (self.session_id, t, type, data))
-        curs = self._sql('SELECT last_insert_rowid();')
-        entry_id = int(curs.next()[0])
+        entry_id = cursor_value(self._sql('SELECT last_insert_rowid()'))
         self._qid_to_entry_id[qid] = entry_id
  
     def _mark_entry_completed(self, qid):
@@ -96,19 +96,17 @@ class SessionOrchestrator(object):
 
     def _start_new_session(self):
         self._sql('INSERT INTO bayesdb_session DEFAULT VALUES;')
-        curs = self._sql('SELECT last_insert_rowid();')
-        self.session_id = int(curs.next()[0])
+        self.session_id = cursor_value(self._sql('SELECT last_insert_rowid()'))
         # check for errors on the previous session
         self._check_error_entries(self.session_id - 1)
 
     def _check_error_entries(self, session_id):
         '''Check if the previous session contains queries that resulted in
         errors and suggest sending the session'''
-        cursor = self._sql('''
+        error_entries = cursor_value(self._sql('''
             SELECT COUNT(*) FROM bayesdb_session_entries
-                WHERE error=1 AND session_id=?;
-        ''', (session_id,))
-        error_entries = int(cursor.next()[0])
+                WHERE error = 1 AND session_id = ?;
+        ''', (session_id,)))
         # suggest sending sessions but don't suggest more than once
         if error_entries > 0 and not self._suggested_send:
             self._warn(_error_previous_session_msg)
