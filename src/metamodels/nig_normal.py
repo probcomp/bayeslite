@@ -236,7 +236,8 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             sigmas[colno] = sigma
         return (mus, sigmas)
 
-    def logpdf_joint(self, bdb, generator_id, targets, _constraints):
+    def logpdf_joint(self, bdb, generator_id, targets, _constraints,
+            modelno=None):
         # Note: The constraints are irrelevant for the same reason as
         # in simulate_joint.
         (all_mus, all_sigmas) = self._all_mus_sigmas(bdb, generator_id)

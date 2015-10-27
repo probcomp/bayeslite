@@ -51,7 +51,8 @@ class TrollMetamodel(metamodel.IBayesDBMetamodel):
     def simulate_joint(self, _bdb, _generator_id, targets, _constraints,
             modelno=None, num_predictions=1):
         return [[9 for _ in targets]] * num_predictions
-    def logpdf_joint(self, _bdb, _generator_id, targets, constraints):
+    def logpdf_joint(self, _bdb, _generator_id, targets, constraints,
+            modelno=None):
         for (_, _, value) in constraints:
             if not value == 9:
                 return float("nan")

@@ -217,7 +217,8 @@ class IBayesDBMetamodel(object):
         """
         raise NotImplementedError
 
-    def logpdf_joint(self, bdb, generator_id, targets, constraints, modelno):
+    def logpdf_joint(self, bdb, generator_id, targets, constraints,
+            modelno=None):
         """Evalute the joint probability of `targets` subject to `constraints`.
 
         Returns the probability density of the targets (in log domain).

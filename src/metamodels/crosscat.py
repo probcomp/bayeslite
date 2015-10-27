@@ -1187,7 +1187,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 for ((_, colno), code) in zip(targets, raw_output)]
             for raw_output in raw_outputs]
 
-    def logpdf_joint(self, bdb, generator_id, targets, constraints, modelno):
+    def logpdf_joint(self, bdb, generator_id, targets, constraints,
+            modelno=None):
         M_c = self._crosscat_metadata(bdb, generator_id)
         try:
             for _, colno, value in constraints:
