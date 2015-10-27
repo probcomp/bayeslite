@@ -79,7 +79,7 @@ class SessionOrchestrator(object):
         ''', (self.session_id, t, type, data))
         entry_id = cursor_value(self._sql('SELECT last_insert_rowid()'))
         self._qid_to_entry_id[qid] = entry_id
- 
+
     def _mark_entry_completed(self, qid):
         entry_id = self._qid_to_entry_id[qid]
         self._sql('''
@@ -125,11 +125,11 @@ class SessionOrchestrator(object):
         """Lists all saved sessions with the number of entries in each, and
         whether they were sent or not."""
         return self._sql('SELECT * FROM bayesdb_session')
-    
+
     def current_session_id(self):
         """Returns the current integer session id."""
         return self.session_id
-    
+
     def dump_session_as_json(self, session_id):
         """Returns a JSON string representing the list of SQL or BQL entries
         (e.g.  queries) executed within session `session_id`."""
@@ -141,12 +141,12 @@ class SessionOrchestrator(object):
                 ORDER BY time DESC
         ''', (session_id,))
         return json.dumps(list(entries))
-    
+
     def dump_current_session_as_json(self):
         """Returns a JSON string representing the current sesion (see
         `dump_session_as_json`)"""
         return self.dump_session_as_json(self.session_id)
-    
+
     def send_session_data(self):
         """Send all saved session history. The session history will be used for
         research purposes."""
