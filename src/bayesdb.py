@@ -15,12 +15,10 @@
 #   limitations under the License.
 
 import contextlib
-import json
 import numpy.random
 import random
 import sqlite3
 import struct
-import time
 
 import bayeslite.bql as bql
 import bayeslite.bqlfn as bqlfn
