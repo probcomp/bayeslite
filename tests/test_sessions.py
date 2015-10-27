@@ -41,18 +41,16 @@ def make_bdb_with_sessions():
     return (bdb, tr)
 
 def get_num_sessions(executor):
-    return cursor_value(executor('''
-        SELECT COUNT(*) FROM bayesdb_session;
-    '''))
+    return cursor_value(executor('''SELECT COUNT(*) FROM bayesdb_session'''))
 
 def get_num_entries(executor):
     return cursor_value(executor('''
-        SELECT COUNT(*) FROM bayesdb_session_entries;
+        SELECT COUNT(*) FROM bayesdb_session_entries
     '''))
 
 def get_entries(executor):
     entries = list(executor('''
-        SELECT * FROM bayesdb_session_entries ORDER BY id;
+        SELECT * FROM bayesdb_session_entries ORDER BY id
     '''))
     SessionEntry = namedtuple('SessionEntry', ['id', 'session', 'time', 'type', 'data', 'completed'])
     return [SessionEntry(e[0], e[1], e[2], e[3], e[4], e[5]) for e in entries]
@@ -64,7 +62,7 @@ def _basic_test_trace(executor):
 
     # the above select query counts should become one or more entries
     num_entries = cursor_value(executor('''
-        SELECT COUNT(*) FROM bayesdb_session_entries;
+        SELECT COUNT(*) FROM bayesdb_session_entries
     '''))
     assert num_entries > 0
 
@@ -82,9 +80,7 @@ def test_sessions_basic_sql():
     _basic_test_trace(bdb.sql_execute)
 
 def _simple_bql_query(bdb):
-    bdb.execute('''
-        SELECT COUNT(*) FROM bayesdb_session;
-    ''')
+    bdb.execute('''SELECT COUNT(*) FROM bayesdb_session''')
 
 def test_sessions_session_id_and_clear_sessions():
     (bdb, tr) = make_bdb_with_sessions()
@@ -162,11 +158,13 @@ def test_sessions_no_errors():
         cursor = bdb.execute('''
             SELECT age, weight FROM t1
                 WHERE label = 'frotz'
-                ORDER BY weight''')
+                ORDER BY weight
+        ''')
         cursor.fetchall()
         # add a metamodel and do a query
         cursor = bdb.execute('''
-            ESTIMATE PREDICTIVE PROBABILITY OF age FROM t1_cc''')
+            ESTIMATE PREDICTIVE PROBABILITY OF age FROM t1_cc
+        ''')
         cursor.fetchall()
         # there should be no error entries in the previous session
         #tr._start_new_session()
@@ -186,11 +184,14 @@ class ErroneousMetamodel(troll.TrollMetamodel):
 def test_sessions_error_metamodel():
     with test_core.t1() as (bdb, _generator_id):
         bayeslite.bayesdb_register_metamodel(bdb, ErroneousMetamodel())
-        bdb.execute('''CREATE GENERATOR t1_err FOR t1
-                USING erroneous(age NUMERICAL)''')
+        bdb.execute('''
+            CREATE GENERATOR t1_err FOR t1
+                USING erroneous(age NUMERICAL)
+        ''')
         tr = sescap.SessionOrchestrator(bdb)
         cursor = bdb.execute('''
-            ESTIMATE PREDICTIVE PROBABILITY OF age FROM t1_err''')
+            ESTIMATE PREDICTIVE PROBABILITY OF age FROM t1_err
+        ''')
         with pytest.raises(sqlite3.OperationalError):
             cursor.fetchall()
         #tr._start_new_session()

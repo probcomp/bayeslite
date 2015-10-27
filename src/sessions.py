@@ -75,7 +75,7 @@ class SessionOrchestrator(object):
         self._sql('''
             INSERT INTO bayesdb_session_entries
                 (session_id, time, type, data)
-                VALUES (?,?,?,?);
+                VALUES (?,?,?,?)
         ''', (self.session_id, t, type, data))
         entry_id = cursor_value(self._sql('SELECT last_insert_rowid()'))
         self._qid_to_entry_id[qid] = entry_id
@@ -83,19 +83,17 @@ class SessionOrchestrator(object):
     def _mark_entry_completed(self, qid):
         entry_id = self._qid_to_entry_id[qid]
         self._sql('''
-            UPDATE bayesdb_session_entries
-                SET completed=1 WHERE id=?;
+            UPDATE bayesdb_session_entries SET completed = 1 WHERE id = ?
         ''', (entry_id,))
 
     def _mark_entry_error(self, qid):
         entry_id = self._qid_to_entry_id[qid]
         self._sql('''
-            UPDATE bayesdb_session_entries
-                SET error=1 WHERE id=?;
+            UPDATE bayesdb_session_entries SET error = 1 WHERE id = ?
         ''', (entry_id,))
 
     def _start_new_session(self):
-        self._sql('INSERT INTO bayesdb_session DEFAULT VALUES;')
+        self._sql('INSERT INTO bayesdb_session DEFAULT VALUES')
         self.session_id = cursor_value(self._sql('SELECT last_insert_rowid()'))
         # check for errors on the previous session
         self._check_error_entries(self.session_id - 1)
@@ -105,7 +103,7 @@ class SessionOrchestrator(object):
         errors and suggest sending the session'''
         error_entries = cursor_value(self._sql('''
             SELECT COUNT(*) FROM bayesdb_session_entries
-                WHERE error = 1 AND session_id = ?;
+                WHERE error = 1 AND session_id = ?
         ''', (session_id,)))
         # suggest sending sessions but don't suggest more than once
         if error_entries > 0 and not self._suggested_send:
@@ -114,19 +112,19 @@ class SessionOrchestrator(object):
         return error_entries
 
     def clear_all_sessions(self):
-        self._sql('DELETE FROM bayesdb_session_entries;')
-        self._sql('DELETE FROM bayesdb_session;')
+        self._sql('DELETE FROM bayesdb_session_entries')
+        self._sql('DELETE FROM bayesdb_session')
         self._sql('''
             DELETE FROM sqlite_sequence
-                WHERE name='bayesdb_session'
-                OR name='bayesdb_session_entries';
+                WHERE name = 'bayesdb_session'
+                OR name = 'bayesdb_session_entries'
         ''')
         self._start_new_session()
 
     def list_sessions(self):
         """Lists all saved sessions with the number of entries in each, and
         whether they were sent or not."""
-        return self._sql('SELECT * FROM bayesdb_session;')
+        return self._sql('SELECT * FROM bayesdb_session')
     
     def current_session_id(self):
         """Returns the current integer session id."""
@@ -139,8 +137,9 @@ class SessionOrchestrator(object):
             raise ValueError('No such session (%d)' % session_id)
         entries = self._sql('''
             SELECT * FROM bayesdb_session_entries
-                WHERE session_id == ?
-                ORDER BY time DESC''', (session_id,))
+                WHERE session_id = ?
+                ORDER BY time DESC
+        ''', (session_id,))
         return json.dumps(list(entries))
     
     def dump_current_session_as_json(self):
