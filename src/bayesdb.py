@@ -105,7 +105,7 @@ class BayesDB(object):
     def py_prng(self):
         """A :class:`random.Random` object local to this BayesDB instance.
 
-        This pseudo-random number generator is deterministically
+        This pseudorandom number generator is deterministically
         initialized from the seed supplied to :func:`bayesdb_open`.
         Use it to conserve reproducibility of results.
         """
@@ -115,7 +115,7 @@ class BayesDB(object):
     def np_prng(self):
         """A Numpy RandomState object local to this BayesDB instance.
 
-        This pseudo-random number generator is deterministically
+        This pseudorandom number generator is deterministically
         initialized from the seed supplied to :func:`bayesdb_open`.
         Use it to conserve reproducibility of results.
         """
