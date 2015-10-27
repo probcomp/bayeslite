@@ -39,7 +39,8 @@ def bayesdb_open(pathname=None, builtin_metamodels=None, seed=None):
     If `pathname` is unspecified or ``None``, a temporary in-memory
     BayesDB instance is created.
 
-    If no `seed` is given, a deterministic one is used.
+    `seed` is a 32-byte string specifying a pseudorandom number
+    generation seed.  If not specified, it defaults to all zeros.
     """
     if builtin_metamodels is None:
         builtin_metamodels = True
