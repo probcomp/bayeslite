@@ -56,6 +56,8 @@ class SessionOrchestrator(object):
             print msg
 
     def _sql(self, query, bindings=None):
+        # Go through bdb.sqlite3.execute instead of bdb.sql_execute to
+        # avoid hitting the tracer.
         if bindings == None:
             bindings = ()
         return self.bdb.sqlite3.execute(query, bindings)
