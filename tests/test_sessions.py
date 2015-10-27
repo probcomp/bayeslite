@@ -14,14 +14,17 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pytest
-import bayeslite
-import bayeslite.sessions as sescap
-import bayeslite.metamodels.troll_rng as troll
-import test_core
 import json
+import pytest
 import sqlite3
+
 from collections import namedtuple
+
+import bayeslite
+import bayeslite.metamodels.troll_rng as troll
+import bayeslite.sessions as sescap
+
+import test_core
 
 def make_bdb():
     crosscat = test_core.local_crosscat()

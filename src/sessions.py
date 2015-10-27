@@ -14,12 +14,14 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import bayeslite
-from bayeslite import IBayesDBTracer
-import time
-import sys
 import json
 import requests
+import sys
+import time
+
+import bayeslite
+
+from bayeslite import IBayesDBTracer
 
 _error_previous_session_msg = 'WARNING: Current or previous session contains queries that resulted in errors or exceptions. Consider uploading the session with send_session_data().'
 
