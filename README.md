@@ -16,13 +16,16 @@ Bayeslite depends on:
 - [Crosscat](https://github.com/probcomp/crosscat),
   a general-purpose nonparametric Bayesian population model which
   serves as a default in the absence of a domain-specific model.
+- [numpy](http://www.numpy.org), a library of vectorized numerical
+  algorithms
 - [requests](http://www.python-requests.org/), an HTTP/HTTPS library,
   which we use to track users.
 
 The bayeslite automatic tests depend on:
 
-- [numpy](http://www.numpy.org)
 - [pytest](https://pytest.org/)
+- [pandas](http://pandas.pydata.org), a library for tabular data
+  structures
 
 The bayeslite documentation depends on:
 
