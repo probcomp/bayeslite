@@ -177,6 +177,7 @@ setup(
         'requests',
     ],
     tests_require=[
+        'pandas',
         'pytest',
     ],
     packages=[
