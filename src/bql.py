@@ -34,6 +34,7 @@ import bayeslite.txn as txn
 from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
+from bayeslite.util import cursor_value
 
 def execute_phrase(bdb, phrase, bindings=()):
     """Execute the BQL AST phrase `phrase` and return a cursor of results."""
@@ -176,7 +177,7 @@ def execute_phrase(bdb, phrase, bindings=()):
         with bdb.savepoint():
             sql = 'SELECT COUNT(*) FROM bayesdb_generator WHERE tabname = ?'
             cursor = bdb.sql_execute(sql, (phrase.name,))
-            if 0 < cursor.next()[0]:
+            if 0 < cursor_value(cursor):
                 # XXX Automatically delete the generators?  Generators
                 # are more interesting than triggers and indices, so
                 # automatic deletion is not obviously right.
@@ -476,7 +477,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                         'generator_id': generator_id,
                         'modelno': modelno,
                     })
-                    if cursor.next()[0] == 0:
+                    if cursor_value(cursor) == 0:
                         raise BQLError(bdb, 'No such model'
                             ' in generator %s: %s' %
                             (repr(phrase.generator), repr(modelno)))
@@ -576,7 +577,7 @@ def instantiate_generator(bdb, gen_name, table, metamodel, columns,
             cursor = bdb.sql_execute(stattype_sql, {
                 'stattype': stattype,
             })
-            if cursor.next()[0] == 0:
+            if cursor_value(cursor) == 0:
                 invalid.add(stattype)
                 continue
             column_map[casefold(name)] = colno
@@ -663,6 +664,8 @@ class BayesDBCursor(object):
         return self._cursor.next()
     def fetchone(self):
         return self._cursor.fetchone()
+    def fetchvalue(self):
+        return cursor_value(self)
     def fetchmany(self, size=1):
         with txn.bayesdb_caching(self._bdb):
             return self._cursor.fetchmany(size=size)

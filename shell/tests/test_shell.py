@@ -136,6 +136,18 @@ def test_python_expression(spawnbdb):
     c.expect_prompt()
 
 
+def test_python_expression(spawnbdb):
+    c = spawnbdb
+    c.sendexpectcmd('.pythexec print 73')
+    c.expect_lines(['73'])
+    c.expect_prompt()
+    c.sendexpectcmd('.pythexec x = 42')
+    c.expect_prompt()
+    c.sendexpectcmd('.python x')
+    c.expect_lines(['42'])
+    c.expect_prompt()
+
+
 def test_help_returns_list_of_commands(spawnbdb):
     c = spawnbdb
     c.sendexpectcmd('.help')
@@ -148,6 +160,7 @@ def test_help_returns_list_of_commands(spawnbdb):
         '         .hook    add custom commands from a python source file',
         ' .legacymodels    load legacy models',
         '         .open    close existing database and open new one',
+        '     .pythexec    execute a Python statement',
         '       .python    evaluate a Python expression',
         '         .read    read a file of shell commands',
         '          .sql    execute a SQL query',
@@ -382,6 +395,7 @@ def test_hook(spawnbdb):
         ' .legacymodels    load legacy models',
         '       .myhook    myhook help string',
         '         .open    close existing database and open new one',
+        '     .pythexec    execute a Python statement',
         '       .python    evaluate a Python expression',
         '         .read    read a file of shell commands',
         '          .sql    execute a SQL query',

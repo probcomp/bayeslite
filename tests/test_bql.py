@@ -26,6 +26,8 @@ import bayeslite.guess as guess
 import bayeslite.parse as parse
 import bayeslite.metamodels.troll_rng as troll
 
+from bayeslite.util import cursor_value
+
 import test_core
 import test_csv
 
@@ -78,9 +80,9 @@ def test_conditional_probability():
         bdb.execute('analyze t1_cc for 1 iteration wait')
         q0 = 'estimate probability of age = 8 by t1_cc'
         q1 = 'estimate probability of age = 8 given () by t1_cc'
-        assert bdb.execute(q0).next()[0] == bdb.execute(q1).next()[0]
+        assert bdb.execute(q0).fetchvalue() == bdb.execute(q1).fetchvalue()
         q2 = 'estimate probability of age = 8 given (weight = 16) by t1_cc'
-        assert bdb.execute(q0).next()[0] < bdb.execute(q2).next()[0]
+        assert bdb.execute(q0).fetchvalue() < bdb.execute(q2).fetchvalue()
         bdb.execute('estimate probability of value 8'
             ' given (weight = 16) from columns of t1_cc').fetchall()
 
@@ -730,8 +732,8 @@ def test_trivial_commands():
         bdb.execute('alter table t rename to T0')               # XXX
         bdb.sql_execute('create table t0_temp(x)')
         bdb.execute('alter table T0 rename to t0')
-        assert bdb.execute('select count(*) from t0_temp').next()[0] == 0
-        assert bdb.execute('select count(*) from t0').next()[0] > 0
+        assert bdb.execute('select count(*) from t0_temp').fetchvalue() == 0
+        assert bdb.execute('select count(*) from t0').fetchvalue() > 0
         bdb.execute('drop table T0_TEMP')
         bdb.execute('analyze t_cc model 0 for 1 iteration wait')
         bdb.execute('analyze t_cc model 1 for 1 iteration wait')
@@ -982,7 +984,7 @@ def test_parametrized():
             'SELECT modelno FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ?',
             'SELECT sql_rowid, cc_row_id FROM bayesdb_crosscat_subsample'
-                ' WHERE generator_id = ? AND sql_rowid IN (1,1)',
+                ' WHERE generator_id = ? AND sql_rowid IN (1)',
             'SELECT metadata_json FROM bayesdb_crosscat_metadata'
                 ' WHERE generator_id = ?',
             'SELECT cc_colno FROM bayesdb_crosscat_column'
@@ -1028,7 +1030,7 @@ def test_parametrized():
             'SELECT modelno FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ?',
             'SELECT sql_rowid, cc_row_id FROM bayesdb_crosscat_subsample'
-                ' WHERE generator_id = ? AND sql_rowid IN (1,1)',
+                ' WHERE generator_id = ? AND sql_rowid IN (1)',
             'SELECT metadata_json FROM bayesdb_crosscat_metadata'
                 ' WHERE generator_id = ?',
             'SELECT cc_colno FROM bayesdb_crosscat_column'
@@ -1078,25 +1080,41 @@ def test_parametrized():
             'CREATE TEMP TABLE IF NOT EXISTS "sim"'
                 ' ("age" NUMERIC,"RANK" NUMERIC,"division" NUMERIC)',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
-            'SELECT metadata_json FROM bayesdb_crosscat_metadata'
-                ' WHERE generator_id = ?',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
             'SELECT MAX(_rowid_) FROM "t"',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT metadata_json FROM bayesdb_crosscat_metadata'
+                ' WHERE generator_id = ?',
             'SELECT modelno FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ?',
             'SELECT theta_json FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ? AND modelno = ?',
             'SELECT modelno FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ?',
+            'SELECT sql_rowid, cc_row_id FROM bayesdb_crosscat_subsample'
+                ' WHERE generator_id = ? AND sql_rowid IN (8)',
+            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
+            'SELECT c.name'
+                ' FROM bayesdb_column AS c,'
+                    ' bayesdb_generator AS g,'
+                    ' bayesdb_generator_column AS gc'
+                ' WHERE g.id = ? AND gc.generator_id = g.id'
+                    ' AND c.tabname = g.tabname AND c.colno = gc.colno'
+                ' ORDER BY c.colno ASC',
+            'SELECT "age","gender","salary","height","division","rank"'
+                ' FROM "t" WHERE _rowid_ IN (8) ORDER BY _rowid_ ASC',
+            'SELECT colno FROM bayesdb_generator_column'
+                ' WHERE generator_id = ? ORDER BY colno ASC',
+            'SELECT MAX(cc_row_id) + 1 FROM bayesdb_crosscat_subsample'
+                ' WHERE generator_id = ?',
             'SELECT cc_colno FROM bayesdb_crosscat_column'
                 ' WHERE generator_id = ? AND colno = ?',
             'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column'
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column'
                 ' WHERE generator_id = ? AND colno = ?',
             'SELECT cc_colno FROM bayesdb_crosscat_column'
                 ' WHERE generator_id = ? AND colno = ?',
@@ -1180,22 +1198,37 @@ def test_parametrized():
                     ' AND g.tabname = c.tabname' \
                     ' AND gc.colno = c.colno',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
-            'SELECT metadata_json FROM bayesdb_crosscat_metadata' \
-                ' WHERE generator_id = ?',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
             'SELECT MAX(_rowid_) FROM "t"',
-            'SELECT cc_colno FROM bayesdb_crosscat_column' \
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column' \
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column' \
-                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT metadata_json FROM bayesdb_crosscat_metadata' \
+                ' WHERE generator_id = ?',
             'SELECT modelno FROM bayesdb_crosscat_theta' \
                 ' WHERE generator_id = ?',
             'SELECT theta_json FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ? AND modelno = ?',
             'SELECT modelno FROM bayesdb_crosscat_theta' \
                 ' WHERE generator_id = ?',
+            'SELECT sql_rowid, cc_row_id FROM bayesdb_crosscat_subsample'
+                ' WHERE generator_id = ? AND sql_rowid IN (8)',
+            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
+            'SELECT c.name'
+                ' FROM bayesdb_column AS c, bayesdb_generator AS g,'
+                    ' bayesdb_generator_column AS gc'
+                ' WHERE g.id = ? AND gc.generator_id = g.id'
+                    ' AND c.tabname = g.tabname AND c.colno = gc.colno'
+                ' ORDER BY c.colno ASC',
+            'SELECT "age","gender","salary","height","division","rank"'
+                ' FROM "t" WHERE _rowid_ IN (8) ORDER BY _rowid_ ASC',
+            'SELECT colno FROM bayesdb_generator_column'
+                ' WHERE generator_id = ? ORDER BY colno ASC',
+            'SELECT MAX(cc_row_id) + 1 FROM bayesdb_crosscat_subsample'
+                ' WHERE generator_id = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column' \
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column' \
+                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column' \
+                ' WHERE generator_id = ? AND colno = ?',
             'SELECT cc_colno FROM bayesdb_crosscat_column' \
                 ' WHERE generator_id = ? AND colno = ?',
             'SELECT stattype FROM bayesdb_generator_column' \
@@ -1670,7 +1703,7 @@ def test_checkpoint_slow():
             select iterations from bayesdb_generator_model
                 where generator_id = ?
         '''
-        assert bdb.execute(sql, (generator_id,)).next()[0] == 5
+        assert bdb.execute(sql, (generator_id,)).fetchvalue() == 5
         bdb.execute('drop models from t1_cc')
         bdb.execute('initialize 1 model for t1_cc')
         bdb.execute('analyze t1_cc for 1 iteration checkpoint 2 iterations'
@@ -1679,7 +1712,8 @@ def test_checkpoint_slow():
             select iterations from bayesdb_generator_model
                 where generator_id = ?
         '''
-        assert bdb.execute(sql, (generator_id,)).next()[0] == 1
+        assert bdb.execute(sql, (generator_id,)).fetchvalue() == 1
+        bdb.execute('analyze t1_cc for 1 iteration checkpoint 0 seconds wait')
 
 def test_infer_confidence_slow():
     with test_core.t1() as (bdb, _generator_id):
@@ -1728,35 +1762,36 @@ def test_empty_cursor():
         empty(bdb.execute('DROP TABLE t'))
 
 class MockTracerOneQuery(bayeslite.IBayesDBTracer):
-    def __init__(self, q):
+    def __init__(self, q, qid):
         self.q = q
+        self.qid = qid
         self.start_calls = 0
         self.ready_calls = 0
         self.error_calls = 0
         self.finished_calls = 0
         self.abandoned_calls = 0
     def start(self, qid, query, bindings):
-        assert qid == 1
+        assert qid == self.qid
         assert query == self.q
         assert bindings == ()
         self.start_calls += 1
     def ready(self, qid, _cursor):
-        assert qid == 1
+        assert qid == self.qid
         self.ready_calls += 1
     def error(self, qid, _e):
-        assert qid == 1
+        assert qid == self.qid
         self.error_calls += 1
     def finished(self, qid):
-        assert qid == 1
+        assert qid == self.qid
         self.finished_calls += 1
     def abandoned(self, qid):
-        assert qid == 1
+        assert qid == self.qid
         self.abandoned_calls += 1
 
 def test_tracing_smoke():
     with test_core.t1() as (bdb, _generator_id):
         q = 'SELECT * FROM t1'
-        tracer = MockTracerOneQuery(q)
+        tracer = MockTracerOneQuery(q, 1)
         bdb.trace(tracer)
         cursor = bdb.execute(q)
         assert tracer.start_calls == 1
@@ -1776,11 +1811,34 @@ def test_tracing_smoke():
         assert tracer.error_calls == 0
         assert tracer.finished_calls == 1
         assert tracer.abandoned_calls == 1
+        bdb.untrace(tracer)
+        # XXX Make sure the whole cursor API works.
+        q = 'SELECT 42'
+        tracer = MockTracerOneQuery(q, 2)
+        bdb.trace(tracer)
+        cursor = bdb.execute(q)
+        assert tracer.start_calls == 1
+        assert tracer.ready_calls == 1
+        assert tracer.error_calls == 0
+        assert tracer.finished_calls == 0
+        assert tracer.abandoned_calls == 0
+        assert cursor.fetchvalue() == 42
+        assert tracer.start_calls == 1
+        assert tracer.ready_calls == 1
+        assert tracer.error_calls == 0
+        assert tracer.finished_calls == 1
+        assert tracer.abandoned_calls == 0
+        del cursor
+        assert tracer.start_calls == 1
+        assert tracer.ready_calls == 1
+        assert tracer.error_calls == 0
+        assert tracer.finished_calls == 1
+        assert tracer.abandoned_calls == 1
 
 def test_tracing_error_smoke():
     with test_core.t1() as (bdb, _generator_id):
         q = 'SELECT * FROM wrong'
-        tracer = MockTracerOneQuery(q)
+        tracer = MockTracerOneQuery(q, 1)
         bdb.trace(tracer)
         with pytest.raises(sqlite3.OperationalError):
             bdb.execute(q)
@@ -1795,7 +1853,7 @@ class ErroneousMetamodel(troll.TrollMetamodel):
     def __init__(self):
         self.call_ct = 0
     def name(self): return 'erroneous'
-    def row_column_predictive_probability(self, *_args, **_kwargs):
+    def logpdf_joint(self, *_args, **_kwargs):
         if self.call_ct > 10: # Wait to avoid raising during sqlite's prefetch
             raise Boom()
         self.call_ct += 1
@@ -1807,7 +1865,7 @@ def test_tracing_execution_error_smoke():
         bdb.execute('''
             CREATE GENERATOR t1_err FOR t1 USING erroneous(age NUMERICAL)''')
         q = 'ESTIMATE PREDICTIVE PROBABILITY OF age FROM t1_err'
-        tracer = MockTracerOneQuery(q)
+        tracer = MockTracerOneQuery(q, 1)
         bdb.trace(tracer)
         cursor = bdb.execute(q)
         assert tracer.start_calls == 1

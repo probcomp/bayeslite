@@ -24,6 +24,7 @@ import bayeslite.core as core
 
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
+from bayeslite.util import cursor_value
 
 renamed_column_stattypes = {
     'continuous': 'numerical',
@@ -143,7 +144,7 @@ def bayesdb_load_legacy_models(bdb, generator, table, metamodel, pathname,
                         WHERE generator_id = ?
                 '''
                 cursor = bdb.sql_execute(bdb, (generator_id,))
-                if 0 < cursor.next()[0]:
+                if 0 < cursor_value(cursor):
                     raise ValueError('Legacy models mismatch schema: %s' %
                         (repr(generator),))
                 qg = sqlite3_quote_name(generator)
@@ -195,7 +196,7 @@ def bayesdb_load_legacy_models(bdb, generator, table, metamodel, pathname,
                 WHERE generator_id = ?
         '''
         cursor = bdb.sql_execute(modelno_max_sql, (generator_id,))
-        modelno_max = cursor.next()[0]
+        modelno_max = cursor_value(cursor)
         modelno_start = 0 if modelno_max is None else modelno_max + 1
 
         # Consistently number the models consecutively in order of the

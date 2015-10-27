@@ -84,7 +84,7 @@ def test_correlation():
                 ' FROM PAIRWISE COLUMNS OF t_cc'
                 ' WHERE name0 < name1').fetchall() == \
             [
-                (2, 'c0', 'c1', 1., 2.900863120340446e-12),
+                (2, 'c0', 'c1', 1., 2.900863120340436e-12),
                 (2, 'c0', 'cx', None, None),
                 (2, 'c0', 'cy', None, None),
                 (2, 'c0', 'n0', 1., 0.),
@@ -115,7 +115,7 @@ def test_correlation():
                 (2, 'cy', 'nx', None, None),
                 (2, 'cy', 'ny', None, None),
                 (2, 'n0', 'n1', 0.7913965673596881, 0.),
-                (2, 'n0', 'nc', 0.20860343264031164, .26502),
+                (2, 'n0', 'nc', 0.20860343264031175, .26502),
                 (2, 'n0', 'nl', 0.7913965673596881, 0.),
                 (2, 'n0', 'nx', None, None),
                 (2, 'n0', 'ny', None, None),

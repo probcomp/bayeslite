@@ -100,11 +100,11 @@ def _test_example(bdb, exname):
     assert core.bayesdb_has_table(bdb, t)
 
     # Insert data into the table.
-    assert bdb.execute('SELECT COUNT(*) FROM %s' % (qt,)).next()[0] == 0
+    assert bdb.execute('SELECT COUNT(*) FROM %s' % (qt,)).fetchvalue() == 0
     for row in data:
         bdb.sql_execute(data_sql, row)
     n = len(data)
-    assert bdb.execute('SELECT COUNT(*) FROM %s' % (qt,)).next()[0] == n
+    assert bdb.execute('SELECT COUNT(*) FROM %s' % (qt,)).fetchvalue() == n
 
     # Create a generator.  Make sure savepoints work for this.
     assert not core.bayesdb_has_generator(bdb, g)
@@ -128,13 +128,16 @@ def _test_example(bdb, exname):
 
     gid = core.bayesdb_get_generator(bdb, g)
     assert not core.bayesdb_generator_has_model(bdb, gid, 0)
+    assert [] == core.bayesdb_generator_modelnos(bdb, gid)
     with bdb.savepoint_rollback():
         bdb.execute('INITIALIZE 1 MODEL FOR %s' % (qg,))
         assert core.bayesdb_generator_has_model(bdb, gid, 0)
+        assert [0] == core.bayesdb_generator_modelnos(bdb, gid)
     with bdb.savepoint_rollback():
         bdb.execute('INITIALIZE 10 MODELS FOR %s' % (qg,))
         for i in range(10):
             assert core.bayesdb_generator_has_model(bdb, gid, i)
+            assert range(10) == core.bayesdb_generator_modelnos(bdb, gid)
     bdb.execute('INITIALIZE 2 MODELS FOR %s' % (qg,))
 
     # Test dropping things.
@@ -169,6 +172,7 @@ def _test_example(bdb, exname):
         bdb.execute('DROP MODEL 1 FROM %s' % (qg,))
         assert core.bayesdb_generator_has_model(bdb, gid, 0)
         assert not core.bayesdb_generator_has_model(bdb, gid, 1)
+        assert [0] == core.bayesdb_generator_modelnos(bdb, gid)
 
     # Test analyzing models.
     bdb.execute('ANALYZE %s FOR 1 ITERATION WAIT' % (qg,))

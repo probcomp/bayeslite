@@ -1,3 +1,5 @@
+Notes for anyone hacking bayeslite
+
 * Automatic tests
 
 Every commit on long-term branches including master should pass
@@ -20,18 +22,6 @@ run a subset of tests, and stop at the first failure, with
 
 However, please double-check that every commit you have made passes
 all tests before publishing the commits.
-
-* Randomization
-
-Avoid indiscriminate nondeterminism.
-
-All random choices should be made from PRNGs with seeds that the user
-can control, via the normal Python API and the bayeslite shell.  Any
-actual nondeterminism should be clearly labelled as such, e.g. a
-future shell command to choose a seed from /dev/urandom.
-
-(Crosscat is currently nondeterministc, but this is a bug in
-Crosscat.)
 
 * SQL/BQL parameters
 
@@ -61,16 +51,50 @@ covers multiple lines:
         })
 
 If the tables and columns in the query are determined dynamically,
-then use sqlite3_quote_name and format strings to assemble SQL/BQL
+then use bql_quote_name and format strings to assemble SQL/BQL
 queries.  But prefer to avoid this by writing different queries or
 reusing subroutines that already do it, such as in bayeslite.core.
 
-DO:     qt = sqlite3_quote_name(table)
-        qc = sqlite3_quote_name(column)
+DO:     from bayeslite import bql_quote_name
+        qt = bql_quote_name(table)
+        qc = bql_quote_name(column)
         db.execute('SELECT %s FROM %s WHERE x = ?' % (qc, qt), (x,))
 
 DON'T:  db.execute('SELECT %s FROM %s WHERE x = ?' % (column, table), (x,))
 DON'T:  db.execute('SELECT %s FROM %s WHERE x = %d' % (qc, qt, x))
+
+* Randomization
+
+Avoid indiscriminate nondeterminism.
+
+All random choices should be made from PRNGs with seeds that the user
+can control, via the normal Python API and the bayeslite shell.  Any
+actual nondeterminism should be clearly labelled as such, e.g. a
+future shell command to choose a seed from /dev/urandom.
+
+(Crosscat is currently nondeterministc, but this is a bug in
+Crosscat.)
+
+* Python coding style
+
+Generally follow PEP 8, with these exceptions:
+
+- Single line between top-level definitions.
+  => Two blank lines are needlessly verbose.
+- Four spaces, instead of alignment, for continuation lines.
+  => Using alignment penalizes descriptive function names and renaming.
+
+Additional guidelines:
+
+- General API should be exposed in the bayeslite module.
+- General names should begin with the lexeme `bayesdb' or `bql'.
+- Prefer greppable descriptive global functions over methods.
+  => Legibility is more important than extensibility.
+- Prefer single-quoted strings, except use """ for docstrings.
+- unicode for user data; str for SQL/BQL text.
+- Don't bother with pylint.  It will waste your time.
+- Prefer clarity over boilerplate.
+  => No need to clutter every docstring with a sphinx template.
 
 * SQL updates
 
@@ -84,22 +108,3 @@ rows:
 
 XXX Should not use bdb.sqlite3 explicitly here.
 XXX Not every use is so marked.
-
-* Python coding style
-
-Generally follow PEP 8, with these exceptions:
-
-- Single line between top-level definitions.
-  => Two blank lines are needlessly verbose.
-
-Additional guidelines:
-
-- General API should be exposed in the bayeslite module.
-- General names should begin with the lexeme `bayesdb' or `bql'.
-- Prefer greppable descriptive global functions over methods.
-  => Legibility is more important than extensibility.
-- Prefer single-quoted strings, except use """ for docstrings.
-- unicode for user data; str for SQL/BQL text.
-- Don't bother with pylint.  It will waste your time.
-- Prefer clarity over boilerplate.
-  => No need to clutter every docstring with a sphinx template.

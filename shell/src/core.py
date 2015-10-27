@@ -57,6 +57,8 @@ class Shell(cmd.Cmd):
         self._sql_traced = False
         self._hooked_filenames = set([])
 
+        self._python_globals = {'bayeslite': bayeslite}
+
         # Awful kludge to make commands begin with `.'.
         #
         # XXX Does not disable the `quit' command and whatever other
@@ -69,6 +71,7 @@ class Shell(cmd.Cmd):
         self._installcmd('hook', self.dot_hook)
         self._installcmd('legacymodels', self.dot_legacymodels)
         self._installcmd('open', self.dot_open)
+        self._installcmd('pythexec', self.dot_pythexec)
         self._installcmd('python', self.dot_python)
         self._installcmd('read', self.dot_read)
         self._installcmd('sql', self.dot_sql)
@@ -350,6 +353,22 @@ class Shell(cmd.Cmd):
         self._bdb = bayeslite.bayesdb_open(pathname=line,
             builtin_metamodels=False)
 
+    def dot_pythexec(self, line):
+        '''execute a Python statement
+        <statement>
+
+        Execute a Python statement in the underlying Python
+        interpreter.
+
+        `bdb' is bound to the BayesDB instance.
+        '''
+        try:
+            self._python_globals['bdb'] = self._bdb
+            exec line in self._python_globals
+        except Exception:
+            self.stdout.write(traceback.format_exc())
+        return False
+
     def dot_python(self, line):
         '''evaluate a Python expression
         <expression>
@@ -358,11 +377,13 @@ class Shell(cmd.Cmd):
         interpreter.
 
         `bdb' is bound to the BayesDB instance.
+
+        Note that this command cannot execute a Python statement at
+        the moment.  For that, use the `.pythexec` command.
         '''
         try:
-            globals = {'bayeslite': bayeslite}
-            locals = {'bdb': self._bdb}
-            value = eval(line, globals, locals)
+            self._python_globals['bdb'] = self._bdb
+            value = eval(line, self._python_globals)
             self.stdout.write('%s\n' % (repr(value),))
         except Exception:
             self.stdout.write(traceback.format_exc())

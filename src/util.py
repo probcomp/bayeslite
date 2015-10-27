@@ -79,7 +79,36 @@ def casefold(string):
 
 def logsumexp(array):
     m = max(array)
+    if m == float('inf'):
+        return float('inf')
+    elif m == -float('inf'):
+        return -float('inf')
+    # This math.exp can't overflow b/c a - m is <= 0, so ieee_exp is
+    # the same.
     return m + math.log(sum(math.exp(a - m) for a in array))
 
 def logmeanexp(array):
     return logsumexp(array) - math.log(len(array))
+
+def ieee_exp(x):
+    try:
+        return math.exp(x)
+    except OverflowError:
+        return float("inf")
+
+def cursor_value(cursor):
+    try:
+        row = cursor.next()
+    except StopIteration:
+        raise ValueError('Empty cursor')
+    try:
+        cursor.next()
+    except StopIteration:
+        pass
+    else:
+        raise ValueError('Cursor with >1 result')
+    if len(row) == 0:
+        raise ValueError('Empty cursor result')
+    if 1 < len(row):
+        raise ValueError('Excessive cursor result')
+    return row[0]

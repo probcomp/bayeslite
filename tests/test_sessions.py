@@ -171,13 +171,11 @@ def test_sessions_no_errors():
         assert tr._check_error_entries(tr.session_id) == 0
 
 class Boom(Exception): pass
-
 class ErroneousMetamodel(troll.TrollMetamodel):
     def __init__(self):
         self.call_ct = 0
-    def name(self):
-        return 'erroneous'
-    def row_column_predictive_probability(self, *_args, **_kwargs):
+    def name(self): return 'erroneous'
+    def logpdf_joint(self, *_args, **_kwargs):
         if self.call_ct > 10: # Wait to avoid raising during sqlite's prefetch
             raise Boom()
         self.call_ct += 1

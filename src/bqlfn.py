@@ -16,6 +16,7 @@
 
 import json
 import math
+import numpy
 
 import bayeslite.core as core
 import bayeslite.stats as stats
@@ -25,6 +26,7 @@ from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
 from bayeslite.util import casefold
+from bayeslite.util import ieee_exp
 from bayeslite.util import unique_indices
 
 def bayesdb_install_bql(db, cookie):
@@ -131,8 +133,14 @@ def cramerphi_chi2(data0, data1):
     assert n == len(data1)
     if n == 0:
         return float('NaN'), 0, 0
-    unique0 = unique_indices(data0)
-    unique1 = unique_indices(data1)
+    index0 = dict((x, i) for i, x in enumerate(sorted(set(data0))))
+    index1 = dict((x, i) for i, x in enumerate(sorted(set(data1))))
+    data0 = numpy.array([index0[d] for d in data0])
+    data1 = numpy.array([index1[d] for d in data1])
+    assert data0.ndim == 1
+    assert data1.ndim == 1
+    unique0 = numpy.unique(data0)
+    unique1 = numpy.unique(data1)
     n0 = len(unique0)
     n1 = len(unique1)
     min_levels = min(n0, n1)
@@ -140,15 +148,12 @@ def cramerphi_chi2(data0, data1):
         # No variation in at least one column, so no notion of
         # correlation.
         return float('NaN'), n0, n1
-    ct = [0] * n0
-    for i0, j0 in enumerate(unique0):
-        ct[i0] = [0] * n1
-        for i1, j1 in enumerate(unique1):
-            c = 0
-            for i in range(n):
-                if data0[i] == data0[j0] and data1[i] == data1[j1]:
-                    c += 1
-            ct[i0][i1] = c
+    ct = numpy.zeros((n0, n1), dtype=int)
+    for i0, x0 in enumerate(unique0):
+        for i1, x1 in enumerate(unique1):
+            matches0 = numpy.array(data0 == x0, dtype=int)
+            matches1 = numpy.array(data1 == x1, dtype=int)
+            ct[i0][i1] = numpy.dot(matches0, matches1)
     # Compute observed chi^2 statistic.
     chi2 = stats.chi2_contingency(ct)
     return chi2, n0, n1
@@ -267,22 +272,26 @@ def bql_column_mutual_information(bdb, generator_id, modelno, colno0, colno1,
     return metamodel.column_mutual_information(bdb, generator_id, modelno,
         colno0, colno1, numsamples=numsamples)
 
-# One-column function:  PROBABILITY OF <col>=<value>
+# One-column function:  PROBABILITY OF <col>=<value> GIVEN <constraints>
 def bql_column_value_probability(bdb, generator_id, modelno, colno, value,
         *constraint_args):
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
+    # A nonexistent (`unobserved') row id.
+    fake_row_id = core.bayesdb_generator_fresh_row_id(bdb, generator_id)
     constraints = []
     i = 0
     while i < len(constraint_args):
         if i + 1 == len(constraint_args):
             raise ValueError('Odd constraint arguments: %s' %
                 (constraint_args,))
-        col = constraint_args[i]
-        value = constraint_args[i + 1]
-        constraints.append((col, value))
+        constraint_colno = constraint_args[i]
+        constraint_value = constraint_args[i + 1]
+        constraints.append((fake_row_id, constraint_colno, constraint_value))
         i += 2
-    return metamodel.column_value_probability(bdb, generator_id, modelno,
-        colno, value, constraints)
+    targets = [(fake_row_id, colno, value)]
+    r = metamodel.logpdf_joint(
+        bdb, generator_id, targets, constraints, modelno)
+    return ieee_exp(r)
 
 ### BayesDB row functions
 
@@ -301,8 +310,13 @@ def bql_row_similarity(bdb, generator_id, modelno, rowid, target_rowid,
 def bql_row_column_predictive_probability(bdb, generator_id, modelno, rowid,
         colno):
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    return metamodel.row_column_predictive_probability(bdb, generator_id,
-        modelno, rowid, colno)
+    value = core.bayesdb_generator_cell_value(
+        bdb, generator_id, rowid, colno)
+    if value is None:
+        return None
+    r = metamodel.logpdf_joint(
+        bdb, generator_id, [(rowid, colno, value)], [], modelno)
+    return ieee_exp(r)
 
 ### Predict and simulate
 
@@ -332,10 +346,19 @@ def bayesdb_simulate(bdb, generator_id, constraints, colnos,
     column specified in the list `colnos`, conditioned on the
     constraints in the list `constraints` of tuples ``(colno,
     value)``.
+
+    The results are simulated from the predictive distribution on
+    fresh rows.
+
     """
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    return metamodel.simulate(bdb, generator_id, modelno, constraints, colnos,
-        numpredictions=numpredictions)
+    fake_rowid = core.bayesdb_generator_fresh_row_id(bdb, generator_id)
+    targets = [(fake_rowid, colno) for colno in colnos]
+    if constraints is not None:
+        constraints = [(fake_rowid, colno, val)
+                       for colno, val in constraints]
+    return metamodel.simulate_joint(bdb, generator_id, targets,
+        constraints, modelno, num_predictions=numpredictions)
 
 def bayesdb_insert(bdb, generator_id, row):
     """Notify a generator that a row has been inserted into its table."""

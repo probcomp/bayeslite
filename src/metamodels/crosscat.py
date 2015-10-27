@@ -38,6 +38,7 @@ from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.stats import arithmetic_mean
 from bayeslite.util import casefold
+from bayeslite.util import cursor_value
 from bayeslite.util import unique
 
 crosscat_schema_1 = '''
@@ -360,14 +361,14 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             SELECT sql_rowid, cc_row_id FROM bayesdb_crosscat_subsample
                 WHERE generator_id = ?
                     AND sql_rowid IN (%s)
-        ''' % (','.join('%d' % (rowid,) for rowid in rowids)),
+        ''' % (','.join('%d' % (rowid,) for rowid in sorted(set(rowids)))),
             (generator_id,))
         for rowid, row_id in cursor:
             for i in index[rowid]:
                 row_ids[i] = row_id
             del index[rowid]
         if 0 < len(index):
-            rowids = sorted(index.keys())
+            rowids = sorted(set(index.keys()))
             table_name = core.bayesdb_generator_table(bdb, generator_id)
             qt = sqlite3_quote_name(table_name)
             modelled_column_names = \
@@ -382,27 +383,80 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             rows = [[crosscat_value_to_code(bdb, generator_id, M_c, colno, x)
                     for colno, x in zip(colnos, row)]
                 for row in cursor]
-            T = self._crosscat_data(bdb, generator_id, M_c)
-            X_L_list, X_D_list, T = self._crosscat.insert(
-                M_c=M_c,
-                T=T,
-                X_L_list=X_L_list,
-                X_D_list=X_D_list,
-                new_rows=rows,
-            )
-            for r0, r1 in \
-                zip(T, self._crosscat_data(bdb, generator_id, M_c) + rows):
-                assert all(x0 == x1 or (math.isnan(x0) and math.isnan(x1))
-                    for x0, x1 in zip(r0, r1))
-            next_row_id = bdb.sql_execute('''
+            if len(rows) > 0:
+                # Need to put more stuff into the subsample temporarily
+                T = self._crosscat_data(bdb, generator_id, M_c)
+                X_L_list, X_D_list, T = self._crosscat.insert(
+                    M_c=M_c,
+                    T=T,
+                    X_L_list=X_L_list,
+                    X_D_list=X_D_list,
+                    new_rows=rows,
+                )
+                for r0, r1 in \
+                    zip(T, self._crosscat_data(bdb, generator_id, M_c) + rows):
+                    assert all(x0 == x1 or (math.isnan(x0) and math.isnan(x1))
+                               for x0, x1 in zip(r0, r1))
+            cursor = bdb.sql_execute('''
                 SELECT MAX(cc_row_id) + 1 FROM bayesdb_crosscat_subsample
                     WHERE generator_id = ?
-            ''', (generator_id,)).next()[0]
+            ''', (generator_id,))
+            next_row_id = cursor_value(cursor)
             for n, rowid in enumerate(rowids):
                 for i in index[rowid]:
                     row_ids[i] = next_row_id + n
         assert all(row_id is not None for row_id in row_ids)
         return row_ids, X_L_list, X_D_list
+
+    def _crosscat_remap_mixed(self, bdb, generator_id, X_L_list,
+            X_D_list, items):
+        # XXX Why special-case empty items?
+        if items is None:
+            return None, X_L_list, X_D_list
+        M_c = self._crosscat_metadata(bdb, generator_id)
+        rowids = [item[0] for item in items]
+        row_ids, X_L_list, X_D_list = self._crosscat_get_rows(
+            bdb, generator_id, rowids, X_L_list, X_D_list)
+        def remap_tuple(row_id, item):
+            # XXX See the comment on _crosscat_remap_two below for an
+            # explanation of this horrible type dispatch.
+            if len(item) == 2:
+                (_, colno) = item
+                return (row_id, crosscat_cc_colno(bdb, generator_id, colno))
+            if len(item) == 3:
+                (_, colno, value) = item
+                new_colno = crosscat_cc_colno(bdb, generator_id, colno)
+                new_value = crosscat_value_to_code(
+                    bdb, generator_id, M_c, colno, value)
+                return (row_id, new_colno, new_value)
+        res = [remap_tuple(row_id, item)
+               for row_id, item in zip(row_ids, items)]
+        return res, X_L_list, X_D_list
+
+    def _crosscat_remap_two(self, bdb, generator_id, X_L_list, X_D_list,
+            first, second):
+        # XXX This kludgerosity (together with the tuple size dispatch
+        # in _crosscat_remap_mixed) is trying to apply a consistent
+        # row id mapping to both the targets and the constraints.  In
+        # retrospect, it may have been better to do that by making a
+        # routine that explicitly constructs a row id mapping table
+        # and separately applying it to the targets and the
+        # constraints.  As it is, said mapping table is more or less
+        # implicit in the behavior of _crosscat_get_rows (and
+        # intertwined with possibly extending the input crosscat
+        # states in the case that the requested rows are added to the
+        # effective subsample).
+        if first is None:
+            new_second, X_L_list, X_D_list = self._crosscat_remap_mixed(
+                bdb, generator_id, X_L_list, X_D_list, second)
+            return None, new_second, X_L_list, X_D_list
+        if second is None:
+            new_first, X_L_list, X_D_list = self._crosscat_remap_mixed(
+                bdb, generator_id, X_L_list, X_D_list, first)
+            return new_first, None, X_L_list, X_D_list
+        new, X_L_list, X_D_list = self._crosscat_remap_mixed(
+            bdb, generator_id, X_L_list, X_D_list, first + second)
+        return new[:len(first)], new[len(first):], X_L_list, X_D_list
 
     def name(self):
         return 'crosscat'
@@ -654,8 +708,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 # XXX Let the user pass in a seed.
                 k = do_subsample
                 sql = 'SELECT COUNT(*) FROM %s' % (qt,)
-                cursor = bdb.sql_execute(sql)
-                n = cursor.next()[0]
+                n = cursor_value(bdb.sql_execute(sql))
                 sql = 'SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC' % (qt,)
                 cursor = bdb.sql_execute(sql)
                 seed = struct.pack('<QQQQ', 0, 0, k, n)
@@ -909,10 +962,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             ckpt_deadline = time.time() + ckpt_seconds
             if max_seconds is not None:
                 ckpt_deadline = min(ckpt_deadline, deadline)
-        if ckpt_iterations is not None:
-            ckpt_counter = ckpt_iterations
-            if iterations is not None:
-                ckpt_counter = min(ckpt_counter, iterations)
+        if ckpt_iterations is not None and iterations is not None:
+            ckpt_iterations = min(ckpt_iterations, iterations)
         while (iterations is None or 0 < iterations) and \
               (max_seconds is None or time.time() < deadline):
             n_steps = 1
@@ -947,9 +998,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 # Python and C++ more often than is necessary, but it
                 # doesn't report back to us the number of iterations
                 # actually performed.
-                iterations_done = 0
-                while (ckpt_iterations is None or 0 < ckpt_counter) and \
-                      (ckpt_seconds is None or time.time() < ckpt_deadline):
+                iterations_in_ckpt = 0
+                while True:
                     X_L_list, X_D_list, diagnostics = self._crosscat.analyze(
                         M_c=M_c,
                         T=T,
@@ -960,28 +1010,32 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                         X_D=X_D_list,
                         n_steps=n_steps,
                     )
-                    iterations_done += n_steps
+                    iterations_in_ckpt += n_steps
                     if iterations is not None:
                         assert n_steps <= iterations
                         iterations -= n_steps
                         if iterations == 0:
                             break
                     if ckpt_iterations is not None:
-                        ckpt_counter -= n_steps
-                    if ckpt_iterations is None and ckpt_seconds is None:
+                        if ckpt_iterations <= iterations_in_ckpt:
+                            break
+                    elif ckpt_seconds is not None:
+                        if ckpt_deadline < time.time():
+                            break
+                    else:
                         break
                 cc_cache = self._crosscat_cache(bdb)
                 for i, (modelno, theta, X_L, X_D) \
                         in enumerate(
                             zip(update_modelnos, thetas, X_L_list, X_D_list)):
-                    theta['iterations'] += iterations_done
+                    theta['iterations'] += iterations_in_ckpt
                     theta['X_L'] = X_L
                     theta['X_D'] = X_D
                     total_changes = bdb.sqlite3.total_changes
                     bdb.sql_execute(update_iterations_sql, {
                         'generator_id': generator_id,
                         'modelno': modelno,
-                        'iterations': iterations_done,
+                        'iterations': iterations_in_ckpt,
                     })
                     assert bdb.sqlite3.total_changes - total_changes == 1
                     total_changes = bdb.sqlite3.total_changes
@@ -1001,7 +1055,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                         'generator_id': generator_id,
                         'modelno': modelno,
                     })
-                    checkpoint = cursor.next()[0]
+                    checkpoint = cursor_value(cursor)
                     if checkpoint is None:
                         checkpoint = 0
                     assert isinstance(checkpoint, int)
@@ -1068,31 +1122,6 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         # the mean.
         return arithmetic_mean(mi)
 
-    def column_value_probability(self, bdb, generator_id, modelno, colno,
-            value, constraints):
-        M_c = self._crosscat_metadata(bdb, generator_id)
-        try:
-            code = crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
-        except KeyError:
-            return 0
-        X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
-        X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
-        # Fabricate a nonexistent (`unobserved') row id.
-        fake_row_id = len(X_D_list[0][0])
-        cc_colno = crosscat_cc_colno(bdb, generator_id, colno)
-        r = self._crosscat.simple_predictive_probability_multistate(
-            M_c=M_c,
-            X_L_list=X_L_list,
-            X_D_list=X_D_list,
-            Y=[(fake_row_id,
-                    crosscat_cc_colno(bdb, generator_id, c_colno),
-                    crosscat_value_to_code(bdb, generator_id, M_c, c_colno,
-                        c_value))
-                for c_colno, c_value in constraints],
-            Q=[(fake_row_id, cc_colno, code)]
-        )
-        return math.exp(r)
-
     def row_similarity(self, bdb, generator_id, modelno, rowid, target_rowid,
             colnos):
         X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
@@ -1110,71 +1139,12 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 for colno in colnos],
         )
 
-    def row_column_predictive_probability(self, bdb, generator_id, modelno,
-            rowid, colno):
-        M_c = self._crosscat_metadata(bdb, generator_id)
-        table_name = core.bayesdb_generator_table(bdb, generator_id)
-        colname = core.bayesdb_generator_column_name(bdb, generator_id, colno)
-        qt = sqlite3_quote_name(table_name)
-        qcn = sqlite3_quote_name(colname)
-        value_sql = 'SELECT %s FROM %s WHERE _rowid_ = ?' % (qcn, qt)
-        value_cursor = bdb.sql_execute(value_sql, (rowid,))
-        value = None
-        try:
-            row = value_cursor.next()
-        except StopIteration:
-            generator = core.bayesdb_generator_name(bdb, generator_id)
-            raise BQLError(bdb, 'No such row in %s: %d' %
-                (repr(generator), rowid))
-        else:
-            assert len(row) == 1
-            value = row[0]
-        if value is None:
-            return None
-        code = crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
-        cc_colno = crosscat_cc_colno(bdb, generator_id, colno)
-        X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
-        X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
-        row_id, X_L_list, X_D_list = \
-            self._crosscat_get_row(bdb, generator_id, rowid, X_L_list,
-                X_D_list)
-        r = self._crosscat.simple_predictive_probability_multistate(
-            M_c=M_c,
-            X_L_list=X_L_list,
-            X_D_list=X_D_list,
-            Y=[],
-            Q=[(row_id, cc_colno, code)],
-        )
-        return math.exp(r)
-
     def predict_confidence(self, bdb, generator_id, modelno, colno, rowid,
             numsamples=None):
         if numsamples is None:
             numsamples = 100    # XXXWARGHWTF
         M_c = self._crosscat_metadata(bdb, generator_id)
-        column_names = core.bayesdb_generator_column_names(bdb, generator_id)
-        table_name = core.bayesdb_generator_table(bdb, generator_id)
-        qt = sqlite3_quote_name(table_name)
-        qcns = ','.join(map(sqlite3_quote_name, column_names))
-        select_sql = ('SELECT %s FROM %s WHERE _rowid_ = ?' % (qcns, qt))
-        cursor = bdb.sql_execute(select_sql, (rowid,))
-        row = None
-        try:
-            row = cursor.next()
-        except StopIteration:
-            generator = core.bayesdb_generator_table(bdb, generator_id)
-            raise BQLError(bdb, 'No such row in table %s'
-                ' for generator %d: %d' %
-                (repr(table_name), repr(generator), repr(rowid)))
-        try:
-            cursor.next()
-        except StopIteration:
-            pass
-        else:
-            generator = core.bayesdb_generator_table(bdb, generator_id)
-            raise BQLError(bdb, 'More than one such row'
-                ' in table %s for generator %s: %d' %
-                (repr(table_name), repr(generator), repr(rowid)))
+        row = core.bayesdb_generator_row_values(bdb, generator_id, rowid)
         X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
         X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
         row_id, X_L_list, X_D_list = \
@@ -1198,40 +1168,52 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         value = crosscat_code_to_value(bdb, generator_id, M_c, colno, code)
         return value, confidence
 
-    def simulate(self, bdb, generator_id, modelno, constraints, colnos,
-            numpredictions=1):
+    def simulate_joint(self, bdb, generator_id, targets, constraints,
+            modelno, num_predictions=1):
         M_c = self._crosscat_metadata(bdb, generator_id)
-        table_name = core.bayesdb_generator_table(bdb, generator_id)
-        qt = sqlite3_quote_name(table_name)
-        cursor = bdb.sql_execute('SELECT MAX(_rowid_) FROM %s' % (qt,))
-        max_rowid = None
-        try:
-            row = cursor.next()
-        except StopIteration:
-            assert False, 'SELECT MAX(rowid) returned no results!'
-        else:
-            assert len(row) == 1
-            max_rowid = row[0]
-        fake_rowid = max_rowid + 1   # Synthesize a non-existent SQLite row id
-        fake_row_id = fake_rowid - 1 # Crosscat row ids are 0-indexed
-        # XXX Why special-case empty constraints?
-        Y = None
-        if constraints is not None:
-            Y = [(fake_row_id, crosscat_cc_colno(bdb, generator_id, colno),
-                  crosscat_value_to_code(bdb, generator_id, M_c, colno, value))
-                 for colno, value in constraints]
+        X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
+        X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
+        Q, Y, X_L_list, X_D_list = self._crosscat_remap_two(
+            bdb, generator_id, X_L_list, X_D_list, targets, constraints)
         raw_outputs = self._crosscat.simple_predictive_sample(
             M_c=M_c,
-            X_L=self._crosscat_latent_state(bdb, generator_id, modelno),
-            X_D=self._crosscat_latent_data(bdb, generator_id, modelno),
+            X_L=X_L_list,
+            X_D=X_D_list,
             Y=Y,
-            Q=[(fake_row_id, crosscat_cc_colno(bdb, generator_id, colno))
-                for colno in colnos],
-            n=numpredictions
+            Q=Q,
+            n=num_predictions
         )
         return [[crosscat_code_to_value(bdb, generator_id, M_c, colno, code)
-                for (colno, code) in zip(colnos, raw_output)]
+                for ((_, colno), code) in zip(targets, raw_output)]
             for raw_output in raw_outputs]
+
+    def logpdf_joint(self, bdb, generator_id, targets, constraints,
+            modelno=None):
+        M_c = self._crosscat_metadata(bdb, generator_id)
+        try:
+            for _, colno, value in constraints:
+                crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
+        except KeyError:
+            # Probability with constraint that has no code
+            return float('nan')
+        try:
+            for _, colno, value in targets:
+                crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
+        except KeyError:
+            # Probability of value that has no code
+            return float('-inf')
+        X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
+        X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
+        Q, Y, X_L_list, X_D_list = self._crosscat_remap_two(
+            bdb, generator_id, X_L_list, X_D_list, targets, constraints)
+        r = self._crosscat.predictive_probability_multistate(
+            M_c=M_c,
+            X_L_list=X_L_list,
+            X_D_list=X_D_list,
+            Y=Y,
+            Q=Q,
+        )
+        return r
 
     def insertmany(self, bdb, generator_id, rows):
         with bdb.savepoint():

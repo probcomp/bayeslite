@@ -31,6 +31,7 @@ import bayeslite.guess as guess
 import bayeslite.metamodel as metamodel
 
 from bayeslite import bql_quote_name
+from bayeslite.util import cursor_value
 
 import test_csv
 
@@ -63,6 +64,12 @@ def test_bayesdb_instantiation():
         bayeslite.BayesDB()  # pylint: disable=no-value-for-parameter
     with pytest.raises(ValueError):
         bayeslite.BayesDB(':memory:', 0xdeadbeef)
+
+def test_prng_determinism():
+    bdb = bayeslite.bayesdb_open(builtin_metamodels=False)
+    assert bdb._prng.weakrandom_uniform(1000) == 303
+    assert bdb.py_prng.uniform(0, 1) == 0.6156331606142532
+    assert bdb.np_prng.uniform(0, 1) == 0.28348770982811367
 
 def test_openclose():
     with bayesdb():
@@ -175,7 +182,7 @@ def bayesdb_maxrowid(bdb, generator_id):
     table_name = core.bayesdb_generator_table(bdb, generator_id)
     qt = bql_quote_name(table_name)
     sql = 'SELECT MAX(_rowid_) FROM %s' % (qt,)
-    return bdb.sql_execute(sql).next()[0]
+    return cursor_value(bdb.sql_execute(sql))
 
 def test_casefold_colname():
     def t(tname, gname, sql, *args, **kwargs):
@@ -528,7 +535,7 @@ def bayesdb_generator_cell_value(bdb, generator_id, colno, rowid):
 
 def test_crosscat_constraints():
     class FakeEngine(crosscat.LocalEngine.LocalEngine):
-        def simple_predictive_probability_multistate(self, M_c, X_L_list,
+        def predictive_probability_multistate(self, M_c, X_L_list,
                 X_D_list, Y, Q):
             self._last_Y = Y
             sup = super(FakeEngine, self)

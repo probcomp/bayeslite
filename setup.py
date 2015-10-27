@@ -172,11 +172,12 @@ setup(
     author_email='bayesdb@mit.edu',
     license='Apache License, Version 2.0',
     install_requires=[
-        'crosscat>=0.1.29',
+        'crosscat>=0.1.37',
+        'numpy',
         'requests',
     ],
     tests_require=[
-        'numpy',
+        'pandas',
         'pytest',
     ],
     packages=[

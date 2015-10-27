@@ -39,8 +39,8 @@ class TrollMetamodel(metamodel.IBayesDBMetamodel):
     def register(self, bdb):
         bdb.sql_execute('''
             INSERT INTO bayesdb_metamodel (name, version)
-                VALUES ('%s', 1)
-        ''' % self.name())
+                VALUES (?, 1)
+        ''', (self.name(),))
     def create_generator(self, bdb, table, schema, instantiate):
         instantiate(schema)
     def drop_generator(self, *args, **kwargs): pass
@@ -49,9 +49,10 @@ class TrollMetamodel(metamodel.IBayesDBMetamodel):
     def drop_models(self, *args, **kwargs): pass
     def analyze_models(self, *args, **kwargs): pass
     def simulate_joint(self, _bdb, _generator_id, targets, _constraints,
-            modelnos=None):
-        return [9 for _ in targets]
-    def logpdf(self, _bdb, _generator_id, targets, constraints):
+            modelno=None, num_predictions=1):
+        return [[9 for _ in targets]] * num_predictions
+    def logpdf_joint(self, _bdb, _generator_id, targets, constraints,
+            modelno=None):
         for (_, _, value) in constraints:
             if not value == 9:
                 return float("nan")
