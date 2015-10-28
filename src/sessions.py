@@ -24,6 +24,7 @@ import bayeslite
 
 from bayeslite import IBayesDBTracer
 from bayeslite.util import cursor_value
+from bayeslite import __version__
 
 _error_previous_session_msg = 'WARNING: Current or previous session contains queries that resulted in errors or exceptions. Consider uploading the session with send_session_data().'
 
@@ -97,7 +98,8 @@ class SessionOrchestrator(object):
         ''', (traceback.format_exc(), entry_id))
 
     def _start_new_session(self):
-        self._sql('INSERT INTO bayesdb_session DEFAULT VALUES')
+        self._sql('INSERT INTO bayesdb_session (version) VALUES (?)',
+                  (__version__,))
         self.session_id = cursor_value(self._sql('SELECT last_insert_rowid()'))
         # check for errors on the previous session
         self._check_error_entries(self.session_id - 1)
