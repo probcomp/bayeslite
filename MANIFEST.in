@@ -131,3 +131,4 @@ include tests/test_parse.py
 include tests/test_read_csv.py
 include tests/test_stats.py
 include tests/test_subsample.py
+include tests/test_sessions.py
