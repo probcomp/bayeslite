@@ -201,7 +201,7 @@ def test_sessions_send_data():
     class response(object):
         @property
         def text(self):
-            return 'Session uploaded to http://probcomp.csail.mit.edu/bayesdb/saved_sessions/127.0.0.1_1970-01-01T01:01:01.000000_XXXXXXXX.json'
+            return 'Session uploaded. Thank you!'
     def post(url, data):
         assert url == 'https://projects.csail.mit.edu/probcomp/bayesdb/save_sessions.cgi'
         assert isinstance(data, dict)
