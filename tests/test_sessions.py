@@ -160,7 +160,7 @@ def test_sessions_error_entry_sql():
     _nonexistent_table_helper(bdb.sql_execute, tr)
 
 def test_sessions_no_errors():
-    with test_core.analyzed_bayesdb_generator(test_core.t1(), 
+    with test_core.analyzed_bayesdb_generator(test_core.t1(),
             10, None, max_seconds=1) as (bdb, generator_id):
         tr = sescap.SessionOrchestrator(bdb)
         # simple query

@@ -15,7 +15,6 @@
 #   limitations under the License.
 
 from bayeslite.sqlite3_util import sqlite3_exec_1
-from bayeslite.version import __version__
 
 bayesdb_schema_5 = '''
 PRAGMA user_version = 5;
@@ -95,9 +94,9 @@ PRAGMA user_version = 7;
 
 CREATE TABLE bayesdb_session (
 	id		INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
-				CHECK (0 < id),
-	sent		BOOLEAN DEFAULT 0,
-    version     TEXT DEFAULT "%s"
+            CHECK (0 < id),
+	sent	BOOLEAN DEFAULT 0,
+    version TEXT NOT NULL
 );
 CREATE TABLE bayesdb_session_entries (
 	id		INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
@@ -109,7 +108,7 @@ CREATE TABLE bayesdb_session_entries (
 	completed	BOOLEAN DEFAULT 0,
 	error		TEXT
 );
-''' % (__version__,)
+'''
 
 ### BayesDB SQLite setup
 
