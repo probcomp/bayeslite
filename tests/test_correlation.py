@@ -18,6 +18,7 @@ import crosscat.LocalEngine
 
 import bayeslite
 from bayeslite.metamodels.crosscat import CrosscatMetamodel
+from bayeslite.math_util import relerr
 
 def test_correlation():
     with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
@@ -82,9 +83,9 @@ def test_correlation():
             )
         ''')
         result = bdb.execute('ESTIMATE CORRELATION, CORRELATION PVALUE'
-                             ' FROM PAIRWISE COLUMNS OF t_cc'
-                             ' WHERE name0 < name1'
-                             ' ORDER BY name0, name1').fetchall()
+            ' FROM PAIRWISE COLUMNS OF t_cc'
+            ' WHERE name0 < name1'
+            ' ORDER BY name0, name1').fetchall()
         expected = [
                 (2, 'c0', 'c1', 1., 2.900863120340436e-12),
                 (2, 'c0', 'cx', None, None),
@@ -138,5 +139,6 @@ def test_correlation():
         assert xpd_genid == obs_genid
         assert xpd_name0 == obs_name0
         assert xpd_name1 == obs_name1
-        assert xpd_corr == obs_corr or abs(xpd_corr - obs_corr) < 1e-10
-        assert xpd_corr_p == obs_corr_p or abs(xpd_corr_p - obs_corr_p) < 1e-10
+        assert xpd_corr == obs_corr or relerr(xpd_corr, obs_corr) < 1e-10
+        assert (xpd_corr_p == obs_corr_p or
+                relerr(xpd_corr_p, obs_corr_p) < 1e-10)
