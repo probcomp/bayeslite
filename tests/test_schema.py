@@ -15,6 +15,7 @@
 #   limitations under the License.
 
 import pytest
+import tempfile
 
 from bayeslite import bayesdb_open
 from bayeslite import bayesdb_upgrade_schema
@@ -37,3 +38,18 @@ def test_schema_upgrade():
             # Nobody'll ever bump the schema version this many times,
             # right?
             bayesdb_schema_required(bdb, 1000000, 'test a gazillion')
+
+def test_schema_nonautomatic():
+    with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
+        with bayesdb_open(pathname=f.name, version=6) as bdb:
+            bayesdb_schema_required(bdb, 6, 'test nonautomatic 0/6')
+            with pytest.raises(BayesDBException):
+                bayesdb_schema_required(bdb, 7, 'test nonautomatic 0/7')
+        with bayesdb_open(pathname=f.name) as bdb:
+            bayesdb_schema_required(bdb, 6, 'test nonautomatic 1/6')
+            with pytest.raises(BayesDBException):
+                bayesdb_schema_required(bdb, 7, 'test nonautomatic 1/7')
+            bayesdb_upgrade_schema(bdb)
+        with bayesdb_open(pathname=f.name) as bdb:
+            bayesdb_schema_required(bdb, 6, 'test nonautomatic 2/6')
+            bayesdb_schema_required(bdb, 7, 'test nonautomatic 2/7')
