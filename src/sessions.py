@@ -18,6 +18,7 @@ import json
 import requests
 import sys
 import time
+import traceback
 
 import bayeslite
 
@@ -92,8 +93,8 @@ class SessionOrchestrator(object):
     def _mark_entry_error(self, qid):
         entry_id = self._qid_to_entry_id[qid]
         self._sql('''
-            UPDATE bayesdb_session_entries SET error = 1 WHERE id = ?
-        ''', (entry_id,))
+            UPDATE bayesdb_session_entries SET error = ? WHERE id = ?
+        ''', (traceback.format_exc(), entry_id))
 
     def _start_new_session(self):
         self._sql('INSERT INTO bayesdb_session DEFAULT VALUES')
@@ -106,7 +107,7 @@ class SessionOrchestrator(object):
         errors and suggest sending the session'''
         error_entries = cursor_value(self._sql('''
             SELECT COUNT(*) FROM bayesdb_session_entries
-                WHERE error = 1 AND session_id = ?
+                WHERE error IS NOT NULL AND session_id = ?
         ''', (session_id,)))
         # suggest sending sessions but don't suggest more than once
         if error_entries > 0 and not self._suggested_send:

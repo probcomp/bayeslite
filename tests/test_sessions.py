@@ -213,3 +213,15 @@ def test_sessions_send_data():
     _simple_bql_query(bdb)
     tr.send_session_data()
 
+def test_error():
+    (bdb, tr) = make_bdb_with_sessions()
+    with pytest.raises(sqlite3.OperationalError):
+        bdb.execute('select x from nonexistent_table')
+    assert 1 == bdb.execute('''
+            SELECT COUNT(*) FROM bayesdb_session_entries
+                WHERE type = 'bql' AND error LIKE '%no such table%'
+        ''').fetchvalue()
+    assert 1 == bdb.execute('''
+            SELECT COUNT(*) FROM bayesdb_session_entries
+                WHERE type = 'sql' AND error LIKE '%no such table%'
+        ''').fetchvalue()
