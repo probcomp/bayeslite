@@ -80,6 +80,7 @@ from bayeslite.metamodel import bayesdb_register_metamodel
 from bayeslite.parse import BQLParseError
 from bayeslite.read_csv import bayesdb_read_csv
 from bayeslite.read_csv import bayesdb_read_csv_file
+from bayeslite.schema import bayesdb_upgrade_schema
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.txn import BayesDBTxnError
 from bayeslite.version import __version__
