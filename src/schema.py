@@ -95,8 +95,9 @@ PRAGMA user_version = 7;
 
 CREATE TABLE bayesdb_session (
 	id		INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
-				CHECK (0 < id),
-	sent		BOOLEAN DEFAULT 0
+			CHECK (0 < id),
+	sent	BOOLEAN DEFAULT 0,
+    version	TEXT NOT NULL
 );
 CREATE TABLE bayesdb_session_entries (
 	id		INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
