@@ -35,9 +35,9 @@ def make_bdb():
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)
     return bdb
 
-def make_bdb_with_sessions():
+def make_bdb_with_sessions(*args, **kwargs):
     bdb = make_bdb()
-    tr = sescap.SessionOrchestrator(bdb)
+    tr = sescap.SessionOrchestrator(bdb, *args, **kwargs)
     return (bdb, tr)
 
 def get_num_sessions(executor):
@@ -198,7 +198,18 @@ def test_sessions_error_metamodel():
         assert tr._check_error_entries(tr.session_id) > 0
 
 def test_sessions_send_data():
-    (bdb, tr) = make_bdb_with_sessions()
+    class response(object):
+        @property
+        def text(self):
+            return 'Session uploaded to http://probcomp.csail.mit.edu/bayesdb/saved_sessions/127.0.0.1_1970-01-01T01:01:01.000000_XXXXXXXX.json'
+    def post(url, data):
+        assert url == 'http://probcomp.csail.mit.edu/bayesdb/save_sessions.cgi'
+        assert isinstance(data, dict)
+        assert len(data) == 1
+        assert 'session_json' in data
+        assert isinstance(data['session_json'], str)
+        return response()
+    (bdb, tr) = make_bdb_with_sessions(post=post)
     _simple_bql_query(bdb)
     tr.send_session_data()
 

@@ -28,11 +28,14 @@ _error_previous_session_msg = 'WARNING: Current or previous session contains que
 
 class SessionOrchestrator(object):
 
-    def __init__(self, bdb, logger=None):
+    def __init__(self, bdb, logger=None, post=None):
+        if post is None:
+            post = requests.post
         self.bdb = bdb
         self._qid_to_entry_id = {}
         self._sql_tracer = _SessionTracer("sql", self)
         self._bql_tracer = _SessionTracer("bql", self)
+        self._post = post
         self.start_saving_sessions()
         self._suggested_send = False
         self._logger = logger
@@ -155,7 +158,7 @@ class SessionOrchestrator(object):
             self._info('Sending session %d to %s ...' % (id, probcomp_url))
             json_string = self.dump_session_as_json(id)
             self._info(json_string)
-            r = requests.post(probcomp_url,
+            r = self._post(probcomp_url,
                     data={'session_json' : json_string})
             self._info('Response: %s' % (r.text,))
 
