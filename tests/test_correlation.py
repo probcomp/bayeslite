@@ -18,6 +18,7 @@ import crosscat.LocalEngine
 
 import bayeslite
 from bayeslite.metamodels.crosscat import CrosscatMetamodel
+from bayeslite.math_util import relerr
 
 def test_correlation():
     with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
@@ -37,7 +38,8 @@ def test_correlation():
         ''')
         assert bdb.execute('ESTIMATE CORRELATION, CORRELATION PVALUE'
                 ' FROM PAIRWISE COLUMNS OF u_cc'
-                ' WHERE name0 < name1').fetchall() == \
+                ' WHERE name0 < name1'
+                ' ORDER BY name0, name1').fetchall() == \
             [
                 (1, 'c0', 'c1', None, None),
                 (1, 'c0', 'n0', None, None),
@@ -80,10 +82,11 @@ def test_correlation():
                 ny NUMERICAL
             )
         ''')
-        assert bdb.execute('ESTIMATE CORRELATION, CORRELATION PVALUE'
-                ' FROM PAIRWISE COLUMNS OF t_cc'
-                ' WHERE name0 < name1').fetchall() == \
-            [
+        result = bdb.execute('ESTIMATE CORRELATION, CORRELATION PVALUE'
+            ' FROM PAIRWISE COLUMNS OF t_cc'
+            ' WHERE name0 < name1'
+            ' ORDER BY name0, name1').fetchall()
+        expected = [
                 (2, 'c0', 'c1', 1., 2.900863120340436e-12),
                 (2, 'c0', 'cx', None, None),
                 (2, 'c0', 'cy', None, None),
@@ -130,3 +133,12 @@ def test_correlation():
                 (2, 'nl', 'ny', None, None),
                 (2, 'nx', 'ny', None, None),
             ]
+    for expected_item, observed_item in zip(expected, result):
+        (xpd_genid, xpd_name0, xpd_name1, xpd_corr, xpd_corr_p) = expected_item
+        (obs_genid, obs_name0, obs_name1, obs_corr, obs_corr_p) = observed_item
+        assert xpd_genid == obs_genid
+        assert xpd_name0 == obs_name0
+        assert xpd_name1 == obs_name1
+        assert xpd_corr == obs_corr or relerr(xpd_corr, obs_corr) < 1e-10
+        assert (xpd_corr_p == obs_corr_p or
+                relerr(xpd_corr_p, obs_corr_p) < 1e-10)
