@@ -23,6 +23,7 @@ from collections import namedtuple
 import bayeslite
 import bayeslite.metamodels.troll_rng as troll
 import bayeslite.sessions as sescap
+from bayeslite.version import __version__
 
 from bayeslite.util import cursor_value
 
@@ -42,6 +43,9 @@ def make_bdb_with_sessions(*args, **kwargs):
 
 def get_num_sessions(executor):
     return cursor_value(executor('''SELECT COUNT(*) FROM bayesdb_session'''))
+
+def get_session_versions(executor):
+    return list(executor('''SELECT version from bayesdb_session'''))
 
 def get_num_entries(executor):
     return cursor_value(executor('''
@@ -91,6 +95,11 @@ def test_sessions_session_id_and_clear_sessions():
     tr._start_new_session()
     assert tr.current_session_id() == 3
     assert get_num_sessions(bdb.execute) == 3
+    versions = get_session_versions(bdb.execute)
+    assert 3 == len(versions)
+    for version_row in versions:
+        assert 1 == len(version_row)
+        assert version_row[0] == __version__
 
     # there should now be one session (the current session)
     tr.clear_all_sessions()
