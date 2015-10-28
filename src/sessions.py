@@ -154,7 +154,7 @@ class SessionOrchestrator(object):
     def send_session_data(self):
         """Send all saved session history. The session history will be used for
         research purposes."""
-        probcomp_url = 'http://probcomp.csail.mit.edu/bayesdb/save_sessions.cgi'
+        probcomp_url = 'https://projects.csail.mit.edu/probcomp/bayesdb/save_sessions.cgi'
         for id in range(1, self.session_id+1):
             self._info('Sending session %d to %s ...' % (id, probcomp_url))
             json_string = self.dump_session_as_json(id)
