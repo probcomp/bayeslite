@@ -14,7 +14,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from bayeslite.exception import BayesDBException
 from bayeslite.sqlite3_util import sqlite3_exec_1
+from bayeslite.util import cursor_value
 
 bayesdb_schema_5 = '''
 PRAGMA user_version = 5;
@@ -78,8 +80,7 @@ CREATE TABLE bayesdb_generator_model (
 );
 '''
 
-bayesdb_schema_upgrade = ['']*7
-bayesdb_schema_upgrade[5] = '''
+bayesdb_schema_5to6 = '''
 PRAGMA user_version = 6;
 
 ALTER TABLE bayesdb_generator
@@ -89,7 +90,7 @@ CREATE UNIQUE INDEX bayesdb_generator_i_default ON bayesdb_generator (tabname)
     WHERE defaultp;
 '''
 
-bayesdb_schema_upgrade[6] = '''
+bayesdb_schema_6to7 = '''
 PRAGMA user_version = 7;
 
 CREATE TABLE bayesdb_session (
@@ -111,7 +112,7 @@ CREATE TABLE bayesdb_session_entries (
 
 ### BayesDB SQLite setup
 
-def bayesdb_install_schema(db):
+def bayesdb_install_schema(db, version=None):
     # Get the application id.
     cursor = db.execute('PRAGMA application_id')
     application_id = 0
@@ -135,6 +136,7 @@ def bayesdb_install_schema(db):
         assert isinstance(user_version, int)
 
     # Check them.  If zero, install schema.  If mismatch, fail.
+    install = False
     if application_id == 0 and user_version == 0:
         # Assume we just created the database.
         #
@@ -163,16 +165,59 @@ def bayesdb_install_schema(db):
                 COMMIT;
             ''' % (0x42594442, bayesdb_schema_5))
             user_version = 5
+        install = True
     elif application_id != 0x42594442:
         raise IOError('Wrong application id: 0x%08x' % (application_id,))
-    while user_version < 7:
-        # XXX One of these days, we'll have to consider making the
-        # upgrade something to be explicitly requested by the user
-        # when old versions persist.
-        db.executescript('BEGIN; %s; COMMIT;' % (bayesdb_schema_upgrade[user_version],))
-        user_version += 1
-    if user_version != 7:
+    # 5 was the last prerelease version.
+    if user_version == 5:
+        db.executescript('BEGIN; %s; COMMIT;' % (bayesdb_schema_5to6,))
+        user_version = 6
+    if install:
+        _upgrade_schema(db, version=version)
+    if user_version != 6 and user_version != 7:
         raise IOError('Unknown bayeslite format version: %d' % (user_version,))
     db.execute('PRAGMA foreign_keys = ON')
     db.execute('PRAGMA integrity_check')
     db.execute('PRAGMA foreign_key_check')
+
+def _upgrade_schema(db, version=None):
+    if version is None:
+        version = 7
+    assert 6 <= version
+    current_version = _schema_version(db)
+    assert 6 <= current_version
+    if current_version == 6 < version:
+        db.executescript('BEGIN; %s; COMMIT;' % (bayesdb_schema_6to7,))
+        current_version = 7
+    assert current_version == version
+    db.execute('PRAGMA integrity_check')
+    db.execute('PRAGMA foreign_key_check')
+
+def _schema_version(db):
+    return cursor_value(db.execute('PRAGMA user_version'))
+
+def bayesdb_upgrade_schema(bdb, version=None):
+    """Upgrade the BayesDB internal database schema.
+
+    If `version` is `None`, upgrade to the latest database format
+    version supported by bayeslite.  Otherwise, it may be a schema
+    version number.
+    """
+    _upgrade_schema(bdb.sqlite3, version=version)
+
+def bayesdb_schema_version(bdb):
+    """Return the version number for the BayesDB internal database schema."""
+    return _schema_version(bdb.sqlite3)
+
+def bayesdb_schema_required(bdb, version, why):
+    """Fail if `bdb`'s internal database schema version is not new enough.
+
+    The string `why` is included in the text of the error message,
+    along with advice to use `bayesdb_upgrade_schema` to upgrade it.
+    """
+    current_version = bayesdb_schema_version(bdb)
+    if current_version < version:
+        raise BayesDBException(bdb, 'BayesDB schema version too old'
+            ' to support %s: current version %r, at least %r required;'
+            ' use bayesdb_upgrade_schema to upgrade.'
+            % (why, current_version, version))

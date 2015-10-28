@@ -23,6 +23,7 @@ import traceback
 import bayeslite
 
 from bayeslite import IBayesDBTracer
+from bayeslite.schema import bayesdb_schema_required
 from bayeslite.util import cursor_value
 
 _error_previous_session_msg = 'WARNING: Current or previous session contains queries that resulted in errors or exceptions. Consider uploading the session with send_session_data().'
@@ -30,6 +31,7 @@ _error_previous_session_msg = 'WARNING: Current or previous session contains que
 class SessionOrchestrator(object):
 
     def __init__(self, bdb, logger=None, post=None):
+        bayesdb_schema_required(bdb, 7, 'sessions')
         if post is None:
             post = requests.post
         self.bdb = bdb
