@@ -112,7 +112,7 @@ CREATE TABLE bayesdb_session_entries (
 
 ### BayesDB SQLite setup
 
-def bayesdb_install_schema(db, version=None):
+def bayesdb_install_schema(db, version=None, compatible=None):
     # Get the application id.
     cursor = db.execute('PRAGMA application_id')
     application_id = 0
@@ -172,10 +172,10 @@ def bayesdb_install_schema(db, version=None):
     if user_version == 5:
         db.executescript('BEGIN; %s; COMMIT;' % (bayesdb_schema_5to6,))
         user_version = 6
-    if install:
-        _upgrade_schema(db, version=version)
     if user_version != 6 and user_version != 7:
         raise IOError('Unknown bayeslite format version: %d' % (user_version,))
+    if install or not compatible:
+        _upgrade_schema(db, version=version)
     db.execute('PRAGMA foreign_keys = ON')
     db.execute('PRAGMA integrity_check')
     db.execute('PRAGMA foreign_key_check')

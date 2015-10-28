@@ -39,17 +39,31 @@ def test_schema_upgrade():
             # right?
             bayesdb_schema_required(bdb, 1000000, 'test a gazillion')
 
-def test_schema_nonautomatic():
+def test_schema_incompatible():
     with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
         with bayesdb_open(pathname=f.name, version=6) as bdb:
-            bayesdb_schema_required(bdb, 6, 'test nonautomatic 0/6')
+            bayesdb_schema_required(bdb, 6, 'test incompatible 0/6')
             with pytest.raises(BayesDBException):
-                bayesdb_schema_required(bdb, 7, 'test nonautomatic 0/7')
+                bayesdb_schema_required(bdb, 7, 'test incompatible 0/7')
         with bayesdb_open(pathname=f.name) as bdb:
-            bayesdb_schema_required(bdb, 6, 'test nonautomatic 1/6')
-            with pytest.raises(BayesDBException):
-                bayesdb_schema_required(bdb, 7, 'test nonautomatic 1/7')
+            bayesdb_schema_required(bdb, 6, 'test incompatible 1/6')
+            bayesdb_schema_required(bdb, 7, 'test incompatible 1/7')
             bayesdb_upgrade_schema(bdb)
         with bayesdb_open(pathname=f.name) as bdb:
-            bayesdb_schema_required(bdb, 6, 'test nonautomatic 2/6')
-            bayesdb_schema_required(bdb, 7, 'test nonautomatic 2/7')
+            bayesdb_schema_required(bdb, 6, 'test incompatible 2/6')
+            bayesdb_schema_required(bdb, 7, 'test incompatible 2/7')
+
+def test_schema_compatible():
+    with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
+        with bayesdb_open(pathname=f.name, version=6) as bdb:
+            bayesdb_schema_required(bdb, 6, 'test compatible 0/6')
+            with pytest.raises(BayesDBException):
+                bayesdb_schema_required(bdb, 7, 'test compatible 0/7')
+        with bayesdb_open(pathname=f.name, compatible=True) as bdb:
+            bayesdb_schema_required(bdb, 6, 'test nonautomatic 1/6')
+            with pytest.raises(BayesDBException):
+                bayesdb_schema_required(bdb, 7, 'test compatible 1/7')
+            bayesdb_upgrade_schema(bdb)
+        with bayesdb_open(pathname=f.name, compatible=True) as bdb:
+            bayesdb_schema_required(bdb, 6, 'test compatible 2/6')
+            bayesdb_schema_required(bdb, 7, 'test compatible 2/7')

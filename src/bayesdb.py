@@ -33,7 +33,7 @@ from bayeslite.util import cursor_value
 bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
 
 def bayesdb_open(pathname=None, builtin_metamodels=None, seed=None,
-        version=None):
+        version=None, compatible=None):
     """Open the BayesDB in the file at `pathname`.
 
     If there is no file at `pathname`, it is automatically created.
@@ -42,11 +42,18 @@ def bayesdb_open(pathname=None, builtin_metamodels=None, seed=None,
 
     `seed` is a 32-byte string specifying a pseudorandom number
     generation seed.  If not specified, it defaults to all zeros.
+
+    If `compatible` is `None` or `False` and the database already
+    exists, `bayesdb_open` may have the effect of incompatibly
+    changing the format of the database so that older versions of
+    bayeslite cannot read it.  If `compatible` is `True`,
+    `bayesdb_open` will not incompatibly change the format of the
+    database.
     """
     if builtin_metamodels is None:
         builtin_metamodels = True
     bdb = BayesDB(bayesdb_open_cookie, pathname=pathname, seed=seed,
-        version=version)
+        version=version, compatible=compatible)
     if builtin_metamodels:
         metamodel.bayesdb_register_builtin_metamodels(bdb)
     return bdb
@@ -63,7 +70,8 @@ class BayesDB(object):
             ...
     """
 
-    def __init__(self, cookie, pathname=None, seed=None, version=None):
+    def __init__(self, cookie, pathname=None, seed=None, version=None,
+            compatible=None):
         if cookie != bayesdb_open_cookie:
             raise ValueError('Do not construct BayesDB objects directly!')
         if pathname is None:
@@ -86,7 +94,8 @@ class BayesDB(object):
         self._py_prng = random.Random(pyrseed)
         nprseed = [self._prng.weakrandom32() for _ in range(4)]
         self._np_prng = numpy.random.RandomState(nprseed)
-        schema.bayesdb_install_schema(self.sqlite3, version=version)
+        schema.bayesdb_install_schema(self.sqlite3, version=version,
+            compatible=compatible)
         bqlfn.bayesdb_install_bql(self.sqlite3, self)
 
         # Cache an empty cursor for convenience.
