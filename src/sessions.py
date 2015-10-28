@@ -14,6 +14,22 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+# PLEASE DO NOT SEND SESSIONS WHEN THEY MAY CONTAIN SECRET OR SENSITIVE INFO!
+#
+# With sessions, we intend to capture full queries and their
+# timings. When something goes wrong, a user can send their info to
+# probcomp, and we can use it to help that user, and to improve the
+# system for other users. Briefly:
+# SessionOrchestrator._add_entry adds json-encoded queries and parameter
+#     values to the bayesdb_session_entries table;
+# SessionOrchestrator.dump_session_as_json creates an aggregated blob
+#     of the entire session.
+# SessionOrchestrator.send_session_data() then sends that as an HTTP POST
+#     request.
+# Please contact probcomp-community@csail.mit.edu with questions and concerns.
+#
+# PLEASE DO NOT SEND SESSIONS WHEN THEY MAY CONTAIN SECRET OR SENSITIVE INFO!
+
 import json
 import requests
 import sys
@@ -26,7 +42,7 @@ from bayeslite import IBayesDBTracer
 from bayeslite.schema import bayesdb_schema_required
 from bayeslite.util import cursor_value
 
-_error_previous_session_msg = 'WARNING: Current or previous session contains queries that resulted in errors or exceptions. Consider uploading the session with send_session_data().'
+_error_previous_session_msg = 'WARNING: Current or previous session contains queries that resulted in errors or exceptions. Consider uploading the session with send_session_data() if your data are freely shareable (free of secret or personally identifiable info). Contact probcomp-community@csail.mit.edu for help or with questions.'
 
 class SessionOrchestrator(object):
 
@@ -155,7 +171,8 @@ class SessionOrchestrator(object):
 
     def send_session_data(self):
         """Send all saved session history. The session history will be used for
-        research purposes."""
+        research purposes. DO NOT SEND IF YOU ARE WORKING WITH CONFIDENTIAL,
+        PROPRIETARY, IDENTIFYING, OR OTHERWISE SECRET INFO."""
         probcomp_url = 'https://projects.csail.mit.edu/probcomp/bayesdb/save_sessions.cgi'
         for id in range(1, self.session_id+1):
             self._info('Sending session %d to %s ...' % (id, probcomp_url))
