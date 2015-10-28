@@ -32,7 +32,8 @@ from bayeslite.util import cursor_value
 
 bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
 
-def bayesdb_open(pathname=None, builtin_metamodels=None, seed=None):
+def bayesdb_open(pathname=None, builtin_metamodels=None, seed=None,
+        version=None):
     """Open the BayesDB in the file at `pathname`.
 
     If there is no file at `pathname`, it is automatically created.
@@ -44,7 +45,8 @@ def bayesdb_open(pathname=None, builtin_metamodels=None, seed=None):
     """
     if builtin_metamodels is None:
         builtin_metamodels = True
-    bdb = BayesDB(bayesdb_open_cookie, pathname=pathname, seed=seed)
+    bdb = BayesDB(bayesdb_open_cookie, pathname=pathname, seed=seed,
+        version=version)
     if builtin_metamodels:
         metamodel.bayesdb_register_builtin_metamodels(bdb)
     return bdb
@@ -61,7 +63,7 @@ class BayesDB(object):
             ...
     """
 
-    def __init__(self, cookie, pathname=None, seed=None):
+    def __init__(self, cookie, pathname=None, seed=None, version=None):
         if cookie != bayesdb_open_cookie:
             raise ValueError('Do not construct BayesDB objects directly!')
         if pathname is None:
@@ -84,7 +86,7 @@ class BayesDB(object):
         self._py_prng = random.Random(pyrseed)
         nprseed = [self._prng.weakrandom32() for _ in range(4)]
         self._np_prng = numpy.random.RandomState(nprseed)
-        schema.bayesdb_install_schema(self.sqlite3)
+        schema.bayesdb_install_schema(self.sqlite3, version=version)
         bqlfn.bayesdb_install_bql(self.sqlite3, self)
 
         # Cache an empty cursor for convenience.
