@@ -25,7 +25,7 @@ from bayeslite.metamodels.crosscat import CrosscatMetamodel
 # Synthetic dataset (x,y,z,v,w) for the tests. Fixed seed is not used since
 # the tests should pass independently of the generated dataset.
 
-def test_complex_dependencies_slow():
+def test_complex_dependencies__ci_slow():
     # Parameterize number of rows in synthetic dataset.
     n_rows = 250
 

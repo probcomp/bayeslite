@@ -1690,7 +1690,7 @@ def test_using_models():
             ' "ifnull"("weight", bql_predict(1, 42, 3, _rowid_, 0.9))' \
         ' FROM "t1";'
 
-def test_checkpoint_slow():
+def test_checkpoint__ci_slow():
     with test_core.t1() as (bdb, generator_id):
         bdb.execute('initialize 1 model for t1_cc')
         bdb.execute('analyze t1_cc for 10 iterations checkpoint 1 iteration'
@@ -1715,7 +1715,7 @@ def test_checkpoint_slow():
         assert bdb.execute(sql, (generator_id,)).fetchvalue() == 1
         bdb.execute('analyze t1_cc for 1 iteration checkpoint 0 seconds wait')
 
-def test_infer_confidence_slow():
+def test_infer_confidence__ci_slow():
     with test_core.t1() as (bdb, _generator_id):
         bdb.execute('initialize 1 model for t1_cc')
         bdb.execute('analyze t1_cc for 1 iteration wait')
