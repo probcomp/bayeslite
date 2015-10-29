@@ -235,7 +235,7 @@ def test_sessions_send_data():
     def post(url, data):
         assert url == 'https://projects.csail.mit.edu/probcomp/bayesdb/save_sessions.cgi'
         assert isinstance(data, dict)
-        assert len(data) == 1
+        assert 2 == len(data)
         assert 'session_json' in data
         assert isinstance(data['session_json'], str)
         return response()

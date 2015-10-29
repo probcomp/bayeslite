@@ -229,11 +229,9 @@ class SessionOrchestrator(object):
             self._info('Sending session %d to %s ...' % (id, probcomp_url))
             json_string = self.dump_session_as_json(id)
             self._info(json_string)
-            data = [('session_json', json_string)]
-            headers = {
-                'User-Agent': 'bayeslite %s' % (__version__,)
-            }
-            r = self._post(probcomp_url, data=data, headers=headers)
+            data = {'session_json': json_string,
+                    'User-Agent': 'bayeslite %s' % (__version__,)}
+            r = self._post(probcomp_url, data=data)
             self._info('Response: %s' % (r.text,))
 
     def start_saving_sessions(self):
