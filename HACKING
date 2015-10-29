@@ -27,9 +27,12 @@ all tests before publishing the commits.
 
 Our version scheme:
 
-    <major>.<minor>.<teeny>a<date>      (prerelease snapshot)
-    <major>.<minor>.<teeny>rc<N>        (release candidate)
-    <major>.<minor>.<teeny>             (release)
+    <major>.<minor>[.<teeny>]a<date>    (prerelease snapshot)
+    <major>.<minor>[.<teeny>]rc<N>      (release candidate)
+    <major>.<minor>[.<teeny>]           (release)
+
+We do not currently make any semantic API compatibility guarantees
+about the meaning of <major>, <minor>, and <teeny>.
 
 In the source tree, the VERSION file contains either the current
 release version number, or the most recent tagged version number
