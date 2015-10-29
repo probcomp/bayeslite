@@ -93,27 +93,28 @@ class SessionOrchestrator(object):
         # check for errors on this session and suggest if we haven't already
         if not self._suggested_send:
             self._check_error_entries(self.session_id)
-        t = time.time()
         data = query + json.dumps(bindings)
         self._sql('''
             INSERT INTO bayesdb_session_entries
-                (session_id, time, type, data)
+                (session_id, type, data, start_time)
                 VALUES (?,?,?,?)
-        ''', (self.session_id, t, type, data))
+        ''', (self.session_id, type, data, time.time()))
         entry_id = cursor_value(self._sql('SELECT last_insert_rowid()'))
         self._qid_to_entry_id[qid] = entry_id
 
     def _mark_entry_completed(self, qid):
         entry_id = self._qid_to_entry_id[qid]
         self._sql('''
-            UPDATE bayesdb_session_entries SET completed = 1 WHERE id = ?
-        ''', (entry_id,))
+            UPDATE bayesdb_session_entries SET end_time = ? WHERE id = ?
+        ''', (time.time(), entry_id))
 
     def _mark_entry_error(self, qid):
         entry_id = self._qid_to_entry_id[qid]
         self._sql('''
-            UPDATE bayesdb_session_entries SET error = ? WHERE id = ?
-        ''', (traceback.format_exc(), entry_id))
+            UPDATE bayesdb_session_entries
+                SET error = ?, end_time = ?
+                WHERE id = ?
+        ''', (traceback.format_exc(), time.time(), entry_id))
 
     def _start_new_session(self):
         self._sql('INSERT INTO bayesdb_session (version) VALUES (?)',
@@ -162,7 +163,7 @@ class SessionOrchestrator(object):
         entries = self._sql('''
             SELECT * FROM bayesdb_session_entries
                 WHERE session_id = ?
-                ORDER BY time DESC
+                ORDER BY start_time DESC
         ''', (session_id,))
         return json.dumps(list(entries))
 

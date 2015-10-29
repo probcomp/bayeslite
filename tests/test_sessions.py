@@ -53,11 +53,21 @@ def get_num_entries(executor):
     '''))
 
 def get_entries(executor):
-    entries = list(executor('''
+    entries = executor('''
         SELECT * FROM bayesdb_session_entries ORDER BY id
-    '''))
-    SessionEntry = namedtuple('SessionEntry', ['id', 'session', 'time', 'type', 'data', 'completed'])
-    return [SessionEntry(e[0], e[1], e[2], e[3], e[4], e[5]) for e in entries]
+    ''')
+    fields = [
+        'id',
+        'session_id',
+        'type',
+        'data',
+        'start_time',
+        'end_time',
+        'error',
+    ]
+    assert fields == [d[0] for d in entries.description]
+    SessionEntry = namedtuple('SessionEntry', fields)
+    return [SessionEntry(*e) for e in entries]
 
 def _basic_test_trace(executor):
 
@@ -72,7 +82,7 @@ def _basic_test_trace(executor):
 
     # entries are ordered starting from 1
     for id, entry in enumerate(get_entries(executor)):
-        assert entry.session == 1
+        assert entry.session_id == 1
         assert entry.id == id + 1
 
 def test_sessions_basic_bql():
@@ -226,11 +236,19 @@ def test_error():
     (bdb, tr) = make_bdb_with_sessions()
     with pytest.raises(sqlite3.OperationalError):
         bdb.execute('select x from nonexistent_table')
-    assert 1 == bdb.execute('''
+    assert 1 == bdb.sql_execute('''
             SELECT COUNT(*) FROM bayesdb_session_entries
                 WHERE type = 'bql' AND error LIKE '%no such table%'
         ''').fetchvalue()
-    assert 1 == bdb.execute('''
+    assert 1 == bdb.sql_execute('''
             SELECT COUNT(*) FROM bayesdb_session_entries
                 WHERE type = 'sql' AND error LIKE '%no such table%'
+        ''').fetchvalue()
+    assert 0 == bdb.sql_execute('''
+            SELECT COUNT(*) FROM bayesdb_session_entries
+                WHERE type = 'bql' AND error IS NULL
+        ''').fetchvalue()
+    assert 0 == bdb.sql_execute('''
+            SELECT COUNT(*) FROM bayesdb_session_entries
+                WHERE type = 'bql' AND end_time IS NULL
         ''').fetchvalue()
