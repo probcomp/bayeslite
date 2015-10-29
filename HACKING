@@ -23,6 +23,46 @@ run a subset of tests, and stop at the first failure, with
 However, please double-check that every commit you have made passes
 all tests before publishing the commits.
 
+* Versions
+
+Our version scheme:
+
+    <major>.<minor>.<teeny>a<date>      (prerelease snapshot)
+    <major>.<minor>.<teeny>rc<N>        (release candidate)
+    <major>.<minor>.<teeny>             (release)
+
+In the source tree, the VERSION file contains either the current
+release version number, or the most recent tagged version number
+followed by a plus sign `+'.  In that case, a suffix will be added to
+the most recent version number, derived from `git describe', of the
+form:
+
+    .post<N>+g<commitid>[-<dirty>]
+
+The Git tag for a tagged version is named with a `v' prefix.  Note
+that the content of VERSION for any tagged version MUST NOT include a
+`+' suffix, so that `cat VERSION' is sufficient to find the version
+number, and `git describe' is not necessary.
+
+To tag a new version:
+
+1. Set VERSION to the new version, say `0.2.42':
+
+    % echo 0.2.42 > VERSION
+    % git commit -m 'Bump version to 0.2.42.' VERSION
+
+2. Tag it with an annotated tag:
+
+    % git tag -a -m v0.2.42 v0.2.42
+
+   If you want, you can include release notes in the annotated tag
+   message.
+
+3. Append `+' to the version in VERSION:
+
+    % echo 0.2.42+ > VERSION
+    % git commit -m 'Bump version to 0.2.42+.' VERSION
+
 * SQL/BQL parameters
 
 Use SQL/BQL parameters to pass strings and other values into SQL/BQL.
