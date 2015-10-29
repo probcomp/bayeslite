@@ -357,7 +357,7 @@ def test_t1_mp_analysis_time_deadline():
     with analyzed_bayesdb_generator(t1_mp(), 10, None, max_seconds=1):
         pass
 
-def test_t1_mp_analysis_iter_deadline_slow():
+def test_t1_mp_analysis_iter_deadline__ci_slow():
     with analyzed_bayesdb_generator(t1_mp(), 10, 1, max_seconds=10):
         pass
 
@@ -365,7 +365,7 @@ def test_t1_analysis_time_deadline():
     with analyzed_bayesdb_generator(t1(), 10, None, max_seconds=1):
         pass
 
-def test_t1_analysis_iter_deadline_slow():
+def test_t1_analysis_iter_deadline__ci_slow():
     with analyzed_bayesdb_generator(t1(), 10, 1, max_seconds=10):
         pass
 
