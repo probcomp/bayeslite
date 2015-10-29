@@ -25,7 +25,7 @@ all tests before publishing the commits.
 
 * Versions
 
-Our version scheme:
+Our version scheme, compatible with PEP 440:
 
     <major>.<minor>[.<teeny>]a<date>    (prerelease snapshot)
     <major>.<minor>[.<teeny>]rc<N>      (release candidate)
