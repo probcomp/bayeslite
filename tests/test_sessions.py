@@ -149,8 +149,19 @@ def test_sessions_json_dump():
     _simple_bql_query(bdb)
     tr.stop_saving_sessions()
     json_str = tr.dump_current_session_as_json()
-    entries = json.loads(json_str)
+    session = json.loads(json_str)
+    assert isinstance(session, dict)
+    assert 'version' in session
+    assert session['version'] == __version__
+    assert 'fields' in session
+    assert isinstance(session['fields'], list)
+    nfields = len(session['fields'])
+    assert 'entries' in session
+    assert isinstance(session['entries'], list)
+    entries = session['entries']
     assert len(entries) == get_num_entries(bdb.execute)
+    for entry in entries:
+        assert len(entry) == nfields
 
 def _nonexistent_table_helper(executor, tr):
     query = 'SELECT * FROM nonexistent_table'

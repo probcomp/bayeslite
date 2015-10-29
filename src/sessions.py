@@ -160,12 +160,21 @@ class SessionOrchestrator(object):
         (e.g.  queries) executed within session `session_id`."""
         if session_id > self.session_id or session_id < 1:
             raise ValueError('No such session (%d)' % session_id)
+        version = cursor_value(self._sql('''
+            SELECT version FROM bayesdb_session
+                WHERE id = ?
+        ''', (session_id,)))
         entries = self._sql('''
             SELECT * FROM bayesdb_session_entries
                 WHERE session_id = ?
                 ORDER BY start_time DESC
         ''', (session_id,))
-        return json.dumps(list(entries))
+        session = {
+            'entries': entries.fetchall(),
+            'fields': [d[0] for d in entries.description],
+            'version': version,
+        }
+        return json.dumps(session, sort_keys=True)
 
     def dump_current_session_as_json(self):
         """Returns a JSON string representing the current sesion (see
