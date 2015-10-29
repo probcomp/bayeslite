@@ -20,9 +20,14 @@ root=`cd -- "$(dirname -- "$0")" && pwd`
     export BAYESDB_WIZARD_MODE=1
     export BAYESDB_DISABLE_VERSION_CHECK=1
     if [ $# -eq 0 ]; then
-        ./pythenv.sh "$PYTHON" "$PY_TEST" -k "not _slow and not _network" \
+        # By default, when running all tests, skip tests that have
+        # been marked for continuous integration by using __ci_ in
+        # their names.  (git grep __ci_ to find these.)
+        ./pythenv.sh "$PYTHON" "$PY_TEST" -k "not __ci_" \
             tests shell/tests
     else
+        # If args are specified, run all tests, including continuous
+        # integration tests, for the selected components.
         ./pythenv.sh "$PYTHON" "$PY_TEST" "$@"
     fi
 )

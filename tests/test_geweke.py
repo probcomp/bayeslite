@@ -47,7 +47,7 @@ def test_geweke_nig_normal():
         assert 0 < kl and kl < 10 # KL should be positive
         assert 0 < error and error < 10 # KL error estimate too
 
-def test_geweke_nig_normal_seriously_slow():
+def test_geweke_nig_normal_seriously__ci_slow():
     # Note: The actual assertions in this test and the next one were
     # dervied heuristically by inspecting a fuller (and costlier to
     # compute) tableau of values of geweke.geweke_kl and deciding the
@@ -71,7 +71,7 @@ class DoctoredNIGNormal(normal.NIGNormalMetamodel):
         # We actually had a bug that amounted to this
         return float(1.0/scale) / self.prng.gammavariate(shape, 1.0)
 
-def test_geweke_catches_nig_normal_bug_slow():
+def test_geweke_catches_nig_normal_bug__ci_slow():
     with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
         bayeslite.bayesdb_register_metamodel(bdb, DoctoredNIGNormal(seed=1))
         cells = [(i,0) for i in range(4)]
