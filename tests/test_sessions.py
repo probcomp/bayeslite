@@ -222,6 +222,11 @@ def test_sessions_send_data():
     _simple_bql_query(bdb)
     tr.send_session_data()
 
+def test_sessions_send_data_network():
+    (bdb, tr) = make_bdb_with_sessions()
+    _simple_bql_query(bdb)
+    tr.send_session_data()
+
 def test_error():
     (bdb, tr) = make_bdb_with_sessions()
     with pytest.raises(sqlite3.OperationalError):
