@@ -18,9 +18,9 @@ import math
 import pytest
 
 from bayeslite.math_util import relerr
+from bayeslite.math_util import logmeanexp
+from bayeslite.math_util import logsumexp
 from bayeslite.util import cursor_value
-from bayeslite.util import logmeanexp
-from bayeslite.util import logsumexp
 
 def test_logsumexp():
     assert logsumexp([-1000.]) == -1000.
