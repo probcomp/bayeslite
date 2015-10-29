@@ -30,8 +30,8 @@ import random
 import bayeslite.metamodel as metamodel
 
 from bayeslite.exception import BQLError
+from bayeslite.math_util import logmeanexp
 from bayeslite.sqlite3_util import sqlite3_quote_name
-from bayeslite.util import logmeanexp
 
 nig_normal_schema_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('nig_normal', 1);

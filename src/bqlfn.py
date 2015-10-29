@@ -25,8 +25,8 @@ from bayeslite.exception import BQLError
 
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
+from bayeslite.math_util import ieee_exp
 from bayeslite.util import casefold
-from bayeslite.util import ieee_exp
 from bayeslite.util import unique_indices
 
 def bayesdb_install_bql(db, cookie):

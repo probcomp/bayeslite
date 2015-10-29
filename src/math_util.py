@@ -44,6 +44,25 @@ def relerr(expected, actual):
     """Relative error between `expected` and `actual`: ``abs((a - e)/e)``."""
     return abs((actual - expected)/expected)
 
+def ieee_exp(x):
+    try:
+        return math.exp(x)
+    except OverflowError:
+        return float("inf")
+
+def logsumexp(array):
+    m = max(array)
+    if m == float('inf'):
+        return float('inf')
+    elif m == -float('inf'):
+        return -float('inf')
+    # This math.exp can't overflow b/c a - m is <= 0, so ieee_exp is
+    # the same.
+    return m + math.log(sum(math.exp(a - m) for a in array))
+
+def logmeanexp(array):
+    return logsumexp(array) - math.log(len(array))
+
 def continuants(contfrac):
     """Continuants of a continued fraction.
 
@@ -187,7 +206,7 @@ def gamma_below(a, x):
     w = a*math.log(x) - x - math.lgamma(a)
     if w < -MAXLOG:
         return 0.
-    m = math.exp(w)
+    m = ieee_exp(w)
 
     def seq():
         k = 0
@@ -239,7 +258,7 @@ def gamma_above(a, x):
     w = a*math.log(x) - x - math.lgamma(a)
     if w < -MAXLOG:
         return 0.
-    m = math.exp(w)
+    m = ieee_exp(w)
 
     def contfrac():
         yield 1, x              # 1/(x + ...), without division.
