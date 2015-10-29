@@ -95,18 +95,20 @@ PRAGMA user_version = 7;
 
 CREATE TABLE bayesdb_session (
 	id		INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
-			CHECK (0 < id),
+				CHECK (0 < id),
 	sent	BOOLEAN DEFAULT 0,
-    version	TEXT NOT NULL
+	version	TEXT NOT NULL
 );
+
 CREATE TABLE bayesdb_session_entries (
 	id		INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
 				CHECK (0 < id),
 	session_id	INTEGER NOT NULL REFERENCES bayesdb_session(id),
-	time		INTEGER NOT NULL, -- Unix time.
 	type		TEXT CHECK (type IN ('bql','sql')) NOT NULL,
 	data		TEXT NOT NULL,
-	completed	BOOLEAN DEFAULT 0,
+	-- Timing is by the local POSIX clock.
+	start_time	INTEGER NOT NULL,
+	end_time	INTEGER,
 	error		TEXT
 );
 '''
