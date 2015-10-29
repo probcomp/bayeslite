@@ -129,6 +129,7 @@ include tests/test_math_util.py
 include tests/test_metamodels.py
 include tests/test_parse.py
 include tests/test_read_csv.py
+include tests/test_schema.py
+include tests/test_sessions.py
 include tests/test_stats.py
 include tests/test_subsample.py
-include tests/test_sessions.py
