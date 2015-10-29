@@ -14,19 +14,58 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+"""Logging sessions.
+
+PLEASE DO NOT SEND SESSIONS WHEN THEY MAY CONTAIN SECRET OR SENSITIVE INFO!
+
+If you want to log your interactions with BayesDB in order to send a
+record of all your queries to the MIT Probabilistic Computing Project
+for diagnostic and research purposes, create a `SessionOrchestrator`
+object:
+
+    import bayeslite.sessions as sessions
+
+    so = sessions.SessionOrchestrator(bdb)
+
+This will begin recording in the database all queries submitted to
+`bdb` with `bdb.execute` and `bdb.sql_execute`, including those done
+internally by BayesDB -- specifically, it will record:
+
+- the text of each query
+- the parameters passed to each query
+- the starting time of each query
+- the ending time of each query, if it completed
+- the stack trace of any error while executing a query
+- the version of bayeslite used to create each session
+
+To upload the session to the MIT Probcomp group over the internet, run:
+
+    so.send_session_data()
+
+Please contact probcomp-community@csail.mit.edu with questions and
+concerns.
+
+PLEASE DO NOT SEND SESSIONS WHEN THEY MAY CONTAIN SECRET OR SENSITIVE INFO!
+"""
+
 # PLEASE DO NOT SEND SESSIONS WHEN THEY MAY CONTAIN SECRET OR SENSITIVE INFO!
 #
-# With sessions, we intend to capture full queries and their
-# timings. When something goes wrong, a user can send their info to
-# probcomp, and we can use it to help that user, and to improve the
-# system for other users. Briefly:
-# SessionOrchestrator._add_entry adds json-encoded queries and parameter
-#     values to the bayesdb_session_entries table;
-# SessionOrchestrator.dump_session_as_json creates an aggregated blob
-#     of the entire session.
-# SessionOrchestrator.send_session_data() then sends that as an HTTP POST
-#     request.
-# Please contact probcomp-community@csail.mit.edu with questions and concerns.
+# For details on what is recorded in sessions and where, see:
+#
+# SessionOrchestrator._add_entry
+#
+#       Stores query text and parameters in the database.
+#
+# SessionOrchestrator.dump_session_as_json
+#
+#       Serializes all data about a session into a JSON blob.
+#
+# SessionOrchestrator.send_session_data
+#
+#       Sends session data over the internet in an HTTP POST request.
+#
+# See also the bayesdb_session and bayesdb_session_entries tables in
+# the database schema, in schema.py.
 #
 # PLEASE DO NOT SEND SESSIONS WHEN THEY MAY CONTAIN SECRET OR SENSITIVE INFO!
 
