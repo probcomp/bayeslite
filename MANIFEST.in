@@ -41,7 +41,6 @@ include external/plex/dist/Plex/Timing.py
 include external/plex/dist/Plex/Traditional.py
 include external/plex/dist/Plex/Transitions.py
 include external/plex/dist/Plex/__init__.py
-include external/plex/dist/Plex/test_tm.py
 include external/plex/dist/README
 include external/plex/dist/TODO
 include external/plex/dist/doc/Reference.html
