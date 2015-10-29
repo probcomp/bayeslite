@@ -94,7 +94,7 @@ def test_sessions_basic_sql():
     _basic_test_trace(bdb.sql_execute)
 
 def _simple_bql_query(bdb):
-    bdb.execute('''SELECT COUNT(*) FROM bayesdb_session''')
+    bdb.execute('''SELECT COUNT(*) FROM bayesdb_session''').fetchall()
 
 def test_sessions_session_id_and_clear_sessions():
     (bdb, tr) = make_bdb_with_sessions()
