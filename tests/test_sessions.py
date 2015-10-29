@@ -243,7 +243,7 @@ def test_sessions_send_data():
     _simple_bql_query(bdb)
     tr.send_session_data()
 
-def test_sessions_send_data_network():
+def test_sessions_send_data__ci_network():
     (bdb, tr) = make_bdb_with_sessions()
     _simple_bql_query(bdb)
     tr.send_session_data()
