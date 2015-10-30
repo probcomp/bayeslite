@@ -23,7 +23,7 @@ extensions = [
 copyright = '2010-2015, MIT Probabilistic Computing Project'
 master_doc = 'index'
 project = 'bayeslite'
-release = '0.1.dev'
-version = '0.1'
+release = '0.1.3rc1'
+version = '0.1.3'
 
 nitpicky = True
