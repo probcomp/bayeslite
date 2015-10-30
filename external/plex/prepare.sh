@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (c) 2014, MIT Probabilistic Computing Project.
+# Copyright (c) 2015, MIT Probabilistic Computing Project.
 #
 # This file is part of Venture.
 #
