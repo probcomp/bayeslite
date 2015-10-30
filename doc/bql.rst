@@ -268,10 +268,15 @@ Model estimators are functions of a model, up to two columns, and up to one row.
 
 .. index:: ``MUTUAL INFORMATION``
 
-``MUTUAL INFORMATION [[OF <column1>] WITH <column2>]``
+``MUTUAL INFORMATION [[OF <column1>] WITH <column2>] [USING <n> SAMPLES]``
 
    Constant, or function of one or two implied columns.  Returns the
    strength of dependence between the two columns, in units of bits.
+
+   If ``USING <n> SAMPLES`` is specified and the underlying metamodel
+   uses Monte Carlo integration for each model to estimate the mutual
+   information (beyond merely the integral averaging all models), the
+   integration is performed using *n* samples for each model.
 
 Model Predictions
 ^^^^^^^^^^^^^^^^^
