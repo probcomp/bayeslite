@@ -36,8 +36,8 @@ except ImportError:
             Command.set_undefined_options(self, opt, val)
 
 def get_version():
-    with open('VERSION', 'rU') as version_file:
-        version = version_file.readline().strip()
+    with open('VERSION', 'rb') as f:
+        version = f.read().strip()
 
     # Append the Git commit id if this is a development version.
     if version.endswith('+'):
@@ -66,20 +66,20 @@ version = get_version()
 
 def write_version_py(path):
     try:
-        with open(path, 'rU') as f:
-            version_old = f.readlines()
+        with open(path, 'rb') as f:
+            version_old = f.read()
     except IOError:
         version_old = None
-    version_new = ['__version__ = %s\n' % (repr(version),)]
+    version_new = '__version__ = %r\n' % (version,)
     if version_old != version_new:
         print 'writing %s' % (path,)
-        with open(path, 'w') as f:
-            f.writelines(version_new)
+        with open(path, 'wb') as f:
+            f.write(version_new)
 
 def sha256_file(pathname):
     import hashlib
     sha256 = hashlib.sha256()
-    with open(pathname, 'r') as source_file:
+    with open(pathname, 'rb') as source_file:
         for block in iter(lambda: source_file.read(65536), ''):
             sha256.update(block)
     return sha256
@@ -87,7 +87,7 @@ def sha256_file(pathname):
 def uptodate(path_in, path_out, path_sha256):
     import errno
     try:
-        with open(path_sha256, 'r') as file_sha256:
+        with open(path_sha256, 'rb') as file_sha256:
             # Strip newlines and compare.
             if file_sha256.next()[:-1] != sha256_file(path_in).hexdigest():
                 return False
@@ -101,7 +101,7 @@ def uptodate(path_in, path_out, path_sha256):
 
 def commit(path_in, path_out, path_sha256):
     import os
-    with open(path_sha256 + '.tmp', 'w') as file_sha256:
+    with open(path_sha256 + '.tmp', 'wb') as file_sha256:
         file_sha256.write('%s\n' % (sha256_file(path_in).hexdigest(),))
         file_sha256.write('%s\n' % (sha256_file(path_out).hexdigest(),))
     os.rename(path_sha256 + '.tmp', path_sha256)
