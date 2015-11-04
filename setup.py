@@ -61,14 +61,16 @@ if version.endswith('+'):
             assert '-' not in version
 
 def write_version():
+    version_py = 'src/version.py'
     try:
-        with open('src/version.py', 'rU') as version_pyfile:
+        with open(version_py, 'rU') as version_pyfile:
             version_old = version_pyfile.readlines()
     except IOError:
         version_old = None
     version_new = ['__version__ = %s\n' % (repr(version),)]
     if version_old != version_new:
-        with open('src/version.py', 'w') as version_pyfile:
+        print 'writing %s' % (version_py,)
+        with open(version_py, 'w') as version_pyfile:
             version_pyfile.writelines(version_new)
 
 grammars = [
