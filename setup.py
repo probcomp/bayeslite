@@ -18,11 +18,11 @@
 # pylint: disable=import-error
 try:
     from setuptools import setup
-    from setuptools.command.test import test as TestCommand
+    from setuptools.command.test import test
 except ImportError:
     from distutils.core import setup
     from distutils.cmd import Command
-    class TestCommand(Command):
+    class test(Command):
         def __init__(self, *args, **kwargs):
             Command.__init__(self, *args, **kwargs)
         def initialize_options(self): pass
@@ -145,13 +145,13 @@ run_lemonade_on_grammars(grammars)
 #
 # - build command's build_lib variable is relative to source
 #   directory, so we must assume os.getcwd() gives that.
-class cmd_pytest(TestCommand):
+class local_test(test):
     def __init__(self, *args, **kwargs):
-        TestCommand.__init__(self, *args, **kwargs)
+        test.__init__(self, *args, **kwargs)
         self.test_suite = 'tests shell/tests'
         self.build_lib = None
     def finalize_options(self):
-        TestCommand.finalize_options(self)
+        test.finalize_options(self)
         # self.build_lib = ...
         self.set_undefined_options('build', ('build_lib', 'build_lib'))
     def run_tests(self):
@@ -196,6 +196,6 @@ setup(
     # Not in this release, perhaps later.
     #scripts=['shell/scripts/bayeslite'],
     cmdclass={
-        'test': cmd_pytest,
+        'test': local_test,
     },
 )
