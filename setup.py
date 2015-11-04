@@ -64,7 +64,7 @@ def get_version():
 
 version = get_version()
 
-def write_version(path):
+def write_version_py(path):
     try:
         with open(path, 'rU') as f:
             version_old = f.readlines()
@@ -106,30 +106,30 @@ def commit(path_in, path_out, path_sha256):
         file_sha256.write('%s\n' % (sha256_file(path_out).hexdigest(),))
     os.rename(path_sha256 + '.tmp', path_sha256)
 
-def run_lemonade_on_grammars(lemonade, grammar_paths):
+def generate_parser(lemonade, path_y):
     import distutils.spawn
     import os.path
     root = os.path.dirname(os.path.abspath(__file__))
     lemonade = os.path.join(root, *lemonade.split('/'))
-    for path_y in grammar_paths:
-        path = os.path.splitext(path_y)[0]
-        path_py = path + '.py'
-        path_sha256 = path + '.sha256'
-        if uptodate(path_y, path_py, path_sha256):
-            continue
-        print 'generating %s -> %s' % (path_y, path_py)
-        distutils.spawn.spawn([
-            '/usr/bin/env', 'PYTHONPATH=' + lemonade,
-            lemonade + '/bin/lemonade',
-            '-s',                   # Write statistics to stdout.
-            path_y,
-        ])
-        commit(path_y, path_py, path_sha256)
+    path = os.path.splitext(path_y)[0]
+    path_py = path + '.py'
+    path_sha256 = path + '.sha256'
+    if uptodate(path_y, path_py, path_sha256):
+        return
+    print 'generating %s -> %s' % (path_y, path_py)
+    distutils.spawn.spawn([
+        '/usr/bin/env', 'PYTHONPATH=' + lemonade,
+        lemonade + '/bin/lemonade',
+        '-s',                   # Write statistics to stdout.
+        path_y,
+    ])
+    commit(path_y, path_py, path_sha256)
 
 class local_build_py(build_py):
     def run(self):
-        write_version(version_py)
-        run_lemonade_on_grammars(lemonade, grammars)
+        write_version_py(version_py)
+        for grammar in grammars:
+            generate_parser(lemonade, grammar)
         build_py.run(self)
 
 # XXX Several horrible kludges here to make `python setup.py test' work:
