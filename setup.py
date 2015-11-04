@@ -35,30 +35,34 @@ except ImportError:
         def set_undefined_options(self, opt, val):
             Command.set_undefined_options(self, opt, val)
 
+def get_version():
+    with open('VERSION', 'rU') as version_file:
+        version = version_file.readline().strip()
 
-with open('VERSION', 'rU') as version_file:
-    version = version_file.readline().strip()
-
-# Append the Git commit id if this is a development version.
-if version.endswith('+'):
-    tag = 'v' + version[:-1]
-    try:
-        import subprocess
-        desc = subprocess.check_output([
-            'git', 'describe', '--dirty', '--match', tag,
-        ])
-    except Exception:
-        version += 'unknown'
-    else:
-        assert desc.startswith(tag)
-        import re
-        match = re.match(r'v([^-]*)-([0-9]+)-(.*)$', desc)
-        if match is None:       # paranoia
+    # Append the Git commit id if this is a development version.
+    if version.endswith('+'):
+        tag = 'v' + version[:-1]
+        try:
+            import subprocess
+            desc = subprocess.check_output([
+                'git', 'describe', '--dirty', '--match', tag,
+            ])
+        except Exception:
             version += 'unknown'
         else:
-            ver, rev, local = match.groups()
-            version = '%s.post%s+%s' % (ver, rev, local.replace('-', '.'))
-            assert '-' not in version
+            assert desc.startswith(tag)
+            import re
+            match = re.match(r'v([^-]*)-([0-9]+)-(.*)$', desc)
+            if match is None:       # paranoia
+                version += 'unknown'
+            else:
+                ver, rev, local = match.groups()
+                version = '%s.post%s+%s' % (ver, rev, local.replace('-', '.'))
+                assert '-' not in version
+
+    return version
+
+version = get_version()
 
 def write_version(path):
     try:
@@ -72,14 +76,8 @@ def write_version(path):
         with open(path, 'w') as f:
             f.writelines(version_new)
 
-
-import distutils.spawn
-import hashlib
-import errno
-import os
-import os.path
-
 def sha256_file(pathname):
+    import hashlib
     sha256 = hashlib.sha256()
     with open(pathname, 'r') as source_file:
         for block in iter(lambda: source_file.read(65536), ''):
@@ -87,6 +85,7 @@ def sha256_file(pathname):
     return sha256
 
 def uptodate(path_in, path_out, path_sha256):
+    import errno
     try:
         with open(path_sha256, 'r') as file_sha256:
             # Strip newlines and compare.
@@ -101,12 +100,15 @@ def uptodate(path_in, path_out, path_sha256):
     return True
 
 def commit(path_in, path_out, path_sha256):
+    import os
     with open(path_sha256 + '.tmp', 'w') as file_sha256:
         file_sha256.write('%s\n' % (sha256_file(path_in).hexdigest(),))
         file_sha256.write('%s\n' % (sha256_file(path_out).hexdigest(),))
     os.rename(path_sha256 + '.tmp', path_sha256)
 
 def run_lemonade_on_grammars(lemonade, grammar_paths):
+    import distutils.spawn
+    import os.path
     root = os.path.dirname(os.path.abspath(__file__))
     lemonade = os.path.join(root, *lemonade.split('/'))
     for path_y in grammar_paths:
