@@ -72,18 +72,12 @@ def write_version(path):
         with open(path, 'w') as f:
             f.writelines(version_new)
 
-grammars = [
-    'src/grammar.y',
-]
 
 import distutils.spawn
 import hashlib
 import errno
 import os
 import os.path
-
-root = os.path.dirname(os.path.abspath(__file__))
-lemonade = root + '/external/lemonade/dist'
 
 def sha256_file(pathname):
     sha256 = hashlib.sha256()
@@ -112,7 +106,9 @@ def commit(path_in, path_out, path_sha256):
         file_sha256.write('%s\n' % (sha256_file(path_out).hexdigest(),))
     os.rename(path_sha256 + '.tmp', path_sha256)
 
-def run_lemonade_on_grammars(grammar_paths):
+def run_lemonade_on_grammars(lemonade, grammar_paths):
+    root = os.path.dirname(os.path.abspath(__file__))
+    lemonade = os.path.join(root, *lemonade.split('/'))
     for path_y in grammar_paths:
         path = os.path.splitext(path_y)[0]
         path_py = path + '.py'
@@ -130,8 +126,8 @@ def run_lemonade_on_grammars(grammar_paths):
 
 class local_build_py(build_py):
     def run(self):
-        write_version('src/version.py')
-        run_lemonade_on_grammars(grammars)
+        write_version(version_py)
+        run_lemonade_on_grammars(lemonade, grammars)
         build_py.run(self)
 
 # XXX Several horrible kludges here to make `python setup.py test' work:
@@ -151,7 +147,7 @@ class local_build_py(build_py):
 class local_test(test):
     def __init__(self, *args, **kwargs):
         test.__init__(self, *args, **kwargs)
-        self.test_suite = 'tests shell/tests'
+        self.test_suite = ' '.join(test_directories)
         self.build_lib = None
     def finalize_options(self):
         test.finalize_options(self)
@@ -164,7 +160,19 @@ class local_test(test):
         os.environ['BAYESDB_WIZARD_MODE'] = '1'
         os.environ['BAYESDB_DISABLE_VERSION_CHECK'] = '1'
         os.environ['PYTHONPATH'] = ':'.join(sys.path)
-        sys.exit(pytest.main(['tests', 'shell/tests']))
+        sys.exit(pytest.main(test_directories))
+
+# XXX These should be attributes of `setup', but helpful distutils
+# doesn't pass them through when it doesn't know about them a priori.
+version_py = 'src/version.py'
+lemonade = 'external/lemonade/dist'
+grammars = [
+    'src/grammar.y',
+]
+test_directories = [
+    'shell/tests',
+    'tests',
+]
 
 setup(
     name='bayeslite',
