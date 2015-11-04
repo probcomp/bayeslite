@@ -60,18 +60,17 @@ if version.endswith('+'):
             version = '%s.post%s+%s' % (ver, rev, local.replace('-', '.'))
             assert '-' not in version
 
-def write_version():
-    version_py = 'src/version.py'
+def write_version(path):
     try:
-        with open(version_py, 'rU') as version_pyfile:
-            version_old = version_pyfile.readlines()
+        with open(path, 'rU') as f:
+            version_old = f.readlines()
     except IOError:
         version_old = None
     version_new = ['__version__ = %s\n' % (repr(version),)]
     if version_old != version_new:
-        print 'writing %s' % (version_py,)
-        with open(version_py, 'w') as version_pyfile:
-            version_pyfile.writelines(version_new)
+        print 'writing %s' % (path,)
+        with open(path, 'w') as f:
+            f.writelines(version_new)
 
 grammars = [
     'src/grammar.y',
@@ -131,7 +130,7 @@ def run_lemonade_on_grammars(grammar_paths):
 
 class local_build_py(build_py):
     def run(self):
-        write_version()
+        write_version('src/version.py')
         run_lemonade_on_grammars(grammars)
         build_py.run(self)
 
