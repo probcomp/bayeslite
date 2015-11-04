@@ -18,10 +18,13 @@
 # pylint: disable=import-error
 try:
     from setuptools import setup
+    from setuptools.command.build_py import build_py
     from setuptools.command.test import test
 except ImportError:
     from distutils.core import setup
     from distutils.cmd import Command
+    from distutils.command.build_py import build_py
+
     class test(Command):
         def __init__(self, *args, **kwargs):
             Command.__init__(self, *args, **kwargs)
@@ -57,7 +60,6 @@ if version.endswith('+'):
             version = '%s.post%s+%s' % (ver, rev, local.replace('-', '.'))
             assert '-' not in version
 
-# XXX Mega-kludge.  See below about grammars for details.
 try:
     with open('src/version.py', 'rU') as version_pyfile:
         version_old = version_pyfile.readlines()
@@ -68,11 +70,6 @@ if version_old != version_new:
     with open('src/version.py', 'w') as version_pyfile:
         version_pyfile.writelines(version_new)
 
-# XXX This is a mega-kludge.  Since distutils/setuptools has no way to
-# order dependencies (what kind of brain-dead build system can't do
-# this?), we just always regenerate the grammar.  Could hack
-# distutils.command.build to include a dependency mechanism, but this
-# is more expedient for now.
 grammars = [
     'src/grammar.y',
 ]
@@ -129,7 +126,10 @@ def run_lemonade_on_grammars(grammar_paths):
         ])
         commit(path_y, path_py, path_sha256)
 
-run_lemonade_on_grammars(grammars)
+class local_build_py(build_py):
+    def run(self):
+        run_lemonade_on_grammars(grammars)
+        build_py.run(self)
 
 # XXX Several horrible kludges here to make `python setup.py test' work:
 #
@@ -196,6 +196,7 @@ setup(
     # Not in this release, perhaps later.
     #scripts=['shell/scripts/bayeslite'],
     cmdclass={
+        'build_py': local_build_py,
         'test': local_test,
     },
 )
