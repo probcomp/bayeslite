@@ -111,9 +111,10 @@ def generate_parser(lemonade, path_y):
     import os.path
     root = os.path.dirname(os.path.abspath(__file__))
     lemonade = os.path.join(root, *lemonade.split('/'))
-    path = os.path.splitext(path_y)[0]
-    path_py = path + '.py'
-    path_sha256 = path + '.sha256'
+    base, ext = os.path.splitext(path_y)
+    assert ext == '.y'
+    path_py = base + '.py'
+    path_sha256 = base + '.sha256'
     if uptodate(path_y, path_py, path_sha256):
         return
     print 'generating %s -> %s' % (path_y, path_py)
