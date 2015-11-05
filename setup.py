@@ -19,11 +19,13 @@
 try:
     from setuptools import setup
     from setuptools.command.build_py import build_py
+    from setuptools.command.sdist import sdist
     from setuptools.command.test import test
 except ImportError:
     from distutils.core import setup
     from distutils.cmd import Command
     from distutils.command.build_py import build_py
+    from distutils.command.sdist import sdist
 
     class test(Command):
         def __init__(self, *args, **kwargs):
@@ -133,6 +135,19 @@ class local_build_py(build_py):
             generate_parser(lemonade, grammar)
         build_py.run(self)
 
+# XXX For inexplicable reasons, during sdist.run, setuptools quietly
+# modifies self.distribution.metadata.version to replace plus signs by
+# hyphens -- even where they are explicitly allowed by PEP 440.
+# distutils does not do this -- only setuptools.
+class local_sdist(sdist):
+    # This is not really a subcommand -- it's actually a predicate to
+    # determine whether to run a subcommand.  So modifying anything in
+    # it is a little evil.  But it'll do.
+    def fixidioticegginfomess(self):
+        self.distribution.metadata.version = version
+        return False
+    sub_commands = [('sdist_fixidioticegginfomess', fixidioticegginfomess)]
+
 # XXX Several horrible kludges here to make `python setup.py test' work:
 #
 # - Standard setputools test command searches for unittest, not
@@ -211,6 +226,7 @@ setup(
     #scripts=['shell/scripts/bayeslite'],
     cmdclass={
         'build_py': local_build_py,
+        'sdist': local_sdist,
         'test': local_test,
     },
 )
