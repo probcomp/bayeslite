@@ -579,3 +579,12 @@ def test_crosscat_constraints():
         assert engine._last_Y == [(3, 0, 1), (3, 2, 32)]
         bdb.execute('SIMULATE weight FROM t1_cc GIVEN age = 8 LIMIT 1').next()
         assert engine._last_Y == [(28, 1, 8)]
+
+def test_bayesdb_generator_fresh_row_id():
+    with bayesdb_generator(bayesdb(), 't1', 't1_cc', t1_schema, lambda x: 0,\
+            columns=['label CATEGORICAL', 'age NUMERICAL', 'weight NUMERICAL'])\
+            as (bdb, generator_id):
+        assert core.bayesdb_generator_fresh_row_id(bdb, generator_id) == 1
+        t1_data(bdb)
+        assert core.bayesdb_generator_fresh_row_id(bdb, generator_id) == \
+            len(t1_rows) + 1
