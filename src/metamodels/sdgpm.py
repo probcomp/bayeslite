@@ -105,19 +105,24 @@ class SdGpm(object):
 
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
             max_seconds=None, ckpt_iterations=None, ckpt_seconds=None):
-        raise ValueError('Analyze coming soon.')
+        return
 
     def simulate_joint(self, bdb, generator_id, targets, constraints, modelno,
             num_predictions=1):
-        ripl = self._ripl(bdb, generator_id, modelno)
-        results = []
-        for _ in range(num_predictions):
-            result = []
-            # for (row, col, val) in constraints:
-            #     ripl.infer(v.app(v.sym("obs_cell"), colno, v.quote(value)))
-            # for (row, col, val) in colnos:
-            #     result.append(ripl.infer(v.app(v.sym("sim_cell"), colno)))
-            # results.append(result)
+        n_model = len(core.bayesdb_generator_modelnos(bdb, generator_id))
+        results = [[] for _ in xrange(num_predictions)]
+        for k in range(num_predictions):
+            m = bdb.np_prng.randint(0, high=n_model)
+            ripl = self._hack_ripl(bdb, generator_id, m)
+            for (rowid, col, val) in constraints:
+                ripl.observe('(get_cell %i %i)' % (col, rowid), val)
+            for rowid in set([r for (r,c,v) in constraints]):
+                ripl.infer('(mh (quote rlat) %i 100)' % rowid)
+            for (rowid, col) in targets:
+                rc_sample = ripl.predict(
+                    '(get_cell %i %i)' % (col, rowid))
+                ripl.infer('(mh (quote rlat) %i 100)' % rowid)
+                results[k].append(rc_sample)
         return results
 
     def _parse_schema(self, bdb, schema):
@@ -204,8 +209,14 @@ class SdGpm(object):
 
     def _ripl(self, bdb, generator_id, model_no):
         box = self._cache_for(bdb, ('ripls', generator_id, model_no))
-        return box.get() or box.set(self._retrieve_ripl(bdb, generator_id,
+        return box.get() or box.set(self._load_ripl(bdb, generator_id,
             model_no))
+
+    def _hack_ripl(self, bdb, generator_id, model_no):
+        hack_ripl_binary = self._ripl(bdb, generator_id, model_no).saves()
+        hack_ripl = s.make_lite_church_prime_ripl()
+        hack_ripl.loads(hack_ripl_binary)
+        return hack_ripl
 
     def _cache(self, bdb):
         return self.hack_in_memory_cache
@@ -225,7 +236,7 @@ class SdGpm(object):
         else:
             return HashBox(cache, key)
 
-    def _retrieve_ripl(self, bdb, generator_id, model_no):
+    def _load_ripl(self, bdb, generator_id, model_no):
         sql = '''
             SELECT ripl_binary FROM bayesdb_sdgpm_ripl
                 WHERE generator_id = ? AND modelno = ?
