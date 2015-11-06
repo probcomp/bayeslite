@@ -452,4 +452,6 @@ def bayesdb_generator_fresh_row_id(bdb, generator_id):
     qt = sqlite3_quote_name(table_name)
     cursor = bdb.sql_execute('SELECT MAX(_rowid_) FROM %s' % (qt,))
     max_rowid = cursor_value(cursor)
+    if max_rowid is None:
+        max_rowid = 0
     return max_rowid + 1   # Synthesize a non-existent SQLite row id
