@@ -18,11 +18,16 @@
 # pylint: disable=import-error
 try:
     from setuptools import setup
-    from setuptools.command.test import test as TestCommand
+    from setuptools.command.build_py import build_py
+    from setuptools.command.sdist import sdist
+    from setuptools.command.test import test
 except ImportError:
     from distutils.core import setup
     from distutils.cmd import Command
-    class TestCommand(Command):
+    from distutils.command.build_py import build_py
+    from distutils.command.sdist import sdist
+
+    class test(Command):
         def __init__(self, *args, **kwargs):
             Command.__init__(self, *args, **kwargs)
         def initialize_options(self): pass
@@ -32,70 +37,59 @@ except ImportError:
         def set_undefined_options(self, opt, val):
             Command.set_undefined_options(self, opt, val)
 
+def get_version():
+    with open('VERSION', 'rb') as f:
+        version = f.read().strip()
 
-with open('VERSION', 'rU') as version_file:
-    version = version_file.readline().strip()
-
-# Append the Git commit id if this is a development version.
-if version.endswith('+'):
-    tag = 'v' + version[:-1]
-    try:
-        import subprocess
-        desc = subprocess.check_output([
-            'git', 'describe', '--dirty', '--match', tag,
-        ])
-    except Exception:
-        version += 'unknown'
-    else:
-        assert desc.startswith(tag)
-        import re
-        match = re.match(r'v([^-]*)-([0-9]+)-(.*)$', desc)
-        if match is None:       # paranoia
+    # Append the Git commit id if this is a development version.
+    if version.endswith('+'):
+        tag = 'v' + version[:-1]
+        try:
+            import subprocess
+            desc = subprocess.check_output([
+                'git', 'describe', '--dirty', '--match', tag,
+            ])
+        except Exception:
             version += 'unknown'
         else:
-            ver, rev, local = match.groups()
-            version = '%s.post%s+%s' % (ver, rev, local.replace('-', '.'))
-            assert '-' not in version
+            assert desc.startswith(tag)
+            import re
+            match = re.match(r'v([^-]*)-([0-9]+)-(.*)$', desc)
+            if match is None:       # paranoia
+                version += 'unknown'
+            else:
+                ver, rev, local = match.groups()
+                version = '%s.post%s+%s' % (ver, rev, local.replace('-', '.'))
+                assert '-' not in version
 
-# XXX Mega-kludge.  See below about grammars for details.
-try:
-    with open('src/version.py', 'rU') as version_pyfile:
-        version_old = version_pyfile.readlines()
-except IOError:
-    version_old = None
-version_new = ['__version__ = %s\n' % (repr(version),)]
-if version_old != version_new:
-    with open('src/version.py', 'w') as version_pyfile:
-        version_pyfile.writelines(version_new)
+    return version
 
-# XXX This is a mega-kludge.  Since distutils/setuptools has no way to
-# order dependencies (what kind of brain-dead build system can't do
-# this?), we just always regenerate the grammar.  Could hack
-# distutils.command.build to include a dependency mechanism, but this
-# is more expedient for now.
-grammars = [
-    'src/grammar.y',
-]
+version = get_version()
 
-import distutils.spawn
-import hashlib
-import errno
-import os
-import os.path
-
-root = os.path.dirname(os.path.abspath(__file__))
-lemonade = root + '/external/lemonade/dist'
+def write_version_py(path):
+    try:
+        with open(path, 'rb') as f:
+            version_old = f.read()
+    except IOError:
+        version_old = None
+    version_new = '__version__ = %r\n' % (version,)
+    if version_old != version_new:
+        print 'writing %s' % (path,)
+        with open(path, 'wb') as f:
+            f.write(version_new)
 
 def sha256_file(pathname):
+    import hashlib
     sha256 = hashlib.sha256()
-    with open(pathname, 'r') as source_file:
+    with open(pathname, 'rb') as source_file:
         for block in iter(lambda: source_file.read(65536), ''):
             sha256.update(block)
     return sha256
 
 def uptodate(path_in, path_out, path_sha256):
+    import errno
     try:
-        with open(path_sha256, 'r') as file_sha256:
+        with open(path_sha256, 'rb') as file_sha256:
             # Strip newlines and compare.
             if file_sha256.next()[:-1] != sha256_file(path_in).hexdigest():
                 return False
@@ -108,28 +102,51 @@ def uptodate(path_in, path_out, path_sha256):
     return True
 
 def commit(path_in, path_out, path_sha256):
-    with open(path_sha256 + '.tmp', 'w') as file_sha256:
+    import os
+    with open(path_sha256 + '.tmp', 'wb') as file_sha256:
         file_sha256.write('%s\n' % (sha256_file(path_in).hexdigest(),))
         file_sha256.write('%s\n' % (sha256_file(path_out).hexdigest(),))
     os.rename(path_sha256 + '.tmp', path_sha256)
 
-def run_lemonade_on_grammars(grammar_paths):
-    for path_y in grammar_paths:
-        path = os.path.splitext(path_y)[0]
-        path_py = path + '.py'
-        path_sha256 = path + '.sha256'
-        if uptodate(path_y, path_py, path_sha256):
-            continue
-        print 'generating %s -> %s' % (path_y, path_py)
-        distutils.spawn.spawn([
-            '/usr/bin/env', 'PYTHONPATH=' + lemonade,
-            lemonade + '/bin/lemonade',
-            '-s',                   # Write statistics to stdout.
-            path_y,
-        ])
-        commit(path_y, path_py, path_sha256)
+def generate_parser(lemonade, path_y):
+    import distutils.spawn
+    import os.path
+    root = os.path.dirname(os.path.abspath(__file__))
+    lemonade = os.path.join(root, *lemonade.split('/'))
+    base, ext = os.path.splitext(path_y)
+    assert ext == '.y'
+    path_py = base + '.py'
+    path_sha256 = base + '.sha256'
+    if uptodate(path_y, path_py, path_sha256):
+        return
+    print 'generating %s -> %s' % (path_y, path_py)
+    distutils.spawn.spawn([
+        '/usr/bin/env', 'PYTHONPATH=' + lemonade,
+        lemonade + '/bin/lemonade',
+        '-s',                   # Write statistics to stdout.
+        path_y,
+    ])
+    commit(path_y, path_py, path_sha256)
 
-run_lemonade_on_grammars(grammars)
+class local_build_py(build_py):
+    def run(self):
+        write_version_py(version_py)
+        for grammar in grammars:
+            generate_parser(lemonade, grammar)
+        build_py.run(self)
+
+# XXX For inexplicable reasons, during sdist.run, setuptools quietly
+# modifies self.distribution.metadata.version to replace plus signs by
+# hyphens -- even where they are explicitly allowed by PEP 440.
+# distutils does not do this -- only setuptools.
+class local_sdist(sdist):
+    # This is not really a subcommand -- it's actually a predicate to
+    # determine whether to run a subcommand.  So modifying anything in
+    # it is a little evil.  But it'll do.
+    def fixidioticegginfomess(self):
+        self.distribution.metadata.version = version
+        return False
+    sub_commands = [('sdist_fixidioticegginfomess', fixidioticegginfomess)]
 
 # XXX Several horrible kludges here to make `python setup.py test' work:
 #
@@ -145,13 +162,13 @@ run_lemonade_on_grammars(grammars)
 #
 # - build command's build_lib variable is relative to source
 #   directory, so we must assume os.getcwd() gives that.
-class cmd_pytest(TestCommand):
+class local_test(test):
     def __init__(self, *args, **kwargs):
-        TestCommand.__init__(self, *args, **kwargs)
-        self.test_suite = 'tests shell/tests'
+        test.__init__(self, *args, **kwargs)
+        self.test_suite = ' '.join(test_directories)
         self.build_lib = None
     def finalize_options(self):
-        TestCommand.finalize_options(self)
+        test.finalize_options(self)
         # self.build_lib = ...
         self.set_undefined_options('build', ('build_lib', 'build_lib'))
     def run_tests(self):
@@ -161,7 +178,19 @@ class cmd_pytest(TestCommand):
         os.environ['BAYESDB_WIZARD_MODE'] = '1'
         os.environ['BAYESDB_DISABLE_VERSION_CHECK'] = '1'
         os.environ['PYTHONPATH'] = ':'.join(sys.path)
-        sys.exit(pytest.main(['tests', 'shell/tests']))
+        sys.exit(pytest.main(test_directories))
+
+# XXX These should be attributes of `setup', but helpful distutils
+# doesn't pass them through when it doesn't know about them a priori.
+version_py = 'src/version.py'
+lemonade = 'external/lemonade/dist'
+grammars = [
+    'src/grammar.y',
+]
+test_directories = [
+    'shell/tests',
+    'tests',
+]
 
 setup(
     name='bayeslite',
@@ -196,6 +225,8 @@ setup(
     # Not in this release, perhaps later.
     #scripts=['shell/scripts/bayeslite'],
     cmdclass={
-        'test': cmd_pytest,
+        'build_py': local_build_py,
+        'sdist': local_sdist,
+        'test': local_test,
     },
 )

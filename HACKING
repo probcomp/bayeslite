@@ -40,7 +40,7 @@ followed by a plus sign `+'.  In that case, a suffix will be added to
 the most recent version number, derived from `git describe', of the
 form:
 
-    .post<N>+g<commitid>[-<dirty>]
+    .post<N>+g<commitid>[.<dirty>]
 
 The Git tag for a tagged version is named with a `v' prefix.  Note
 that the content of VERSION for any tagged version MUST NOT include a
