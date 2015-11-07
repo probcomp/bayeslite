@@ -117,12 +117,10 @@ class SdGpm(object):
             ripl = self._hack_ripl(bdb, generator_id, m)
             for (rowid, col, val) in constraints:
                 ripl.observe('(get_cell %i %i)' % (col, rowid), val)
-            for rowid in set([r for (r,c,v) in constraints]):
-                ripl.infer('(mh (quote rlat) %i 100)' % rowid)
+            for rowid in set([r for (r, _, _) in constraints]):
+                ripl.infer('(mh %i one 250)' % rowid)
             for (rowid, col) in targets:
-                rc_sample = ripl.predict(
-                    '(get_cell %i %i)' % (col, rowid))
-                ripl.infer('(mh (quote rlat) %i 100)' % rowid)
+                rc_sample = ripl.predict('(get_cell %i %i)' % (col, rowid))
                 results[k].append(rc_sample)
         return results
 
