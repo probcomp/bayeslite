@@ -39,7 +39,7 @@ CREATE TABLE bayesdb_sdgpm_program (
 CREATE TABLE bayesdb_sdgpm_ripl (
 	generator_id	INTEGER NOT NULL
         REFERENCES bayesdb_generator(id),
-	modelno		INTEGER NOT NULL,
+	modelno    INTEGER NOT NULL,
 	ripl_binary	BLOB NOT NULL,
 	PRIMARY KEY(generator_id, modelno),
 	FOREIGN KEY(generator_id, modelno)
@@ -92,10 +92,9 @@ class SdGpm(object):
         for modelno in modelnos:
             ripl = s.make_lite_church_prime_ripl()
             ripl.execute_program(program)
-            # TODO Probably want to replace this with passing a
-            # callable that will fetch streaming data from the DB,
-            # except the question of caching the fetch across model
-            # instantiations.
+            ripl.execute_program('''
+                (assume get_cell (lambda (col rowid)
+                    ((lookup (list u x) col) rowid)))''')
             # Note: This is not ripl.observe_dataset because I want to
             # give the inference program a chance to do something
             # between each row, if it wants.
@@ -109,6 +108,8 @@ class SdGpm(object):
 
     def simulate_joint(self, bdb, generator_id, targets, constraints, modelno,
             num_predictions=1):
+        constraints = self._remap_constraints(bdb, generator_id, constraints)
+        targets = self._remap_targets(bdb, generator_id, targets)
         n_model = len(core.bayesdb_generator_modelnos(bdb, generator_id))
         results = [[] for _ in xrange(num_predictions)]
         for k in range(num_predictions):
@@ -253,6 +254,18 @@ class SdGpm(object):
             ripl_binary = row[0]
             ripl.loads(ripl_binary)
             return ripl
+
+    def _column_map(self, bdb, generator_id):
+        table_cols = core.bayesdb_generator_column_numbers(bdb, generator_id)
+        return {c:i for (i,c) in enumerate(table_cols)}
+
+    def _remap_constraints(self, bdb, generator_id, constraints):
+        column_map = self._column_map(bdb, generator_id)
+        return [(row, column_map[col], val) for (row, col, val) in constraints]
+
+    def _remap_targets(self, bdb, generator_id, targets):
+        column_map = self._column_map(bdb, generator_id)
+        return [(row, column_map[col]) for (row, col) in targets]
 
 class NullBox(object):
     def get(self):
