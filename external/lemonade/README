@@ -1,0 +1,11 @@
+lemonade - LALR parser generator for Python
+
+https://pypi.python.org/pypi/lemonade
+
+Ported to Python from the LEMON parser generator by D. Richard Hipp:
+
+http://www.hwaci.com/sw/lemon/
+
+We have back-ported some bug fixes from LEMON into our copy of
+lemonade, since upstream does not appear to be maintained.  (Upstream
+author responded to email but then vanished.)

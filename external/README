@@ -14,6 +14,7 @@ Each subdirectory corresponds to one external package and has the
 following contents:
 
 COPYING         summary of copying terms
+README          notes on upstream, link to upstream web site, &c.
 dist/           subdirectory containing the external distribution
 prepare.sh      script to prepare a distribution for import
 ...             other supporting files
@@ -26,7 +27,8 @@ fixes, should be made in separate commits.
 
 * To import a new external package:
 
-1. Write the COPYING file and prepare.sh script and commit them.
+1. Write the COPYING and README files and the prepare.sh script, and
+   commit them.
 
 2. Create a temporary Git repository for the package:
 

@@ -1,0 +1,4 @@
+weakprng - cryptographic pseudorandom number generator based on ChaCha
+
+http://mumble.net/~campbell/python/chacha.py
+http://mumble.net/~campbell/python/weakprng.py
