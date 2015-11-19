@@ -207,6 +207,19 @@ CREATE TABLE bayesdb_crosscat_column_dependency (
 );
 '''
 
+crosscat_schema_6to7 = '''
+UPDATE bayesdb_metamodel SET version = 6 WHERE name = 'crosscat';
+
+CREATE TABLE bayesdb_crosscat_row_dependency (
+    generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    row0      INTEGER NOT NULL,
+    row1      INTEGER NOT NULL,
+    dependent   BOOLEAN NOT NULL,
+    PRIMARY KEY(generator_id, row0, row1),
+    CHECK(row0 < row1)
+);
+'''
+
 class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
     """Crosscat metamodel for BayesDB.
 
@@ -546,7 +559,11 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 for stmt in crosscat_schema_5to6.split(';'):
                     bdb.sql_execute(stmt)
                 version = 6
-            if version != 6:
+            if version == 6:
+                for stmt in crosscat_schema_6to7.split(';'):
+                    bdb.sql_execute(stmt)
+                version = 7
+            if version != 7:
                 raise BQLError(bdb, 'Crosscat already installed'
                     ' with unknown schema version: %d' % (version,))
 
