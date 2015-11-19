@@ -119,11 +119,11 @@ class SessionOrchestrator(object):
             print msg
 
     def _sql(self, query, bindings=None):
-        # Go through bdb.sqlite3.execute instead of bdb.sql_execute to
-        # avoid hitting the tracer.
+        # Go through bdb._sqlite3.cursor().execute instead of
+        # bdb.sql_execute to avoid hitting the tracer.
         if bindings == None:
             bindings = ()
-        return self.bdb.sqlite3.execute(query, bindings)
+        return self.bdb._sqlite3.cursor().execute(query, bindings)
 
     def _add_entry(self, qid, type, query, bindings):
         '''Save a session entry into the database. The entry is initially in
