@@ -15,9 +15,9 @@
 #   limitations under the License.
 
 import StringIO
+import apsw
 import contextlib
 import pytest
-import sqlite3
 import tempfile
 
 import bayeslite
@@ -121,9 +121,9 @@ def test_csv_import_schema():
         # compatibility with MySQL idiocy or something, SQLite treats
         # double-quotes as single-quotes if the alternative would be
         # an error.
-        with pytest.raises(sqlite3.OperationalError):
+        with pytest.raises(apsw.SQLError):
             bdb.execute('select idontexist from employees')
-            raise sqlite3.OperationalError('BQL compiler is broken;'
+            raise apsw.SQLError('BQL compiler is broken;'
                 ' a.k.a. sqlite3 is stupid.')
         bdb.execute('''
             CREATE GENERATOR employees_cc FOR employees USING crosscat(
