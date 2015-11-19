@@ -572,6 +572,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         do_subsample = self._subsample
         columns = []
         col_dep_constraints = []
+        row_dep_constraints = []
         for directive in schema:
             # XXX Whattakludge.  Invent a better parsing scheme for
             # these things, please.
@@ -630,6 +631,44 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 col_dep_constraints.append((indep_columns, False))
                 continue
             if isinstance(directive, list) and \
+               len(directive) == 3 and \
+               isinstance(directive[0], (str, unicode)) and \
+               casefold(directive[0]) == 'row' and \
+               isinstance(directive[1], (str, unicode)) and \
+               casefold(directive[1]) == 'dependent':
+                args = directive[2]
+                i = 0
+                dep_rows = []
+                while i < len(args):
+                    if (not isinstance(args[i], int)) and \
+                        i + 1 < len(args) and args[i + 1] != ',':
+                        # XXX Pretty-print the tokens.
+                        raise BQLError(bdb, 'Invalid dependent rowids: %s' %
+                            (repr(args),))
+                    dep_rows.append(args[i])
+                    i += 2
+                row_dep_constraints.append((dep_rows, True))
+                continue
+            if isinstance(directive, list) and \
+               len(directive) == 3 and \
+               isinstance(directive[0], (str, unicode)) and \
+               casefold(directive[0]) == 'row' and \
+               isinstance(directive[1], (str, unicode)) and \
+               casefold(directive[1]) == 'independent':
+                args = directive[2]
+                i = 0
+                ind_rows = []
+                while i < len(args):
+                    if (not isinstance(args[i], int)) and \
+                        i + 1 < len(args) and args[i + 1] != ',':
+                        # XXX Pretty-print the tokens.
+                        raise BQLError(bdb, 'Invalid independent rowids: %s' %
+                            (repr(args),))
+                    ind_rows.append(args[i])
+                    i += 2
+                row_dep_constraints.append((ind_rows, False))
+                continue
+            if isinstance(directive, list) and \
                len(directive) == 2 and \
                isinstance(directive[0], (str, unicode)) and \
                casefold(directive[0]) != 'guess' and \
@@ -648,6 +687,9 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 continue
             raise BQLError(bdb, 'Invalid crosscat column model: %s' %
                 (repr(directive),))
+
+        print row_dep_constraints
+        import sys; sys.exit(0)
 
         with bdb.savepoint():
             # If necessary, guess the column statistical types.
