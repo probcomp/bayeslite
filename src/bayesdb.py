@@ -14,10 +14,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import apsw
 import contextlib
 import numpy.random
 import random
-import sqlite3
 import struct
 
 import bayeslite.bql as bql
@@ -76,10 +76,7 @@ class BayesDB(object):
             raise ValueError('Do not construct BayesDB objects directly!')
         if pathname is None:
             pathname = ":memory:"
-        # isolation_level=None actually means that the sqlite3 module
-        # will not randomly begin and commit transactions where we
-        # didn't ask it to.
-        self.sqlite3 = sqlite3.connect(pathname, isolation_level=None)
+        self._sqlite3 = apsw.Connection(pathname)
         self.txn_depth = 0
         self.metamodels = {}
         self.tracer = None
@@ -94,12 +91,14 @@ class BayesDB(object):
         self._py_prng = random.Random(pyrseed)
         nprseed = [self._prng.weakrandom32() for _ in range(4)]
         self._np_prng = numpy.random.RandomState(nprseed)
-        schema.bayesdb_install_schema(self.sqlite3, version=version,
+        schema.bayesdb_install_schema(self._sqlite3, version=version,
             compatible=compatible)
-        bqlfn.bayesdb_install_bql(self.sqlite3, self)
+        bqlfn.bayesdb_install_bql(self._sqlite3, self)
 
         # Cache an empty cursor for convenience.
-        self.empty_cursor = bql.BayesDBCursor(self, self.sqlite3.execute(''))
+        empty_cursor = self._sqlite3.cursor()
+        empty_cursor.execute('')
+        self._empty_cursor = bql.BayesDBCursor(self, empty_cursor)
 
     def __enter__(self):
         return self
@@ -109,8 +108,8 @@ class BayesDB(object):
     def close(self):
         """Close the database.  Further use is not allowed."""
         assert self.txn_depth == 0, "pending BayesDB transactions"
-        self.sqlite3.close()
-        self.sqlite3 = None
+        self._sqlite3.close()
+        self._sqlite3 = None
 
     @property
     def py_prng(self):
@@ -232,7 +231,7 @@ class BayesDB(object):
         try:
             cursor = meth(string, bindings)
             tracer.ready(qid, cursor)
-            if cursor == self.empty_cursor:
+            if cursor == self._empty_cursor:
                 tracer.finished(qid)
                 # Calling abandoned here is a choice.  On the one
                 # hand, I know the client can't get anything out of
@@ -262,7 +261,7 @@ class BayesDB(object):
         else:
             raise ValueError('>1 phrase in string')
         cursor = bql.execute_phrase(self, phrase, bindings)
-        return self.empty_cursor if cursor is None else cursor
+        return self._empty_cursor if cursor is None else cursor
 
     def sql_execute(self, string, bindings=None):
         """Execute a SQL query on the underlying SQLite database.
@@ -281,7 +280,9 @@ class BayesDB(object):
             self.sql_tracer, self._do_sql_execute, string, bindings)
 
     def _do_sql_execute(self, string, bindings):
-        return bql.BayesDBCursor(self, self.sqlite3.execute(string, bindings))
+        cursor = self._sqlite3.cursor()
+        cursor.execute(string, bindings)
+        return bql.BayesDBCursor(self, cursor)
 
     @contextlib.contextmanager
     def savepoint(self):
@@ -315,6 +316,10 @@ class BayesDB(object):
         n = self.temptable
         self.temptable += 1
         return 'bayesdb_temp_%u' % (n,)
+
+    def last_insert_rowid(self):
+        """Return the rowid of the row most recently inserted."""
+        return self._sqlite3.last_insert_rowid()
 
 class IBayesDBTracer(object):
     """BayesDB articulated tracing interface.
