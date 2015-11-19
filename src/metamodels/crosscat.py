@@ -22,10 +22,10 @@ This module implements the :class:`bayeslite.IBayesDBMetamodel`
 interface for Crosscat.
 """
 
+import apsw
 import itertools
 import json
 import math
-import sqlite3
 import struct
 import time
 
@@ -755,7 +755,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     try:
                         bdb.sql_execute(insert_dep_constraint_sql,
                             (generator_id, min_col_id, max_col_id, dependent))
-                    except sqlite3.IntegrityError:
+                    except apsw.ConstraintError:
                         # XXX This is a cop-out -- we should validate
                         # the relation ourselves (and show a more
                         # helpful error message).
@@ -830,12 +830,12 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 WHERE generator_id = :generator_id
         '''
         metadata_json = json.dumps(M_c)
-        total_changes = bdb.sqlite3.total_changes
+        total_changes = bdb._sqlite3.totalchanges()
         bdb.sql_execute(sql, {
             'generator_id': generator_id,
             'metadata_json': metadata_json,
         })
-        assert bdb.sqlite3.total_changes - total_changes == 1
+        assert bdb._sqlite3.totalchanges() - total_changes == 1
         cc_cache = self._crosscat_cache_nocreate(bdb)
         if cc_cache is not None:
             cc_cache.metadata[generator_id] = M_c
@@ -1031,20 +1031,20 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     theta['iterations'] += iterations_in_ckpt
                     theta['X_L'] = X_L
                     theta['X_D'] = X_D
-                    total_changes = bdb.sqlite3.total_changes
+                    total_changes = bdb._sqlite3.totalchanges()
                     bdb.sql_execute(update_iterations_sql, {
                         'generator_id': generator_id,
                         'modelno': modelno,
                         'iterations': iterations_in_ckpt,
                     })
-                    assert bdb.sqlite3.total_changes - total_changes == 1
-                    total_changes = bdb.sqlite3.total_changes
+                    assert bdb._sqlite3.totalchanges() - total_changes == 1
+                    total_changes = bdb._sqlite3.totalchanges()
                     bdb.sql_execute(update_theta_json_sql, {
                         'generator_id': generator_id,
                         'modelno': modelno,
                         'theta_json': json.dumps(theta),
                     })
-                    assert bdb.sqlite3.total_changes - total_changes == 1
+                    assert bdb._sqlite3.totalchanges() - total_changes == 1
                     checkpoint_sql = '''
                         SELECT 1 + MAX(checkpoint)
                             FROM bayesdb_crosscat_diagnostics
@@ -1283,13 +1283,13 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     in zip(modelnos, thetas, X_L_list, X_D_list):
                 theta['X_L'] = X_L
                 theta['X_D'] = X_D
-                total_changes = bdb.sqlite3.total_changes
+                total_changes = bdb._sqlite3.totalchanges()
                 bdb.sql_execute(update_theta_sql, {
                     'generator_id': generator_id,
                     'modelno': modelno,
                     'theta_json': json.dumps(theta),
                 })
-                assert bdb.sqlite3.total_changes - total_changes == 1
+                assert bdb._sqlite3.totalchanges() - total_changes == 1
 
 class CrosscatCache(object):
     def __init__(self):
