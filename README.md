@@ -16,6 +16,8 @@ Bayeslite depends on:
 - [Crosscat](https://github.com/probcomp/crosscat),
   a general-purpose nonparametric Bayesian population model which
   serves as a default in the absence of a domain-specific model.
+- [apsw](https://rogerbinns.github.io/apsw/), a sqlite3 wrapper for
+  Python more articulated than the builtin sqlite3 module
 - [numpy](http://www.numpy.org), a library of vectorized numerical
   algorithms
 - [requests](http://www.python-requests.org/), an HTTP/HTTPS library,
