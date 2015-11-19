@@ -23,8 +23,6 @@ on, are compiled into SQL; commands, as in ``CREATE TABLE``,
 language) are executed directly.
 """
 
-import sqlite3
-
 import bayeslite.ast as ast
 import bayeslite.bqlfn as bqlfn
 import bayeslite.compiler as compiler
