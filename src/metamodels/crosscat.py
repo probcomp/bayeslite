@@ -212,11 +212,11 @@ UPDATE bayesdb_metamodel SET version = 6 WHERE name = 'crosscat';
 
 CREATE TABLE bayesdb_crosscat_row_dependency (
     generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
-    row0      INTEGER NOT NULL,
-    row1      INTEGER NOT NULL,
+    rowno0      INTEGER NOT NULL,
+    rowno1      INTEGER NOT NULL,
     dependent   BOOLEAN NOT NULL,
-    PRIMARY KEY(generator_id, row0, row1),
-    CHECK(row0 < row1)
+    PRIMARY KEY(generator_id, rowno0, rowno1),
+    CHECK(rowno0 < rowno1)
 );
 '''
 
@@ -688,9 +688,6 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             raise BQLError(bdb, 'Invalid crosscat column model: %s' %
                 (repr(directive),))
 
-        print row_dep_constraints
-        import sys; sys.exit(0)
-
         with bdb.savepoint():
             # If necessary, guess the column statistical types.
             #
@@ -797,7 +794,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 bdb.sql_execute(insert_subsample_sql,
                     (generator_id, sql_rowid, cc_row_id))
 
-            # Store dependence constraints, if necessary.
+            # Store column dependence constraints, if necessary.
             insert_dep_constraint_sql = '''
                 INSERT INTO bayesdb_crosscat_column_dependency
                     (generator_id, colno0, colno1, dependent)
@@ -818,7 +815,28 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                         # XXX This is a cop-out -- we should validate
                         # the relation ourselves (and show a more
                         # helpful error message).
-                        raise BQLError(bdb, 'Invalid dependency constraints!')
+                        raise BQLError(bdb, 'Invalid column dependency '
+                            'constraints!')
+
+            # Store row dependence constraints, if necessary.
+            insert_dep_constraint_sql = '''
+                INSERT INTO bayesdb_crosscat_row_dependency
+                    (generator_id, rowno0, rowno1, dependent)
+                    VALUES (?, ?, ?, ?)
+            '''
+            for rows, dependent in row_dep_constraints:
+                for rowno0, rowno1 in itertools.combinations(rows, 2):
+                    min_rowno = min(rowno0, rowno1)
+                    max_rowno = max(rowno0, rowno1)
+                    try:
+                        bdb.sql_execute(insert_dep_constraint_sql,
+                            (generator_id, min_rowno, max_rowno, dependent))
+                    except sqlite3.IntegrityError:
+                        # XXX This is a cop-out -- we should validate
+                        # the relation ourselves (and show a more
+                        # helpful error message).
+                        raise BQLError(bdb, 'Invalid row dependency '
+                            ' constraints!')
 
     def drop_generator(self, bdb, generator_id):
         with bdb.savepoint():
@@ -928,7 +946,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             for colno1, colno2, dep in
                 crosscat_gen_column_dependencies(bdb, generator_id)]
         if 0 < len(col_dep_constraints):
-            X_L_list, X_D_list = self._crosscat.ensure_col_col_dep_constraints(
+            X_L_list, X_D_list = self._crosscat.ensure_col_dep_constraints(
                 M_c=M_c,
                 M_r=None,
                 T=self._crosscat_data(bdb, generator_id, M_c),
