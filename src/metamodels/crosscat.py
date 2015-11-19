@@ -571,7 +571,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         do_guess = False
         do_subsample = self._subsample
         columns = []
-        dep_constraints = []
+        col_dep_constraints = []
         for directive in schema:
             # XXX Whattakludge.  Invent a better parsing scheme for
             # these things, please.
@@ -611,7 +611,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                         raise BQLError(bdb, 'Invalid dependent columns: %s' %
                             (repr(args),))
                     i += 2
-                dep_constraints.append((dep_columns, True))
+                col_dep_constraints.append((dep_columns, True))
                 continue
             if isinstance(directive, list) and \
                len(directive) == 2 and \
@@ -627,7 +627,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                         raise BQLError(bdb, 'Invalid dependent columns: %s' %
                             (repr(args),))
                     i += 2
-                dep_constraints.append((indep_columns, False))
+                col_dep_constraints.append((indep_columns, False))
                 continue
             if isinstance(directive, list) and \
                len(directive) == 2 and \
@@ -761,7 +761,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     (generator_id, colno0, colno1, dependent)
                     VALUES (?, ?, ?, ?)
             '''
-            for columns, dependent in dep_constraints:
+            for columns, dependent in col_dep_constraints:
                 for col1, col2 in itertools.combinations(columns, 2):
                     col1_id = core.bayesdb_generator_column_number(bdb,
                         generator_id, col1)
@@ -881,18 +881,18 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             X_L_list = [X_L_list]
             X_D_list = [X_D_list]
         # Ensure dependent columns if necessary.
-        dep_constraints = [(crosscat_cc_colno(bdb, generator_id, colno1),
+        col_dep_constraints = [(crosscat_cc_colno(bdb, generator_id, colno1),
                 crosscat_cc_colno(bdb, generator_id, colno2), dep)
             for colno1, colno2, dep in
                 crosscat_gen_column_dependencies(bdb, generator_id)]
-        if 0 < len(dep_constraints):
-            X_L_list, X_D_list = self._crosscat.ensure_col_dep_constraints(
+        if 0 < len(col_dep_constraints):
+            X_L_list, X_D_list = self._crosscat.ensure_col_col_dep_constraints(
                 M_c=M_c,
                 M_r=None,
                 T=self._crosscat_data(bdb, generator_id, M_c),
                 X_L=X_L_list,
                 X_D=X_D_list,
-                dep_constraints=dep_constraints,
+                dep_constraints=col_dep_constraints,
             )
         insert_theta_sql = '''
             INSERT INTO bayesdb_crosscat_theta
