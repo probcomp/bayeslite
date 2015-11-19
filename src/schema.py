@@ -15,7 +15,6 @@
 #   limitations under the License.
 
 from bayeslite.exception import BayesDBException
-from bayeslite.sqlite3_util import sqlite3_exec_1
 from bayeslite.util import cursor_value
 
 bayesdb_schema_5 = '''
