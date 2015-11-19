@@ -31,6 +31,7 @@ import bayeslite.guess as guess
 import bayeslite.metamodel as metamodel
 
 from bayeslite import bql_quote_name
+from bayeslite.sqlite3_util import sqlite3_connection
 from bayeslite.util import cursor_value
 
 import test_csv
@@ -77,7 +78,7 @@ def test_openclose():
 
 def test_bad_db_application_id():
     with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
-        with sqlite3.connect(f.name, isolation_level=None) as db:
+        with sqlite3_connection(f.name) as db:
             db.execute('PRAGMA application_id = 42')
             db.execute('PRAGMA user_version = 3')
         with pytest.raises(IOError):
@@ -88,7 +89,7 @@ def test_bad_db_user_version():
     # XXX Would be nice to avoid a named temporary file here.  Pass
     # the sqlite3 database connection in?
     with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
-        with sqlite3.connect(f.name, isolation_level=None) as db:
+        with sqlite3_connection(f.name) as db:
             db.execute('PRAGMA application_id = 1113146434')
             db.execute('PRAGMA user_version = 42')
         with pytest.raises(IOError):
