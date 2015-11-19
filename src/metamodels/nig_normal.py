@@ -161,6 +161,11 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             max_seconds=None, ckpt_iterations=None, ckpt_seconds=None):
         # Ignore analysis timing control, because one step reaches the
         # posterior anyway.
+        # NOTE: Does not update the model iteration count.  This would
+        # manifest as failing to count the number of inference
+        # iterations taken.  Since inference converges in one step,
+        # this consists of failing to track the metadata of whether
+        # that one step was done or not.
         update_sample_sql = '''
             UPDATE bayesdb_nig_normal_model SET mu = :mu, sigma = :sigma
                 WHERE generator_id = :generator_id
