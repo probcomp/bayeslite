@@ -1509,3 +1509,11 @@ def crosscat_gen_column_dependencies(bdb, generator_id):
             WHERE generator_id = ?
     '''
     return bdb.sql_execute(sql, (generator_id,)).fetchall()
+
+def crosscat_gen_row_dependencies(bdb, generator_id):
+    sql = '''
+        SELECT rowno0, rowno1, dependent
+            FROM bayesdb_crosscat_row_dependency
+            WHERE generator_id = ?
+    '''
+    return bdb.sql_execute(sql, (generator_id,)).fetchall()
