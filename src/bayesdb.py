@@ -456,9 +456,6 @@ class TracingCursor(object):
     def connection(self):
         return self._cursor.connection
     @property
-    def rowcount(self):
-        return self._cursor.rowcount
-    @property
     def lastrowid(self):
         return self._cursor.lastrowid
     @property

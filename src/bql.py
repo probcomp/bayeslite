@@ -676,9 +676,6 @@ class BayesDBCursor(object):
     def connection(self):
         return self._bdb
     @property
-    def rowcount(self):
-        return self._cursor.rowcount
-    @property
     def lastrowid(self):
         return self._cursor.lastrowid
     @property
