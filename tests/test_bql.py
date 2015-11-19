@@ -15,8 +15,8 @@
 #   limitations under the License.
 
 import StringIO
+import apsw
 import pytest
-import sqlite3
 
 import bayeslite
 import bayeslite.ast as ast
@@ -1258,7 +1258,7 @@ def test_parametrized():
 
 def test_createtab():
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
-        with pytest.raises(sqlite3.OperationalError):
+        with pytest.raises(apsw.SQLError):
             bdb.execute('drop table t')
         bdb.execute('drop table if exists t')
         with pytest.raises(bayeslite.BQLError):
@@ -1317,10 +1317,10 @@ def test_createtab():
             (36, 'F', 96000, 70, 'management', 2),
             (30, 'F', 81000, 73, 'engineering', 3),
         ]
-        with pytest.raises(sqlite3.OperationalError):
+        with pytest.raises(apsw.SQLError):
             bdb.execute("create table u as select * from t where gender = 'F'")
         bdb.execute('drop table u')
-        with pytest.raises(sqlite3.OperationalError):
+        with pytest.raises(apsw.SQLError):
             bql_execute(bdb, 'select * from u')
         bdb.execute("create temp table u as"
             " select * from t where gender = 'F'")
@@ -1379,7 +1379,7 @@ def test_txn():
             bdb.execute('ESTIMATE * FROM t_cc').fetchall()
         finally:
             bdb.execute('ROLLBACK')
-        with pytest.raises(sqlite3.OperationalError):
+        with pytest.raises(apsw.SQLError):
             bdb.execute('SELECT * FROM t')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('ESTIMATE * FROM t_cc')
@@ -1399,13 +1399,13 @@ def test_txn():
             with pytest.raises(bayeslite.BQLError):
                 bdb.execute('ESTIMATE * FROM t_cc')
             bdb.execute('DROP TABLE t')
-            with pytest.raises(sqlite3.OperationalError):
+            with pytest.raises(apsw.SQLError):
                 bdb.execute('SELECT * FROM t')
         finally:
             bdb.execute('ROLLBACK')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('ESTIMATE * FROM t_cc')
-        with pytest.raises(sqlite3.OperationalError):
+        with pytest.raises(apsw.SQLError):
             bdb.execute('SELECT * FROM t')
 
         # Make sure CREATE and DROP work even if we commit.
@@ -1423,13 +1423,13 @@ def test_txn():
             with pytest.raises(bayeslite.BQLError):
                 bdb.execute('ESTIMATE * FROM t_cc')
             bdb.execute('DROP TABLE t')
-            with pytest.raises(sqlite3.OperationalError):
+            with pytest.raises(apsw.SQLError):
                 bdb.execute('SELECT * FROM t')
         finally:
             bdb.execute('COMMIT')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('ESTIMATE * FROM t_cc')
-        with pytest.raises(sqlite3.OperationalError):
+        with pytest.raises(apsw.SQLError):
             bdb.execute('SELECT * FROM t')
 
         # Make sure CREATE persists if we commit.
@@ -1454,7 +1454,7 @@ def test_txn():
                 raise StopIteration
         except StopIteration:
             pass
-        with pytest.raises(sqlite3.OperationalError):
+        with pytest.raises(apsw.SQLError):
             bdb.execute('select * from quagga')
         with bdb.transaction():
             with bdb.savepoint():
@@ -1585,7 +1585,7 @@ def test_misc_errors():
         with bdb.savepoint():
             bdb.execute('initialize 1 model for t1_cc')
             bdb.execute('analyze t1_cc for 1 iteration wait')
-            with pytest.raises(sqlite3.OperationalError):
+            with pytest.raises(apsw.SQLError):
                 bdb.execute('select'
                     ' nonexistent((simulate age from t1_cc limit 1));')
         with pytest.raises(ValueError):
@@ -1840,7 +1840,7 @@ def test_tracing_error_smoke():
         q = 'SELECT * FROM wrong'
         tracer = MockTracerOneQuery(q, 1)
         bdb.trace(tracer)
-        with pytest.raises(sqlite3.OperationalError):
+        with pytest.raises(apsw.SQLError):
             bdb.execute(q)
         assert tracer.start_calls == 1
         assert tracer.ready_calls == 0
@@ -1873,7 +1873,7 @@ def test_tracing_execution_error_smoke():
         assert tracer.error_calls == 0
         assert tracer.finished_calls == 0
         assert tracer.abandoned_calls == 0
-        with pytest.raises(sqlite3.OperationalError):
+        with pytest.raises(apsw.SQLError):
             cursor.fetchall()
         assert tracer.start_calls == 1
         assert tracer.ready_calls == 1
