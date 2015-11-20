@@ -31,8 +31,7 @@ from bayeslite.util import unique_indices
 
 def bayesdb_install_bql(db, cookie):
     def function(name, nargs, fn):
-        db.create_function(name, nargs,
-            lambda *args: bayesdb_bql(fn, cookie, *args))
+        db.createscalarfunction(name, (lambda *args: fn(cookie, *args)), nargs)
     function("bql_column_correlation", 3, bql_column_correlation)
     function("bql_column_correlation_pvalue", 3, bql_column_correlation_pvalue)
     function("bql_column_dependence_probability", 4,
@@ -45,17 +44,6 @@ def bayesdb_install_bql(db, cookie):
     function("bql_predict", 5, bql_predict)
     function("bql_predict_confidence", 4, bql_predict_confidence)
     function("bql_json_get", 2, bql_json_get)
-
-# XXX XXX XXX Temporary debugging kludge!
-import sys
-import traceback
-
-def bayesdb_bql(fn, cookie, *args):
-    try:
-        return fn(cookie, *args)
-    except Exception as e:
-        print >>sys.stderr, traceback.format_exc()
-        raise e
 
 ### BayesDB column functions
 
