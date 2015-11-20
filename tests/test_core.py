@@ -149,17 +149,7 @@ def bayesdb_generator(mkbdb, tab, gen, table_schema, data, columns,
         qmm = bql_quote_name(metamodel_name)
         bdb.execute('CREATE GENERATOR %s FOR %s USING %s(%s)' %
             (qg, qt, qmm, ','.join(columns)))
-        sql = 'SELECT id FROM bayesdb_generator WHERE name = ?'
-        cursor = bdb.sql_execute(sql, (gen,))
-        try:
-            row = cursor.next()
-        except StopIteration:
-            assert False, 'Generator didn\'t make it!'
-        else:
-            assert len(row) == 1
-            assert isinstance(row[0], int)
-            generator_id = row[0]
-            yield bdb, generator_id
+        yield bdb, core.bayesdb_get_generator(bdb, gen)
 
 @contextlib.contextmanager
 def analyzed_bayesdb_generator(mkbdb, nmodels, nsteps, max_seconds=None):
