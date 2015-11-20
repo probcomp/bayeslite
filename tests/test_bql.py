@@ -1873,7 +1873,7 @@ def test_tracing_execution_error_smoke():
         assert tracer.error_calls == 0
         assert tracer.finished_calls == 0
         assert tracer.abandoned_calls == 0
-        with pytest.raises(apsw.SQLError):
+        with pytest.raises(Boom):
             cursor.fetchall()
         assert tracer.start_calls == 1
         assert tracer.ready_calls == 1

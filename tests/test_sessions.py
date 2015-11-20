@@ -222,7 +222,7 @@ def test_sessions_error_metamodel():
         cursor = bdb.execute('''
             ESTIMATE PREDICTIVE PROBABILITY OF age FROM t1_err
         ''')
-        with pytest.raises(apsw.SQLError):
+        with pytest.raises(Boom):
             cursor.fetchall()
         #tr._start_new_session()
         assert tr._check_error_entries(tr.session_id) > 0
