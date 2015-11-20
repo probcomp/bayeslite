@@ -203,14 +203,19 @@ class SessionOrchestrator(object):
             SELECT version FROM bayesdb_session
                 WHERE id = ?
         ''', (session_id,)))
-        entries = self._sql('''
+        cursor = self._sql('''
             SELECT * FROM bayesdb_session_entries
                 WHERE session_id = ?
                 ORDER BY start_time DESC
         ''', (session_id,))
+        # XXX Get the description first because apsw cursors, for
+        # whatever reason, don't let you get the description after
+        # you've gotten all the results.
+        fields = [d[0] for d in cursor.description]
+        entries = cursor.fetchall()
         session = {
-            'entries': entries.fetchall(),
-            'fields': [d[0] for d in entries.description],
+            'entries': entries,
+            'fields': fields,
             'version': version,
         }
         return json.dumps(session, sort_keys=True)

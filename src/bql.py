@@ -23,6 +23,8 @@ on, are compiled into SQL; commands, as in ``CREATE TABLE``,
 language) are executed directly.
 """
 
+import apsw
+
 import bayeslite.ast as ast
 import bayeslite.bqlfn as bqlfn
 import bayeslite.compiler as compiler
@@ -656,6 +658,17 @@ class BayesDBCursor(object):
     def __init__(self, bdb, cursor):
         self._bdb = bdb
         self._cursor = cursor
+        # XXX Must save the description early because apsw discards it
+        # after we have iterated over all rows -- or if there are no
+        # rows, discards it immediately!
+        try:
+            self._description = cursor.description
+        except apsw.ExecutionCompleteError:
+            self._description = []
+        else:
+            assert self._description is not None
+            if self._description is None:
+                self._description = []
     def __iter__(self):
         return self
     def next(self):
@@ -678,8 +691,7 @@ class BayesDBCursor(object):
         return self._bdb.last_insert_rowid()
     @property
     def description(self):
-        desc = self._cursor.description
-        return [] if desc is None else desc
+        return self._description
 
 class WoundCursor(BayesDBCursor):
     def __init__(self, bdb, cursor, unwinders):
