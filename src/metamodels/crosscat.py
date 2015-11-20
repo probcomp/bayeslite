@@ -214,8 +214,11 @@ CREATE TABLE bayesdb_crosscat_row_dependency (
     generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
     rowno0      INTEGER NOT NULL,
     rowno1      INTEGER NOT NULL,
+    colno       INTEGER NOT NULL,
     dependent   BOOLEAN NOT NULL,
-    PRIMARY KEY(generator_id, rowno0, rowno1),
+    PRIMARY KEY(generator_id, rowno0, rowno1, colno),
+    FOREIGN KEY(generator_id, colno)
+        REFERENCES bayesdb_generator_column(generator_id, colno)
     CHECK(rowno0 < rowno1)
 );
 '''
@@ -631,42 +634,27 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 col_dep_constraints.append((indep_columns, False))
                 continue
             if isinstance(directive, list) and \
-               len(directive) == 3 and \
+               len(directive) == 7 and \
                isinstance(directive[0], (str, unicode)) and \
-               casefold(directive[0]) == 'row' and \
-               isinstance(directive[1], (str, unicode)) and \
-               casefold(directive[1]) == 'dependent':
-                args = directive[2]
+               casefold(directive[0]) == 'rows' and \
+               isinstance(directive[1], list) and \
+               isinstance(directive[-1], list) and \
+               casefold(directive[2]) in ['dependent', 'independent'] and\
+               casefold(' '.join(directive[3:-1])) == 'with respect to':
+                dep = True if casefold(directive[2]) == 'dependent' else False
+                rowids = directive[1]
                 i = 0
                 dep_rows = []
-                while i < len(args):
-                    if (not isinstance(args[i], int)) and \
-                        i + 1 < len(args) and args[i + 1] != ',':
+                while i < len(rowids):
+                    if (not isinstance(rowids[i], int)) and \
+                        i + 1 < len(rowids) and rowids[i + 1] != ',':
                         # XXX Pretty-print the tokens.
                         raise BQLError(bdb, 'Invalid dependent rowids: %s' %
-                            (repr(args),))
-                    dep_rows.append(args[i])
+                            (repr(rowids),))
+                    dep_rows.append(rowids[i])
                     i += 2
-                row_dep_constraints.append((dep_rows, True))
-                continue
-            if isinstance(directive, list) and \
-               len(directive) == 3 and \
-               isinstance(directive[0], (str, unicode)) and \
-               casefold(directive[0]) == 'row' and \
-               isinstance(directive[1], (str, unicode)) and \
-               casefold(directive[1]) == 'independent':
-                args = directive[2]
-                i = 0
-                ind_rows = []
-                while i < len(args):
-                    if (not isinstance(args[i], int)) and \
-                        i + 1 < len(args) and args[i + 1] != ',':
-                        # XXX Pretty-print the tokens.
-                        raise BQLError(bdb, 'Invalid independent rowids: %s' %
-                            (repr(args),))
-                    ind_rows.append(args[i])
-                    i += 2
-                row_dep_constraints.append((ind_rows, False))
+                wrt_cols = [col for col in directive[-1] if col != ',']
+                row_dep_constraints.append((dep_rows, wrt_cols, dep))
                 continue
             if isinstance(directive, list) and \
                len(directive) == 2 and \
@@ -821,10 +809,10 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             # Store row dependence constraints, if necessary.
             insert_dep_constraint_sql = '''
                 INSERT INTO bayesdb_crosscat_row_dependency
-                    (generator_id, rowno0, rowno1, dependent)
-                    VALUES (?, ?, ?, ?)
+                    (generator_id, rowno0, rowno1, colno, dependent)
+                    VALUES (?, ?, ?, ?, ?)
             '''
-            for rows, dependent in row_dep_constraints:
+            for rows, wrt_cols, dependent in row_dep_constraints:
                 for rowno0, rowno1 in itertools.combinations(rows, 2):
                     min_rowno = min(rowno0, rowno1)
                     max_rowno = max(rowno0, rowno1)
@@ -832,15 +820,19 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                             <= max_rowno:
                         raise ValueError('Invalid row dependency rowid, '
                             ' %i too large!' % max_rowno)
-                    try:
-                        bdb.sql_execute(insert_dep_constraint_sql,
-                            (generator_id, min_rowno, max_rowno, dependent))
-                    except sqlite3.IntegrityError:
+                    for col in wrt_cols:
+                        colno = core.bayesdb_generator_column_number(bdb,
+                            generator_id, col)
+                        try:
+                            bdb.sql_execute(insert_dep_constraint_sql,
+                                (generator_id, min_rowno, max_rowno, colno,
+                                    dependent))
+                        except sqlite3.IntegrityError:
                         # XXX This is a cop-out -- we should validate
                         # the relation ourselves (and show a more
                         # helpful error message).
-                        raise BQLError(bdb, 'Invalid row dependency '
-                            ' constraints!')
+                            raise BQLError(bdb, 'Invalid row dependency '
+                                ' constraints!')
 
     def drop_generator(self, bdb, generator_id):
         with bdb.savepoint():
@@ -969,7 +961,6 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 X_L_list, X_D_list)
             remapped_constraints = [(r0, r1, dep) for ((r0, r1), dep)
                 in zip(zip(rowids[::2], rowids[1::2]), dependencies)]
-            import ipdb; ipdb.set_trace()
             X_L_list, X_D_list = self._crosscat.ensure_row_dep_constraints(
                 M_c=M_c,
                 M_r=None,
