@@ -828,6 +828,10 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 for rowno0, rowno1 in itertools.combinations(rows, 2):
                     min_rowno = min(rowno0, rowno1)
                     max_rowno = max(rowno0, rowno1)
+                    if core.bayesdb_generator_fresh_row_id(bdb, generator_id) \
+                            <= max_rowno:
+                        raise ValueError('Invalid row dependency rowid, '
+                            ' %i too large!' % max_rowno)
                     try:
                         bdb.sql_execute(insert_dep_constraint_sql,
                             (generator_id, min_rowno, max_rowno, dependent))
