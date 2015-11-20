@@ -247,7 +247,7 @@ def test_sql(spawntable):
     c.expect_prompt()
     c.sendexpectcmd('.sql select * from foo')
     c.expect_lines([
-        'no such table: foo'
+        'SQLError: no such table: foo'
     ])
     c.expect_prompt()
 
