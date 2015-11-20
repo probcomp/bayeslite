@@ -474,6 +474,27 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             bdb, generator_id, X_L_list, X_D_list, first + second)
         return new[:len(first)], new[len(first):], X_L_list, X_D_list
 
+    def _crosscat_get_row_constraints(self, bdb, generator_id, X_L_list,
+            X_D_list):
+        row_dep_constraints = crosscat_gen_row_dependencies(bdb, generator_id)
+        if 0 < len(row_dep_constraints):
+            # XXX Better algorithm for this mess.
+            # Dictionary mapping (rowno0, rowno1, dep) -> [wrt_cols]
+            remapped_constraints = {}
+            for rowno0, rowno1, wrt_col, dep in row_dep_constraints:
+                (rowno0, rowno1), _, _ = self._crosscat_get_rows(bdb,
+                    generator_id, [rowno0, rowno1], X_L_list, X_D_list)
+                wrt_col = crosscat_cc_colno(bdb, generator_id, wrt_col)
+                if (rowno0, rowno1, dep) in remapped_constraints:
+                    remapped_constraints[(rowno0, rowno1, dep)].append(wrt_col)
+                else:
+                    remapped_constraints[(rowno0, rowno1, dep)] = [wrt_col]
+        # Convert the dictionary (rowno0, rowno1, dep) -> [wrt_cols]
+        # to a list of (rowno0, rowno1, [wrt_cols], dep).
+        constraints = [(rowno0, rowno1, wrt_cols, dep) for ((rowno0, rowno1,
+            dep), wrt_cols) in remapped_constraints.iteritems()]
+        return constraints
+
     def name(self):
         return 'crosscat'
 
@@ -951,23 +972,16 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 dep_constraints=col_dep_constraints,
             )
         # Ensure dependent rows if necessary.
-        row_dep_constraints = crosscat_gen_row_dependencies(bdb, generator_id)
-        if 0 < len(col_dep_constraints):
-            # XXX Better algorithm for this mess.
-            rowids = [(r0, r1) for r0, r1, _ in row_dep_constraints]
-            rowids = [r for pair in rowids for r in pair]
-            dependencies = [dep for _, _, dep in row_dep_constraints]
-            rowids, _, _ = self._crosscat_get_rows(bdb, generator_id, rowids,
-                X_L_list, X_D_list)
-            remapped_constraints = [(r0, r1, dep) for ((r0, r1), dep)
-                in zip(zip(rowids[::2], rowids[1::2]), dependencies)]
+        row_dep_constraints = self._crosscat_get_row_constraints(bdb,
+            generator_id, X_L_list, X_D_list)
+        if 0 < len(row_dep_constraints):
             X_L_list, X_D_list = self._crosscat.ensure_row_dep_constraints(
                 M_c=M_c,
                 M_r=None,
                 T=self._crosscat_data(bdb, generator_id, M_c),
                 X_L=X_L_list,
                 X_D=X_D_list,
-                dep_constraints=remapped_constraints,
+                dep_constraints=row_dep_constraints,
             )
         insert_theta_sql = '''
             INSERT INTO bayesdb_crosscat_theta
@@ -1527,7 +1541,7 @@ def crosscat_gen_column_dependencies(bdb, generator_id):
 
 def crosscat_gen_row_dependencies(bdb, generator_id):
     sql = '''
-        SELECT rowno0, rowno1, dependent
+        SELECT rowno0, rowno1, colno, dependent
             FROM bayesdb_crosscat_row_dependency
             WHERE generator_id = ?
     '''
