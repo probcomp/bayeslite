@@ -958,6 +958,26 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 X_D=X_D_list,
                 dep_constraints=col_dep_constraints,
             )
+        # Ensure dependent rows if necessary.
+        row_dep_constraints = crosscat_gen_row_dependencies(bdb, generator_id)
+        if 0 < len(col_dep_constraints):
+            # XXX Better algorithm for this mess.
+            rowids = [(r0, r1) for r0, r1, _ in row_dep_constraints]
+            rowids = [r for pair in rowids for r in pair]
+            dependencies = [dep for _, _, dep in row_dep_constraints]
+            rowids, _, _ = self._crosscat_get_rows(bdb, generator_id, rowids,
+                X_L_list, X_D_list)
+            remapped_constraints = [(r0, r1, dep) for ((r0, r1), dep)
+                in zip(zip(rowids[::2], rowids[1::2]), dependencies)]
+            import ipdb; ipdb.set_trace()
+            X_L_list, X_D_list = self._crosscat.ensure_row_dep_constraints(
+                M_c=M_c,
+                M_r=None,
+                T=self._crosscat_data(bdb, generator_id, M_c),
+                X_L=X_L_list,
+                X_D=X_D_list,
+                dep_constraints=remapped_constraints,
+            )
         insert_theta_sql = '''
             INSERT INTO bayesdb_crosscat_theta
                 (generator_id, modelno, theta_json)
