@@ -477,18 +477,19 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
     def _crosscat_get_row_constraints(self, bdb, generator_id, X_L_list,
             X_D_list):
         row_dep_constraints = crosscat_gen_row_dependencies(bdb, generator_id)
-        if 0 < len(row_dep_constraints):
-            # XXX Better algorithm for this mess.
-            # Dictionary mapping (rowno0, rowno1, dep) -> [wrt_cols]
-            remapped_constraints = {}
-            for rowno0, rowno1, wrt_col, dep in row_dep_constraints:
-                (rowno0, rowno1), _, _ = self._crosscat_get_rows(bdb,
-                    generator_id, [rowno0, rowno1], X_L_list, X_D_list)
-                wrt_col = crosscat_cc_colno(bdb, generator_id, wrt_col)
-                if (rowno0, rowno1, dep) in remapped_constraints:
-                    remapped_constraints[(rowno0, rowno1, dep)].append(wrt_col)
-                else:
-                    remapped_constraints[(rowno0, rowno1, dep)] = [wrt_col]
+        if len(row_dep_constraints) == 0:
+            return []
+        # XXX Better algorithm for this mess.
+        # Create dictionary mapping (rowno0, rowno1, dep) -> [wrt_cols]
+        remapped_constraints = {}
+        for rowno0, rowno1, wrt_col, dep in row_dep_constraints:
+            (rowno0, rowno1), _, _ = self._crosscat_get_rows(bdb,
+                generator_id, [rowno0, rowno1], X_L_list, X_D_list)
+            wrt_col = crosscat_cc_colno(bdb, generator_id, wrt_col)
+            if (rowno0, rowno1, dep) in remapped_constraints:
+                remapped_constraints[(rowno0, rowno1, dep)].append(wrt_col)
+            else:
+                remapped_constraints[(rowno0, rowno1, dep)] = [wrt_col]
         # Convert the dictionary (rowno0, rowno1, dep) -> [wrt_cols]
         # to a list of (rowno0, rowno1, [wrt_cols], dep).
         constraints = [(rowno0, rowno1, wrt_cols, dep) for ((rowno0, rowno1,
