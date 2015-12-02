@@ -207,6 +207,7 @@ setup(
     ],
     tests_require=[
         'pandas',
+        'pexpect',
         'pytest',
     ],
     packages=[
