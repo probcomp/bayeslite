@@ -14,9 +14,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import apsw
 import pandas
 import pytest
-import sqlite3
 
 from bayeslite import bayesdb_open
 from bayeslite import bql_quote_name
@@ -40,7 +40,7 @@ def do_test(bdb, t, df, index=None):
             index=index)
     assert 4 == bdb.execute(countem).fetchvalue()
 
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(apsw.ConstraintError):
         bayesdb_read_pandas_df(bdb, t, df, create=True, ifnotexists=True,
             index=index)
     assert 4 == bdb.execute(countem).fetchvalue()

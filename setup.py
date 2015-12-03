@@ -201,6 +201,7 @@ setup(
     author_email='bayesdb@mit.edu',
     license='Apache License, Version 2.0',
     install_requires=[
+        'bayeslite-apsw>=3.7.17',
         'crosscat>=0.1.37',
         'numpy',
         'requests',

@@ -15,9 +15,9 @@
 #   limitations under the License.
 
 import StringIO
+import apsw
 import cmd
 import traceback
-import sqlite3
 import sys
 
 import bayeslite
@@ -333,7 +333,7 @@ class Shell(cmd.Cmd):
         '''
         try:
             pretty.pp_cursor(self.stdout, self._bdb.sql_execute(line))
-        except sqlite3.Error as e:
+        except apsw.Error as e:
             self.stdout.write('%s\n' % (e,))
         except Exception as e:
             self.stdout.write(traceback.format_exc())

@@ -14,10 +14,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import apsw
 import contextlib
 import itertools
 import pytest
-import sqlite3
 import tempfile
 
 import crosscat.LocalEngine
@@ -79,8 +79,8 @@ def test_openclose():
 def test_bad_db_application_id():
     with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
         with sqlite3_connection(f.name) as db:
-            db.execute('PRAGMA application_id = 42')
-            db.execute('PRAGMA user_version = 3')
+            db.cursor().execute('PRAGMA application_id = 42')
+            db.cursor().execute('PRAGMA user_version = 3')
         with pytest.raises(IOError):
             with bayesdb(pathname=f.name):
                 pass
@@ -90,8 +90,8 @@ def test_bad_db_user_version():
     # the sqlite3 database connection in?
     with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
         with sqlite3_connection(f.name) as db:
-            db.execute('PRAGMA application_id = 1113146434')
-            db.execute('PRAGMA user_version = 42')
+            db.cursor().execute('PRAGMA application_id = 1113146434')
+            db.cursor().execute('PRAGMA user_version = 42')
         with pytest.raises(IOError):
             with bayesdb(pathname=f.name):
                 pass
@@ -149,17 +149,7 @@ def bayesdb_generator(mkbdb, tab, gen, table_schema, data, columns,
         qmm = bql_quote_name(metamodel_name)
         bdb.execute('CREATE GENERATOR %s FOR %s USING %s(%s)' %
             (qg, qt, qmm, ','.join(columns)))
-        sql = 'SELECT id FROM bayesdb_generator WHERE name = ?'
-        cursor = bdb.sql_execute(sql, (gen,))
-        try:
-            row = cursor.next()
-        except StopIteration:
-            assert False, 'Generator didn\'t make it!'
-        else:
-            assert len(row) == 1
-            assert isinstance(row[0], int)
-            generator_id = row[0]
-            yield bdb, generator_id
+        yield bdb, core.bayesdb_get_generator(bdb, gen)
 
 @contextlib.contextmanager
 def analyzed_bayesdb_generator(mkbdb, nmodels, nsteps, max_seconds=None):
@@ -193,7 +183,7 @@ def test_casefold_colname():
             pass
         return bayesdb_generator(bayesdb(), tname, gname, schema, data, *args,
             **kwargs)
-    with pytest.raises(sqlite3.OperationalError):
+    with pytest.raises(apsw.SQLError):
         with t('t', 't_cc', 'create table t(x, X)', []):
             pass
     with pytest.raises(bayeslite.BQLError):

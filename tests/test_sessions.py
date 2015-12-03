@@ -14,9 +14,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import apsw
 import json
 import pytest
-import sqlite3
 
 from collections import namedtuple
 
@@ -168,7 +168,7 @@ def _nonexistent_table_helper(executor, tr):
     try:
         executor(query)
         assert False
-    except sqlite3.OperationalError:
+    except apsw.SQLError:
         #tr._start_new_session()
         assert tr._check_error_entries(tr.session_id) > 0
 
@@ -222,7 +222,7 @@ def test_sessions_error_metamodel():
         cursor = bdb.execute('''
             ESTIMATE PREDICTIVE PROBABILITY OF age FROM t1_err
         ''')
-        with pytest.raises(sqlite3.OperationalError):
+        with pytest.raises(Boom):
             cursor.fetchall()
         #tr._start_new_session()
         assert tr._check_error_entries(tr.session_id) > 0
@@ -250,7 +250,7 @@ def test_sessions_send_data__ci_network():
 
 def test_error():
     (bdb, tr) = make_bdb_with_sessions()
-    with pytest.raises(sqlite3.OperationalError):
+    with pytest.raises(apsw.SQLError):
         bdb.execute('select x from nonexistent_table')
     assert 1 == bdb.sql_execute('''
             SELECT COUNT(*) FROM bayesdb_session_entries

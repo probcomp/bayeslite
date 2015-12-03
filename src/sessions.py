@@ -119,11 +119,11 @@ class SessionOrchestrator(object):
             print msg
 
     def _sql(self, query, bindings=None):
-        # Go through bdb.sqlite3.execute instead of bdb.sql_execute to
-        # avoid hitting the tracer.
+        # Go through bdb._sqlite3.cursor().execute instead of
+        # bdb.sql_execute to avoid hitting the tracer.
         if bindings == None:
             bindings = ()
-        return self.bdb.sqlite3.execute(query, bindings)
+        return self.bdb._sqlite3.cursor().execute(query, bindings)
 
     def _add_entry(self, qid, type, query, bindings):
         '''Save a session entry into the database. The entry is initially in
@@ -203,14 +203,19 @@ class SessionOrchestrator(object):
             SELECT version FROM bayesdb_session
                 WHERE id = ?
         ''', (session_id,)))
-        entries = self._sql('''
+        cursor = self._sql('''
             SELECT * FROM bayesdb_session_entries
                 WHERE session_id = ?
                 ORDER BY start_time DESC
         ''', (session_id,))
+        # XXX Get the description first because apsw cursors, for
+        # whatever reason, don't let you get the description after
+        # you've gotten all the results.
+        fields = [d[0] for d in cursor.description]
+        entries = cursor.fetchall()
         session = {
-            'entries': entries.fetchall(),
-            'fields': [d[0] for d in entries.description],
+            'entries': entries,
+            'fields': fields,
             'version': version,
         }
         return json.dumps(session, sort_keys=True)

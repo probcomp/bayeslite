@@ -36,7 +36,7 @@ def bayesdb_caching(bdb):
 def bayesdb_savepoint(bdb):
     bayesdb_txn_push(bdb)
     try:
-        with sqlite3_savepoint(bdb.sqlite3):
+        with sqlite3_savepoint(bdb._sqlite3):
             yield
     finally:
         bayesdb_txn_pop(bdb)
@@ -45,7 +45,7 @@ def bayesdb_savepoint(bdb):
 def bayesdb_savepoint_rollback(bdb):
     bayesdb_txn_push(bdb)
     try:
-        with sqlite3_savepoint_rollback(bdb.sqlite3):
+        with sqlite3_savepoint_rollback(bdb._sqlite3):
             yield
     finally:
         bayesdb_txn_pop(bdb)
@@ -57,7 +57,7 @@ def bayesdb_transaction(bdb):
     bayesdb_txn_init(bdb)
     bdb.txn_depth = 1
     try:
-        with sqlite3_transaction(bdb.sqlite3):
+        with sqlite3_transaction(bdb._sqlite3):
             yield
     finally:
         assert bdb.txn_depth == 1

@@ -23,6 +23,8 @@ on, are compiled into SQL; commands, as in ``CREATE TABLE``,
 language) are executed directly.
 """
 
+import apsw
+
 import bayeslite.ast as ast
 import bayeslite.bqlfn as bqlfn
 import bayeslite.compiler as compiler
@@ -246,13 +248,13 @@ def execute_phrase(bdb, phrase, bindings=()):
                         UPDATE bayesdb_column SET name = :new
                             WHERE tabname = :table AND name = :old
                     '''
-                    total_changes = bdb.sqlite3.total_changes
+                    total_changes = bdb._sqlite3.totalchanges()
                     bdb.sql_execute(update_column_sql, {
                         'table': table,
                         'old': cmd.old,
                         'new': cmd.new,
                     })
-                    assert bdb.sqlite3.total_changes - total_changes == 1
+                    assert bdb._sqlite3.totalchanges() - total_changes == 1
                     # ...except metamodels may have the (case-folded)
                     # name cached.
                     if old_folded != new_folded:
@@ -275,23 +277,23 @@ def execute_phrase(bdb, phrase, bindings=()):
                         UPDATE bayesdb_generator SET defaultp = 0
                             WHERE tabname = ? AND defaultp
                     '''
-                    total_changes = bdb.sqlite3.total_changes
+                    total_changes = bdb._sqlite3.totalchanges()
                     bdb.sql_execute(unset_default_sql, (table,))
-                    assert bdb.sqlite3.total_changes - total_changes in (0, 1)
+                    assert bdb._sqlite3.totalchanges() - total_changes in (0, 1)
                     set_default_sql = '''
                         UPDATE bayesdb_generator SET defaultp = 1 WHERE id = ?
                     '''
-                    total_changes = bdb.sqlite3.total_changes
+                    total_changes = bdb._sqlite3.totalchanges()
                     bdb.sql_execute(set_default_sql, (generator_id,))
-                    assert bdb.sqlite3.total_changes - total_changes == 1
+                    assert bdb._sqlite3.totalchanges() - total_changes == 1
                 elif isinstance(cmd, ast.AlterTabUnsetDefGen):
                     unset_default_sql = '''
                         UPDATE bayesdb_generator SET defaultp = 0
                             WHERE tabname = ? AND defaultp
                     '''
-                    total_changes = bdb.sqlite3.total_changes
+                    total_changes = bdb._sqlite3.totalchanges()
                     bdb.sql_execute(unset_default_sql, (table,))
-                    assert bdb.sqlite3.total_changes - total_changes in (0, 1)
+                    assert bdb._sqlite3.totalchanges() - total_changes in (0, 1)
                 else:
                     assert False, 'Invalid alter table command: %s' % \
                         (cmd,)
@@ -370,10 +372,10 @@ def execute_phrase(bdb, phrase, bindings=()):
                     update_generator_sql = '''
                         UPDATE bayesdb_generator SET name = ? WHERE id = ?
                     '''
-                    total_changes = bdb.sqlite3.total_changes
+                    total_changes = bdb._sqlite3.totalchanges()
                     bdb.sql_execute(update_generator_sql,
                         (cmd.name, generator_id))
-                    assert bdb.sqlite3.total_changes - total_changes == 1
+                    assert bdb._sqlite3.totalchanges() - total_changes == 1
                     # Remember the new name for subsequent commands.
                     generator = cmd.name
                 else:
@@ -656,6 +658,17 @@ class BayesDBCursor(object):
     def __init__(self, bdb, cursor):
         self._bdb = bdb
         self._cursor = cursor
+        # XXX Must save the description early because apsw discards it
+        # after we have iterated over all rows -- or if there are no
+        # rows, discards it immediately!
+        try:
+            self._description = cursor.description
+        except apsw.ExecutionCompleteError:
+            self._description = []
+        else:
+            assert self._description is not None
+            if self._description is None:
+                self._description = []
     def __iter__(self):
         return self
     def next(self):
@@ -675,11 +688,10 @@ class BayesDBCursor(object):
         return self._bdb
     @property
     def lastrowid(self):
-        return self._cursor.lastrowid
+        return self._bdb.last_insert_rowid()
     @property
     def description(self):
-        desc = self._cursor.description
-        return [] if desc is None else desc
+        return self._description
 
 class WoundCursor(BayesDBCursor):
     def __init__(self, bdb, cursor, unwinders):
@@ -695,7 +707,7 @@ class WoundCursor(BayesDBCursor):
         # XXX Name the question of whether it's closed a little less
         # kludgily.  (But that might encourage people outside to
         # depend on that, which is not such a great idea.)
-        if self._bdb.sqlite3 is not None:
+        if self._bdb._sqlite3 is not None:
             for sql, bindings in reversed(self._unwinders):
                 self._bdb.sql_execute(sql, bindings)
         # Apparently object doesn't have a __del__ method.

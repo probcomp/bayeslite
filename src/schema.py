@@ -15,6 +15,7 @@
 #   limitations under the License.
 
 from bayeslite.exception import BayesDBException
+from bayeslite.sqlite3_util import sqlite3_transaction
 from bayeslite.util import cursor_value
 
 bayesdb_schema_5 = '''
@@ -116,7 +117,7 @@ CREATE TABLE bayesdb_session_entries (
 
 def bayesdb_install_schema(db, version=None, compatible=None):
     # Get the application id.
-    cursor = db.execute('PRAGMA application_id')
+    cursor = db.cursor().execute('PRAGMA application_id')
     application_id = 0
     try:
         row = cursor.next()
@@ -127,7 +128,7 @@ def bayesdb_install_schema(db, version=None, compatible=None):
         assert isinstance(application_id, int)
 
     # Get the user version.
-    cursor = db.execute('PRAGMA user_version')
+    cursor = db.cursor().execute('PRAGMA user_version')
     user_version = 0
     try:
         row = cursor.next()
@@ -145,42 +146,25 @@ def bayesdb_install_schema(db, version=None, compatible=None):
         # XXX What if we opened some random other sqlite file which
         # did not have an application_id or user_version set?  Hope
         # everyone else sets application_id and user_version too...
-        #
-        # XXX Idiotic Python sqlite3 module has no way to execute a
-        # string with multiple SQL commands that doesn't muck with the
-        # application's transactions -- db.executescript("...") will
-        # issue a COMMIT first, if there is a transaction pending, so
-        # we can't just write
-        #
-        #   with sqlite3_transaction(db):
-        #       db.executescript(bayesdb_schema)
-        #
-        # Instead, we abuse the use of sqlite database connections as
-        # context managers that commit/rollback if there is a
-        # transaction active.  Otherwise we make no use of the sqlite3
-        # module's automatic transaction handling.
-        with db:
-            db.executescript('''
-                BEGIN;
-                PRAGMA application_id = %d;
-                %s;
-                COMMIT;
-            ''' % (0x42594442, bayesdb_schema_5))
-            user_version = 5
+        with sqlite3_transaction(db):
+            db.cursor().execute('PRAGMA application_id = %d' % (0x42594442,))
+            db.cursor().execute(bayesdb_schema_5)
+        user_version = 5
         install = True
     elif application_id != 0x42594442:
         raise IOError('Wrong application id: 0x%08x' % (application_id,))
     # 5 was the last prerelease version.
     if user_version == 5:
-        db.executescript('BEGIN; %s; COMMIT;' % (bayesdb_schema_5to6,))
+        with sqlite3_transaction(db):
+            db.cursor().execute(bayesdb_schema_5to6)
         user_version = 6
     if user_version != 6 and user_version != 7:
         raise IOError('Unknown bayeslite format version: %d' % (user_version,))
     if install or not compatible:
         _upgrade_schema(db, version=version)
-    db.execute('PRAGMA foreign_keys = ON')
-    db.execute('PRAGMA integrity_check')
-    db.execute('PRAGMA foreign_key_check')
+    db.cursor().execute('PRAGMA foreign_keys = ON')
+    db.cursor().execute('PRAGMA integrity_check')
+    db.cursor().execute('PRAGMA foreign_key_check')
 
 def _upgrade_schema(db, version=None):
     if version is None:
@@ -189,14 +173,15 @@ def _upgrade_schema(db, version=None):
     current_version = _schema_version(db)
     assert 6 <= current_version
     if current_version == 6 < version:
-        db.executescript('BEGIN; %s; COMMIT;' % (bayesdb_schema_6to7,))
+        with sqlite3_transaction(db):
+            db.cursor().execute(bayesdb_schema_6to7)
         current_version = 7
     assert current_version == version
-    db.execute('PRAGMA integrity_check')
-    db.execute('PRAGMA foreign_key_check')
+    db.cursor().execute('PRAGMA integrity_check')
+    db.cursor().execute('PRAGMA foreign_key_check')
 
 def _schema_version(db):
-    return cursor_value(db.execute('PRAGMA user_version'))
+    return cursor_value(db.cursor().execute('PRAGMA user_version'))
 
 def bayesdb_upgrade_schema(bdb, version=None):
     """Upgrade the BayesDB internal database schema.
@@ -205,11 +190,11 @@ def bayesdb_upgrade_schema(bdb, version=None):
     version supported by bayeslite.  Otherwise, it may be a schema
     version number.
     """
-    _upgrade_schema(bdb.sqlite3, version=version)
+    _upgrade_schema(bdb._sqlite3, version=version)
 
 def bayesdb_schema_version(bdb):
     """Return the version number for the BayesDB internal database schema."""
-    return _schema_version(bdb.sqlite3)
+    return _schema_version(bdb._sqlite3)
 
 def bayesdb_schema_required(bdb, version, why):
     """Fail if `bdb`'s internal database schema version is not new enough.

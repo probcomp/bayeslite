@@ -37,15 +37,15 @@ def sqlite3_transaction(db):
     Transactions may not be nested.  Use savepoints if you want a
     nestable analogue to transactions.
     """
-    db.execute("BEGIN")
+    db.cursor().execute("BEGIN")
     ok = False
     try:
         yield
-        db.execute("COMMIT")
+        db.cursor().execute("COMMIT")
         ok = True
     finally:
         if not ok:
-            db.execute("ROLLBACK")
+            db.cursor().execute("ROLLBACK")
 
 @contextlib.contextmanager
 def sqlite3_savepoint(db):
@@ -60,26 +60,26 @@ def sqlite3_savepoint(db):
     # as is.  So for either success or failure we must release the
     # savepoint explicitly.
     savepoint = binascii.b2a_hex(os.urandom(32))
-    db.execute("SAVEPOINT x%s" % (savepoint,))
+    db.cursor().execute("SAVEPOINT x%s" % (savepoint,))
     ok = False
     try:
         yield
         ok = True
     finally:
         if not ok:
-            db.execute("ROLLBACK TO x%s" % (savepoint,))
-        db.execute("RELEASE x%s" % (savepoint,))
+            db.cursor().execute("ROLLBACK TO x%s" % (savepoint,))
+        db.cursor().execute("RELEASE x%s" % (savepoint,))
 
 @contextlib.contextmanager
 def sqlite3_savepoint_rollback(db):
     """Savepoint context manager that always rolls back."""
     savepoint = binascii.b2a_hex(os.urandom(32))
-    db.execute("SAVEPOINT x%s" % (savepoint,))
+    db.cursor().execute("SAVEPOINT x%s" % (savepoint,))
     try:
         yield
     finally:
-        db.execute("ROLLBACK TO x%s" % (savepoint,))
-        db.execute("RELEASE x%s" % (savepoint,))
+        db.cursor().execute("ROLLBACK TO x%s" % (savepoint,))
+        db.cursor().execute("RELEASE x%s" % (savepoint,))
 
 def sqlite3_exec_1(db, query, *args):
     """Execute a query returning a 1x1 table, and return its one value.
@@ -87,7 +87,7 @@ def sqlite3_exec_1(db, query, *args):
     Do not call this if you cannot guarantee the result is a 1x1
     table.  Beware passing user-controlled input in here.
     """
-    cursor = db.execute(query, *args)
+    cursor = db.cursor().execute(query, *args)
     row = cursor.fetchone()
     assert row
     assert len(row) == 1
