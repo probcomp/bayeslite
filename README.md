@@ -9,7 +9,7 @@ information, contact bayesdb@mit.edu.
 ## Dependencies
 
 Bayeslite is written in Python 2.7, using the sqlite3 module with
-SQLite3 >=3.7.17.
+SQLite3 >=3.8.0.
 
 Bayeslite depends on:
 
