@@ -18,7 +18,7 @@ import apsw
 import json
 import pytest
 
-from collections import namedtuple
+from collections import defaultdict, namedtuple
 
 import bayeslite
 import bayeslite.metamodels.troll_rng as troll
@@ -232,16 +232,38 @@ def test_sessions_send_data():
         @property
         def text(self):
             return 'Session uploaded. Thank you!'
+    was_called = defaultdict(int)
     def post(url, data):
         assert url == 'https://projects.csail.mit.edu/probcomp/bayesdb/save_sessions.cgi'
         assert isinstance(data, dict)
         assert 2 == len(data)
         assert 'session_json' in data
         assert isinstance(data['session_json'], str)
+        was_called['post'] += 1
         return response()
     (bdb, tr) = make_bdb_with_sessions(post=post)
     _simple_bql_query(bdb)
     tr.send_session_data()
+    assert 1 == was_called['post']
+
+def test_sessions_auto_send_data():
+    class response(object):
+        @property
+        def text(self):
+            return 'Session uploaded. Thank you!'
+    was_called = defaultdict(int)
+    def post(url, data):
+        assert url == 'https://projects.csail.mit.edu/probcomp/bayesdb/save_sessions.cgi'
+        assert isinstance(data, dict)
+        assert 2 == len(data)
+        assert 'session_json' in data
+        assert isinstance(data['session_json'], str)
+        was_called['post'] += 1
+        return response()
+    (bdb, tr) = make_bdb_with_sessions(post=post)
+    tr.auto_send_session_data()
+    _simple_bql_query(bdb)
+    assert 0 < was_called['post']
 
 def test_sessions_send_data__ci_network():
     (bdb, tr) = make_bdb_with_sessions()
