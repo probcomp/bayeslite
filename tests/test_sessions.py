@@ -259,6 +259,7 @@ def test_sessions_auto_send_data():
         assert 'session_json' in data
         assert isinstance(data['session_json'], str)
         was_called['post'] += 1
+        assert False  # Test that we silently eat errors instead of dying!
         return response()
     (bdb, tr) = make_bdb_with_sessions(post=post)
     tr.auto_send_session_data()

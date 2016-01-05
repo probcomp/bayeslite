@@ -73,6 +73,7 @@ PLEASE DO NOT SEND SESSIONS WHEN THEY MAY CONTAIN SECRET OR SENSITIVE INFO!
 #
 # PLEASE DO NOT SEND SESSIONS WHEN THEY MAY CONTAIN SECRET OR SENSITIVE INFO!
 
+import apsw
 import json
 import requests
 import sys
@@ -152,7 +153,10 @@ class SessionOrchestrator(object):
             UPDATE bayesdb_session_entries SET end_time = ? WHERE id = ?
         ''', (time.time(), entry_id))
         if self._auto_send_sessions:
-            self.send_session_data()
+            try:
+                self.send_session_data()
+            except:
+                pass # Never fail on auto-send. Worst case we miss these.
 
     def _mark_entry_error(self, qid):
         entry_id = self._qid_to_entry_id[qid]
@@ -162,7 +166,10 @@ class SessionOrchestrator(object):
                 WHERE id = ?
         ''', (traceback.format_exc(), time.time(), entry_id))
         if self._auto_send_sessions:
-            self.send_session_data()
+            try:
+                self.send_session_data()
+            except:
+                pass # Never fail on auto-send. Worst case we miss these.
 
     def _start_new_session(self):
         self._sql('INSERT INTO bayesdb_session (version) VALUES (?)',
@@ -221,7 +228,12 @@ class SessionOrchestrator(object):
         # XXX Get the description first because apsw cursors, for
         # whatever reason, don't let you get the description after
         # you've gotten all the results.
-        fields = [d[0] for d in cursor.description]
+        # (see also bql.py BayesDBCursor.__init__)
+        fields = []
+        try:
+            fields = [d[0] for d in cursor.description]
+        except apsw.ExecutionCompleteError:
+            pass # Probably no rows.
         entries = cursor.fetchall()
         session = {
             'entries': entries,
