@@ -86,7 +86,7 @@ def correlation_pearsonr2(data0, data1):
     return stats.pearsonr(data0, data1)**2
 
 def correlation_p_pearsonr2(data0, data1):
-    correlation = correlation_pearsonr2(data0, data1)
+    correlation = stats.pearsonr(data0, data1)
     if math.isnan(correlation):
         return float('NaN')
     if correlation == 1.:
