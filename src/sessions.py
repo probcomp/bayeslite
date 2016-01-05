@@ -250,6 +250,10 @@ class SessionOrchestrator(object):
             self._info('Response: %s' % (r.text,))
 
     def auto_send_session_data(self):
+        """Send sessions after each command.
+        The session history will be used for research purposes.
+        DO NOT SEND IF YOU ARE WORKING WITH CONFIDENTIAL, PROPRIETARY,
+        IDENTIFYING, OR OTHERWISE SECRET INFO."""
         self._auto_send_sessions = not self._auto_send_sessions
         return self._auto_send_sessions
     
