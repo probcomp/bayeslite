@@ -83,18 +83,19 @@ def bql_column_correlation_pvalue(bdb, generator_id, colno0, colno1):
     return correlation_p_methods[st0, st1](data0, data1)
 
 def correlation_pearsonr2(data0, data1):
-    return stats.pearsonr(data0, data1)**2
+    r = stats.pearsonr(data0, data1)
+    return r**2
 
 def correlation_p_pearsonr2(data0, data1):
-    correlation = stats.pearsonr(data0, data1)
-    if math.isnan(correlation):
+    r = stats.pearsonr(data0, data1)
+    if math.isnan(r):
         return float('NaN')
-    if correlation == 1.:
+    if r == 1.:
         return 0.
     n = len(data0)
     assert n == len(data1)
     # Compute observed t statistic.
-    t = correlation * math.sqrt((n - 2)/(1 - correlation**2))
+    t = r * math.sqrt((n - 2)/(1 - r**2))
     # Compute p-value for two-sided t-test.
     return 2 * stats.t_cdf(-abs(t), n - 2)
 
