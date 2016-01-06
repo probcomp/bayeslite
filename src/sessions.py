@@ -42,10 +42,6 @@ To upload the session to the MIT Probcomp group over the internet, run:
 
     so.send_session_data()
 
-To upload your session automatically in real time:
-
-    so.auto_send_session_data()
-
 Please contact probcomp-community@csail.mit.edu with questions and
 concerns.
 
@@ -103,7 +99,6 @@ class SessionOrchestrator(object):
         self.start_saving_sessions()
         self._suggested_send = False
         self._logger = logger
-        self._auto_send_sessions = False
         self._start_new_session()
 
     def _info(self, msg):
@@ -152,11 +147,6 @@ class SessionOrchestrator(object):
         self._sql('''
             UPDATE bayesdb_session_entries SET end_time = ? WHERE id = ?
         ''', (time.time(), entry_id))
-        if self._auto_send_sessions:
-            try:
-                self.send_session_data()
-            except:
-                pass # Never fail on auto-send. Worst case we miss these.
 
     def _mark_entry_error(self, qid):
         entry_id = self._qid_to_entry_id[qid]
@@ -165,11 +155,6 @@ class SessionOrchestrator(object):
                 SET error = ?, end_time = ?
                 WHERE id = ?
         ''', (traceback.format_exc(), time.time(), entry_id))
-        if self._auto_send_sessions:
-            try:
-                self.send_session_data()
-            except:
-                pass # Never fail on auto-send. Worst case we miss these.
 
     def _start_new_session(self):
         self._sql('INSERT INTO bayesdb_session (version) VALUES (?)',
@@ -186,8 +171,7 @@ class SessionOrchestrator(object):
                 WHERE error IS NOT NULL AND session_id = ?
         ''', (session_id,)))
         # suggest sending sessions but don't suggest more than once
-        if (error_entries > 0 and
-            not self._suggested_send and not self._auto_send_sessions):
+        if (error_entries > 0 and not self._suggested_send):
             self._warn(_error_previous_session_msg)
             self._suggested_send = True
         return error_entries
@@ -261,14 +245,6 @@ class SessionOrchestrator(object):
             r = self._post(probcomp_url, data=data)
             self._info('Response: %s' % (r.text,))
 
-    def auto_send_session_data(self):
-        """Send sessions after each command.
-        The session history will be used for research purposes.
-        DO NOT SEND IF YOU ARE WORKING WITH CONFIDENTIAL, PROPRIETARY,
-        IDENTIFYING, OR OTHERWISE SECRET INFO."""
-        self._auto_send_sessions = not self._auto_send_sessions
-        return self._auto_send_sessions
-    
     def start_saving_sessions(self):
         self.bdb.trace(self._bql_tracer)
         self.bdb.sql_trace(self._sql_tracer)
