@@ -279,6 +279,9 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 ORDER BY c.colno ASC
         '''
         columns = bdb.sql_execute(columns_sql, (generator_id,)).fetchall()
+        if not columns:
+            raise BQLError(bdb,
+                'No columns found for generator (id = %r)' % generator_id)
         colnames = [name for name, _colno in columns]
         qcns = map(sqlite3_quote_name, colnames)
         cursor = bdb.sql_execute('''
