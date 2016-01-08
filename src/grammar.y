@@ -455,8 +455,14 @@ unary(bql)		::= bqlfn(b).
 bqlfn(predprob_row)	::= K_PREDICTIVE K_PROBABILITY K_OF column_name(col).
 bqlfn(prob_const)	::= K_PROBABILITY K_OF column_name(col)
 				T_EQ unary(e).
+bqlfn(jprob_const)	::= K_PROBABILITY K_OF
+				T_LROUND constraints_opt(targets) T_RROUND.
 bqlfn(condprob_const)	::= K_PROBABILITY K_OF column_name(col)
 				T_EQ primary(e)
+				K_GIVEN T_LROUND constraints_opt(constraints)
+					T_RROUND.
+bqlfn(condjprob_const)	::= K_PROBABILITY K_OF
+				T_LROUND constraints_opt(targets) T_RROUND
 				K_GIVEN T_LROUND constraints_opt(constraints)
 					T_RROUND.
 /* XXX Givens for PROBABILITY OF VALUE function of columns?  */

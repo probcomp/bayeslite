@@ -44,6 +44,7 @@ def bayesdb_install_bql(db, cookie):
     function("bql_predict", 5, bql_predict)
     function("bql_predict_confidence", 4, bql_predict_confidence)
     function("bql_json_get", 2, bql_json_get)
+    function("bql_pdf_joint", -1, bql_pdf_joint)
 
 ### BayesDB column functions
 
@@ -280,6 +281,35 @@ def bql_column_value_probability(bdb, generator_id, modelno, colno, value,
     r = metamodel.logpdf_joint(
         bdb, generator_id, targets, constraints, modelno)
     return ieee_exp(r)
+
+# XXX This is silly.  We should return log densities, not densities.
+def bql_pdf_joint(bdb, generator_id, modelno, *args):
+    metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
+    # A nonexistent (`unobserved') row id.
+    fake_row_id = core.bayesdb_generator_fresh_row_id(bdb, generator_id)
+    i = 0
+    targets = []
+    while i < len(args):
+        if args[i] == -1:
+            i += 1
+            break
+        if i + 1 == len(args):
+            raise ValueError('Odd logpdf targets/constraints: %r' % (args,))
+        t_colno = args[i]
+        t_value = args[i + 1]
+        targets.append((fake_row_id, t_colno, t_value))
+        i += 2
+    constraints = []
+    while i < len(args):
+        if i + 1 == len(args):
+            raise ValueError('Odd logpdf targets/constraints: %r' % (args,))
+        c_colno = args[i]
+        c_value = args[i + 1]
+        constraints.append((fake_row_id, c_colno, c_value))
+        i += 2
+    logp = metamodel.logpdf_joint(bdb, generator_id, targets, constraints,
+        modelno)
+    return ieee_exp(logp)
 
 ### BayesDB row functions
 
