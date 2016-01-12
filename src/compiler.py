@@ -836,7 +836,7 @@ class BQLCompiler_Const(object):
         assert ast.is_bql(bql)
         generator_id = self.generator_id
         if isinstance(bql, ast.ExpBQLPredProb):
-            raise BQLError('Predictive probability is 1-row function,'
+            raise BQLError(bdb, 'Predictive probability is 1-row function,'
                 ' not a constant.')
         elif isinstance(bql, ast.ExpBQLProb):
             compile_pdf_joint(bdb, generator_id, self.modelno, bql.targets,
@@ -845,7 +845,7 @@ class BQLCompiler_Const(object):
             raise BQLError(bdb, 'Probability of value at row is 1-column'
                 ' function, not a constant.')
         elif isinstance(bql, ast.ExpBQLSim):
-            raise BQLError('Row similarity needs row.')
+            raise BQLError(bdb, 'Row similarity needs row.')
         elif isinstance(bql, ast.ExpBQLDepProb):
             compile_bql_2col_2(bdb, generator_id, self.modelno,
                 'bql_column_dependence_probability',
