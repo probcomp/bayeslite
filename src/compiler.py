@@ -836,25 +836,17 @@ class BQLCompiler_Const(object):
         assert ast.is_bql(bql)
         generator_id = self.generator_id
         if isinstance(bql, ast.ExpBQLPredProb):
-            raise BQLError('Predictive probability needs row.')
+            raise BQLError(bdb, 'Predictive probability is 1-row function,'
+                ' not a constant.')
         elif isinstance(bql, ast.ExpBQLProb):
-            if bql.column is None:
-                raise BQLError(bdb, 'Probability of value at row'
-                    ' needs column.')
-            colno = core.bayesdb_generator_column_number(bdb, generator_id,
-                bql.column)
-            out.write('bql_column_value_probability(%s, ' % (generator_id,))
-            compile_expression(bdb, self.modelno, self, out)
-            out.write(', %s, ' % (colno,))
-            compile_expression(bdb, bql.value, self, out)
-            for c_col, c_exp in bql.constraints:
-                c_colno = core.bayesdb_generator_column_number(bdb,
-                    generator_id, c_col)
-                out.write(', %d, ' % (c_colno,))
-                compile_expression(bdb, c_exp, self, out)
-            out.write(')')
+            compile_pdf_joint(bdb, generator_id, self.modelno, bql.targets,
+                bql.constraints, self, out)
+        elif isinstance(bql, ast.ExpBQLProbFn):
+            raise BQLError(bdb, 'Probability of value at row is 1-column'
+                ' function, not a constant.')
         elif isinstance(bql, ast.ExpBQLSim):
-            raise BQLError('Row similarity needs row.')
+            raise BQLError(bdb, 'Row similarity is 1- or 2-row function,'
+                ' not a constant.')
         elif isinstance(bql, ast.ExpBQLDepProb):
             compile_bql_2col_2(bdb, generator_id, self.modelno,
                 'bql_column_dependence_probability',
@@ -961,9 +953,14 @@ class BQLCompiler_2Row(object):
         assert ast.is_bql(bql)
         generator_id = self.generator_id
         if isinstance(bql, ast.ExpBQLProb):
-            raise BQLError(bdb, 'Probability of value is 1-row function.')
+            compile_pdf_joint(bdb, generator_id, self.modelno, bql.targets,
+                bql.constraints, self, out)
+        elif isinstance(bql, ast.ExpBQLProbFn):
+            raise BQLError(bdb, 'Probability of value is 1-column function,'
+                ' not 2-row function.')
         elif isinstance(bql, ast.ExpBQLPredProb):
-            raise BQLError(bdb, 'Predictive probability is 1-row function.')
+            raise BQLError(bdb, 'Predictive probability is 1-row function,'
+                ' not 2-row function.')
         elif isinstance(bql, ast.ExpBQLSim):
             if bql.condition is not None:
                 raise BQLError(bdb, 'Similarity needs no row'
@@ -1009,16 +1006,12 @@ class BQLCompiler_1Col(object):
         assert ast.is_bql(bql)
         generator_id = self.generator_id
         if isinstance(bql, ast.ExpBQLProb):
+            compile_pdf_joint(bdb, generator_id, self.modelno, bql.targets,
+                bql.constraints, self, out)
+        elif isinstance(bql, ast.ExpBQLProbFn):
             out.write('bql_column_value_probability(%d, ' % (generator_id,))
             compile_expression(bdb, self.modelno, self, out)
-            out.write(', ')
-            if bql.column is None:
-                out.write('%s' % (self.colno_exp,))
-            else:
-                colno = core.bayesdb_generator_column_number(bdb, generator_id,
-                    bql.column)
-                out.write('%d' % (colno,))
-            out.write(', ')
+            out.write(', %s, ' % (self.colno_exp,))
             compile_expression(bdb, bql.value, self, out)
             out.write(')')
         elif isinstance(bql, ast.ExpBQLPredProb):
@@ -1064,7 +1057,10 @@ class BQLCompiler_2Col(object):
         assert ast.is_bql(bql)
         generator_id = self.generator_id
         if isinstance(bql, ast.ExpBQLProb):
-            raise BQLError(bdb, 'Probability of value is one-column function.')
+            compile_pdf_joint(bdb, generator_id, self.modelno, bql.targets,
+                bql.constraints, self, out)
+        elif isinstance(bql, ast.ExpBQLProbFn):
+            raise BQLError(bdb, 'Probability of value is 1-column function.')
         elif isinstance(bql, ast.ExpBQLPredProb):
             raise BQLError(bdb, 'Predictive probability'
                 ' is one-column function.')
@@ -1100,6 +1096,25 @@ class BQLCompiler_2Col(object):
             raise BQLError(bdb, 'Predict is a 1-row function.')
         else:
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
+
+def compile_pdf_joint(bdb, generator_id, modelno, targets, constraints,
+        bql_compiler, out):
+    out.write('bql_pdf_joint(%d, ' % (generator_id,))
+    compile_expression(bdb, modelno, bql_compiler, out)
+    for t_col, t_exp in targets:
+        t_colno = core.bayesdb_generator_column_number(bdb, generator_id,
+            t_col)
+        assert t_colno != -1
+        out.write(', %d, ' % (t_colno,))
+        compile_expression(bdb, t_exp, bql_compiler, out)
+    if 0 < len(constraints):
+        out.write(', -1')
+        for c_col, c_exp in constraints:
+            c_colno = core.bayesdb_generator_column_number(bdb,
+                generator_id, c_col)
+            out.write(', %d, ' % (c_colno,))
+            compile_expression(bdb, c_exp, bql_compiler, out)
+    out.write(')')
 
 def compile_column_lists(bdb, generator_id, column_lists, _bql_compiler, out):
     first = True

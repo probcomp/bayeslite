@@ -86,6 +86,24 @@ def test_conditional_probability():
         bdb.execute('estimate probability of value 8'
             ' given (weight = 16) from columns of t1_cc').fetchall()
 
+def test_joint_probability():
+    with test_core.t1() as (bdb, _generator_id):
+        bdb.execute('initialize 1 model for t1_cc')
+        bdb.execute('analyze t1_cc for 1 iteration wait')
+        q0 = 'estimate probability of age = 8 by t1_cc'
+        q1 = 'estimate probability of (age = 8) by t1_cc'
+        assert bdb.execute(q0).fetchvalue() == bdb.execute(q1).fetchvalue()
+        q1 = 'estimate probability of (age = 8) given () by t1_cc'
+        assert bdb.execute(q0).fetchvalue() == bdb.execute(q1).fetchvalue()
+        q2 = 'estimate probability of age = 8 given (weight = 16) by t1_cc'
+        assert bdb.execute(q0).fetchvalue() < bdb.execute(q2).fetchvalue()
+        q0 = 'estimate probability of age = 8 by t1_cc'
+        q1 = 'estimate probability of (age = 8, weight = 16) by t1_cc'
+        assert bdb.execute(q1).fetchvalue() < bdb.execute(q0).fetchvalue()
+        q2 = 'estimate probability of (age = 8, weight = 16)' \
+            " given (label = 'mumble') by t1_cc"
+        assert bdb.execute(q1).fetchvalue() < bdb.execute(q2).fetchvalue()
+
 def test_badbql():
     with test_core.t1() as (bdb, _generator_id):
         with pytest.raises(ValueError):
@@ -248,11 +266,21 @@ def test_estimate_bql():
         # Need a column.
         bql2sql('estimate predictive probability from t1_cc;')
     assert bql2sql('estimate probability of weight = 20 from t1_cc;') == \
-        'SELECT bql_column_value_probability(1, NULL, 3, 20) FROM "t1";'
+        'SELECT bql_pdf_joint(1, NULL, 3, 20) FROM "t1";'
+    assert bql2sql('estimate probability of weight = 20 given (age = 8)'
+            'from t1_cc;') == \
+        'SELECT bql_pdf_joint(1, NULL, 3, 20, -1, 2, 8) FROM "t1";'
+    assert bql2sql('estimate probability of (weight = 20, age = 8)'
+            ' from t1_cc;') == \
+        'SELECT bql_pdf_joint(1, NULL, 3, 20, 2, 8) FROM "t1";'
+    assert bql2sql('estimate probability of (weight = 20, age = 8)'
+            " given (label = 'mumble') from t1_cc;") == \
+        "SELECT bql_pdf_joint(1, NULL, 3, 20, 2, 8, -1, 1, 'mumble')" \
+            ' FROM "t1";'
     assert bql2sql('estimate probability of weight = (c + 1) from t1_cc;') == \
-        'SELECT bql_column_value_probability(1, NULL, 3, ("c" + 1)) FROM "t1";'
+        'SELECT bql_pdf_joint(1, NULL, 3, ("c" + 1)) FROM "t1";'
     assert bql2sql('estimate probability of weight = f(c) from t1_cc;') == \
-        'SELECT bql_column_value_probability(1, NULL, 3, "f"("c")) FROM "t1";'
+        'SELECT bql_pdf_joint(1, NULL, 3, "f"("c")) FROM "t1";'
     assert bql2sql('estimate similarity to (rowid = 5) from t1_cc;') == \
         'SELECT bql_row_similarity(1, NULL, _rowid_,' \
         ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5))) FROM "t1";'
@@ -390,7 +418,7 @@ def test_estimate_columns_trivial():
             ' where (probability of value 8) > (probability of age = 16)') == \
         prefix + \
         ' AND (bql_column_value_probability(1, NULL, c.colno, 8) >' \
-        ' bql_column_value_probability(1, NULL, 2, 16));'
+        ' bql_pdf_joint(1, NULL, 2, 16));'
     with pytest.raises(bayeslite.BQLError):
         # PREDICTIVE PROBABILITY makes no sense without row.
         bql2sql('estimate * from columns of t1_cc where' +
@@ -479,16 +507,13 @@ def test_estimate_pairwise_trivial():
         prefix + \
         'bql_column_dependence_probability(1, NULL, c0.colno, c1.colno)' + \
         infix + ';'
-    with pytest.raises(bayeslite.BQLError):
-        # PROBABILITY OF = is a row function.
-        bql2sql('estimate mutual information'
+    assert bql2sql('estimate mutual information'
             ' from pairwise columns of t1_cc where'
-            ' (probability of x = 0) > 0.5;')
-    with pytest.raises(bayeslite.BQLError):
-        # PROBABILITY OF = is a row function.
-        bql2sql('estimate mutual information using 42 samples'
-            ' from pairwise columns of t1_cc'
-            ' where (probability of x = 0) > 0.5;')
+            ' (probability of age = 0) > 0.5;') == \
+        prefix + \
+        'bql_column_mutual_information(1, NULL, c0.colno, c1.colno, NULL)' + \
+        infix + \
+        ' AND (bql_pdf_joint(1, NULL, 2, 0) > 0.5);'
     with pytest.raises(bayeslite.BQLError):
         # PROBABILITY OF VALUE is 1-column.
         bql2sql('estimate correlation from pairwise columns of t1_cc where' +

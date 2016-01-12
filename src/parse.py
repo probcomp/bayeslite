@@ -526,15 +526,19 @@ class BQLSemantics(object):
     def p_unary_bql(self, b):           return b
 
     def p_bqlfn_predprob_row(self, col):        return ast.ExpBQLPredProb(col)
-    def p_bqlfn_prob_const(self, col, e):       return ast.ExpBQLProb(col, e,
+    def p_bqlfn_prob_const(self, col, e):       return ast.ExpBQLProb(
+                                                    [(col, e)], [])
+    def p_bqlfn_jprob_const(self, targets):     return ast.ExpBQLProb(targets,
                                                     [])
     def p_bqlfn_condprob_const(self, col, e, constraints):
-                                                return ast.ExpBQLProb(col, e,
+                                                return ast.ExpBQLProb(
+                                                    [(col, e)], constraints)
+    def p_bqlfn_condjprob_const(self, targets, constraints):
+                                                return ast.ExpBQLProb(targets,
                                                     constraints)
-    def p_bqlfn_prob_1col(self, e):             return ast.ExpBQLProb(None, e,
-                                                    [])
+    def p_bqlfn_prob_1col(self, e):             return ast.ExpBQLProbFn(e, [])
     def p_bqlfn_condprob_1col(self, e, constraints):
-                                                return ast.ExpBQLProb(None, e,
+                                                return ast.ExpBQLProbFn(e,
                                                     constraints)
     def p_bqlfn_sim_1row(self, cond, cols):     return ast.ExpBQLSim(cond,cols)
     def p_bqlfn_sim_2row(self, cols):           return ast.ExpBQLSim(None,cols)

@@ -241,20 +241,31 @@ subquery instead:
 
 .. index:: ``PROBABILITY OF``
 
-``PROBABILITY OF <column> = <value>``
+``PROBABILITY OF <column> = <value> [GIVEN (<constraints>)]``
+``PROBABILITY OF (<targets>) [GIVEN (<constraints>)]``
 
-   Constant.  Returns the probability that the column named *column*
-   has the value of the BQL expression *value*.
+   Constant.  Returns the probability density of the value of the BQL
+   expression *value* for the column *column*.  If *targets* is
+   specified instead, it is a comma-separated list of
+   ``<column> = <value>`` terms, and the result is the joint density
+   for all the specified target column values.
+
+   If *constraints* is specified, it is also a comma-separated list of
+   ``<column> = <value>`` terms, and the result is the conditional
+   joint density given the specified constraint column values.
 
    WARNING: The value this function is not a normalized probability in
    [0, 1], but rather a probability density with a normalization
    constant that is common to the column but may vary between columns.
    So it may take on values above 1.
 
-``PROBABILITY OF VALUE <value>``
+``PROBABILITY OF VALUE <value> [GIVEN (<constraints>)]``
 
-   Function of one implied column.  Returns the probability that the
-   implied column has the value of the BQL expression *value*.
+   Function of one implied column.  Returns the probability density of
+   the value of the BQL expression *value* for the implied column.  If
+   *constraints* is specified, it is a comma-separated list of
+   ``<column> = <value>`` terms, and the result is the conditional
+   density given the specified constraint column values.
 
 .. index:: ``SIMILARITY``
 
