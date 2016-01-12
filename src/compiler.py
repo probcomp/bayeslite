@@ -845,7 +845,8 @@ class BQLCompiler_Const(object):
             raise BQLError(bdb, 'Probability of value at row is 1-column'
                 ' function, not a constant.')
         elif isinstance(bql, ast.ExpBQLSim):
-            raise BQLError(bdb, 'Row similarity needs row.')
+            raise BQLError(bdb, 'Row similarity is 1- or 2-row function,'
+                ' not a constant.')
         elif isinstance(bql, ast.ExpBQLDepProb):
             compile_bql_2col_2(bdb, generator_id, self.modelno,
                 'bql_column_dependence_probability',
@@ -955,9 +956,11 @@ class BQLCompiler_2Row(object):
             compile_pdf_joint(bdb, generator_id, self.modelno, bql.targets,
                 bql.constraints, self, out)
         elif isinstance(bql, ast.ExpBQLProbFn):
-            raise BQLError(bdb, 'Probability of value is 1-column function.')
+            raise BQLError(bdb, 'Probability of value is 1-column function,'
+                ' not 2-row function.')
         elif isinstance(bql, ast.ExpBQLPredProb):
-            raise BQLError(bdb, 'Predictive probability is 1-row function.')
+            raise BQLError(bdb, 'Predictive probability is 1-row function,'
+                ' not 2-row function.')
         elif isinstance(bql, ast.ExpBQLSim):
             if bql.condition is not None:
                 raise BQLError(bdb, 'Similarity needs no row'
