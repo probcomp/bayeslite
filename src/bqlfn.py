@@ -283,6 +283,8 @@ def bql_column_value_probability(bdb, generator_id, modelno, colno, value,
     return ieee_exp(r)
 
 # XXX This is silly.  We should return log densities, not densities.
+# This is Github issue #360:
+# https://github.com/probcomp/bayeslite/issues/360
 def bql_pdf_joint(bdb, generator_id, modelno, *args):
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
     # A nonexistent (`unobserved') row id.
