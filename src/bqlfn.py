@@ -294,7 +294,7 @@ def bql_pdf_joint(bdb, generator_id, modelno, *args):
             i += 1
             break
         if i + 1 == len(args):
-            raise ValueError('Odd logpdf targets/constraints: %r' % (args,))
+            raise ValueError('Missing logpdf target value: %r' % (args[i],))
         t_colno = args[i]
         t_value = args[i + 1]
         targets.append((fake_row_id, t_colno, t_value))
@@ -302,7 +302,8 @@ def bql_pdf_joint(bdb, generator_id, modelno, *args):
     constraints = []
     while i < len(args):
         if i + 1 == len(args):
-            raise ValueError('Odd logpdf targets/constraints: %r' % (args,))
+            raise ValueError('Missing logpdf constraint value: %r' %
+                (args[i],))
         c_colno = args[i]
         c_value = args[i + 1]
         constraints.append((fake_row_id, c_colno, c_value))
