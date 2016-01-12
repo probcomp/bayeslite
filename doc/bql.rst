@@ -261,9 +261,9 @@ subquery instead:
 
 ``PROBABILITY OF VALUE <value> [GIVEN (<constraints>)]``
 
-   Function of one implied column.  Returns the probability of density
-   of the value of the BQL expression *value* for the implied column.
-   If *constraints* is specified, it is a comma-separated list of
+   Function of one implied column.  Returns the probability density of
+   the value of the BQL expression *value* for the implied column.  If
+   *constraints* is specified, it is a comma-separated list of
    ``<column> = <value>`` terms, and the result is the conditional
    density given the specified constraint column values.
 
