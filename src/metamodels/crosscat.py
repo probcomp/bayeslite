@@ -33,6 +33,7 @@ import bayeslite.core as core
 import bayeslite.guess as guess
 import bayeslite.metamodel as metamodel
 import bayeslite.weakprng as weakprng
+import crosscat_generator_schema
 
 from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
@@ -551,101 +552,25 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     ' with unknown schema version: %d' % (version,))
 
     def create_generator(self, bdb, table, schema, instantiate):
-        do_guess = False
-        do_subsample = self._subsample
-        columns = []
-        dep_constraints = []
-        for directive in schema:
-            # XXX Whattakludge.  Invent a better parsing scheme for
-            # these things, please.
-            if isinstance(directive, list) and \
-               len(directive) == 2 and \
-               isinstance(directive[0], (str, unicode)) and \
-               casefold(directive[0]) == 'guess' and \
-               directive[1] == ['*']:
-                do_guess = True
-                continue
-            if isinstance(directive, list) and \
-               len(directive) == 2 and \
-               isinstance(directive[0], (str, unicode)) and \
-               casefold(directive[0]) == 'subsample' and \
-               isinstance(directive[1], list) and \
-               len(directive[1]) == 1:
-                if isinstance(directive[1][0], (str, unicode)) and \
-                   casefold(directive[1][0]) == 'off':
-                    do_subsample = False
-                elif isinstance(directive[1][0], int):
-                    do_subsample = directive[1][0]
-                else:
-                    raise BQLError(bdb, 'Invalid subsampling: %s' %
-                        (repr(directive[1][0]),))
-                continue
-            if isinstance(directive, list) and \
-               len(directive) == 2 and \
-               isinstance(directive[0], (str, unicode)) and \
-               casefold(directive[0]) == 'dependent':
-                args = directive[1]
-                i = 0
-                dep_columns = []
-                while i < len(args):
-                    dep_columns.append(args[i])
-                    if i + 1 < len(args) and args[i + 1] != ',':
-                        # XXX Pretty-print the tokens.
-                        raise BQLError(bdb, 'Invalid dependent columns: %s' %
-                            (repr(args),))
-                    i += 2
-                dep_constraints.append((dep_columns, True))
-                continue
-            if isinstance(directive, list) and \
-               len(directive) == 2 and \
-               isinstance(directive[0], (str, unicode)) and \
-               casefold(directive[0]) == 'independent':
-                args = directive[1]
-                i = 0
-                indep_columns = []
-                while i < len(args):
-                    indep_columns.append(args[i])
-                    if i + 1 < len(args) and args[i + 1] != ',':
-                        # XXX Pretty-print the tokens.
-                        raise BQLError(bdb, 'Invalid dependent columns: %s' %
-                            (repr(args),))
-                    i += 2
-                dep_constraints.append((indep_columns, False))
-                continue
-            if isinstance(directive, list) and \
-               len(directive) == 2 and \
-               isinstance(directive[0], (str, unicode)) and \
-               casefold(directive[0]) != 'guess' and \
-               isinstance(directive[1], (str, unicode)) and \
-               casefold(directive[1]) != 'guess':
-                columns.append((directive[0], directive[1]))
-                continue
-            if directive == []:
-                # Skip extra commas so you can write
-                #
-                #    CREATE GENERATOR t_cc FOR t USING crosscat(
-                #        x,
-                #        y,
-                #        z,
-                #    )
-                continue
-            raise BQLError(bdb, 'Invalid crosscat column model: %s' %
-                (repr(directive),))
+        parsed_schema = crosscat_generator_schema.parse(
+            schema, subsample_default=self._subsample)
 
         with bdb.savepoint():
             # If necessary, guess the column statistical types.
             #
             # XXX Allow passing count/ratio cutoffs, and other
             # parameters.
-            if do_guess:
+            if parsed_schema.guess:
                 column_names = core.bayesdb_table_column_names(bdb, table)
                 qt = sqlite3_quote_name(table)
                 rows = bdb.sql_execute('SELECT * FROM %s' % (qt,)).fetchall()
                 stattypes = guess.bayesdb_guess_stattypes(column_names, rows,
-                    overrides=columns)
+                    overrides=parsed_schema.columns)
                 columns = zip(column_names, stattypes)
                 columns = [(name, stattype) for name, stattype in columns
                     if stattype not in ('key', 'ignore')]
+            else:
+                columns = parsed_schema.columns
 
             # Create the metamodel-independent records and assign a
             # generator id.
@@ -700,13 +625,13 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             # Choose a subsample (possibly the whole thing).
             qt = sqlite3_quote_name(table)
             cursor = None
-            if do_subsample:
+            if parsed_schema.subsample:
                 # Sample k of the n rowids without replacement,
                 # choosing from all the k-of-n combinations uniformly
                 # at random.
                 #
                 # XXX Let the user pass in a seed.
-                k = do_subsample
+                k = parsed_schema.subsample
                 sql = 'SELECT COUNT(*) FROM %s' % (qt,)
                 n = cursor_value(bdb.sql_execute(sql))
                 sql = 'SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC' % (qt,)
@@ -744,7 +669,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     (generator_id, colno0, colno1, dependent)
                     VALUES (?, ?, ?, ?)
             '''
-            for columns, dependent in dep_constraints:
+            for columns, dependent in parsed_schema.dep_constraints:
                 for col1, col2 in itertools.combinations(columns, 2):
                     col1_id = core.bayesdb_generator_column_number(bdb,
                         generator_id, col1)
