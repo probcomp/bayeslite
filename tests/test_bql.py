@@ -1786,6 +1786,22 @@ def test_empty_cursor():
         empty(bdb.execute('DROP GENERATOR t_cc'))
         empty(bdb.execute('DROP TABLE t'))
 
+def test_create_generator_ifnotexists():
+    # XXX Test other metamodels too, because they have a role in ensuring that
+    # this works. Their create_generator will still be called.
+    for using_clause in ('crosscat(GUESS(*))',):
+        with bayeslite.bayesdb_open() as bdb:
+            bdb.sql_execute('CREATE TABLE t(x, y, z)')
+            bdb.sql_execute('INSERT INTO t VALUES(1,2,3)')
+            for _i in (0, 1):
+                bdb.execute('CREATE GENERATOR t_cc IF NOT EXISTS FOR t USING '
+                            + using_clause)
+            try:
+                bdb.execute('CREATE GENERATOR t_cc FOR t USING ' + using_clause)
+                assert False  # Should have said it exists.
+            except bayeslite.BQLError:
+                pass
+
 class MockTracerOneQuery(bayeslite.IBayesDBTracer):
     def __init__(self, q, qid):
         self.q = q

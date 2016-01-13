@@ -538,7 +538,10 @@ def instantiate_generator(bdb, gen_name, table, metamodel, columns,
         'metamodel': metamodel.name(),
         'defaultp': default,
     })
-    generator_id = cursor.lastrowid
+    # If it already existed, then that cursor is empty. In any case, select it.
+    cursor = bdb.sql_execute(
+        '''SELECT id FROM bayesdb_generator WHERE name=?''', (gen_name,))
+    generator_id = cursor.fetchvalue()
     assert generator_id
     assert 0 < generator_id
 
@@ -594,7 +597,7 @@ def instantiate_generator(bdb, gen_name, table, metamodel, columns,
 
     # Insert column records.
     column_sql = '''
-        INSERT INTO bayesdb_generator_column
+        INSERT OR IGNORE INTO bayesdb_generator_column
             (generator_id, colno, stattype)
             VALUES (:generator_id, :colno, :stattype)
     '''
