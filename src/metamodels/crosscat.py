@@ -582,7 +582,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             # Install the metadata json blob.
             M_c = create_metadata(bdb, generator_id, column_list)
             insert_metadata_sql = '''
-                INSERT OR IGNORE INTO bayesdb_crosscat_metadata
+                INSERT INTO bayesdb_crosscat_metadata
                     (generator_id, metadata_json)
                     VALUES (?, ?)
             '''
@@ -598,12 +598,12 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
 
             # Expose the same information relationally.
             insert_column_sql = '''
-                INSERT OR IGNORE INTO bayesdb_crosscat_column
+                INSERT INTO bayesdb_crosscat_column
                     (generator_id, colno, cc_colno, disttype)
                     VALUES (:generator_id, :colno, :cc_colno, :disttype)
             '''
             insert_codemap_sql = '''
-                INSERT OR IGNORE INTO bayesdb_crosscat_column_codemap
+                INSERT INTO bayesdb_crosscat_column_codemap
                     (generator_id, cc_colno, code, value)
                     VALUES (:generator_id, :cc_colno, :code, :value)
             '''
@@ -656,7 +656,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                      SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC
                 ''' % (qt,))
             insert_subsample_sql = '''
-                INSERT OR IGNORE INTO bayesdb_crosscat_subsample
+                INSERT INTO bayesdb_crosscat_subsample
                     (generator_id, sql_rowid, cc_row_id)
                     VALUES (?, ?, ?)
             '''

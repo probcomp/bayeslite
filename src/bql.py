@@ -309,13 +309,18 @@ def execute_phrase(bdb, phrase, bindings=()):
         # Let the metamodel parse the schema itself and call
         # create_generator with the modelled columns.
         with bdb.savepoint():
-            def instantiate(columns):
-                return instantiate_generator(bdb, phrase.name, phrase.table,
-                    metamodel, columns,
-                    ifnotexists=phrase.ifnotexists,
-                    default=phrase.default)
-            metamodel.create_generator(bdb, phrase.table, phrase.schema,
-                instantiate)
+            if core.bayesdb_has_generator(bdb, phrase.name):
+                if not phrase.ifnotexists:
+                    raise BQLError(bdb,
+                                   'Name already defined as generator: %s' %
+                        (repr(phrase.name),))
+            else:
+                def instantiate(columns):
+                    return instantiate_generator(bdb, phrase.name, phrase.table,
+                        metamodel, columns,
+                        default=phrase.default)
+                metamodel.create_generator(bdb, phrase.table, phrase.schema,
+                    instantiate)
 
         # All done.  Nothing to return.
         return empty_cursor(bdb)
@@ -506,9 +511,7 @@ def execute_phrase(bdb, phrase, bindings=()):
 # directly yourself -- it must be called via the metamodel's
 # create_generator method.
 def instantiate_generator(bdb, gen_name, table, metamodel, columns,
-        ifnotexists=None, default=None):
-    if ifnotexists is None:
-        ifnotexists = False
+                          default=None):
     if default is None:
         default = False
 
@@ -517,31 +520,25 @@ def instantiate_generator(bdb, gen_name, table, metamodel, columns,
         raise BQLError(bdb, 'Name already defined as table: %s' %
             (repr(gen_name),))
 
-    # Make sure there's no generator by this name unless we were asked
-    # to redefine it in that case.
-    if not ifnotexists and core.bayesdb_has_generator(bdb, gen_name):
-        raise BQLError(bdb, 'Name already defined as generator: %s' %
-            (repr(gen_name),))
-
     # Make sure the bayesdb_column table knows all the columns.
     core.bayesdb_table_guarantee_columns(bdb, table)
 
-    # Create the generator record.
-    generator_sql = '''
-        INSERT%s INTO bayesdb_generator
-            (name, tabname, metamodel, defaultp)
-            VALUES (:name, :table, :metamodel, :defaultp)
-    ''' % (' OR IGNORE' if ifnotexists else '',)
-    cursor = bdb.sql_execute(generator_sql, {
-        'name': gen_name,
-        'table': table,
-        'metamodel': metamodel.name(),
-        'defaultp': default,
-    })
-    # If it already existed, then that cursor is empty. In any case, select it.
-    cursor = bdb.sql_execute(
-        '''SELECT id FROM bayesdb_generator WHERE name=?''', (gen_name,))
-    generator_id = cursor.fetchvalue()
+    generator_already_existed = False
+    if core.bayesdb_has_generator(bdb, gen_name):
+        generator_already_existed = True
+    else:
+        # Create the generator record.
+        generator_sql = '''INSERT INTO bayesdb_generator
+                           (name, tabname, metamodel, defaultp)
+                           VALUES (:name, :table, :metamodel, :defaultp)'''
+        cursor = bdb.sql_execute(generator_sql, {
+            'name': gen_name,
+            'table': table,
+            'metamodel': metamodel.name(),
+            'defaultp': default,
+        })
+    generator_id = core.bayesdb_get_generator(bdb, gen_name)
+    
     assert generator_id
     assert 0 < generator_id
 
@@ -595,20 +592,21 @@ def instantiate_generator(bdb, gen_name, table, metamodel, columns,
         raise BQLError(bdb, 'Invalid statistical types: %s' %
             (repr(list(invalid)),))
 
-    # Insert column records.
-    column_sql = '''
-        INSERT OR IGNORE INTO bayesdb_generator_column
+    if not generator_already_existed:
+        # Insert column records.
+        column_sql = '''
+            INSERT INTO bayesdb_generator_column
             (generator_id, colno, stattype)
             VALUES (:generator_id, :colno, :stattype)
-    '''
-    for name, stattype in columns:
-        colno = column_map[casefold(name)]
-        stattype = casefold(stattype)
-        bdb.sql_execute(column_sql, {
-            'generator_id': generator_id,
-            'colno': colno,
-            'stattype': stattype,
-        })
+        '''
+        for name, stattype in columns:
+            colno = column_map[casefold(name)]
+            stattype = casefold(stattype)
+            bdb.sql_execute(column_sql, {
+                'generator_id': generator_id,
+                'colno': colno,
+                'stattype': stattype,
+            })
 
     column_list = sorted((column_map[casefold(name)], name, stattype)
         for name, stattype in columns)
