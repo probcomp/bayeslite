@@ -928,6 +928,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 # actually performed.
                 iterations_in_ckpt = 0
                 while True:
+                    X_L_list_0 = X_L_list
                     X_L_list, X_D_list, diagnostics = self._crosscat.analyze(
                         M_c=M_c,
                         T=T,
@@ -988,6 +989,10 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                         checkpoint = 0
                     assert isinstance(checkpoint, int)
                     assert 0 < len(diagnostics['logscore'])
+                    assert i < len(diagnostics['logscore'][-1])
+                    assert diagnostics['logscore'][-1][i] is not None
+                    assert not math.isnan(diagnostics['logscore'][-1][i]), \
+                        'bad X_L before %r after %r' % (X_L, X_L_list_0[i])
                     assert 0 < len(diagnostics['num_views'])
                     assert 0 < len(diagnostics['column_crp_alpha'])
                     bdb.sql_execute(insert_diagnostics_sql, {
