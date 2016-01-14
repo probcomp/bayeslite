@@ -1779,6 +1779,8 @@ def test_empty_cursor():
         empty(bdb.execute('COMMIT'))
         empty(bdb.sql_execute('CREATE TABLE t(x, y, z)'))
         empty(bdb.sql_execute('INSERT INTO t VALUES(1,2,3)'))
+        empty(bdb.sql_execute('INSERT INTO t VALUES(4,5,6)'))
+        empty(bdb.sql_execute('INSERT INTO t VALUES(7,8,9)'))
         empty(bdb.execute('''
             CREATE GENERATOR t_cc FOR t USING crosscat(GUESS(*))
         '''))
