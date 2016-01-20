@@ -290,6 +290,22 @@ def t1_mp():
         't1', 't1_cc', t1_schema, t1_data,
          columns=['label CATEGORICAL', 'age NUMERICAL', 'weight NUMERICAL'])
 
+def t2_schema(bdb):
+    bdb.sql_execute('''create table t2 (id, label, age, weight)''')
+
+def t2_data(bdb):
+    bdb.sql_execute('''
+        insert into t2 (label,age,weight) values
+            ('1', '2', ?),
+            ('2', '3', '1.2'),
+            ('3', '48', '3e10'),
+            ('4', '3', ?)
+    ''', (2/3., -0.,))
+
+def t2():
+    return bayesdb_generator(bayesdb(), 't2', 't2_cc', t2_schema, t2_data,
+        columns=['label CATEGORICAL', 'age CATEGORICAL', 'weight CATEGORICAL'])
+
 def test_t1_nokey():
     with bayesdb_generator(bayesdb(), 't1', 't1_cc', t1_schema, t1_data,
             columns=['age NUMERICAL', 'weight NUMERICAL']):
@@ -318,6 +334,7 @@ examples = {
 #    't1_mp': t1_mp,
     't1_sub': t1_sub,
     't1_subcat': t1_subcat,
+    't2': t2,
 }
 
 @pytest.mark.parametrize('exname', examples.keys())

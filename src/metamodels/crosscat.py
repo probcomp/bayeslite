@@ -269,7 +269,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         table_name = core.bayesdb_generator_table(bdb, generator_id)
         qt = sqlite3_quote_name(table_name)
         columns_sql = '''
-            SELECT c.name, c.colno
+            SELECT c.name, c.colno, gc.stattype
                 FROM bayesdb_column AS c,
                     bayesdb_generator AS g,
                     bayesdb_generator_column AS gc
@@ -280,19 +280,18 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 ORDER BY c.colno ASC
         '''
         columns = bdb.sql_execute(columns_sql, (generator_id,)).fetchall()
-        if not columns:
-            raise BQLError(bdb,
-                'No columns found for generator (id = %r)' % generator_id)
-        colnames = [name for name, _colno in columns]
-        qcns = map(sqlite3_quote_name, colnames)
+        qexpressions = ','.join('CAST(t.%s AS %s)' %
+                (sqlite3_quote_name(name),
+                    sqlite3_quote_name(core.bayesdb_stattype_affinity(bdb,
+                            stattype)))
+            for name, _colno, stattype in columns)
         cursor = bdb.sql_execute('''
             SELECT %s FROM %s AS t, bayesdb_crosscat_subsample AS s
                 WHERE s.generator_id = ?
                     AND s.sql_rowid = t._rowid_
-        ''' % (','.join('t.%s' % (qcn,) for qcn in qcns), qt),
-            (generator_id,))
+        ''' % (qexpressions, qt), (generator_id,))
         return [[crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
-                for value, (_name, colno) in zip(row, columns)]
+                for value, (_name, colno, _stattype) in zip(row, columns)]
             for row in cursor]
 
     def _crosscat_thetas(self, bdb, generator_id, modelno):
@@ -375,17 +374,29 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             rowids = sorted(set(index.keys()))
             table_name = core.bayesdb_generator_table(bdb, generator_id)
             qt = sqlite3_quote_name(table_name)
-            modelled_column_names = \
-                core.bayesdb_generator_column_names(bdb, generator_id)
-            qcns = ','.join(map(sqlite3_quote_name, modelled_column_names))
+            columns = bdb.sql_execute('''
+                SELECT c.name, c.colno, gc.stattype
+                    FROM bayesdb_column AS c,
+                        bayesdb_generator AS g,
+                        bayesdb_generator_column AS gc
+                    WHERE g.id = ?
+                        AND c.tabname = g.tabname
+                        AND c.colno = gc.colno
+                        AND gc.generator_id = g.id
+                    ORDER BY c.colno ASC
+            ''', (generator_id,)).fetchall()
+            qexpressions = ','.join('CAST(%s AS %s)' %
+                    (sqlite3_quote_name(name),
+                        sqlite3_quote_name(core.bayesdb_stattype_affinity(bdb,
+                                stattype)))
+                for name, _colno, stattype in columns)
             qrowids = ','.join('%d' % (rowid,) for rowid in rowids)
             M_c = self._crosscat_metadata(bdb, generator_id)
             cursor = bdb.sql_execute('''
                 SELECT %s FROM %s WHERE _rowid_ IN (%s) ORDER BY _rowid_ ASC
-            ''' % (qcns, qt, qrowids))
-            colnos = core.bayesdb_generator_column_numbers(bdb, generator_id)
+            ''' % (qexpressions, qt, qrowids))
             rows = [[crosscat_value_to_code(bdb, generator_id, M_c, colno, x)
-                    for colno, x in zip(colnos, row)]
+                     for x, (_name, colno, _stattype) in zip(row, columns)]
                 for row in cursor]
             if len(rows) > 0:
                 # Need to put more stuff into the subsample temporarily
@@ -1261,10 +1272,12 @@ def create_metadata_categorical(bdb, generator_id, colno):
     qt = sqlite3_quote_name(table)
     qcn = sqlite3_quote_name(column_name)
     sql = '''
-        SELECT DISTINCT %s FROM %s WHERE %s IS NOT NULL ORDER BY %s
+        SELECT DISTINCT CAST(%s AS TEXT)
+            FROM %s WHERE %s IS NOT NULL ORDER BY %s
     ''' % (qcn, qt, qcn, qcn)
     cursor = bdb.sql_execute(sql)
     codes = [row[0] for row in cursor]
+    assert all(isinstance(value, unicode) for value in codes)
     ncodes = len(codes)
     return {
         'modeltype': 'symmetric_dirichlet_discrete',

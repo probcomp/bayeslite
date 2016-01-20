@@ -49,6 +49,7 @@ generator may be substituted.
 
 from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
+from bayeslite.util import casefold
 from bayeslite.util import cursor_value
 
 def bayesdb_has_table(bdb, name):
@@ -455,3 +456,14 @@ def bayesdb_generator_fresh_row_id(bdb, generator_id):
     if max_rowid is None:
         max_rowid = 0
     return max_rowid + 1   # Synthesize a non-existent SQLite row id
+
+# XXX This should be stored in the database by adding a column to the
+# bayesdb_stattype table -- when we are later willing to contemplate
+# adding statistical types, e.g. COUNT, SCALE, or NONNEGATIVE REAL.
+_STATTYPE_TO_AFFINITY = dict((casefold(st), casefold(af)) for st, af in (
+    ('categorical', 'text'),
+    ('cyclic', 'real'),
+    ('numerical', 'real'),
+))
+def bayesdb_stattype_affinity(_bdb, stattype):
+    return _STATTYPE_TO_AFFINITY[casefold(stattype)]
