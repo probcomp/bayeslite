@@ -76,6 +76,7 @@ class BayesDB(object):
             raise ValueError('Do not construct BayesDB objects directly!')
         if pathname is None:
             pathname = ":memory:"
+        self.pathname = pathname
         self._sqlite3 = apsw.Connection(pathname)
         self.txn_depth = 0
         self.metamodels = {}
@@ -320,6 +321,16 @@ class BayesDB(object):
     def last_insert_rowid(self):
         """Return the rowid of the row most recently inserted."""
         return self._sqlite3.last_insert_rowid()
+
+    def reconnect(self):
+        """Reconnecting may sometimes be necessary, e.g. before a DROP TABLE"""
+        # http://stackoverflow.com/questions/32788271
+        if self.pathname == ":memory:":
+            raise ValueError("""Cannot meaningfully reconnect to an in-memory
+                database. All prior transactions would be lost.""")
+        assert self.txn_depth == 0, "pending BayesDB transactions"
+        self._sqlite3.close()
+        self._sqlite3 = apsw.Connection(self.pathname)
 
 class IBayesDBTracer(object):
     """BayesDB articulated tracing interface.
