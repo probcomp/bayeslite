@@ -32,6 +32,7 @@ import bayeslite.core as core
 import bayeslite.txn as txn
 
 from bayeslite.exception import BQLError
+from bayeslite.schema import bayesdb_schema_required
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 from bayeslite.util import cursor_value
@@ -273,6 +274,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                             (repr(cmd.generator),))
                     generator_id = core.bayesdb_get_generator(bdb,
                         cmd.generator)
+                    bayesdb_schema_required(bdb, 6, "generator defaults")
                     unset_default_sql = '''
                         UPDATE bayesdb_generator SET defaultp = 0
                             WHERE tabname = ? AND defaultp
@@ -538,7 +540,7 @@ def instantiate_generator(bdb, gen_name, table, metamodel, columns,
             'defaultp': default,
         })
     generator_id = core.bayesdb_get_generator(bdb, gen_name)
-    
+
     assert generator_id
     assert 0 < generator_id
 

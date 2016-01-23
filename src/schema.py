@@ -159,6 +159,10 @@ def bayesdb_install_schema(db, version=None, compatible=None):
         install = True
     elif application_id != APPLICATION_ID:
         raise IOError('Wrong application id: 0x%08x' % (application_id,))
+    if user_version > LATEST_VERSION:
+        raise IOError('Unknown bayeslite db version: %d' % (user_version,))
+    if user_version not in USABLE_VERSIONS:
+        raise IOError('Unsupported bayeslite db version: %d' % (user_version,))
     if install or not compatible:
         _upgrade_schema(db, user_version, desired_version=version)
     db.cursor().execute('PRAGMA foreign_keys = ON')
@@ -171,15 +175,9 @@ def _upgrade_schema(db, current_version, desired_version=None):
             current_version = _schema_version(db)
     if desired_version is None:
         desired_version = LATEST_VERSION
-
-    if current_version > LATEST_VERSION:
-        raise IOError('Unknown bayeslite db version: %d' % (current_version,))
     if desired_version > LATEST_VERSION:
         raise IOError('Unknown bayeslite desired version: %d' % (
             desired_version,))
-    if current_version not in USABLE_VERSIONS:
-        raise IOError('Unsupported bayeslite db version: %d' % (
-            current_version,))
     if desired_version not in USABLE_VERSIONS:
         raise IOError('Unsupported bayeslite desired version: %d' % (
             desired_version,))
