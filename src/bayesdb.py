@@ -48,7 +48,7 @@ def bayesdb_open(pathname=None, builtin_metamodels=None, seed=None,
     changing the format of the database so that older versions of
     bayeslite cannot read it.  If `compatible` is `True`,
     `bayesdb_open` will not incompatibly change the format of the
-    database.
+    database (but some newer bayesdb features may not work).
     """
     if builtin_metamodels is None:
         builtin_metamodels = True
