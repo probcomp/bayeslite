@@ -493,7 +493,7 @@ def test_read_nonsequential_verbose(spawnbdb):
 def test_exception(spawnbdb):
     c = spawnbdb
     c.sendexpectcmd('SELECT +;')
-    c.expect_lines(['Parse error: syntax error near ;'])
+    c.expect_lines(['Syntax error near [;] after [SELECT +]'])
     c.expect_prompt()
     c.sendexpectcmd('COMMIT;')
     c.expect_lines(['Not in a transaction!'])

@@ -36,10 +36,9 @@ class BQLParseError(Exception):
         self.errors = errors
     def __str__(self):
         if len(self.errors) == 1:
-            return 'Parse error: ' + self.errors[0]
+            return self.errors[0]
         else:
             out = StringIO.StringIO()
-            out.write('Parse errors:\n')
             for error in self.errors:
                 out.write('  %s\n' % (error,))
             return out.getvalue()
@@ -49,6 +48,7 @@ def parse_bql_phrases(scanner):
     parser = grammar.Parser(semantics)
     while not semantics.failed:
         token = scanner.read()
+        semantics.context.append(token)
         if token[0] == -1:      # error
             semantics.syntax_error(token)
         else:
@@ -136,6 +136,7 @@ def bql_string_complete_p(string):
 class BQLSemantics(object):
     def __init__(self):
         self.phrase = None
+        self.context = []
         self.errors = []
         self.failed = False
 
@@ -149,9 +150,10 @@ class BQLSemantics(object):
         #
         # XXX Record source position.
         if number == -1:        # error
-            self.errors.append('skipping bad token: %s' % (text,))
+            self.errors.append('Skipping bad token: %s' % (text,))
         else:
-            self.errors.append('syntax error near %s' % (text,))
+            self.errors.append('Syntax error near [%s] after [%s]' % (
+                text, ' '.join([tok for (pos, tok) in self.context[:-1]])))
 
     def p_bql_start(self, phrases):
         pass
