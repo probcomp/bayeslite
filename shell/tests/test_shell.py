@@ -136,7 +136,7 @@ def test_python_expression(spawnbdb):
     c.expect_prompt()
 
 
-def test_python_expression(spawnbdb):
+def test_pythexec_expression(spawnbdb):
     c = spawnbdb
     c.sendexpectcmd('.pythexec print 73')
     c.expect_lines(['73'])
