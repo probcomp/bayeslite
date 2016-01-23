@@ -129,7 +129,17 @@ class SessionOrchestrator(object):
     def _add_entry(self, qid, type, query, bindings):
         '''Save a session entry into the database. The entry is initially in
         the not-completed state. Return the new entry's id so that it can be
-        set to completed when appropriate.'''
+        set to completed when appropriate.
+
+        qid: str, num, or anything that can be used as a hash key.
+          Any identifier unique to this query.
+        type: str
+          The class of query, usually "bql" or "sql". Case-sensitive.
+        query: str
+          The text of the query, perhaps with unbound positional references.
+        bindings: iterable(str)
+          Fillers for unbound references in query, if any.
+        '''
         # check for errors on this session and suggest if we haven't already
         if not self._suggested_send:
             self._check_error_entries(self.session_id)
