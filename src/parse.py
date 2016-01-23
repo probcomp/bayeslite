@@ -610,7 +610,6 @@ class BQLSemantics(object):
     def _ensure_wizard_mode(self, text):
         import os
         if "BAYESDB_WIZARD_MODE" not in os.environ:
-            self.syntax_error((0, str(text)))
             self.errors.append("""\
 If you would like to analyze your own data with BayesDB, please contact
   bayesdb@mit.edu to participate in our research project.""")
