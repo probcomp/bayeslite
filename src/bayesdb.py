@@ -92,7 +92,7 @@ class BayesDB(object):
         self._py_prng = random.Random(pyrseed)
         nprseed = [self._prng.weakrandom32() for _ in range(4)]
         self._np_prng = numpy.random.RandomState(nprseed)
-        schema.bayesdb_install_schema(self._sqlite3, version=version,
+        schema.bayesdb_install_schema(self, version=version,
             compatible=compatible)
         bqlfn.bayesdb_install_bql(self._sqlite3, self)
 
