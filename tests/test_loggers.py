@@ -19,7 +19,7 @@ import pytest
 import re
 import time
 
-from bdbcontrib import loggers
+from bayeslite import loggers
 
 class StubCallable:
     def __init__(self, sleep=None, throw=None):
