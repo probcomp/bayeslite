@@ -116,6 +116,27 @@ class LoggingLogger(BqlLogger):
   def exception(self, *args, **kwargs):
     logging.exception(*args, **kwargs)
 
+class CaptureLogger(BqlLogger):
+  """Produces no output, but captures call details in .calls"""
+  def __init__(self):
+    self.calls = []
+  def info(self, msg_format, *values):
+    self.calls.append(('info', msg_format, values))
+  def warn(self, msg_format, *values):
+    self.calls.append(('warn', msg_format, values))
+  def plot(self, suggested_name, figure):
+    self.calls.append(('plot', suggested_name, figure))
+  def debug(self, *args, **kwargs):
+    self.calls.append(('debug', args, kwargs))
+  def exception(self, *args, **kwargs):
+    self.calls.append(('exception', args, kwargs, sys.exc_info()))
+  def __call__(self, *args, **kwargs):
+    self.calls.append(('call', args, kwargs))
+  def __getattr__(self, name):
+    def _capture(*args, **kwargs):
+      self.calls.append((name, args, kwargs))
+    return _capture
+
 PROBCOMP_URL = 'https://projects.csail.mit.edu/probcomp/bayesdb/save_sessions.cgi'
 import requests
 import time
