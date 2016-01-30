@@ -79,6 +79,7 @@ import traceback
 import bayeslite
 
 from bayeslite import IBayesDBTracer
+from bayeslite.loggers import BqlLogger, CallHomeStatusLogger
 from bayeslite.schema import bayesdb_schema_required
 from bayeslite.util import cursor_value
 from bayeslite import __version__
@@ -87,37 +88,23 @@ _error_previous_session_msg = 'WARNING: Current or previous session contains que
 
 class SessionOrchestrator(object):
 
-    def __init__(self, bdb, logger=None, post=None):
+    def __init__(self, bdb, meta_logger=None, session_logger=None):
         bayesdb_schema_required(bdb, 7, 'sessions')
-        if post is None:
-            post = requests.post
         self.bdb = bdb
+
+        if meta_logger is None:
+            meta_logger = BqlLogger()
+        self._logger = meta_logger
+        if session_logger is None:
+            session_logger = CallHomeStatusLogger()
+        self._session_logger = session_logger
+
         self._qid_to_entry_id = {}
         self._sql_tracer = _SessionTracer("sql", self)
         self._bql_tracer = _SessionTracer("bql", self)
-        self._post = post
         self.start_saving_sessions()
         self._suggested_send = False
-        self._logger = logger
         self._start_new_session()
-
-    def _info(self, msg):
-        if self._logger:
-            self._logger.info(msg)
-        else:
-            print msg
-
-    def _warn(self, msg):
-        if self._logger:
-            self._logger.warn(msg)
-        else:
-            print msg
-
-    def _error(self, msg):
-        if self._logger:
-            self._logger.error(msg)
-        else:
-            print msg
 
     def _sql(self, query, bindings=None):
         # Go through bdb._sqlite3.cursor().execute instead of
@@ -182,7 +169,7 @@ class SessionOrchestrator(object):
         ''', (session_id,)))
         # suggest sending sessions but don't suggest more than once
         if (error_entries > 0 and not self._suggested_send):
-            self._warn(_error_previous_session_msg)
+            self._logger.warn(_error_previous_session_msg)
             self._suggested_send = True
         return error_entries
 
@@ -245,15 +232,11 @@ class SessionOrchestrator(object):
         """Send all saved session history. The session history will be used for
         research purposes. DO NOT SEND IF YOU ARE WORKING WITH CONFIDENTIAL,
         PROPRIETARY, IDENTIFYING, OR OTHERWISE SECRET INFO."""
-        probcomp_url = 'https://projects.csail.mit.edu/probcomp/bayesdb/save_sessions.cgi'
         for id in range(1, self.session_id+1):
-            self._info('Sending session %d to %s ...' % (id, probcomp_url))
+            self._logger.info('Sending session %d', id)
             json_string = self.dump_session_as_json(id)
-            self._info(json_string)
-            data = {'session_json': json_string,
-                    'User-Agent': 'bayeslite %s' % (__version__,)}
-            r = self._post(probcomp_url, data=data)
-            self._info('Response: %s' % (r.text,))
+            self._logger.info(json_string)
+            self._session_logger._send(json_string)
 
     def start_saving_sessions(self):
         self.bdb.trace(self._bql_tracer)

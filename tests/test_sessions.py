@@ -21,6 +21,7 @@ import pytest
 from collections import defaultdict, namedtuple
 
 import bayeslite
+from bayeslite.loggers import CaptureLogger
 import bayeslite.metamodels.troll_rng as troll
 import bayeslite.sessions as sescap
 from bayeslite.version import __version__
@@ -228,23 +229,13 @@ def test_sessions_error_metamodel():
         assert tr._check_error_entries(tr.session_id) > 0
 
 def test_sessions_send_data():
-    class response(object):
-        @property
-        def text(self):
-            return 'Session uploaded. Thank you!'
-    was_called = defaultdict(int)
-    def post(url, data):
-        assert url == 'https://projects.csail.mit.edu/probcomp/bayesdb/save_sessions.cgi'
-        assert isinstance(data, dict)
-        assert 2 == len(data)
-        assert 'session_json' in data
-        assert isinstance(data['session_json'], str)
-        was_called['post'] += 1
-        return response()
-    (bdb, tr) = make_bdb_with_sessions(post=post)
+    lgr = CaptureLogger()
+    (bdb, tr) = make_bdb_with_sessions(session_logger=lgr)
     _simple_bql_query(bdb)
     tr.send_session_data()
-    assert 1 == was_called['post']
+    assert 1 == len(lgr.calls)
+    assert "_send" == lgr.calls[0][0]
+    assert "SELECT COUNT(*) FROM bayesdb_session" in str(lgr.calls[0][1])
 
 def test_sessions_send_data__ci_network():
     (bdb, tr) = make_bdb_with_sessions()
