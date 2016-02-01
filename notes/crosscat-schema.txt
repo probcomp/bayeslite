@@ -29,7 +29,8 @@ Table metadata is a record with three fields, stored in a JSON blob:
 XXX Not really necessary, can be encoded in SQL.  But these get passed
 to the engine, so can't change it immediately.
 
-Crosscat model data is a record with the following fields:
+Crosscat model data is a record with the following fields (see also
+src/metamodels/crosscat_theta.schema.json.):
 
   X_L                   record
     column_partition      record
