@@ -179,6 +179,7 @@ setup(
     install_requires=[
         'bayeslite-apsw>=3.8.0',
         'crosscat>=0.1.48',
+        'jsonschema',
         'numpy',
         'requests',
         'setuptools', # For parse_version in src/remote.py
@@ -208,5 +209,8 @@ setup(
         'build_py': local_build_py,
         'sdist': local_sdist,
         'test': local_test,
+    },
+    package_data={
+        'bayeslite.metamodels': ['*.schema.json'],
     },
 )
