@@ -34,6 +34,7 @@ import bayeslite.guess as guess
 import bayeslite.metamodel as metamodel
 import bayeslite.weakprng as weakprng
 import crosscat_generator_schema
+import crosscat_theta_validator
 
 from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
@@ -226,6 +227,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             subsample = False
         self._crosscat = crosscat
         self._subsample = subsample
+        self._theta_validator = crosscat_theta_validator.Validator()
 
     def _crosscat_cache_nocreate(self, bdb):
         if bdb.cache is None:
@@ -519,6 +521,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     del theta['logscore']
                     del theta['num_views']
                     del theta['column_crp_alpha']
+                    self._theta_validator.validate(theta)
                     theta_json = json.dumps(theta)
                     bdb.sql_execute(update_sql, {
                         'generator_id': generator_id,
@@ -786,7 +789,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 for modelno in modelnos)
         if model_config is None:
             model_config = {
-                'kernel_list': (),
+                'kernel_list': [],
                 'initialization': 'from_the_prior',
                 'row_initialization': 'from_the_prior',
             }
@@ -828,6 +831,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 'iterations': 0,
                 'model_config': model_config,
             }
+            self._theta_validator.validate(theta)
             bdb.sql_execute(insert_theta_sql, {
                 'generator_id': generator_id,
                 'modelno': modelno,
@@ -979,6 +983,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     })
                     assert bdb._sqlite3.totalchanges() - total_changes == 1
                     total_changes = bdb._sqlite3.totalchanges()
+                    self._theta_validator.validate(theta)
                     bdb.sql_execute(update_theta_json_sql, {
                         'generator_id': generator_id,
                         'modelno': modelno,
@@ -1228,6 +1233,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 theta['X_L'] = X_L
                 theta['X_D'] = X_D
                 total_changes = bdb._sqlite3.totalchanges()
+                self._theta_validator.validate(theta)
                 bdb.sql_execute(update_theta_sql, {
                     'generator_id': generator_id,
                     'modelno': modelno,
