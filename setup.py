@@ -173,6 +173,7 @@ class local_test(test):
         self.set_undefined_options('build', ('build_lib', 'build_lib'))
     def run_tests(self):
         import pytest
+        import os
         import sys
         sys.path = [os.path.join(os.getcwd(), self.build_lib)] + sys.path
         os.environ['BAYESDB_WIZARD_MODE'] = '1'
