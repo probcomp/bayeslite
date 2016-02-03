@@ -19,6 +19,7 @@ root=`cd -- "$(dirname -- "$0")" && pwd`
     "$PYTHON" setup.py build
     export BAYESDB_WIZARD_MODE=1
     export BAYESDB_DISABLE_VERSION_CHECK=1
+    export MPLBACKEND=pdf
     if [ $# -eq 0 ]; then
         # By default, when running all tests, skip tests that have
         # been marked for continuous integration by using __ci_ in
