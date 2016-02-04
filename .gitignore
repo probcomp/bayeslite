@@ -14,3 +14,4 @@
 /src/grammar.sha256.tmp
 /src/version.py
 __pycache__/
+.eggs

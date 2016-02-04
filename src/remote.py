@@ -15,7 +15,12 @@
 #   limitations under the License.
 
 import json
-from pkg_resources import parse_version
+try:
+    from pkg_resources import parse_version
+except ImportError:
+    # XXX Consider requiring setuptools
+    def parse_version(v):
+        return 1
 import requests
 import warnings
 

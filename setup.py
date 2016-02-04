@@ -148,38 +148,17 @@ class local_sdist(sdist):
         return False
     sub_commands = [('sdist_fixidioticegginfomess', fixidioticegginfomess)]
 
-# XXX Several horrible kludges here to make `python setup.py test' work:
-#
-# - Standard setputools test command searches for unittest, not
-#   pytest.
-#
-# - pytest suggested copypasta assumes . works in sys.path; we
-#   deliberately make . not work in sys.path and require ./build/lib
-#   instead, in order to force a clean build.
-#
-# - Must set PYTHONPATH too for shell tests, which fork and exec a
-#   subprocess which inherits PYTHONPATH but not sys.path.
-#
-# - build command's build_lib variable is relative to source
-#   directory, so we must assume os.getcwd() gives that.
+import sys
 class local_test(test):
+    description = "Run check.sh"
+    user_options = [('fail=', None, 'Use check.sh.')] # for distutils
     def __init__(self, *args, **kwargs):
         test.__init__(self, *args, **kwargs)
-        self.test_suite = ' '.join(test_directories)
-        self.build_lib = None
-    def finalize_options(self):
-        test.finalize_options(self)
-        # self.build_lib = ...
-        self.set_undefined_options('build', ('build_lib', 'build_lib'))
+        self.test_suite = "not None"
     def run_tests(self):
-        import pytest
-        import os
-        import sys
-        sys.path = [os.path.join(os.getcwd(), self.build_lib)] + sys.path
-        os.environ['BAYESDB_WIZARD_MODE'] = '1'
-        os.environ['BAYESDB_DISABLE_VERSION_CHECK'] = '1'
-        os.environ['PYTHONPATH'] = ':'.join(sys.path)
-        sys.exit(pytest.main(test_directories))
+        import subprocess
+        subprocess.check_call(["./check.sh"])
+        print "Using ./check.sh directly gives you more options for testing."
 
 # XXX These should be attributes of `setup', but helpful distutils
 # doesn't pass them through when it doesn't know about them a priori.
@@ -187,10 +166,6 @@ version_py = 'src/version.py'
 lemonade = 'external/lemonade/dist'
 grammars = [
     'src/grammar.y',
-]
-test_directories = [
-    'shell/tests',
-    'tests',
 ]
 
 setup(
@@ -206,6 +181,7 @@ setup(
         'crosscat>=0.1.48',
         'numpy',
         'requests',
+        'setuptools', # For parse_version in src/remote.py
     ],
     tests_require=[
         'pandas',
@@ -227,6 +203,7 @@ setup(
     },
     # Not in this release, perhaps later.
     #scripts=['shell/scripts/bayeslite'],
+    test_suite = "not None",  # Without it, run_tests is not called.
     cmdclass={
         'build_py': local_build_py,
         'sdist': local_sdist,

@@ -19,6 +19,9 @@ version=`"${PYTHON}" -c 'import sys; print sys.version[0:3]'`
 libdir="${root}/build/lib"
 plat_libdir="${libdir}.${platform}-${version}"
 export PYTHONPATH="${libdir}:${plat_libdir}${PYTHONPATH:+:${PYTHONPATH}}"
+for egg in .eggs/*.egg; do
+    export PYTHONPATH="$PYTHONPATH:$egg"
+done
 
 bindir="${root}/build/scripts-${version}"
 export PATH="${bindir}${PATH:+:${PATH}}"
