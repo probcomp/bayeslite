@@ -332,6 +332,14 @@ class BayesDB(object):
         self._sqlite3.close()
         self._sqlite3 = apsw.Connection(self.pathname)
 
+    def changes(self):
+        """Return the number of changes of the last INSERT, DELETE, or UPDATE.
+
+        This may return unexpected results after a statement that is not an
+        INSERT, DELETE, or UPDATE.
+        """
+        return self._sqlite3.changes()
+
 class IBayesDBTracer(object):
     """BayesDB articulated tracing interface.
 
