@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-#   Copyright (c) 2010-2015, MIT Probabilistic Computing Project
+#   Copyright (c) 2010-2016, MIT Probabilistic Computing Project
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ extensions = [
     'sphinx.ext.autodoc',
 ]
 
-copyright = '2010-2015, MIT Probabilistic Computing Project'
+copyright = '2010-2016, MIT Probabilistic Computing Project'
 master_doc = 'index'
 project = 'bayeslite'
 release = '0.1.3rc1'
