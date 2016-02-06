@@ -21,27 +21,7 @@ import StringIO
 import bayeslite.ast as ast
 import bayeslite.grammar as grammar
 import bayeslite.scan as scan
-
-class BQLParseError(Exception):
-    """Errors in parsing BQL.
-
-    As many parse errors as can be reasonably detected are listed
-    together.
-
-    :ivar list errors: list of strings describing parse errors
-    """
-
-    def __init__(self, errors):
-        assert 0 < len(errors)
-        self.errors = errors
-    def __str__(self):
-        if len(self.errors) == 1:
-            return self.errors[0]
-        else:
-            out = StringIO.StringIO()
-            for error in self.errors:
-                out.write('  %s\n' % (error,))
-            return out.getvalue()
+from bayeslite.exception import BQLParseError
 
 def parse_bql_phrases(scanner):
     semantics = BQLSemantics()

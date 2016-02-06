@@ -14,6 +14,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import StringIO
+
 class BayesDBException(Exception):
     """Exceptions associated with a BayesDB instance.
 
@@ -27,3 +29,26 @@ class BayesDBException(Exception):
 class BQLError(BayesDBException):
     """Errors in compiling or executing BQL."""
     pass
+
+class BQLParseError(BQLError):
+    """Errors in parsing BQL.
+
+    As many parse errors as can be reasonably detected are listed
+    together.
+
+    :ivar list errors: list of strings describing parse errors
+    """
+
+    def __init__(self, errors):
+        assert 0 < len(errors)
+        self.errors = errors
+        # XXX: Should we be capturing the associated bdb and calling super?
+
+    def __str__(self):
+        if len(self.errors) == 1:
+            return self.errors[0]
+        else:
+            out = StringIO.StringIO()
+            for error in self.errors:
+                out.write('  %s\n' % (error,))
+            return out.getvalue()
