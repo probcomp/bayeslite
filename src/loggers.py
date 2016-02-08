@@ -17,7 +17,6 @@
 from __future__ import print_function
 
 import logging
-import matplotlib.pyplot as plt
 import re
 import sys
 import traceback
