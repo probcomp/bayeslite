@@ -1,14 +1,14 @@
 #!/bin/sh
 
-set -Ceu
-
 : ${PYTHON:=python}
 
-lib_avail=`./pythenv.sh python -m pytest --version 2>&1 | grep 'This is pytest'`
+lib_avail=`./pythenv.sh ${PYTHON} -m pytest --version 2>&1 | grep 'This is pytest'`
 if [ -z "$lib_avail" ]; then
-    printf >&2 'Unable to find pytest.\n'
+    printf >&2 'Unable to find pytest. Consider running python setup.py test.\n'
     exit 1
 fi
+
+set -Ceu
 
 root=`cd -- "$(dirname -- "$0")" && pwd`
 
