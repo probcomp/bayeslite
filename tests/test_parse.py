@@ -776,3 +776,6 @@ def test_estimate_pairwise_deprecation():
 def test_parse_error_with_context():
     with raises_str(bayeslite.BQLParseError, "select ( 1 +"):
         parse_bql_string('select (1 +')
+    with raises_str(bayeslite.BQLParseError,
+                    "Syntax error near [] after [select]"):
+        parse_bql_string('select')

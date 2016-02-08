@@ -34,7 +34,7 @@ def parse_bql_phrases(scanner):
         else:
             if token[0] == 0:   # EOF
                 # Implicit ; at EOF.
-                parser.feed((grammar.T_SEMI, ';'))
+                parser.feed((grammar.T_SEMI, ''))
             parser.feed(token)
         if semantics.phrase is not None:
             phrase = semantics.phrase
