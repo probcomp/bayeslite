@@ -133,7 +133,7 @@ class BQLSemantics(object):
             self.errors.append('Skipping bad token: %s' % (text,))
         else:
             self.errors.append('Syntax error near [%s] after [%s]' % (
-                text, ' '.join([tok for (pos, tok) in self.context[:-1]])))
+                text, ' '.join([str(tok) for (pos, tok) in self.context[:-1]])))
 
     def p_bql_start(self, phrases):
         pass

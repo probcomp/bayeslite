@@ -772,3 +772,7 @@ def test_estimate_pairwise_deprecation():
     with raises_str(bayeslite.BQLParseError,
             "deprecated `ESTIMATE PAIRWISE ROW'"):
         parse_bql_string('estimate pairwise row similarity from t')
+
+def test_parse_error_with_context():
+    with raises_str(bayeslite.BQLParseError, "select ( 1 +"):
+        parse_bql_string('select (1 +')
