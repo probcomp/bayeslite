@@ -73,14 +73,16 @@ def check_logcall(logcall):
     assert 'q["b"]' == the_only_entry[2]
 
 def test_logged_query_success():
-    okstub = StubCallable()
-    lgr = loggers.CallHomeStatusLogger(post=okstub)
+    query_stub = StubCallable()
+    post_stub = StubCallable()
+    lgr = loggers.CallHomeStatusLogger(post=post_stub)
     with loggers.logged_query(logger=lgr, **THE_USUAL):
-        okstub('inside')
-    # Success after done.
-    assert 2 == len(okstub.calls)
-    assert "(('inside',), {})" == str(okstub.calls[0])
-    check_logcall(okstub.calls[1])
+        query_stub('inside')
+    assert 1 == len(query_stub.calls)
+    assert "(('inside',), {})" == str(query_stub.calls[0])
+    time.sleep(0.2)  # To let the call-home thread run, so this is less flaky.
+    assert 1 == len(post_stub.calls)
+    check_logcall(post_stub.calls[0])
 
 def test_logged_query_successful_log_failure():
     okstub = StubCallable()
@@ -92,7 +94,7 @@ def test_logged_query_successful_log_failure():
     assert "[(('inside',), {})]" == str(okstub.calls)
     # There will have been a failure on another thread,
     # and it will have been ignored.
-    time.sleep(0.2) # To let the other thread run, so this is less flaky.
+    time.sleep(0.2) # To let the call-home thread run, so this is less flaky.
     assert 1 == len(failstub.calls)
     check_logcall(failstub.calls[0])
 
