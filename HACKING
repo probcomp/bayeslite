@@ -6,22 +6,30 @@ Every commit on long-term branches including master should pass
 
    % ./check.sh
 
-which builds bayeslite and runs the automatic tests.  Please run this
+It builds bayeslite and runs the automatic smoke tests.  Please run this
 in your .git/hooks/pre-commit script during development, and in each
 commit please add or update automatic tests for any bugs you add or
-features you fix in the that commit.
+features you fix in that commit.
 
-check.sh does a clean build of bayeslite into the build/ directory and
-then either runs `py.test tests shell', if you pass it no arguments;
-or runs py.test with the arguments supplied.
+check.sh has two modes: if you pass no arguments, it runs smoke tests
+only. There are tests that are slower, use the network, or otherwise
+are better suited to testing during continuous integration only. If
+you run a particular test, e.g.:
 
-Thus, if you're hacking a limited part of bayeslite, you can, e.g.,
-run a subset of tests, and stop at the first failure, with
+  % ./check.sh --pdb tests/test_foo.py
 
-   % ./check.sh -x tests/test_frobnitz.py
+that will run even the tests that would otherwise have been run during
+continuous integration, for that file (and with --pdb it will drop you into the python debugger on the first failure). These tests are marked with
+__ci_ in their names, and you can `git grep __ci_` to find them.
 
-However, please double-check that every commit you have made passes
-all tests before publishing the commits.
+If you want to run all tests, you can
+
+   % ./check.sh tests/ shell/tests
+
+Because this may take awhile, we don't require it of all commits, but
+you should monitor the continuous integration suite, and rapidly roll
+back your change if it causes a failure.
+
 
 * Versions
 
