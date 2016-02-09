@@ -123,9 +123,6 @@ can control, via the normal Python API and the bayeslite shell.  Any
 actual nondeterminism should be clearly labelled as such, e.g. a
 future shell command to choose a seed from /dev/urandom.
 
-(Crosscat is currently nondeterministc, but this is a bug in
-Crosscat.)
-
 * Python coding style
 
 Generally follow PEP 8, with these exceptions:
