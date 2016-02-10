@@ -108,6 +108,7 @@ def test_logged_query_fail():
         assert False
     except NotImplementedError:
         pass
+    time.sleep(0.2) # To let the call-home thread run, so this is less flaky.
     assert 1 == len(okstub.calls)
     check_logcall(okstub.calls[0])
 
@@ -123,6 +124,7 @@ def test_logged_query_reporting_timeout():
     with loggers.logged_query(logger=lgr, **THE_USUAL):
         okstub('inside')
     elapsed_time = time.time() - start_time
+    time.sleep(0.2) # To let the call-home thread run, so this is less flaky.
     # Success after done.
     assert 1 == len(okstub.calls)
     assert "(('inside',), {})" == str(okstub.calls[0])
