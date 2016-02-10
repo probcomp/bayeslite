@@ -18,7 +18,9 @@ root=`cd -- "$(dirname -- "$0")" && pwd`
         # been marked for continuous integration by using __ci_ in
         # their names.  (git grep __ci_ to find these.)
         ./pythenv.sh "$PYTHON" -m pytest -k "not __ci_" \
-            tests shell/tests
+                     tests shell/tests
+    elif [ "docker" = "$1" ]; then
+        docker build -f tests/Dockerfile -t bayeslite-test .
     else
         # If args are specified, run all tests, including continuous
         # integration tests, for the selected components.
