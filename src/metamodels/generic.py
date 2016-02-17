@@ -67,6 +67,13 @@ ColnoValue = namedtuple('ColnoValue', ['colno', 'value'])
 
 class GenericState(object):
 
+    @classmethod
+    def from_json(cls):
+        raise NotImplementedError
+
+    def to_json(self):
+        raise NotImplementedError
+
     def transition_iterations(self, iterations):
         raise NotImplementedError
 
@@ -88,7 +95,14 @@ class GenericState(object):
     def predict_confidence(self, colno, rowid):
         raise NotImplementedError
 
-    def simulate(self, colnos, given_colno_values, N):
+    def simulate_missing_columns(self, rowid, colnos, N):
         raise NotImplementedError
 
-    def logpdf(self, colnos, given_colno_values):
+    def simulate_new_rows(self, colnos, given_colno_values, N):
+        raise NotImplementedError
+
+    def logpdf_missing_columns(self, rowid, target_colno_values):
+        raise NotImplementedError
+
+    def logpdf_new_rows(self, target_colno_values, given_colno_values):
+        raise NotImplementedError
