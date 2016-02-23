@@ -56,7 +56,7 @@ class ColumnValue(namedtuple('_ColumnValue', ['row', 'colno', 'value'])):
     pass
 
 
-class GenerativeProbabilityModel(object):
+class GenerativePopulationModel(object):
     '''See the BayesDB paper for the semantics.'''
 
     def simulate(self, givens, targets):
@@ -120,7 +120,7 @@ class ModelState(object):
 
     @property
     def model(self):
-        '''A GenerativeProbabilityModel that reflects the current
+        '''A GenerativePopulationModel that reflects the current
         state. This object may be invalidated by calls to transition_iterations
         or transition_seconds, but if it is, its methods must raise exceptions
         instead of silently returning wrong values.'''
