@@ -12,9 +12,27 @@ The main purposes of this project are:
     (1) Move all metamodel SQL code into a single module. (Serialization will
         not be backward compatible; existing bdbs will use CrosscatMetamodel.)
     (2) Reduce the amount of bayeslite-specific code necessary to implement a
-        new model to just the GPM interface.
+        new model to just the GPM interface. For example, GenericMetamodel will
+        have a predict_confidence method that is implemented in terms of
+        simulate.
     (3) Allow us to write alternative implementations of GenericMetamodel that
         are remote or distributed.
+
+Some open issues:
+    (1) Madeleine is skeptical of the utility of rename_column and insertmany,
+        which allow mutation of generators. She is likely to have them throw
+        NotImplementedError unless a compelling use case comes up.
+    (2) Likewise, she is skeptical of the utility of operations that work on
+        individual models at a BQL level. The first version will not support
+        that.
+    (3) Madeleine does not know how to implement row_similarity or
+        column_dependence_probability in terms of KL divergence. (She is
+        generally confused about these methods, beyond just their
+        implementation in terms of the GPM interface.)
+    (4) We can estimate column_mutual_information by randomly drawing a set of
+        rows and averaging KL((row,col1)|(row,col2)) over the rows, weighted by
+        the marginal probabilities of (row,col1). Did I get that right? I
+        haven't checked it.
 '''
 
 from bayeslite.metamodel import IBayesDBMetamodel
