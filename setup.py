@@ -89,11 +89,12 @@ def sha256_file(pathname):
 def uptodate(path_in, path_out, path_sha256):
     import errno
     try:
+        sha256_in = sha256_file(path_in).hexdigest()
+        sha256_out = sha256_file(path_out).hexdigest()
+        expected = bytes('%s\n%s\n' % (sha256_in, sha256_out))
         with open(path_sha256, 'rb') as file_sha256:
-            # Strip newlines and compare.
-            if file_sha256.next()[:-1] != sha256_file(path_in).hexdigest():
-                return False
-            if file_sha256.next()[:-1] != sha256_file(path_out).hexdigest():
+            actual = file_sha256.read(len(expected))
+            if actual != expected or file_sha256.read(1) != '':
                 return False
     except (IOError, OSError) as e:
         if e.errno != errno.ENOENT:
