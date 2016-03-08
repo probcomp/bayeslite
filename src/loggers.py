@@ -90,6 +90,8 @@ class DebugLogger(BqlLogger):
 class QuietLogger(BqlLogger):
   def info(self, _msg_format, *_values):
     pass
+  def plot(self, _suggested_name, _figure):
+    pass
   def warn(self, _msg_format, *_values):
     pass
 
