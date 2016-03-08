@@ -119,23 +119,52 @@ class LoggingLogger(BqlLogger):
 
 class CaptureLogger(BqlLogger):
   """Produces no output, but captures call details in .calls"""
-  def __init__(self):
+  def __init__(self, verbose=False):
     self.calls = []
+    self._verbose = verbose
+    self._next_capturelogger_results = []
+  def set_next_capturelogger_results(self, results):
+    """Returns results.pop(0) from each call or getattr, or None if empty."""
+    self._next_capturelogger_results = results
+  def next_capturelogger_result(self):
+    if self._next_capturelogger_results:
+      return self._next_capturelogger_results.pop(0)
+    else:
+      return None
   def info(self, msg_format, *values):
+    if self._verbose:
+      print('INFO: '+msg_format, *values)
     self.calls.append(('info', msg_format, values))
   def warn(self, msg_format, *values):
+    if self._verbose:
+      print('WARN: '+msg_format, *values)
     self.calls.append(('warn', msg_format, values))
   def plot(self, suggested_name, figure):
+    if self._verbose:
+      if (hasattr(figure, 'show')):
+        figure.show()
+      else:
+        print(repr(figure))
     self.calls.append(('plot', suggested_name, figure))
   def debug(self, *args, **kwargs):
+    if self._verbose:
+      print("DEBUG: "+repr(args)+repr(kwargs))
     self.calls.append(('debug', args, kwargs))
   def exception(self, *args, **kwargs):
     self.calls.append(('exception', args, kwargs, sys.exc_info()))
+  def result(self, msg_format, *values):
+    if self._verbose:
+      print('RSLT: '+msg_format, *values)
+    self.calls.append(('result', msg_format, values))
   def __call__(self, *args, **kwargs):
+    if self._verbose:
+      print("CALL: "+repr(args)+repr(kwargs))
     self.calls.append(('call', args, kwargs))
+    return self.next_capturelogger_result()
   def __getattr__(self, name):
     def _capture(*args, **kwargs):
       self.calls.append((name, args, kwargs))
+      return self.next_capturelogger_result()
     return _capture
 
 PROBCOMP_URL = 'https://projects.csail.mit.edu/probcomp/bayesdb/save_sessions.cgi'
