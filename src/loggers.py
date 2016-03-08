@@ -215,7 +215,7 @@ def logged_query(query_string=None, bindings=(), name=None, logger=None):
   if logger is None:
     logger = CallHomeStatusLogger()
 
-  if name is None:
+  if name is None or name is False:
     yield  # Do no logging without a name to log by.
   else:
     start_time = time.time()
