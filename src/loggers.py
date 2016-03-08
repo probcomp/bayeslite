@@ -198,7 +198,9 @@ class CallHomeStatusLogger(BqlLogger):
 import json
 def query_info_to_json(session_id, logtype, query, bindings,
                        start_time, error, end_time):
-  session = {'entries': [[session_id, logtype, query + json.dumps(bindings),
+  # Doubly-nested list because elsewhere we log more than one entry in each
+  # such json message. elsewhere=sessions.py
+  session = {'entries': [[session_id, logtype, (query, bindings),
                           start_time, error, end_time]],
              'fields': ['session_id', 'type', 'data',
                         'start_time', 'error', 'end_time'],

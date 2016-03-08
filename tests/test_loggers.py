@@ -70,7 +70,7 @@ def check_logcall(logcall):
     entries = logdata['entries']
     the_only_entry = entries[0]
     assert "test_logged_query_success" == the_only_entry[0]
-    assert 'q["b"]' == the_only_entry[2]
+    assert ['q', ['b']] == the_only_entry[2]
 
 def test_logged_query_success():
     query_stub = StubCallable()
