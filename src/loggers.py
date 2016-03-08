@@ -221,11 +221,11 @@ def logged_query(query_string=None, bindings=(), name=None, logger=None):
     start_time = time.time()
     try:
       yield
-      logger.info(query_info_to_json(
-          name, 'logged_query', query_string, bindings,
-          start_time, None, time.time()))
     except:
       logger.warn(query_info_to_json(
           name, 'logged_query', query_string, bindings,
           start_time, traceback.format_exc(), time.time()))
       raise
+    logger.info(query_info_to_json(
+        name, 'logged_query', query_string, bindings,
+        start_time, None, time.time()))

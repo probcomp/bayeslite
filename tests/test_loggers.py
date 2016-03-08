@@ -99,6 +99,7 @@ def test_logged_query_successful_log_failure():
     check_logcall(failstub.calls[0])
 
 def test_logged_query_fail():
+    # If the query itself fails, we should not impede that floating to top.
     failstub = StubCallable(throw=NotImplementedError('foo'))
     okstub = StubCallable()
     lgr = loggers.CallHomeStatusLogger(post=okstub)
