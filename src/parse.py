@@ -181,7 +181,6 @@ class BQLSemantics(object):
     # BQL Model Definition Language
     def p_command_creategen(self, defaultp, name, ifnotexists, table,
             metamodel, schema):
-        self._ensure_wizard_mode(name)
         return ast.CreateGen(defaultp, name, ifnotexists, table,
             metamodel, schema)
     def p_command_dropgen(self, ifexists, name):
@@ -210,7 +209,6 @@ class BQLSemantics(object):
     # BQL Model Analysis Language
     def p_command_init_models(self, n, ifnotexists, generator):
         # XXX model config
-        self._ensure_wizard_mode(n)
         return ast.InitModels(ifnotexists, generator, n, config=None)
     def p_command_analyze_models(self, generator, models, anlimit, anckpt,
             wait):
