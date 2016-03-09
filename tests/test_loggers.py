@@ -84,6 +84,31 @@ def test_logged_query_success():
     assert 1 == len(post_stub.calls)
     check_logcall(post_stub.calls[0])
 
+def test_logged_query_dataframe():
+    from pandas import DataFrame
+    df = DataFrame({'a': [1, 2.3, -4], # complex(4, -5)],
+                    # Complex is broken, even with the default
+                    # handler special case.
+                    # See https://github.com/pydata/pandas/issues/12554
+                    'b': [float('nan'), None, 'N/A']})
+
+    query_stub = StubCallable()
+    post_stub = StubCallable()
+    lgr = loggers.CallHomeStatusLogger(post=post_stub)
+    with loggers.logged_query(logger=lgr,
+                              query_string='q', bindings= (df,), name='n'):
+        query_stub('inside')
+    assert 1 == len(query_stub.calls)
+    assert "(('inside',), {})" == str(query_stub.calls[0])
+    time.sleep(0.2)  # To let the call-home thread run, so this is less flaky.
+    assert 1 == len(post_stub.calls)
+    posted = post_stub.calls[0][1]['data']['session_json']
+    data = json.loads(posted)
+    df = data['entries'][0][2][1]
+    assert ['{"a":{"0":1.0,"1":2.3,"2":-4.0},'
+            # {"mathjs":"Complex","re":4,"im":-5}},' Complex broken. See above.
+            '"b":{"0":null,"1":null,"2":"N\/A"}}'] == df
+
 def test_logged_query_successful_log_failure():
     okstub = StubCallable()
     failstub = StubCallable(throw=NotImplementedError('foo'))

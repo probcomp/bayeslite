@@ -196,6 +196,26 @@ class CallHomeStatusLogger(BqlLogger):
         # I don't care if it finishes. We tried.
 
 import json
+class NpPdEncoder(json.JSONEncoder):
+  # disable method-hidden because https://github.com/PyCQA/pylint/issues/414
+  def default(self, obj): # pylint: disable=method-hidden
+    try:
+      if hasattr(obj, 'to_json'):
+        if 'default_handler' in obj.to_json.__code__.co_varnames:
+          return obj.to_json(default_handler=NpPdEncoder)
+        else:
+          return obj.to_json()
+      if hasattr(obj, 'toJSON'):
+        return obj.toJSON()
+      if hasattr(obj,'to_dict'):
+        return obj.to_dict()
+      if isinstance(obj, complex):
+        return {'mathjs' : 'Complex', 're' : x.real, 'im' : x.imag}
+        # See discussion at https://github.com/pydata/pandas/issues/12554
+      return json.JSONEncoder.default(self, obj)
+    except Exception as e:
+      return repr(e)
+
 def query_info_to_json(session_id, logtype, query, bindings,
                        start_time, error, end_time):
   # Doubly-nested list because elsewhere we log more than one entry in each
@@ -206,7 +226,7 @@ def query_info_to_json(session_id, logtype, query, bindings,
                         'start_time', 'error', 'end_time'],
              'version': __version__,
   }
-  return json.dumps(session)
+  return json.dumps(session, cls=NpPdEncoder)
 
 import traceback
 from contextlib import contextmanager
