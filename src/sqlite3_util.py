@@ -16,15 +16,15 @@
 
 """SQLite3 utilities."""
 
+import apsw
 import binascii
 import contextlib
 import os
-import sqlite3
 
 @contextlib.contextmanager
 def sqlite3_connection(*args, **kwargs):
     """SQLite3 connection context manager.  On exit, runs close."""
-    connection = sqlite3.connect(*args, isolation_level=None, **kwargs)
+    connection = apsw.Connection(*args, **kwargs)
     try:
         yield connection
     finally:
