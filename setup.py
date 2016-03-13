@@ -123,6 +123,7 @@ def generate_parser(lemonade, path_y):
     print 'generating %s -> %s' % (path_y, path_py)
     distutils.spawn.spawn([
         '/usr/bin/env', 'PYTHONPATH=' + lemonade,
+        sys.executable,
         lemonade + '/bin/lemonade',
         '-s',                   # Write statistics to stdout.
         path_y,
