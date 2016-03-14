@@ -10,9 +10,7 @@ RUN         apt-get update -qq
 RUN apt-get install -y -qq python2.7-dev python-pip apt-utils pkg-config \
     libboost-dev python-numpy python-scipy python-pandas
 
-# For installation: setuptools
-# For testing: pexpect, cython
-RUN pip -q install setuptools pexpect cython
+RUN pip -q install setuptools cython
 
 RUN BOOST_ROOT=/usr/include pip -q install crosscat
 
@@ -25,4 +23,5 @@ COPY shell ./shell
 RUN for d in tests shell; do find $d -name __pycache__ -o -name "*.pyc" -exec rm -fr {} \; ; done
 
 RUN     pip -q install .
+RUN     python setup.py test  # Install any tests_require
 RUN     ./check.sh tests/ shell/tests/
