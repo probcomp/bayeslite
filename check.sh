@@ -20,7 +20,8 @@ root=`cd -- "$(dirname -- "$0")" && pwd`
         ./pythenv.sh "$PYTHON" -m pytest -k "not __ci_" \
                      tests shell/tests
     elif [ "docker" = "$1" ]; then
-        docker build -f tests/Dockerfile -t bayeslite-test .
+        shift
+        docker build -f tests/Dockerfile -t bayeslite-test "$@" .
     else
         # If args are specified, run all tests, including continuous
         # integration tests, for the selected components.
