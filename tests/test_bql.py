@@ -74,22 +74,35 @@ def empty(cursor):
     with pytest.raises(StopIteration):
         cursor.next()
 
+from flaky import flaky
+@flaky(max_runs=2, min_passes=1)
 def test_conditional_probability():
     with test_core.t1() as (bdb, _generator_id):
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 1 iteration wait')
-        q0 = 'estimate probability of age = 8 by t1_cc'
-        q1 = 'estimate probability of age = 8 given () by t1_cc'
-        assert bdb.execute(q0).fetchvalue() == bdb.execute(q1).fetchvalue()
-        q2 = 'estimate probability of age = 8 given (weight = 16) by t1_cc'
-        assert bdb.execute(q0).fetchvalue() < bdb.execute(q2).fetchvalue()
-        bdb.execute('estimate probability of value 8'
-            ' given (weight = 16) from columns of t1_cc').fetchall()
+        bdb.execute('''create generator t1_cond_prob_cc for t1 using
+                       crosscat(age numerical, weight numerical,
+                           dependent(age, weight));''')
+        bdb.execute('initialize 1 model for t1_cond_prob_cc')
+        bdb.execute('analyze t1_cond_prob_cc for 1 iteration wait')
+        q0 = 'estimate probability of age = 8 by t1_cond_prob_cc'
+        q1 = 'estimate probability of age = 8 given () by t1_cond_prob_cc'
+        age_is_8 = bdb.execute(q0).fetchvalue()
+        assert age_is_8 == bdb.execute(q1).fetchvalue()
+        q2 = '''estimate probability of age = 8 given (weight = 16)
+                by t1_cond_prob_cc'''
+        age_is_8_given_weight_is_16 = bdb.execute(q2).fetchvalue()
+        assert age_is_8 < age_is_8_given_weight_is_16
 
+        probs = bdb.execute(
+            'estimate probability of value 8 given (weight = 16)'
+            ' from columns of t1_cond_prob_cc').fetchall()
+#        assert [(age_is_8_given_weight_is_16,), (0,)] == probs
+#        https://github.com/probcomp/bayeslite/issues/380
+
+@flaky(max_runs=2, min_passes=1)
 def test_joint_probability():
     with test_core.t1() as (bdb, _generator_id):
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 1 iteration wait')
+        bdb.execute('initialize 10 models for t1_cc')
+        bdb.execute('analyze t1_cc for 10 iterations wait')
         q0 = 'estimate probability of age = 8 by t1_cc'
         q1 = 'estimate probability of (age = 8) by t1_cc'
         assert bdb.execute(q0).fetchvalue() == bdb.execute(q1).fetchvalue()
