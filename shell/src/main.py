@@ -63,11 +63,11 @@ def run(stdin, stdout, stderr, argv):
     if args.jobs != 1:
         import crosscat.MultiprocessingEngine as ccme
         jobs = args.jobs if args.jobs > 0 else None
-        crosscat = ccme.MultiprocessingEngine(seed=args.seed, cpu_count=jobs)
+        metamodel = CrosscatMetamodel(
+            ccme.MultiprocessingEngine, cckwargs={'pool': ccme.Pool(jobs)})
     else:
         import crosscat.LocalEngine as ccle
-        crosscat = ccle.LocalEngine(seed=args.seed)
-    metamodel = CrosscatMetamodel(crosscat)
+        metamodel = CrosscatMetamodel(ccle.LocalEngine)
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)
     bdbshell = shell.Shell(bdb, 'crosscat', stdin, stdout, stderr)
     with hook.set_current_shell(bdbshell):

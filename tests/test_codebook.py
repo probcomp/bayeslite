@@ -51,12 +51,12 @@ def test_codebook_value_map():
         ANALYZE dummy_cc
         SIMULATE specifying `city` = `LA` (throws KeyError)
     '''
-    
+
     with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
-        cc = crosscat.LocalEngine.LocalEngine(seed=0)
+        cc = crosscat.LocalEngine.LocalEngine
         ccme = CrosscatMetamodel(cc)
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
-        
+
         bayeslite.bayesdb_read_csv(bdb,'dummy', dummy_data,
             header=True,create=True)
 

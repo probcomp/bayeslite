@@ -27,7 +27,7 @@ dha_csv = os.path.join(root, 'dha.csv')
 
 def test_subsample():
     with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
-        cc = crosscat.LocalEngine.LocalEngine(seed=0)
+        cc = crosscat.LocalEngine.LocalEngine
         metamodel = CrosscatMetamodel(cc)
         bayeslite.bayesdb_register_metamodel(bdb, metamodel)
         with open(dha_csv, 'rU') as f:

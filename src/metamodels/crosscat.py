@@ -22,6 +22,9 @@ This module implements the :class:`bayeslite.IBayesDBMetamodel`
 interface for Crosscat.
 """
 
+# For the EngineTemplate import
+from __future__ import absolute_import
+
 import apsw
 import itertools
 import json
@@ -33,8 +36,8 @@ import bayeslite.core as core
 import bayeslite.guess as guess
 import bayeslite.metamodel as metamodel
 import bayeslite.weakprng as weakprng
-import crosscat_generator_schema
-import crosscat_theta_validator
+from bayeslite.metamodels import crosscat_generator_schema
+from bayeslite.metamodels import crosscat_theta_validator
 
 from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
@@ -42,6 +45,9 @@ from bayeslite.stats import arithmetic_mean
 from bayeslite.util import casefold
 from bayeslite.util import cursor_value
 from bayeslite.util import unique
+
+from crosscat.EngineTemplate import EngineTemplate
+from crosscat.MultiprocessingEngine import MultiprocessingEngine, Pool
 
 crosscat_schema_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('crosscat', 1);
@@ -209,6 +215,7 @@ CREATE TABLE bayesdb_crosscat_column_dependency (
 );
 '''
 
+
 class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
     """Crosscat metamodel for BayesDB.
 
@@ -220,14 +227,61 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
 
     Internally, the Crosscat metamodel adds SQL tables to the database
     with names that begin with ``bayesdb_crosscat_``.
+
+    `crosscat` can be a crosscat engine instance or constructor. Prefer the
+    latter case, as that way bayeslite stochasticity is passed to the
+    constructor `seed` argument when engines are constructed for crosscat
+    queries (which at the time of writing happens every time bayeslite makes a
+    query.) The 'crosscat as instance' case is kept for backwards
+    compatibility.
+
+    Arguments to the constructor can be passed by ccargs and cckwargs. If using
+    a crosscat MultiprocessingEngine, the process pool must be passed as a
+    'pool' argument via cckwargs. It would not do for a new process pool to be
+    created every time a new query is made.
+
     """
 
-    def __init__(self, crosscat, subsample=None):
-        if subsample is None:
-            subsample = False
-        self._crosscat = crosscat
-        self._subsample = subsample
+    def __init__(self, crosscat, subsample=None, ccargs=None,
+                 cckwargs=None):
+        if isinstance(crosscat, EngineTemplate):
+            self._crosscat = crosscat
+            if (ccargs, cckwargs) != (None, None):
+                raise ValueError('ccargs, cckwargs are only for when you'
+                                 'pass a constructor.')
+        else:
+            if not issubclass(crosscat, EngineTemplate):
+                raise ValueError(
+                    '`crosscat` must be crosscat engine or engine constructor')
+            if issubclass(crosscat, MultiprocessingEngine):
+                # If using a crosscat MultiprocessingEngine, the process pool
+                # must be passed as a 'pool' argument via cckwargs. It would
+                # not do for a new process pool to be created every time a new
+                # query is made.
+                if not isinstance(cckwargs.get('pool', None), Pool):
+                    raise ValueError(
+                        'If using MultiprocessingEngine constructor, cckwargs '
+                        'must contain a process pool')
+                if cckwargs.get('cpu_count', None) is not None:
+                    raise ValueError(
+                        'If using MultiprocessingEngine constructor, cckwargs '
+                        'must not contain cpu_count')
+            self._crosscat = crosscat
+            self.ccargs = ccargs if ccargs is not None else []
+            self.cckwargs = cckwargs if cckwargs is not None else {}
+        self._subsample = False if subsample is None else subsample
         self._theta_validator = crosscat_theta_validator.Validator()
+
+    def _crosscat_engine(self, bdb):
+        if isinstance(self._crosscat, EngineTemplate):
+            return self._crosscat
+        # XXX with so few seeds, the optimistic scenario is that someone is
+        # going to birthday-paradox themselves. We need an RNG on the crosscat
+        # side with a bigger seed space. Python's randint can take an arbitrary
+        # range, here, but crosscat can't take a bigger seed.
+        seed = bdb._py_prng.randint(0, 2**32-1)
+        cckwargs = dict(self.cckwargs, seed=seed)
+        return self._crosscat(*self.ccargs, **cckwargs)
 
     def _crosscat_cache_nocreate(self, bdb):
         if bdb.cache is None:
@@ -403,7 +457,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             if len(rows) > 0:
                 # Need to put more stuff into the subsample temporarily
                 T = self._crosscat_data(bdb, generator_id, M_c)
-                X_L_list, X_D_list, T = self._crosscat.insert(
+                X_L_list, X_D_list, T = self._crosscat_engine(bdb).insert(
                     M_c=M_c,
                     T=T,
                     X_L_list=X_L_list,
@@ -794,7 +848,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 'row_initialization': 'from_the_prior',
             }
         M_c = self._crosscat_metadata(bdb, generator_id)
-        X_L_list, X_D_list = self._crosscat.initialize(
+        X_L_list, X_D_list = self._crosscat_engine(bdb).initialize(
             M_c=M_c,
             M_r=None,           # XXX
             T=self._crosscat_data(bdb, generator_id, M_c),
@@ -811,7 +865,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             for colno1, colno2, dep in
                 crosscat_gen_column_dependencies(bdb, generator_id)]
         if 0 < len(dep_constraints):
-            X_L_list, X_D_list = self._crosscat.ensure_col_dep_constraints(
+            engine = self._crosscat_engine(bdb)
+            X_L_list, X_D_list = engine.ensure_col_dep_constraints(
                 M_c=M_c,
                 M_r=None,
                 T=self._crosscat_data(bdb, generator_id, M_c),
@@ -944,7 +999,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 iterations_in_ckpt = 0
                 while True:
                     X_L_list_0 = X_L_list
-                    X_L_list, X_D_list, diagnostics = self._crosscat.analyze(
+                    engine = self._crosscat_engine(bdb)
+                    X_L_list, X_D_list, diagnostics = engine.analyze(
                         M_c=M_c,
                         T=T,
                         do_diagnostics=True,
@@ -1056,7 +1112,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
         cc_colno0 = crosscat_cc_colno(bdb, generator_id, colno0)
         cc_colno1 = crosscat_cc_colno(bdb, generator_id, colno1)
-        r = self._crosscat.mutual_information(
+        r = self._crosscat_engine(bdb).mutual_information(
             M_c=self._crosscat_metadata(bdb, generator_id),
             X_L_list=X_L_list,
             X_D_list=X_D_list,
@@ -1078,7 +1134,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         [given_row_id, target_row_id], X_L_list, X_D_list = \
             self._crosscat_get_rows(bdb, generator_id, [rowid, target_rowid],
                 X_L_list, X_D_list)
-        return self._crosscat.similarity(
+        return self._crosscat_engine(bdb).similarity(
             M_c=self._crosscat_metadata(bdb, generator_id),
             X_L_list=X_L_list,
             X_D_list=X_D_list,
@@ -1100,7 +1156,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             self._crosscat_get_row(bdb, generator_id, rowid, X_L_list,
                 X_D_list)
         cc_colno = crosscat_cc_colno(bdb, generator_id, colno)
-        code, confidence = self._crosscat.impute_and_confidence(
+        code, confidence = self._crosscat_engine(bdb).impute_and_confidence(
             M_c=M_c,
             X_L=X_L_list,
             X_D=X_D_list,
@@ -1124,7 +1180,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
         Q, Y, X_L_list, X_D_list = self._crosscat_remap_two(
             bdb, generator_id, X_L_list, X_D_list, targets, constraints)
-        raw_outputs = self._crosscat.simple_predictive_sample(
+        engine = self._crosscat_engine(bdb)
+        raw_outputs = engine.simple_predictive_sample(
             M_c=M_c,
             X_L=X_L_list,
             X_D=X_D_list,
@@ -1155,7 +1212,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
         Q, Y, X_L_list, X_D_list = self._crosscat_remap_two(
             bdb, generator_id, X_L_list, X_D_list, targets, constraints)
-        r = self._crosscat.predictive_probability_multistate(
+        r = self._crosscat_engine(bdb).predictive_probability_multistate(
             M_c=M_c,
             X_L_list=X_L_list,
             X_D_list=X_D_list,
@@ -1215,7 +1272,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             modelnos = [modelno for modelno, _theta_json in models]
             thetas = [json.loads(theta_json)
                 for _modelno, theta_json in models]
-            X_L_list, X_D_list, T = self._crosscat.insert(
+            X_L_list, X_D_list, T = self._crosscat_engine(bdb).insert(
                 M_c=M_c,
                 T=T,
                 X_L_list=[theta['X_L'] for theta in thetas],

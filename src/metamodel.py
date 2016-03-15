@@ -27,7 +27,7 @@ that for illustration::
    from bayeslite.metamodels.crosscat import CrosscatMetamodel
 
    bdb = bayeslite.bayesdb_open(pathname='foo.bdb', builtin_metamodels=False)
-   cc = crosscat.LocalEngine.LocalEngine(seed=0)
+   cc = crosscat.LocalEngine.LocalEngine
    bayeslite.bayesdb_register_metamodel(bdb, CrosscatMetamodel(cc))
 
 Then you can model a table with Crosscat and query the probable

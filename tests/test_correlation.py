@@ -22,7 +22,7 @@ from bayeslite.math_util import relerr
 
 def test_correlation():
     with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
-        cc = crosscat.LocalEngine.LocalEngine(seed=0)
+        cc = crosscat.LocalEngine.LocalEngine
         ccme = CrosscatMetamodel(cc)
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
         bdb.sql_execute('CREATE TABLE u(id, c0, c1, n0, n1, r0, r1)')
