@@ -76,8 +76,8 @@ def empty(cursor):
 
 def test_conditional_probability():
     with test_core.t1() as (bdb, _generator_id):
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 1 iteration wait')
+        bdb.execute('initialize 10 model for t1_cc')
+        bdb.execute('analyze t1_cc for 10 iteration wait')
         q0 = 'estimate probability of age = 8 by t1_cc'
         q1 = 'estimate probability of age = 8 given () by t1_cc'
         assert bdb.execute(q0).fetchvalue() == bdb.execute(q1).fetchvalue()
@@ -88,8 +88,8 @@ def test_conditional_probability():
 
 def test_joint_probability():
     with test_core.t1() as (bdb, _generator_id):
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 1 iteration wait')
+        bdb.execute('initialize 10 model for t1_cc')
+        bdb.execute('analyze t1_cc for 10 iteration wait')
         q0 = 'estimate probability of age = 8 by t1_cc'
         q1 = 'estimate probability of (age = 8) by t1_cc'
         assert bdb.execute(q0).fetchvalue() == bdb.execute(q1).fetchvalue()
