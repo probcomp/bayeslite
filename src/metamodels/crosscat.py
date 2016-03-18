@@ -228,11 +228,9 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
     Internally, the Crosscat metamodel adds SQL tables to the database
     with names that begin with ``bayesdb_crosscat_``.
 
-    `crosscat` can be a crosscat engine instance or constructor. Prefer the
-    latter case, as that way bayeslite stochasticity is passed to the
-    constructor `seed` argument when engines are constructed for crosscat
-    queries (which at the time of writing happens every time bayeslite makes a
-    query.) The 'crosscat as instance' case is kept for backwards
+    `crosscat` can be a crosscat engine instance or constructor. Prefer to pass
+    a constructor, since that way the engine obtains a random seed from the
+    BayesDB object. The 'crosscat as instance' case is kept for backwards
     compatibility.
 
     Arguments to the constructor can be passed by ccargs and cckwargs. If using
@@ -246,9 +244,10 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                  cckwargs=None):
         if isinstance(crosscat, EngineTemplate):
             self._crosscat = crosscat
-            if (ccargs, cckwargs) != (None, None):
-                raise ValueError('ccargs, cckwargs are only for when you'
-                                 'pass a constructor.')
+            if ccargs is not None or cckwargs is not None:
+                raise ValueError('Use ccargs, cckwargs only if you are '
+                                 'passing a constructor in the "crosscat" '
+                                 'argument.')
         else:
             if not issubclass(crosscat, EngineTemplate):
                 raise ValueError(
