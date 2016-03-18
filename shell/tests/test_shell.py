@@ -18,6 +18,7 @@ import contextlib
 import os
 import pexpect
 import pytest
+import sys
 import tempfile
 
 from bayeslite import __version__ as bayeslite_version
@@ -71,7 +72,7 @@ class spawnjr(pexpect.spawn):
 BAYESLITE = os.path.join(ROOT, '..', 'scripts', 'bayeslite')
 
 def spawn_bayeslite(options):
-    return spawnjr(BAYESLITE + ' -q ' + options)
+    return spawnjr(sys.executable + ' ' + BAYESLITE + ' -q ' + options)
 
 
 @contextlib.contextmanager
