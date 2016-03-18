@@ -45,8 +45,8 @@ def local_crosscat():
     return crosscat.LocalEngine.LocalEngine
 
 def multiprocessing_crosscat():
-    return (crosscat.MultiprocessingEngine.MultiprocessingEngine,
-            {'pool': crosscat.MultiprocessingEngine.Pool()})
+    return crosscat.MultiprocessingEngine.MultiprocessingEngineFactoryFromPool(
+        crosscat.MultiprocessingEngine.Pool())
 
 @contextlib.contextmanager
 def bayesdb(metamodel=None, **kwargs):
@@ -285,8 +285,7 @@ def t1_subcat():
         columns=['label CATEGORICAL', 'weight CATEGORICAL'])
 
 def t1_mp():
-    crosscat, cckwargs = multiprocessing_crosscat()
-    metamodel = CrosscatMetamodel(crosscat, cckwargs=cckwargs)
+    metamodel = CrosscatMetamodel(multiprocessing_crosscat())
     return bayesdb_generator(bayesdb(metamodel=metamodel),
         't1', 't1_cc', t1_schema, t1_data,
          columns=['label CATEGORICAL', 'age NUMERICAL', 'weight NUMERICAL'])

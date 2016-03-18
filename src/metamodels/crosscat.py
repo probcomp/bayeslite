@@ -215,7 +215,6 @@ CREATE TABLE bayesdb_crosscat_column_dependency (
 );
 '''
 
-
 class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
     """Crosscat metamodel for BayesDB.
 
@@ -240,34 +239,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
 
     """
 
-    def __init__(self, crosscat, subsample=None, ccargs=None,
-                 cckwargs=None):
-        if isinstance(crosscat, EngineTemplate):
-            self._crosscat = crosscat
-            if ccargs is not None or cckwargs is not None:
-                raise ValueError('Use ccargs, cckwargs only if you are '
-                                 'passing a constructor in the "crosscat" '
-                                 'argument.')
-        else:
-            if not issubclass(crosscat, EngineTemplate):
-                raise ValueError(
-                    '`crosscat` must be crosscat engine or engine constructor')
-            if issubclass(crosscat, MultiprocessingEngine):
-                # If using a crosscat MultiprocessingEngine, the process pool
-                # must be passed as a 'pool' argument via cckwargs. It would
-                # not do for a new process pool to be created every time a new
-                # query is made.
-                if not isinstance(cckwargs.get('pool', None), Pool):
-                    raise ValueError(
-                        'If using MultiprocessingEngine constructor, cckwargs '
-                        'must contain a process pool')
-                if cckwargs.get('cpu_count', None) is not None:
-                    raise ValueError(
-                        'If using MultiprocessingEngine constructor, cckwargs '
-                        'must not contain cpu_count')
-            self._crosscat = crosscat
-            self.ccargs = ccargs if ccargs is not None else []
-            self.cckwargs = cckwargs if cckwargs is not None else {}
+    def __init__(self, crosscat, subsample=None):
+        self._crosscat = crosscat
         self._subsample = False if subsample is None else subsample
         self._theta_validator = crosscat_theta_validator.Validator()
 
@@ -279,8 +252,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         # side with a bigger seed space. Python's randint can take an arbitrary
         # range, here, but crosscat can't take a bigger seed.
         seed = bdb._py_prng.randint(0, 2**32-1)
-        cckwargs = dict(self.cckwargs, seed=seed)
-        return self._crosscat(*self.ccargs, **cckwargs)
+        return self._crosscat(seed=seed)
 
     def _crosscat_cache_nocreate(self, bdb):
         if bdb.cache is None:
