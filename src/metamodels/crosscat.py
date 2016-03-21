@@ -244,8 +244,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
     >>> from bayeslite import bayesdb_register_metamodel as register_metamodel
     >>> from bayeslite import bayesdb_open
     >>> pool = mpe.Pool(4)
-    >>> thelambda = lambda s: mpe.MultiprocessingEngine(seed=s, pool=pool)
-    >>> metamodel = cc.CrosscatMetamodel(thelambda)
+    >>> engine_factory = lambda s: mpe.MultiprocessingEngine(seed=s, pool=pool)
+    >>> metamodel = cc.CrosscatMetamodel(engine_factory)
     >>> bdb = bayesdb_open(builtin_metamodels=False)
     >>> register_metamodel(bdb, metamodel)
 
@@ -254,7 +254,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
     crosscat.MultiprocessingEngine.MultiprocessingEngineFactoryFromPool is
     provided as a convenience function:
 
-    >>> thelambda = mpe.MultiprocessingEngineFactoryFromPool(pool)
+    >>> engine_factory = mpe.MultiprocessingEngineFactoryFromPool(pool)
     >>> metamodel = cc.CrosscatMetamodel(thelambda)
     >>> register_metamodel(bdb, metamodel)
 
