@@ -239,22 +239,24 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
 
     E.g.
 
-    >>> import bayeslite.metamodels.crosscat as cc
     >>> from crosscat import MultiprocessingEngine as mpe
     >>> import bayeslite.metamodels.crosscat as cc
-    >>> from bayeslite import bayesdb_register_metamodel as rg
-    >>> from bayeslite import bayesdb_open as bp
+    >>> from bayeslite import bayesdb_register_metamodel as register_metamodel
+    >>> from bayeslite import bayesdb_open
     >>> pool = mpe.Pool(4)
     >>> thelambda = lambda s: mpe.MultiprocessingEngine(seed=s, pool=pool)
-    >>> rg(bp(builtin_metamodels=False), cc.CrosscatMetamodel(thelambda))
+    >>> metamodel = cc.CrosscatMetamodel(thelambda)
+    >>> bdb = bayesdb_open(builtin_metamodels=False)
+    >>> register_metamodel(bdb, metamodel)
 
     Since people will often want in particular to create MultiprocessingEngine
     factories with a fixed thread pool,
     crosscat.MultiprocessingEngine.MultiprocessingEngineFactoryFromPool is
     provided as a convenience function:
 
-    >>> rg(bg(builtin_metamodels=False, cc.CrosscatMetamodel(
-            mpe.MultiprocessingEngineFactoryFromPool(pool))))
+    >>> thelambda = mpe.MultiprocessingEngineFactoryFromPool(pool)
+    >>> metamodel = cc.CrosscatMetamodel(thelambda)
+    >>> register_metamodel(bdb, metamodel)
 
     """
 
