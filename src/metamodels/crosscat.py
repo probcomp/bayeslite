@@ -227,15 +227,15 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
     Internally, the Crosscat metamodel adds SQL tables to the database
     with names that begin with ``bayesdb_crosscat_``.
 
-    `crosscat` can be a crosscat engine instance or constructor. Prefer to pass
-    a constructor, since that way a new crosscat engine is constructed for each
-    query, and its random seed is taken from the BayesDB object. The 'crosscat
-    as instance' case is kept for backwards compatibility.
+    `crosscat` can be a crosscat engine instance or a constructor callable
+    which takes a seed. Prefer to pass a constructor, since that way a new
+    crosscat engine is constructed for each query, and its random seed is taken
+    from the BayesDB object. The 'crosscat as instance' case is kept for
+    backwards compatibility.
 
-    Arguments to the constructor can be passed by ccargs and cckwargs. If using
-    a crosscat MultiprocessingEngine, the process pool must be passed as a
-    'pool' argument via cckwargs. It would not do for a new process pool to be
-    created every time a new query is made.
+    If using a crosscat MultiprocessingEngine, the process pool must be passed
+    as a 'pool' argument. It would not do for a new process pool to be created
+    every time a new query is made.
 
     E.g.
 
@@ -245,13 +245,16 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
     >>> from bayeslite import bayesdb_register_metamodel as rg
     >>> from bayeslite import bayesdb_open as bp
     >>> pool = mpe.Pool(4)
-    >>> thelambda = lambda: mpe.MultiprocessingEngine(pool=pool)
+    >>> thelambda = lambda s: mpe.MultiprocessingEngine(seed=s, pool=pool)
     >>> rg(bp(builtin_metamodels=False), cc.CrosscatMetamodel(thelambda))
 
     Since people will often want in particular to create MultiprocessingEngine
     factories with a fixed thread pool,
     crosscat.MultiprocessingEngine.MultiprocessingEngineFactoryFromPool is
-    provided as a convenience function.
+    provided as a convenience function:
+
+    >>> rg(bg(builtin_metamodels=False, cc.CrosscatMetamodel(
+            mpe.MultiprocessingEngineFactoryFromPool(pool))))
 
     """
 
