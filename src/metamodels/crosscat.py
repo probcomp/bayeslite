@@ -36,8 +36,8 @@ import bayeslite.core as core
 import bayeslite.guess as guess
 import bayeslite.metamodel as metamodel
 import bayeslite.weakprng as weakprng
-from bayeslite.metamodels import crosscat_generator_schema
-from bayeslite.metamodels import crosscat_theta_validator
+import crosscat_generator_schema
+import crosscat_theta_validator
 
 from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
@@ -228,14 +228,30 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
     with names that begin with ``bayesdb_crosscat_``.
 
     `crosscat` can be a crosscat engine instance or constructor. Prefer to pass
-    a constructor, since that way the engine obtains a random seed from the
-    BayesDB object. The 'crosscat as instance' case is kept for backwards
-    compatibility.
+    a constructor, since that way a new crosscat engine is constructed for each
+    query, and its random seed is taken from the BayesDB object. The 'crosscat
+    as instance' case is kept for backwards compatibility.
 
     Arguments to the constructor can be passed by ccargs and cckwargs. If using
     a crosscat MultiprocessingEngine, the process pool must be passed as a
     'pool' argument via cckwargs. It would not do for a new process pool to be
     created every time a new query is made.
+
+    E.g.
+
+    >>> import bayeslite.metamodels.crosscat as cc
+    >>> from crosscat import MultiprocessingEngine as mpe
+    >>> import bayeslite.metamodels.crosscat as cc
+    >>> from bayeslite import bayesdb_register_metamodel as rg
+    >>> from bayeslite import bayesdb_open as bp
+    >>> pool = mpe.Pool(4)
+    >>> thelambda = lambda: mpe.MultiprocessingEngine(pool=pool)
+    >>> rg(bp(builtin_metamodels=False), cc.CrosscatMetamodel(thelambda))
+
+    Since people will often want in particular to create MultiprocessingEngine
+    factories with a fixed thread pool,
+    crosscat.MultiprocessingEngine.MultiprocessingEngineFactoryFromPool is
+    provided as a convenience function.
 
     """
 
