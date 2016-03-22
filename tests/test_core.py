@@ -549,14 +549,14 @@ def test_crosscat_constraints():
             sup = super(FakeEngine, self)
             return sup.simple_predictive_probability_multistate(M_c=M_c,
                 X_L_list=X_L_list, X_D_list=X_D_list, Y=Y, Q=Q)
-        def simple_predictive_sample(self, M_c, X_L, X_D, Y, Q, n):
+        def simple_predictive_sample(self, seed, M_c, X_L, X_D, Y, Q, n):
             self._last_Y = Y
-            return super(FakeEngine, self).simple_predictive_sample(M_c=M_c,
-                X_L=X_L, X_D=X_D, Y=Y, Q=Q, n=n)
-        def impute_and_confidence(self, M_c, X_L, X_D, Y, Q, n):
+            return super(FakeEngine, self).simple_predictive_sample(seed=seed,
+                M_c=M_c, X_L=X_L, X_D=X_D, Y=Y, Q=Q, n=n)
+        def impute_and_confidence(self, seed, M_c, X_L, X_D, Y, Q, n):
             self._last_Y = Y
-            return super(FakeEngine, self).impute_and_confidence(M_c=M_c,
-                X_L=X_L, X_D=X_D, Y=Y, Q=Q, n=n)
+            return super(FakeEngine, self).impute_and_confidence(seed=seed,
+                M_c=M_c, X_L=X_L, X_D=X_D, Y=Y, Q=Q, n=n)
     engine = FakeEngine(seed=0)
     mm = CrosscatMetamodel(engine)
     with bayesdb(metamodel=mm) as bdb:
