@@ -43,26 +43,21 @@ def get_version():
 
     # Append the Git commit id if this is a development version.
     if version.endswith('+'):
+        import re
+        import subprocess
         version = version[:-1]
         tag = 'v' + version
-        try:
-            import subprocess
-            desc = subprocess.check_output([
-                'git', 'describe', '--dirty', '--match', tag,
-            ])
-        except Exception:
-            full_version = '%s.post0+unknown' % (version,)
-            raise
-        else:
-            import re
-            match = re.match(r'^v([^-]*)-([0-9]+)-(.*)$', desc)
-            assert match is not None
-            verpart, revpart, localpart = match.groups()
-            assert verpart == version
-            # Local part may be g0123abcd or g0123abcd-dirty.  Hyphens
-            # are not kosher here, so replace by dots.
-            localpart = localpart.replace('-', '.')
-            full_version = '%s.post%s+%s' % (verpart, revpart, localpart)
+        desc = subprocess.check_output([
+            'git', 'describe', '--dirty', '--match', tag,
+        ])
+        match = re.match(r'^v([^-]*)-([0-9]+)-(.*)$', desc)
+        assert match is not None
+        verpart, revpart, localpart = match.groups()
+        assert verpart == version
+        # Local part may be g0123abcd or g0123abcd-dirty.  Hyphens are
+        # not kosher here, so replace by dots.
+        localpart = localpart.replace('-', '.')
+        full_version = '%s.post%s+%s' % (verpart, revpart, localpart)
     else:
         full_version = version
 
