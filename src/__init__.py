@@ -107,10 +107,10 @@ __all__ = [
     'bayesdb_read_csv',
     'bayesdb_read_csv_file',
     'bayesdb_register_metamodel',
+    'bayesdb_upgrade_schema',
     'bql_quote_name',
     'IBayesDBMetamodel',
     'IBayesDBTracer',
-    '__version__',
 ]
 
 from bayeslite.metamodels.crosscat import CrosscatMetamodel
