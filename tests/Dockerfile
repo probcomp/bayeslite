@@ -14,14 +14,12 @@ RUN pip -q install setuptools cython
 
 RUN BOOST_ROOT=/usr/include pip -q install crosscat
 
+RUN mkdir /bayeslite
 WORKDIR /bayeslite
-COPY Makefile VERSION check.sh pythenv.sh setup.py ./
-COPY external ./external
-COPY src ./src
-COPY tests ./tests
-COPY shell ./shell
-RUN for d in tests shell; do find $d -name __pycache__ -o -name "*.pyc" -exec rm -fr {} \; ; done
 
-RUN     pip -q install .
+COPY    dist/bayeslite-*.tar.gz ./
+RUN     tar --strip-components=1 -xzvf `ls bayeslite-*.tar.gz | tail -1`
+
+RUN     pip install .
 RUN     python setup.py test  # Install any tests_require
 RUN     ./check.sh tests/ shell/tests/

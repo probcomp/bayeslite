@@ -21,6 +21,7 @@ root=`cd -- "$(dirname -- "$0")" && pwd`
                      tests shell/tests
     elif [ "docker" = "$1" ]; then
         shift
+        python setup.py sdist
         docker build -f tests/Dockerfile -t bayeslite-test "$@" .
     else
         # If args are specified, run all tests, including continuous
