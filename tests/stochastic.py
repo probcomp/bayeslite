@@ -32,7 +32,7 @@ class StochasticError(Exception):
 
 def stochastic(max_runs, min_passes):
     assert 0 < max_runs
-    assert min_passes < max_runs
+    assert min_passes <= max_runs
     def wrap(f):
         def f_(seed=None):
             if seed is not None:
