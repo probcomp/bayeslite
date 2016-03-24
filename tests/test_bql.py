@@ -29,6 +29,8 @@ import bayeslite.metamodels.troll_rng as troll
 import test_core
 import test_csv
 
+from stochastic import stochastic
+
 def bql2sql(string, setup=None):
     with test_core.t1() as (bdb, _table_id):
         if setup is not None:
@@ -72,10 +74,9 @@ def empty(cursor):
     with pytest.raises(StopIteration):
         cursor.next()
 
-from flaky import flaky
-@flaky(max_runs=2, min_passes=1)
-def test_conditional_probability():
-    with test_core.t1() as (bdb, _generator_id):
+@stochastic(max_runs=2, min_passes=1)
+def test_conditional_probability(seed):
+    with test_core.t1(seed=seed) as (bdb, _generator_id):
         bdb.execute('''create generator t1_cond_prob_cc for t1 using
                        crosscat(age numerical, weight numerical,
                            dependent(age, weight));''')
@@ -95,9 +96,9 @@ def test_conditional_probability():
             ' from columns of t1_cond_prob_cc').fetchall()
         assert [(age_is_8_given_weight_is_16,), (0,)] == probs
 
-@flaky(max_runs=2, min_passes=1)
-def test_joint_probability():
-    with test_core.t1() as (bdb, _generator_id):
+@stochastic(max_runs=2, min_passes=1)
+def test_joint_probability(seed):
+    with test_core.t1(seed=seed) as (bdb, _generator_id):
         bdb.execute('initialize 10 models for t1_cc')
         bdb.execute('analyze t1_cc for 10 iterations wait')
         q0 = 'estimate probability of age = 8 by t1_cc'

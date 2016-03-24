@@ -267,8 +267,9 @@ t1_rows = [
     (None, 31, 62),
 ]
 
-def t1():
-    return bayesdb_generator(bayesdb(), 't1', 't1_cc', t1_schema, t1_data,
+def t1(*args, **kwargs):
+    return bayesdb_generator(bayesdb(*args, **kwargs), 't1', 't1_cc',
+        t1_schema, t1_data,
         columns=['label CATEGORICAL', 'age NUMERICAL', 'weight NUMERICAL'])
 
 def t1_sub():
