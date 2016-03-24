@@ -23,7 +23,7 @@ class StochasticError(Exception):
         self.exctype = exctype
         self.excvalue = excvalue
     def __str__(self):
-        hexseed = ''.join('%02x' % (ord(b),) for b in self.seed)
+        hexseed = self.seed.encode('hex')
         if hasattr(self.exctype, '__name__'):
             typename = self.exctype.__name__
         else:
