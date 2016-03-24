@@ -398,7 +398,7 @@ def compile_infer_auto(bdb, infer, out):
     def map_columns(col):
         if isinstance(col, ast.InfColAll):
             column_names = core.bayesdb_table_column_names(bdb, table)
-            return [map_column(col, None) for col in column_names]
+            return [map_column(colname, None) for colname in column_names]
         elif isinstance(col, ast.InfColOne):
             return [map_column(col.column, col.name)]
         else:
