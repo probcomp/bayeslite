@@ -18,7 +18,7 @@ import apsw
 import json
 import pytest
 
-from collections import defaultdict, namedtuple
+from collections import namedtuple
 
 import bayeslite
 from bayeslite.loggers import CaptureLogger

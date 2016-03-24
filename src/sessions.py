@@ -71,12 +71,8 @@ PLEASE DO NOT SEND SESSIONS WHEN THEY MAY CONTAIN SECRET OR SENSITIVE INFO!
 
 import apsw
 import json
-import requests
-import sys
 import time
 import traceback
-
-import bayeslite
 
 from bayeslite import IBayesDBTracer
 from bayeslite.loggers import BqlLogger, CallHomeStatusLogger

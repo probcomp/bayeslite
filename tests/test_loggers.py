@@ -15,8 +15,6 @@
 #   limitations under the License.
 
 import json
-import pytest
-import re
 import time
 
 from bayeslite import loggers

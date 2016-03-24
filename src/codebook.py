@@ -16,7 +16,6 @@
 
 import csv
 import json
-import math
 
 import bayeslite.core as core
 

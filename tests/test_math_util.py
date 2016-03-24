@@ -14,6 +14,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import math
+import pytest
+
 from bayeslite.math_util import *
 
 def pi_cf():
@@ -83,3 +86,39 @@ def test_misc():
     assert relerr(math.pi, pi_cf()) < EPSILON
     assert relerr(math.pi, pi_ps()) < EPSILON
     assert relerr((1 + math.sqrt(5))/2, phi_cf()) < EPSILON
+
+def test_logsumexp():
+    inf = float('inf')
+    nan = float('nan')
+    with pytest.raises(OverflowError):
+        math.log(sum(map(math.exp, range(1000))))
+    assert relerr(999.4586751453871, logsumexp(range(1000))) < 1e-15
+    assert logsumexp([]) == -inf
+    assert logsumexp([-1000.]) == -1000.
+    assert logsumexp([-1000., -1000.]) == -1000. + math.log(2.)
+    assert relerr(math.log(2.), logsumexp([0., 0.])) < 1e-15
+    assert logsumexp([-inf, 1]) == 1
+    assert logsumexp([-inf, -inf]) == -inf
+    assert logsumexp([+inf, +inf]) == +inf
+    assert math.isnan(logsumexp([-inf, +inf]))
+    assert math.isnan(logsumexp([nan, inf]))
+    assert math.isnan(logsumexp([nan, -3]))
+
+def test_logmeanexp():
+    inf = float('inf')
+    nan = float('nan')
+    assert logmeanexp([]) == -inf
+    assert relerr(992.550919866405, logmeanexp(range(1000))) < 1e-15
+    assert logmeanexp([-1000., -1000.]) == -1000.
+    assert relerr(math.log(0.5 * (1 + math.exp(-1.))),
+            logmeanexp([0., -1.])) \
+        < 1e-15
+    assert relerr(math.log(0.5), logmeanexp([0., -1000.])) < 1e-15
+    assert relerr(-3 - math.log(2.), logmeanexp([-inf, -3])) < 1e-15
+    assert relerr(-3 - math.log(2.), logmeanexp([-3, -inf])) < 1e-15
+    assert logmeanexp([+inf, -3]) == +inf
+    assert logmeanexp([-3, +inf]) == +inf
+    assert logmeanexp([-inf, 0, +inf]) == +inf
+    assert math.isnan(logmeanexp([nan, inf]))
+    assert math.isnan(logmeanexp([nan, -3]))
+    assert math.isnan(logmeanexp([nan]))

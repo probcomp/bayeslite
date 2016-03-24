@@ -14,8 +14,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import csv
-import os
 import pytest
 import tempfile
 
@@ -83,7 +81,6 @@ def test_codebook_value_map():
                 ('jackie', 18, 'LA'), ('rocker', 22, 'DC')
         ''')
         bdb.execute('ANALYZE dummy_cc FOR 20 ITERATIONS WAIT')
-        c = bdb.sql_execute('SELECT * FROM dummy')
         with pytest.raises(KeyError):
             bdb.execute('SIMULATE age FROM dummy_cc GIVEN city = LA LIMIT 5')
 
