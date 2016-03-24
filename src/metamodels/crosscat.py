@@ -41,7 +41,6 @@ from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.stats import arithmetic_mean
 from bayeslite.util import casefold
 from bayeslite.util import cursor_value
-from bayeslite.util import unique
 
 crosscat_schema_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('crosscat', 1);
@@ -1028,8 +1027,6 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                             cc_cache.thetas[generator_id] = {modelno: theta}
                 if ckpt_seconds is not None:
                     ckpt_deadline = time.time() + ckpt_seconds
-                if ckpt_iterations is not None:
-                    ckpt_counter = ckpt_iterations
 
     def column_dependence_probability(self, bdb, generator_id, modelno,
             colno0, colno1):

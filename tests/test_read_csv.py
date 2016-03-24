@@ -15,7 +15,6 @@
 #   limitations under the License.
 
 import StringIO
-import contextlib
 import pytest
 import tempfile
 

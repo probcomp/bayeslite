@@ -105,7 +105,6 @@ def execute_phrase(bdb, phrase, bindings=()):
             table = core.bayesdb_generator_table(bdb, generator_id)
             qn = sqlite3_quote_name(phrase.name)
             qt = sqlite3_quote_name(table)
-            qgn = sqlite3_quote_name(phrase.simulation.generator)
             column_names = phrase.simulation.columns
             qcns = map(sqlite3_quote_name, column_names)
             cursor = bdb.sql_execute('PRAGMA table_info(%s)' % (qt,))
