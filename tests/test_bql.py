@@ -93,8 +93,7 @@ def test_conditional_probability():
         probs = bdb.execute(
             'estimate probability of value 8 given (weight = 16)'
             ' from columns of t1_cond_prob_cc').fetchall()
-#        assert [(age_is_8_given_weight_is_16,), (0,)] == probs
-#        https://github.com/probcomp/bayeslite/issues/380
+        assert [(age_is_8_given_weight_is_16,), (0,)] == probs
 
 @flaky(max_runs=2, min_passes=1)
 def test_joint_probability():
