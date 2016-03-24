@@ -16,10 +16,18 @@
 
 from __future__ import print_function
 
+import json
 import logging
 import re
+import requests
 import sys
+import threading
+import time
 import traceback
+
+from contextlib import contextmanager
+
+from bayeslite.version import __version__
 
 class BqlLogger(object):
   '''A logger object for BQL.
@@ -168,10 +176,6 @@ class CaptureLogger(BqlLogger):
     return _capture
 
 PROBCOMP_URL = 'https://projects.csail.mit.edu/probcomp/bayesdb/save_sessions.cgi'
-import requests
-import time
-import threading
-from version import __version__
 
 class CallHomeStatusLogger(BqlLogger):
     # We will start a small thread for each call home so as to avoid
@@ -195,7 +199,6 @@ class CallHomeStatusLogger(BqlLogger):
         t.start()
         # I don't care if it finishes. We tried.
 
-import json
 class NpPdEncoder(json.JSONEncoder):
   # disable method-hidden because https://github.com/PyCQA/pylint/issues/414
   def default(self, obj): # pylint: disable=method-hidden
@@ -228,8 +231,6 @@ def query_info_to_json(session_id, logtype, query, bindings,
   }
   return json.dumps(session, cls=NpPdEncoder)
 
-import traceback
-from contextlib import contextmanager
 @contextmanager
 def logged_query(query_string=None, bindings=(), name=None, logger=None):
   if query_string is None:
