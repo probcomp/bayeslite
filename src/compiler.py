@@ -923,7 +923,7 @@ class BQLCompiler_1Row_Infer(BQLCompiler_1Row):
                 bql.column)
             out.write('bql_predict(%d, ' % (generator_id,))
             compile_expression(bdb, self.modelno, self, out)
-            out.write(', %d, _rowid_, ' % (colno,))
+            out.write(', %d, %s, ' % (colno, rowid_col))
             compile_expression(bdb, bql.confidence, self, out)
             out.write(')')
         elif isinstance(bql, ast.ExpBQLPredictConf):
@@ -932,7 +932,7 @@ class BQLCompiler_1Row_Infer(BQLCompiler_1Row):
                 bql.column)
             out.write('bql_predict_confidence(%d, ' % (generator_id,))
             compile_expression(bdb, self.modelno, self, out)
-            out.write(', %d, _rowid_)' % (colno,))
+            out.write(', %d, %s)' % (colno, rowid_col))
         else:
             super(BQLCompiler_1Row_Infer, self).compile_bql(bdb, bql, out)
 
