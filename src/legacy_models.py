@@ -143,7 +143,7 @@ def bayesdb_load_legacy_models(bdb, generator, table, metamodel, pathname,
                     SELECT COUNT(*) FROM bayesdb_generator_model
                         WHERE generator_id = ?
                 '''
-                cursor = bdb.sql_execute(bdb, (generator_id,))
+                cursor = bdb.sql_execute(sql, (generator_id,))
                 if 0 < cursor_value(cursor):
                     raise ValueError('Legacy models mismatch schema: %s' %
                         (repr(generator),))
