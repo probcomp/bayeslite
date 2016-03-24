@@ -123,6 +123,33 @@ can control, via the normal Python API and the bayeslite shell.  Any
 actual nondeterminism should be clearly labelled as such, e.g. a
 future shell command to choose a seed from /dev/urandom.
 
+To write nondeterministic tests that explore an intentionally
+unpredictable source of inputs, instead of testing exactly the same
+input every time, write a deterministic function of a 32-byte seed and
+use the @stochastic decorator to vary it:
+
+    from stochastic import stochastic
+
+    @stochastic(max_runs=4, min_passes=2)
+    def test_quagga(seed):
+        frobnicate(seed)
+
+This defines test_quagga to be a function that accepts an *optional*
+seed argument.  If you call it with zero arguments, then it will call
+frobnicate up to four times, and if it does not pass twice, it will
+raise a StochasticError that includes (a) the last exception with
+which frobnicate failed and (b) the last seed with which frobnicate
+failed.
+
+You can then retry using exactly the same seed by calling test_quagga
+manually with the seed as its argument:
+
+    >>> test_quagga()
+    StochasticError: [seed 434529bf3e5a16930701b55c39a90acfcd115ba0cada99f5af5448f3b96923dd]
+    ZigException: something set us up the bomb
+    >>> test_quagga('434529bf3e5a16930701b55c39a90acfcd115ba0cada99f5af5448f3b96923dd'.decode('hex'))
+    ZigException: something set us up the bomb
+
 * Python coding style
 
 Generally follow PEP 8, with these exceptions:
