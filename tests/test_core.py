@@ -117,8 +117,6 @@ def test_hackmetamodel():
         bdb.execute('CREATE GENERATOR t_cc FOR t USING crosscat(a NUMERICAL)')
     with pytest.raises(bayeslite.BQLError):
         bdb.execute('CREATE GENERATOR t_dd FOR t USING dotdog(a NUMERICAL)')
-    crosscat = local_crosscat()
-    crosscat_metamodel = CrosscatMetamodel(crosscat)
     dotdog_metamodel = DotdogMetamodel()
     bayeslite.bayesdb_register_metamodel(bdb, dotdog_metamodel)
     bayeslite.bayesdb_deregister_metamodel(bdb, dotdog_metamodel)
