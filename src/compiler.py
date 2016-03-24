@@ -570,7 +570,6 @@ def compile_simulate(bdb, simulate, out):
         table = core.bayesdb_generator_table(bdb, generator_id)
         qtt = sqlite3_quote_name(temptable)
         qt = sqlite3_quote_name(table)
-        qgn = sqlite3_quote_name(simulate.generator)
         column_names = simulate.columns
         qcns = map(sqlite3_quote_name, column_names)
         cursor = bdb.sql_execute('PRAGMA table_info(%s)' % (qt,))
@@ -915,7 +914,6 @@ class BQLCompiler_1Row_Infer(BQLCompiler_1Row):
         rowid_col = '_rowid_' # XXX Don't hard-code this.
         if isinstance(bql, ast.ExpBQLPredict):
             assert bql.column is not None
-            table_name = core.bayesdb_generator_table(bdb, generator_id)
             if not core.bayesdb_generator_has_column(bdb, generator_id,
                     bql.column):
                 generator = core.bayesdb_generator_name(bdb, generator_id)
@@ -930,7 +928,6 @@ class BQLCompiler_1Row_Infer(BQLCompiler_1Row):
             out.write(')')
         elif isinstance(bql, ast.ExpBQLPredictConf):
             assert bql.column is not None
-            table_name = core.bayesdb_generator_table(bdb, generator_id)
             colno = core.bayesdb_generator_column_number(bdb, generator_id,
                 bql.column)
             out.write('bql_predict_confidence(%d, ' % (generator_id,))

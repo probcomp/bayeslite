@@ -1031,8 +1031,6 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                             cc_cache.thetas[generator_id] = {modelno: theta}
                 if ckpt_seconds is not None:
                     ckpt_deadline = time.time() + ckpt_seconds
-                if ckpt_iterations is not None:
-                    ckpt_counter = ckpt_iterations
 
     def column_dependence_probability(self, bdb, generator_id, modelno,
             colno0, colno1):
