@@ -40,8 +40,6 @@ implications of the data in the table::
        print x
 """
 
-import bayeslite.core as core
-
 builtin_metamodels = []
 builtin_metamodel_names = set()
 

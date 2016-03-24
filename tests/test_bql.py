@@ -26,8 +26,6 @@ import bayeslite.guess as guess
 import bayeslite.parse as parse
 import bayeslite.metamodels.troll_rng as troll
 
-from bayeslite.util import cursor_value
-
 import test_core
 import test_csv
 
