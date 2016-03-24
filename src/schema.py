@@ -15,7 +15,6 @@
 #   limitations under the License.
 
 from bayeslite.exception import BayesDBException
-from bayeslite.sqlite3_util import sqlite3_transaction
 from bayeslite.util import cursor_value
 
 APPLICATION_ID = 0x42594442

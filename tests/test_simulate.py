@@ -17,7 +17,6 @@
 import os
 
 import bayeslite
-from bayeslite.core import bayesdb_get_generator
 from bayeslite.metamodels.crosscat import CrosscatMetamodel
 import bayeslite.read_csv as read_csv
 import crosscat.LocalEngine

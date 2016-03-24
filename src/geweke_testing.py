@@ -56,7 +56,6 @@ http://qed.econ.queensu.ca/pub/faculty/ferrall/quant/papers/04_04_29_geweke.pdf
 
 import math
 
-import bayeslite.ast as ast
 import bayeslite.bql as bql
 import bayeslite.core as core
 import bayeslite.stats as stats
