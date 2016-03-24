@@ -1010,6 +1010,7 @@ class BQLCompiler_1Col(object):
             compile_expression(bdb, self.modelno, self, out)
             out.write(', %s, ' % (self.colno_exp,))
             compile_expression(bdb, bql.value, self, out)
+            compile_constraints(bdb, generator_id, bql.constraints, self, out)
             out.write(')')
         elif isinstance(bql, ast.ExpBQLPredProb):
             raise BQLError(bdb, 'Predictive probability makes sense'
@@ -1106,12 +1107,18 @@ def compile_pdf_joint(bdb, generator_id, modelno, targets, constraints,
         compile_expression(bdb, t_exp, bql_compiler, out)
     if 0 < len(constraints):
         out.write(', -1')
-        for c_col, c_exp in constraints:
-            c_colno = core.bayesdb_generator_column_number(bdb,
-                generator_id, c_col)
-            out.write(', %d, ' % (c_colno,))
-            compile_expression(bdb, c_exp, bql_compiler, out)
+        compile_constraints(bdb, generator_id, constraints, bql_compiler, out)
     out.write(')')
+
+def compile_constraints(bdb, generator_id, constraints, bql_compiler, out):
+    for c_col, c_exp in constraints:
+        if not core.bayesdb_generator_has_column(bdb, generator_id, c_col):
+            raise BQLError(bdb, 'No such column in generator %s: %s' %
+                (generator, c_col))
+        c_colno = core.bayesdb_generator_column_number(bdb,
+            generator_id, c_col)
+        out.write(', %d, ' % (c_colno,))
+        compile_expression(bdb, c_exp, bql_compiler, out)
 
 def compile_column_lists(bdb, generator_id, column_lists, _bql_compiler, out):
     first = True

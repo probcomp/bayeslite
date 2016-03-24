@@ -93,8 +93,7 @@ def test_conditional_probability():
         probs = bdb.execute(
             'estimate probability of value 8 given (weight = 16)'
             ' from columns of t1_cond_prob_cc').fetchall()
-#        assert [(age_is_8_given_weight_is_16,), (0,)] == probs
-#        https://github.com/probcomp/bayeslite/issues/380
+        assert [(age_is_8_given_weight_is_16,), (0,)] == probs
 
 @flaky(max_runs=2, min_passes=1)
 def test_joint_probability():
@@ -430,6 +429,11 @@ def test_estimate_columns_trivial():
         prefix + \
         ' AND (bql_column_value_probability(1, NULL, c.colno, 8) >' \
         ' bql_pdf_joint(1, NULL, 2, 16));'
+    assert bql2sql('estimate *, probability of value 8 given (age = 8)'
+            ' from columns of t1_cc;') == \
+        prefix0 + \
+        ', bql_column_value_probability(1, NULL, c.colno, 8, 2, 8)' + \
+        prefix1 + ';'
     with pytest.raises(bayeslite.BQLError):
         # PREDICTIVE PROBABILITY makes no sense without row.
         bql2sql('estimate * from columns of t1_cc where' +
