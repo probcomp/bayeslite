@@ -347,8 +347,6 @@ def test_example_analysis0(exname):
 
 @pytest.mark.parametrize('exname', examples.keys())
 def test_example_analysis1(exname):
-    if exname == 't0':
-        pytest.xfail("Crosscat can't handle a table with only one column.")
     with analyzed_bayesdb_generator(examples[exname](), 1, 1):
         pass
 
