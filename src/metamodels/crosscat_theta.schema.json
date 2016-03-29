@@ -26,8 +26,17 @@
           "enum": ["from_the_prior"]
         },
         "kernel_list": {
+          "description": "See transition_name_to_method_name_and_args in crosscat/src/cython_code/State.pyx.",
           "type": "array",
-          "maxItems": 0
+          "items": {
+            "enum": [
+              "column_partition_hyperparameter",
+              "column_partition_assignments",
+              "column_hyperparameters",
+              "row_partition_hyperparameters",
+              "row_partition_assignments"
+            ]
+          }
         }
       }
     },
