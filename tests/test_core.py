@@ -392,7 +392,10 @@ def test_t1_predict(rowid, colno, confidence):
         for numpred in range(3)])
 def test_t1_simulate(colnos, constraints, numpredictions):
     if len(colnos) == 0:
-        pytest.xfail("Crosscat can't simulate zero columns.")
+        # No need to try this or confirm it fails gracefully --
+        # nothing should be trying it anyway, and bayeslite_simulate
+        # is not exposed to users of the bayeslite API.
+        return
     with analyzed_bayesdb_generator(t1(), 1, 1) as (bdb, generator_id):
         if constraints is not None:
             rowid = 1           # XXX Avoid hard-coding this.
