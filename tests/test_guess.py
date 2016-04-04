@@ -109,7 +109,7 @@ def test_guess_generator():
     data = ((chr(c) + chr(d), (c + d) % 2, math.sqrt(c + d)) for c, d in aa_zz)
     for row in data:
         bdb.sql_execute('INSERT INTO t (x, y, z) VALUES (?, ?, ?)', row)
-    cc = crosscat.LocalEngine.LocalEngine(seed=0)
+    cc = crosscat.LocalEngine.LocalEngine
     metamodel = CrosscatMetamodel(cc)
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)
     with pytest.raises(ValueError):

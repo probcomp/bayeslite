@@ -51,7 +51,7 @@ def test_complex_dependencies__ci_slow():
 
     # Create the database.
     with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
-        cc = crosscat.LocalEngine.LocalEngine(seed=0)
+        cc = crosscat.LocalEngine.LocalEngine
         ccme = CrosscatMetamodel(cc)
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
 

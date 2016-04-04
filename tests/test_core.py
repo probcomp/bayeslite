@@ -42,10 +42,11 @@ def powerset(s):
     return itertools.chain.from_iterable(combinations)
 
 def local_crosscat():
-    return crosscat.LocalEngine.LocalEngine(seed=0)
+    return crosscat.LocalEngine.LocalEngine
 
 def multiprocessing_crosscat():
-    return crosscat.MultiprocessingEngine.MultiprocessingEngine(seed=0)
+    return crosscat.MultiprocessingEngine.MultiprocessingEngineFactoryFromPool(
+        crosscat.MultiprocessingEngine.Pool())
 
 @contextlib.contextmanager
 def bayesdb(metamodel=None, **kwargs):
@@ -282,8 +283,7 @@ def t1_subcat():
         columns=['label CATEGORICAL', 'weight CATEGORICAL'])
 
 def t1_mp():
-    crosscat = multiprocessing_crosscat()
-    metamodel = CrosscatMetamodel(crosscat)
+    metamodel = CrosscatMetamodel(multiprocessing_crosscat())
     return bayesdb_generator(bayesdb(metamodel=metamodel),
         't1', 't1_cc', t1_schema, t1_data,
          columns=['label CATEGORICAL', 'age NUMERICAL', 'weight NUMERICAL'])
@@ -544,20 +544,19 @@ def test_crosscat_constraints():
     class FakeEngine(crosscat.LocalEngine.LocalEngine):
         def predictive_probability_multistate(self, M_c, X_L_list,
                 X_D_list, Y, Q):
-            self._last_Y = Y
+            FakeEngine._last_Y = Y
             sup = super(FakeEngine, self)
             return sup.simple_predictive_probability_multistate(M_c=M_c,
                 X_L_list=X_L_list, X_D_list=X_D_list, Y=Y, Q=Q)
         def simple_predictive_sample(self, M_c, X_L, X_D, Y, Q, n):
-            self._last_Y = Y
+            FakeEngine._last_Y = Y
             return super(FakeEngine, self).simple_predictive_sample(M_c=M_c,
                 X_L=X_L, X_D=X_D, Y=Y, Q=Q, n=n)
         def impute_and_confidence(self, M_c, X_L, X_D, Y, Q, n):
-            self._last_Y = Y
+            FakeEngine._last_Y = Y
             return super(FakeEngine, self).impute_and_confidence(M_c=M_c,
                 X_L=X_L, X_D=X_D, Y=Y, Q=Q, n=n)
-    engine = FakeEngine(seed=0)
-    mm = CrosscatMetamodel(engine)
+    mm = CrosscatMetamodel(FakeEngine)
     with bayesdb(metamodel=mm) as bdb:
         t1_schema(bdb)
         t1_data(bdb)
@@ -580,12 +579,12 @@ def test_crosscat_constraints():
         bdb.execute('ANALYZE t1_cc FOR 1 ITERATION WAIT')
         bdb.execute('ESTIMATE PROBABILITY OF age = 8 GIVEN (weight = 16)'
             ' BY t1_cc').next()
-        assert engine._last_Y == [(28, 2, 16)]
+        assert FakeEngine._last_Y == [(28, 2, 16)]
         bdb.execute("SELECT age FROM t1 WHERE label = 'baz'").next()
         bdb.execute("INFER age FROM t1_cc WHERE label = 'baz'").next()
-        assert engine._last_Y == [(3, 0, 1), (3, 2, 32)]
+        assert FakeEngine._last_Y == [(3, 0, 1), (3, 2, 32)]
         bdb.execute('SIMULATE weight FROM t1_cc GIVEN age = 8 LIMIT 1').next()
-        assert engine._last_Y == [(28, 1, 8)]
+        assert FakeEngine._last_Y == [(28, 1, 8)]
 
 def test_bayesdb_generator_fresh_row_id():
     with bayesdb_generator(bayesdb(), 't1', 't1_cc', t1_schema, lambda x: 0,\
