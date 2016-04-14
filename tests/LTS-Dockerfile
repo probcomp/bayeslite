@@ -1,7 +1,7 @@
 # Dockerfile that builds, installs, and tests bayeslite. It is for development
 # only; users should use the python package.
 
-FROM        ubuntu:15.10
+FROM        ubuntu:14.04
 RUN         apt-get update -qq --fix-missing
 
 # For installation: python, pip, apt, pkg
@@ -10,7 +10,7 @@ RUN         apt-get update -qq --fix-missing
 RUN apt-get install -y -qq python2.7-dev python-pip apt-utils pkg-config \
     libboost-dev python-numpy python-scipy python-pandas
 
-RUN pip -q install setuptools cython
+RUN pip -q install pip setuptools cython
 RUN pip -q install pytest flaky pexpect
 RUN BOOST_ROOT=/usr/include pip -q install crosscat
 
