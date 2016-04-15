@@ -1393,5 +1393,6 @@ def crosscat_gen_column_dependencies(bdb, generator_id):
 
 def crosscat_seed(bdb):
     # XXX Pass a 32-byte seed from weakprng once Crosscat supports
-    # that.
+    # that.  Crosscat Github issue #93:
+    # https://github.com/probcomp/crosscat/issues/93
     return bdb.py_prng.randrange(2**32)
