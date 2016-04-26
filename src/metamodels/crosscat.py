@@ -46,10 +46,10 @@ crosscat_schema_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('crosscat', 1);
 
 CREATE TABLE bayesdb_crosscat_disttype (
-	name		TEXT NOT NULL PRIMARY KEY,
-	stattype	TEXT NOT NULL REFERENCES bayesdb_stattype(name),
-	default_dist	BOOLEAN NOT NULL,
-	UNIQUE(stattype, default_dist)
+    name		TEXT NOT NULL PRIMARY KEY,
+    stattype	TEXT NOT NULL REFERENCES bayesdb_stattype(name),
+    default_dist	BOOLEAN NOT NULL,
+    UNIQUE(stattype, default_dist)
 );
 
 INSERT INTO bayesdb_crosscat_disttype (name, stattype, default_dist)
@@ -59,40 +59,40 @@ INSERT INTO bayesdb_crosscat_disttype (name, stattype, default_dist)
         ('vonmises', 'cyclic', 1);
 
 CREATE TABLE bayesdb_crosscat_metadata (
-	generator_id	INTEGER NOT NULL PRIMARY KEY
-				REFERENCES bayesdb_generator(id),
-	metadata_json	BLOB NOT NULL
+    generator_id	INTEGER NOT NULL PRIMARY KEY
+                REFERENCES bayesdb_generator(id),
+    metadata_json	BLOB NOT NULL
 );
 
 CREATE TABLE bayesdb_crosscat_column (
-	generator_id	INTEGER NOT NULL REFERENCES bayesdb_generator(id),
-	colno		INTEGER NOT NULL CHECK (0 <= colno),
-	cc_colno	INTEGER NOT NULL CHECK (0 <= cc_colno),
-	disttype	TEXT NOT NULL,
-	PRIMARY KEY(generator_id, colno),
-	FOREIGN KEY(generator_id, colno)
-		REFERENCES bayesdb_generator_column(generator_id, colno),
-	UNIQUE(generator_id, cc_colno)
+    generator_id	INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    colno		INTEGER NOT NULL CHECK (0 <= colno),
+    cc_colno	INTEGER NOT NULL CHECK (0 <= cc_colno),
+    disttype	TEXT NOT NULL,
+    PRIMARY KEY(generator_id, colno),
+    FOREIGN KEY(generator_id, colno)
+        REFERENCES bayesdb_generator_column(generator_id, colno),
+    UNIQUE(generator_id, cc_colno)
 );
 
 CREATE TABLE bayesdb_crosscat_column_codemap (
-	generator_id	INTEGER NOT NULL REFERENCES bayesdb_generator(id),
-	cc_colno	INTEGER NOT NULL CHECK (0 <= cc_colno),
-	code		INTEGER NOT NULL,
-	value		TEXT NOT NULL,
-	FOREIGN KEY(generator_id, cc_colno)
-		REFERENCES bayesdb_crosscat_column(generator_id, cc_colno),
-	UNIQUE(generator_id, cc_colno, code),
-	UNIQUE(generator_id, cc_colno, value)
+    generator_id	INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    cc_colno	INTEGER NOT NULL CHECK (0 <= cc_colno),
+    code		INTEGER NOT NULL,
+    value		TEXT NOT NULL,
+    FOREIGN KEY(generator_id, cc_colno)
+        REFERENCES bayesdb_crosscat_column(generator_id, cc_colno),
+    UNIQUE(generator_id, cc_colno, code),
+    UNIQUE(generator_id, cc_colno, value)
 );
 
 CREATE TABLE bayesdb_crosscat_theta (
-	generator_id	INTEGER NOT NULL REFERENCES bayesdb_generator(id),
-	modelno		INTEGER NOT NULL,
-	theta_json	BLOB NOT NULL,
-	PRIMARY KEY(generator_id, modelno),
-	FOREIGN KEY(generator_id, modelno)
-		REFERENCES bayesdb_generator_model(generator_id, modelno)
+    generator_id	INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    modelno		INTEGER NOT NULL,
+    theta_json	BLOB NOT NULL,
+    PRIMARY KEY(generator_id, modelno),
+    FOREIGN KEY(generator_id, modelno)
+        REFERENCES bayesdb_generator_model(generator_id, modelno)
 );
 '''
 
@@ -100,17 +100,17 @@ crosscat_schema_1to2 = '''
 UPDATE bayesdb_metamodel SET version = 2 WHERE name = 'crosscat';
 
 CREATE TABLE bayesdb_crosscat_diagnostics (
-	generator_id	INTEGER NOT NULL REFERENCES bayesdb_generator(id),
-	modelno		INTEGER NOT NULL,
-	checkpoint	INTEGER NOT NULL,
-	logscore	REAL NOT NULL CHECK (logscore <= 0),
-	num_views	INTEGER NOT NULL CHECK (0 < num_views),
-	column_crp_alpha
-			REAL NOT NULL,
-	iterations	INTEGER,	-- Not historically recorded.
-	PRIMARY KEY(generator_id, modelno, checkpoint),
-	FOREIGN KEY(generator_id, modelno)
-		REFERENCES bayesdb_generator_model(generator_id, modelno)
+    generator_id	INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    modelno		INTEGER NOT NULL,
+    checkpoint	INTEGER NOT NULL,
+    logscore	REAL NOT NULL CHECK (logscore <= 0),
+    num_views	INTEGER NOT NULL CHECK (0 < num_views),
+    column_crp_alpha
+            REAL NOT NULL,
+    iterations	INTEGER,	-- Not historically recorded.
+    PRIMARY KEY(generator_id, modelno, checkpoint),
+    FOREIGN KEY(generator_id, modelno)
+        REFERENCES bayesdb_generator_model(generator_id, modelno)
 );
 '''
 
@@ -118,24 +118,24 @@ crosscat_schema_2to3 = '''
 UPDATE bayesdb_metamodel SET version = 3 WHERE name = 'crosscat';
 
 CREATE TABLE bayesdb_crosscat_subsampled (
-	generator_id	INTEGER NOT NULL PRIMARY KEY
-				REFERENCES bayesdb_crosscat_metadata
+    generator_id	INTEGER NOT NULL PRIMARY KEY
+                REFERENCES bayesdb_crosscat_metadata
 );
 
 -- Generator-wide subsample, not per-model.
 CREATE TABLE bayesdb_crosscat_subsample (
-	generator_id    INTEGER NOT NULL
-				REFERENCES bayesdb_crosscat_subsampled,
-	sql_rowid	INTEGER NOT NULL,
-	cc_row_id	INTEGER NOT NULL,
-	PRIMARY KEY(generator_id, sql_rowid ASC),
-	UNIQUE(generator_id, cc_row_id ASC)
-	-- Can't express the desired foreign key constraint,
-	--	FOREIGN KEY(sql_rowid) REFERENCES <table of generator>(rowid),
-	-- for two reasons:
-	--   1. No way for constraint to have data-dependent table.
-	--   2. Can't refer to implicit rowid in sqlite3 constraints.
-	-- So we'll just hope nobody botches it.
+    generator_id    INTEGER NOT NULL
+                REFERENCES bayesdb_crosscat_subsampled,
+    sql_rowid	INTEGER NOT NULL,
+    cc_row_id	INTEGER NOT NULL,
+    PRIMARY KEY(generator_id, sql_rowid ASC),
+    UNIQUE(generator_id, cc_row_id ASC)
+    -- Can't express the desired foreign key constraint,
+    --	FOREIGN KEY(sql_rowid) REFERENCES <table of generator>(rowid),
+    -- for two reasons:
+    --   1. No way for constraint to have data-dependent table.
+    --   2. Can't refer to implicit rowid in sqlite3 constraints.
+    -- So we'll just hope nobody botches it.
 );
 '''
 
@@ -143,18 +143,18 @@ crosscat_schema_3to4 = '''
 UPDATE bayesdb_metamodel SET version = 4 WHERE name = 'crosscat';
 
 CREATE TABLE bayesdb_crosscat_subsample_temp (
-	generator_id    INTEGER NOT NULL
-				REFERENCES bayesdb_crosscat_metadata,
-	sql_rowid	INTEGER NOT NULL,
-	cc_row_id	INTEGER NOT NULL,
-	PRIMARY KEY(generator_id, sql_rowid ASC),
-	UNIQUE(generator_id, cc_row_id ASC)
-	-- Can't express the desired foreign key constraint,
-	--	FOREIGN KEY(sql_rowid) REFERENCES <table of generator>(rowid),
-	-- for two reasons:
-	--   1. No way for constraint to have data-dependent table.
-	--   2. Can't refer to implicit rowid in sqlite3 constraints.
-	-- So we'll just hope nobody botches it.
+    generator_id    INTEGER NOT NULL
+                REFERENCES bayesdb_crosscat_metadata,
+    sql_rowid	INTEGER NOT NULL,
+    cc_row_id	INTEGER NOT NULL,
+    PRIMARY KEY(generator_id, sql_rowid ASC),
+    UNIQUE(generator_id, cc_row_id ASC)
+    -- Can't express the desired foreign key constraint,
+    --	FOREIGN KEY(sql_rowid) REFERENCES <table of generator>(rowid),
+    -- for two reasons:
+    --   1. No way for constraint to have data-dependent table.
+    --   2. Can't refer to implicit rowid in sqlite3 constraints.
+    -- So we'll just hope nobody botches it.
 );
 INSERT INTO bayesdb_crosscat_subsample_temp
     SELECT * FROM bayesdb_crosscat_subsample;
@@ -174,17 +174,17 @@ UPDATE bayesdb_metamodel SET version = 5 WHERE name = 'crosscat';
 ALTER TABLE bayesdb_crosscat_diagnostics
     RENAME TO bayesdb_crosscat_diagnostics_temp;
 CREATE TABLE bayesdb_crosscat_diagnostics (
-	generator_id	INTEGER NOT NULL REFERENCES bayesdb_generator(id),
-	modelno		INTEGER NOT NULL,
-	checkpoint	INTEGER NOT NULL,
-	logscore	REAL NOT NULL,
-	num_views	INTEGER NOT NULL CHECK (0 < num_views),
-	column_crp_alpha
-			REAL NOT NULL,
-	iterations	INTEGER,	-- Not historically recorded.
-	PRIMARY KEY(generator_id, modelno, checkpoint),
-	FOREIGN KEY(generator_id, modelno)
-		REFERENCES bayesdb_generator_model(generator_id, modelno)
+    generator_id	INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    modelno		INTEGER NOT NULL,
+    checkpoint	INTEGER NOT NULL,
+    logscore	REAL NOT NULL,
+    num_views	INTEGER NOT NULL CHECK (0 < num_views),
+    column_crp_alpha
+            REAL NOT NULL,
+    iterations	INTEGER,	-- Not historically recorded.
+    PRIMARY KEY(generator_id, modelno, checkpoint),
+    FOREIGN KEY(generator_id, modelno)
+        REFERENCES bayesdb_generator_model(generator_id, modelno)
 );
 INSERT INTO bayesdb_crosscat_diagnostics
     SELECT * FROM bayesdb_crosscat_diagnostics_temp;
@@ -794,6 +794,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             }
         M_c = self._crosscat_metadata(bdb, generator_id)
         X_L_list, X_D_list = self._crosscat.initialize(
+            seed=crosscat_seed(bdb),
             M_c=M_c,
             M_r=None,           # XXX
             T=self._crosscat_data(bdb, generator_id, M_c),
@@ -811,6 +812,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 crosscat_gen_column_dependencies(bdb, generator_id)]
         if 0 < len(dep_constraints):
             X_L_list, X_D_list = self._crosscat.ensure_col_dep_constraints(
+                seed=crosscat_seed(bdb),
                 M_c=M_c,
                 M_r=None,
                 T=self._crosscat_data(bdb, generator_id, M_c),
@@ -944,6 +946,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 while True:
                     X_L_list_0 = X_L_list
                     X_L_list, X_D_list, diagnostics = self._crosscat.analyze(
+                        seed=crosscat_seed(bdb),
                         M_c=M_c,
                         T=T,
                         do_diagnostics=True,
@@ -1054,6 +1057,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         cc_colno0 = crosscat_cc_colno(bdb, generator_id, colno0)
         cc_colno1 = crosscat_cc_colno(bdb, generator_id, colno1)
         r = self._crosscat.mutual_information(
+            seed=crosscat_seed(bdb),
             M_c=self._crosscat_metadata(bdb, generator_id),
             X_L_list=X_L_list,
             X_D_list=X_D_list,
@@ -1098,6 +1102,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 X_D_list)
         cc_colno = crosscat_cc_colno(bdb, generator_id, colno)
         code, confidence = self._crosscat.impute_and_confidence(
+            seed=crosscat_seed(bdb),
             M_c=M_c,
             X_L=X_L_list,
             X_D=X_D_list,
@@ -1122,6 +1127,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         Q, Y, X_L_list, X_D_list = self._crosscat_remap_two(
             bdb, generator_id, X_L_list, X_D_list, targets, constraints)
         raw_outputs = self._crosscat.simple_predictive_sample(
+            seed=crosscat_seed(bdb),
             M_c=M_c,
             X_L=X_L_list,
             X_D=X_D_list,
@@ -1381,3 +1387,9 @@ def crosscat_gen_column_dependencies(bdb, generator_id):
             WHERE generator_id = ?
     '''
     return bdb.sql_execute(sql, (generator_id,)).fetchall()
+
+def crosscat_seed(bdb):
+    # XXX Pass a 32-byte seed from weakprng once Crosscat supports
+    # that.  Crosscat Github issue #93:
+    # https://github.com/probcomp/crosscat/issues/93
+    return bdb.py_prng.randrange(2**32)
