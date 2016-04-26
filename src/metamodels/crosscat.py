@@ -794,6 +794,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             }
         M_c = self._crosscat_metadata(bdb, generator_id)
         X_L_list, X_D_list = self._crosscat.initialize(
+            seed=crosscat_seed(bdb),
             M_c=M_c,
             M_r=None,           # XXX
             T=self._crosscat_data(bdb, generator_id, M_c),
@@ -811,6 +812,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 crosscat_gen_column_dependencies(bdb, generator_id)]
         if 0 < len(dep_constraints):
             X_L_list, X_D_list = self._crosscat.ensure_col_dep_constraints(
+                seed=crosscat_seed(bdb),
                 M_c=M_c,
                 M_r=None,
                 T=self._crosscat_data(bdb, generator_id, M_c),
@@ -944,6 +946,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 while True:
                     X_L_list_0 = X_L_list
                     X_L_list, X_D_list, diagnostics = self._crosscat.analyze(
+                        seed=crosscat_seed(bdb),
                         M_c=M_c,
                         T=T,
                         do_diagnostics=True,
@@ -1054,6 +1057,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         cc_colno0 = crosscat_cc_colno(bdb, generator_id, colno0)
         cc_colno1 = crosscat_cc_colno(bdb, generator_id, colno1)
         r = self._crosscat.mutual_information(
+            seed=crosscat_seed(bdb),
             M_c=self._crosscat_metadata(bdb, generator_id),
             X_L_list=X_L_list,
             X_D_list=X_D_list,
@@ -1098,6 +1102,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 X_D_list)
         cc_colno = crosscat_cc_colno(bdb, generator_id, colno)
         code, confidence = self._crosscat.impute_and_confidence(
+            seed=crosscat_seed(bdb),
             M_c=M_c,
             X_L=X_L_list,
             X_D=X_D_list,
@@ -1122,6 +1127,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         Q, Y, X_L_list, X_D_list = self._crosscat_remap_two(
             bdb, generator_id, X_L_list, X_D_list, targets, constraints)
         raw_outputs = self._crosscat.simple_predictive_sample(
+            seed=crosscat_seed(bdb),
             M_c=M_c,
             X_L=X_L_list,
             X_D=X_D_list,
@@ -1381,3 +1387,9 @@ def crosscat_gen_column_dependencies(bdb, generator_id):
             WHERE generator_id = ?
     '''
     return bdb.sql_execute(sql, (generator_id,)).fetchall()
+
+def crosscat_seed(bdb):
+    # XXX Pass a 32-byte seed from weakprng once Crosscat supports
+    # that.  Crosscat Github issue #93:
+    # https://github.com/probcomp/crosscat/issues/93
+    return bdb.py_prng.randrange(2**32)
