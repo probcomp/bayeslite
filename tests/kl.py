@@ -19,6 +19,7 @@ class KLEstimate(namedtuple('KLEstimate', ['estimate', 'se'])):
     obvious bias for sample sizes below 100,000.
 
     """
+    pass
 
 def kullback_leibler(postsample, postlpdf, complpdf):
     """Estimate KL-divergence of sample (a collection of values) w.r.t. known pdf,

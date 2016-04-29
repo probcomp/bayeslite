@@ -30,7 +30,7 @@ conveniently make such a generator using functools.partial. E.g.
 
 """
 
-from collections import namedtuple as namedtuple
+from collections import namedtuple
 import math
 import numbers
 
@@ -57,6 +57,7 @@ class FailProbThreshold(namedtuple('FailProbThreshold', 'fprob fthreshold')):
     probability P(X < fthreshold | D) is approximately `threshold`**(1/ns).
 
     """
+    pass
 
 
 def failprob_threshold(observed, ns, threshold):
@@ -134,6 +135,7 @@ class TestThreshold(namedtuple('TestThreshold', test_threshold_fields)):
                        `threshold` meets the requirements.
 
         """
+        pass
 
 
 def compute_sufficiently_stringent_threshold(generator, ns, maxprob):
