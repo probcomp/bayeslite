@@ -1009,8 +1009,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     assert 0 < len(diagnostics['logscore'])
                     assert i < len(diagnostics['logscore'][-1])
                     assert diagnostics['logscore'][-1][i] is not None
-                    assert not math.isnan(diagnostics['logscore'][-1][i]), \
-                        'bad X_L before %r after %r' % (X_L, X_L_list_0[i])
+                    assert not math.isnan(diagnostics['logscore'][-1][i])
                     assert 0 < len(diagnostics['num_views'])
                     assert 0 < len(diagnostics['column_crp_alpha'])
                     bdb.sql_execute(insert_diagnostics_sql, {
