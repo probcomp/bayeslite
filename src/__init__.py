@@ -115,8 +115,10 @@ __all__ = [
 
 from bayeslite.metamodels.crosscat import CrosscatMetamodel
 from crosscat.LocalEngine import LocalEngine as CrosscatLocalEngine
+from crosscat.MultiprocessingEngine import MultiprocessingEngine
 
-bayesdb_builtin_metamodel(CrosscatMetamodel(CrosscatLocalEngine(seed=0)))
+bayesdb_builtin_metamodel(
+    CrosscatMetamodel(MultiprocessingEngine(seed=0, cpu_count=None)))
 
 import bayeslite.remote
 import os
