@@ -62,10 +62,12 @@ def bayesdb_register_metamodel(bdb, metamodel):
     """
     name = metamodel.name()
     if name in bdb.metamodels:
-        raise ValueError('Metamodel already registered: %s' % (name,))
-    with bdb.savepoint():
-        metamodel.register(bdb)
-        bdb.metamodels[name] = metamodel
+        import warnings
+        warnings.warn('Metamodel already registered: %s' % (name,))
+    else:
+        with bdb.savepoint():
+            metamodel.register(bdb)
+            bdb.metamodels[name] = metamodel
 
 def bayesdb_deregister_metamodel(bdb, metamodel):
     """Deregister `metamodel`, which must have been registered in `bdb`."""
