@@ -116,9 +116,11 @@ __all__ = [
 from bayeslite.metamodels.crosscat import CrosscatMetamodel
 from crosscat.LocalEngine import LocalEngine as CrosscatLocalEngine
 from crosscat.MultiprocessingEngine import MultiprocessingEngine
+import gpmcc_metamodel
 
 bayesdb_builtin_metamodel(
     CrosscatMetamodel(MultiprocessingEngine(seed=0, cpu_count=None)))
+bayesdb_builtin_metamodel(gpmcc_metamodel.Metamodel())
 
 import bayeslite.remote
 import os
