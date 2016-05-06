@@ -289,8 +289,25 @@ class BayesDB(object):
     def savepoint(self):
         """Savepoint context.  On return, commit; on exception, roll back.
 
+        The effects of a savepoint happen durably all at once if
+        committed, or not at all if rolled back.
+
         Savepoints may be nested.  Parsed metadata and models are
         cached in Python during a savepoint.
+
+        Example::
+
+            with bdb.savepoint():
+                bdb.execute('DROP GENERATOR foo')
+                try:
+                    with bdb.savepoint():
+                        bdb.execute('ALTER TABLE foo RENAME TO bar')
+                        raise NeverMind
+                except NeverMind:
+                    # No changes will be recorded.
+                    pass
+                bdb.execute('CREATE GENERATOR foo ...')
+            # foo will have been dropped and re-created.
         """
         with txn.bayesdb_savepoint(self):
             yield
@@ -298,6 +315,9 @@ class BayesDB(object):
     @contextlib.contextmanager
     def savepoint_rollback(self):
         """Auto-rollback savepoint context.  Roll back on return or exception.
+
+        This may be used to compute hypotheticals -- the bdb is
+        guaranteed to remain unmodified afterward.
         """
         with txn.bayesdb_savepoint_rollback(self):
             yield
