@@ -197,18 +197,20 @@ def partial_sums(sequence):
 def gamma_below(a, x):
     """Normalized lower incomplete gamma integral.
 
-    ``(1/\Gamma(a)) \int_0^x e^{-t} t^{a - 1} dt``
+    Equal to::
 
-    gamma_below is the complement of gamma_above:
+        (1/\Gamma(a)) \int_0^x e^{-t} t^{a - 1} dt.
 
-    ``gamma_below(a, x) = 1 - gamma_above(a, x)``
+    gamma_below is the complement of gamma_above::
+
+        gamma_below(a, x) = 1 - gamma_above(a, x).
 
     As x grows, gamma_below(a, x) converges to 1.
 
-    For x <= max(1, a), this is computed by the power series[1]:
+    For x <= max(1, a), this is computed by the power series[1]::
 
          x^a e^-x   /           x^2            x^3           \
-        ----------- | 1 + x + ------- + -------------- + ... |
+        ----------- | 1 + x + ------- + -------------- + ... |.
         a \Gamma(a) \         (a + 1)   (a + 1)(a + 2)       /
 
     For x > max(1, a), this is computed by ``1 - gamma_above(a, x)``.
@@ -250,18 +252,20 @@ def gamma_below(a, x):
 def gamma_above(a, x):
     """Normalized upper incomplete gamma integral.
 
-    ``(1/\Gamma(a)) \int_x^\infty e^{-t} t^{a - 1} dt``
+    Equal to::
 
-    gamma_above is the complement of gamma_below:
+        (1/\Gamma(a)) \int_x^\infty e^{-t} t^{a - 1} dt.
 
-    ``gamma_above(a, x) = 1 - gamma_below(a, x)``
+    gamma_above is the complement of gamma_below::
+
+        gamma_above(a, x) = 1 - gamma_below(a, x).
 
     As x goes to zero, gamma_above(a, x) converges to 1.
 
-    For x > max(1, a), this is computed by the continued fraction[1]:
+    For x > max(1, a), this is computed by the continued fraction[1]::
 
                    1
-        -----------------------
+        -----------------------,
                   1 - s
         x + -------------------
                        1

@@ -43,7 +43,7 @@ def bayesdb_guess_generator(bdb, generator, table, metamodel,
         already exists, do nothing.
     :param bool default: Make this the default generator.
         (for if a later query does not specify a generator).
-    :param dict **kwargs: options to pass through to bayesdb_guess_stattypes.
+    :param dict kwargs: options to pass through to bayesdb_guess_stattypes.
 
     In addition to statistical types, the overrides may specify
     ``key`` or ``ignore``, in which case those columns will not be

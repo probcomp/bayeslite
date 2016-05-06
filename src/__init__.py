@@ -27,7 +27,7 @@ When done, close it with the :meth:`~BayesDB.close` method::
 
     bdb.close()
 
-BayesDB handles also serve as context managers, so you can do:
+BayesDB handles also serve as context managers, so you can do::
 
     with bayeslite.bayesdb_open(pathname='foo.bdb') as bdb:
         bdb.execute('SELECT 42')
