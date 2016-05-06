@@ -11,7 +11,7 @@ RUN apt-get install -y -qq python2.7-dev python-pip apt-utils pkg-config \
     libboost-dev python-numpy python-scipy python-pandas
 
 RUN pip -q install pip setuptools cython
-RUN pip -q install pytest flaky pexpect
+RUN pip -q install pytest pexpect
 RUN BOOST_ROOT=/usr/include pip -q install crosscat
 
 RUN mkdir /bayeslite
