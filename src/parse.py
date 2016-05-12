@@ -200,8 +200,10 @@ class BQLSemantics(object):
     def p_generator_schema_many(self, ss, s):   ss.append(s); return ss
     def p_generator_schemum_empty(self):        return []
     def p_generator_schemum_nonempty(self, s, t): s.append(t); return s
-    def p_gs_token_prim(self, t):               return t
     def p_gs_token_comp(self, s):               return s
+    def p_gs_token_name(self, n):               return n
+    def p_gs_token_string(self, s):             return ('string', s)
+    def p_gs_token_prim(self, t):               return t
 
     def p_stattype_s(self, name):
         return name

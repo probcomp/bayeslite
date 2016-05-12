@@ -84,6 +84,8 @@ generator_schema(many)	::= generator_schema(ss) T_COMMA generator_schemum(s).
 generator_schemum(empty)	::= .
 generator_schemum(nonempty)	::= generator_schemum(s) gs_token(t).
 gs_token(comp)			::= T_LROUND generator_schemum(s) T_RROUND.
+gs_token(name)			::= L_NAME(n).
+gs_token(string)		::= L_STRING(s).
 gs_token(prim)			::= ANY(t).
 
 /*
