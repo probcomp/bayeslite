@@ -22,10 +22,10 @@ from bayeslite.math_util import *
 def pi_cf():
     """Compute pi with a generalized continued fraction.
 
-    The continued fraction is[1]:
+    The continued fraction is[1]::
 
                        1
-        pi/4 = -------------------
+        pi/4 = -------------------.
                          1^2
                1 + ---------------
                            2^2
@@ -57,15 +57,15 @@ def phi_cf():
 def pi_ps():
     """Compute pi with a power series representation of arctan.
 
-    The power series for arctan is Gregory's series:
+    The power series for arctan is Gregory's series::
 
                        z^3   z^5   z^7
-        arctan z = z - --- + --- - --- + ...
+        arctan z = z - --- + --- - --- + ....
                         3     5     7
 
-    We use a Machin-like formula attributed on Wikipedia to Euler:
+    We use a Machin-like formula attributed on Wikipedia to Euler::
 
-        pi/4 = 20 arctan(1/7) + 8 arctan(3/79)
+        pi/4 = 20 arctan(1/7) + 8 arctan(3/79).
     """
     def arctan(z):
         def seq():

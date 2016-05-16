@@ -1,12 +1,5 @@
 FROM alxempirical/conda-crosscat
 
-# bayeslite tests need flaky, but flaky depends on tox, which is incompatible
-# with conda...  So rip out the tox dependency, which does not break flaky
-RUN git clone https://github.com/box/flaky
-WORKDIR flaky
-RUN sed -i 's/^tox$//' requirements.txt
-RUN python setup.py install
-
 # Install bayeslite
 RUN conda install --use-local bayeslite
 

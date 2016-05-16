@@ -113,7 +113,7 @@ BQL Data Modelling Commands
    :members:
 
 :mod:`bayeslite.metamodels.crosscat`: Crosscat metamodel
----------------------------------------------
+--------------------------------------------------------
 
 .. automodule:: bayeslite.metamodels.crosscat
    :members:

@@ -205,7 +205,6 @@ setup(
         'setuptools', # For parse_version in src/remote.py
     ],
     tests_require=[
-        'flaky',
         'pandas',
         'pexpect',
         'pytest',
