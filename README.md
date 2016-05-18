@@ -1,59 +1,43 @@
 # Bayeslite
 
-Bayeslite is a BQL database built on SQLite3.  BQL is an extension to
-SQL that supports queries about the probable implications of data.
+BQL interpretation and storage for BayesDB.
+Please see http://probcomp.csail.mit.edu/bayesdb for more info.
 
-Bayeslite is part of an ongoing research project.  For more
-information, contact bayesdb@mit.edu.
+## Installing
 
-## Dependencies
+Software requirements are detailed in setup.py.
+Please see http://probcomp.csail.mit.edu/bayesdb/install.html for installation.
 
-Bayeslite is written in Python 2.7, using the sqlite3 module with
-SQLite3 >=3.8.0.
+## Expectations
 
-Bayeslite depends on:
+Users and contributors should expect **rapidly and dramatically
+shifting code and behavior** at this time.
 
-- [Crosscat](https://github.com/probcomp/crosscat),
-  a general-purpose nonparametric Bayesian population model which
-  serves as a default in the absence of a domain-specific model.
-- [apsw](https://rogerbinns.github.io/apsw/), a sqlite3 wrapper for
-  Python more articulated than the builtin sqlite3 module
-- [numpy](http://www.numpy.org), a library of vectorized numerical
-  algorithms
-- [requests](http://www.python-requests.org/), an HTTP/HTTPS library,
-  which we use to track users.
+**THIS SOFTWARE SHOULD NOT BE EXPECTED TO TREAT YOUR DATA SECURELY.**
 
-The bayeslite automatic tests depend on:
+## Contributing
 
-- [pytest](https://pytest.org/)
-- [pandas](http://pandas.pydata.org), a library for tabular data
-  structures
+This repository is currently using "Light Review" from
+http://tinyurl.com/probcomp-review-standards
 
-The bayeslite documentation depends on:
+Our compatibility aim is to work on probcomp machines and members'
+laptops, and to provide scripts and instructions that make it not too
+hard to re-create our environments elsewhere. Pulls for polished
+packaging, broad installability, etc. are not appropriate
+contributions at this time.
 
-- [Sphinx](http://sphinx-doc.org/)
-
-## Test
-
-To check that everything will work, before installing:
+Please run local tests before sending a pull request:
 
 ```
 $ ./check.sh
 ```
 
-## Install
-
-To install system-wide, or into the current virtual environment:
+That does not run the complete test suite, only the smoke tests, but
+is usually good enough. For the full suite:
 
 ```
-$ python setup.py build
-$ python setup.py install
+$ ./check.sh tests shell/tests
 ```
-
-## Use
-
-Import the `bayeslite` module.  See the documentation for details on
-the Python API.
 
 ## Documentation
 
