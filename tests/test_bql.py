@@ -1379,6 +1379,37 @@ def test_parametrized():
                     ' :num_views, :column_crp_alpha, :iterations)',
         ]
 
+def test_create_table_ifnotexists_as_simulate():
+    with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
+        with open(fname, 'rU') as f:
+            bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
+            # If not exists table tests
+            bdb.execute('''
+                create generator t_cc for t using crosscat (
+                    guess(*),
+                    age numerical
+                )
+            ''')
+            bdb.execute('initialize 1 model for t_cc')
+            bdb.execute('analyze t_cc for 1 iteration wait')
+            bdb.execute("create table if not exists u as simulate age from t_cc limit 10")
+            bdb.execute("drop table u")
+            bdb.execute('''
+                create table if not exists w as simulate age from t_cc
+                    given division=sales limit 10
+            ''')
+            bdb.execute("drop table w")
+            bdb.execute("create table u as simulate age from t_cc limit 10")
+            x = bdb.execute("select count (*) from u").fetchvalue()
+            bdb.execute('''
+                create table if not exists u as simulate age from t_cc limit 10
+            ''')
+            bdb.execute('''
+                create table if not exists u as simulate age from t_cc
+                    given division=sales limit 10
+            ''')
+            assert x == bdb.execute("select count (*) from u").fetchvalue()
+
 def test_createtab():
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
         with pytest.raises(apsw.SQLError):
