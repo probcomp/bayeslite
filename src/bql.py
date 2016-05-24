@@ -93,8 +93,11 @@ def execute_phrase(bdb, phrase, bindings=()):
                 raise BQLError(bdb, 'Name already defined as generator: %s' %
                     (repr(phrase.name),))
             if core.bayesdb_has_table(bdb, phrase.name):
-                raise BQLError(bdb, 'Name already defined as table: %s' %
-                    (repr(phrase.name),))
+                if phrase.ifnotexists:
+                    return empty_cursor(bdb)
+                else:
+                    raise BQLError(bdb, 'Name already defined as table: %s' %
+                        (repr(phrase.name),))
             if not core.bayesdb_has_generator_default(bdb,
                     phrase.simulation.generator):
                 raise BQLError(bdb, 'No such generator: %s' %
