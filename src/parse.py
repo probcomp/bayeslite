@@ -256,8 +256,12 @@ class BQLSemantics(object):
         return ast.Simulate(cols, generator, modelno, constraints, lim.limit)
     def p_simulate_nolimit(self, cols, generator, modelno, constraints):
         # XXX Report source location.
-        self.errors.append('simulate missing limit')
+        self.errors.append('SIMULATE missing LIMIT')
         return ast.Simulate(cols, generator, modelno, constraints, 0)
+    def p_simulate_nogiven(self, cols, generator, modelno, constraints, lim):
+        # XXX Report source location.
+        self.errors.append('SIMULATE missing GIVEN')
+        return ast.Simulate(cols, generator, modelno, constraints, lim.limit)
     def p_simulate_columns_one(self, col):
         return [col]
     def p_simulate_columns_many(self, cols, col):

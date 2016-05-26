@@ -139,6 +139,11 @@ simulate(nolimit)	::= K_SIMULATE simulate_columns(cols)
 				K_FROM generator_name(generator)
 				usingmodel_opt(modelno)
 				given_opt(constraints).
+simulate(nogiven)	::= K_SIMULATE simulate_columns(cols)
+				K_FROM generator_name(generator)
+				usingmodel_opt(modelno)
+				constraints(constraints)
+				limit(lim).
 
 simulate_columns(one)	::= column_name(col).
 simulate_columns(many)	::= simulate_columns(cols) T_COMMA column_name(col).
@@ -614,7 +619,7 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 	K_ITERATION
 	K_ITERATIONS
 	K_LIKE
-	K_LIMIT
+	/* K_LIMIT */
 	K_MATCH
 	K_MINUTE
 	K_MINUTES

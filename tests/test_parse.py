@@ -658,12 +658,27 @@ def test_complete():
     assert parse.bql_string_complete_p('select 0;\nselect 1;')
 
 def test_simulate():
-    with pytest.raises(parse.BQLParseError):
+    try:
         # Need limit.
         parse_bql_string('create table s as simulate x from t')
-    with pytest.raises(parse.BQLParseError):
+    except parse.BQLParseError as e:
+        assert any('SIMULATE missing LIMIT' in error for error in e.errors)
+    else:
+        assert False, 'failed to detect parse error'
+    try:
         # Need limit.
         parse_bql_string('create table s as simulate x from t given y = 0')
+    except parse.BQLParseError as e:
+        assert any('SIMULATE missing LIMIT' in error for error in e.errors)
+    else:
+        assert False, 'failed to detect parse error'
+    try:
+        # Need GIVEN.
+        parse_bql_string('create table s as simulate x from t y = 0 limit 10')
+    except parse.BQLParseError as e:
+        assert any('SIMULATE missing GIVEN' in error for error in e.errors)
+    else:
+        assert False, 'failed to detect parse error'
     assert parse_bql_string('create table s as'
             ' simulate x from t limit 10') == \
         [ast.CreateTabSim(False, False, 's',
