@@ -96,7 +96,7 @@ def continuants(contfrac):
     """Continuants of a continued fraction.
 
     contfrac must yield an infinite sequence (n0, d0), (n1, d1), (n2,
-    d2), ..., representing the continued fraction
+    d2), ..., representing the continued fraction::
 
                 n0
         ------------------
@@ -132,7 +132,7 @@ def convergents(contfrac):
     """Convergents of a continued fraction.
 
     contfrac must yield an infinite sequence (n0, d0), (n1, d1), (n2,
-    d2), ..., representing the continued fraction
+    d2), ..., representing the continued fraction::
 
                 n0
         ------------------
