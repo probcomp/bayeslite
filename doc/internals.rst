@@ -37,6 +37,12 @@ Bayeslite API internals
 .. automodule:: bayeslite.stats
    :members:
 
+:mod:`bayeslite.math_util`: Math utilities
+------------------------------------------
+
+.. automodule:: bayeslite.math_util
+   :members:
+
 :mod:`bayeslite.util`: Miscellaneous utilities
 ----------------------------------------------
 
