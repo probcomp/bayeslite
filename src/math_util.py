@@ -209,7 +209,7 @@ def gamma_below(a, x):
 
     For x <= max(1, a), this is computed by the power series[1]::
 
-         x^a e^-x   /           x^2            x^3           \
+         x^a e^-x   /           x^2            x^3           \ 
         ----------- | 1 + x + ------- + -------------- + ... |.
         a \Gamma(a) \         (a + 1)   (a + 1)(a + 2)       /
 
