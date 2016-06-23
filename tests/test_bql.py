@@ -436,6 +436,9 @@ def test_estimate_columns_trivial():
         ', bql_column_value_probability(1, NULL, c.colno, 8, 2, 8)' + \
         prefix1 + ';'
     with pytest.raises(bayeslite.BQLError):
+        bql2sql('estimate probability of value 8 given (agee = 8)'
+            ' from columns of t1_cc')
+    with pytest.raises(bayeslite.BQLError):
         # PREDICTIVE PROBABILITY makes no sense without row.
         bql2sql('estimate * from columns of t1_cc where' +
             ' predictive probability of x > 0;')

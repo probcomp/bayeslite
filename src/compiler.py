@@ -1114,7 +1114,7 @@ def compile_constraints(bdb, generator_id, constraints, bql_compiler, out):
     for c_col, c_exp in constraints:
         if not core.bayesdb_generator_has_column(bdb, generator_id, c_col):
             raise BQLError(bdb, 'No such column in generator %s: %s' %
-                (generator, c_col))
+                (generator_id, c_col))
         c_colno = core.bayesdb_generator_column_number(bdb,
             generator_id, c_col)
         out.write(', %d, ' % (c_colno,))
