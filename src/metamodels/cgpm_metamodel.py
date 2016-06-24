@@ -601,12 +601,12 @@ def _parse_schema(schema_text):
         ),
     }
 
-CCTYPE_TO_STATTYPE = {
+STATTYPE_TO_CCTYPE = {
     casefold('numerical'): 'normal',
     casefold('categorical'): 'categorical',
 }
 def cctype(stattype):
-    return CCTYPE_TO_STATTYPE[casefold(stattype)]
+    return STATTYPE_TO_CCTYPE[casefold(stattype)]
 
 class CGPM_Cache(object):
     def __init__(self):
