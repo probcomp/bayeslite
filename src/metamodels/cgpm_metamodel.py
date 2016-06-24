@@ -18,8 +18,8 @@
 #
 # [DONE] Fix necessary XXX: fill bayesdb_cgpm_variable.
 # [DONE] Teach analysis to update CGPMs too.
-# - Kludge up Kepler's laws in Python.
-# - Test hand-kludged CGPM registry.
+# [DONE] Kludge up Kepler's laws in Python.
+# [DONE] Test hand-kludged CGPM registry.
 # - Write stupid schema parser.  Adapt axch's?
 # - Teach INITIALIZE MODELS to take a model_config argument for real:
 #   . INITIALIZE 10 MODELS FOR <population> (x POISSON, y ...)
@@ -39,10 +39,6 @@
 #
 # XXX Future TODO:
 #
-# - Implement model tagging:
-#   . INITIALIZE 10 MODELS FOR <population> (...) TAGGED foobar
-#   . ANALYZE <population> MODELS TAGGED foobar
-#   . DROP MODELS FROM <population> TAGGED foobar
 # - Rename keyword BY ---> WITHIN?
 # - Conjecture more elaborate predicates on models?
 #   . ANALYZE <population> MODELS WHERE DEP. PROB. OF X WITH Y > 0.5
