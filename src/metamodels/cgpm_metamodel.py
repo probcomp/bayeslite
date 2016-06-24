@@ -143,14 +143,16 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         schema = _parse_schema(schema_text)
 
         # Instantiate the generic parts of the generator.
-        generator_id, variable_list = instantiate(schema['variables'])
+        columns = [(name, stattype)
+            for name, stattype, cctype, distargs in schema['variables']]
+        generator_id, column_list = instantiate(columns)
 
         # Instantiate the CGPM-specific parts of the generator.
         schema_json = json_dumps(schema)
         bdb.sql_execute('''
             INSERT INTO bayesdb_cgpm (generator_id, schema_json) VALUES (?, ?)
         ''', (generator_id, schema_json))
-        for cgpm_colno, (colno, _name, _stattype) in enumerate(variable_list):
+        for cgpm_colno, (colno, _name, _stattype) in enumerate(column_list):
             bdb.sql_execute('''
                 INSERT INTO bayesdb_cgpm_variable
                     (generator_id, colno, cgpm_colno)
@@ -445,9 +447,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
     def _initialize(self, nstates, X, schema):
         # XXX Parallelize me!  Push me into the engine!
         variables = schema['variables']
-        distargs = schema['distargs']
         outputs = range(len(variables))
-        cctypes = [cctype(stattype) for _name, stattype in variables]
+        cctypes = [cctype for _n, _st, cctype, _da in variables]
+        distargs = [distargs for _n, _st, _cct, distargs in variables]
         return [State(X, outputs, cctypes=cctypes, distargs=distargs)
             for _ in xrange(nstates)]
 
@@ -563,20 +565,12 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 def _parse_schema(schema_text):
     return {
         'variables': (
-            ('apogee', 'numerical'),
-            ('class_of_orbit', 'categorical'),
-            ('country_of_operator', 'categorical'),
-            ('launch_mass', 'numerical'),
-            ('perigee', 'numerical'),
-            ('period', 'numerical'),
-        ),
-        'distargs': (
-            {},
-            {'k': 3},
-            {'k': 4},
-            {},
-            {},
-            {},
+            ('apogee', 'numerical', 'normal', {}),
+            ('class_of_orbit', 'categorical', 'categorical', {'k': 3}),
+            ('country_of_operator', 'categorical', 'categorical', {'k': 4}),
+            ('launch_mass', 'numerical', 'normal', {}),
+            ('perigee', 'numerical', 'normal', {}),
+            ('period', 'numerical', 'normal', {}),
         ),
         'categoricals': {
             '1': {
@@ -600,13 +594,6 @@ def _parse_schema(schema_text):
             },
         ),
     }
-
-STATTYPE_TO_CCTYPE = {
-    casefold('numerical'): 'normal',
-    casefold('categorical'): 'categorical',
-}
-def cctype(stattype):
-    return STATTYPE_TO_CCTYPE[casefold(stattype)]
 
 class CGPM_Cache(object):
     def __init__(self):
