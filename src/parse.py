@@ -207,9 +207,8 @@ class BQLSemantics(object):
         return name
 
     # BQL Model Analysis Language
-    def p_command_init_models(self, n, ifnotexists, generator):
-        # XXX model config
-        return ast.InitModels(ifnotexists, generator, n, config=None)
+    def p_command_init_models(self, n, ifnotexists, generator, schema):
+        return ast.InitModels(ifnotexists, generator, n, config=schema)
     def p_command_analyze_models(self, generator, models, anlimit, anckpt,
             wait):
         self._ensure_wizard_mode(generator)
@@ -251,6 +250,22 @@ class BQLSemantics(object):
 
     def p_wait_opt_none(self):                  return False
     def p_wait_opt_some(self):                  return True
+
+    def p_model_schema_opt_none(self):          return None
+    def p_model_schema_opt_some(self, ms):
+        schema = []
+        def walk(l):
+            for x in l:
+                if isinstance(x, list):
+                    walk(x)
+                else:
+                    schema.append(x)
+        walk(ms)
+        return schema
+    def p_model_schema_none(self):              return []
+    def p_model_schema_some(self, ms, ms1):     ms.append(ms1); return ms
+    def p_model_schema1_comp(self, ms):         return ['(', ms, ')']
+    def p_model_schema1_prim(self, t):          return t
 
     def p_simulate_s(self, cols, generator, modelno, constraints, lim):
         return ast.Simulate(cols, generator, modelno, constraints, lim.limit)

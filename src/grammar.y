@@ -92,7 +92,8 @@ gs_token(prim)			::= ANY(t).
 /* XXX No way to initialize individual models after DROP.  */
 command(init_models)	::= K_INITIALIZE L_INTEGER(n) K_MODEL|K_MODELS
 				ifnotexists(ifnotexists)
-				K_FOR generator_name(generator).
+				K_FOR generator_name(generator)
+				model_schema_opt(schema).
 command(analyze_models)	::= K_ANALYZE generator_name(generator)
 				anmodelset_opt(models) anlimit(anlimit)
 				anckpt_opt(anckpt)
@@ -130,6 +131,13 @@ anduration(seconds)	::= L_INTEGER(n) K_SECOND|K_SECONDS.
 
 wait_opt(none)		::= .
 wait_opt(some)		::= K_WAIT.
+
+model_schema_opt(none)	::= .
+model_schema_opt(some)	::= T_LROUND model_schema(ms) T_RROUND.
+model_schema(none)	::= .
+model_schema(some)	::= model_schema(ms) model_schema1(ms1).
+model_schema1(comp)	::= T_LROUND model_schema(ms) T_RROUND.
+model_schema1(prim)	::= ANY(t).
 
 simulate(s)		::= K_SIMULATE simulate_columns(cols)
 				K_FROM generator_name(generator)

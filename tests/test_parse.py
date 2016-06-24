@@ -739,6 +739,18 @@ def test_using_model():
             't', ast.ExpCol(None, 'modelno'),
             None, None, None, None)]
 
+def test_parse_model_schema():
+    assert parse_bql_string('''
+        initialize 32 models for t (
+            launch_mass_kg exponential,
+            kepler(period, kepcluster) given (perigee, apogee)
+        )
+    ''') == \
+        [ast.InitModels(False, 't', 32,
+            ['launch_mass_kg', 'exponential', ',',
+             'kepler', '(', 'period', ',', 'kepcluster', ')',
+             'given', '(', 'perigee', ',', 'apogee', ')'])]
+
 def test_is_bql():
     assert ast.is_bql(ast.ExpLit(ast.LitInt(0))) == False
     assert ast.is_bql(ast.ExpNumpar(0)) == False
