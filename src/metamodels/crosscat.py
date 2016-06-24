@@ -792,6 +792,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 'initialization': 'from_the_prior',
                 'row_initialization': 'from_the_prior',
             }
+        else:
+            raise NotImplementedError('Crosscat per-model schemas')
         M_c = self._crosscat_metadata(bdb, generator_id)
         X_L_list, X_D_list = self._crosscat.initialize(
             seed=crosscat_seed(bdb),
