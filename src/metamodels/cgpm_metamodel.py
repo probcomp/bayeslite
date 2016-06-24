@@ -66,10 +66,13 @@ from bayeslite.util import casefold
 CGPM_SCHEMA_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('cgpm', 1);
 
-CREATE TABLE bayesdb_cgpm (
-    generator_id        INTEGER NOT NULL PRIMARY KEY
-                            REFERENCES bayesdb_generator(id),
-    schema_json         BLOB NOT NULL
+CREATE TABLE bayesdb_cgpm_category (
+    generator_id        INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    colno               INTEGER NOT NULL CHECK (0 <= colno),
+    value               TEXT NOT NULL,
+    code                INTEGER NOT NULL,
+    PRIMARY KEY(generator_id, colno, value),
+    UNIQUE(generator_id, colno, code)
 );
 
 CREATE TABLE bayesdb_cgpm_variable (
@@ -134,20 +137,28 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 raise BQLError(bdb, 'CGPM already installed'
                     ' with unknown schema version: %d' % (version,))
 
-    def create_generator(self, bdb, table, schema_text, instantiate):
-        # Parse the schema.
-        schema = _parse_schema(schema_text)
+    def create_generator(self, bdb, table, schema, instantiate):
+        # Instantiate the generator.  No interesting schema parsing
+        # here -- we just pass along the statistical types verbatim
+        # specified by the user.
+        generator_id, column_list = instantiate(schema)
 
-        # Instantiate the generic parts of the generator.
-        columns = [(name, stattype)
-            for name, stattype, cctype, distargs in schema['variables']]
-        generator_id, column_list = instantiate(columns)
+        # Assign codes to categories.
+        qt = sqlite3_quote_name(table)
+        for colno, name, stattype in column_list:
+            if casefold(stattype) == 'categorical':
+                qn = sqlite3_quote_name(name)
+                cursor = bdb.sql_execute('''
+                    SELECT DISTINCT %s FROM %s WHERE %s IS NOT NULL
+                ''' % (qn, qt, qn))
+                for code, (value,) in enumerate(cursor):
+                    bdb.sql_execute('''
+                        INSERT INTO bayesdb_cgpm_category
+                            (generator_id, colno, value, code)
+                            VALUES (?, ?, ?, ?)
+                    ''', (generator_id, colno, value, code))
 
-        # Instantiate the CGPM-specific parts of the generator.
-        schema_json = json_dumps(schema)
-        bdb.sql_execute('''
-            INSERT INTO bayesdb_cgpm (generator_id, schema_json) VALUES (?, ?)
-        ''', (generator_id, schema_json))
+        # Assign consecutive column numbers to the modelled variables.
         for cgpm_colno, (colno, _name, _stattype) in enumerate(column_list):
             bdb.sql_execute('''
                 INSERT INTO bayesdb_cgpm_variable
@@ -174,7 +185,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             DELETE FROM bayesdb_cgpm WHERE generator_id = ?
         ''', (generator_id,))
 
-    def initialize_models(self, bdb, generator_id, modelnos, schema):
+    def initialize_models(self, bdb, generator_id, modelnos, schema_tokens):
         # Caller should guarantee a nondegenerate request.
         assert 0 < len(modelnos)
 
@@ -186,8 +197,29 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # If the caller didn't provide a schema for these models, get
         # the generator-wide one.
-        if schema is None:
-            schema = self._schema(bdb, generator_id)
+        if schema_tokens is None:
+            raise BQLError(bdb, 'Missing CGPM model schema')
+        else:
+            # XXX MEGA-KLUDGE!
+            def jsonify(x):
+                if isinstance(x, int):
+                    return str(x)
+                elif x == '<':
+                    return '{'
+                elif x == '>':
+                    return '}'
+                elif x == '(':
+                    return '['
+                elif x == ')':
+                    return ']'
+                elif x == '~':
+                    return ':'
+                elif x == ',':
+                    return ','
+                else:
+                    return '"' + x + '"'
+            schema = json.loads(' '.join(map(jsonify, schema_tokens)))
+            # XXX check schema
 
         # Initialize fresh states and their composed CGPMs.
         X = self._X(bdb, generator_id)
@@ -426,17 +458,20 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         ''' % (qexpressions, qt))
 
         # Map values to codes.
-        schema = self._schema(bdb, generator_id)
         colnos = core.bayesdb_generator_column_numbers(bdb, generator_id)
         def map(colno, value):
-            colno_key = unicode(colno) # XXX WHATTAKLUDGE for json
-            if colno_key in schema['categoricals']:
-                if value in schema['categoricals'][colno_key]:
-                    return schema['categoricals'][colno_key][value]
-                else:
-                    raise BQLError(bdb, 'Invalid category: %r' % (value,))
-            else:
-                return value
+            stattype = core.bayesdb_generator_column_stattype(
+                bdb, generator_id, colno)
+            if casefold(stattype) == 'categorical':
+                cursor = bdb.sql_execute('''
+                    SELECT code FROM bayesdb_cgpm_category
+                        WHERE generator_id = ? AND colno = ? AND value = ?
+                ''', (generator_id, colno, value))
+                code = cursor_value(cursor, nullok=True)
+                if code is None:
+                    raise BQLError('Invalid category: %r' % (value,))
+                return code
+            return value
         return [tuple(map(colno, x) for colno, x in zip(colnos, row))
             for row in cursor]
 
@@ -474,28 +509,6 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Otherwise, get it.
         return bdb.cache['cgpm']
-
-    def _schema(self, bdb, generator_id):
-        # Probe the cache.
-        cache = self._cache(bdb)
-        if cache is not None and generator_id in cache.schema:
-            return cache.schema[generator_id]
-
-        # Not cached.  Load the schema from the database.
-        cursor = bdb.sql_execute('''
-            SELECT schema_json FROM bayesdb_cgpm WHERE generator_id = ?
-        ''', (generator_id,))
-        schema_json = cursor_value(cursor, nullok=True)
-        if schema_json is None:
-            generator = core.bayesdb_generator_name(bdb, generator_id)
-            raise BQLError(bdb, 'No CGPM schema for generator: %s' %
-                (repr(generator),))
-        schema = json.loads(schema_json)
-
-        # Cache it if we can.
-        if cache is not None:
-            cache.schema[generator_id] = schema
-        return schema
 
     def _models(self, bdb, generator_id, modelno):
         # Get the model numbers.
@@ -557,39 +570,6 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         ''', (generator_id, colno))
         # XXX error message if not modelled
         return cursor_value(cursor)
-
-def _parse_schema(schema_text):
-    return {
-        'variables': (
-            ('apogee', 'numerical', 'normal', {}),
-            ('class_of_orbit', 'categorical', 'categorical', {'k': 3}),
-            ('country_of_operator', 'categorical', 'categorical', {'k': 4}),
-            ('launch_mass', 'numerical', 'normal', {}),
-            ('perigee', 'numerical', 'normal', {}),
-            ('period', 'numerical', 'normal', {}),
-        ),
-        'categoricals': {
-            '1': {
-                'geo': 0,
-                'leo': 1,
-                'meo': 2,
-            },
-            '2': {
-                'US': 0,
-                'Russia': 1,
-                'China': 2,
-                'Bulgaria': 3,
-            }
-        },
-        'cgpm_composition': (
-            {
-                'name': 'kepler',
-                'outputs': ('apogee', 'perigee'),
-                'inputs': ('period',),
-                #'kwds': {'noise': 1.0},
-            },
-        ),
-    }
 
 class CGPM_Cache(object):
     def __init__(self):

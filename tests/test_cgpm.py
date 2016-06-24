@@ -114,12 +114,45 @@ def test_cgpm():
             CREATE GENERATOR g FOR satellites USING cgpm(
                 apogee NUMERICAL,
                 class_of_orbit CATEGORICAL,
+                country_of_operator CATEGORICAL,
+                launch_mass NUMERICAL,
                 perigee NUMERICAL,
                 period NUMERICAL
             )
         ''')
         bdb.execute('''
-            INITIALIZE 1 MODEL FOR g
+            INITIALIZE 1 MODEL FOR g (<
+                "variables"~ (
+                    ("apogee", "numerical", "normal", < >),
+                    ("class_of_orbit", "categorical", "categorical", <"k"~ 3>),
+                    ("country_of_operator", "categorical", "categorical",
+                     <"k"~ 4>),
+                    ("launch_mass", "numerical", "normal", < >),
+                    ("perigee", "numerical", "normal", < >),
+                    ("period", "numerical", "normal", < >)
+                ),
+                "categoricals"~ <
+                    "1"~ <
+                        "geo"~ 0,
+                        "leo"~ 1,
+                        "meo"~ 2
+                    >,
+                    "2"~ <
+                        "US"~ 0,
+                        "Russia"~ 1,
+                        "China"~ 2,
+                        "Bulgaria"~ 3
+                    >
+                >,
+                "cgpm_composition"~ (
+                    <
+                        "name"~ "kepler",
+                        "outputs"~ ("apogee", "perigee"),
+                        "inputs"~ ("period")
+                        -- "kwds"~ <"noise"~ 1.0>
+                    >
+                )
+            >)
             -- USING (period ~ kepler(apogee, perigee))
         ''')
         bdb.execute('ANALYZE g FOR 1 ITERATION WAIT')
