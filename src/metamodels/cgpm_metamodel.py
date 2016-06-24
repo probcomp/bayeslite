@@ -605,6 +605,7 @@ def cursor_row(cursor, nullok=None):
 def cursor_value(cursor, nullok=None):
     row = cursor_row(cursor, nullok)
     if row is None:
+        assert nullok
         return None
     if len(row) != 1:
         raise ValueError('Non-unit cursor')
