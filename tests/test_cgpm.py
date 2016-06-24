@@ -97,7 +97,7 @@ def test_cgpm():
                 for y in xrange(10):
                     countries = ['US', 'Russia', 'China', 'Bulgaria']
                     country = countries[random.randrange(len(countries))]
-                    mass = random.gauss(1000, 500)
+                    mass = random.gauss(1000, 50)
                     bdb.sql_execute('''
                         INSERT INTO satellites
                             (country_of_operator, launch_mass, class_of_orbit,
@@ -128,6 +128,47 @@ def test_cgpm():
                     ("country_of_operator", "categorical", "categorical",
                      <"k"~ 4>),
                     ("launch_mass", "numerical", "normal", < >),
+                    ("perigee", "numerical", "normal", < >),
+                    ("period", "numerical", "normal", < >)
+                ),
+                "categoricals"~ <
+                    "1"~ <
+                        "geo"~ 0,
+                        "leo"~ 1,
+                        "meo"~ 2
+                    >,
+                    "2"~ <
+                        "US"~ 0,
+                        "Russia"~ 1,
+                        "China"~ 2,
+                        "Bulgaria"~ 3
+                    >
+                >,
+                "cgpm_composition"~ (
+                    <
+                        "name"~ "kepler",
+                        "outputs"~ ("apogee", "perigee"),
+                        "inputs"~ ("period")
+                        -- "kwds"~ <"noise"~ 1.0>
+                    >
+                )
+            >)
+            -- USING (period ~ kepler(apogee, perigee))
+        ''')
+        # Another model schema: exponential launch mass instead of
+        # normal.
+        #
+        # XXX For the moment, we have to use INITIALIZE 2 MODELS IF
+        # NOT EXISTS in order to get *one* model with this schema.  To
+        # be remedied once we name model schemas.
+        bdb.execute('''
+            INITIALIZE 2 MODELS IF NOT EXISTS FOR g (<
+                "variables"~ (
+                    ("apogee", "numerical", "normal", < >),
+                    ("class_of_orbit", "categorical", "categorical", <"k"~ 3>),
+                    ("country_of_operator", "categorical", "categorical",
+                     <"k"~ 4>),
+                    ("launch_mass", "numerical", "exponential", < >),
                     ("perigee", "numerical", "normal", < >),
                     ("period", "numerical", "normal", < >)
                 ),
