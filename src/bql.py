@@ -399,7 +399,7 @@ def execute_phrase(bdb, phrase, bindings=()):
         generator_id = core.bayesdb_get_generator_default(bdb,
             phrase.generator)
         modelnos = range(phrase.nmodels)
-        model_config = None         # XXX For now.
+        model_config = phrase.config
 
         with bdb.savepoint():
             # Find the model numbers.  Omit existing ones for
