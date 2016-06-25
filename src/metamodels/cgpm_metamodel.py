@@ -25,7 +25,7 @@
 #   . [DONE] INITIALIZE 10 MODELS FOR <population> (x POISSON, y ...)
 #   . rename model_config -> model schema
 #   . Meaning: prior and likelihood model?  Or, `just SP'...
-# - Introduce named model schemas:
+# [DONE] Introduce named model schemas:
 #   . CREATE MODEL SCHEMA <schema> FOR <population> (...)
 #   . INITIALIZE 40 MODELS FOR <population> USING <model schema>
 # - Make populations metamodel-independent.
