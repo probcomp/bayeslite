@@ -67,11 +67,15 @@ CGPM_SCHEMA_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('cgpm', 1);
 
 CREATE TABLE bayesdb_cgpm_schema (
+    -- We use AUTOINCREMENT so that id numbers don't get reused and
+    -- are safe to hang onto outside a transaction.
+    id                  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
+                            CHECK (0 < id),
     generator_id        INTEGER NOT NULL REFERENCES bayesdb_generator(id),
     -- XXX Should be globally unique for the whole database, but we'll
     -- let that pass for now until we move the model schema business
     -- into the generic BayesDB SQL schema.
-    name                TEXT NOT NULL PRIMARY KEY,
+    name                TEXT NOT NULL UNIQUE,
     schema_json         BLOB NOT NULL
 );
 
