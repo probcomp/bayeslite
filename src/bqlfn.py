@@ -47,27 +47,27 @@ def bayesdb_install_bql(db, cookie):
 
 ### BayesDB column functions
 
-def bql_column_stattypes_and_data(bdb, generator_id, colno0, colno1):
-    st0 = core.bayesdb_generator_column_stattype(bdb, generator_id, colno0)
-    st1 = core.bayesdb_generator_column_stattype(bdb, generator_id, colno1)
-    table_name = core.bayesdb_generator_table(bdb, generator_id)
+def bql_variable_stattypes_and_data(bdb, population_id, colno0, colno1):
+    st0 = core.bayesdb_variable_stattype(bdb, population_id, colno0)
+    st1 = core.bayesdb_variable_stattype(bdb, population_id, colno1)
+    table_name = core.bayesdb_population_table(bdb, population_id)
     qt = sqlite3_quote_name(table_name)
-    colname0 = core.bayesdb_generator_column_name(bdb, generator_id, colno0)
-    colname1 = core.bayesdb_generator_column_name(bdb, generator_id, colno1)
-    qcn0 = sqlite3_quote_name(colname0)
-    qcn1 = sqlite3_quote_name(colname1)
+    varname0 = core.bayesdb_variable_name(bdb, population_id, colno0)
+    varname1 = core.bayesdb_variable_name(bdb, population_id, colno1)
+    qvn0 = sqlite3_quote_name(varname0)
+    qvn1 = sqlite3_quote_name(varname1)
     data_sql = '''
         SELECT %s, %s FROM %s WHERE %s IS NOT NULL AND %s IS NOT NULL
-    ''' % (qcn0, qcn1, qt, qcn0, qcn1)
+    ''' % (qvn0, qvn1, qt, qvn0, qvn1)
     data = bdb.sql_execute(data_sql).fetchall()
     data0 = [row[0] for row in data]
     data1 = [row[1] for row in data]
     return (st0, st1, data0, data1)
 
 # Two-column function:  CORRELATION [OF <col0> WITH <col1>]
-def bql_column_correlation(bdb, generator_id, colno0, colno1):
-    (st0, st1, data0, data1) = bql_column_stattypes_and_data(bdb, generator_id,
-        colno0, colno1)
+def bql_column_correlation(bdb, population_id, colno0, colno1):
+    (st0, st1, data0, data1) = bql_variable_stattypes_and_data(bdb,
+        population_id, colno0, colno1)
     if (st0, st1) not in correlation_methods:
         raise NotImplementedError('No correlation method for %s/%s.' %
             (st0, st1))

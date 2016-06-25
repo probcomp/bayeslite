@@ -114,6 +114,9 @@ def test_cgpm():
                 period NUMERICAL
             )
         ''')
+        bdb.execute('''
+            estimate correlation from pairwise columns of satellites
+        ''').fetchall()
         XXX = bdb.sql_execute('SELECT * FROM satellites_ucs').fetchall()
         engine = Engine(XXX, num_states=0, multithread=False)
         registry = {
