@@ -511,13 +511,13 @@ def test_trivial_commands():
             ['lmn', 'cyclic'],
         ])]
     assert parse_bql_string('initialize 1 model for t;') == \
-        [ast.InitModels(False, 't', 1, None)]
+        [ast.InitModels(False, 't', 1)]
     assert parse_bql_string('initialize 1 model if not exists for t;') == \
-        [ast.InitModels(True, 't', 1, None)]
+        [ast.InitModels(True, 't', 1)]
     assert parse_bql_string('initialize 2 models for t;') == \
-        [ast.InitModels(False, 't', 2, None)]
+        [ast.InitModels(False, 't', 2)]
     assert parse_bql_string('initialize 2 models if not exists for t;') == \
-        [ast.InitModels(True, 't', 2, None)]
+        [ast.InitModels(True, 't', 2)]
     assert parse_bql_string('analyze t for 1 iteration;') == \
         [ast.AnalyzeModels('t', None, 1, None, None, None, False)]
     assert parse_bql_string('analyze t for 1 iteration wait;') == \
@@ -738,32 +738,6 @@ def test_using_model():
         [ast.InferExplicit([ast.SelColExp(ast.ExpCol(None, 'x'), None)],
             't', ast.ExpCol(None, 'modelno'),
             None, None, None, None)]
-
-def test_parse_model_schema():
-    assert parse_bql_string('''
-        initialize 32 models for t (
-            launch_mass_kg exponential,
-            kepler(period, kepcluster) given (perigee, apogee)
-        )
-    ''') == \
-        [ast.InitModels(False, 't', 32,
-            ['launch_mass_kg', 'exponential', ',',
-             'kepler', '(', 'period', ',', 'kepcluster', ')',
-             'given', '(', 'perigee', ',', 'apogee', ')'])]
-    assert parse_bql_string('''
-        create model schema ms for t (
-            launch_mass_kg exponential,
-            kepler(period, kepcluster) given (perigee, apogee)
-        )
-    ''') == \
-        [ast.CreateModelSchema('ms', 't',
-            ['launch_mass_kg', 'exponential', ',',
-             'kepler', '(', 'period', ',', 'kepcluster', ')',
-             'given', '(', 'perigee', ',', 'apogee', ')'])]
-    assert parse_bql_string('''
-        drop modelschema ms;
-    ''') == \
-        [ast.DropModelSchema('ms')]
 
 def test_is_bql():
     assert ast.is_bql(ast.ExpLit(ast.LitInt(0))) == False

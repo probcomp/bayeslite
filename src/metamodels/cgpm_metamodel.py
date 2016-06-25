@@ -66,9 +66,9 @@ from bayeslite.util import casefold
 CGPM_SCHEMA_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('cgpm', 1);
 
-CREATE TABLE bayesdb_cgpm_model_schema (
-    model_schema_id     INTEGER NOT NULL PRIMARY KEY
-                            REFERENCES bayesdb_model_schema(id),
+CREATE TABLE bayesdb_cgpm_generator (
+    generator_id        INTEGER NOT NULL PRIMARY KEY
+                            REFERENCES bayesdb_generator(id),
     schema_json         BLOB NOT NULL
 );
 
@@ -143,11 +143,42 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 raise BQLError(bdb, 'CGPM already installed'
                     ' with unknown schema version: %d' % (version,))
 
-    def create_generator(self, bdb, table, schema, instantiate):
-        # Instantiate the generator.  No interesting schema parsing
-        # here -- we just pass along the statistical types verbatim
-        # specified by the user.
-        generator_id, column_list = instantiate(schema)
+    def create_generator(self, bdb, table, schema_tokens, instantiate):
+        # Parse the schema crap.
+        def intersperse(comma, l):
+            if len(l) == 0:
+                return []
+            it = iter(l)
+            result = list(it.next())
+            for l_ in it:
+                result.append(comma)
+                result += l_
+            return result
+        def flatten1(l, f):
+            for x in l:
+                if isinstance(x, list):
+                    f.append('(')
+                    flatten1(x, f)
+                    f.append(')')
+                else:
+                    f.append(x)
+        def flatten(l):
+            f = []
+            flatten1(l, f)
+            return f
+        tokenses = [flatten(tokens) for tokens in schema_tokens]
+        schema = _parse_cgpm_schema(intersperse(',', tokenses))
+
+        # Instantiate the generator.
+        columns = [(name, stattype) for name, stattype, _ct, _da
+            in schema['variables']]
+        generator_id, column_list = instantiate(columns)
+
+        # Store the schema.
+        bdb.sql_execute('''
+            INSERT INTO bayesdb_cgpm_generator (generator_id, schema_json)
+                VALUES (?, ?)
+        ''', (generator_id, json_dumps(schema)))
 
         # Assign codes to categories.
         qt = sqlite3_quote_name(table)
@@ -196,29 +227,12 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             DELETE FROM bayesdb_cgpm_category WHERE generator_id = ?
         ''', (generator_id,))
 
-        # Delete model schemas.
+        # Delete generator.
         bdb.sql_execute('''
-            DELETE FROM bayesdb_cgpm_model_schema
-                WHERE model_schema_id IN
-                    (SELECT model_schema_id FROM bayesdb_model_schema
-                        WHERE generator_id = ?)
+            DELETE FROM bayesdb_cgpm_generator WHERE generator_id = ?
         ''', (generator_id,))
 
-    def create_model_schema(self, bdb, generator_id, model_schema_id, tokens):
-        schema = _parse_cgpm_schema(tokens)
-        schema_json = json_dumps(schema)
-        bdb.sql_execute('''
-            INSERT INTO bayesdb_cgpm_model_schema
-                (model_schema_id, schema_json)
-                VALUES (?, ?)
-        ''', (model_schema_id, schema_json))
-
-    def drop_model_schema(self, bdb, generator_id, model_schema_id):
-        bdb.sql_execute('''
-            DELETE FROM bayesdb_cgpm_model_schema WHERE model_schema_id = ?
-        ''', (model_schema_id,))
-
-    def initialize_models(self, bdb, generator_id, modelnos, schema_ref):
+    def initialize_models(self, bdb, generator_id, modelnos):
         # Caller should guarantee a nondegenerate request.
         assert 0 < len(modelnos)
 
@@ -228,22 +242,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             assert not any(modelno in cache.models[generator_id]
                 for modelno in modelnos)
 
-        if isinstance(schema_ref, (bytes, unicode)):
-            model_schema_id = core.bayesdb_get_model_schema(bdb, schema_ref)
-            if generator_id != \
-               core.bayesdb_model_schema_generator(bdb, model_schema_id):
-                raise BQLError(bdb, 'Invalid model schema: %r' % (schema_ref,))
-            cursor = bdb.sql_execute('''
-                SELECT schema_json FROM bayesdb_cgpm_model_schema
-                    WHERE model_schema_id = ?
-            ''', (model_schema_id,))
-            schema_json = cursor_value(cursor, nullok=True)
-            if schema_json is None:
-                raise BQLError(bdb, 'No such named model schema: %r' %
-                    (schema_ref,))
-            schema = json.loads(schema_json)
-        elif isinstance(schema_ref, (list, tuple)):
-            schema = _parse_cgpm_schema(schema_ref)
+        # Get the schema.
+        schema = self._schema(bdb, generator_id)
 
         # Initialize fresh states and their composed CGPMs.
         X = self._X(bdb, generator_id)
@@ -533,6 +533,32 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Otherwise, get it.
         return bdb.cache['cgpm']
+
+    def _schema(self, bdb, generator_id):
+        # Probe the cache.
+        cache = self._cache(bdb)
+        if cache is not None:
+            if generator_id in cache.schema:
+                return cache.schema[generator_id]
+
+        # Not cached.  Load the schema from the database.
+        cursor = bdb.sql_execute('''
+            SELECT schema_json FROM bayesdb_cgpm_generator
+                WHERE generator_id = ?
+        ''', (generator_id,))
+        schema_json = cursor_value(cursor, nullok=True)
+        if schema_json is None:
+            generator = core.bayesdb_generator_name(bdb, generator_id)
+            raise BQLError(bdb, 'No such CGPM generator %r: %d' %
+                (generator, modelno))
+
+        # Deserialize the schema.
+        schema = json.loads(schema_json)
+
+        # Cache it, if we can.
+        if cache is not None:
+            cache.schema[generator_id] = schema
+        return schema
 
     def _models(self, bdb, generator_id, modelno):
         # Get the model numbers.

@@ -133,9 +133,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             '''
             bdb.sql_execute(delete_columns_sql, (generator_id,))
 
-    def initialize_models(self, bdb, generator_id, modelnos, model_schema):
-        if model_schema is not None:
-            raise NotImplementedError('nig_normal per-model schemas')
+    def initialize_models(self, bdb, generator_id, modelnos):
         insert_sample_sql = '''
             INSERT INTO bayesdb_nig_normal_model
                 (generator_id, colno, modelno, mu, sigma)

@@ -212,8 +212,8 @@ class BQLSemantics(object):
         return ast.DropModelSchema(name)
 
     # BQL Model Analysis Language
-    def p_command_init_models(self, n, ifnotexists, generator, schema):
-        return ast.InitModels(ifnotexists, generator, n, schema)
+    def p_command_init_models(self, n, ifnotexists, generator):
+        return ast.InitModels(ifnotexists, generator, n)
     def p_command_analyze_models(self, generator, models, anlimit, anckpt,
             wait):
         self._ensure_wizard_mode(generator)

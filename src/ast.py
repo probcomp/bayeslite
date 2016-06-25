@@ -91,23 +91,12 @@ AlterGenRenameGen = namedtuple('AlterGenRenameGen', [
     'name',                     # XXX name
 ])
 
-CreateModelSchema = namedtuple('CreateModelSchema', [
-    'name',
-    'generator',
-    'schema',
-])
-
-DropModelSchema = namedtuple('DropModelSchema', [
-    'name',
-])
-
 ### BQL Model Analysis Language
 
 InitModels = namedtuple('InitModels', [
     'ifnotexists',
     'generator',
     'nmodels',
-    'schema',
 ])
 AnalyzeModels = namedtuple('AnalyzeModels', [
     'generator',

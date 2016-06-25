@@ -86,32 +86,13 @@ generator_schemum(nonempty)	::= generator_schemum(s) gs_token(t).
 gs_token(comp)			::= T_LROUND generator_schemum(s) T_RROUND.
 gs_token(prim)			::= ANY(t).
 
-command(create_model_schema)	::= K_CREATE K_MODEL K_SCHEMA
-					model_schema_name(name)
-					K_FOR generator_name(gen)
-					model_schema_inline(ms).
-
-/*
- * XXX We use the single keyword `MODELSCHEMA' here to work around a
- * bug in lemonade.  (Report this bug!)  Maybe it makes the grammar
- * non-LALR because of the `DROP MODELS [<modelset>] FROM' rule below,
- * but lemonade crashes on an assertion instead of reporting a sane
- * error!
- *
- * XXX Should not pass the generator in -- model schemas should be
- * globally unique, like triggers.
- */
-command(drop_model_schema)	::= K_DROP K_MODELSCHEMA
-					model_schema_name(name).
-
 /*
  * BQL Model Analysis Language
  */
 /* XXX No way to initialize individual models after DROP.  */
 command(init_models)	::= K_INITIALIZE L_INTEGER(n) K_MODEL|K_MODELS
 				ifnotexists(ifnotexists)
-				K_FOR generator_name(generator)
-				model_schema_opt(schema).
+				K_FOR generator_name(generator).
 command(analyze_models)	::= K_ANALYZE generator_name(generator)
 				anmodelset_opt(models) anlimit(anlimit)
 				anckpt_opt(anckpt)
@@ -149,15 +130,6 @@ anduration(seconds)	::= L_INTEGER(n) K_SECOND|K_SECONDS.
 
 wait_opt(none)		::= .
 wait_opt(some)		::= K_WAIT.
-
-model_schema_opt(none)		::= .
-model_schema_opt(inline)	::= model_schema_inline(ms).
-model_schema_opt(named)		::= K_USING model_schema_name(name).
-model_schema_inline(msi)	::= T_LROUND model_schema(ms) T_RROUND.
-model_schema(none)	::= .
-model_schema(some)	::= model_schema(ms) model_schema1(ms1).
-model_schema1(comp)	::= T_LROUND model_schema(ms) T_RROUND.
-model_schema1(prim)	::= ANY(t).
 
 simulate(s)		::= K_SIMULATE simulate_columns(cols)
 				K_FROM generator_name(generator)
@@ -301,7 +273,6 @@ where(conditional)	::= K_WHERE expression(condition).
 column_name(cn)		::= L_NAME(name).
 generator_name(unqualified)	::= L_NAME(name).
 metamodel_name(mn)	::= L_NAME(name).
-model_schema_name(ms)	::= L_NAME(name).
 table_name(unqualified)	::= L_NAME(name).
 
 group_by(none)		::= .

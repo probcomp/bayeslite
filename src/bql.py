@@ -392,38 +392,6 @@ def execute_phrase(bdb, phrase, bindings=()):
                         (repr(cmd),)
         return empty_cursor(bdb)
 
-    if isinstance(phrase, ast.CreateModelSchema):
-        if not core.bayesdb_has_generator_default(bdb, phrase.generator):
-            raise BQLError(bdb, 'No such generator: %s' %
-                (phrase.generator,))
-        generator_id = core.bayesdb_get_generator_default(bdb,
-            phrase.generator)
-        with bdb.savepoint():
-            bdb.sql_execute('''
-                INSERT INTO bayesdb_model_schema
-                    (generator_id, name)
-                    VALUES (?, ?)
-            ''', (generator_id, phrase.name))
-            model_schema_id = bdb._sqlite3.last_insert_rowid()
-            metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-            metamodel.create_model_schema(bdb, generator_id, model_schema_id,
-                phrase.schema)
-        return empty_cursor(bdb)
-
-    if isinstance(phrase, ast.DropModelSchema):
-        if not core.bayesdb_has_model_schema(bdb, phrase.name):
-            raise BQLError(bdb, 'No such model schema: %s' % (phrase.name,))
-        model_schema_id = core.bayesdb_get_model_schema(bdb, phrase.name)
-        generator_id = core.bayesdb_model_schema_generator(bdb,
-            model_schema_id)
-        with bdb.savepoint():
-            metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-            metamodel.drop_model_schema(bdb, generator_id, model_schema_id)
-            bdb.sql_execute('''
-                DELETE FROM bayesdb_model_schema WHERE id = ?
-            ''', (model_schema_id,))
-        return empty_cursor(bdb)
-
     if isinstance(phrase, ast.InitModels):
         if not core.bayesdb_has_generator_default(bdb, phrase.generator):
             raise BQLError(bdb, 'No such generator: %s' %
@@ -431,7 +399,6 @@ def execute_phrase(bdb, phrase, bindings=()):
         generator_id = core.bayesdb_get_generator_default(bdb,
             phrase.generator)
         modelnos = range(phrase.nmodels)
-        model_schema = phrase.schema
 
         with bdb.savepoint():
             # Find the model numbers.  Omit existing ones for
@@ -468,8 +435,7 @@ def execute_phrase(bdb, phrase, bindings=()):
 
             # Do metamodel-specific initialization.
             metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-            metamodel.initialize_models(bdb, generator_id, modelnos,
-                model_schema)
+            metamodel.initialize_models(bdb, generator_id, modelnos)
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.AnalyzeModels):
