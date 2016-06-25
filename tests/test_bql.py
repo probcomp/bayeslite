@@ -74,6 +74,14 @@ def empty(cursor):
     with pytest.raises(StopIteration):
         cursor.next()
 
+def test_trivial_population():
+    with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
+        with open(fname, 'rU') as f:
+            bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
+        # XXX if (not) exists
+        bdb.execute('create population p for t(age numerical)')
+        bdb.execute('drop population p')
+
 @stochastic(max_runs=2, min_passes=1)
 def test_conditional_probability(seed):
     with test_core.t1(seed=seed) as (bdb, _generator_id):

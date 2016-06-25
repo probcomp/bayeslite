@@ -94,6 +94,7 @@ keywords = {
     "or": grammar.K_OR,
     "order": grammar.K_ORDER,
     "pairwise": grammar.K_PAIRWISE,
+    "population": grammar.K_POPULATION,
     "predict": grammar.K_PREDICT,
     "predictive": grammar.K_PREDICTIVE,
     "probability": grammar.K_PROBABILITY,

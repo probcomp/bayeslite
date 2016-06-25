@@ -275,6 +275,42 @@ def execute_phrase(bdb, phrase, bindings=()):
                         (cmd,)
         return empty_cursor(bdb)
 
+    if isinstance(phrase, ast.CreatePop):
+        with bdb.savepoint():
+            if core.bayesdb_has_population(bdb, phrase.name):
+                raise BQLError(bdb, 'Name already defined as population: %r' %
+                    (phrase.name,))
+            core.bayesdb_table_guarantee_columns(bdb, phrase.table)
+            bdb.sql_execute('''
+                INSERT INTO bayesdb_population (name, tabname) VALUES (?, ?)
+            ''', (phrase.name, phrase.table))
+            population_id = core.bayesdb_get_population(bdb, phrase.name)
+            # XXX helpful error checking: unknown name, unknown stattype
+            for name, stattype in phrase.schema:
+                colno = core.bayesdb_table_column_number(bdb, phrase.table,
+                    name)
+                bdb.sql_execute('''
+                    INSERT INTO bayesdb_variable
+                        (population_id, colno, stattype)
+                        VALUES (?, ?, ?)
+                ''', (population_id, colno, stattype))
+        return empty_cursor(bdb)
+
+    if isinstance(phrase, ast.DropPop):
+        with bdb.savepoint():
+            if not core.bayesdb_has_population(bdb, phrase.name):
+                raise BQLError(bdb, 'No such population: %r' % (phrase.name,))
+            population_id = core.bayesdb_get_population(bdb, phrase.name)
+            # XXX helpful error checking if generators still exist
+            # XXX check change counts
+            bdb.sql_execute('''
+                DELETE FROM bayesdb_variable WHERE population_id = ?
+            ''', (population_id,))
+            bdb.sql_execute('''
+                DELETE FROM bayesdb_population WHERE id = ?
+            ''', (population_id,))
+        return empty_cursor(bdb)
+
     if isinstance(phrase, ast.CreateGen):
         # Find the metamodel.
         if phrase.metamodel not in bdb.metamodels:

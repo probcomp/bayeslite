@@ -177,7 +177,7 @@ class BQLSemantics(object):
     # BQL Model Definition Language
     def p_command_create_pop(self, name, table, schema):
         return ast.CreatePop(name, table, schema)
-    def p_command_drpo_pop(self, name):
+    def p_command_drop_pop(self, name):
         return ast.DropPop(name)
 
     def p_pop_schema_one(self, var):            return [var]

@@ -131,12 +131,12 @@ CREATE TABLE bayesdb_population (
 
 CREATE TABLE bayesdb_variable (
 	population_id	INTEGER NOT NULL REFERENCES bayesdb_population(id),
-	varno		INTEGER NOT NULL CHECK (0 <= varno),
+	colno		INTEGER NOT NULL CHECK (0 <= colno),
 	stattype	TEXT NOT NULL REFERENCES bayesdb_stattype(name),
-	PRIMARY KEY(population_id, varno)
+	PRIMARY KEY(population_id, colno)
 );
 
-INSERT INTO bayesdb_variable (population_id, varno, stattype)
+INSERT INTO bayesdb_variable (population_id, colno, stattype)
     SELECT p.id, gc.colno, gc.stattype
         FROM bayesdb_population AS p, bayesdb_generator AS g,
             bayesdb_generator_column AS gc
