@@ -180,9 +180,14 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             DELETE FROM bayesdb_cgpm_model WHERE generator_id = ?
         ''', (generator_id,))
 
-        # Delete CGPM.
+        # Delete variables.
         bdb.sql_execute('''
-            DELETE FROM bayesdb_cgpm WHERE generator_id = ?
+            DELETE FROM bayesdb_cgpm_variable WHERE generator_id = ?
+        ''', (generator_id,))
+
+        # Delete categories.
+        bdb.sql_execute('''
+            DELETE FROM bayesdb_cgpm_category WHERE generator_id = ?
         ''', (generator_id,))
 
     def initialize_models(self, bdb, generator_id, modelnos, schema_tokens):
@@ -259,7 +264,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         if modelnos is None:
             # All models.
             if cache is not None:
-                if generator_id in cache:
+                if generator_id in cache.models:
                     del cache.models[generator_id]
             bdb.sql_execute('''
                 DELETE FROM bayesdb_cgpm_model WHERE generator_id = ?

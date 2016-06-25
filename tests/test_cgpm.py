@@ -201,3 +201,5 @@ def test_cgpm():
             ESTIMATE DEPENDENCE PROBABILITY
                 FROM PAIRWISE COLUMNS OF g
         ''').fetchall()
+        bdb.execute('DROP MODELS FROM g')
+        bdb.execute('DROP GENERATOR g')
