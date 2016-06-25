@@ -206,11 +206,6 @@ class BQLSemantics(object):
     def p_stattype_s(self, name):
         return name
 
-    def p_command_create_model_schema(self, name, gen, ms):
-        return ast.CreateModelSchema(name, gen, ms)
-    def p_command_drop_model_schema(self, name):
-        return ast.DropModelSchema(name)
-
     # BQL Model Analysis Language
     def p_command_init_models(self, n, ifnotexists, generator):
         return ast.InitModels(ifnotexists, generator, n)
@@ -255,24 +250,6 @@ class BQLSemantics(object):
 
     def p_wait_opt_none(self):                  return False
     def p_wait_opt_some(self):                  return True
-
-    def p_model_schema_opt_none(self):          return None
-    def p_model_schema_opt_inline(self, ms):    return ms
-    def p_model_schema_opt_named(self, name):   return name
-    def p_model_schema_inline_msi(self, ms):
-        schema = []
-        def walk(l):
-            for x in l:
-                if isinstance(x, list):
-                    walk(x)
-                else:
-                    schema.append(x)
-        walk(ms)
-        return schema
-    def p_model_schema_none(self):              return []
-    def p_model_schema_some(self, ms, ms1):     ms.append(ms1); return ms
-    def p_model_schema1_comp(self, ms):         return ['(', ms, ')']
-    def p_model_schema1_prim(self, t):          return t
 
     def p_simulate_s(self, cols, generator, modelno, constraints, lim):
         return ast.Simulate(cols, generator, modelno, constraints, lim.limit)
@@ -412,7 +389,6 @@ class BQLSemantics(object):
     def p_column_name_cn(self, name):           return name
     def p_generator_name_unqualified(self, name): return name
     def p_metamodel_name_mn(self, name):        return name
-    def p_model_schema_name_ms(self, name):     return name
     def p_table_name_unqualified(self, name):   return name
 
     def p_group_by_none(self):                  return None
