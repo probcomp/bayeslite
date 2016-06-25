@@ -196,6 +196,44 @@ def test_cgpm():
             >)
             -- USING (period ~ kepler(apogee, perigee))
         ''')
+        # Another model -- via a model schema.
+        bdb.execute('''
+            CREATE MODEL SCHEMA g0 FOR g (<
+                "variables"~ (
+                    ("apogee", "numerical", "normal", < >),
+                    ("class_of_orbit", "categorical", "categorical", <"k"~ 3>),
+                    ("country_of_operator", "categorical", "categorical",
+                     <"k"~ 4>),
+                    ("launch_mass", "numerical", "normal_trunc",
+                     <"l"~ 0, "h"~ 4000>),
+                    ("perigee", "numerical", "normal", < >),
+                    ("period", "numerical", "normal", < >)
+                ),
+                "categoricals"~ <
+                    "1"~ <
+                        "geo"~ 0,
+                        "leo"~ 1,
+                        "meo"~ 2
+                    >,
+                    "2"~ <
+                        "US"~ 0,
+                        "Russia"~ 1,
+                        "China"~ 2,
+                        "Bulgaria"~ 3
+                    >
+                >,
+                "cgpm_composition"~ (
+                    <
+                        "name"~ "kepler",
+                        "outputs"~ ("apogee", "perigee"),
+                        "inputs"~ ("period")
+                        -- "kwds"~ <"noise"~ 1.0>
+                    >
+                )
+            >)
+        ''')
+        bdb.execute('INITIALIZE 3 MODELS IF NOT EXISTS FOR g USING g0')
+        bdb.execute('DROP MODELSCHEMA g0 FROM g')
         bdb.execute('ANALYZE g FOR 1 ITERATION WAIT')
         bdb.execute('''
             ESTIMATE DEPENDENCE PROBABILITY

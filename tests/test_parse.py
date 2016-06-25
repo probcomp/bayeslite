@@ -750,6 +750,20 @@ def test_parse_model_schema():
             ['launch_mass_kg', 'exponential', ',',
              'kepler', '(', 'period', ',', 'kepcluster', ')',
              'given', '(', 'perigee', ',', 'apogee', ')'])]
+    assert parse_bql_string('''
+        create model schema ms for t (
+            launch_mass_kg exponential,
+            kepler(period, kepcluster) given (perigee, apogee)
+        )
+    ''') == \
+        [ast.CreateModelSchema('ms', 't',
+            ['launch_mass_kg', 'exponential', ',',
+             'kepler', '(', 'period', ',', 'kepcluster', ')',
+             'given', '(', 'perigee', ',', 'apogee', ')'])]
+    assert parse_bql_string('''
+        drop modelschema ms from g;
+    ''') == \
+        [ast.DropModelSchema('ms', 'g')]
 
 def test_is_bql():
     assert ast.is_bql(ast.ExpLit(ast.LitInt(0))) == False

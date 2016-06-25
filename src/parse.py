@@ -206,9 +206,14 @@ class BQLSemantics(object):
     def p_stattype_s(self, name):
         return name
 
+    def p_command_create_model_schema(self, name, gen, ms):
+        return ast.CreateModelSchema(name, gen, ms)
+    def p_command_drop_model_schema(self, name, gen):
+        return ast.DropModelSchema(name, gen)
+
     # BQL Model Analysis Language
     def p_command_init_models(self, n, ifnotexists, generator, schema):
-        return ast.InitModels(ifnotexists, generator, n, config=schema)
+        return ast.InitModels(ifnotexists, generator, n, schema)
     def p_command_analyze_models(self, generator, models, anlimit, anckpt,
             wait):
         self._ensure_wizard_mode(generator)
@@ -252,7 +257,9 @@ class BQLSemantics(object):
     def p_wait_opt_some(self):                  return True
 
     def p_model_schema_opt_none(self):          return None
-    def p_model_schema_opt_some(self, ms):
+    def p_model_schema_opt_inline(self, ms):    return ms
+    def p_model_schema_opt_named(self, name):   return name
+    def p_model_schema_inline_msi(self, ms):
         schema = []
         def walk(l):
             for x in l:
@@ -405,6 +412,7 @@ class BQLSemantics(object):
     def p_column_name_cn(self, name):           return name
     def p_generator_name_unqualified(self, name): return name
     def p_metamodel_name_mn(self, name):        return name
+    def p_model_schema_name_ms(self, name):     return name
     def p_table_name_unqualified(self, name):   return name
 
     def p_group_by_none(self):                  return None

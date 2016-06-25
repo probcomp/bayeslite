@@ -66,6 +66,15 @@ from bayeslite.util import casefold
 CGPM_SCHEMA_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('cgpm', 1);
 
+CREATE TABLE bayesdb_cgpm_schema (
+    generator_id        INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    -- XXX Should be globally unique for the whole database, but we'll
+    -- let that pass for now until we move the model schema business
+    -- into the generic BayesDB SQL schema.
+    name                TEXT NOT NULL PRIMARY KEY,
+    schema_json         BLOB NOT NULL
+);
+
 CREATE TABLE bayesdb_cgpm_category (
     generator_id        INTEGER NOT NULL REFERENCES bayesdb_generator(id),
     colno               INTEGER NOT NULL CHECK (0 <= colno),
@@ -190,7 +199,25 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             DELETE FROM bayesdb_cgpm_category WHERE generator_id = ?
         ''', (generator_id,))
 
-    def initialize_models(self, bdb, generator_id, modelnos, schema_tokens):
+        # Delete model schemas.
+        bdb.sql_execute('''
+            DELETE FROM bayesdb_cgpm_schema WHERE generator_id = ?
+        ''', (generator_id,))
+
+    def create_model_schema(self, bdb, generator_id, name, tokens):
+        schema = _parse_cgpm_schema(tokens)
+        schema_json = json_dumps(schema)
+        bdb.sql_execute('''
+            INSERT INTO bayesdb_cgpm_schema (generator_id, name, schema_json)
+                VALUES (?, ?, ?)
+        ''', (generator_id, name, schema_json))
+
+    def drop_model_schema(self, bdb, generator_id, name):
+        bdb.sql_execute('''
+            DELETE FROM bayesdb_cgpm_schema WHERE name = ?
+        ''', (name,))
+
+    def initialize_models(self, bdb, generator_id, modelnos, schema_ref):
         # Caller should guarantee a nondegenerate request.
         assert 0 < len(modelnos)
 
@@ -200,31 +227,18 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             assert not any(modelno in cache.models[generator_id]
                 for modelno in modelnos)
 
-        # If the caller didn't provide a schema for these models, get
-        # the generator-wide one.
-        if schema_tokens is None:
-            raise BQLError(bdb, 'Missing CGPM model schema')
-        else:
-            # XXX MEGA-KLUDGE!
-            def jsonify(x):
-                if isinstance(x, int):
-                    return str(x)
-                elif x == '<':
-                    return '{'
-                elif x == '>':
-                    return '}'
-                elif x == '(':
-                    return '['
-                elif x == ')':
-                    return ']'
-                elif x == '~':
-                    return ':'
-                elif x == ',':
-                    return ','
-                else:
-                    return '"' + x + '"'
-            schema = json.loads(' '.join(map(jsonify, schema_tokens)))
-            # XXX check schema
+        if isinstance(schema_ref, (bytes, unicode)):
+            cursor = bdb.sql_execute('''
+                SELECT schema_json FROM bayesdb_cgpm_schema
+                    WHERE generator_id = ? AND name = ?
+            ''', (generator_id, schema_ref))
+            schema_json = cursor_value(cursor, nullok=True)
+            if schema_json is None:
+                raise BQLError(bdb, 'No such named model schema: %r' %
+                    (schema_ref,))
+            schema = json.loads(schema_json)
+        elif isinstance(schema_ref, (list, tuple)):
+            schema = _parse_cgpm_schema(schema_ref)
 
         # Initialize fresh states and their composed CGPMs.
         X = self._X(bdb, generator_id)
@@ -580,6 +594,29 @@ class CGPM_Cache(object):
     def __init__(self):
         self.schema = {}
         self.models = {}
+
+def _parse_cgpm_schema(tokens):
+    # XXX MEGA-KLUDGE!
+    def jsonify(x):
+        if isinstance(x, int):
+            return str(x)
+        elif x == '<':
+            return '{'
+        elif x == '>':
+            return '}'
+        elif x == '(':
+            return '['
+        elif x == ')':
+            return ']'
+        elif x == '~':
+            return ':'
+        elif x == ',':
+            return ','
+        else:
+            return '"' + x + '"'
+    schema = json.loads(' '.join(map(jsonify, tokens)))
+    # XXX check schema
+    return schema
 
 # XXX Move these utilities elsewhere.
 

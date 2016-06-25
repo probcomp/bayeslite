@@ -392,6 +392,29 @@ def execute_phrase(bdb, phrase, bindings=()):
                         (repr(cmd),)
         return empty_cursor(bdb)
 
+    if isinstance(phrase, ast.CreateModelSchema):
+        if not core.bayesdb_has_generator_default(bdb, phrase.generator):
+            raise BQLError(bdb, 'No such generator: %s' %
+                (phrase.generator,))
+        generator_id = core.bayesdb_get_generator_default(bdb,
+            phrase.generator)
+        with bdb.savepoint():
+            metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
+            metamodel.create_model_schema(bdb, generator_id, phrase.name,
+                phrase.schema)
+        return empty_cursor(bdb)
+
+    if isinstance(phrase, ast.DropModelSchema):
+        if not core.bayesdb_has_generator_default(bdb, phrase.generator):
+            raise BQLError(bdb, 'No such generator: %s' %
+                (phrase.generator,))
+        generator_id = core.bayesdb_get_generator_default(bdb,
+            phrase.generator)
+        with bdb.savepoint():
+            metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
+            metamodel.drop_model_schema(bdb, generator_id, phrase.name)
+        return empty_cursor(bdb)
+
     if isinstance(phrase, ast.InitModels):
         if not core.bayesdb_has_generator_default(bdb, phrase.generator):
             raise BQLError(bdb, 'No such generator: %s' %
