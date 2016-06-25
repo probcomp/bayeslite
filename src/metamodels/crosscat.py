@@ -781,12 +781,12 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         if cc_cache is not None:
             cc_cache.metadata[generator_id] = M_c
 
-    def initialize_models(self, bdb, generator_id, modelnos, model_config):
+    def initialize_models(self, bdb, generator_id, modelnos, model_schema):
         cc_cache = self._crosscat_cache(bdb)
         if cc_cache is not None and generator_id in cc_cache.thetas:
             assert not any(modelno in cc_cache.thetas[generator_id]
                 for modelno in modelnos)
-        if model_config is None:
+        if model_schema is None:
             model_config = {
                 'kernel_list': [],
                 'initialization': 'from_the_prior',

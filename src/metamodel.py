@@ -150,7 +150,7 @@ class IBayesDBMetamodel(object):
         """
         raise NotImplementedError
 
-    def initialize_models(self, bdb, generator_id, modelnos, model_config):
+    def initialize_models(self, bdb, generator_id, modelnos, model_schema):
         """Initialize the specified model numbers for a generator."""
         raise NotImplementedError
 

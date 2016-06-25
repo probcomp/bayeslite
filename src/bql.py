@@ -422,7 +422,7 @@ def execute_phrase(bdb, phrase, bindings=()):
         generator_id = core.bayesdb_get_generator_default(bdb,
             phrase.generator)
         modelnos = range(phrase.nmodels)
-        model_config = phrase.config
+        model_schema = phrase.schema
 
         with bdb.savepoint():
             # Find the model numbers.  Omit existing ones for
@@ -460,7 +460,7 @@ def execute_phrase(bdb, phrase, bindings=()):
             # Do metamodel-specific initialization.
             metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
             metamodel.initialize_models(bdb, generator_id, modelnos,
-                model_config)
+                model_schema)
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.AnalyzeModels):

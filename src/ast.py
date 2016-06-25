@@ -108,7 +108,7 @@ InitModels = namedtuple('InitModels', [
     'ifnotexists',
     'generator',
     'nmodels',
-    'config',
+    'schema',
 ])
 AnalyzeModels = namedtuple('AnalyzeModels', [
     'generator',
