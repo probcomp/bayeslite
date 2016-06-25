@@ -332,12 +332,12 @@ def compile_infer_explicit_predict(bdb, infer, out):
 def compile_infer_explicit(bdb, infer, named, out):
     assert isinstance(infer, ast.InferExplicit)
     out.write('SELECT')
-    if not core.bayesdb_has_generator(bdb, infer.generator):
-        raise BQLError(bdb, 'No such generator: %s' % (infer.generator,))
-    generator_id = core.bayesdb_get_generator(bdb, infer.generator)
-    bql_compiler = BQLCompiler_1Row_Infer(generator_id, infer.modelno)
+    if not core.bayesdb_has_population(bdb, infer.population):
+        raise BQLError(bdb, 'No such population: %s' % (infer.population,))
+    population_id = core.bayesdb_get_population(bdb, infer.population)
+    bql_compiler = BQLCompiler_1Row_Infer(population_id, infer.modelno)
     compile_select_columns(bdb, infer.columns, named, bql_compiler, out)
-    table_name = core.bayesdb_generator_table(bdb, generator_id)
+    table_name = core.bayesdb_population_table(bdb, population_id)
     qt = sqlite3_quote_name(table_name)
     out.write(' FROM %s' % (qt,))
     if infer.condition is not None:
@@ -382,14 +382,14 @@ def compile_infer_explicit(bdb, infer, named, out):
 
 def compile_infer_auto(bdb, infer, out):
     assert isinstance(infer, ast.InferAuto)
-    if not core.bayesdb_has_generator(bdb, infer.generator):
-        raise BQLError(bdb, 'No such generator: %s' % (infer.generator,))
-    generator_id = core.bayesdb_get_generator(bdb, infer.generator)
-    table = core.bayesdb_generator_table(bdb, generator_id)
+    if not core.bayesdb_has_population(bdb, infer.population):
+        raise BQLError(bdb, 'No such population: %s' % (infer.population,))
+    population_id = core.bayesdb_get_population(bdb, infer.population)
+    table = core.bayesdb_population_table(bdb, population_id)
     confidence = infer.confidence
     def map_column(col, name):
         exp = ast.ExpCol(None, col)
-        if core.bayesdb_generator_has_column(bdb, generator_id, col):
+        if core.bayesdb_has_variable(bdb, population_id, col):
             pred = ast.ExpBQLPredict(col, confidence)
             exp = ast.ExpApp(False, 'IFNULL', [exp, pred])
         if name is None:
@@ -404,7 +404,7 @@ def compile_infer_auto(bdb, infer, out):
         else:
             assert False, 'Invalid INFER column: %s' % (repr(col),)
     columns = [mcol for col in infer.columns for mcol in map_columns(col)]
-    infer_exp = ast.InferExplicit(columns, infer.generator, infer.modelno,
+    infer_exp = ast.InferExplicit(columns, infer.population, infer.modelno,
         infer.condition, infer.grouping, infer.order, infer.limit)
     named = True
     return compile_infer_explicit(bdb, infer_exp, named, out)
@@ -416,13 +416,13 @@ def compile_estimate(bdb, estimate, out):
         out.write(' DISTINCT')
     else:
         assert estimate.quantifier == ast.SELQUANT_ALL
-    if not core.bayesdb_has_generator(bdb, estimate.generator):
-        raise BQLError(bdb, 'No such generator: %s' % (estimate.generator,))
-    generator_id = core.bayesdb_get_generator(bdb, estimate.generator)
-    bql_compiler = BQLCompiler_1Row(generator_id, estimate.modelno)
+    if not core.bayesdb_has_population(bdb, estimate.population):
+        raise BQLError(bdb, 'No such population: %s' % (estimate.population,))
+    population_id = core.bayesdb_get_population(bdb, estimate.population)
+    bql_compiler = BQLCompiler_1Row(population_id, estimate.modelno)
     named = True
     compile_select_columns(bdb, estimate.columns, named, bql_compiler, out)
-    table_name = core.bayesdb_generator_table(bdb, generator_id)
+    table_name = core.bayesdb_population_table(bdb, population_id)
     qt = sqlite3_quote_name(table_name)
     out.write(' FROM %s' % (qt,))
     if estimate.condition is not None:
@@ -472,10 +472,10 @@ def compile_estimate_by(bdb, estby, out):
         out.write(' DISTINCT')
     else:
         assert estby.quantifier == ast.SELQUANT_ALL
-    if not core.bayesdb_has_generator(bdb, estby.generator):
-        raise BQLError(bdb, 'No such generator: %s' % (estby.generator,))
-    generator_id = core.bayesdb_get_generator(bdb, estby.generator)
-    bql_compiler = BQLCompiler_Const(generator_id, estby.modelno)
+    if not core.bayesdb_has_population(bdb, estby.population):
+        raise BQLError(bdb, 'No such population: %s' % (estby.population,))
+    population_id = core.bayesdb_get_population(bdb, estby.population)
+    bql_compiler = BQLCompiler_Const(population_id, estby.modelno)
     named = True
     compile_select_columns(bdb, estby.columns, named, bql_compiler, out)
 
@@ -565,8 +565,8 @@ def compile_simulate(bdb, simulate, out):
     with bdb.savepoint():
         temptable = bdb.temp_table_name()
         assert not core.bayesdb_has_table(bdb, temptable)
-        generator_id = core.bayesdb_get_generator(bdb, simulate.generator)
-        table = core.bayesdb_generator_table(bdb, generator_id)
+        population_id = core.bayesdb_get_population(bdb, simulate.population)
+        table = core.bayesdb_population_table(bdb, population_id)
         qtt = sqlite3_quote_name(temptable)
         qt = sqlite3_quote_name(table)
         column_names = simulate.columns
@@ -580,13 +580,17 @@ def compile_simulate(bdb, simulate, out):
         for column_name in column_names:
             if casefold(column_name) not in column_sqltypes:
                 raise BQLError(bdb, 'No such column'
-                    ' in generator %s table %s: %s' %
-                    (repr(simulate.generator), repr(table), repr(column_name)))
+                    ' in population %s table %s: %s' %
+                    (repr(simulate.population),
+                     repr(table),
+                     repr(column_name)))
         for column_name, _expression in simulate.constraints:
             if casefold(column_name) not in column_sqltypes:
                 raise BQLError(bdb, 'No such column'
-                    ' in generator %s table %s: %s' %
-                    (repr(simulate.generator), repr(table), repr(column_name)))
+                    ' in population %s table %s: %s' %
+                    (repr(simulate.population),
+                     repr(table),
+                     repr(column_name)))
         # XXX Move to compiler.py.
         subout = out.subquery()
         subout.write('SELECT ')
@@ -608,12 +612,11 @@ def compile_simulate(bdb, simulate, out):
         modelno = cursor[0][1]
         assert modelno is None or isinstance(modelno, int)
         constraints = \
-            [(core.bayesdb_generator_column_number(bdb, generator_id, name),
-                    value)
+            [(core.bayesdb_variable_number(bdb, population_id, name), value)
                 for (name, _expression), value in
                     zip(simulate.constraints, cursor[0][2:])]
         colnos = \
-            [core.bayesdb_generator_column_number(bdb, generator_id, name)
+            [core.bayesdb_variable_number(bdb, population_id, name)
                 for name in column_names]
         out.winder('CREATE TEMP TABLE %s (%s)' %
             (qtt,
@@ -624,7 +627,7 @@ def compile_simulate(bdb, simulate, out):
         insert_sql = '''
             INSERT INTO %s (%s) VALUES (%s)
         ''' % (qtt, ','.join(qcns), ','.join('?' for qcn in qcns))
-        for row in bqlfn.bayesdb_simulate(bdb, generator_id, constraints,
+        for row in bqlfn.bayesdb_simulate(bdb, population_id, constraints,
                 colnos, modelno=modelno, numpredictions=nsamples):
             out.winder(insert_sql, row)
         out.unwinder('DROP TABLE %s' % (qtt,), ())
@@ -640,11 +643,11 @@ def compile_estcols(bdb, estcols, out):
     assert isinstance(estcols, ast.EstCols)
     # XXX UH OH!  This will have the effect of shadowing names.  We
     # need an alpha-renaming pass.
-    if not core.bayesdb_has_generator(bdb, estcols.generator):
-        raise BQLError(bdb, 'No such generator: %s' % (estcols.generator,))
-    generator_id = core.bayesdb_get_generator(bdb, estcols.generator)
+    if not core.bayesdb_has_population(bdb, estcols.population):
+        raise BQLError(bdb, 'No such population: %s' % (estcols.population,))
+    population_id = core.bayesdb_get_population(bdb, estcols.population)
     colno_exp = 'c.colno'       # XXX
-    bql_compiler = BQLCompiler_1Col(generator_id, estcols.modelno, colno_exp)
+    bql_compiler = BQLCompiler_1Col(population_id, estcols.modelno, colno_exp)
     out.write('SELECT')
     first = True
     for col in estcols.columns:
@@ -655,12 +658,12 @@ def compile_estcols(bdb, estcols, out):
         out.write(' ')
         if isinstance(col, ast.SelColAll):
             # XXX Whattakludge!  Should we not also include colno,
-            # generator id?  Main reason for using * at all for this
+            # population id?  Main reason for using * at all for this
             # is we don't have a mechanism for automatically
             # qualifying all input-column references with `c.', and
             # unqualified `name' is ambiguous in the FROM context
             # given below.
-            out.write('c.name AS name') # XXX Colno?  Generator id?  ...?
+            out.write('c.name AS name') # XXX Colno?  Population id?  ...?
         elif isinstance(col, ast.SelColSub):
             raise NotImplementedError('No subqueries for COLUMNS OF columns!')
         elif isinstance(col, ast.SelColExp):
@@ -672,13 +675,13 @@ def compile_estcols(bdb, estcols, out):
             raise NotImplementedError('No PREDICT on column queries!')
         else:
             assert False, 'Invalid ESTIMATE column: %s' % (repr(col),)
-    out.write(' FROM bayesdb_generator AS g,'
-        ' bayesdb_generator_column AS gc,'
+    out.write(' FROM bayesdb_population AS p,'
+        ' bayesdb_variable AS v,'
         ' bayesdb_column AS c'
-        ' WHERE g.id = %(generator_id)d'
-        ' AND gc.generator_id = g.id'
-        ' AND c.tabname = g.tabname AND c.colno = gc.colno' %
-            {'generator_id': generator_id})
+        ' WHERE p.id = %(population_id)d'
+        ' AND v.population_id = p.id'
+        ' AND c.tabname = p.tabname AND c.colno = v.colno' %
+            {'population_id': population_id})
     if estcols.condition is not None:
         out.write(' AND ')
         compile_expression(bdb, estcols.condition, bql_compiler, out)
@@ -709,14 +712,15 @@ def compile_estpaircols(bdb, estpaircols, out):
     assert isinstance(estpaircols, ast.EstPairCols)
     colno0_exp = 'c0.colno'     # XXX
     colno1_exp = 'c1.colno'     # XXX
-    if not core.bayesdb_has_generator(bdb, estpaircols.generator):
-        raise BQLError(bdb, 'No such generator: %s' % (estpaircols.generator,))
-    generator_id = core.bayesdb_get_generator(bdb, estpaircols.generator)
-    bql_compiler = BQLCompiler_2Col(generator_id, estpaircols.modelno,
+    if not core.bayesdb_has_population(bdb, estpaircols.population):
+        raise BQLError(bdb, 'No such population: %s' %
+            (estpaircols.population,))
+    population_id = core.bayesdb_get_population(bdb, estpaircols.population)
+    bql_compiler = BQLCompiler_2Col(population_id, estpaircols.modelno,
         colno0_exp, colno1_exp)
     out.write('SELECT'
-        ' %d AS generator_id, c0.name AS name0, c1.name AS name1' %
-        (generator_id,))
+        ' %d AS population_id, c0.name AS name0, c1.name AS name1' %
+        (population_id,))
     if len(estpaircols.columns) == 1 and estpaircols.columns[0][1] is None:
         # XXX Compatibility with existing queries.
         expression = estpaircols.columns[0][0]
@@ -730,23 +734,23 @@ def compile_estpaircols(bdb, estpaircols, out):
             if name is not None:
                 out.write(' AS %s' % (sqlite3_quote_name(name),))
     out.write(' FROM'
-        ' bayesdb_generator AS g,'
-        ' bayesdb_generator_column AS gc0, bayesdb_column AS c0,'
-        ' bayesdb_generator_column AS gc1, bayesdb_column AS c1'
-        ' WHERE g.id = %(generator_id)d'
-        ' AND gc0.generator_id = g.id AND gc1.generator_id = g.id'
-        ' AND c0.tabname = g.tabname AND c0.colno = gc0.colno'
-        ' AND c1.tabname = g.tabname AND c1.colno = gc1.colno' %
-              {'generator_id': generator_id})
+        ' bayesdb_population AS p,'
+        ' bayesdb_variable AS v0, bayesdb_column AS c0,'
+        ' bayesdb_variable AS v1, bayesdb_column AS c1'
+        ' WHERE p.id = %(population_id)d'
+        ' AND v0.population_id = p.id AND v1.population_id = p.id'
+        ' AND c0.tabname = p.tabname AND c0.colno = v0.colno'
+        ' AND c1.tabname = p.tabname AND c1.colno = v1.colno' %
+              {'population_id': population_id})
     if estpaircols.subcolumns is not None:
         # XXX Would be nice not to duplicate these column lists.
         out.write(' AND c0.colno IN ')
         with compiling_paren(bdb, out, '(', ')'):
-            compile_column_lists(bdb, generator_id, estpaircols.subcolumns,
+            compile_column_lists(bdb, population_id, estpaircols.subcolumns,
                 bql_compiler, out)
         out.write(' AND c1.colno IN ')
         with compiling_paren(bdb, out, '(', ')'):
-            compile_column_lists(bdb, generator_id, estpaircols.subcolumns,
+            compile_column_lists(bdb, population_id, estpaircols.subcolumns,
                 bql_compiler, out)
     if estpaircols.condition is not None:
         out.write(' AND ')
@@ -777,18 +781,19 @@ def compile_estpaircols(bdb, estpaircols, out):
 
 def compile_estpairrow(bdb, estpairrow, out):
     assert isinstance(estpairrow, ast.EstPairRow)
-    if not core.bayesdb_has_generator(bdb, estpairrow.generator):
-        raise BQLError(bdb, 'No such generator: %s' % (estpairrow.generator,))
-    generator_id = core.bayesdb_get_generator(bdb, estpairrow.generator)
+    if not core.bayesdb_has_population(bdb, estpairrow.population):
+        raise BQLError(bdb, 'No such population: %s' %
+            (estpairrow.population,))
+    population_id = core.bayesdb_get_population(bdb, estpairrow.population)
     rowid0_exp = 'r0._rowid_'
     rowid1_exp = 'r1._rowid_'
-    bql_compiler = BQLCompiler_2Row(generator_id, estpairrow.modelno,
+    bql_compiler = BQLCompiler_2Row(population_id, estpairrow.modelno,
         rowid0_exp, rowid1_exp)
     out.write('SELECT %s AS rowid0, %s AS rowid1,' % (rowid0_exp, rowid1_exp))
     named = True
     compile_select_columns(bdb, estpairrow.columns, named, bql_compiler, out)
     out.write(' AS value')
-    table_name = core.bayesdb_generator_table(bdb, generator_id)
+    table_name = core.bayesdb_population_table(bdb, population_id)
     qt = sqlite3_quote_name(table_name)
     out.write(' FROM %s AS r0, %s AS r1' % (qt, qt))
     if estpairrow.condition is not None:
@@ -823,19 +828,19 @@ class BQLCompiler_None(object):
         raise BQLError(bdb, 'Invalid context for BQL!')
 
 class BQLCompiler_Const(object):
-    def __init__(self, generator_id, modelno):
-        assert isinstance(generator_id, int)
-        self.generator_id = generator_id
+    def __init__(self, population_id, modelno):
+        assert isinstance(population_id, int)
+        self.population_id = population_id
         self.modelno = modelno
 
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
-        generator_id = self.generator_id
+        population_id = self.population_id
         if isinstance(bql, ast.ExpBQLPredProb):
             raise BQLError(bdb, 'Predictive probability is 1-row function,'
                 ' not a constant.')
         elif isinstance(bql, ast.ExpBQLProb):
-            compile_pdf_joint(bdb, generator_id, self.modelno, bql.targets,
+            compile_pdf_joint(bdb, population_id, self.modelno, bql.targets,
                 bql.constraints, self, out)
         elif isinstance(bql, ast.ExpBQLProbFn):
             raise BQLError(bdb, 'Probability of value at row is 1-column'
@@ -844,19 +849,19 @@ class BQLCompiler_Const(object):
             raise BQLError(bdb, 'Row similarity is 1- or 2-row function,'
                 ' not a constant.')
         elif isinstance(bql, ast.ExpBQLDepProb):
-            compile_bql_2col_2(bdb, generator_id, self.modelno,
+            compile_bql_2col_2(bdb, population_id, self.modelno,
                 'bql_column_dependence_probability',
                 'Dependence probability', None, bql, self, out)
         elif isinstance(bql, ast.ExpBQLMutInf):
-            compile_bql_2col_2(bdb, generator_id, self.modelno,
+            compile_bql_2col_2(bdb, population_id, self.modelno,
                 'bql_column_mutual_information',
                 'Mutual information', compile_mutinf_extra, bql, self, out)
         elif isinstance(bql, ast.ExpBQLCorrel):
-            compile_bql_2col_2(bdb, generator_id, None,
+            compile_bql_2col_2(bdb, population_id, None,
                 'bql_column_correlation',
                 'Column correlation', None, bql, self, out)
         elif isinstance(bql, ast.ExpBQLCorrelPval):
-            compile_bql_2col_2(bdb, generator_id, None,
+            compile_bql_2col_2(bdb, population_id, None,
                 'bql_column_correlation_pvalue',
                 'Column correlation pvalue', None, bql, self, out)
         elif isinstance(bql, (ast.ExpBQLPredict, ast.ExpBQLPredictConf)):
@@ -867,26 +872,26 @@ class BQLCompiler_Const(object):
 class BQLCompiler_1Row(BQLCompiler_Const):
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
-        generator_id = self.generator_id
+        population_id = self.population_id
         rowid_col = '_rowid_'   # XXX Don't hard-code this.
         if isinstance(bql, ast.ExpBQLPredProb):
             if bql.column is None:
                 raise BQLError(bdb, 'Predictive probability at row'
                     ' needs column.')
-            colno = core.bayesdb_generator_column_number(bdb, generator_id,
+            colno = core.bayesdb_variable_number(bdb, population_id,
                 bql.column)
             out.write('bql_row_column_predictive_probability(%s, ' %
-                (generator_id,))
+                (population_id,))
             compile_expression(bdb, self.modelno, self, out)
             out.write(', %s, %s)' % (rowid_col, colno))
         elif isinstance(bql, ast.ExpBQLSim):
             if bql.condition is None:
                 raise BQLError(bdb, 'Similarity as 1-row function needs row.')
-            out.write('bql_row_similarity(%s, ' % (generator_id,))
+            out.write('bql_row_similarity(%s, ' % (population_id,))
             compile_expression(bdb, self.modelno, self, out)
             out.write(', _rowid_, ')
             with compiling_paren(bdb, out, '(', ')'):
-                table_name = core.bayesdb_generator_table(bdb, generator_id)
+                table_name = core.bayesdb_population_table(bdb, population_id)
                 qt = sqlite3_quote_name(table_name)
                 out.write('SELECT _rowid_ FROM %s WHERE ' % (qt,))
                 compile_expression(bdb, bql.condition, self, out)
@@ -898,8 +903,8 @@ class BQLCompiler_1Row(BQLCompiler_Const):
                 pass
             else:
                 out.write(', ')
-                compile_column_lists(bdb, generator_id, bql.column_lists, self,
-                    out)
+                compile_column_lists(bdb, population_id, bql.column_lists,
+                    self, out)
             out.write(')')
         else:
             super(BQLCompiler_1Row, self).compile_bql(bdb, bql, out)
@@ -907,47 +912,46 @@ class BQLCompiler_1Row(BQLCompiler_Const):
 class BQLCompiler_1Row_Infer(BQLCompiler_1Row):
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
-        generator_id = self.generator_id
+        population_id = self.population_id
         rowid_col = '_rowid_' # XXX Don't hard-code this.
         if isinstance(bql, ast.ExpBQLPredict):
             assert bql.column is not None
-            if not core.bayesdb_generator_has_column(bdb, generator_id,
-                    bql.column):
-                generator = core.bayesdb_generator_name(bdb, generator_id)
-                raise BQLError(bdb, 'No such column in generator %s: %s' %
-                    (generator, bql.column))
-            colno = core.bayesdb_generator_column_number(bdb, generator_id,
+            if not core.bayesdb_has_variable(bdb, population_id, bql.column):
+                population = core.bayesdb_population_name(bdb, population_id)
+                raise BQLError(bdb, 'No such column in population %s: %s' %
+                    (population, bql.column))
+            colno = core.bayesdb_variable_number(bdb, population_id,
                 bql.column)
-            out.write('bql_predict(%d, ' % (generator_id,))
+            out.write('bql_predict(%d, ' % (population_id,))
             compile_expression(bdb, self.modelno, self, out)
             out.write(', %d, %s, ' % (colno, rowid_col))
             compile_expression(bdb, bql.confidence, self, out)
             out.write(')')
         elif isinstance(bql, ast.ExpBQLPredictConf):
             assert bql.column is not None
-            colno = core.bayesdb_generator_column_number(bdb, generator_id,
+            colno = core.bayesdb_variable_number(bdb, population_id,
                 bql.column)
-            out.write('bql_predict_confidence(%d, ' % (generator_id,))
+            out.write('bql_predict_confidence(%d, ' % (population_id,))
             compile_expression(bdb, self.modelno, self, out)
             out.write(', %d, %s)' % (colno, rowid_col))
         else:
             super(BQLCompiler_1Row_Infer, self).compile_bql(bdb, bql, out)
 
 class BQLCompiler_2Row(object):
-    def __init__(self, generator_id, modelno, rowid0_exp, rowid1_exp):
-        assert isinstance(generator_id, int)
+    def __init__(self, population_id, modelno, rowid0_exp, rowid1_exp):
+        assert isinstance(population_id, int)
         assert isinstance(rowid0_exp, str)
         assert isinstance(rowid1_exp, str)
-        self.generator_id = generator_id
+        self.population_id = population_id
         self.modelno = modelno
         self.rowid0_exp = rowid0_exp
         self.rowid1_exp = rowid1_exp
 
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
-        generator_id = self.generator_id
+        population_id = self.population_id
         if isinstance(bql, ast.ExpBQLProb):
-            compile_pdf_joint(bdb, generator_id, self.modelno, bql.targets,
+            compile_pdf_joint(bdb, population_id, self.modelno, bql.targets,
                 bql.constraints, self, out)
         elif isinstance(bql, ast.ExpBQLProbFn):
             raise BQLError(bdb, 'Probability of value is 1-column function,'
@@ -959,7 +963,7 @@ class BQLCompiler_2Row(object):
             if bql.condition is not None:
                 raise BQLError(bdb, 'Similarity needs no row'
                     ' in 2-row context.')
-            out.write('bql_row_similarity(%d, ' % (generator_id,))
+            out.write('bql_row_similarity(%d, ' % (population_id,))
             compile_expression(bdb, self.modelno, self, out)
             out.write(', %s, %s' % (self.rowid0_exp, self.rowid1_exp))
             if len(bql.column_lists) == 1 and \
@@ -970,8 +974,8 @@ class BQLCompiler_2Row(object):
                 pass
             else:
                 out.write(', ')
-                compile_column_lists(bdb, generator_id, bql.column_lists, self,
-                    out)
+                compile_column_lists(bdb, population_id, bql.column_lists,
+                    self, out)
             out.write(')')
         elif isinstance(bql, ast.ExpBQLDepProb):
             raise BQLError(bdb, 'Dependence probability is 0-row function.')
@@ -989,25 +993,25 @@ class BQLCompiler_2Row(object):
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
 
 class BQLCompiler_1Col(object):
-    def __init__(self, generator_id, modelno, colno_exp):
-        assert isinstance(generator_id, int)
+    def __init__(self, population_id, modelno, colno_exp):
+        assert isinstance(population_id, int)
         assert isinstance(colno_exp, str)
-        self.generator_id = generator_id
+        self.population_id = population_id
         self.modelno = modelno
         self.colno_exp = colno_exp
 
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
-        generator_id = self.generator_id
+        population_id = self.population_id
         if isinstance(bql, ast.ExpBQLProb):
-            compile_pdf_joint(bdb, generator_id, self.modelno, bql.targets,
+            compile_pdf_joint(bdb, population_id, self.modelno, bql.targets,
                 bql.constraints, self, out)
         elif isinstance(bql, ast.ExpBQLProbFn):
-            out.write('bql_column_value_probability(%d, ' % (generator_id,))
+            out.write('bql_column_value_probability(%d, ' % (population_id,))
             compile_expression(bdb, self.modelno, self, out)
             out.write(', %s, ' % (self.colno_exp,))
             compile_expression(bdb, bql.value, self, out)
-            compile_constraints(bdb, generator_id, bql.constraints, self, out)
+            compile_constraints(bdb, population_id, bql.constraints, self, out)
             out.write(')')
         elif isinstance(bql, ast.ExpBQLPredProb):
             raise BQLError(bdb, 'Predictive probability makes sense'
@@ -1015,20 +1019,20 @@ class BQLCompiler_1Col(object):
         elif isinstance(bql, ast.ExpBQLSim):
             raise BQLError(bdb, 'Similarity to row makes sense only at row.')
         elif isinstance(bql, ast.ExpBQLDepProb):
-            compile_bql_2col_1(bdb, generator_id, self.modelno,
+            compile_bql_2col_1(bdb, population_id, self.modelno,
                 'bql_column_dependence_probability',
                 'Dependence probability', None, bql, self.colno_exp, self, out)
         elif isinstance(bql, ast.ExpBQLMutInf):
-            compile_bql_2col_1(bdb, generator_id, self.modelno,
+            compile_bql_2col_1(bdb, population_id, self.modelno,
                 'bql_column_mutual_information',
                 'Mutual information',
                 compile_mutinf_extra, bql, self.colno_exp, self, out)
         elif isinstance(bql, ast.ExpBQLCorrel):
-            compile_bql_2col_1(bdb, generator_id, None,
+            compile_bql_2col_1(bdb, population_id, None,
                 'bql_column_correlation',
                 'Column correlation', None, bql, self.colno_exp, self, out)
         elif isinstance(bql, ast.ExpBQLCorrelPval):
-            compile_bql_2col_1(bdb, generator_id, None,
+            compile_bql_2col_1(bdb, population_id, None,
                 'bql_column_correlation_pvalue',
                 'Column correlation pvalue', None, bql, self.colno_exp, self, out)
         elif isinstance(bql, ast.ExpBQLPredict):
@@ -1039,20 +1043,20 @@ class BQLCompiler_1Col(object):
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
 
 class BQLCompiler_2Col(object):
-    def __init__(self, generator_id, modelno, colno0_exp, colno1_exp):
-        assert isinstance(generator_id, int)
+    def __init__(self, population_id, modelno, colno0_exp, colno1_exp):
+        assert isinstance(population_id, int)
         assert isinstance(colno0_exp, str)
         assert isinstance(colno1_exp, str)
-        self.generator_id = generator_id
+        self.population_id = population_id
         self.modelno = modelno
         self.colno0_exp = colno0_exp
         self.colno1_exp = colno1_exp
 
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
-        generator_id = self.generator_id
+        population_id = self.population_id
         if isinstance(bql, ast.ExpBQLProb):
-            compile_pdf_joint(bdb, generator_id, self.modelno, bql.targets,
+            compile_pdf_joint(bdb, population_id, self.modelno, bql.targets,
                 bql.constraints, self, out)
         elif isinstance(bql, ast.ExpBQLProbFn):
             raise BQLError(bdb, 'Probability of value is 1-column function.')
@@ -1062,25 +1066,25 @@ class BQLCompiler_2Col(object):
         elif isinstance(bql, ast.ExpBQLSim):
             raise BQLError(bdb, 'Similarity to row makes sense only at row.')
         elif isinstance(bql, ast.ExpBQLDepProb):
-            compile_bql_2col_0(bdb, generator_id, self.modelno,
+            compile_bql_2col_0(bdb, population_id, self.modelno,
                 'bql_column_dependence_probability',
                 'Dependence probability',
                 None,
                 bql, self.colno0_exp, self.colno1_exp, self, out)
         elif isinstance(bql, ast.ExpBQLMutInf):
-            compile_bql_2col_0(bdb, generator_id, self.modelno,
+            compile_bql_2col_0(bdb, population_id, self.modelno,
                 'bql_column_mutual_information',
                 'Mutual Information',
                 compile_mutinf_extra,
                 bql, self.colno0_exp, self.colno1_exp, self, out)
         elif isinstance(bql, ast.ExpBQLCorrel):
-            compile_bql_2col_0(bdb, generator_id, None,
+            compile_bql_2col_0(bdb, population_id, None,
                 'bql_column_correlation',
                 'Correlation',
                 None,
                 bql, self.colno0_exp, self.colno1_exp, self, out)
         elif isinstance(bql, ast.ExpBQLCorrelPval):
-            compile_bql_2col_0(bdb, generator_id, None,
+            compile_bql_2col_0(bdb, population_id, None,
                 'bql_column_correlation_pvalue',
                 'Correlation pvalue',
                 None,
@@ -1092,32 +1096,32 @@ class BQLCompiler_2Col(object):
         else:
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
 
-def compile_pdf_joint(bdb, generator_id, modelno, targets, constraints,
+def compile_pdf_joint(bdb, population_id, modelno, targets, constraints,
         bql_compiler, out):
-    out.write('bql_pdf_joint(%d, ' % (generator_id,))
+    out.write('bql_pdf_joint(%d, ' % (population_id,))
     compile_expression(bdb, modelno, bql_compiler, out)
     for t_col, t_exp in targets:
-        t_colno = core.bayesdb_generator_column_number(bdb, generator_id,
+        t_colno = core.bayesdb_variable_number(bdb, population_id,
             t_col)
         assert t_colno != -1
         out.write(', %d, ' % (t_colno,))
         compile_expression(bdb, t_exp, bql_compiler, out)
     if 0 < len(constraints):
         out.write(', -1')
-        compile_constraints(bdb, generator_id, constraints, bql_compiler, out)
+        compile_constraints(bdb, population_id, constraints, bql_compiler, out)
     out.write(')')
 
-def compile_constraints(bdb, generator_id, constraints, bql_compiler, out):
+def compile_constraints(bdb, population_id, constraints, bql_compiler, out):
     for c_col, c_exp in constraints:
-        if not core.bayesdb_generator_has_column(bdb, generator_id, c_col):
-            raise BQLError(bdb, 'No such column in generator %s: %s' %
-                (generator_id, c_col))
-        c_colno = core.bayesdb_generator_column_number(bdb,
-            generator_id, c_col)
+        if not core.bayesdb_has_variable(bdb, population_id, c_col):
+            raise BQLError(bdb, 'No such column in population %s: %s' %
+                (population_id, c_col))
+        c_colno = core.bayesdb_variable_number(bdb,
+            population_id, c_col)
         out.write(', %d, ' % (c_colno,))
         compile_expression(bdb, c_exp, bql_compiler, out)
 
-def compile_column_lists(bdb, generator_id, column_lists, _bql_compiler, out):
+def compile_column_lists(bdb, population_id, column_lists, _bql_compiler, out):
     first = True
     for collist in column_lists:
         if first:
@@ -1125,18 +1129,17 @@ def compile_column_lists(bdb, generator_id, column_lists, _bql_compiler, out):
         else:
             out.write(', ')
         if isinstance(collist, ast.ColListAll):
-            colnos = core.bayesdb_generator_column_numbers(bdb, generator_id)
+            colnos = core.bayesdb_variable_numbers(bdb, population_id)
             out.write(', '.join(str(colno) for colno in colnos))
         elif isinstance(collist, ast.ColListLit):
             unknown = set()
             for column in collist.columns:
-                if not core.bayesdb_generator_has_column(bdb, generator_id,
-                        column):
+                if not core.bayesdb_has_variable(bdb, population_id, column):
                     unknown.add(column)
             if 0 < len(unknown):
-                raise BQLError(bdb, 'No such columns in generator: %s' %
+                raise BQLError(bdb, 'No such columns in population: %s' %
                     (repr(list(unknown)),))
-            colnos = (core.bayesdb_generator_column_number(bdb, generator_id,
+            colnos = (core.bayesdb_variable_number(bdb, population_id,
                     column)
                 for column in collist.columns)
             out.write(', '.join(str(colno) for colno in colnos))
@@ -1163,64 +1166,61 @@ def compile_column_lists(bdb, generator_id, column_lists, _bql_compiler, out):
                 if not isinstance(column[0], unicode):
                     raise BQLError(bdb, 'ESTIMATE * FROM COLUMNS OF subquery'
                         ' returned non-string.')
-                colno = core.bayesdb_generator_column_number(bdb, generator_id,
+                colno = core.bayesdb_variable_number(bdb, population_id,
                     column[0])
                 out.write('%d' % (colno,))
         else:
             assert False, 'Invalid column list: %s' % (repr(collist),)
 
-def compile_bql_2col_2(bdb, generator_id, modelno, bqlfn, desc, extra, bql,
+def compile_bql_2col_2(bdb, population_id, modelno, bqlfn, desc, extra, bql,
         bql_compiler, out):
     if bql.column0 is None:
         raise BQLError(bdb, desc + ' needs exactly two columns.')
     if bql.column1 is None:
         raise BQLError(bdb, desc + ' needs exactly two columns.')
-    colno0 = core.bayesdb_generator_column_number(bdb, generator_id,
-        bql.column0)
-    colno1 = core.bayesdb_generator_column_number(bdb, generator_id,
-        bql.column1)
-    out.write('%s(%d, ' % (bqlfn, generator_id))
+    colno0 = core.bayesdb_variable_number(bdb, population_id, bql.column0)
+    colno1 = core.bayesdb_variable_number(bdb, population_id, bql.column1)
+    out.write('%s(%d, ' % (bqlfn, population_id))
     if modelno is not None:
         compile_expression(bdb, modelno, bql_compiler, out)
         out.write(', ')
     out.write('%s, %s' % (colno0, colno1))
     if extra:
-        extra(bdb, generator_id, bql, bql_compiler, out)
+        extra(bdb, population_id, bql, bql_compiler, out)
     out.write(')')
 
-def compile_bql_2col_1(bdb, generator_id, modelno, bqlfn, desc, extra, bql,
+def compile_bql_2col_1(bdb, population_id, modelno, bqlfn, desc, extra, bql,
         colno1_exp, bql_compiler, out):
     if bql.column0 is None:
         raise BQLError(bdb, desc + ' needs at least one column.')
     if bql.column1 is not None:
         raise BQLError(bdb, desc + ' needs at most one column.')
-    colno0 = core.bayesdb_generator_column_number(bdb, generator_id,
-        bql.column0)
-    out.write('%s(%d, ' % (bqlfn, generator_id))
+    colno0 = core.bayesdb_variable_number(bdb, population_id, bql.column0)
+    out.write('%s(%d, ' % (bqlfn, population_id))
     if modelno is not None:
         compile_expression(bdb, modelno, bql_compiler, out)
         out.write(', ')
     out.write('%s, %s' % (colno0, colno1_exp))
     if extra:
-        extra(bdb, generator_id, bql, bql_compiler, out)
+        extra(bdb, population_id, bql, bql_compiler, out)
     out.write(')')
 
-def compile_bql_2col_0(bdb, generator_id, modelno, bqlfn, desc, extra, bql,
+def compile_bql_2col_0(bdb, population_id, modelno, bqlfn, desc, extra, bql,
         colno0_exp, colno1_exp, bql_compiler, out):
     if bql.column0 is not None:
         raise BQLError(bdb, desc + ' needs no columns.')
     if bql.column1 is not None:
         raise BQLError(bdb, desc + ' needs no columns.')
-    out.write('%s(%d, ' % (bqlfn, generator_id))
+    out.write('%s(%d, ' % (bqlfn, population_id))
     if modelno is not None:
         compile_expression(bdb, modelno, bql_compiler, out)
         out.write(', ')
     out.write('%s, %s' % (colno0_exp, colno1_exp))
     if extra:
-        extra(bdb, generator_id, bql, bql_compiler, out)
+        extra(bdb, population_id, bql, bql_compiler, out)
     out.write(')')
 
-def compile_mutinf_extra(bdb, generator_id, bql, bql_compiler, out):
+def compile_mutinf_extra(bdb, population_id, bql, bql_compiler, out):
     out.write(', ')
     if bql.nsamples:
         compile_expression(bdb, bql.nsamples, bql_compiler, out)

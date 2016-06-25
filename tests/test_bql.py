@@ -26,13 +26,24 @@ import bayeslite.guess as guess
 import bayeslite.parse as parse
 import bayeslite.metamodels.troll_rng as troll
 
+from bayeslite import bayesdb_open
+
 import test_core
 import test_csv
 
 from stochastic import stochastic
 
 def bql2sql(string, setup=None):
-    with test_core.t1() as (bdb, _table_id):
+    with bayeslite.bayesdb_open(':memory:') as bdb:
+        test_core.t1_schema(bdb)
+        test_core.t1_data(bdb)
+        bdb.execute('''
+            create population t1_cc for t1 (
+                label categorical,
+                age numerical,
+                weight numerical
+            )
+        ''')
         if setup is not None:
             setup(bdb)
         phrases = parse.parse_bql_string(string)
@@ -45,7 +56,16 @@ def bql2sql(string, setup=None):
 
 # XXX Kludgey mess.  Please reorganize.
 def bql2sqlparam(string):
-    with test_core.t1() as (bdb, _table_id):
+    with bayeslite.bayesdb_open(':memory:') as bdb:
+        test_core.t1_schema(bdb)
+        test_core.t1_data(bdb)
+        bdb.execute('''
+            create population t1_cc for t1 (
+                label categorical,
+                age numerical,
+                weight numerical
+            )
+        ''')
         phrases = parse.parse_bql_string(string)
         out0 = StringIO.StringIO()
         for phrase in phrases:
@@ -422,10 +442,10 @@ def test_estimate_bql():
 
 def test_estimate_columns_trivial():
     prefix0 = 'SELECT c.name AS name'
-    prefix1 = ' FROM bayesdb_generator AS g,' \
-        ' bayesdb_generator_column AS gc, bayesdb_column AS c' \
-        ' WHERE g.id = 1 AND gc.generator_id = g.id' \
-        ' AND c.tabname = g.tabname AND c.colno = gc.colno'
+    prefix1 = ' FROM bayesdb_population AS p,' \
+        ' bayesdb_variable AS v, bayesdb_column AS c' \
+        ' WHERE p.id = 1 AND v.population_id = p.id' \
+        ' AND c.tabname = p.tabname AND c.colno = v.colno'
     prefix = prefix0 + prefix1
     assert bql2sql('estimate * from columns of t1_cc;') == \
         prefix + ';'
@@ -519,15 +539,15 @@ def test_estimate_columns_trivial():
         ' ORDER BY "mutinf" DESC;'
 
 def test_estimate_pairwise_trivial():
-    prefix = 'SELECT 1 AS generator_id, c0.name AS name0, c1.name AS name1, '
+    prefix = 'SELECT 1 AS population_id, c0.name AS name0, c1.name AS name1, '
     infix = ' AS value'
-    infix0 = ' FROM bayesdb_generator AS g,'
-    infix0 += ' bayesdb_generator_column AS gc0, bayesdb_column AS c0,'
-    infix0 += ' bayesdb_generator_column AS gc1, bayesdb_column AS c1'
-    infix0 += ' WHERE g.id = 1'
-    infix0 += ' AND gc0.generator_id = g.id AND gc1.generator_id = g.id'
-    infix0 += ' AND c0.tabname = g.tabname AND c0.colno = gc0.colno'
-    infix0 += ' AND c1.tabname = g.tabname AND c1.colno = gc1.colno'
+    infix0 = ' FROM bayesdb_population AS p,'
+    infix0 += ' bayesdb_variable AS v0, bayesdb_column AS c0,'
+    infix0 += ' bayesdb_variable AS v1, bayesdb_column AS c1'
+    infix0 += ' WHERE p.id = 1'
+    infix0 += ' AND v0.population_id = p.id AND v1.population_id = p.id'
+    infix0 += ' AND c0.tabname = p.tabname AND c0.colno = v0.colno'
+    infix0 += ' AND c1.tabname = p.tabname AND c1.colno = v1.colno'
     infix += infix0
     assert bql2sql('estimate dependence probability'
             ' from pairwise columns of t1_cc;') == \
@@ -656,31 +676,31 @@ def test_estimate_pairwise_row():
 def test_estimate_pairwise_selected_columns():
     assert bql2sql('estimate dependence probability'
             ' from pairwise columns of t1_cc for label, age') == \
-        'SELECT 1 AS generator_id, c0.name AS name0, c1.name AS name1,' \
+        'SELECT 1 AS population_id, c0.name AS name0, c1.name AS name1,' \
         ' bql_column_dependence_probability(1, NULL, c0.colno, c1.colno)' \
             ' AS value' \
-        ' FROM bayesdb_generator AS g,' \
-        ' bayesdb_generator_column AS gc0, bayesdb_column AS c0,' \
-        ' bayesdb_generator_column AS gc1, bayesdb_column AS c1' \
-        ' WHERE g.id = 1' \
-        ' AND gc0.generator_id = g.id AND gc1.generator_id = g.id' \
-        ' AND c0.tabname = g.tabname AND c0.colno = gc0.colno' \
-        ' AND c1.tabname = g.tabname AND c1.colno = gc1.colno' \
+        ' FROM bayesdb_population AS p,' \
+        ' bayesdb_variable AS v0, bayesdb_column AS c0,' \
+        ' bayesdb_variable AS v1, bayesdb_column AS c1' \
+        ' WHERE p.id = 1' \
+        ' AND v0.population_id = p.id AND v1.population_id = p.id' \
+        ' AND c0.tabname = p.tabname AND c0.colno = v0.colno' \
+        ' AND c1.tabname = p.tabname AND c1.colno = v1.colno' \
         ' AND c0.colno IN (1, 2) AND c1.colno IN (1, 2);'
     assert bql2sql('estimate dependence probability'
             ' from pairwise columns of t1_cc'
             ' for (ESTIMATE * FROM COLUMNS OF t1_cc'
                 ' ORDER BY name DESC LIMIT 2)') == \
-        'SELECT 1 AS generator_id, c0.name AS name0, c1.name AS name1,' \
+        'SELECT 1 AS population_id, c0.name AS name0, c1.name AS name1,' \
         ' bql_column_dependence_probability(1, NULL, c0.colno, c1.colno)' \
             ' AS value' \
-        ' FROM bayesdb_generator AS g,' \
-        ' bayesdb_generator_column AS gc0, bayesdb_column AS c0,' \
-        ' bayesdb_generator_column AS gc1, bayesdb_column AS c1' \
-        ' WHERE g.id = 1' \
-        ' AND gc0.generator_id = g.id AND gc1.generator_id = g.id' \
-        ' AND c0.tabname = g.tabname AND c0.colno = gc0.colno' \
-        ' AND c1.tabname = g.tabname AND c1.colno = gc1.colno' \
+        ' FROM bayesdb_population AS p,' \
+        ' bayesdb_variable AS v0, bayesdb_column AS c0,' \
+        ' bayesdb_variable AS v1, bayesdb_column AS c1' \
+        ' WHERE p.id = 1' \
+        ' AND v0.population_id = p.id AND v1.population_id = p.id' \
+        ' AND c0.tabname = p.tabname AND c0.colno = v0.colno' \
+        ' AND c1.tabname = p.tabname AND c1.colno = v1.colno' \
         ' AND c0.colno IN (3, 1) AND c1.colno IN (3, 1);'
 
 def test_select_columns_subquery():

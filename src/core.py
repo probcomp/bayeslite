@@ -202,6 +202,119 @@ def bayesdb_population_table(bdb, id):
     else:
         return row[0]
 
+def bayesdb_has_variable(bdb, population_id, name):
+    """True if the population has a given variable."""
+    sql = '''
+        SELECT COUNT(*)
+            FROM bayesdb_population AS p,
+                bayesdb_variable AS v,
+                bayesdb_column AS c
+            WHERE p.id = :population_id AND c.name = :name
+                AND p.id = v.population_id
+                AND p.tabname = c.tabname
+                AND v.colno = c.colno
+    '''
+    cursor = bdb.sql_execute(sql, {
+        'population_id': population_id,
+        'name': name,
+    })
+    return cursor_value(cursor)
+
+def bayesdb_variable_number(bdb, population_id, name):
+    """Return the column number of a population variable."""
+    sql = '''
+        SELECT c.colno
+            FROM bayesdb_population AS p,
+                bayesdb_variable AS v,
+                bayesdb_column AS c
+            WHERE p.id = :population_id AND c.name = :name
+                AND p.id = v.population_id
+                AND p.tabname = c.tabname
+                AND v.colno = c.colno
+    '''
+    cursor = bdb.sql_execute(sql, {
+        'population_id': population_id,
+        'name': name,
+    })
+    try:
+        row = cursor.next()
+    except StopIteration:
+        population = bayesdb_population_name(bdb, population_id)
+        raise ValueError('No such column in population %r: %r' %
+            (population, name))
+    else:
+        assert len(row) == 1
+        assert isinstance(row[0], int)
+        return row[0]
+
+def bayesdb_variable_numbers(bdb, population_id):
+    """Return a list of the numbers of columns modelled in `population_id`."""
+    sql = '''
+        SELECT colno FROM bayesdb_variable
+            WHERE population_id = ?
+            ORDER BY colno ASC
+    '''
+    return [row[0] for row in bdb.sql_execute(sql, (population_id,))]
+
+def bayesdb_variable_name(bdb, population_id, colno):
+    """Return the name a population variable."""
+    sql = '''
+        SELECT c.name
+            FROM bayesdb_population AS p,
+                bayesdb_variable AS v,
+                bayesdb_column AS c
+            WHERE p.id = :population_id
+                AND v.colno = :colno
+                AND p.id = v.population_id
+                AND p.tabname = c.tabname
+                AND v.colno = c.colno
+    '''
+    cursor = bdb.sql_execute(sql, {
+        'population_id': population_id,
+        'colno': colno,
+    })
+    try:
+        row = cursor.next()
+    except StopIteration:
+        generator = bayesdb_population_name(bdb, population_id)
+        raise ValueError('No such variable in population %r: %d' %
+            (population, colno))
+    else:
+        assert len(row) == 1
+        return row[0]
+
+def bayesdb_variable_stattype(bdb, population_id, colno):
+    """Return the statistical type of a population variable."""
+    sql = '''
+        SELECT stattype FROM bayesdb_variable
+            WHERE population_id = ? AND colno = ?
+    '''
+    cursor = bdb.sql_execute(sql, (population_id, colno))
+    try:
+        row = cursor.next()
+    except StopIteration:
+        population = bayesdb_population_name(bdb, population_id)
+        sql = '''
+            SELECT COUNT(*)
+                FROM bayesdb_population AS p, bayesdb_column AS c
+                WHERE p.id = :population_id
+                    AND p.tabname = c.tabname
+                    AND c.colno = :colno
+        '''
+        cursor = bdb.sql_execute(sql, {
+            'population_id': population_id,
+            'colno': colno,
+        })
+        if cursor_value(cursor) == 0:
+            raise ValueError('No such variable in population %s: %d' %
+                (population, colno))
+        else:
+            raise ValueError('Variable not modelled in population %s: %d' %
+                (population, colno))
+    else:
+        assert len(row) == 1
+        return row[0]
+
 def bayesdb_has_generator(bdb, name):
     """True if there is a generator named `name` in `bdb`."""
     sql = 'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?'
