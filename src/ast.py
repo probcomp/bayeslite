@@ -79,7 +79,7 @@ DropPop = namedtuple('DropPop', [
 CreateGen = namedtuple('CreateGen', [
     'name',                     # XXX name
     'ifnotexists',              # boolean
-    'table',                    # XXX name
+    'population',               # XXX name
     'metamodel',                # XXX name
     'schema',                   # nested list of tokens
 ])

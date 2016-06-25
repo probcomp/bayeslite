@@ -191,6 +191,17 @@ def bayesdb_population_name(bdb, id):
     else:
         return row[0]
 
+def bayesdb_population_table(bdb, id):
+    """Return the name of table of the population with id `id`."""
+    sql = 'SELECT tabname FROM bayesdb_population WHERE id = ?'
+    cursor = bdb.sql_execute(sql, (id,))
+    try:
+        row = cursor.next()
+    except StopIteration:
+        raise ValueError('No such population id: %r' % (id,))
+    else:
+        return row[0]
+
 def bayesdb_has_generator(bdb, name):
     """True if there is a generator named `name` in `bdb`."""
     sql = 'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?'
@@ -244,6 +255,18 @@ def bayesdb_generator_metamodel(bdb, id):
 def bayesdb_generator_table(bdb, id):
     """Return the name of the table of the generator with id `id`."""
     sql = 'SELECT tabname FROM bayesdb_generator WHERE id = ?'
+    cursor = bdb.sql_execute(sql, (id,))
+    try:
+        row = cursor.next()
+    except StopIteration:
+        raise ValueError('No such generator: %s' % (repr(id),))
+    else:
+        assert len(row) == 1
+        return row[0]
+
+def bayesdb_generator_population(bdb, id):
+    """Return the id of the population of the generator with id `id`."""
+    sql = 'SELECT population_id FROM bayesdb_generator WHERE id = ?'
     cursor = bdb.sql_execute(sql, (id,))
     try:
         row = cursor.next()

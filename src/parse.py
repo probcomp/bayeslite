@@ -181,7 +181,7 @@ class BQLSemantics(object):
         return ast.DropPop(name)
 
     def p_pop_schema_one(self, var):            return [var]
-    def p_pop_schema_many(self, schema, var):   schema.append(var); return var
+    def p_pop_schema_many(self, schema, var): schema.append(var); return schema
     def p_pop_var_v(self, name, st):            return (name, st)
     def p_stattype_st(self, name):              return name
 

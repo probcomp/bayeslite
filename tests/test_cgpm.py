@@ -81,7 +81,7 @@ Kepler = RandomForest
 def test_cgpm():
     with bayesdb_open(':memory:') as bdb:
         bdb.sql_execute('''
-            CREATE TABLE satellites(
+            CREATE TABLE satellites_ucs (
                 apogee,
                 class_of_orbit,
                 country_of_operator,
@@ -99,12 +99,22 @@ def test_cgpm():
                     country = countries[random.randrange(len(countries))]
                     mass = random.gauss(1000, 50)
                     bdb.sql_execute('''
-                        INSERT INTO satellites
+                        INSERT INTO satellites_ucs
                             (country_of_operator, launch_mass, class_of_orbit,
                                 apogee, perigee, period)
                             VALUES (?,?,?,?,?,?)
                     ''', (country, mass, l, x, y, f(x, y)))
-        XXX = bdb.sql_execute('SELECT * FROM satellites').fetchall()
+        bdb.execute('''
+            CREATE POPULATION satellites FOR satellites_ucs (
+                apogee NUMERICAL,
+                class_of_orbit CATEGORICAL,
+                country_of_operator CATEGORICAL,
+                launch_mass NUMERICAL,
+                perigee NUMERICAL,
+                period NUMERICAL
+            )
+        ''')
+        XXX = bdb.sql_execute('SELECT * FROM satellites_ucs').fetchall()
         engine = Engine(XXX, num_states=0, multithread=False)
         registry = {
             'kepler': Kepler,

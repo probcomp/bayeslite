@@ -312,14 +312,19 @@ def execute_phrase(bdb, phrase, bindings=()):
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.CreateGen):
+        # Find the population.
+        if not core.bayesdb_has_population(bdb, phrase.population):
+            raise BQLError(bdb, 'No such population: %r' %
+                (phrase.population,))
+        population_id = core.bayesdb_get_population(bdb, phrase.population)
+        table = core.bayesdb_population_table(bdb, population_id)
+
         # Find the metamodel.
         if phrase.metamodel not in bdb.metamodels:
             raise BQLError(bdb, 'No such metamodel: %s' %
                 (repr(phrase.metamodel),))
         metamodel = bdb.metamodels[phrase.metamodel]
 
-        # Let the metamodel parse the schema itself and call
-        # create_generator with the modelled columns.
         with bdb.savepoint():
             if core.bayesdb_has_generator(bdb, phrase.name):
                 if not phrase.ifnotexists:
@@ -327,11 +332,21 @@ def execute_phrase(bdb, phrase, bindings=()):
                                    'Name already defined as generator: %s' %
                         (repr(phrase.name),))
             else:
-                def instantiate(columns):
-                    return instantiate_generator(bdb, phrase.name, phrase.table,
-                        metamodel, columns)
-                metamodel.create_generator(bdb, phrase.table, phrase.schema,
-                    instantiate)
+                bdb.sql_execute('''
+                    INSERT INTO bayesdb_generator
+                        (name, tabname, population_id, metamodel)
+                        VALUES (?, ?, ?, ?)
+                ''', (phrase.name, table, population_id, metamodel.name()))
+                generator_id = core.bayesdb_get_generator(bdb, phrase.name)
+                # XXX omit needless bayesdb_generator_column table
+                bdb.sql_execute('''
+                    INSERT INTO bayesdb_generator_column
+                        (generator_id, colno, stattype)
+                        SELECT ?, colno, stattype
+                            FROM bayesdb_variable
+                            WHERE population_id = ?
+                ''', (generator_id, population_id))
+                metamodel.create_generator(bdb, generator_id, phrase.schema)
 
         # All done.  Nothing to return.
         return empty_cursor(bdb)
@@ -512,106 +527,6 @@ def execute_phrase(bdb, phrase, bindings=()):
         return empty_cursor(bdb)
 
     assert False                # XXX
-
-# Metamodel-independent logic to create a generator.  Don't call this
-# directly yourself -- it must be called via the metamodel's
-# create_generator method.
-def instantiate_generator(bdb, gen_name, table, metamodel, columns):
-    # Make sure there is no table by this name.
-    if core.bayesdb_has_table(bdb, gen_name):
-        raise BQLError(bdb, 'Name already defined as table: %s' %
-            (repr(gen_name),))
-
-    # Make sure the bayesdb_column table knows all the columns.
-    core.bayesdb_table_guarantee_columns(bdb, table)
-
-    generator_already_existed = False
-    if core.bayesdb_has_generator(bdb, gen_name):
-        generator_already_existed = True
-    else:
-        # Create the generator record.
-        generator_sql = '''INSERT INTO bayesdb_generator
-                           (name, tabname, metamodel)
-                           VALUES (:name, :table, :metamodel)'''
-        cursor = bdb.sql_execute(generator_sql, {
-            'name': gen_name,
-            'table': table,
-            'metamodel': metamodel.name(),
-        })
-    generator_id = core.bayesdb_get_generator(bdb, gen_name)
-
-    assert generator_id
-    assert 0 < generator_id
-
-    # Get a map from column name to colno.  Check
-    # - for duplicates,
-    # - for nonexistent columns,
-    # - for invalid statistical types.
-    column_map = {}
-    duplicates = set()
-    missing = set()
-    invalid = set()
-    colno_sql = '''
-        SELECT colno FROM bayesdb_column
-            WHERE tabname = :table AND name = :column_name
-    '''
-    stattype_sql = '''
-        SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype
-    '''
-    for name, stattype in columns:
-        name_folded = casefold(name)
-        if name_folded in column_map:
-            duplicates.add(name)
-            continue
-        cursor = bdb.sql_execute(colno_sql, {
-            'table': table,
-            'column_name': name,
-        })
-        try:
-            row = cursor.next()
-        except StopIteration:
-            missing.add(name)
-            continue
-        else:
-            colno = row[0]
-            assert isinstance(colno, int)
-            cursor = bdb.sql_execute(stattype_sql, {
-                'stattype': stattype,
-            })
-            if cursor_value(cursor) == 0:
-                invalid.add(stattype)
-                continue
-            column_map[casefold(name)] = colno
-    # XXX Would be nice to report these simultaneously.
-    if missing:
-        raise BQLError(bdb, 'No such columns in table %s: %s' %
-            (repr(table), repr(list(missing))))
-    if duplicates:
-        raise BQLError(bdb, 'Duplicate column names: %s' %
-            (repr(list(duplicates)),))
-    if invalid:
-        raise BQLError(bdb, 'Invalid statistical types: %s' %
-            (repr(list(invalid)),))
-
-    if not generator_already_existed:
-        # Insert column records.
-        column_sql = '''
-            INSERT INTO bayesdb_generator_column
-            (generator_id, colno, stattype)
-            VALUES (:generator_id, :colno, :stattype)
-        '''
-        for name, stattype in columns:
-            colno = column_map[casefold(name)]
-            stattype = casefold(stattype)
-            bdb.sql_execute(column_sql, {
-                'generator_id': generator_id,
-                'colno': colno,
-                'stattype': stattype,
-            })
-
-    column_list = sorted((column_map[casefold(name)], name, stattype)
-        for name, stattype in columns)
-    return generator_id, column_list
 
 def rename_table(bdb, old, new):
     assert core.bayesdb_has_table(bdb, old)

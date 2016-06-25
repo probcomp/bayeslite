@@ -143,7 +143,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 raise BQLError(bdb, 'CGPM already installed'
                     ' with unknown schema version: %d' % (version,))
 
-    def create_generator(self, bdb, table, schema_tokens, instantiate):
+    def create_generator(self, bdb, generator_id, schema_tokens):
         # Parse the schema crap.
         def intersperse(comma, l):
             if len(l) == 0:
@@ -169,20 +169,26 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         tokenses = [flatten(tokens) for tokens in schema_tokens]
         schema = _parse_cgpm_schema(intersperse(',', tokenses))
 
-        # Instantiate the generator.
-        columns = [(name, stattype) for name, stattype, _ct, _da
-            in schema['variables']]
-        generator_id, column_list = instantiate(columns)
-
         # Store the schema.
         bdb.sql_execute('''
             INSERT INTO bayesdb_cgpm_generator (generator_id, schema_json)
                 VALUES (?, ?)
         ''', (generator_id, json_dumps(schema)))
 
-        # Assign codes to categories.
+        # Assign codes to categories and consecutive column numbers to
+        # the modelled variables.
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        table = core.bayesdb_population_table(bdb, population_id)
         qt = sqlite3_quote_name(table)
-        for colno, name, stattype in column_list:
+        vars_cursor = bdb.sql_execute('''
+            SELECT v.colno, c.name, v.stattype
+                FROM bayesdb_variable AS v,
+                    bayesdb_population AS p,
+                    bayesdb_column AS c
+                WHERE p.id = ? AND v.population_id = p.id
+                    AND c.tabname = p.tabname AND c.colno = v.colno
+        ''', (population_id,))
+        for cgpm_colno, (colno, name, stattype) in enumerate(vars_cursor):
             if casefold(stattype) == 'categorical':
                 qn = sqlite3_quote_name(name)
                 cursor = bdb.sql_execute('''
@@ -194,9 +200,6 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                             (generator_id, colno, value, code)
                             VALUES (?, ?, ?, ?)
                     ''', (generator_id, colno, value, code))
-
-        # Assign consecutive column numbers to the modelled variables.
-        for cgpm_colno, (colno, _name, _stattype) in enumerate(column_list):
             bdb.sql_execute('''
                 INSERT INTO bayesdb_cgpm_variable
                     (generator_id, colno, cgpm_colno)
