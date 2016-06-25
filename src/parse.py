@@ -175,9 +175,18 @@ class BQLSemantics(object):
         return ast.AlterTabRenameCol(old, new)
 
     # BQL Model Definition Language
-    def p_command_creategen(self, name, ifnotexists, table, metamodel, schema):
-        return ast.CreateGen(name, ifnotexists, table,
-            metamodel, schema)
+    def p_command_create_pop(self, name, table, schema):
+        return ast.CreatePop(name, table, schema)
+    def p_command_drpo_pop(self, name):
+        return ast.DropPop(name)
+
+    def p_pop_schema_one(self, var):            return [var]
+    def p_pop_schema_many(self, schema, var):   schema.append(var); return var
+    def p_pop_var_v(self, name, st):            return (name, st)
+    def p_stattype_st(self, name):              return name
+
+    def p_command_creategen(self, name, ifnotexists, pop, metamodel, schema):
+        return ast.CreateGen(name, ifnotexists, pop, metamodel, schema)
     def p_command_dropgen(self, ifexists, name):
         return ast.DropGen(ifexists, name)
     def p_command_altergen(self, generator, cmds):
@@ -379,6 +388,7 @@ class BQLSemantics(object):
     def p_column_name_cn(self, name):           return name
     def p_generator_name_unqualified(self, name): return name
     def p_metamodel_name_mn(self, name):        return name
+    def p_population_name_pn(self, name):       return name
     def p_table_name_unqualified(self, name):   return name
 
     def p_group_by_none(self):                  return None

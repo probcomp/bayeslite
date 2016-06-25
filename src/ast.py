@@ -67,6 +67,15 @@ AlterTabRenameCol = namedtuple('AlterTabRenameCol', [
 
 ### BQL Model Definition Language
 
+CreatePop = namedtuple('CreatePop', [
+    'name',
+    'table',
+    'schema',
+])
+DropPop = namedtuple('DropPop', [
+    'name',
+])
+
 CreateGen = namedtuple('CreateGen', [
     'name',                     # XXX name
     'ifnotexists',              # boolean

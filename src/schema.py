@@ -129,16 +129,6 @@ CREATE TABLE bayesdb_population (
 				-- REFERENCES sqlite_master(name)
 );
 
-ALTER TABLE bayesdb_generator
-    ADD COLUMN population_id INTEGER REFERENCES bayesdb_population(id);
-
-INSERT INTO bayesdb_population (name, tabname)
-    SELECT DISTINCT name, tabname FROM bayesdb_generator;
-
-UPDATE bayesdb_generator
-    SET population_id =
-        (SELECT p.id FROM bayesdb_population AS p WHERE p.tabname = tabname);
-
 CREATE TABLE bayesdb_variable (
 	population_id	INTEGER NOT NULL REFERENCES bayesdb_population(id),
 	varno		INTEGER NOT NULL CHECK (0 <= varno),
@@ -146,13 +136,19 @@ CREATE TABLE bayesdb_variable (
 	PRIMARY KEY(population_id, varno)
 );
 
--- XXX If some generators had different statistical types, we'll have
--- a problem...
-INSERT OR IGNORE INTO bayesdb_variable (population_id, varno, stattype)
-    SELECT DISTINCT p.id, gc.colno, gc.stattype
+INSERT INTO bayesdb_variable (population_id, varno, stattype)
+    SELECT p.id, gc.colno, gc.stattype
         FROM bayesdb_population AS p, bayesdb_generator AS g,
             bayesdb_generator_column AS gc
-        WHERE p.id = g.population_id AND g.id = gc.generator_id;
+        WHERE p.name = g.name AND g.id = gc.generator_id;
+
+-- Adapt each existing generator to a single population.
+
+INSERT INTO bayesdb_population (name, tabname)
+    SELECT name, tabname FROM bayesdb_generator;
+
+ALTER TABLE bayesdb_generator
+    ADD COLUMN population_id INTEGER REFERENCES bayesdb_population(id);
 '''
 
 ### BayesDB SQLite setup

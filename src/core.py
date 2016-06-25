@@ -156,11 +156,43 @@ def bayesdb_table_guarantee_columns(bdb, table):
         if nrows == 0:
             raise ValueError('No such table: %s' % (repr(table),))
 
-def bayesdb_has_generator(bdb, name):
-    """True if there is a generator named `name` in `bdb`.
+def bayesdb_has_population(bdb, name):
+    """True if there is a populatoin named `name` in `bdb`."""
+    sql = 'SELECT COUNT(*) FROM bayesdb_population WHERE name = ?'
+    return 0 != cursor_value(bdb.sql_execute(sql, (name,)))
 
-    Only actual generator names are considered.
+def bayesdb_get_population(bdb, name):
+    """Return the id of the population named `name` in `bdb`.
+
+    The id is persistent across savepoints: ids are 64-bit integers
+    that increase monotonically and are never reused.
+
+    `bdb` must have a population named `name`.  If you're not sure,
+    call :func:`bayesdb_has_population` first.
     """
+    sql = 'SELECT id FROM bayesdb_population WHERE name = ?'
+    cursor = bdb.sql_execute(sql, (name,))
+    try:
+        row = cursor.next()
+    except StopIteration:
+        raise ValueError('No such population: %r' % (name,))
+    else:
+        assert isinstance(row[0], int)
+        return row[0]
+
+def bayesdb_population_name(bdb, id):
+    """Return the name of the population with id `id`."""
+    sql = 'SELECT name FROM bayesdb_population WHERE id = ?'
+    cursor = bdb.sql_execute(sql, (id,))
+    try:
+        row = cursor.next()
+    except StopIteration:
+        raise ValueError('No such population id: %r' % (id,))
+    else:
+        return row[0]
+
+def bayesdb_has_generator(bdb, name):
+    """True if there is a generator named `name` in `bdb`."""
     sql = 'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?'
     return 0 != cursor_value(bdb.sql_execute(sql, (name,)))
 

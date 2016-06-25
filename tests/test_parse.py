@@ -488,6 +488,26 @@ def test_trivial_precedence_error():
             ' with respect to c from t;')
 
 def test_trivial_commands():
+    assert parse_bql_string('''
+        create population satellites for satellites_ucs (
+            country_of_operator categorical,
+            orbit_type categorical,
+            launch_mass numerical,
+            perigee numerical,
+            apogee numerical,
+            period numerical
+        )
+    ''') == \
+        [ast.CreatePop('satellites', 'satellites_ucs', [
+            ('country_of_operator', 'categorical'),
+            ('orbit_type', 'categorical'),
+            ('launch_mass', 'numerical'),
+            ('perigee', 'numerical'),
+            ('apogee', 'numerical'),
+            ('period', 'numerical'),
+        ])]
+    assert parse_bql_string('drop population satellites') == \
+        [ast.DropPop('satellites')]
     assert parse_bql_string('create generator t_cc for t using crosscat'
             '(xyz numerical, pqr categorical, lmn cyclic)') == \
         [ast.CreateGen('t_cc', False, 't', 'crosscat', [

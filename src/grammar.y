@@ -55,10 +55,27 @@ k_column_opt		::= K_COLUMN.
 /*
  * BQL Model Definition Language
  */
+command(create_pop)	::= K_CREATE K_POPULATION population_name(name)
+				K_FOR table_name(table)
+				T_LROUND pop_schema(schema) T_RROUND.
+command(drop_pop)	::= K_DROP K_POPULATION population_name(name).
+/*
+ * XXX alter population xyz
+ *	rename to pqr
+ *	add variable ...
+ *	remove variable ...
+ *	set statistical type ...
+ */
+
+pop_schema(one)		::= pop_var(var).
+pop_schema(many)	::= pop_schema(schema) T_COMMA pop_var(var).
+pop_var(v)		::= column_name(name) stattype(st).
+stattype(st)		::= L_NAME(name).
+
 /* XXX Temporary generators?  */
 command(creategen)	::= K_CREATE K_GENERATOR generator_name(name)
 				ifnotexists(ifnotexists)
-				K_FOR table_name(table)
+				K_FOR population_name(pop)
 				K_USING metamodel_name(metamodel)
 				T_LROUND generator_schema(schema) T_RROUND.
 command(dropgen)	::= K_DROP K_GENERATOR ifexists(ifexists)
@@ -262,6 +279,7 @@ where(conditional)	::= K_WHERE expression(condition).
 column_name(cn)		::= L_NAME(name).
 generator_name(unqualified)	::= L_NAME(name).
 metamodel_name(mn)	::= L_NAME(name).
+population_name(pn)	::= L_NAME(name).
 table_name(unqualified)	::= L_NAME(name).
 
 group_by(none)		::= .
