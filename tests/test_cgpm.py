@@ -198,11 +198,7 @@ def test_cgpm():
         bdb.execute('ANALYZE g1 FOR 1 ITERATION WAIT')
         bdb.execute('''
             ESTIMATE DEPENDENCE PROBABILITY
-                FROM PAIRWISE COLUMNS OF g0
-        ''').fetchall()
-        bdb.execute('''
-            ESTIMATE DEPENDENCE PROBABILITY
-                FROM PAIRWISE COLUMNS OF g1
+                FROM PAIRWISE COLUMNS OF satellites
         ''').fetchall()
         bdb.execute('DROP MODELS FROM g0')
         bdb.execute('DROP GENERATOR g0')

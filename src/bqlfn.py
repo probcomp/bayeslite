@@ -248,11 +248,15 @@ define_correlation_p('cyclic', 'numerical', correlation_p_pearsonr2)
 define_correlation_p('numerical', 'cyclic', correlation_p_pearsonr2)
 
 # Two-column function:  DEPENDENCE PROBABILITY [OF <col0> WITH <col1>]
-def bql_column_dependence_probability(bdb, generator_id, modelno, colno0,
+def bql_column_dependence_probability(bdb, population_id, modelnos, colno0,
         colno1):
-    metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    return metamodel.column_dependence_probability(bdb, generator_id, modelno,
-        colno0, colno1)
+    def generator_depprob(generator_id):
+        metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
+        return metamodel.column_dependence_probability(bdb, generator_id, None,
+            colno0, colno1)
+    return stats.arithmetic_mean(
+        map(generator_depprob,
+            core.bayesdb_population_generators(bdb, population_id)))
 
 # Two-column function:  MUTUAL INFORMATION [OF <col0> WITH <col1>]
 def bql_column_mutual_information(bdb, generator_id, modelno, colno0, colno1,
