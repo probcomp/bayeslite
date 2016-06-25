@@ -133,9 +133,11 @@ wait_opt(some)		::= K_WAIT.
 
 simulate(s)		::= K_SIMULATE simulate_columns(cols)
 				K_FROM generator_name(generator)
+				usingmodel_opt(modelno)
 				given_opt(constraints) limit(lim).
 simulate(nolimit)	::= K_SIMULATE simulate_columns(cols)
 				K_FROM generator_name(generator)
+				usingmodel_opt(modelno)
 				given_opt(constraints).
 
 simulate_columns(one)	::= column_name(col).
@@ -177,6 +179,7 @@ select(s)		::= K_SELECT select_quant(quant) select_columns(cols)
 
 estimate(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
 				from_est(tabs)
+				usingmodel_opt(modelno)
 				where(cond)
 				group_by(grouping)
 				order_by(ord)
@@ -187,15 +190,18 @@ estpairrow(e)		::= K_ESTIMATE K_PAIRWISE K_ROW error T_SEMI.
 estpaircol(e)		::= K_ESTIMATE K_PAIRWISE error T_SEMI.
 
 estby(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
-				K_BY generator_name(generator).
+				K_BY generator_name(generator)
+				usingmodel_opt(modelno).
 
 infer(auto)		::= K_INFER infer_auto_columns(cols)
 				withconf_opt(conf)
 				K_FROM generator_name(generator)
+				usingmodel_opt(modelno)
 				where(cond) group_by(grouping) order_by(ord)
 				limit_opt(lim).
 infer(explicit)		::= K_INFER K_EXPLICIT infer_exp_columns(cols)
 				K_FROM generator_name(generator)
+				usingmodel_opt(modelno)
 				where(cond) group_by(grouping) order_by(ord)
 				limit_opt(lim).
 
@@ -242,6 +248,9 @@ from_est(pairrow)	::= K_FROM K_PAIRWISE generator_name(name).
 from_est(col)		::= K_FROM K_COLUMNS K_OF generator_name(name).
 from_est(paircol)	::= K_FROM K_PAIRWISE K_COLUMNS K_OF
 				generator_name(name) for(subcols).
+
+/* Vestige of a former design.  Remove me!  */
+usingmodel_opt(all)	::= .
 
 /* XXX Allow all kinds of joins.  */
 select_tables(one)	::= select_table(t).
