@@ -293,7 +293,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                     INSERT INTO bayesdb_variable
                         (population_id, colno, stattype)
                         VALUES (?, ?, ?)
-                ''', (population_id, colno, stattype))
+                ''', (population_id, colno, casefold(stattype)))
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.DropPop):
