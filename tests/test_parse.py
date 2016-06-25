@@ -691,54 +691,6 @@ def test_simulate():
                 ],
                 ast.ExpLit(ast.LitInt(10))))]
 
-def test_using_model():
-    assert parse_bql_string('simulate x from t using model 42'
-            ' limit 10') == \
-        [ast.Simulate(['x'], 't', ast.ExpLit(ast.LitInt(42)), [],
-            ast.ExpLit(ast.LitInt(10)))]
-    with pytest.raises(parse.BQLParseError):
-        assert parse_bql_string('simulate x from t'
-                ' using model (87)') == \
-            [ast.Simulate(['x'], 't', ast.ExpLit(ast.LitInt(87)), [],
-                ast.ExpLit(ast.LitInt(10)))]
-    assert parse_bql_string('estimate x from t using model (1+2)') == \
-        [ast.Estimate(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpCol(None, 'x'), None)],
-            't',
-            ast.ExpOp(ast.OP_ADD, (
-                ast.ExpLit(ast.LitInt(1)),
-                ast.ExpLit(ast.LitInt(2)),
-            )),
-            None, None, None, None)]
-    assert parse_bql_string('estimate * from columns of t'
-            ' using model modelno') == \
-        [ast.EstCols([ast.SelColAll(None)], 't', ast.ExpCol(None, 'modelno'),
-            None, None, None)]
-    assert parse_bql_string('estimate 42 from columns of t'
-            ' using model modelno') == \
-        [ast.EstCols([(ast.ExpLit(ast.LitInt(42)), None)], 't',
-            ast.ExpCol(None, 'modelno'),
-            None, None, None)]
-    assert parse_bql_string('estimate 42 from pairwise columns of t'
-            ' using model modelno') == \
-        [ast.EstPairCols([(ast.ExpLit(ast.LitInt(42)), None)], 't', None,
-            ast.ExpCol(None, 'modelno'),
-            None, None, None)]
-    assert parse_bql_string('estimate similarity from pairwise t'
-            ' using model modelno') == \
-        [ast.EstPairRow([ast.SelColExp(ast.ExpBQLSim(None, [ast.ColListAll()]),
-                None)],
-            't', ast.ExpCol(None, 'modelno'),
-            None, None, None)]
-    assert parse_bql_string('infer x from t using model modelno') == \
-        [ast.InferAuto([ast.InfColOne('x', None)], ast.ExpLit(ast.LitInt(0)),
-            't', ast.ExpCol(None, 'modelno'),
-            None, None, None, None)]
-    assert parse_bql_string('infer explicit x from t using model modelno') == \
-        [ast.InferExplicit([ast.SelColExp(ast.ExpCol(None, 'x'), None)],
-            't', ast.ExpCol(None, 'modelno'),
-            None, None, None, None)]
-
 def test_is_bql():
     assert ast.is_bql(ast.ExpLit(ast.LitInt(0))) == False
     assert ast.is_bql(ast.ExpNumpar(0)) == False

@@ -88,40 +88,28 @@ BQL Queries
 
 .. index:: ``ESTIMATE BY``
 
-``ESTIMATE <columns> BY <generator> [USING MODEL <modelno>]``
+``ESTIMATE <columns> BY <generator>``
 
    Like constant ``SELECT``, extended with model estimators of one
    implied row.
 
-   ``USING MODEL <modelno>``
-      *Modelno* is a BQL expression specifying the number of the model
-      of *generator* to use in model estimators.  Values of model
-      estimators are averaged over all models if ``USING MODEL`` is
-      not specified.  Models are zero-indexed.
-
 .. index:: ``ESTIMATE``
 
-``ESTIMATE [DISTINCT|ALL] <columns> FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE [DISTINCT|ALL] <columns> FROM <generator> [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the table associated with *generator*, extended
    with model estimators of one implied row.
 
-   ``USING MODEL <modelno>``
-      *Modelno* is a BQL expression specifying the number of the model
-      of *generator* to use in model estimators.  Values of model
-      estimators are averaged over all models if ``USING MODEL`` is
-      not specified.  Models are zero-indexed.
-
 .. index:: ``ESTIMATE FROM COLUMNS OF``
 
-``ESTIMATE <columns> FROM COLUMNS OF <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <columns> FROM COLUMNS OF <generator> [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the modelled columns of *generator*, extended
    with model estimators of one implied column.
 
 .. index:: ``ESTIMATE FROM PAIRWISE COLUMNS OF``
 
-``ESTIMATE <columns> FROM PAIRWISE COLUMNS OF <generator> [FOR <subcolumns>] [USING MODEL <modelno>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <columns> FROM PAIRWISE COLUMNS OF <generator> [FOR <subcolumns>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the modelled columns of
    *generator*, extended with model estimators of two implied columns.
@@ -131,7 +119,7 @@ BQL Queries
 
 .. index:: ``ESTIMATE, PAIRWISE``
 
-``ESTIMATE <expression> FROM PAIRWISE <generator> [USING MODEL <modelno>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <expression> FROM PAIRWISE <generator> [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the table assocated with
    *generator*, extended with model estimators of two implied rows.
@@ -141,7 +129,7 @@ BQL Queries
 
 .. index:: ``INFER``
 
-``INFER <colnames> [WITH CONFIDENCE <conf>] FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``INFER <colnames> [WITH CONFIDENCE <conf>] FROM <generator> [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Select the specified *colnames* from *generator*, filling in
    missing values if they can be filled in with confidence at least
@@ -159,7 +147,7 @@ BQL Queries
 
 .. index:: ``INFER EXPLICIT``
 
-``INFER EXPLICIT <columns> FROM <generator> [USING MODEL <modelno>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``INFER EXPLICIT <columns> FROM <generator> [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the table associated with *generator*, extended
    with model estimators of one implied row and with model predictions.
@@ -176,7 +164,7 @@ BQL Queries
 
 .. index:: ``SIMULATE``
 
-``SIMULATE <colnames> FROM <generator> [USING MODEL <modelno>] [GIVEN <constraints>] [LIMIT <limit>]``
+``SIMULATE <colnames> FROM <generator> [GIVEN <constraints>] [LIMIT <limit>]``
 
    Select the requested *colnames* from rows sampled from *generator*.
    *Constraints* is a comma-separated list of constraints of the form
@@ -186,9 +174,6 @@ BQL Queries
    representing equations that the returned rows satisfy.
 
    The number of rows in the result will be *limit*.
-
-   Each row is drawn from a single model, but if ``USING MODEL`` is
-   not specified, different rows may be drawn from different models.
 
 BQL Expressions
 ---------------

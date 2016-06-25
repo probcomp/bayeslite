@@ -1798,55 +1798,6 @@ def test_nested_simulate():
             ' given age = (simulate age from t1_cc limit 1)'
             ' limit 1').__del__()
 
-def test_using_models():
-    def setup(bdb):
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 1 iteration wait')
-    assert bql2sql('simulate age, weight from t1_cc using model 0'
-            ' limit 1', setup=setup) == \
-        'SELECT * FROM "bayesdb_temp_0";'
-    assert bql2sql('estimate predictive probability of weight from t1_cc'
-            ' using model 42') == \
-        'SELECT bql_row_column_predictive_probability(1, 42, _rowid_, 3)' \
-            ' FROM "t1";'
-    assert bql2sql('estimate *, mutual information with weight as mi'
-            ' from columns of t1_cc using model 42') == \
-        'SELECT c.name AS name,' \
-            ' bql_column_mutual_information(1, 42, 3, c.colno, NULL) AS "mi"' \
-        ' FROM bayesdb_generator AS g,' \
-            ' bayesdb_generator_column AS gc, bayesdb_column AS c' \
-        ' WHERE g.id = 1 AND gc.generator_id = g.id' \
-        ' AND c.tabname = g.tabname AND c.colno = gc.colno;'
-    assert bql2sql('estimate mutual information from pairwise columns of t1_cc'
-            ' using model 42') == \
-        'SELECT 1 AS generator_id, c0.name AS name0, c1.name AS name1,' \
-            ' bql_column_mutual_information(1, 42, c0.colno, c1.colno,' \
-                ' NULL) AS value' \
-        ' FROM bayesdb_generator AS g,' \
-            ' bayesdb_generator_column AS gc0, bayesdb_column AS c0,' \
-            ' bayesdb_generator_column AS gc1, bayesdb_column AS c1' \
-        ' WHERE g.id = 1' \
-            ' AND gc0.generator_id = g.id AND gc1.generator_id = g.id' \
-            ' AND c0.tabname = g.tabname AND c0.colno = gc0.colno' \
-            ' AND c1.tabname = g.tabname AND c1.colno = gc1.colno;'
-    assert bql2sql('estimate similarity from pairwise t1_cc'
-            ' using model 42') == \
-        'SELECT r0._rowid_ AS rowid0, r1._rowid_ AS rowid1,' \
-            ' bql_row_similarity(1, 42, r0._rowid_, r1._rowid_) AS value' \
-        ' FROM "t1" AS r0, "t1" AS r1;'
-    assert bql2sql('infer id, age, weight from t1_cc using model 42') == \
-        'SELECT "id" AS "id",' \
-            ' "IFNULL"("age", bql_predict(1, 42, 2, _rowid_, 0)) AS "age",' \
-            ' "IFNULL"("weight", bql_predict(1, 42, 3, _rowid_, 0))' \
-                ' AS "weight"' \
-        ' FROM "t1";'
-    assert bql2sql('infer explicit id, age,'
-            ' ifnull(weight, predict weight with confidence 0.9)'
-            ' from t1_cc using model 42') == \
-        'SELECT "id", "age",' \
-            ' "ifnull"("weight", bql_predict(1, 42, 3, _rowid_, 0.9))' \
-        ' FROM "t1";'
-
 def test_checkpoint__ci_slow():
     with test_core.t1() as (bdb, generator_id):
         bdb.execute('initialize 1 model for t1_cc')
