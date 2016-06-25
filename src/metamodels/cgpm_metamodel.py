@@ -21,8 +21,8 @@
 # [DONE] Kludge up Kepler's laws in Python.
 # [DONE] Test hand-kludged CGPM registry.
 # - Write stupid schema parser.  Adapt axch's?
-# - Teach INITIALIZE MODELS to take a model_config argument for real:
-#   . [DONE] INITIALIZE 10 MODELS FOR <population> (x POISSON, y ...)
+# [DONE] Teach INITIALIZE MODELS to take a model_config argument for real:
+#   . INITIALIZE 10 MODELS FOR <population> (x POISSON, y ...)
 #   . rename model_config -> model schema
 #   . Meaning: prior and likelihood model?  Or, `just SP'...
 # [DONE] Introduce named model schemas:
