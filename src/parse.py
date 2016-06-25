@@ -173,23 +173,15 @@ class BQLSemantics(object):
         return ast.AlterTabRenameTab(name)
     def p_altertab_cmd_renamecol(self, old, new):
         return ast.AlterTabRenameCol(old, new)
-    def p_altertab_cmd_setdefgen(self, generator):
-        return ast.AlterTabSetDefGen(generator)
-    def p_altertab_cmd_unsetdefgen(self):
-        return ast.AlterTabUnsetDefGen()
 
     # BQL Model Definition Language
-    def p_command_creategen(self, defaultp, name, ifnotexists, table,
-            metamodel, schema):
-        return ast.CreateGen(defaultp, name, ifnotexists, table,
+    def p_command_creategen(self, name, ifnotexists, table, metamodel, schema):
+        return ast.CreateGen(name, ifnotexists, table,
             metamodel, schema)
     def p_command_dropgen(self, ifexists, name):
         return ast.DropGen(ifexists, name)
     def p_command_altergen(self, generator, cmds):
         return ast.AlterGen(generator, cmds)
-
-    def p_default_opt_none(self):               return False
-    def p_default_opt_some(self):               return True
 
     def p_altergen_cmds_one(self, cmd):         return [cmd]
     def p_altergen_cmds_many(self, cmds, cmd):  cmds.append(cmd); return cmds

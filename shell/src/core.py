@@ -581,12 +581,11 @@ class Shell(cmd.Cmd):
                 params = tokens[1:]
                 names = ','.join('?%d' % (i + 1,) for i in range(len(params)))
                 qualifier = '''
-                    (name IN ({names}) OR (defaultp AND tabname IN ({names})))
+                    (name IN ({names}))
                 '''.format(names=names)
                 ok = True
                 for generator in params:
-                    if not core.bayesdb_has_generator_default(self._bdb,
-                            generator):
+                    if not core.bayesdb_has_generator(self._bdb, generator):
                         self.stdout.write('No such generator: %s\n' %
                             (repr(generator),))
                         ok = False
@@ -606,13 +605,11 @@ class Shell(cmd.Cmd):
                 return
             generator = tokens[1]
             with self._bdb.savepoint():
-                if not core.bayesdb_has_generator_default(self._bdb,
-                        generator):
+                if not core.bayesdb_has_generator(self._bdb, generator):
                     self.stdout.write('No such generator: %s\n' %
                         (repr(generator),))
                     return
-                generator_id = core.bayesdb_get_generator_default(self._bdb,
-                    generator)
+                generator_id = core.bayesdb_get_generator(self._bdb, generator)
                 sql = '''
                     SELECT c.colno AS colno, c.name AS name,
                             gc.stattype AS stattype, c.shortname AS shortname
@@ -633,13 +630,11 @@ class Shell(cmd.Cmd):
                 return
             generator = tokens[1]
             with self._bdb.savepoint():
-                if not core.bayesdb_has_generator_default(self._bdb,
-                        generator):
+                if not core.bayesdb_has_generator(self._bdb, generator):
                     self.stdout.write('No such generator: %s\n' %
                         (repr(generator),))
                     return
-                generator_id = core.bayesdb_get_generator_default(self._bdb,
-                    generator)
+                generator_id = core.bayesdb_get_generator(self._bdb, generator)
                 qualifier = None
                 if len(tokens) == 2:
                     qualifier = '1'

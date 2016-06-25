@@ -26,8 +26,7 @@ a savepoint.
 
 Each table may optionally be modelled by any number of generators,
 representing a parametrized generative model for the table's data,
-according to a named metamodel.  For each table, at most one generator
-may be designated as the default generator for the table.
+according to a named metamodel.
 
 Each generator models a subset of the columns in its table, which are
 called the modelled columns of that generator.  Each column in a
@@ -40,11 +39,6 @@ representing a particular choice of parameters for the parametrized
 generative model.  Models are numbered consecutively for the
 generator, and may be identified uniquely by ``(generator_id,
 modelno)`` or ``(generator_name, modelno)``.
-
-Tables and generators may not share names.  In most contexts, where a
-generator's name is needed, the name of a table with a default
-generator may be substituted.
-
 """
 
 from bayeslite.exception import BQLError
@@ -170,14 +164,6 @@ def bayesdb_has_generator(bdb, name):
     sql = 'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?'
     return 0 != cursor_value(bdb.sql_execute(sql, (name,)))
 
-def bayesdb_has_generator_default(bdb, name):
-    """True if there is a generator or default-modelled table named `name`."""
-    sql = '''
-        SELECT COUNT(*) FROM bayesdb_generator
-            WHERE name = :name OR (defaultp AND tabname = :name)
-    '''
-    return 0 != cursor_value(bdb.sql_execute(sql, {'name': name}))
-
 def bayesdb_get_generator(bdb, name):
     """Return the id of the generator named `name` in `bdb`.
 
@@ -189,29 +175,6 @@ def bayesdb_get_generator(bdb, name):
     """
     sql = 'SELECT id FROM bayesdb_generator WHERE name = ?'
     cursor = bdb.sql_execute(sql, (name,))
-    try:
-        row = cursor.next()
-    except StopIteration:
-        raise ValueError('No such generator: %s' % (repr(name),))
-    else:
-        assert isinstance(row[0], int)
-        return row[0]
-
-def bayesdb_get_generator_default(bdb, name):
-    """Return the id of the (default) generator named `name` in `bdb`.
-
-    The id is persistent across savepoints: ids are 64-bit integers
-    that increase monotonically and are never reused.
-
-    `bdb` must have a generator named `name`, or a modelled table
-    named `name` with a default generator.  If you're not sure, call
-    :func:`bayesdb_has_generator_default` first.
-    """
-    sql = '''
-        SELECT id FROM bayesdb_generator
-            WHERE name = :name OR (defaultp AND tabname = :name)
-    '''
-    cursor = bdb.sql_execute(sql, {'name': name})
     try:
         row = cursor.next()
     except StopIteration:

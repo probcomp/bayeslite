@@ -802,24 +802,6 @@ def test_trivial_commands():
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('infer explicit predict agee with confidence 0.9'
                 ' from t_cc')
-        # Make sure it works with the table too if we create a default
-        # generator.
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate * from t0')
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate * from columns of t0')
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate correlation from pairwise columns of t0')
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate similarity from pairwise t0')
-        bdb.execute('''
-            create default generator t_ccd for t0 using crosscat(
-                age numerical,
-                rank categorical
-            )
-        ''')
-        bdb.execute('initialize 1 model if not exists for t_ccd')
-        bdb.execute('analyze t_ccd for 1 iteration wait')
         bdb.execute('''
             create generator t_cce for t0 using crosscat(
                 guess(*),
@@ -834,49 +816,10 @@ def test_trivial_commands():
         bdb.execute('analyze t_cce for 1 iteration wait')
         bdb.execute('estimate correlation'
             ' from pairwise columns of t_cce').fetchall()
-        bdb.execute('initialize 2 models if not exists for t0')
-        bdb.execute('analyze t0 for 1 iteration wait')
-        bdb.execute('estimate * from t0').fetchall()
-        bdb.execute('estimate * from columns of t0').fetchall()
-        bdb.execute('estimate * from columns of t0'
-            ' order by dependence probability with age').fetchall()
-        bdb.execute('estimate correlation'
-            ' from pairwise columns of t0').fetchall()
-        bdb.execute('estimate similarity from pairwise t0').fetchall()
-        # XXX Distinguish the two generators somehow.
-        bdb.execute('alter table t0 set default generator to t_cc')
-        bdb.execute('estimate * from t0').fetchall()
-        bdb.execute('estimate * from columns of t0').fetchall()
-        bdb.execute('estimate correlation'
-            ' from pairwise columns of t0').fetchall()
-        bdb.execute('estimate similarity from pairwise t0').fetchall()
-        bdb.execute('alter table t0 unset default generator')
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate * from t0')
-        bdb.execute('alter table t0 rename to t')
-        bdb.execute('alter table t set default generator to t_ccd')
-        bdb.execute('estimate * from t').fetchall()
-        bdb.execute('estimate * from columns of t').fetchall()
-        bdb.execute('estimate correlation'
-            ' from pairwise columns of t').fetchall()
-        bdb.execute('estimate similarity from pairwise t').fetchall()
-        bdb.execute('drop generator t_ccd')
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('initialize 3 models if not exists for t_ccd')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('initialize 4 models if not exists for t')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('analyze t_ccd for 1 iteration wait')
-        with pytest.raises(bayeslite.BQLError):
             bdb.execute('analyze t0 for 1 iteration wait')
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate * from t_ccd')
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate * from columns of t_ccd')
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate correlation from pairwise columns of t_ccd')
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate similarity from pairwise t_ccd')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate * from t')
         with pytest.raises(bayeslite.BQLError):
@@ -885,16 +828,8 @@ def test_trivial_commands():
             bdb.execute('estimate correlation from pairwise columns of t')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate similarity from pairwise t')
-        bdb.execute('alter table t set default generator to t_cc')
         bdb.execute('initialize 6 models if not exists for t_cc')
-        bdb.execute('initialize 7 models if not exists for t')
         bdb.execute('analyze t_cc for 1 iteration wait')
-        bdb.execute('analyze t for 1 iteration wait')
-        bdb.execute('estimate * from t').fetchall()
-        bdb.execute('estimate * from columns of t').fetchall()
-        bdb.execute('estimate correlation'
-            ' from pairwise columns of t').fetchall()
-        bdb.execute('estimate similarity from pairwise t').fetchall()
 
 def test_trivial_deadline():
     with test_core.t1() as (bdb, _table_id):
@@ -993,14 +928,14 @@ def test_parametrized():
                 ' with respect to (estimate * from columns of t_cc limit 1)'
                 ' from t_cc;') == [
             'SELECT COUNT(*) FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+                ' WHERE name = ?',
             'SELECT id FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+                ' WHERE name = ?',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
             'SELECT COUNT(*) FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+                ' WHERE name = ?',
             'SELECT id FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+                ' WHERE name = ?',
             # ESTIMATE * FROM COLUMNS OF:
             'SELECT c.name AS name'
                 ' FROM bayesdb_generator AS g,'
@@ -1039,14 +974,14 @@ def test_parametrized():
                 ' from t_cc;',
                 (1,)) == [
             'SELECT COUNT(*) FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+                ' WHERE name = ?',
             'SELECT id FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+                ' WHERE name = ?',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
             'SELECT COUNT(*) FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+                ' WHERE name = ?',
             'SELECT id FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+                ' WHERE name = ?',
             # ESTIMATE * FROM COLUMNS OF:
             'SELECT c.name AS name'
                 ' FROM bayesdb_generator AS g,'
@@ -1086,9 +1021,9 @@ def test_parametrized():
             'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?',
             'PRAGMA table_info("sim")',
             'SELECT COUNT(*) FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+                ' WHERE name = ?',
             'SELECT id FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+                ' WHERE name = ?',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
             'PRAGMA table_info("t")',
@@ -1219,8 +1154,7 @@ def test_parametrized():
         assert sqltraced_execute('select * from (simulate age from t_cc'
                     " given gender = 'F' limit 4)") == [
             'PRAGMA table_info("bayesdb_temp_0")',
-            'SELECT id FROM bayesdb_generator WHERE name = :name' \
-                ' OR (defaultp AND tabname = :name)',
+            'SELECT id FROM bayesdb_generator WHERE name = ?',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
             'PRAGMA table_info("t")',
             "SELECT CAST(4 AS INTEGER), CAST(NULL AS INTEGER), 'F'",
@@ -1315,9 +1249,9 @@ def test_parametrized():
         bdb.execute('initialize 1 model for tu_cc;')
         assert sqltraced_execute('analyze tu_cc for 1 iteration wait;') == [
             'SELECT COUNT(*) FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+                ' WHERE name = ?',
             'SELECT id FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+                ' WHERE name = ?',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
             'SELECT metadata_json FROM bayesdb_crosscat_metadata'
                 ' WHERE generator_id = ?',
@@ -1693,9 +1627,6 @@ def test_misc_errors():
             # t1_cc does not have a column agee.
             bdb.execute('create table t1_sim as simulate weight from t1_cc'
                 ' given agee = 42 limit 1')
-        with pytest.raises(bayeslite.BQLError):
-            # t2 does not exist as a table.
-            bdb.execute('alter table t2 set default generator to t1_cc')
         with bdb.savepoint():
             bdb.sql_execute('create table t2(x)')
             with pytest.raises(bayeslite.BQLError):
@@ -1707,9 +1638,6 @@ def test_misc_errors():
         with pytest.raises(NotImplementedError):
             # Renaming columns is not yet implemented.
             bdb.execute('alter table t1 rename weight to mass')
-        with pytest.raises(bayeslite.BQLError):
-            # t1_xc does not exist as a generator.
-            bdb.execute('alter table t1 set default generator to t1_xc')
         with pytest.raises(bayeslite.BQLError):
             # xcat does not exist as a metamodel.
             bdb.execute('create generator t1_xc for t1 using xcat(guess(*))')

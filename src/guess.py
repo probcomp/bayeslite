@@ -33,7 +33,7 @@ from bayeslite.util import casefold
 from bayeslite.util import unique
 
 def bayesdb_guess_generator(bdb, generator, table, metamodel,
-        ifnotexists=None, default=None, **kwargs):
+        ifnotexists=None, **kwargs):
     """Heuristically guess a generator for `table` using `metamodel`.
 
     Based on the data in `table`, create a generator named `generator`
@@ -41,8 +41,6 @@ def bayesdb_guess_generator(bdb, generator, table, metamodel,
 
     :param bool ifnotexists: if true or ``None`` and `generator`
         already exists, do nothing.
-    :param bool default: Make this the default generator.
-        (for if a later query does not specify a generator).
     :param dict kwargs: options to pass through to bayesdb_guess_stattypes.
 
     In addition to statistical types, the overrides may specify
@@ -53,8 +51,6 @@ def bayesdb_guess_generator(bdb, generator, table, metamodel,
     # Fill in default arguments.
     if ifnotexists is None:
         ifnotexists = False
-    if default is None:
-        default = False
 
     with bdb.savepoint():
         if core.bayesdb_has_generator(bdb, generator):
@@ -80,8 +76,8 @@ def bayesdb_guess_generator(bdb, generator, table, metamodel,
         qcns = map(sqlite3_quote_name, column_names)
         qsts = map(sqlite3_quote_name, stattypes)
         qs = ','.join(qcn + ' ' + qst for qcn, qst in zip(qcns, qsts))
-        bdb.execute('CREATE %sGENERATOR %s FOR %s USING %s(%s)' %
-            ('DEFAULT ' if default else '', qg, qt, qmm, qs))
+        bdb.execute('CREATE GENERATOR %s FOR %s USING %s(%s)' %
+            (qg, qt, qmm, qs))
 
 def unzip(l):                   # ???
     xs = []

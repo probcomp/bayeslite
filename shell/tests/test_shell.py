@@ -266,12 +266,6 @@ def test_describe_generator(spawntablegen):
     c.sendexpectcmd('.describe generator %s' % (gen,))
     c.expect_lines(generator_output)
     c.expect_prompt()
-    c.sendexpectcmd('alter table %s set default generator to %s;' %
-        (table, gen))
-    c.expect_prompt()
-    c.sendexpectcmd('.describe generator %s' % (table,))
-    c.expect_lines(generator_output)
-    c.expect_prompt()
 
 
 def test_describe_models(spawntablegen):
@@ -293,12 +287,6 @@ def test_describe_models(spawntablegen):
     c.expect_lines(['No such generator: %s' % (repr(table),),])
     c.expect_prompt()
     c.sendexpectcmd('.describe models %s' % (gen,))
-    c.expect_lines(models_output)
-    c.expect_prompt()
-    c.sendexpectcmd('alter table %s set default generator to %s;' %
-        (table, gen))
-    c.expect_prompt()
-    c.sendexpectcmd('.describe models %s' % (table,))
     c.expect_lines(models_output)
     c.expect_prompt()
 
@@ -376,12 +364,6 @@ def test_describe_column_with_generator(spawntablegen):
     c.expect_lines(['No such generator: %s' % (repr(table),),])
     c.expect_prompt()
     c.sendexpectcmd('.describe columns %s' % (gen,))
-    c.expect_lines(columns_output)
-    c.expect_prompt()
-    c.sendexpectcmd('alter table %s set default generator to %s;' %
-        (table, gen))
-    c.expect_prompt()
-    c.sendexpectcmd('.describe columns %s' % (table,))
     c.expect_lines(columns_output)
     c.expect_prompt()
 

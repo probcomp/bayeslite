@@ -387,16 +387,4 @@ executing SQL instead of BQL in Bayeslite.
       are updated; triggers and views are not, and must be dropped
       and recreated separately, due to limitations in sqlite3.
 
-   .. index:: ``SET DEFAULT GENERATOR``
-
-   ``SET DEFAULT GENERATOR TO <generator>``
-
-      Set the default generator of the table to be *generator*.
-
-   .. index:: ``UNSET DEFAULT GENERATOR``
-
-   ``UNSET DEFAULT GENERATOR``
-
-      Remove any default generator associated with the table.
-
    FUTURE: Renaming columns (Github issue #35).

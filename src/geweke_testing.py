@@ -90,8 +90,7 @@ def create_temp_gen(bdb, table, target_metamodel, schema):
     gen_id_box = [None]
     def instantiate(columns):
         gen_id, column_list = bql.instantiate_generator(bdb, gen_name, table,
-            target_metamodel, columns,
-            default=True)
+            target_metamodel, columns)
         gen_id_box[0] = gen_id
         return gen_id, column_list
     with bdb.savepoint():

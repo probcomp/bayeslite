@@ -64,15 +64,10 @@ AlterTabRenameCol = namedtuple('AlterTabRenameCol', [
     'old',                      # XXX name
     'new',                      # XXX name
 ])
-AlterTabSetDefGen = namedtuple('AlterTabSetDefGen', [
-    'generator',                # XXX name
-])
-AlterTabUnsetDefGen = namedtuple('AlterTabUnsetDefGen', [])
 
 ### BQL Model Definition Language
 
 CreateGen = namedtuple('CreateGen', [
-    'default',                  # boolean
     'name',                     # XXX name
     'ifnotexists',              # boolean
     'table',                    # XXX name
