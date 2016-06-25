@@ -66,16 +66,9 @@ from bayeslite.util import casefold
 CGPM_SCHEMA_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('cgpm', 1);
 
-CREATE TABLE bayesdb_cgpm_schema (
-    -- We use AUTOINCREMENT so that id numbers don't get reused and
-    -- are safe to hang onto outside a transaction.
-    id                  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
-                            CHECK (0 < id),
-    generator_id        INTEGER NOT NULL REFERENCES bayesdb_generator(id),
-    -- XXX Should be globally unique for the whole database, but we'll
-    -- let that pass for now until we move the model schema business
-    -- into the generic BayesDB SQL schema.
-    name                TEXT NOT NULL UNIQUE,
+CREATE TABLE bayesdb_cgpm_model_schema (
+    model_schema_id     INTEGER NOT NULL PRIMARY KEY
+                            REFERENCES bayesdb_model_schema(id),
     schema_json         BLOB NOT NULL
 );
 
@@ -205,21 +198,25 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Delete model schemas.
         bdb.sql_execute('''
-            DELETE FROM bayesdb_cgpm_schema WHERE generator_id = ?
+            DELETE FROM bayesdb_cgpm_model_schema
+                WHERE model_schema_id IN
+                    (SELECT model_schema_id FROM bayesdb_model_schema
+                        WHERE generator_id = ?)
         ''', (generator_id,))
 
-    def create_model_schema(self, bdb, generator_id, name, tokens):
+    def create_model_schema(self, bdb, generator_id, model_schema_id, tokens):
         schema = _parse_cgpm_schema(tokens)
         schema_json = json_dumps(schema)
         bdb.sql_execute('''
-            INSERT INTO bayesdb_cgpm_schema (generator_id, name, schema_json)
-                VALUES (?, ?, ?)
-        ''', (generator_id, name, schema_json))
+            INSERT INTO bayesdb_cgpm_model_schema
+                (model_schema_id, schema_json)
+                VALUES (?, ?)
+        ''', (model_schema_id, schema_json))
 
-    def drop_model_schema(self, bdb, generator_id, name):
+    def drop_model_schema(self, bdb, generator_id, model_schema_id):
         bdb.sql_execute('''
-            DELETE FROM bayesdb_cgpm_schema WHERE name = ?
-        ''', (name,))
+            DELETE FROM bayesdb_cgpm_model_schema WHERE model_schema_id = ?
+        ''', (model_schema_id,))
 
     def initialize_models(self, bdb, generator_id, modelnos, schema_ref):
         # Caller should guarantee a nondegenerate request.
@@ -232,10 +229,14 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 for modelno in modelnos)
 
         if isinstance(schema_ref, (bytes, unicode)):
+            model_schema_id = core.bayesdb_get_model_schema(bdb, schema_ref)
+            if generator_id != \
+               core.bayesdb_model_schema_generator(bdb, model_schema_id):
+                raise BQLError(bdb, 'Invalid model schema: %r' % (schema_ref,))
             cursor = bdb.sql_execute('''
-                SELECT schema_json FROM bayesdb_cgpm_schema
-                    WHERE generator_id = ? AND name = ?
-            ''', (generator_id, schema_ref))
+                SELECT schema_json FROM bayesdb_cgpm_model_schema
+                    WHERE model_schema_id = ?
+            ''', (model_schema_id,))
             schema_json = cursor_value(cursor, nullok=True)
             if schema_json is None:
                 raise BQLError(bdb, 'No such named model schema: %r' %

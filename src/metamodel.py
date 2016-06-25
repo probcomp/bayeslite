@@ -139,11 +139,11 @@ class IBayesDBMetamodel(object):
         """
         raise NotImplementedError
 
-    def create_model_schema(self, bdb, generator_id, name, tokens):
+    def create_model_schema(self, bdb, generator_id, model_schema_id, tokens):
         """Create a named model schema, for use with INITIALIZE MODELS."""
         raise NotImplementedError
 
-    def drop_model_schema(self, bdb, generator_id, name):
+    def drop_model_schema(self, bdb, generator_id, model_schema_id):
         """Drop a named model schema.
 
         May fail if there exist models with this schema.

@@ -99,7 +99,6 @@ CreateModelSchema = namedtuple('CreateModelSchema', [
 
 DropModelSchema = namedtuple('DropModelSchema', [
     'name',
-    'generator',
 ])
 
 ### BQL Model Analysis Language

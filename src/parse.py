@@ -208,8 +208,8 @@ class BQLSemantics(object):
 
     def p_command_create_model_schema(self, name, gen, ms):
         return ast.CreateModelSchema(name, gen, ms)
-    def p_command_drop_model_schema(self, name, gen):
-        return ast.DropModelSchema(name, gen)
+    def p_command_drop_model_schema(self, name):
+        return ast.DropModelSchema(name)
 
     # BQL Model Analysis Language
     def p_command_init_models(self, n, ifnotexists, generator, schema):

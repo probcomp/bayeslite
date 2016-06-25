@@ -102,8 +102,7 @@ command(create_model_schema)	::= K_CREATE K_MODEL K_SCHEMA
  * globally unique, like triggers.
  */
 command(drop_model_schema)	::= K_DROP K_MODELSCHEMA
-					model_schema_name(name)
-					K_FROM generator_name(gen).
+					model_schema_name(name).
 
 /*
  * BQL Model Analysis Language

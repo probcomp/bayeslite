@@ -761,9 +761,9 @@ def test_parse_model_schema():
              'kepler', '(', 'period', ',', 'kepcluster', ')',
              'given', '(', 'perigee', ',', 'apogee', ')'])]
     assert parse_bql_string('''
-        drop modelschema ms from g;
+        drop modelschema ms;
     ''') == \
-        [ast.DropModelSchema('ms', 'g')]
+        [ast.DropModelSchema('ms')]
 
 def test_is_bql():
     assert ast.is_bql(ast.ExpLit(ast.LitInt(0))) == False

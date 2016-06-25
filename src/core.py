@@ -387,6 +387,45 @@ def bayesdb_generator_column_numbers(bdb, generator_id):
     '''
     return [row[0] for row in bdb.sql_execute(sql, (generator_id,))]
 
+def bayesdb_has_model_schema(bdb, name):
+    """True if there is a model schema named `name` in `bdb`."""
+    sql = '''
+        SELECT COUNT(*) FROM bayesdb_model_schema
+            WHERE name = ?
+    '''
+    return 0 != cursor_value(bdb.sql_execute(sql, (name,)))
+
+def bayesdb_get_model_schema(bdb, name):
+    """Return the id of the model schema named `name` in `bdb`.
+
+    The id is persistent across savepoints: ids are 64-bit integers
+    that increase monotonically and are never reused.
+
+    `bdb` must have a generator named `name`.  If you're not sure,
+    call :func:`bayesdb_has_model_schema` first.
+    """
+    sql = 'SELECT id FROM bayesdb_model_schema WHERE name = ?'
+    cursor = bdb.sql_execute(sql, (name,))
+    try:
+        row = cursor.next()
+    except StopIteration:
+        raise ValueError('No such model schema: %r' % (name,))
+    else:
+        assert isinstance(row[0], int)
+        return row[0]
+
+def bayesdb_model_schema_generator(bdb, model_schema_id):
+    """Return the id of the generator for the specified model schema."""
+    sql = 'SELECT generator_id FROM bayesdb_model_schema WHERE id = ?'
+    cursor = bdb.sql_execute(sql, (model_schema_id,))
+    try:
+        row = cursor.next()
+    except StopIteration:
+        raise ValueError('No such model schema: %r' % (model_schema_id,))
+    else:
+        assert isinstance(row[0], int)
+        return row[0]
+
 def bayesdb_generator_has_model(bdb, generator_id, modelno):
     """True if `generator_id` has a model numbered `modelno`."""
     sql = '''

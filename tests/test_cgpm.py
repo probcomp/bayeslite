@@ -233,7 +233,7 @@ def test_cgpm():
             >)
         ''')
         bdb.execute('INITIALIZE 3 MODELS IF NOT EXISTS FOR g USING g0')
-        bdb.execute('DROP MODELSCHEMA g0 FROM g')
+        bdb.execute('DROP MODELSCHEMA g0')
         bdb.execute('ANALYZE g FOR 1 ITERATION WAIT')
         bdb.execute('''
             ESTIMATE DEPENDENCE PROBABILITY
