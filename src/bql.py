@@ -178,13 +178,10 @@ def execute_phrase(bdb, phrase, bindings=()):
 
     if isinstance(phrase, ast.DropTab):
         with bdb.savepoint():
-            sql = 'SELECT COUNT(*) FROM bayesdb_generator WHERE tabname = ?'
+            sql = 'SELECT COUNT(*) FROM bayesdb_population WHERE tabname = ?'
             cursor = bdb.sql_execute(sql, (phrase.name,))
             if 0 < cursor_value(cursor):
-                # XXX Automatically delete the generators?  Generators
-                # are more interesting than triggers and indices, so
-                # automatic deletion is not obviously right.
-                raise BQLError(bdb, 'Table still in use by generators: %s' %
+                raise BQLError(bdb, 'Table still in use by populations: %s' %
                     (repr(phrase.name),))
             bdb.sql_execute('DELETE FROM bayesdb_column WHERE tabname = ?',
                 (phrase.name,))
