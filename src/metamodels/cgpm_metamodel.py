@@ -319,7 +319,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             with self._engine_data(bdb, generator_id):
                 # Do the transition.
                 self._engine.transition(
-                    N=iterations, S=max_seconds, multithread=10)
+                    N=iterations, S=max_seconds, multithread=False)
 
                 # Get the cache and make sure if it is available it is
                 # ready for models in this generator.
