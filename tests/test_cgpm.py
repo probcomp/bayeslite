@@ -53,10 +53,11 @@ class FourWay(CGpm):
 
     def logpdf(self, rowid, query, evidence=None):
         x = query[self.outputs[0]]
+        if int(x) != x: return -float('inf')
         if not (0 <= x <= 3): return -float('inf')
         regime = self.lookup_quadrant(
-            evidence[self.inputs[0]], evidence[self.inputs[1]])
-        return np.log(self.probabilities[regime][x])
+            evidence[self.inputs[0]] + 1e-5, evidence[self.inputs[1]] + 1e-5)
+        return np.log(self.probabilities[regime][int(x)])
 
     def incorporate(self, rowid, observations, evidence=None):
         pass
