@@ -322,6 +322,25 @@ def bayesdb_variable_stattype(bdb, population_id, colno):
         assert len(row) == 1
         return row[0]
 
+def bayesdb_population_cell_value(bdb, population_id, rowid, colno):
+    table_name = bayesdb_population_table(bdb, population_id)
+    var = bayesdb_variable_name(bdb, population_id, colno)
+    qt = sqlite3_quote_name(table_name)
+    qv = sqlite3_quote_name(var)
+    value_sql = 'SELECT %s FROM %s WHERE _rowid_ = ?' % (qv, qt)
+    value_cursor = bdb.sql_execute(value_sql, (rowid,))
+    value = None
+    try:
+        row = value_cursor.next()
+    except StopIteration:
+        population = bayesdb_population_name(bdb, population_id)
+        raise BQLError(bdb, 'No such invidual in population %r: %d' %
+            (population, rowid))
+    else:
+        assert len(row) == 1
+        value = row[0]
+    return value
+
 def bayesdb_has_generator(bdb, name):
     """True if there is a generator named `name` in `bdb`."""
     sql = 'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?'

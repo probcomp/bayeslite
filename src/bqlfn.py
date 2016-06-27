@@ -26,6 +26,7 @@ from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
 from bayeslite.math_util import ieee_exp
+from bayeslite.math_util import logmeanexp
 from bayeslite.util import casefold
 
 def bayesdb_install_bql(db, cookie):
@@ -74,9 +75,9 @@ def bql_column_correlation(bdb, population_id, colno0, colno1):
     return correlation_methods[st0, st1](data0, data1)
 
 # Two-column function:  CORRELATION PVALUE [OF <col0> WITH <col1>]
-def bql_column_correlation_pvalue(bdb, generator_id, colno0, colno1):
-    (st0, st1, data0, data1) = bql_column_stattypes_and_data(bdb, generator_id,
-        colno0, colno1)
+def bql_column_correlation_pvalue(bdb, population_id, colno0, colno1):
+    (st0, st1, data0, data1) = bql_variable_stattypes_and_data(bdb,
+        population_id, colno0, colno1)
     if (st0, st1) not in correlation_p_methods:
         raise NotImplementedError('No correlation pvalue method for %s/%s.' %
             (st0, st1))
@@ -348,7 +349,7 @@ def bql_row_similarity(bdb, population_id, _modelno, rowid, target_rowid,
             core.bayesdb_population_generators(bdb, population_id)))
 
 # Row function:  PREDICTIVE PROBABILITY OF <column>
-def bql_row_column_predictive_probability(bdb, generator_id, _modelno, rowid,
+def bql_row_column_predictive_probability(bdb, population_id, _modelno, rowid,
         colno):
     value = core.bayesdb_population_cell_value(
         bdb, population_id, rowid, colno)
