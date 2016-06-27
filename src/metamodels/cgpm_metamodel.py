@@ -363,16 +363,17 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         if colno0 == colno1:
             return 1
 
+        # Map the variable indexing.
+        cgpm_colno0 = self._cgpm_colno(bdb, generator_id, colno0)
+        cgpm_colno1 = self._cgpm_colno(bdb, generator_id, colno1)
+
         # Prepare the engine with the requested states.
         modelnos = None if modelno is None else [modelno]
         with self._engine_states(bdb, generator_id, modelnos):
-            # Map the variable indexing.
-            cgpm_colno0 = self._cgpm_colno(bdb, generator_id, colno0)
-            cgpm_colno1 = self._cgpm_colno(bdb, generator_id, colno1)
-
-            # Go!
-            return self._engine.dependence_probability(
-                cgpm_colno0, cgpm_colno1)
+            with self._engine_data(bdb, generator_id):
+                # Go!
+                return self._engine.dependence_probability(
+                    cgpm_colno0, cgpm_colno1, multithread=False)
 
     def column_mutual_information(self, bdb, generator_id, modelno,
             colno0, colno1, numsamples=None):
