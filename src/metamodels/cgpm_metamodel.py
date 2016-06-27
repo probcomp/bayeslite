@@ -81,16 +81,6 @@ CREATE TABLE bayesdb_cgpm_category (
     UNIQUE(generator_id, colno, code)
 );
 
-CREATE TABLE bayesdb_cgpm_variable (
-    generator_id        INTEGER NOT NULL REFERENCES bayesdb_generator(id),
-    colno               INTEGER NOT NULL CHECK (0 <= colno),
-    cgpm_colno          INTEGER NOT NULL CHECK (0 <= cgpm_colno),
-    PRIMARY KEY(generator_id, colno),
-    FOREIGN KEY(generator_id, colno)
-        REFERENCES bayesdb_generator_column(generator_id, colno),
-    UNIQUE(generator_id, cgpm_colno)
-);
-
 CREATE TABLE bayesdb_cgpm_model (
     generator_id        INTEGER NOT NULL REFERENCES bayesdb_generator(id),
     modelno             INTEGER NOT NULL,
@@ -175,8 +165,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 VALUES (?, ?)
         ''', (generator_id, json_dumps(schema)))
 
-        # Assign codes to categories and consecutive column numbers to
-        # the modelled variables.
+        # Assign codes to categories.
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         table = core.bayesdb_population_table(bdb, population_id)
         qt = sqlite3_quote_name(table)
@@ -188,7 +177,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 WHERE p.id = ? AND v.population_id = p.id
                     AND c.tabname = p.tabname AND c.colno = v.colno
         ''', (population_id,))
-        for cgpm_colno, (colno, name, stattype) in enumerate(vars_cursor):
+        for colno, name, stattype in vars_cursor:
             if casefold(stattype) == 'categorical':
                 qn = sqlite3_quote_name(name)
                 cursor = bdb.sql_execute('''
@@ -200,11 +189,6 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                             (generator_id, colno, value, code)
                             VALUES (?, ?, ?, ?)
                     ''', (generator_id, colno, value, code))
-            bdb.sql_execute('''
-                INSERT INTO bayesdb_cgpm_variable
-                    (generator_id, colno, cgpm_colno)
-                    VALUES (?, ?, ?)
-            ''', (generator_id, colno, cgpm_colno))
 
     def drop_generator(self, bdb, generator_id):
         # Flush any cached schema or models.
@@ -218,11 +202,6 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Delete models.
         bdb.sql_execute('''
             DELETE FROM bayesdb_cgpm_model WHERE generator_id = ?
-        ''', (generator_id,))
-
-        # Delete variables.
-        bdb.sql_execute('''
-            DELETE FROM bayesdb_cgpm_variable WHERE generator_id = ?
         ''', (generator_id,))
 
         # Delete categories.
@@ -363,17 +342,13 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         if colno0 == colno1:
             return 1
 
-        # Map the variable indexing.
-        cgpm_colno0 = self._cgpm_colno(bdb, generator_id, colno0)
-        cgpm_colno1 = self._cgpm_colno(bdb, generator_id, colno1)
-
         # Prepare the engine with the requested states.
         modelnos = None if modelno is None else [modelno]
         with self._engine_states(bdb, generator_id, modelnos):
             with self._engine_data(bdb, generator_id):
                 # Go!
                 return self._engine.dependence_probability(
-                    cgpm_colno0, cgpm_colno1, multithread=False)
+                    colno0, colno1, multithread=False)
 
     def column_mutual_information(self, bdb, generator_id, modelno,
             colno0, colno1, numsamples=None):
@@ -384,13 +359,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Prepare the engine with the requested states.
         modelnos = None if modelno is None else [modelno]
         with self._engine_states(bdb, generator_id, modelnos):
-            # Map the variable indexing.
-            cgpm_colno0 = self._cgpm_colno(bdb, generator_id, colno0)
-            cgpm_colno1 = self._cgpm_colno(bdb, generator_id, colno1)
-
             # Go!
             mi_list = self._engine.mutual_information(
-                cgpm_colno0, cgpm_colno1, N=numsamples)
+                colno0, colno1, N=numsamples)
 
             # Engine gives us a list of samples which it is our
             # responsibility to integrate over.
@@ -407,12 +378,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
             cgpm_target_rowid = self._cgpm_rowid(bdb, generator_id,
                 target_rowid)
-            cgpm_colnos = [self._cgpm_colno(bdb, generator_id, colno)
-                for colno in colnos]
 
             # Go!
             return self._engine.row_similarity(
-                cgpm_rowid, cgpm_target_rowid, cgpm_colnos)
+                cgpm_rowid, cgpm_target_rowid, colnos)
 
     def simulate_joint(self, bdb, generator_id, targets, constraints, modelno,
             num_predictions=None):
@@ -421,11 +390,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         rowid = self._unique_rowid(
             [r for r, _c in targets] + [r for r, _c, _v in constraints])
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
-        cgpm_query = [self._cgpm_colno(bdb, generator_id, colno)
-            for _r, colno in targets]
+        cgpm_query = [colno for _r, colno in targets]
         cgpm_evidence = {
-            self._cgpm_colno(bdb, generator_id, colno):
-                self._cgpm_value(bdb, generator_id, colno, value)
+            colno: self._cgpm_value(bdb, generator_id, colno, value)
             for colno, value in constraints
         }
         modelnos = None if modelno is None else [modelno]
@@ -436,7 +403,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                     multithread=False)
                 weighted_samples = self._engine._process_samples(
                     samples, cgpm_rowid, cgpm_evidence, multithread=False)
-        return [[row[cgpm_colno] for cgpm_colno in cgpm_query]
+        return [[row[colno] for colno in cgpm_query]
             for row in weighted_samples]
 
     def logpdf_joint(self, bdb, generator_id, targets, constraints, modelno):
@@ -444,13 +411,11 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             [r for r, _c, _v in targets + constraints])
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
         cgpm_query = {
-            self._cgpm_colno(bdb, generator_id, colno):
-                self._cgpm_value(bdb, generator_id, colno, value)
+            colno: self._cgpm_value(bdb, generator_id, colno, value)
             for _r, colno, value in targets
         }
         cgpm_evidence = {
-            self._cgpm_colno(bdb, generator_id, colno):
-                self._cgpm_value(bdb, generator_id, colno, value)
+            colno: self._cgpm_value(bdb, generator_id, colno, value)
             for _r, colno, value in constraints
         }
         modelnos = None if modelno is None else [modelno]
@@ -481,19 +446,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Load the mapped data from the database.
         data = self._data(bdb, generator_id)
 
-        # Get only the columns that the feralcat models.
-        schema = self._schema(bdb, generator_id)
-        variables = schema['variables']
-        population_id = core.bayesdb_generator_population(bdb, generator_id)
-        def map_var(var):
-            colno = core.bayesdb_variable_number(bdb, population_id, var)
-            return self._cgpm_colno(bdb, generator_id, colno)
-        cgpm_output_colnos = \
-            [map_var(var) for var, _st, _cct, _da in variables]
-        X = [[row[colno] for colno in cgpm_output_colnos] for row in data]
-
         # Prepare the engine with these data.
-        with engine_X(self._engine, X):
+        with engine_X(self._engine, data):
             yield
 
     def _data(self, bdb, generator_id):
@@ -541,8 +495,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # XXX Parallelize me!  Push me into the engine!
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         def map_var(var):
-            colno = core.bayesdb_variable_number(bdb, population_id, var)
-            return self._cgpm_colno(bdb, generator_id, colno)
+            return core.bayesdb_variable_number(bdb, population_id, var)
         cgpm_output_colnos = \
             [map_var(var) for var, _st, _cct, _da in variables]
         cctypes = [cctype for _n, _st, cctype, _da in variables]
@@ -556,8 +509,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
     def _cgpm_initializer(self, bdb, generator_id, data, cgpm_ext):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         def map_var(var):
-            colno = core.bayesdb_variable_number(bdb, population_id, var)
-            return self._cgpm_colno(bdb, generator_id, colno)
+            return core.bayesdb_variable_number(bdb, population_id, var)
         name = cgpm_ext['name']
         cgpm_output_colnos = map(map_var, cgpm_ext['outputs'])
         cgpm_input_colnos = map(map_var, cgpm_ext['inputs'])
@@ -671,14 +623,6 @@ class CGPM_Metamodel(IBayesDBMetamodel):
     # XXX subsampling
     def _cgpm_rowid(self, bdb, generator_id, rowid):
         return rowid
-
-    def _cgpm_colno(self, bdb, generator_id, colno):
-        cursor = bdb.sql_execute('''
-            SELECT cgpm_colno FROM bayesdb_cgpm_variable
-                WHERE generator_id = ? AND colno = ?
-        ''', (generator_id, colno))
-        # XXX error message if not modelled
-        return cursor_value(cursor)
 
     def _cgpm_value(self, bdb, generator_id, colno, value):
         stattype = core.bayesdb_generator_column_stattype(
