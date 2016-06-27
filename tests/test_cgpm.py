@@ -134,12 +134,12 @@ def test_cgpm():
         bdb.execute('''
             CREATE GENERATOR g0 FOR satellites USING cgpm (<
                 "variables"~ (
-                    --("apogee", "numerical", "normal", < >),
+                    ("apogee", "numerical", "normal", < >),
                     ("class_of_orbit", "categorical", "categorical", <"k"~ 3>),
                     ("country_of_operator", "categorical", "categorical",
                      <"k"~ 4>),
-                    ("launch_mass", "numerical", "normal", < >)--,
-                    --("perigee", "numerical", "normal", < >),
+                    ("launch_mass", "numerical", "normal", < >),
+                    ("perigee", "numerical", "normal", < >)--,
                     --("period", "numerical", "normal", < >)
                 ),
                 "categoricals"~ <
@@ -176,12 +176,12 @@ def test_cgpm():
         bdb.execute('''
             CREATE GENERATOR g1 FOR satellites USING cgpm (<
                 "variables"~ (
-                    --("apogee", "numerical", "normal", < >),
+                    ("apogee", "numerical", "normal", < >),
                     ("class_of_orbit", "categorical", "categorical", <"k"~ 3>),
                     ("country_of_operator", "categorical", "categorical",
                      <"k"~ 4>),
-                    ("launch_mass", "numerical", "exponential", < >)--,
-                    --("perigee", "numerical", "normal", < >),
+                    ("launch_mass", "numerical", "exponential", < >),
+                    ("perigee", "numerical", "normal", < >)--,
                     --("period", "numerical", "normal", < >)
                 ),
                 "categoricals"~ <
