@@ -143,12 +143,13 @@ INSERT INTO bayesdb_variable (population_id, colno, stattype)
         WHERE p.name = g.name AND g.id = gc.generator_id;
 
 -- Adapt each existing generator to a single population.
-
 INSERT INTO bayesdb_population (name, tabname)
     SELECT name, tabname FROM bayesdb_generator;
-
 ALTER TABLE bayesdb_generator
     ADD COLUMN population_id INTEGER REFERENCES bayesdb_population(id);
+UPDATE bayesdb_generator
+    SET population_id =
+        (SELECT p.id FROM bayesdb_population AS p WHERE p.tabname = tabname);
 '''
 
 ### BayesDB SQLite setup
