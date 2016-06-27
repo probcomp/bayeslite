@@ -92,6 +92,29 @@ def logmeanexp(array):
     #   = logsumexp(logprobs) - log(len(logprobs))
     return logsumexp(noninfs) - math.log(len(array))
 
+def logsumexp_weighted(log_W, log_A):
+    # Given log W_0, log W_1, ..., log W_{n-1} and log A_0, log A_1,
+    # ... log A_{n-1}, compute
+    #
+    #   log (W_0 A_0 + ... + W_{n-1} A_{n-1})
+    #   = log (exp log (W_0 A_0) + ... + exp log (W_{n-1} A_{n-1}))
+    #   = log (exp (log W_0 + log A_0) + ... + exp (log W_{n-1} + log A_{n-1}))
+    #   = logsumexp (log W_0 + log A_0, ..., log W_{n-1} + log A_{n-1})
+    #
+    # XXX Pathological cases -- infinities, NaNs.
+    assert len(log_W) == len(log_A)
+    return logsumexp([log_w + log_a for log_w, log_a in zip(log_W, log_A)])
+
+def logmeanexp_weighted(log_W, log_A):
+    # logmeanexp_weighted(log W, log A)
+    # = log ((W_0 A_0 + ... + W_{n-1} A_{n-1})/n)
+    # = log (W_0 A_0 + ... + W_{n-1} A_{n-1}) - log n
+    # = logsumexp_weighted(log W, log A) - log n
+    #
+    # XXX Pathological cases -- infinities, NaNs.
+    assert len(log_W) == len(log_A)
+    return logsumexp_weighted(log_W, log_A) - math.log(len(log_A))
+
 def continuants(contfrac):
     """Continuants of a continued fraction.
 

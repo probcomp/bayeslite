@@ -122,3 +122,12 @@ def test_logmeanexp():
     assert math.isnan(logmeanexp([nan, inf]))
     assert math.isnan(logmeanexp([nan, -3]))
     assert math.isnan(logmeanexp([nan]))
+
+def test_logsumexp_weighted():
+    # XXX Expand me!
+    assert logsumexp_weighted([500, -500], [-1500, -500]) == \
+        -1000 + math.log(2)
+
+def test_logmeanexp_weighted():
+    # XXX Expand me!
+    assert logmeanexp_weighted([500, -500], [-1500, -500]) == -1000
