@@ -288,12 +288,15 @@ def bql_column_value_probability(bdb, population_id, _modelno, colno, value,
     targets = [(fake_row_id, colno, value)]
     def generator_logpdf(generator_id):
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-        return metamodel.logpdf_joint(
+        logpdf = metamodel.logpdf_joint(
             bdb, generator_id, targets, constraints, None)
-    r = logmeanexp(
+        loglikelihood = metamodel.logpdf_joint(
+            bdb, generator_id, constraints, [], None)
+        return logpdf + loglikelihood
+    logp = logmeanexp(
         map(generator_logpdf,
             core.bayesdb_population_generators(bdb, population_id)))
-    return ieee_exp(r)
+    return ieee_exp(logp)
 
 # XXX This is silly.  We should return log densities, not densities.
 # This is Github issue #360:
@@ -324,8 +327,11 @@ def bql_pdf_joint(bdb, population_id, _modelno, *args):
         i += 2
     def generator_logpdf(generator_id):
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-        return metamodel.logpdf_joint(bdb, generator_id, targets, constraints,
-            None)
+        logpdf = metamodel.logpdf_joint(
+            bdb, generator_id, targets, constraints, None)
+        loglikelihood = metamodel.logpdf_joint(
+            bdb, generator_id, constraints, [], None)
+        return logpdf + loglikelihood
     logp = logmeanexp(
         map(generator_logpdf,
             core.bayesdb_population_generators(bdb, population_id)))
