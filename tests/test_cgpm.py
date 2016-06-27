@@ -78,6 +78,18 @@ class FourWay(CGpm):
         if x == 2: return [2, -2]
         if x == 3: return [-2, -2]
         raise ValueError('Invalid value: %s' % str(x))
+
+    def to_metadata(self):
+        metadata = {}
+        metadata['outputs'] = self.outputs
+        metadata['inputs'] = self.inputs
+        metadata['factory'] = (__name__, 'FourWay')
+        return metadata
+
+    @classmethod
+    def from_metadata(cls, metadata, rng):
+        return cls(metadata['outputs'], metadata['inputs'], rng)
+
 RandomForest = FourWay
 # XXX END KLUDGE
 
