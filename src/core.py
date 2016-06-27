@@ -206,8 +206,7 @@ def bayesdb_population_generators(bdb, population_id):
     cursor = bdb.sql_execute('''
         SELECT id FROM bayesdb_generator WHERE population_id = ?
     ''', (population_id,))
-    for (generator_id,) in cursor:
-        yield generator_id
+    return [generator_id for (generator_id,) in cursor]
 
 def bayesdb_has_variable(bdb, population_id, name):
     """True if the population has a given variable."""
