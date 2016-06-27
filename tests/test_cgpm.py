@@ -200,6 +200,17 @@ def test_cgpm():
             ESTIMATE DEPENDENCE PROBABILITY
                 FROM PAIRWISE COLUMNS OF satellites
         ''').fetchall()
+        bdb.execute('''
+            ESTIMATE PREDICTIVE PROBABILITY OF period FROM satellites
+        ''').fetchall()
+        bdb.execute('''
+            ESTIMATE PROBABILITY OF period = 42
+                    GIVEN (apogee = 8 AND perigee = 7)
+                BY satellites
+        ''').fetchall()
+        bdb.execute('''
+            SIMULATE apogee, perigee, period FROM satellites LIMIT 100
+        ''').fetchall()
         bdb.execute('DROP MODELS FROM g0')
         bdb.execute('DROP GENERATOR g0')
         bdb.execute('DROP GENERATOR g1')
