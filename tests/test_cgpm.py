@@ -15,6 +15,7 @@
 #   limitations under the License.
 
 import math
+import numpy as np
 import random                   # XXX
 
 from cgpm.crosscat.engine import Engine
