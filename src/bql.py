@@ -277,23 +277,7 @@ def execute_phrase(bdb, phrase, bindings=()):
 
     if isinstance(phrase, ast.CreatePop):
         with bdb.savepoint():
-            if core.bayesdb_has_population(bdb, phrase.name):
-                raise BQLError(bdb, 'Name already defined as population: %r' %
-                    (phrase.name,))
-            core.bayesdb_table_guarantee_columns(bdb, phrase.table)
-            bdb.sql_execute('''
-                INSERT INTO bayesdb_population (name, tabname) VALUES (?, ?)
-            ''', (phrase.name, phrase.table))
-            population_id = core.bayesdb_get_population(bdb, phrase.name)
-            # XXX helpful error checking: unknown name, unknown stattype
-            for name, stattype in phrase.schema:
-                colno = core.bayesdb_table_column_number(bdb, phrase.table,
-                    name)
-                bdb.sql_execute('''
-                    INSERT INTO bayesdb_variable
-                        (population_id, colno, stattype)
-                        VALUES (?, ?, ?)
-                ''', (population_id, colno, casefold(stattype)))
+            _create_population(bdb, phrase)
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.DropPop):
@@ -527,6 +511,78 @@ def execute_phrase(bdb, phrase, bindings=()):
         return empty_cursor(bdb)
 
     assert False                # XXX
+
+def _create_population(bdb, phrase):
+    # XXX ifnotexists
+    if core.bayesdb_has_population(bdb, phrase.name):
+        raise BQLError(bdb, 'Name already defined as population: %r' %
+            (phrase.name,))
+
+    # Make sure the bayesdb_column table knows all the columns of the
+    # underlying table.
+    core.bayesdb_table_guarantee_columns(bdb, phrase.table)
+
+    # Create the population record and get the assigned id.
+    bdb.sql_execute('''
+        INSERT INTO bayesdb_population (name, tabname) VALUES (?, ?)
+    ''', (phrase.name, phrase.table))
+    population_id = core.bayesdb_get_population(bdb, phrase.name)
+
+    # Get a map from variable name to colno.  Check
+    # - for duplicates,
+    # - for nonexistent columns,
+    # - for invalid statistical types.
+    variable_map = {}
+    duplicates = set()
+    missing = set()
+    invalid = set()
+    colno_sql = '''
+        SELECT colno FROM bayesdb_column
+            WHERE tabname = :table AND name = :column_name
+    '''
+    stattype_sql = '''
+        SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype
+    '''
+    for name, stattype in phrase.schema:
+        name_folded = casefold(name)
+        if name_folded in variable_map:
+            duplicates.add(name)
+            continue
+        cursor = bdb.sql_execute(colno_sql, {
+            'table': phrase.table,
+            'column_name': name,
+        })
+        try:
+            row = cursor.next()
+        except StopIteration:
+            missing.add(name)
+            continue
+        else:
+            colno = row[0]
+            assert isinstance(colno, int)
+            cursor = bdb.sql_execute(stattype_sql, {'stattype': stattype})
+            if cursor_value(cursor) == 0:
+                invalid.add(stattype)
+                continue
+            variable_map[casefold(name)] = colno
+    # XXX Would be nice to report these simultaneously.
+    if missing:
+        raise BQLError(bdb, 'No such columns in table %r: %r' %
+            (phrase.table, list(missing)))
+    if duplicates:
+        raise BQLError(bdb, 'Duplicate column names: %r' % (list(duplicates),))
+    if invalid:
+        raise BQLError(bdb, 'Invalid statistical types: %r' % (list(invalid),))
+
+    # Insert variable records.
+    for name, stattype in phrase.schema:
+        colno = variable_map[casefold(name)]
+        stattype = casefold(stattype)
+        bdb.sql_execute('''
+            INSERT INTO bayesdb_variable
+                (population_id, colno, stattype)
+                VALUES (?, ?, ?)
+        ''', (population_id, colno, casefold(stattype)))
 
 def rename_table(bdb, old, new):
     assert core.bayesdb_has_table(bdb, old)
