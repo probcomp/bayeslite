@@ -566,29 +566,17 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             raise BQLError(bdb, 'Crosscat already installed'
                 ' with unknown schema version: %d' % (version,))
 
-    def create_generator(self, bdb, table, schema, instantiate):
+    def create_generator(self, bdb, generator_id, schema):
         parsed_schema = crosscat_generator_schema.parse(
             schema, subsample_default=self._subsample)
-
-        # If necessary, guess the column statistical types.
-        #
-        # XXX Allow passing count/ratio cutoffs, and other
-        # parameters.
-        if parsed_schema.guess:
-            column_names = core.bayesdb_table_column_names(bdb, table)
-            qt = sqlite3_quote_name(table)
-            rows = bdb.sql_execute('SELECT * FROM %s' % (qt,)).fetchall()
-            stattypes = guess.bayesdb_guess_stattypes(column_names, rows,
-                overrides=parsed_schema.columns)
-            columns = zip(column_names, stattypes)
-            columns = [(name, stattype) for name, stattype in columns
-                if stattype not in ('key', 'ignore')]
-        else:
-            columns = parsed_schema.columns
-
-        # Create the metamodel-independent records and assign a
-        # generator id.
-        generator_id, column_list = instantiate(columns)
+        column_list = [
+            (colno,
+             core.bayesdb_generator_column_name(bdb, generator_id, colno),
+             core.bayesdb_generator_column_stattype(bdb, generator_id, colno))
+            for colno in core.bayesdb_generator_column_numbers(
+                bdb, generator_id)
+        ]
+        table = core.bayesdb_generator_table(bdb, generator_id)
 
         # Install the metadata json blob.
         M_c = create_metadata(bdb, generator_id, column_list)
