@@ -105,53 +105,59 @@ class DotdogMetamodel(metamodel.IBayesDBMetamodel):
                 VALUES ('dotdog', 42)
         '''
         bdb.sql_execute(sql)
-    def create_generator(self, bdb, table, schema, instantiate):
-        instantiate(schema)
+    def create_generator(self, bdb, generator_id, schema_tokens):
+        pass
 
 def test_hackmetamodel():
     bdb = bayeslite.bayesdb_open(builtin_metamodels=False)
     bdb.sql_execute('CREATE TABLE t(a INTEGER, b TEXT)')
     bdb.sql_execute("INSERT INTO t (a, b) VALUES (42, 'fnord')")
     bdb.sql_execute('CREATE TABLE u AS SELECT * FROM t')
+    bdb.execute('CREATE POPULATION p FOR t(a NUMERICAL)')
     with pytest.raises(bayeslite.BQLError):
-        bdb.execute('CREATE GENERATOR t_cc FOR t USING crosscat(a NUMERICAL)')
+        bdb.execute('CREATE GENERATOR p_cc FOR p USING crosscat(a NUMERICAL)')
     with pytest.raises(bayeslite.BQLError):
-        bdb.execute('CREATE GENERATOR t_dd FOR t USING dotdog(a NUMERICAL)')
+        bdb.execute('CREATE GENERATOR p_dd FOR p USING dotdog(a NUMERICAL)')
     dotdog_metamodel = DotdogMetamodel()
     bayeslite.bayesdb_register_metamodel(bdb, dotdog_metamodel)
     bayeslite.bayesdb_deregister_metamodel(bdb, dotdog_metamodel)
     bayeslite.bayesdb_register_metamodel(bdb, dotdog_metamodel)
     with pytest.raises(bayeslite.BQLError):
-        bdb.execute('CREATE GENERATOR t_cc FOR t USING crosscat(a NUMERICAL)')
-    bdb.execute('CREATE GENERATOR t_dd FOR t USING dotdog(a NUMERICAL)')
+        bdb.execute('CREATE GENERATOR p_cc FOR p USING crosscat(a NUMERICAL)')
+    bdb.execute('CREATE GENERATOR p_dd FOR p USING dotdog(a NUMERICAL)')
     with pytest.raises(bayeslite.BQLError):
-        bdb.execute('CREATE GENERATOR t_dd FOR t USING dotdog(a NUMERICAL)')
+        bdb.execute('CREATE GENERATOR p_dd FOR p USING dotdog(a NUMERICAL)')
     with pytest.raises(bayeslite.BQLError):
-        bdb.execute('CREATE GENERATOR t_cc FOR t USING crosscat(a NUMERICAL)')
+        bdb.execute('CREATE GENERATOR p_cc FOR p USING crosscat(a NUMERICAL)')
     with pytest.raises(bayeslite.BQLError):
-        bdb.execute('CREATE GENERATOR t_dd FOR t USING dotdog(a NUMERICAL)')
+        bdb.execute('CREATE GENERATOR p_dd FOR p USING dotdog(a NUMERICAL)')
     # XXX Rest of test originally exercised default metamodel, but
     # syntax doesn't support that now.  Not clear that's wrong either.
-    bdb.execute('CREATE GENERATOR u_dd FOR u USING dotdog(a NUMERICAL)')
+    bdb.execute('CREATE GENERATOR q_dd FOR p USING dotdog(a NUMERICAL)')
     with pytest.raises(bayeslite.BQLError):
-        bdb.execute('CREATE GENERATOR u_dd FOR u USING dotdog(a NUMERICAL)')
+        bdb.execute('CREATE GENERATOR q_dd FOR p USING dotdog(a NUMERICAL)')
 
 @contextlib.contextmanager
-def bayesdb_generator(mkbdb, tab, gen, table_schema, data, columns,
+def bayesdb_population(mkbdb, tab, pop, gen, table_schema, data, columns,
         metamodel_name='crosscat'):
     with mkbdb as bdb:
         table_schema(bdb)
         data(bdb)
         qt = bql_quote_name(tab)
+        qp = bql_quote_name(pop)
         qg = bql_quote_name(gen)
         qmm = bql_quote_name(metamodel_name)
+        bdb.execute('CREATE POPULATION %s FOR %s(%s)' %
+            (qp, qt, ','.join(columns)))
         bdb.execute('CREATE GENERATOR %s FOR %s USING %s(%s)' %
-            (qg, qt, qmm, ','.join(columns)))
-        yield bdb, core.bayesdb_get_generator(bdb, gen)
+            (qg, qp, qmm, ','.join(columns)))
+        population_id = core.bayesdb_get_population(bdb, pop)
+        generator_id = core.bayesdb_get_generator(bdb, gen)
+        yield bdb, population_id, generator_id
 
 @contextlib.contextmanager
-def analyzed_bayesdb_generator(mkbdb, nmodels, nsteps, max_seconds=None):
-    with mkbdb as (bdb, generator_id):
+def analyzed_bayesdb_population(mkbdb, nmodels, nsteps, max_seconds=None):
+    with mkbdb as (bdb, population_id, generator_id):
         generator = core.bayesdb_generator_name(bdb, generator_id)
         qg = bql_quote_name(generator)
         bql = 'INITIALIZE %d MODELS FOR %s' % (nmodels, qg)
@@ -165,45 +171,45 @@ def analyzed_bayesdb_generator(mkbdb, nmodels, nsteps, max_seconds=None):
             duration = '%d ITERATIONS' % (nsteps,)
         bql = 'ANALYZE %s FOR %s WAIT' % (qg, duration)
         bdb.execute(bql)
-        yield bdb, generator_id
+        yield bdb, population_id, generator_id
 
-def bayesdb_maxrowid(bdb, generator_id):
-    table_name = core.bayesdb_generator_table(bdb, generator_id)
+def bayesdb_maxrowid(bdb, population_id):
+    table_name = core.bayesdb_population_table(bdb, population_id)
     qt = bql_quote_name(table_name)
     sql = 'SELECT MAX(_rowid_) FROM %s' % (qt,)
     return cursor_value(bdb.sql_execute(sql))
 
 def test_casefold_colname():
-    def t(tname, gname, sql, *args, **kwargs):
+    def t(tname, pname, gname, sql, *args, **kwargs):
         def schema(bdb):
             bdb.sql_execute(sql)
         def data(_bdb):
             pass
-        return bayesdb_generator(bayesdb(), tname, gname, schema, data, *args,
-            **kwargs)
+        return bayesdb_population(bayesdb(), tname, pname, gname, schema, data,
+            *args, **kwargs)
     with pytest.raises(apsw.SQLError):
-        with t('t', 't_cc', 'create table t(x, X)', []):
+        with t('t', 'p', 'p_cc', 'create table t(x, X)', []):
             pass
     with pytest.raises(bayeslite.BQLError):
         columns = ['x CATEGORICAL', 'x CATEGORICAL']
-        with t('t', 't_cc', 'create table t(x, y)', columns):
+        with t('t', 'p', 'p_cc', 'create table t(x, y)', columns):
             pass
     with pytest.raises(bayeslite.BQLError):
         columns = ['x CATEGORICAL', 'X CATEGORICAL']
-        with t('t', 't_cc', 'create table t(x, y)', columns):
+        with t('t', 'p', 'p_cc', 'create table t(x, y)', columns):
             pass
     with pytest.raises(bayeslite.BQLError):
         columns = ['x CATEGORICAL', 'X NUMERICAL']
-        with t('t', 't_cc', 'create table t(x, y)', columns):
+        with t('t', 'p', 'p_cc', 'create table t(x, y)', columns):
             pass
     columns = ['x CATEGORICAL', 'y CATEGORICAL']
-    with t('t', 't_cc', 'create table t(x, y)', columns):
+    with t('t', 'p', 'p_cc', 'create table t(x, y)', columns):
         pass
     columns = ['X CATEGORICAL', 'y CATEGORICAL']
-    with t('t', 't_cc', 'create table t(x, y)', columns):
+    with t('t', 'p', 'p_cc', 'create table t(x, y)', columns):
         pass
     columns = ['x CATEGORICAL', 'Y NUMERICAL']
-    with t('t', 't_cc', 'CREATE TABLE T(X, Y)', columns):
+    with t('t', 'p', 'p_cc', 'CREATE TABLE T(X, Y)', columns):
         pass
 
 def t0_schema(bdb):
@@ -213,12 +219,14 @@ def t0_data(bdb):
         bdb.sql_execute('insert into t0 (id, n) values (?, ?)', row)
 
 def t0():
-    return bayesdb_generator(bayesdb(), 't0', 't0_cc', t0_schema, t0_data,
+    return bayesdb_population(
+        bayesdb(), 't0', 'p0', 'p0_cc', t0_schema, t0_data,
         columns=['n NUMERICAL'])
 
 def test_t0_badname():
     with pytest.raises(bayeslite.BQLError):
-        with bayesdb_generator(bayesdb(), 't0', 't0_cc', t0_schema, t0_data,
+        with bayesdb_population(
+                bayesdb(), 't0', 'p0', 't0_cc', t0_schema, t0_data,
                 columns=['n CATEGORICAL', 'm CATEGORICAL']):
             pass
 
@@ -268,17 +276,17 @@ t1_rows = [
 ]
 
 def t1(*args, **kwargs):
-    return bayesdb_generator(bayesdb(*args, **kwargs), 't1', 't1_cc',
+    return bayesdb_population(bayesdb(*args, **kwargs), 't1', 'p1', 'p1_cc',
         t1_schema, t1_data,
         columns=['label CATEGORICAL', 'age NUMERICAL', 'weight NUMERICAL'])
 
 def t1_sub():
-    return bayesdb_generator(bayesdb(), 't1', 't1_sub_cc',
+    return bayesdb_population(bayesdb(), 't1', 'p1', 'p1_sub_cc',
         t1_schema, t1_data,
         columns=['label CATEGORICAL', 'weight NUMERICAL'])
 
 def t1_subcat():
-    return bayesdb_generator(bayesdb(), 't1', 't1_subcat_cc',
+    return bayesdb_population(bayesdb(), 't1', 'p1', 'p1_subcat_cc',
         t1_schema, t1_data,
         columns=['label CATEGORICAL', 'weight CATEGORICAL'])
 
@@ -286,7 +294,7 @@ def t1_mp():
     crosscat = multiprocessing_crosscat()
     metamodel = CrosscatMetamodel(crosscat)
     return bayesdb_generator(bayesdb(metamodel=metamodel),
-        't1', 't1_cc', t1_schema, t1_data,
+        't1', 'p1', 'p1_cc', t1_schema, t1_data,
          columns=['label CATEGORICAL', 'age NUMERICAL', 'weight NUMERICAL'])
 
 def t2_schema(bdb):
@@ -302,30 +310,32 @@ def t2_data(bdb):
     ''', (2/3., -0.,))
 
 def t2():
-    return bayesdb_generator(bayesdb(), 't2', 't2_cc', t2_schema, t2_data,
+    return bayesdb_population(
+        bayesdb(), 't2', 'p2', 'p2_cc', t2_schema, t2_data,
         columns=['label CATEGORICAL', 'age CATEGORICAL', 'weight CATEGORICAL'])
 
 def test_t1_nokey():
-    with bayesdb_generator(bayesdb(), 't1', 't1_cc', t1_schema, t1_data,
+    with bayesdb_generator(
+            bayesdb(), 't1', 'p1', 'p1_cc', t1_schema, t1_data,
             columns=['age NUMERICAL', 'weight NUMERICAL']):
         pass
 
 def test_t1_nocase():
-    with bayesdb_generator(bayesdb(), 't1', 't1_cc', t1_schema, t1_data,
+    with bayesdb_population(bayesdb(), 't1', 'p1', 'p1_cc', t1_schema, t1_data,
             columns=[
                 'label CATEGORICAL',
                 'age NUMERICAL',
                 'weight NUMERICAL',
             ]) \
             as (bdb, generator_id):
-        bdb.execute('select id from t1').fetchall()
-        bdb.execute('select ID from T1').fetchall()
-        bdb.execute('select iD from T1').fetchall()
-        bdb.execute('select Id from T1').fetchall()
-        # bdb.execute('select id from t1_cc').fetchall()
-        # bdb.execute('select ID from T1_cC').fetchall()
-        # bdb.execute('select iD from T1_Cc').fetchall()
-        # bdb.execute('select Id from T1_CC').fetchall()
+        bdb.execute('select id from p1').fetchall()
+        bdb.execute('select ID from P1').fetchall()
+        bdb.execute('select iD from P1').fetchall()
+        bdb.execute('select Id from P1').fetchall()
+        # bdb.execute('select id from p1_cc').fetchall()
+        # bdb.execute('select ID from P1_cC').fetchall()
+        # bdb.execute('select iD from P1_Cc').fetchall()
+        # bdb.execute('select Id from P1_CC').fetchall()
 
 examples = {
     't0': t0,
@@ -343,35 +353,35 @@ def test_example(exname):
 
 @pytest.mark.parametrize('exname', examples.keys())
 def test_example_analysis0(exname):
-    with analyzed_bayesdb_generator(examples[exname](), 1, 0):
+    with analyzed_bayesdb_population(examples[exname](), 1, 0):
         pass
 
 @pytest.mark.parametrize('exname', examples.keys())
 def test_example_analysis1(exname):
-    with analyzed_bayesdb_generator(examples[exname](), 1, 1):
+    with analyzed_bayesdb_population(examples[exname](), 1, 1):
         pass
 
 # The multiprocessing engine has a large overhead, too much to try
 # every normal test with it, so we'll just run this one test to make
 # sure it doesn't crash and burn with ten models.
 def test_t1_mp_analysis():
-    with analyzed_bayesdb_generator(t1_mp(), 10, 2):
+    with analyzed_bayesdb_population(t1_mp(), 10, 2):
         pass
 
 def test_t1_mp_analysis_time_deadline():
-    with analyzed_bayesdb_generator(t1_mp(), 10, None, max_seconds=1):
+    with analyzed_bayesdb_population(t1_mp(), 10, None, max_seconds=1):
         pass
 
 def test_t1_mp_analysis_iter_deadline__ci_slow():
-    with analyzed_bayesdb_generator(t1_mp(), 10, 1, max_seconds=10):
+    with analyzed_bayesdb_population(t1_mp(), 10, 1, max_seconds=10):
         pass
 
 def test_t1_analysis_time_deadline():
-    with analyzed_bayesdb_generator(t1(), 10, None, max_seconds=1):
+    with analyzed_bayesdb_population(t1(), 10, None, max_seconds=1):
         pass
 
 def test_t1_analysis_iter_deadline__ci_slow():
-    with analyzed_bayesdb_generator(t1(), 10, 1, max_seconds=10):
+    with analyzed_bayesdb_population(t1(), 10, 1, max_seconds=10):
         pass
 
 @pytest.mark.parametrize('rowid,colno,confidence',
@@ -380,9 +390,9 @@ def test_t1_analysis_iter_deadline__ci_slow():
         for j in range(1,3)
         for conf in [0.01, 0.5, 0.99]])
 def test_t1_predict(rowid, colno, confidence):
-    with analyzed_bayesdb_generator(t1(), 1, 1) as (bdb, generator_id):
-        if rowid == 0: rowid = bayesdb_maxrowid(bdb, generator_id)
-        bqlfn.bql_predict(bdb, generator_id, None, colno, rowid, confidence)
+    with analyzed_bayesdb_population(t1(), 1, 1) as (bdb, pop_id, gen_id):
+        if rowid == 0: rowid = bayesdb_maxrowid(bdb, pop_id)
+        bqlfn.bql_predict(bdb, pop_id, None, colno, rowid, confidence)
 
 @pytest.mark.parametrize('colnos,constraints,numpredictions',
     [(colnos, constraints, numpred)

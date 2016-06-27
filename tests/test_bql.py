@@ -129,18 +129,18 @@ def test_joint_probability(seed):
     with test_core.t1(seed=seed) as (bdb, _generator_id):
         bdb.execute('initialize 10 models for t1_cc')
         bdb.execute('analyze t1_cc for 10 iterations wait')
-        q0 = 'estimate probability of age = 8 by t1_cc'
-        q1 = 'estimate probability of (age = 8) by t1_cc'
+        q0 = 'estimate probability of age = 8 by p1'
+        q1 = 'estimate probability of (age = 8) by p1'
         assert bdb.execute(q0).fetchvalue() == bdb.execute(q1).fetchvalue()
-        q1 = 'estimate probability of (age = 8) given () by t1_cc'
+        q1 = 'estimate probability of (age = 8) given () by p1'
         assert bdb.execute(q0).fetchvalue() == bdb.execute(q1).fetchvalue()
-        q2 = 'estimate probability of age = 8 given (weight = 16) by t1_cc'
+        q2 = 'estimate probability of age = 8 given (weight = 16) by p1'
         assert bdb.execute(q0).fetchvalue() < bdb.execute(q2).fetchvalue()
-        q0 = 'estimate probability of age = 8 by t1_cc'
-        q1 = 'estimate probability of (age = 8, weight = 16) by t1_cc'
+        q0 = 'estimate probability of age = 8 by p1'
+        q1 = 'estimate probability of (age = 8, weight = 16) by p1'
         assert bdb.execute(q1).fetchvalue() < bdb.execute(q0).fetchvalue()
         q2 = 'estimate probability of (age = 8, weight = 16)' \
-            " given (label = 'mumble') by t1_cc"
+            " given (label = 'mumble') by p1"
         assert bdb.execute(q1).fetchvalue() < bdb.execute(q2).fetchvalue()
 
 def test_badbql():
