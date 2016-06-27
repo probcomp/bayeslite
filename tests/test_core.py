@@ -315,7 +315,7 @@ def t2():
         columns=['label CATEGORICAL', 'age CATEGORICAL', 'weight CATEGORICAL'])
 
 def test_t1_nokey():
-    with bayesdb_generator(
+    with bayesdb_population(
             bayesdb(), 't1', 'p1', 'p1_cc', t1_schema, t1_data,
             columns=['age NUMERICAL', 'weight NUMERICAL']):
         pass
@@ -327,11 +327,11 @@ def test_t1_nocase():
                 'age NUMERICAL',
                 'weight NUMERICAL',
             ]) \
-            as (bdb, generator_id):
-        bdb.execute('select id from p1').fetchall()
-        bdb.execute('select ID from P1').fetchall()
-        bdb.execute('select iD from P1').fetchall()
-        bdb.execute('select Id from P1').fetchall()
+            as (bdb, population_id, generator_id):
+        bdb.execute('select id from t1').fetchall()
+        bdb.execute('select ID from T1').fetchall()
+        bdb.execute('select iD from T1').fetchall()
+        bdb.execute('select Id from T1').fetchall()
         # bdb.execute('select id from p1_cc').fetchall()
         # bdb.execute('select ID from P1_cC').fetchall()
         # bdb.execute('select iD from P1_Cc').fetchall()
