@@ -282,7 +282,7 @@ def bayesdb_variable_name(bdb, population_id, colno):
     try:
         row = cursor.next()
     except StopIteration:
-        generator = bayesdb_population_name(bdb, population_id)
+        population = bayesdb_population_name(bdb, population_id)
         raise ValueError('No such variable in population %r: %d' %
             (population, colno))
     else:
