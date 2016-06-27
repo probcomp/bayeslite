@@ -293,7 +293,7 @@ def t1_subcat():
 def t1_mp():
     crosscat = multiprocessing_crosscat()
     metamodel = CrosscatMetamodel(crosscat)
-    return bayesdb_generator(bayesdb(metamodel=metamodel),
+    return bayesdb_population(bayesdb(metamodel=metamodel),
         't1', 'p1', 'p1_cc', t1_schema, t1_data,
          columns=['label CATEGORICAL', 'age NUMERICAL', 'weight NUMERICAL'])
 
@@ -405,7 +405,8 @@ def test_t1_simulate(colnos, constraints, numpredictions):
         # nothing should be trying it anyway, and bayeslite_simulate
         # is not exposed to users of the bayeslite API.
         return
-    with analyzed_bayesdb_generator(t1(), 1, 1) as (bdb, generator_id):
+    with analyzed_bayesdb_population(t1(), 1, 1) \
+            as (bdb, population_id, generator_id):
         if constraints is not None:
             rowid = 1           # XXX Avoid hard-coding this.
             # Can't use t1_rows[0][i] because not all t1-based tables
@@ -414,9 +415,10 @@ def test_t1_simulate(colnos, constraints, numpredictions):
             #
             # XXX Automatically test the correct exception.
             constraints = \
-                [(i, bayesdb_generator_cell_value(bdb, generator_id, i, rowid))
+                [(i, core.bayesdb_population_cell_value(
+                            bdb, population_id, i, rowid))
                     for i in constraints]
-        bqlfn.bayesdb_simulate(bdb, generator_id, constraints, colnos,
+        bqlfn.bayesdb_simulate(bdb, population_id, constraints, colnos,
             numpredictions=numpredictions)
 
 @pytest.mark.parametrize('exname,colno',
@@ -475,20 +477,23 @@ def test_twocolumn(exname, colno0, colno1):
         for colno in range(1,4)
         for rowid in range(6)])
 def test_t1_column_value_probability(colno, rowid):
-    with analyzed_bayesdb_generator(t1(), 1, 1) as (bdb, generator_id):
-        if rowid == 0: rowid = bayesdb_maxrowid(bdb, generator_id)
-        value = bayesdb_generator_cell_value(bdb, generator_id, colno, rowid)
-        bqlfn.bql_column_value_probability(bdb, generator_id, None, colno,
+    with analyzed_bayesdb_population(t1(), 1, 1) \
+            as (bdb, population_id, generator_id):
+        if rowid == 0:
+            rowid = bayesdb_maxrowid(bdb, population_id)
+        value = core.bayesdb_population_cell_value(
+            bdb, population_id, colno, rowid)
+        bqlfn.bql_column_value_probability(bdb, population_id, None, colno,
             value)
-        table_name = core.bayesdb_generator_table(bdb, generator_id)
-        colname = core.bayesdb_generator_column_name(bdb, generator_id, colno)
+        table_name = core.bayesdb_population_table(bdb, population_id)
+        var = core.bayesdb_variable_name(bdb, population_id, colno)
         qt = bql_quote_name(table_name)
-        qc = bql_quote_name(colname)
+        qv = bql_quote_name(var)
         sql = '''
             select bql_column_value_probability(?, NULL, ?,
                 (select %s from %s where rowid = ?))
-        ''' % (qc, qt)
-        bdb.sql_execute(sql, (generator_id, colno, rowid)).fetchall()
+        ''' % (qv, qt)
+        bdb.sql_execute(sql, (population_id, colno, rowid)).fetchall()
 
 @pytest.mark.parametrize('exname,source,target,colnos',
     [(exname, source, target, list(colnos))
@@ -536,20 +541,6 @@ def test_insert():
         generator_id = core.bayesdb_get_generator(bdb, 't_cc')
         row = (41, 'F', 96000, 73, 'data science', 2)
         bqlfn.bayesdb_insert(bdb, generator_id, row)
-
-def bayesdb_generator_cell_value(bdb, generator_id, colno, rowid):
-    table_name = core.bayesdb_generator_table(bdb, generator_id)
-    qt = bql_quote_name(table_name)
-    colname = core.bayesdb_generator_column_name(bdb, generator_id, colno)
-    qcn = bql_quote_name(colname)
-    sql = 'SELECT %s FROM %s WHERE _rowid_ = ?' % (qcn, qt)
-    cursor = bdb.sql_execute(sql, (rowid,))
-    try:
-        row = cursor.next()
-    except StopIteration:
-        assert False, 'Missing row at %d!' % (rowid,)
-    else:
-        return row[0]
 
 def test_crosscat_constraints():
     class FakeEngine(crosscat.LocalEngine.LocalEngine):
