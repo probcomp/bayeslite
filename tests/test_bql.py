@@ -104,31 +104,32 @@ def test_trivial_population():
 
 @stochastic(max_runs=2, min_passes=1)
 def test_conditional_probability(seed):
-    with test_core.t1(seed=seed) as (bdb, _generator_id):
-        bdb.execute('''create generator t1_cond_prob_cc for t1 using
+    with test_core.t1(seed=seed) as (bdb, _population_id, _generator_id):
+        bdb.execute('drop generator p1_cc')
+        bdb.execute('''create generator p1_cond_prob_cc for p1 using
                        crosscat(age numerical, weight numerical,
                            dependent(age, weight));''')
-        bdb.execute('initialize 1 model for t1_cond_prob_cc')
-        bdb.execute('analyze t1_cond_prob_cc for 1 iteration wait')
-        q0 = 'estimate probability of age = 8 by t1_cond_prob_cc'
-        q1 = 'estimate probability of age = 8 given () by t1_cond_prob_cc'
+        bdb.execute('initialize 1 model for p1_cond_prob_cc')
+        bdb.execute('analyze p1_cond_prob_cc for 1 iteration wait')
+        q0 = 'estimate probability of age = 8 by p1'
+        q1 = 'estimate probability of age = 8 given () by p1'
         age_is_8 = bdb.execute(q0).fetchvalue()
         assert age_is_8 == bdb.execute(q1).fetchvalue()
         q2 = '''estimate probability of age = 8 given (weight = 16)
-                by t1_cond_prob_cc'''
+                by p1'''
         age_is_8_given_weight_is_16 = bdb.execute(q2).fetchvalue()
         assert age_is_8 < age_is_8_given_weight_is_16
 
         probs = bdb.execute(
             'estimate probability of value 8 given (weight = 16)'
-            ' from columns of t1_cond_prob_cc').fetchall()
+            ' from columns of p1').fetchall()
         assert [(age_is_8_given_weight_is_16,), (0,)] == probs
 
 @stochastic(max_runs=2, min_passes=1)
 def test_joint_probability(seed):
-    with test_core.t1(seed=seed) as (bdb, _generator_id):
-        bdb.execute('initialize 10 models for t1_cc')
-        bdb.execute('analyze t1_cc for 10 iterations wait')
+    with test_core.t1(seed=seed) as (bdb, _population_id, _generator_id):
+        bdb.execute('initialize 10 models for p1_cc')
+        bdb.execute('analyze p1_cc for 10 iterations wait')
         q0 = 'estimate probability of age = 8 by p1'
         q1 = 'estimate probability of (age = 8) by p1'
         assert bdb.execute(q0).fetchvalue() == bdb.execute(q1).fetchvalue()
@@ -144,7 +145,7 @@ def test_joint_probability(seed):
         assert bdb.execute(q1).fetchvalue() < bdb.execute(q2).fetchvalue()
 
 def test_badbql():
-    with test_core.t1() as (bdb, _generator_id):
+    with test_core.t1() as (bdb, _population_id, _generator_id):
         with pytest.raises(ValueError):
             bdb.execute('')
         with pytest.raises(ValueError):
@@ -720,64 +721,64 @@ def test_trivial_commands():
         with open(fname, 'rU') as f:
             bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True,
                 ifnotexists=True)
-        guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+        guess.bayesdb_guess_population(bdb, 'p', 't')
         with pytest.raises(ValueError):
-            guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
-        guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat',
-            ifnotexists=True)
-        bdb.execute('initialize 2 models for t_cc')
+            guess.bayesdb_guess_population(bdb, 'p', 't')
+        guess.bayesdb_guess_population(bdb, 'p', 't', ifnotexists=True)
+        bdb.execute('create generator p_cc for p using crosscat()')
+        bdb.execute('initialize 2 models for p_cc')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('initialize 2 models for t_cc')
-        bdb.execute('drop models from t_cc')
-        bdb.execute('drop models from t_cc')
-        bdb.execute('initialize 2 models for t_cc')
+            bdb.execute('initialize 2 models for p_cc')
+        bdb.execute('drop models from p_cc')
+        bdb.execute('drop models from p_cc')
+        bdb.execute('initialize 2 models for p_cc')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('initialize 2 models for t_cc')
+            bdb.execute('initialize 2 models for p_cc')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('drop models 0-2 from t_cc')
-        bdb.execute('drop models 0-1 from t_cc')
+            bdb.execute('drop models 0-2 from p_cc')
+        bdb.execute('drop models 0-1 from p_cc')
         with bdb.savepoint():
-            bdb.execute('initialize 2 models for t_cc')
-            bdb.execute('drop models 0-1 from t_cc')
+            bdb.execute('initialize 2 models for p_cc')
+            bdb.execute('drop models 0-1 from p_cc')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('drop models 0-1 from t_cc')
-        bdb.execute('initialize 2 models for t_cc')
-        bdb.execute('initialize 1 model if not exists for t_cc')
-        bdb.execute('initialize 2 models if not exists for t_cc')
-        generator_id = core.bayesdb_get_generator(bdb, 't_cc')
+            bdb.execute('drop models 0-1 from p_cc')
+        bdb.execute('initialize 2 models for p_cc')
+        bdb.execute('initialize 1 model if not exists for p_cc')
+        bdb.execute('initialize 2 models if not exists for p_cc')
+        generator_id = core.bayesdb_get_generator(bdb, 'p_cc')
         assert core.bayesdb_generator_table(bdb, generator_id) == 't'
         bdb.execute('alter table t rename to t')
         assert core.bayesdb_generator_table(bdb, generator_id) == 't'
         bdb.execute('alter table t rename to T')
         assert core.bayesdb_generator_table(bdb, generator_id) == 'T'
-        bdb.execute('estimate count(*) from t_cc').fetchall()
+        bdb.execute('estimate count(*) from p').fetchall()
         bdb.execute('alter table t rename to t')
         assert core.bayesdb_generator_table(bdb, generator_id) == 't'
-        bdb.execute('alter generator t_cc rename to t0_cc')
-        assert core.bayesdb_generator_name(bdb, generator_id) == 't0_cc'
-        bdb.execute('alter generator t0_cc rename to zot, rename to T0_CC')
-        assert core.bayesdb_generator_name(bdb, generator_id) == 'T0_CC'
-        bdb.execute('alter generator T0_cc rename to T0_cc')
-        assert core.bayesdb_generator_name(bdb, generator_id) == 'T0_cc'
-        bdb.execute('alter generator t0_CC rename to t0_cc')
-        assert core.bayesdb_generator_name(bdb, generator_id) == 't0_cc'
-        bdb.execute('estimate count(*) from t0_cc').fetchall()
+        bdb.execute('alter generator p_cc rename to p0_cc')
+        assert core.bayesdb_generator_name(bdb, generator_id) == 'p0_cc'
+        bdb.execute('alter generator p0_cc rename to zot, rename to P0_CC')
+        assert core.bayesdb_generator_name(bdb, generator_id) == 'P0_CC'
+        bdb.execute('alter generator P0_cc rename to P0_cc')
+        assert core.bayesdb_generator_name(bdb, generator_id) == 'P0_cc'
+        bdb.execute('alter generator p0_CC rename to p0_cc')
+        assert core.bayesdb_generator_name(bdb, generator_id) == 'p0_cc'
+        bdb.execute('estimate count(*) from p').fetchall()
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate count(*) from t_cc')
-        bdb.execute('alter generator t0_cc rename to T0_cc')
-        bdb.execute('analyze t0_cc for 1 iteration wait')
+            bdb.execute('estimate count(*) from p_cc')
+        bdb.execute('alter generator p0_cc renamee to P0_cc')
+        bdb.execute('analyze p0_cc for 1 iteration wait')
         colno = core.bayesdb_generator_column_number(bdb, generator_id,
             'gender')
         with pytest.raises(parse.BQLParseError):
             # Rename the table's columns, not the generator's columns.
-            bdb.execute('alter generator t0_cc rename gender to sex')
+            bdb.execute('alter generator p0_cc rename gender to sex')
         with pytest.raises(NotImplementedError): # XXX
             bdb.execute('alter table t rename to t0, rename gender to sex')
             assert core.bayesdb_generator_column_number(bdb, generator_id,
                     'sex') \
                 == colno
-            bdb.execute('analyze t0_cc model 0 for 1 iteration wait')
-            bdb.execute('alter generator t0_cc rename to t_cc')
+            bdb.execute('analyze p0_cc model 0 for 1 iteration wait')
+            bdb.execute('alter generator p0_cc rename to p_cc')
             assert core.bayesdb_generator_column_number(bdb, generator_id,
                     'sex') \
                 == colno
@@ -787,63 +788,64 @@ def test_trivial_commands():
                 assert False, 'Need to fix quoting of unknown columns!'
             with pytest.raises(bayeslite.BQLError):
                 bdb.execute('estimate predict sex with confidence 0.9'
-                    ' from t_cc').fetchall()
+                    ' from p').fetchall()
             bdb.execute('infer explicit predict sex with confidence 0.9'
-                ' from t_cc').fetchall()
+                ' from p').fetchall()
             with pytest.raises(bayeslite.BQLError):
                 bdb.execute('estimate predict gender with confidence 0.9'
-                    ' from t_cc')
+                    ' from p')
             with pytest.raises(bayeslite.BQLError):
                 bdb.execute('infer explicit predict gender with confidence 0.9'
-                    ' from t_cc')
+                    ' from p')
             bdb.execute('alter table t0 rename sex to gender')
             assert core.bayesdb_generator_column_number(bdb, generator_id,
                     'gender') \
                 == colno
-        bdb.execute('alter generator t0_cc rename to t_cc')     # XXX
+        bdb.execute('alter generator p0_cc rename to p_cc')     # XXX
         bdb.execute('alter table t rename to T0')               # XXX
         bdb.sql_execute('create table t0_temp(x)')
         bdb.execute('alter table T0 rename to t0')
         assert bdb.execute('select count(*) from t0_temp').fetchvalue() == 0
         assert bdb.execute('select count(*) from t0').fetchvalue() > 0
         bdb.execute('drop table T0_TEMP')
-        bdb.execute('analyze t_cc model 0 for 1 iteration wait')
-        bdb.execute('analyze t_cc model 1 for 1 iteration wait')
-        bdb.execute('analyze t_cc models 0-1 for 1 iteration wait')
-        bdb.execute('analyze t_cc models 0,1 for 1 iteration wait')
-        bdb.execute('analyze t_cc for 1 iteration wait')
+        bdb.execute('analyze p_cc model 0 for 1 iteration wait')
+        bdb.execute('analyze p_cc model 1 for 1 iteration wait')
+        bdb.execute('analyze p_cc models 0-1 for 1 iteration wait')
+        bdb.execute('analyze p_cc models 0,1 for 1 iteration wait')
+        bdb.execute('analyze p_cc for 1 iteration wait')
         bdb.execute('select * from t0').fetchall()
         bdb.execute('select * from T0').fetchall()
-        bdb.execute('estimate * from t_cc').fetchall()
-        bdb.execute('estimate * from T_CC').fetchall()
-        bdb.execute('estimate similarity from pairwise t_cc').fetchall()
+        bdb.execute('estimate * from p').fetchall()
+        bdb.execute('estimate * from P').fetchall()
+        bdb.execute('estimate similarity from pairwise p').fetchall()
         bdb.execute('select value from'
-            ' (estimate correlation from pairwise columns of t_cc)').fetchall()
+            ' (estimate correlation from pairwise columns of p)').fetchall()
         bdb.execute('infer explicit predict age with confidence 0.9'
-            ' from t_cc').fetchall()
+            ' from p').fetchall()
         bdb.execute('infer explicit predict AGE with confidence 0.9'
-            ' from T_cc').fetchall()
+            ' from P').fetchall()
         bdb.execute('infer explicit predict aGe with confidence 0.9'
-            ' from T_cC').fetchall()
+            ' from P').fetchall()
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate predict agee with confidence 0.9 from t_cc')
+            bdb.execute('estimate predict agee with confidence 0.9 from p')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('infer explicit predict agee with confidence 0.9'
-                ' from t_cc')
+                ' from p')
         bdb.execute('''
-            create generator t_cce for t0 using crosscat(
+            create population pe for t0(
                 guess(*),
                 age numerical,
                 rank numerical
             )
         ''')
+        bdb.execute('create generator pe_cc for pe using crosscat()')
         with pytest.raises(bayeslite.BQLError):
             # No models to analyze.
-            bdb.execute('analyze t_cce for 1 iteration wait')
-        bdb.execute('initialize 1 model if not exists for t_cce')
-        bdb.execute('analyze t_cce for 1 iteration wait')
+            bdb.execute('analyze pe_cc for 1 iteration wait')
+        bdb.execute('initialize 1 model if not exists for pe_cc')
+        bdb.execute('analyze pe_cc for 1 iteration wait')
         bdb.execute('estimate correlation'
-            ' from pairwise columns of t_cce').fetchall()
+            ' from pairwise columns of pe').fetchall()
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('initialize 4 models if not exists for t')
         with pytest.raises(bayeslite.BQLError):
@@ -856,13 +858,13 @@ def test_trivial_commands():
             bdb.execute('estimate correlation from pairwise columns of t')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate similarity from pairwise t')
-        bdb.execute('initialize 6 models if not exists for t_cc')
-        bdb.execute('analyze t_cc for 1 iteration wait')
+        bdb.execute('initialize 6 models if not exists for p_cc')
+        bdb.execute('analyze p_cc for 1 iteration wait')
 
 def test_trivial_deadline():
-    with test_core.t1() as (bdb, _table_id):
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 1 second wait')
+    with test_core.t1() as (bdb, _population_id, _generator_id):
+        bdb.execute('initialize 1 model for p1_cc')
+        bdb.execute('analyze p1_cc for 1 second wait')
 
 def test_parametrized():
     assert bql2sqlparam('select * from t where id = ?') == \
@@ -932,13 +934,14 @@ def test_parametrized():
                 bdb.execute(query, *args)
             bdb.sql_untrace(trace)
             return sql
-        bdb.execute('create generator t_cc for t using crosscat(guess(*))')
-        bdb.execute('initialize 1 model for t_cc;')
+        guess.bayesdb_guess_population(bdb, 'p', 't')
+        bdb.execute('create generator p_cc for p using crosscat()')
+        bdb.execute('initialize 1 model for p_cc;')
         iters0 = bdb.sql_execute('select *'
             ' from bayesdb_generator_model').fetchall()
         thetas0 = bdb.sql_execute('select *'
             ' from bayesdb_crosscat_theta').fetchall()
-        bdb.execute('analyze t_cc for 1 iteration wait;')
+        bdb.execute('analyze p_cc for 1 iteration wait;')
         iters1 = bdb.sql_execute('select *'
             ' from bayesdb_generator_model').fetchall()
         thetas1 = bdb.sql_execute('select *'
@@ -946,43 +949,44 @@ def test_parametrized():
         assert iters0 != iters1
         assert thetas0 != thetas1
         assert traced_execute('estimate similarity to (rowid = 1)'
-                ' with respect to (estimate * from columns of t_cc limit 1)'
-                ' from t_cc;') == [
+                ' with respect to (estimate * from columns of p limit 1)'
+                ' from p;') == [
             'estimate similarity to (rowid = 1)' \
-                ' with respect to (estimate * from columns of t_cc limit 1)' \
-                ' from t_cc;',
+                ' with respect to (estimate * from columns of p limit 1)' \
+                ' from p;',
         ]
         assert sqltraced_execute('estimate similarity to (rowid = 1)'
-                ' with respect to (estimate * from columns of t_cc limit 1)'
-                ' from t_cc;') == [
-            'SELECT COUNT(*) FROM bayesdb_generator'
+                ' with respect to (estimate * from columns of p limit 1)'
+                ' from p;') == [
+            'SELECT COUNT(*) FROM bayesdb_population'
                 ' WHERE name = ?',
-            'SELECT id FROM bayesdb_generator'
+            'SELECT id FROM bayesdb_population'
                 ' WHERE name = ?',
-            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
-            'SELECT COUNT(*) FROM bayesdb_generator'
+            'SELECT tabname FROM bayesdb_population WHERE id = ?',
+            'SELECT COUNT(*) FROM bayesdb_population'
                 ' WHERE name = ?',
-            'SELECT id FROM bayesdb_generator'
+            'SELECT id FROM bayesdb_population'
                 ' WHERE name = ?',
             # ESTIMATE * FROM COLUMNS OF:
             'SELECT c.name AS name'
-                ' FROM bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc,'
+                ' FROM bayesdb_population AS p,'
+                    ' bayesdb_variable AS v,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = 1 AND gc.generator_id = g.id'
-                    ' AND c.tabname = g.tabname AND c.colno = gc.colno'
+                ' WHERE p.id = 1 AND v.population_id = p.id'
+                    ' AND c.tabname = g.tabname AND c.colno = v.colno'
                 ' LIMIT 1',
             'SELECT c.colno'
-                ' FROM bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc,'
+                ' FROM bayesdb_population AS p,'
+                    ' bayesdb_variable AS v,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = :generator_id AND c.name = :column_name'
-                    ' AND g.id = gc.generator_id'
-                    ' AND g.tabname = c.tabname AND gc.colno = c.colno',
+                ' WHERE p.id = :population_id AND c.name = :name'
+                    ' AND p.id = v.population_id'
+                    ' AND p.tabname = c.tabname AND v.colno = c.colno',
             # ESTIMATE SIMILARITY TO (rowid=1):
-            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
+            'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'SELECT bql_row_similarity(1, NULL, _rowid_,'
                 ' (SELECT _rowid_ FROM "t" WHERE ("rowid" = 1)), 0) FROM "t"',
+            'SELECT id FROM bayesdb_generator WHERE population_id = ?',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
             'SELECT modelno FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ?',
@@ -998,8 +1002,8 @@ def test_parametrized():
                 ' WHERE generator_id = ? AND colno = ?',
         ]
         assert sqltraced_execute('estimate similarity to (rowid = 1)'
-                ' with respect to (estimate * from columns of t_cc limit ?)'
-                ' from t_cc;',
+                ' with respect to (estimate * from columns of p limit ?)'
+                ' from p;',
                 (1,)) == [
             'SELECT COUNT(*) FROM bayesdb_generator'
                 ' WHERE name = ?',
@@ -1045,7 +1049,7 @@ def test_parametrized():
         ]
         assert sqltraced_execute('create temp table if not exists sim as'
                     ' simulate age, RANK, division'
-                    " from t_cc given gender = 'F' limit 4") == [
+                    " from p given gender = 'F' limit 4") == [
             'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?',
             'PRAGMA table_info("sim")',
             'SELECT COUNT(*) FROM bayesdb_generator'
@@ -1179,7 +1183,7 @@ def test_parametrized():
             'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
             'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
         ]
-        assert sqltraced_execute('select * from (simulate age from t_cc'
+        assert sqltraced_execute('select * from (simulate age from p'
                     " given gender = 'F' limit 4)") == [
             'PRAGMA table_info("bayesdb_temp_0")',
             'SELECT id FROM bayesdb_generator WHERE name = ?',
@@ -1265,7 +1269,7 @@ def test_parametrized():
             'DROP TABLE "bayesdb_temp_0"',
         ]
         bdb.execute('''
-            create generator tu_cc for t using crosscat(
+            create generator pu_cc for p using crosscat(
                 age NUMERICAL,
                 gender CATEGORICAL,   -- Not binary!
                 salary NUMERICAL,
@@ -1274,8 +1278,8 @@ def test_parametrized():
                 rank CATEGORICAL
             )
         ''')
-        bdb.execute('initialize 1 model for tu_cc;')
-        assert sqltraced_execute('analyze tu_cc for 1 iteration wait;') == [
+        bdb.execute('initialize 1 model for pu_cc;')
+        assert sqltraced_execute('analyze pu_cc for 1 iteration wait;') == [
             'SELECT COUNT(*) FROM bayesdb_generator'
                 ' WHERE name = ?',
             'SELECT id FROM bayesdb_generator'
@@ -1350,28 +1354,32 @@ def test_create_table_ifnotexists_as_simulate():
             bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
             # If not exists table tests
             bdb.execute('''
-                create generator t_cc for t using crosscat (
+                create population p for t (
                     guess(*),
                     age numerical
                 )
             ''')
-            bdb.execute('initialize 1 model for t_cc')
-            bdb.execute('analyze t_cc for 1 iteration wait')
-            bdb.execute("create table if not exists u as simulate age from t_cc limit 10")
+            bdb.execute('create generator p_cc for p using crosscat()')
+            bdb.execute('initialize 1 model for p_cc')
+            bdb.execute('analyze p_cc for 1 iteration wait')
+            bdb.execute('''
+                create table if not exists u as
+                    simulate age from p limit 10
+            ''')
             bdb.execute("drop table u")
             bdb.execute('''
-                create table if not exists w as simulate age from t_cc
-                    given division=sales limit 10
+                create table if not exists w as simulate age from p
+                    given division='sales' limit 10
             ''')
             bdb.execute("drop table w")
-            bdb.execute("create table u as simulate age from t_cc limit 10")
+            bdb.execute("create table u as simulate age from p limit 10")
             x = bdb.execute("select count (*) from u").fetchvalue()
             bdb.execute('''
-                create table if not exists u as simulate age from t_cc limit 10
+                create table if not exists u as simulate age from p limit 10
             ''')
             bdb.execute('''
-                create table if not exists u as simulate age from t_cc
-                    given division=sales limit 10
+                create table if not exists u as simulate age from p
+                    given division='sales' limit 10
             ''')
             assert x == bdb.execute("select count (*) from u").fetchvalue()
 
@@ -1380,9 +1388,12 @@ def test_createtab():
         with pytest.raises(apsw.SQLError):
             bdb.execute('drop table t')
         bdb.execute('drop table if exists t')
+        with pytest.raises(apsw.SQLError):
+            bdb.execute('drop population p')
+        bdb.execute('drop population if exists p')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('drop generator t_cc')
-        bdb.execute('drop generator if exists t_cc')
+            bdb.execute('drop generator p_cc')
+        bdb.execute('drop generator if exists p_cc')
         with open(fname, 'rU') as f:
             bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
         with bdb.savepoint():
@@ -1392,44 +1403,55 @@ def test_createtab():
                 bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True, ifnotexists=True)
         bdb.execute('''
-            create generator t_cc for t using crosscat (
+            create population p for t (
                 guess(*),
                 age numerical
             )
         ''')
+        bdb.execute('create generator t_cc for t using crosscat ()')
         with pytest.raises(bayeslite.BQLError):
-            # Redefining generator.
+            # Redefining population.
             bdb.execute('''
-                create generator t_cc for t using crosscat (
+                create population p for t (
                     guess(*),
                     age ignore
                 )
             ''')
+        with pytest.raises(bayeslite.BQLError):
+            # Redefining generator.
+            bdb.execute('create generator p_cc for p using crosscat')
         # Make sure ignore columns work.
         #
         # XXX Also check key columns.
         bdb.execute('''
-            create generator t_cc0 for t using crosscat (
+            create population p0 for t (
                 guess(*),
                 age ignore
             )
         ''')
-        bdb.execute('drop generator t_cc0')
-        generator_id = core.bayesdb_get_generator(bdb, 't_cc')
-        colno = core.bayesdb_generator_column_number(bdb, generator_id, 'age')
-        assert core.bayesdb_generator_column_stattype(bdb, generator_id,
-                colno) == 'numerical'
-        bdb.execute('initialize 1 model for t_cc')
+        bdb.execute('drop population p0')
+        population_id = core.bayesdb_get_population(bdb, 'p')
+        colno = core.bayesdb_variable_number(bdb, population_id, 'age')
+        assert core.bayesdb_variable_stattype(bdb, population_id, colno) == \
+            'numerical'
+        bdb.execute('initialize 1 model for p_cc')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('drop table t')
-        bdb.execute('drop generator t_cc')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('drop generator t_cc')
+            bdb.execute('drop population p')
+        bdb.execute('drop generator p_cc')
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('drop generator p_cc')
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('drop table t')
         bdb.execute('drop generator if exists t_cc')
+        bdb.execute('drop population p')
+        bdb.execute('drop population if exists p')
         bdb.execute('drop table t')
+        bdb.execute('drop table if exists t')
         with open(fname, 'rU') as f:
             bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
-        guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+        guess.bayesdb_guess_population(bdb, 'p', 't')
         bdb.execute("create table u as select * from t where gender = 'F'")
         assert bql_execute(bdb, 'select * from u') == [
             (23, 'F', 81000, 67, 'data science', 3),
@@ -1494,7 +1516,7 @@ def test_txn():
                 bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True)
             bdb.execute('SELECT * FROM t').fetchall()
-            guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+            guess.bayesdb_guess_population(bdb, 't_cc', 't', 'crosscat')
             bdb.execute('ESTIMATE * FROM t_cc').fetchall()
         finally:
             bdb.execute('ROLLBACK')
@@ -1510,7 +1532,7 @@ def test_txn():
                 bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True)
             bdb.execute('SELECT * FROM t').fetchall()
-            guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+            guess.bayesdb_guess_population(bdb, 't_cc', 't', 'crosscat')
             bdb.execute('ESTIMATE * FROM t_cc').fetchall()
             with pytest.raises(bayeslite.BQLError):
                 bdb.execute('DROP TABLE t')
@@ -1534,7 +1556,7 @@ def test_txn():
                 bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True)
             bdb.execute('SELECT * FROM t').fetchall()
-            guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+            guess.bayesdb_guess_population(bdb, 't_cc', 't', 'crosscat')
             bdb.execute('ESTIMATE * FROM t_cc').fetchall()
             with pytest.raises(bayeslite.BQLError):
                 bdb.execute('DROP TABLE t')
@@ -1558,7 +1580,7 @@ def test_txn():
                 bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True)
             bdb.execute('SELECT * FROM t').fetchall()
-            guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+            guess.bayesdb_guess_population(bdb, 't_cc', 't', 'crosscat')
             bdb.execute('ESTIMATE * FROM t_cc').fetchall()
         finally:
             bdb.execute('COMMIT')

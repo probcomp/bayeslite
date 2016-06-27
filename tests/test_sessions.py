@@ -182,8 +182,8 @@ def test_sessions_error_entry_sql():
     _nonexistent_table_helper(bdb.sql_execute, tr)
 
 def test_sessions_no_errors():
-    with test_core.analyzed_bayesdb_generator(test_core.t1(),
-            10, None, max_seconds=1) as (bdb, generator_id):
+    with test_core.analyzed_bayesdb_population(test_core.t1(),
+            10, None, max_seconds=1) as (bdb, population_id, generator_id):
         tr = sescap.SessionOrchestrator(bdb)
         # simple query
         cursor = bdb.execute('''
@@ -194,7 +194,7 @@ def test_sessions_no_errors():
         cursor.fetchall()
         # add a metamodel and do a query
         cursor = bdb.execute('''
-            ESTIMATE PREDICTIVE PROBABILITY OF age FROM t1_cc
+            ESTIMATE PREDICTIVE PROBABILITY OF age FROM p1
         ''')
         cursor.fetchall()
         # there should be no error entries in the previous session
@@ -213,7 +213,7 @@ class ErroneousMetamodel(troll.TrollMetamodel):
         return 0
 
 def test_sessions_error_metamodel():
-    with test_core.t1() as (bdb, _generator_id):
+    with test_core.t1() as (bdb, _population_id, _generator_id):
         bayeslite.bayesdb_register_metamodel(bdb, ErroneousMetamodel())
         bdb.execute('''
             CREATE GENERATOR t1_err FOR t1

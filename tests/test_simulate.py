@@ -16,10 +16,13 @@
 
 import os
 
-import bayeslite
-from bayeslite.metamodels.crosscat import CrosscatMetamodel
-import bayeslite.read_csv as read_csv
 import crosscat.LocalEngine
+
+import bayeslite
+import bayeslite.read_csv as read_csv
+
+from bayeslite.guess import bayesdb_guess_population
+from bayeslite.metamodels.crosscat import CrosscatMetamodel
 
 root = os.path.dirname(os.path.abspath(__file__))
 dha_csv = os.path.join(root, 'dha.csv')
@@ -36,16 +39,15 @@ def test_simulate_drawconstraint():
         bayeslite.bayesdb_register_metamodel(bdb, metamodel)
         with open(dha_csv, 'rU') as f:
             read_csv.bayesdb_read_csv(bdb, 'dha', f, header=True, create=True)
+        bayesdb_guess_population(bdb, 'hospital', 'dha',
+            overrides={'name': 'key'})
         bdb.execute('''
-            CREATE GENERATOR dha_cc FOR dha USING crosscat (
-                GUESS(*),
-                name KEY
-            )
+            CREATE GENERATOR hospital_cc FOR hospital USING crosscat()
         ''')
-        bdb.execute('INITIALIZE 1 MODEL FOR dha_cc')
-        bdb.execute('ANALYZE dha_cc FOR 1 ITERATION WAIT')
+        bdb.execute('INITIALIZE 1 MODEL FOR hospital_cc')
+        bdb.execute('ANALYZE hospital_cc FOR 1 ITERATION WAIT')
         samples = bdb.execute('''
-            SIMULATE ttl_mdcr_spnd, n_death_ill FROM dha_cc
+            SIMULATE ttl_mdcr_spnd, n_death_ill FROM hospital
                 GIVEN TTL_MDCR_SPND = 40000
                 LIMIT 100
         ''').fetchall()
