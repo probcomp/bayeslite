@@ -536,9 +536,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Map values to codes.
         colnos = core.bayesdb_generator_column_numbers(bdb, generator_id)
-        def map(colno, value):
+        def map_value(colno, value):
             return self._cgpm_value(bdb, generator_id, colno, value)
-        return [tuple(map(colno, x) for colno, x in zip(colnos, row))
+        return [tuple(map_value(colno, x) for colno, x in zip(colnos, row))
             for row in cursor]
 
     def _initialize_states(self, nstates, X, variables):
