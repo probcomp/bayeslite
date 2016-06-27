@@ -56,6 +56,11 @@ class FourWay(CGpm):
             evidence[self.inputs[0]], evidence[self.inputs[1]])
         return np.log(self.probabilities[regime][x])
 
+    def incorporate(self, rowid, observations, evidence=None):
+        pass
+    def unincorporate(self, rowid, observations, evidence=None):
+        pass
+
     @staticmethod
     def lookup_quadrant(y0, y1):
         if y0 > 0 and y1 > 0: return 0

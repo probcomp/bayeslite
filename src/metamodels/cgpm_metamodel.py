@@ -237,7 +237,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
     def initialize_models(self, bdb, generator_id, modelnos):
         # Caller should guarantee a nondegenerate request.
-        assert 0 < len(modelnos)
+        n = len(modelnos)
+        assert 0 < n
 
         # Get the cache.  It had better not have any models yet.
         cache = self._cache(bdb)
@@ -248,12 +249,26 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Get the schema.
         schema = self._schema(bdb, generator_id)
 
-        # Initialize fresh states and their composed CGPMs.
+        # Initialize fresh states.
         X = self._X(bdb, generator_id)
-        states = self._initialize(len(modelnos), X, schema)
-        for state in states:
-            for cgpm_ext in schema['cgpm_composition']:
+        states = self._initialize_states(n, X, schema['variables'])
+
+        # Initialize fresh CGPMs for each state.
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        for cgpm_ext in schema['cgpm_composition']:
+            def map_var(var):
+                colno = core.bayesdb_variable_number(bdb, population_id, var)
+                return self._cgpm_colno(bdb, generator_id, colno)
+            cgpm_input_colnos = map(map_var, cgpm_ext['inputs'])
+            cgpm_output_colnos = map(map_var, cgpm_ext['outputs'])
+            for state in states:
                 cgpm = self._initialize_cgpm(bdb, cgpm_ext)
+                for rowid, row in enumerate(X):
+                    cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
+                    inputs = {colno: row[colno] for colno in cgpm_input_colnos}
+                    outputs = \
+                        {colno: row[colno] for colno in cgpm_output_colnos}
+                    cgpm.incorporate(rowid, outputs, inputs)
                 _token = state.compose_cgpm(cgpm)
 
         # Make sure the cache, if available, is ready for models for
@@ -526,9 +541,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         return [tuple(map(colno, x) for colno, x in zip(colnos, row))
             for row in cursor]
 
-    def _initialize(self, nstates, X, schema):
+    def _initialize_states(self, nstates, X, variables):
         # XXX Parallelize me!  Push me into the engine!
-        variables = schema['variables']
         outputs = range(len(variables))
         cctypes = [cctype for _n, _st, cctype, _da in variables]
         distargs = [distargs for _n, _st, _cct, distargs in variables]
