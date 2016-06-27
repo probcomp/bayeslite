@@ -416,7 +416,7 @@ def test_t1_simulate(colnos, constraints, numpredictions):
             # XXX Automatically test the correct exception.
             constraints = \
                 [(i, core.bayesdb_population_cell_value(
-                            bdb, population_id, i, rowid))
+                            bdb, population_id, rowid, i))
                     for i in constraints]
         bqlfn.bayesdb_simulate(bdb, population_id, constraints, colnos,
             numpredictions=numpredictions)
@@ -430,11 +430,11 @@ def test_onecolumn(exname, colno):
         pytest.skip('Not enough columns in %s.' % (exname,))
     if exname.startswith('t1_sub') and colno > 1:
         pytest.skip('Not enough columns in %s.' % (exname,))
-    with analyzed_bayesdb_generator(examples[exname](), 1, 1) \
-            as (bdb, generator_id):
-        bqlfn.bql_column_value_probability(bdb, generator_id, None, colno, 4)
+    with analyzed_bayesdb_population(examples[exname](), 1, 1) \
+            as (bdb, population_id, generator_id):
+        bqlfn.bql_column_value_probability(bdb, population_id, None, colno, 4)
         bdb.sql_execute('select bql_column_value_probability(?, NULL, ?, 4)',
-            (generator_id, colno)).fetchall()
+            (population_id, colno)).fetchall()
 
 @pytest.mark.parametrize('exname,colno0,colno1',
     [(exname, colno0, colno1)
@@ -446,31 +446,31 @@ def test_twocolumn(exname, colno0, colno1):
         pytest.skip('Not enough columns in t0.')
     if exname.startswith('t1_sub') and (colno0 > 1 or colno1 > 1):
         pytest.skip('Not enough columns in %s.' % (exname,))
-    with analyzed_bayesdb_generator(examples[exname](), 1, 1) \
-            as (bdb, generator_id):
-        bqlfn.bql_column_correlation(bdb, generator_id, colno0, colno1)
+    with analyzed_bayesdb_population(examples[exname](), 1, 1) \
+            as (bdb, population_id, generator_id):
+        bqlfn.bql_column_correlation(bdb, population_id, colno0, colno1)
         bdb.sql_execute('select bql_column_correlation(?, ?, ?)',
-            (generator_id, colno0, colno1)).fetchall()
-        bqlfn.bql_column_dependence_probability(bdb, generator_id, None,
+            (population_id, colno0, colno1)).fetchall()
+        bqlfn.bql_column_dependence_probability(bdb, population_id, None,
             colno0, colno1)
         bdb.sql_execute('select'
             ' bql_column_dependence_probability(?, NULL, ?, ?)',
-            (generator_id, colno0, colno1)).fetchall()
-        bqlfn.bql_column_mutual_information(bdb, generator_id, None, colno0,
+            (population_id, colno0, colno1)).fetchall()
+        bqlfn.bql_column_mutual_information(bdb, population_id, None, colno0,
             colno1)
-        bqlfn.bql_column_mutual_information(bdb, generator_id, None, colno0,
+        bqlfn.bql_column_mutual_information(bdb, population_id, None, colno0,
             colno1, numsamples=None)
-        bqlfn.bql_column_mutual_information(bdb, generator_id, None, colno0,
+        bqlfn.bql_column_mutual_information(bdb, population_id, None, colno0,
             colno1, numsamples=1)
         bdb.sql_execute('select'
             ' bql_column_mutual_information(?, NULL, ?, ?, NULL)',
-            (generator_id, colno0, colno1)).fetchall()
+            (population_id, colno0, colno1)).fetchall()
         bdb.sql_execute('select'
             ' bql_column_mutual_information(?, NULL, ?, ?, 1)',
-            (generator_id, colno0, colno1)).fetchall()
+            (population_id, colno0, colno1)).fetchall()
         bdb.sql_execute('select'
             ' bql_column_mutual_information(?, NULL, ?, ?, 100)',
-            (generator_id, colno0, colno1)).fetchall()
+            (population_id, colno0, colno1)).fetchall()
 
 @pytest.mark.parametrize('colno,rowid',
     [(colno, rowid)
@@ -482,7 +482,7 @@ def test_t1_column_value_probability(colno, rowid):
         if rowid == 0:
             rowid = bayesdb_maxrowid(bdb, population_id)
         value = core.bayesdb_population_cell_value(
-            bdb, population_id, colno, rowid)
+            bdb, population_id, rowid, colno0)
         bqlfn.bql_column_value_probability(bdb, population_id, None, colno,
             value)
         table_name = core.bayesdb_population_table(bdb, population_id)
@@ -506,13 +506,13 @@ def test_row_similarity(exname, source, target, colnos):
         pytest.skip('Not enough columns in t0.')
     if exname.startswith('t1_sub') and any(colno > 1 for colno in colnos):
         pytest.skip('Not enough columns in %s.' % (exname,))
-    with analyzed_bayesdb_generator(examples[exname](), 1, 1) \
-            as (bdb, generator_id):
-        bqlfn.bql_row_similarity(bdb, generator_id, None, source, target,
+    with analyzed_bayesdb_population(examples[exname](), 1, 1) \
+            as (bdb, population_id, generator_id):
+        bqlfn.bql_row_similarity(bdb, population_id, None, source, target,
             *colnos)
         sql = 'select bql_row_similarity(?, NULL, ?, ?%s%s)' % \
             ('' if 0 == len(colnos) else ', ', ', '.join(map(str, colnos)))
-        bdb.sql_execute(sql, (generator_id, source, target)).fetchall()
+        bdb.sql_execute(sql, (population_id, source, target)).fetchall()
 
 @pytest.mark.parametrize('exname,rowid,colno',
     [(exname, rowid, colno)
@@ -524,13 +524,13 @@ def test_row_column_predictive_probability(exname, rowid, colno):
         pytest.skip('Not enough columns in t0.')
     if exname.startswith('t1_sub') and colno > 1:
         pytest.skip('Not enough columns in %s.' % (exname,))
-    with analyzed_bayesdb_generator(examples[exname](), 1, 1) \
-            as (bdb, generator_id):
-        if rowid == 0: rowid = bayesdb_maxrowid(bdb, generator_id)
-        bqlfn.bql_row_column_predictive_probability(bdb, generator_id, None,
+    with analyzed_bayesdb_population(examples[exname](), 1, 1) \
+            as (bdb, population_id, generator_id):
+        if rowid == 0: rowid = bayesdb_maxrowid(bdb, population_id)
+        bqlfn.bql_row_column_predictive_probability(bdb, population_id, None,
             rowid, colno)
         sql = 'select bql_row_column_predictive_probability(?, NULL, ?, ?)'
-        bdb.sql_execute(sql, (generator_id, rowid, colno)).fetchall()
+        bdb.sql_execute(sql, (population_id, rowid, colno)).fetchall()
 
 def test_insert():
     with test_csv.bayesdb_csv_stream(test_csv.csv_data) as (bdb, f):
