@@ -39,13 +39,13 @@ examples = {
             (1.82, 3.140, 'bar'),
             (-1, 6.28, 'foo'),
         ],
-        't_cc',
-        'CREATE GENERATOR t_cc FOR t USING crosscat'
+        'p',
+        'p_cc',
+        'CREATE POPULATION p FOR t'
             '(x NUMERICAL, y CYCLIC, z CATEGORICAL)',
-        'CREATE GENERATOR t_cc FOR t USING crosscat'
-            '(x NUMERICAL, y ZAPATISTICAL, z CATEGORICAL)',
-        'CREATE GENERATOR t_cc FOR t USING crosscat'
-            '(x NUMERICAL, y CYCLIC, w CATEGORICAL)',
+        'CREATE GENERATOR p_cc FOR p USING crosscat()',
+        'CREATE GENERATOR p_cc FOR p USING crosscat(DEPENDENT)',
+        'CREATE GENERATOR p_cc FOR p USING crosscat(INDEPENDENT)',
     ),
     'iid_gaussian': (
         lambda: StdNormalMetamodel(seed=0),
@@ -53,15 +53,14 @@ examples = {
         'CREATE TABLE t(x NUMERIC, y NUMERIC)',
         'INSERT INTO t (x, y) VALUES (?, ?)',
         [(0, 1), (1, float('nan')), (2, -1.2)],
-        't_sn',
-        'CREATE GENERATOR t_sn FOR t USING std_normal'
-            ' (x NUMERICAL, y NUMERICAL)',
+        'p',
+        'p_sn',
+        'CREATE POPULATION p FOR t(x NUMERICAL, y NUMERICAL)',
+        'CREATE GENERATOR p_sn FOR p USING std_normal()',
         # XXX Should invent something that fails for
         # metamodel-specific reasons here.
-        'CREATE GENERATOR t_sn FOR t USING std_normal'
-            ' (x NUMERICAL, z NUMERICAL)',
-        'CREATE GENERATOR t_sn FOR t USING std_normal'
-            ' (x NUMERICAL, z NUMERICAL)',
+        'CREATE GENERATOR p_sn FOR p USING std_normal ...',
+        'CREATE GENERATOR p_sn FOR p USING std_normal ...'
     ),
 }
 
@@ -83,7 +82,7 @@ def test_example(persist, exname):
             _test_example(bdb, exname)
 
 def _test_example(bdb, exname):
-    mm, t, t_sql, data_sql, data, g, g_bql, g_bqlbad0, g_bqlbad1 = \
+    mm, t, t_sql, data_sql, data, p, g, p_bql, g_bql, g_bqlbad0, g_bqlbad1 = \
         examples[exname]
     qt = bql_quote_name(t)
     qg = bql_quote_name(g)
@@ -105,6 +104,10 @@ def _test_example(bdb, exname):
         bdb.sql_execute(data_sql, row)
     n = len(data)
     assert bdb.execute('SELECT COUNT(*) FROM %s' % (qt,)).fetchvalue() == n
+
+    # Create a population.
+    assert not core.bayesdb_has_population(bdb, p)
+    bdb.execute(p_bql)
 
     # Create a generator.  Make sure savepoints work for this.
     assert not core.bayesdb_has_generator(bdb, g)
@@ -180,7 +183,7 @@ def _test_example(bdb, exname):
     bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION WAIT' % (qg,))
 
 def _retest_example(bdb, exname):
-    mm, t, t_sql, data_sql, data, g, g_bql, g_bqlbad0, g_bqlbad1 = \
+    mm, t, t_sql, data_sql, data, p, g, p_bql, g_bql, g_bqlbad0, g_bqlbad1 = \
         examples[exname]
     qt = bql_quote_name(t)
     qg = bql_quote_name(g)
