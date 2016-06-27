@@ -250,25 +250,16 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         schema = self._schema(bdb, generator_id)
 
         # Initialize fresh states.
-        X = self._X(bdb, generator_id)
-        states = self._initialize_states(n, X, schema['variables'])
+        data = self._data(bdb, generator_id)
+        variables = schema['variables']
+        states = self._initialize_states(bdb, generator_id, n, data, variables)
 
         # Initialize fresh CGPMs for each state.
-        population_id = core.bayesdb_generator_population(bdb, generator_id)
         for cgpm_ext in schema['cgpm_composition']:
-            def map_var(var):
-                colno = core.bayesdb_variable_number(bdb, population_id, var)
-                return self._cgpm_colno(bdb, generator_id, colno)
-            cgpm_input_colnos = map(map_var, cgpm_ext['inputs'])
-            cgpm_output_colnos = map(map_var, cgpm_ext['outputs'])
+            cgpm_initializer = self._cgpm_initializer(
+                bdb, generator_id, data, cgpm_ext)
             for state in states:
-                cgpm = self._initialize_cgpm(bdb, cgpm_ext)
-                for rowid, row in enumerate(X):
-                    cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
-                    inputs = {colno: row[colno] for colno in cgpm_input_colnos}
-                    outputs = \
-                        {colno: row[colno] for colno in cgpm_output_colnos}
-                    cgpm.incorporate(rowid, outputs, inputs)
+                cgpm = cgpm_initializer()
                 _token = state.compose_cgpm(cgpm)
 
         # Make sure the cache, if available, is ready for models for
@@ -487,18 +478,22 @@ class CGPM_Metamodel(IBayesDBMetamodel):
     @contextlib.contextmanager
     def _engine_data(self, bdb, generator_id):
         # Load the mapped data from the database.
-        X = self._X(bdb, generator_id)
+        data = self._data(bdb, generator_id)
+
+        # Get only the columns that the feralcat models.
+        schema = self._schema(bdb, generator_id)
+        variables = schema['variables']
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        def map_var(var):
+            colno = core.bayesdb_variable_number(bdb, population_id, var)
+            return self._cgpm_colno(bdb, generator_id, colno)
+        cgpm_output_colnos = \
+            [map_var(var) for var, _st, _cct, _da in variables]
+        X = [[row[colno] for colno in cgpm_output_colnos] for row in data]
 
         # Prepare the engine with these data.
         with engine_X(self._engine, X):
             yield
-
-    def _X(self, bdb, generator_id):
-        return self._data(bdb, generator_id)
-        # data = self._data(bdb, generator_id)
-        # colnos = core.bayesdb_generator_column_numbers(bdb, generator_id)
-        # return [[data[rowid][colno] for rowid in xrange(len(data))]
-        #     for colno in xrange(len(colnos))]
 
     def _data(self, bdb, generator_id):
         # Get the table name, quoted for constructing SQL.
@@ -541,13 +536,46 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         return [tuple(map_value(colno, x) for colno, x in zip(colnos, row))
             for row in cursor]
 
-    def _initialize_states(self, nstates, X, variables):
+    def _initialize_states(self, bdb, generator_id, nstates, data, variables):
         # XXX Parallelize me!  Push me into the engine!
-        outputs = range(len(variables))
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        def map_var(var):
+            colno = core.bayesdb_variable_number(bdb, population_id, var)
+            return self._cgpm_colno(bdb, generator_id, colno)
+        cgpm_output_colnos = \
+            [map_var(var) for var, _st, _cct, _da in variables]
         cctypes = [cctype for _n, _st, cctype, _da in variables]
         distargs = [distargs for _n, _st, _cct, distargs in variables]
-        return [State(X, outputs, cctypes=cctypes, distargs=distargs)
-            for _ in xrange(nstates)]
+        X = [[row[colno] for colno in cgpm_output_colnos] for row in data]
+        return [
+            State(X, cgpm_output_colnos, cctypes=cctypes, distargs=distargs)
+            for _ in xrange(nstates)
+        ]
+
+    def _cgpm_initializer(self, bdb, generator_id, data, cgpm_ext):
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        def map_var(var):
+            colno = core.bayesdb_variable_number(bdb, population_id, var)
+            return self._cgpm_colno(bdb, generator_id, colno)
+        name = cgpm_ext['name']
+        cgpm_output_colnos = map(map_var, cgpm_ext['outputs'])
+        cgpm_input_colnos = map(map_var, cgpm_ext['inputs'])
+        args = cgpm_ext.get('args', ())
+        kwds = cgpm_ext.get('kwds', {})
+        if name not in self._cgpm_registry:
+            raise BQLError(bdb, 'Unknown CGPM: %s' % (repr(name),))
+        cls = self._cgpm_registry[name]
+        def initialize():
+            cgpm = cls(
+                cgpm_output_colnos, cgpm_input_colnos, rng=bdb.np_prng,
+                *args, **kwds)
+            for rowid, row in enumerate(data):
+                cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
+                outputs = {colno: row[colno] for colno in cgpm_output_colnos}
+                inputs = {colno: row[colno] for colno in cgpm_input_colnos}
+                cgpm.incorporate(rowid, outputs, inputs)
+            return cgpm
+        return initialize
 
     def _cache(self, bdb):
         # If there's no BayesDB-wide cache, there's no CGPM cache.
@@ -638,17 +666,6 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 cache.models[generator_id] = {}
             cache.models[generator_id][modelno] = state
         return state
-
-    def _initialize_cgpm(self, bdb, cgpm_ext):
-        name = cgpm_ext['name']
-        inputs = cgpm_ext['inputs']
-        outputs = cgpm_ext['outputs']
-        args = cgpm_ext.get('args', ())
-        kwds = cgpm_ext.get('kwds', {})
-        if name not in self._cgpm_registry:
-            raise BQLError(bdb, 'Unknown CGPM: %s' % (repr(name),))
-        cls = self._cgpm_registry[name]
-        return cls(inputs, outputs, rng=bdb.np_prng, *args, **kwds)
 
     # XXX subsampling
     def _cgpm_rowid(self, bdb, generator_id, rowid):

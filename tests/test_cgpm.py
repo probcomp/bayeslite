@@ -19,6 +19,7 @@ import random                   # XXX
 
 from cgpm.crosscat.engine import Engine
 #from cgpm.regressions.forest import RandomForest
+from cgpm.regressions.linreg import LinearRegression
 
 from bayeslite import bayesdb_open
 from bayeslite import bayesdb_register_metamodel
@@ -126,18 +127,19 @@ def test_cgpm():
         engine = Engine(XXX, num_states=0, multithread=False)
         registry = {
             'kepler': Kepler,
+            'linreg': LinearRegression,
         }
         bayesdb_register_metamodel(bdb, CGPM_Metamodel(engine, registry))
         bdb.execute('''
             CREATE GENERATOR g0 FOR satellites USING cgpm (<
                 "variables"~ (
-                    ("apogee", "numerical", "normal", < >),
+                    --("apogee", "numerical", "normal", < >),
                     ("class_of_orbit", "categorical", "categorical", <"k"~ 3>),
                     ("country_of_operator", "categorical", "categorical",
                      <"k"~ 4>),
-                    ("launch_mass", "numerical", "normal", < >),
-                    ("perigee", "numerical", "normal", < >),
-                    ("period", "numerical", "normal", < >)
+                    ("launch_mass", "numerical", "normal", < >)--,
+                    --("perigee", "numerical", "normal", < >),
+                    --("period", "numerical", "normal", < >)
                 ),
                 "categoricals"~ <
                     "1"~ <
@@ -154,10 +156,16 @@ def test_cgpm():
                 >,
                 "cgpm_composition"~ (
                     <
-                        "name"~ "kepler",
-                        "outputs"~ ("apogee", "perigee"),
-                        "inputs"~ ("period")
+                        "name"~ "linreg",
+                        "inputs"~ ("apogee", "perigee"),
+                        "outputs"~ ("period"),
                         -- "kwds"~ <"noise"~ 1.0>
+                        "kwds"~ <
+                            "distargs"~ <
+                                "cctypes"~ ("normal", "normal"),
+                                "ccargs"~ (< >, < >)
+                            >
+                        >
                     >
                 )
             >)
@@ -167,13 +175,13 @@ def test_cgpm():
         bdb.execute('''
             CREATE GENERATOR g1 FOR satellites USING cgpm (<
                 "variables"~ (
-                    ("apogee", "numerical", "normal", < >),
+                    --("apogee", "numerical", "normal", < >),
                     ("class_of_orbit", "categorical", "categorical", <"k"~ 3>),
                     ("country_of_operator", "categorical", "categorical",
                      <"k"~ 4>),
-                    ("launch_mass", "numerical", "exponential", < >),
-                    ("perigee", "numerical", "normal", < >),
-                    ("period", "numerical", "normal", < >)
+                    ("launch_mass", "numerical", "exponential", < >)--,
+                    --("perigee", "numerical", "normal", < >),
+                    --("period", "numerical", "normal", < >)
                 ),
                 "categoricals"~ <
                     "1"~ <
@@ -191,8 +199,8 @@ def test_cgpm():
                 "cgpm_composition"~ (
                     <
                         "name"~ "kepler",
-                        "outputs"~ ("apogee", "perigee"),
-                        "inputs"~ ("period")
+                        "inputs"~ ("apogee", "perigee"),
+                        "outputs"~ ("period")
                         -- "kwds"~ <"noise"~ 1.0>
                     >
                 )
