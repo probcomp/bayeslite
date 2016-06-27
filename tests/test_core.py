@@ -535,10 +535,11 @@ def test_row_column_predictive_probability(exname, rowid, colno):
 def test_insert():
     with test_csv.bayesdb_csv_stream(test_csv.csv_data) as (bdb, f):
         bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
-        guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
-        bdb.execute('initialize 2 models for t_cc')
-        bdb.execute('analyze t_cc for 1 iteration wait')
-        generator_id = core.bayesdb_get_generator(bdb, 't_cc')
+        guess.bayesdb_guess_population(bdb, 'p', 't')
+        bdb.execute('create generator p_cc for p using crosscat()')
+        bdb.execute('initialize 2 models for p_cc')
+        bdb.execute('analyze p_cc for 1 iteration wait')
+        generator_id = core.bayesdb_get_generator(bdb, 'p_cc')
         row = (41, 'F', 96000, 73, 'data science', 2)
         bqlfn.bayesdb_insert(bdb, generator_id, row)
 
@@ -564,36 +565,45 @@ def test_crosscat_constraints():
         t1_schema(bdb)
         t1_data(bdb)
         bdb.execute('''
-            CREATE GENERATOR t1_cc FOR t1 USING crosscat(
+            CREATE POPULATION p1 FOR t1 (
                 label CATEGORICAL,
                 age NUMERICAL,
                 weight NUMERICAL
             )
         ''')
-        gid = core.bayesdb_get_generator(bdb, 't1_cc')
-        assert core.bayesdb_generator_column_number(bdb, gid, 'label') == 1
-        assert core.bayesdb_generator_column_number(bdb, gid, 'age') == 2
-        assert core.bayesdb_generator_column_number(bdb, gid, 'weight') == 3
+        bdb.execute('''
+            CREATE GENERATOR p1_cc FOR p1 USING crosscat(
+                label CATEGORICAL,
+                age NUMERICAL,
+                weight NUMERICAL
+            )
+        ''')
+        pid = core.bayesdb_get_population(bdb, 'p1')
+        assert core.bayesdb_variable_number(bdb, pid, 'label') == 1
+        assert core.bayesdb_variable_number(bdb, pid, 'age') == 2
+        assert core.bayesdb_variable_number(bdb, pid, 'weight') == 3
+        gid = core.bayesdb_get_generator(bdb, 'p1_cc')
         from bayeslite.metamodels.crosscat import crosscat_cc_colno
         assert crosscat_cc_colno(bdb, gid, 1) == 0
         assert crosscat_cc_colno(bdb, gid, 2) == 1
         assert crosscat_cc_colno(bdb, gid, 3) == 2
-        bdb.execute('INITIALIZE 1 MODEL FOR t1_cc')
-        bdb.execute('ANALYZE t1_cc FOR 1 ITERATION WAIT')
+        bdb.execute('INITIALIZE 1 MODEL FOR p1_cc')
+        bdb.execute('ANALYZE p1_cc FOR 1 ITERATION WAIT')
         bdb.execute('ESTIMATE PROBABILITY OF age = 8 GIVEN (weight = 16)'
-            ' BY t1_cc').next()
+            ' BY p1').next()
         assert engine._last_Y == [(28, 2, 16)]
         bdb.execute("SELECT age FROM t1 WHERE label = 'baz'").next()
-        bdb.execute("INFER age FROM t1_cc WHERE label = 'baz'").next()
+        bdb.execute("INFER age FROM p1 WHERE label = 'baz'").next()
         assert engine._last_Y == [(3, 0, 1), (3, 2, 32)]
-        bdb.execute('SIMULATE weight FROM t1_cc GIVEN age = 8 LIMIT 1').next()
+        bdb.execute('SIMULATE weight FROM p1 GIVEN age = 8 LIMIT 1').next()
         assert engine._last_Y == [(28, 1, 8)]
 
-def test_bayesdb_generator_fresh_row_id():
-    with bayesdb_generator(bayesdb(), 't1', 't1_cc', t1_schema, lambda x: 0,\
+def test_bayesdb_population_fresh_row_id():
+    with bayesdb_population(
+            bayesdb(), 't1', 'p1', 'p1_cc', t1_schema, lambda x: 0,\
             columns=['label CATEGORICAL', 'age NUMERICAL', 'weight NUMERICAL'])\
-            as (bdb, generator_id):
-        assert core.bayesdb_generator_fresh_row_id(bdb, generator_id) == 1
+            as (bdb, population_id, generator_id):
+        assert core.bayesdb_population_fresh_row_id(bdb, population_id) == 1
         t1_data(bdb)
-        assert core.bayesdb_generator_fresh_row_id(bdb, generator_id) == \
+        assert core.bayesdb_population_fresh_row_id(bdb, population_id) == \
             len(t1_rows) + 1

@@ -340,6 +340,15 @@ def bayesdb_population_cell_value(bdb, population_id, rowid, colno):
         value = row[0]
     return value
 
+def bayesdb_population_fresh_row_id(bdb, population_id):
+    table_name = bayesdb_population_table(bdb, population_id)
+    qt = sqlite3_quote_name(table_name)
+    cursor = bdb.sql_execute('SELECT MAX(_rowid_) FROM %s' % (qt,))
+    max_rowid = cursor_value(cursor)
+    if max_rowid is None:
+        max_rowid = 0
+    return max_rowid + 1   # Synthesize a non-existent SQLite row id
+
 def bayesdb_has_generator(bdb, name):
     """True if there is a generator named `name` in `bdb`."""
     sql = 'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?'
