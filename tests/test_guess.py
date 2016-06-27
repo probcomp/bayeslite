@@ -21,7 +21,7 @@ import pytest
 import bayeslite
 from bayeslite.metamodels.crosscat import CrosscatMetamodel
 from bayeslite.guess import bayesdb_guess_stattypes
-from bayeslite.guess import bayesdb_guess_generator
+from bayeslite.guess import bayesdb_guess_population
 
 import crosscat.LocalEngine
 
@@ -101,7 +101,7 @@ def test_guess_stattypes():
     assert bayesdb_guess_stattypes(n, rows) == ['ignore', 'key']
 
 
-def test_guess_generator():
+def test_guess_population():
     bdb = bayeslite.bayesdb_open(builtin_metamodels=False)
     bdb.sql_execute('CREATE TABLE t(x NUMERIC, y NUMERIC, z NUMERIC)')
     a_z = range(ord('a'), ord('z') + 1)
@@ -114,14 +114,13 @@ def test_guess_generator():
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)
     with pytest.raises(ValueError):
         # No modelled columns.  (x is key.)
-        bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat',
+        bayesdb_guess_population(bdb, 'p', 't',
             overrides=[('y', 'ignore'), ('z', 'ignore')])
-    bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+    bayesdb_guess_population(bdb, 'p', 't')
     with pytest.raises(ValueError):
-        # Generator already exists.
-        bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
-    assert bdb.sql_execute('SELECT *'
-            ' FROM bayesdb_generator_column').fetchall() == [
+        # Population already exists.
+        bayesdb_guess_population(bdb, 'p', 't')
+    assert bdb.sql_execute('SELECT * FROM bayesdb_variable').fetchall() == [
         (1, 1, 'categorical'),
         (1, 2, 'numerical'),
     ]

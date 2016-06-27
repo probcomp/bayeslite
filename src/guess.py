@@ -32,20 +32,21 @@ from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 from bayeslite.util import unique
 
-def bayesdb_guess_generator(bdb, generator, table, metamodel,
+def bayesdb_guess_population(bdb, population, table,
         ifnotexists=None, **kwargs):
-    """Heuristically guess a generator for `table` using `metamodel`.
+    """Heuristically guess a population schema for `table`.
 
-    Based on the data in `table`, create a generator named `generator`
-    using `metamodel` for it.
+    Based on the data in `table`, create a population named
+    `population`.
 
-    :param bool ifnotexists: if true or ``None`` and `generator`
+    :param bool ifnotexists: if true or ``None`` and `population`
         already exists, do nothing.
     :param dict kwargs: options to pass through to bayesdb_guess_stattypes.
 
     In addition to statistical types, the overrides may specify
     ``key`` or ``ignore``, in which case those columns will not be
     modelled at all.
+
     """
 
     # Fill in default arguments.
@@ -53,12 +54,12 @@ def bayesdb_guess_generator(bdb, generator, table, metamodel,
         ifnotexists = False
 
     with bdb.savepoint():
-        if core.bayesdb_has_generator(bdb, generator):
+        if core.bayesdb_has_population(bdb, population):
             if ifnotexists:
                 return
             else:
-                raise ValueError('Generator already exists: %s' %
-                    (repr(generator),))
+                raise ValueError('Population already exists: %r' % \
+                    (population,))
         qt = sqlite3_quote_name(table)
         cursor = bdb.sql_execute('SELECT * FROM %s' % (qt,))
         column_names = [d[0] for d in cursor.description]
@@ -71,13 +72,11 @@ def bayesdb_guess_generator(bdb, generator, table, metamodel,
         if len(column_names) == 0:
             raise ValueError('Table has no modelled columns: %s' %
                 (repr(table),))
-        qg = sqlite3_quote_name(generator)
-        qmm = sqlite3_quote_name(metamodel)
+        qp = sqlite3_quote_name(population)
         qcns = map(sqlite3_quote_name, column_names)
         qsts = map(sqlite3_quote_name, stattypes)
         qs = ','.join(qcn + ' ' + qst for qcn, qst in zip(qcns, qsts))
-        bdb.execute('CREATE GENERATOR %s FOR %s USING %s(%s)' %
-            (qg, qt, qmm, qs))
+        bdb.execute('CREATE POPULATION %s FOR %s(%s)' % (qp, qt, qs))
 
 def unzip(l):                   # ???
     xs = []
