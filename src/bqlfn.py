@@ -390,7 +390,7 @@ def bql_predict_confidence(bdb, generator_id, modelno, colno, rowid,
 def bql_json_get(bdb, blob, key):
     return json.loads(blob)[key]
 
-def bayesdb_simulate(bdb, generator_id, constraints, colnos,
+def bayesdb_simulate(bdb, population_id, constraints, colnos,
         modelno=None, numpredictions=1):
     """Simulate rows from a generative model, subject to constraints.
 
@@ -401,16 +401,33 @@ def bayesdb_simulate(bdb, generator_id, constraints, colnos,
 
     The results are simulated from the predictive distribution on
     fresh rows.
-
     """
-    metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    fake_rowid = core.bayesdb_generator_fresh_row_id(bdb, generator_id)
+    fake_rowid = -1
     targets = [(fake_rowid, colno) for colno in colnos]
-    if constraints is not None:
-        constraints = [(fake_rowid, colno, val)
-                       for colno, val in constraints]
-    return metamodel.simulate_joint(bdb, generator_id, targets,
-        constraints, modelno, num_predictions=numpredictions)
+    if constraints:
+        constraints = [(fake_rowid, colno, value)
+            for colno, value in constraints]
+    def loglikelihood(generator_id, metamodel):
+        if not constraints:
+            return 0
+        return metamodel.logpdf_joint(
+            bdb, generator_id, constraints, [], modelno)
+    def simulate(generator_id, metamodel, n):
+        return metamodel.simulate_joint(
+            bdb, generator_id, targets,
+            constraints, modelno, num_predictions=n)
+    generator_ids = \
+        list(core.bayesdb_population_generators(bdb, population_id))
+    metamodels = [core.bayesdb_generator_metamodel(bdb, generator_id)
+        for generator_id in generator_ids]
+    loglikelihoods = map(loglikelihood, generator_ids, metamodels)
+    likelihoods = map(math.exp, loglikelihoods)
+    countses = bdb.np_prng.multinomial(numpredictions, likelihoods, size=1)
+    counts = countses[0]
+    rowses = map(simulate, generator_ids, metamodels, counts)
+    all_rows = [row for rows in rowses for row in rows]
+    assert all(isinstance(row, (tuple, list)) for row in all_rows)
+    return all_rows
 
 def bayesdb_insert(bdb, generator_id, row):
     """Notify a generator that a row has been inserted into its table."""
