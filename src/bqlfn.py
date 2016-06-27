@@ -260,7 +260,7 @@ def bql_column_dependence_probability(bdb, population_id, _modelnos, colno0,
             core.bayesdb_population_generators(bdb, population_id)))
 
 # Two-column function:  MUTUAL INFORMATION [OF <col0> WITH <col1>]
-def bql_column_mutual_information(bdb, generator_id, _modelno, colno0, colno1,
+def bql_column_mutual_information(bdb, population_id, _modelno, colno0, colno1,
         numsamples=None):
     def generator_mutinf(generator_id):
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
