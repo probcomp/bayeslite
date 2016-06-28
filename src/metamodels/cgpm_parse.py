@@ -137,8 +137,8 @@ class CGPM_Semantics(object):
     def p_var_name(self, var):                  return var
 
     def p_param_opt_none(self):                 return []
-    def p_param_opt_some(self, ps):             return params
-    def p_params_one(self, p):                  return [p]
+    def p_param_opt_some(self, ps):             return ps
+    def p_params_one(self, param):              return [param]
     def p_params_many(self, ps, p):             ps.append(p); return ps
     def p_param_num(self, p, num):              return (p, num)
     def p_param_nam(self, p, nam):              return (p, nam)
