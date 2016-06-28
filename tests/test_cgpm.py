@@ -156,7 +156,7 @@ def test_cgpm():
             CREATE GENERATOR g1 FOR satellites USING cgpm (
                 launch_mass EXPONENTIAL,
                 MODEL period GIVEN apogee, perigee
-                    USING kepler
+                    USING kepler (quagga = eland)
             )
         ''')
         bdb.execute('INITIALIZE 1 MODEL IF NOT EXISTS FOR g1')
