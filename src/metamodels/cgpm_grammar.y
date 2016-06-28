@@ -33,6 +33,7 @@ clause_opt(some)::= clause(c).
 clause(basic)	::= var(var) dist(dist) param_opt(params).
 clause(foreign)	::= K_MODEL vars(outputs) given_opt(inputs)
 			K_USING foreign(name) param_opt(params).
+clause(subsamp)	::= K_SUBSAMPLE L_NUMBER(n).
 
 dist(name)	::= L_NAME(dist).
 foreign(name)	::= L_NAME(foreign).
