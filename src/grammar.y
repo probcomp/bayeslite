@@ -55,10 +55,12 @@ k_column_opt		::= K_COLUMN.
 /*
  * BQL Model Definition Language
  */
-command(create_pop)	::= K_CREATE K_POPULATION population_name(name)
+command(create_pop)	::= K_CREATE K_POPULATION ifnotexists(ifnotexists)
+				population_name(name)
 				K_FOR table_name(table)
 				T_LROUND pop_schema(schema) T_RROUND.
-command(drop_pop)	::= K_DROP K_POPULATION population_name(name).
+command(drop_pop)	::= K_DROP K_POPULATION ifexists(ifexists)
+				population_name(name).
 /*
  * XXX alter population xyz
  *	rename to pqr

@@ -89,23 +89,19 @@ def execute_phrase(bdb, phrase, bindings=()):
     if isinstance(phrase, ast.CreateTabSim):
         assert isinstance(phrase.simulation, ast.Simulate)
         with bdb.savepoint():
-            if core.bayesdb_has_generator(bdb, phrase.name):
-                raise BQLError(bdb, 'Name already defined as generator: %s' %
-                    (repr(phrase.name),))
             if core.bayesdb_has_table(bdb, phrase.name):
                 if phrase.ifnotexists:
                     return empty_cursor(bdb)
                 else:
                     raise BQLError(bdb, 'Name already defined as table: %s' %
                         (repr(phrase.name),))
-            if not core.bayesdb_has_generator(bdb,
-                    phrase.simulation.generator):
-                raise BQLError(bdb, 'No such generator: %s' %
-                    (phrase.simulation.generator,))
-            generator_id = core.bayesdb_get_generator(bdb,
-                phrase.simulation.generator)
-            metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-            table = core.bayesdb_generator_table(bdb, generator_id)
+            if not core.bayesdb_has_population(
+                    bdb, phrase.simulation.population):
+                raise BQLError(bdb, 'No such population: %s' %
+                    (phrase.simulation.population,))
+            population_id = core.bayesdb_get_population(
+                bdb, phrase.simulation.population)
+            table = core.bayesdb_population_table(bdb, population_id)
             qn = sqlite3_quote_name(phrase.name)
             qt = sqlite3_quote_name(table)
             column_names = phrase.simulation.columns
@@ -118,18 +114,14 @@ def execute_phrase(bdb, phrase, bindings=()):
             assert 0 < len(column_sqltypes)
             for column_name in column_names:
                 if casefold(column_name) not in column_sqltypes:
-                    raise BQLError(bdb, 'No such column'
-                        ' in generator %s table %s: %s' %
-                        (repr(phrase.simulation.generator),
-                         repr(table),
-                         repr(column_name)))
+                    raise BQLError(bdb, 'No such variable'
+                        ' in population %r: %s' %
+                        (phrase.simulation.population, column_name))
             for column_name, _expression in phrase.simulation.constraints:
                 if casefold(column_name) not in column_sqltypes:
-                    raise BQLError(bdb, 'No such column'
-                        ' in generator %s table %s: %s' %
-                        (repr(phrase.simulation.generator),
-                         repr(table),
-                         repr(column_name)))
+                    raise BQLError(bdb, 'No such variable'
+                        ' in population %s: %s' %
+                        (phrase.simulation.population, column_name))
             # XXX Move to compiler.py.
             # XXX Copypasta of this in compile_simulate!
             out = compiler.Output(n_numpar, nampar_map, bindings)
@@ -153,14 +145,15 @@ def execute_phrase(bdb, phrase, bindings=()):
             assert isinstance(nsamples, int)
             modelno = cursor[0][1]
             assert modelno is None or isinstance(modelno, int)
-            constraints = \
-                [(core.bayesdb_generator_column_number(bdb, generator_id, name),
-                        value)
-                    for (name, _expression), value in
-                        zip(phrase.simulation.constraints, cursor[0][2:])]
-            colnos = \
-                [core.bayesdb_generator_column_number(bdb, generator_id, name)
-                    for name in column_names]
+            constraints = [
+                (core.bayesdb_variable_number(bdb, population_id, var), value)
+                for (var, _expression), value in
+                    zip(phrase.simulation.constraints, cursor[0][2:])
+            ]
+            colnos = [
+                core.bayesdb_variable_number(bdb, population_id, var)
+                for var in column_names
+            ]
             bdb.sql_execute('CREATE %sTABLE %s%s (%s)' %
                 ('TEMP ' if phrase.temp else '',
                  'IF NOT EXISTS ' if phrase.ifnotexists else '',
@@ -171,7 +164,7 @@ def execute_phrase(bdb, phrase, bindings=()):
             insert_sql = '''
                 INSERT INTO %s (%s) VALUES (%s)
             ''' % (qn, ','.join(qcns), ','.join('?' for qcn in qcns))
-            for row in bqlfn.bayesdb_simulate(bdb, generator_id, constraints,
+            for row in bqlfn.bayesdb_simulate(bdb, population_id, constraints,
                     colnos, modelno=modelno, numpredictions=nsamples):
                 bdb.sql_execute(insert_sql, row)
         return empty_cursor(bdb)
@@ -275,6 +268,8 @@ def execute_phrase(bdb, phrase, bindings=()):
     if isinstance(phrase, ast.DropPop):
         with bdb.savepoint():
             if not core.bayesdb_has_population(bdb, phrase.name):
+                if phrase.ifexists:
+                    return empty_cursor(bdb)
                 raise BQLError(bdb, 'No such population: %r' % (phrase.name,))
             population_id = core.bayesdb_get_population(bdb, phrase.name)
             # XXX helpful error checking if generators still exist
@@ -505,10 +500,12 @@ def execute_phrase(bdb, phrase, bindings=()):
     assert False                # XXX
 
 def _create_population(bdb, phrase):
-    # XXX ifnotexists
     if core.bayesdb_has_population(bdb, phrase.name):
-        raise BQLError(bdb, 'Name already defined as population: %r' %
-            (phrase.name,))
+        if phrase.ifnotexists:
+            return
+        else:
+            raise BQLError(bdb, 'Name already defined as population: %r' %
+                (phrase.name,))
 
     # Make sure the bayesdb_column table knows all the columns of the
     # underlying table.

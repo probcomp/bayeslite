@@ -175,10 +175,10 @@ class BQLSemantics(object):
         return ast.AlterTabRenameCol(old, new)
 
     # BQL Model Definition Language
-    def p_command_create_pop(self, name, table, schema):
-        return ast.CreatePop(name, table, schema)
-    def p_command_drop_pop(self, name):
-        return ast.DropPop(name)
+    def p_command_create_pop(self, ifnotexists, name, table, schema):
+        return ast.CreatePop(ifnotexists, name, table, schema)
+    def p_command_drop_pop(self, ifexists, name):
+        return ast.DropPop(ifexists, name)
 
     def p_pop_schema_one(self, var):            return [var]
     def p_pop_schema_many(self, schema, var): schema.append(var); return schema
