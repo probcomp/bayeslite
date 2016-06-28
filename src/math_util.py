@@ -107,7 +107,7 @@ def logsumexp_weighted(log_W, log_A):
     # XXX Pathological cases -- infinities, NaNs.
     assert len(log_W) == len(log_A)
     return logsumexp([log_w + log_a for log_w, log_a in zip(log_W, log_A)]) \
-        + logsumexp(log_W)
+        - logsumexp(log_W)
 
 def continuants(contfrac):
     """Continuants of a continued fraction.

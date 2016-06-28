@@ -125,5 +125,5 @@ def test_logmeanexp():
 
 def test_logsumexp_weighted():
     # XXX Expand me!
-    assert relerr(-1000 + logsumexp([500, -500]) + math.log(2),
+    assert relerr(-1000 - logsumexp([500, -500]) + math.log(2),
             logsumexp_weighted([500, -500], [-1500, -500])) < 1e-15
