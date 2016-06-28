@@ -336,7 +336,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
         cgpm_query = [colno for _r, colno in targets]
         cgpm_evidence = {
-            colno: self._cgpm_value(bdb, generator_id, colno, value)
+            colno: self._to_numeric(bdb, generator_id, colno, value)
             for colno, value in constraints
         }
         engine = self._engine(bdb, generator_id)
@@ -345,7 +345,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             multithread=False)
         weighted_samples = engine._process_samples(
             samples, cgpm_rowid, cgpm_evidence, multithread=False)
-        return [[row[colno] for colno in cgpm_query]
+        def map_value(colno, value):
+            return self._from_numeric(bdb, generator_id, colno, value)
+        return [[map_value(colno, row[colno]) for colno in cgpm_query]
             for row in weighted_samples]
 
     def logpdf_joint(self, bdb, generator_id, targets, constraints, modelno):
@@ -353,11 +355,11 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             [r for r, _c, _v in targets + constraints])
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
         cgpm_query = {
-            colno: self._cgpm_value(bdb, generator_id, colno, value)
+            colno: self._to_numeric(bdb, generator_id, colno, value)
             for _r, colno, value in targets
         }
         cgpm_evidence = {
-            colno: self._cgpm_value(bdb, generator_id, colno, value)
+            colno: self._to_numeric(bdb, generator_id, colno, value)
             for _r, colno, value in constraints
         }
         engine = self._engine(bdb, generator_id)
@@ -400,7 +402,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Map values to codes.
         def map_value(colno, value):
-            return self._cgpm_value(bdb, generator_id, colno, value)
+            return self._to_numeric(bdb, generator_id, colno, value)
         return [tuple(map_value(colno, x) for colno, x in zip(colnos, row))
             for row in cursor]
 
@@ -540,7 +542,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         cgpm_rowid = cursor_value(cursor, nullok=True)
         return cgpm_rowid if cgpm_rowid is not None else -1
 
-    def _cgpm_value(self, bdb, generator_id, colno, value):
+    def _to_numeric(self, bdb, generator_id, colno, value):
+        """Convert value in bayeslite to equivalent cgpm format."""
         if value is None:
             return float('NaN')
         stattype = core.bayesdb_generator_column_stattype(
@@ -550,11 +553,30 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 SELECT code FROM bayesdb_cgpm_category
                     WHERE generator_id = ? AND colno = ? AND value = ?
             ''', (generator_id, colno, value))
-            code = cursor_value(cursor, nullok=True)
-            if code is None:
+            integer = cursor_value(cursor, nullok=True)
+            if integer is None:
                 raise BQLError('Invalid category: %r' % (value,))
-            return code
-        return value
+            return integer
+        else:
+            return value
+
+    def _from_numeric(self, bdb, generator_id, colno, value):
+        """Convert value in cgpm to equivalent bayeslite format."""
+        if math.isnan(value):
+            return value
+        stattype = core.bayesdb_generator_column_stattype(
+            bdb, generator_id, colno)
+        if casefold(stattype) == 'categorical':
+            cursor = bdb.sql_execute('''
+                SELECT value FROM bayesdb_cgpm_category
+                    WHERE generator_id = ? AND colno = ? AND code = ?
+            ''', (generator_id, colno, value))
+            text = cursor_value(cursor, nullok=True)
+            if text is None:
+                raise BQLError('Invalid category: %r' % (value,))
+            return text
+        else:
+            return value
 
 class CGPM_Cache(object):
     def __init__(self):

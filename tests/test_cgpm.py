@@ -181,10 +181,11 @@ def test_cgpm():
             INFER EXPLICIT PREDICT apogee
                 CONFIDENCE apogee_confidence FROM satellites LIMIT 2
         ''').fetchall()
-        bdb.execute('''
+        results = bdb.execute('''
             INFER EXPLICIT PREDICT class_of_orbit
                 CONFIDENCE class_of_orbit_confidence FROM satellites LIMIT 2
         ''').fetchall()
+        assert isinstance(results[0][0], unicode)
         bdb.execute('DROP MODELS FROM g0')
         bdb.execute('DROP GENERATOR g0')
         bdb.execute('DROP GENERATOR g1')
