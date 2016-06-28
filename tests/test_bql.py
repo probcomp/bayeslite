@@ -832,10 +832,10 @@ def test_trivial_commands():
             bdb.execute('infer explicit predict agee with confidence 0.9'
                 ' from p')
         guess.bayesdb_guess_population(bdb, 'pe', 't0',
-            overrides={
-                'age': 'numerical',
-                'rank': 'numerical',
-            })
+            overrides=[
+                ('age', 'numerical'),
+                ('rank', 'numerical'),
+            ])
         bdb.execute('create generator pe_cc for pe using crosscat()')
         with pytest.raises(bayeslite.BQLError):
             # No models to analyze.
@@ -1353,7 +1353,7 @@ def test_create_table_ifnotexists_as_simulate():
             bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
             # If not exists table tests
             guess.bayesdb_guess_population(bdb, 'p', 't',
-                overrides={'age': 'numerical'})
+                overrides=[('age', 'numerical')])
             bdb.execute('create generator p_cc for p using crosscat()')
             bdb.execute('initialize 1 model for p_cc')
             bdb.execute('analyze p_cc for 1 iteration wait')
@@ -1398,7 +1398,7 @@ def test_createtab():
                 bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True, ifnotexists=True)
         guess.bayesdb_guess_population(bdb, 'p', 't',
-            overrides={'age': 'numerical'})
+            overrides=[('age', 'numerical')])
         bdb.execute('create generator t_cc for t using crosscat ()')
         with pytest.raises(bayeslite.BQLError):
             # Redefining population.
@@ -1410,7 +1410,7 @@ def test_createtab():
         #
         # XXX Also check key columns.
         guess.bayesdb_guess_population(bdb, 'p', 't',
-            overrides={'age': 'ignore'})
+            overrides=[('age', 'ignore')])
         bdb.execute('drop population p0')
         population_id = core.bayesdb_get_population(bdb, 'p')
         colno = core.bayesdb_variable_number(bdb, population_id, 'age')
