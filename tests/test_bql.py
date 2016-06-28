@@ -1049,46 +1049,43 @@ def test_parametrized():
         assert sqltraced_execute('create temp table if not exists sim as'
                     ' simulate age, RANK, division'
                     " from p given gender = 'F' limit 4") == [
-            'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?',
             'PRAGMA table_info("sim")',
-            'SELECT COUNT(*) FROM bayesdb_generator'
-                ' WHERE name = ?',
-            'SELECT id FROM bayesdb_generator'
-                ' WHERE name = ?',
-            'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
-            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
+            'SELECT COUNT(*) FROM bayesdb_population WHERE name = ?',
+            'SELECT id FROM bayesdb_population WHERE name = ?',
+            'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'PRAGMA table_info("t")',
             "SELECT CAST(4 AS INTEGER), CAST(NULL AS INTEGER), 'F'",
             'SELECT c.colno'
-                ' FROM bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc,'
+                ' FROM bayesdb_population AS p,'
+                    ' bayesdb_variable AS v,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = :generator_id AND c.name = :column_name'
-                    ' AND g.id = gc.generator_id'
-                    ' AND g.tabname = c.tabname AND gc.colno = c.colno',
+                ' WHERE p.id = :population_id AND c.name = :name'
+                    ' AND p.id = v.population_id'
+                    ' AND p.tabname = c.tabname AND v.colno = c.colno',
             'SELECT c.colno'
-                ' FROM bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc,'
+                ' FROM bayesdb_population AS p,'
+                    ' bayesdb_variable AS v,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = :generator_id AND c.name = :column_name'
-                    ' AND g.id = gc.generator_id'
-                    ' AND g.tabname = c.tabname AND gc.colno = c.colno',
+                ' WHERE p.id = :population_id AND c.name = :name'
+                    ' AND p.id = v.population_id'
+                    ' AND p.tabname = c.tabname AND v.colno = c.colno',
             'SELECT c.colno'
-                ' FROM bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc,'
+                ' FROM bayesdb_population AS p,'
+                    ' bayesdb_variable AS v,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = :generator_id AND c.name = :column_name'
-                    ' AND g.id = gc.generator_id'
-                    ' AND g.tabname = c.tabname AND gc.colno = c.colno',
+                ' WHERE p.id = :population_id AND c.name = :name'
+                    ' AND p.id = v.population_id'
+                    ' AND p.tabname = c.tabname AND v.colno = c.colno',
             'SELECT c.colno'
-                ' FROM bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc,'
+                ' FROM bayesdb_population AS p,'
+                    ' bayesdb_population_column AS v,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = :generator_id AND c.name = :column_name'
-                    ' AND g.id = gc.generator_id'
-                    ' AND g.tabname = c.tabname AND gc.colno = c.colno',
+                ' WHERE p.id = :population_id AND c.name = :name'
+                    ' AND p.id = v.population_id'
+                    ' AND p.tabname = c.tabname AND v.colno = c.colno',
             'CREATE TEMP TABLE IF NOT EXISTS "sim"'
                 ' ("age" NUMERIC,"RANK" NUMERIC,"division" NUMERIC)',
+            'SELECT id FROM bayesdb_generator WHERE population_id = ?',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
             'SELECT MAX(_rowid_) FROM "t"',
@@ -1405,7 +1402,7 @@ def test_createtab():
             bdb.execute('create population p for t (age numerical)')
         with pytest.raises(bayeslite.BQLError):
             # Redefining generator.
-            bdb.execute('create generator p_cc for p using crosscat')
+            bdb.execute('create generator p_cc for p using crosscat ()')
         # Make sure ignore columns work.
         #
         # XXX Also check key columns.
@@ -1636,6 +1633,7 @@ def test_guess_all():
     with test_core.bayesdb() as bdb:
         bdb.sql_execute('create table foo (x numeric, y numeric, z numeric)')
         bdb.sql_execute('insert into foo values (1, 2, 3)')
+        bdb.sql_execute('insert into foo values (4, 5, 6)')
         # XXX GUESS(*)
         guess.bayesdb_guess_population(bdb, 'pfoo', 'foo')
 
@@ -1733,8 +1731,8 @@ def test_misc_errors():
 
 def test_nested_simulate():
     with test_core.t1() as (bdb, _population_id, _generator_id):
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 1 iteration wait')
+        bdb.execute('initialize 1 model for p1_cc')
+        bdb.execute('analyze p1_cc for 1 iteration wait')
         bdb.execute('select (simulate age from p1 limit 1),'
             ' (simulate weight from p1 limit 1)').fetchall()
         assert bdb.temp_table_name() == 'bayesdb_temp_2'
@@ -1787,35 +1785,35 @@ def test_checkpoint__ci_slow():
 
 def test_infer_confidence__ci_slow():
     with test_core.t1() as (bdb, _population_id, _generator_id):
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 1 iteration wait')
+        bdb.execute('initialize 1 model for p1_cc')
+        bdb.execute('analyze p1_cc for 1 iteration wait')
         bdb.execute('infer explicit rowid, rowid as another_rowid, 4,'
             ' age, predict age as age_inf confidence age_conf'
-            ' from t1_cc').fetchall()
+            ' from p1').fetchall()
 
 def test_infer_as_estimate():
     with test_core.t1() as (bdb, _population_id, _generator_id):
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 1 iteration wait')
+        bdb.execute('initialize 1 model for p1_cc')
+        bdb.execute('analyze p1_cc for 1 iteration wait')
         bdb.execute('infer explicit predictive probability of age'
-            ' from t1_cc').fetchall()
+            ' from p1').fetchall()
 
 def test_estimate_by():
     with test_core.t1() as (bdb, _population_id, _generator_id):
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 1 iteration wait')
+        bdb.execute('initialize 1 model for p1_cc')
+        bdb.execute('analyze p1_cc for 1 iteration wait')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate predictive probability of age'
-                ' by t1_cc')
+                ' by p1')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate similarity to (rowid=1) by t1_cc')
+            bdb.execute('estimate similarity to (rowid=1) by p1')
         def check(x):
             assert len(bdb.execute(x).fetchall()) == 1
-        check('estimate probability of age = 42 by t1_cc')
-        check('estimate dependence probability of age with weight by t1_cc')
-        check('estimate mutual information of age with weight by t1_cc')
-        check('estimate correlation of age with weight by t1_cc')
-        check('estimate correlation pvalue of age with weight by t1_cc')
+        check('estimate probability of age = 42 by p1')
+        check('estimate dependence probability of age with weight by p1')
+        check('estimate mutual information of age with weight by p1')
+        check('estimate correlation of age with weight by p1')
+        check('estimate correlation pvalue of age with weight by p1')
 
 def test_empty_cursor():
     with bayeslite.bayesdb_open() as bdb:
@@ -1827,7 +1825,7 @@ def test_empty_cursor():
         empty(bdb.sql_execute('INSERT INTO t VALUES(4,5,6)'))
         empty(bdb.sql_execute('INSERT INTO t VALUES(7,8,9)'))
         empty(bdb.execute('CREATE POPULATION p FOR t (x CATEGORICAL)'))
-        empty(bdb.execute('CREATE GENERATOR p_cc FOR t USING crosscat()'))
+        empty(bdb.execute('CREATE GENERATOR p_cc FOR p USING crosscat()'))
         empty(bdb.execute('INITIALIZE 1 MODEL FOR p_cc'))
         empty(bdb.execute('DROP GENERATOR p_cc'))
         empty(bdb.execute('DROP POPULATION p'))
@@ -1958,9 +1956,9 @@ class ErroneousMetamodel(troll.TrollMetamodel):
 def test_tracing_execution_error_smoke():
     with test_core.t1() as (bdb, _population_id, _generator_id):
         bayeslite.bayesdb_register_metamodel(bdb, ErroneousMetamodel())
-        bdb.execute('''
-            CREATE GENERATOR t1_err FOR t1 USING erroneous(age NUMERICAL)''')
-        q = 'ESTIMATE PREDICTIVE PROBABILITY OF age FROM t1_err'
+        bdb.execute('DROP GENERATOR p1_cc')
+        bdb.execute('CREATE GENERATOR p1_err FOR p1 USING erroneous()')
+        q = 'ESTIMATE PREDICTIVE PROBABILITY OF age FROM p1'
         tracer = MockTracerOneQuery(q, 1)
         bdb.trace(tracer)
         cursor = bdb.execute(q)

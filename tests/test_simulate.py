@@ -40,7 +40,7 @@ def test_simulate_drawconstraint():
         with open(dha_csv, 'rU') as f:
             read_csv.bayesdb_read_csv(bdb, 'dha', f, header=True, create=True)
         bayesdb_guess_population(bdb, 'hospital', 'dha',
-            overrides={'name': 'key'})
+            overrides=[('name', 'key')])
         bdb.execute('''
             CREATE GENERATOR hospital_cc FOR hospital USING crosscat()
         ''')

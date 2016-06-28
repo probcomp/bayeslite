@@ -215,13 +215,14 @@ class ErroneousMetamodel(troll.TrollMetamodel):
 def test_sessions_error_metamodel():
     with test_core.t1() as (bdb, _population_id, _generator_id):
         bayeslite.bayesdb_register_metamodel(bdb, ErroneousMetamodel())
+        bdb.execute('DROP GENERATOR p1_cc')
         bdb.execute('''
-            CREATE GENERATOR t1_err FOR t1
+            CREATE GENERATOR p1_err FOR p1
                 USING erroneous(age NUMERICAL)
         ''')
         tr = sescap.SessionOrchestrator(bdb)
         cursor = bdb.execute('''
-            ESTIMATE PREDICTIVE PROBABILITY OF age FROM t1_err
+            ESTIMATE PREDICTIVE PROBABILITY OF age FROM p
         ''')
         with pytest.raises(Boom):
             cursor.fetchall()
