@@ -487,11 +487,11 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                     WHERE generator_id = ? AND colno = ? AND value = ?
             ''', (generator_id, colno, value))
             code = cursor_value(cursor, nullok=True)
-            if code is None:
-                raise BQLError('Invalid category: %r' % (value,))
-            if core.bayesdb_generator_column_name(bdb, generator_id, colno) \
-               == 'class_of_orbit':
-                assert code < 2
+            # if code is None:
+            #     raise BQLError('Invalid category: %r' % (value,))
+            # if core.bayesdb_generator_column_name(bdb, generator_id, colno) \
+            #    == 'class_of_orbit':
+            #     assert code < 2
             return code
         return value
 
