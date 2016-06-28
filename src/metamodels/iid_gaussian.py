@@ -81,8 +81,6 @@ class StdNormalMetamodel(metamodel.IBayesDBMetamodel):
     def logpdf_joint(self, _bdb, _generator_id, targets, _constraints,
             modelno=None):
         return sum(logpdf_gaussian(value, 0, 1) for (_, _, value) in targets)
-    def insert(self, *args, **kwargs): pass
-    def remove(self, *args, **kwargs): pass
     def infer(self, *args, **kwargs): pass
 
 HALF_LOG2PI = 0.5 * math.log(2 * math.pi)

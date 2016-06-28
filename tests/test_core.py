@@ -532,17 +532,6 @@ def test_row_column_predictive_probability(exname, rowid, colno):
         sql = 'select bql_row_column_predictive_probability(?, NULL, ?, ?)'
         bdb.sql_execute(sql, (population_id, rowid, colno)).fetchall()
 
-def test_insert():
-    with test_csv.bayesdb_csv_stream(test_csv.csv_data) as (bdb, f):
-        bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
-        guess.bayesdb_guess_population(bdb, 'p', 't')
-        bdb.execute('create generator p_cc for p using crosscat()')
-        bdb.execute('initialize 2 models for p_cc')
-        bdb.execute('analyze p_cc for 1 iteration wait')
-        generator_id = core.bayesdb_get_generator(bdb, 'p_cc')
-        row = (41, 'F', 96000, 73, 'data science', 2)
-        bqlfn.bayesdb_insert(bdb, generator_id, row)
-
 def test_crosscat_constraints():
     class FakeEngine(crosscat.LocalEngine.LocalEngine):
         def predictive_probability_multistate(self, M_c, X_L_list,

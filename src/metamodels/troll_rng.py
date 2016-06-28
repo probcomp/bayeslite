@@ -62,6 +62,4 @@ class TrollMetamodel(metamodel.IBayesDBMetamodel):
         # TODO This is only correct wrt counting measure.  What's the
         # base measure of numericals?
         return 0
-    def insert(self, *args, **kwargs): pass
-    def remove(self, *args, **kwargs): pass
     def infer(self, *args, **kwargs): pass

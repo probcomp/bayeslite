@@ -228,11 +228,3 @@ class IBayesDBMetamodel(object):
         `modelno` is a model number or `None`, meaning all models.
         """
         raise NotImplementedError
-
-    def insertmany(self, bdb, generator_id, rows):
-        """Insert `rows` into a generator, updating analyses accordingly.
-
-        `rows` is a list of tuples with one value for each column
-        modelled by the generator.
-        """
-        raise NotImplementedError

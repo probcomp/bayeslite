@@ -438,12 +438,3 @@ def bayesdb_simulate(bdb, population_id, constraints, colnos,
     all_rows = [row for rows in rowses for row in rows]
     assert all(isinstance(row, (tuple, list)) for row in all_rows)
     return all_rows
-
-def bayesdb_insert(bdb, generator_id, row):
-    """Notify a generator that a row has been inserted into its table."""
-    bayesdb_insertmany(bdb, generator_id, [row])
-
-def bayesdb_insertmany(bdb, generator_id, rows):
-    """Notify a generator that rows have been inserted into its table."""
-    metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    metamodel.insertmany(bdb, generator_id, rows)
