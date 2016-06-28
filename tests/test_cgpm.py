@@ -18,7 +18,6 @@ import math
 import numpy as np
 import random                   # XXX
 
-from cgpm.crosscat.engine import Engine
 #from cgpm.regressions.forest import RandomForest
 from cgpm.regressions.linreg import LinearRegression
 
@@ -138,12 +137,11 @@ def test_cgpm():
             estimate correlation from pairwise columns of satellites
         ''').fetchall()
         XXX = bdb.sql_execute('SELECT * FROM satellites_ucs').fetchall()
-        engine = Engine(XXX, num_states=0, multithread=False)
         registry = {
             'kepler': Kepler,
             'linreg': LinearRegression,
         }
-        bayesdb_register_metamodel(bdb, CGPM_Metamodel(engine, registry))
+        bayesdb_register_metamodel(bdb, CGPM_Metamodel(registry))
         bdb.execute('''
             CREATE GENERATOR g0 FOR satellites USING cgpm (
                 MODEL period GIVEN apogee, perigee

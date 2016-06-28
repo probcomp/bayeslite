@@ -53,7 +53,7 @@ import json
 
 from collections import namedtuple
 
-from cgpm.crosscat.state import State
+from cgpm.crosscat.engine import Engine
 
 import bayeslite.core as core
 
@@ -70,7 +70,8 @@ INSERT INTO bayesdb_metamodel (name, version) VALUES ('cgpm', 1);
 CREATE TABLE bayesdb_cgpm_generator (
     generator_id        INTEGER NOT NULL PRIMARY KEY
                             REFERENCES bayesdb_generator(id),
-    schema_json         BLOB NOT NULL
+    schema_json         BLOB NOT NULL,
+    engine_json         BLOB
 );
 
 CREATE TABLE bayesdb_cgpm_category (
@@ -81,39 +82,10 @@ CREATE TABLE bayesdb_cgpm_category (
     PRIMARY KEY(generator_id, colno, value),
     UNIQUE(generator_id, colno, code)
 );
-
-CREATE TABLE bayesdb_cgpm_model (
-    generator_id        INTEGER NOT NULL REFERENCES bayesdb_generator(id),
-    modelno             INTEGER NOT NULL,
-    state_json          BLOB NOT NULL,
-    PRIMARY KEY(generator_id, modelno),
-    FOREIGN KEY(generator_id, modelno)
-        REFERENCES bayesdb_generator_model(generator_id, modelno)
-);
 '''
 
-@contextlib.contextmanager
-def engine_states(engine, states):
-    # XXX Whattakludge!
-    ostates = engine.states
-    engine.states = [state.to_metadata() for state in states]
-    try:
-        yield
-    finally:
-        engine.states = ostates
-
-@contextlib.contextmanager
-def engine_X(engine, X):
-    oX = engine.X
-    engine.X = X
-    try:
-        yield
-    finally:
-        engine.X = oX
-
 class CGPM_Metamodel(IBayesDBMetamodel):
-    def __init__(self, engine, cgpm_registry):
-        self._engine = engine
+    def __init__(self, cgpm_registry):
         self._cgpm_registry = cgpm_registry
 
     def name(self):
@@ -171,18 +143,13 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                     ''', (generator_id, colno, value, code))
 
     def drop_generator(self, bdb, generator_id):
-        # Flush any cached schema or models.
+        # Flush any cached schema or engines.
         cache = self._cache_nocreate(bdb)
         if cache is not None:
             if generator_id in cache.schema:
                 del cache.schema[generator_id]
-            if generator_id in cache.model:
-                del cache.model[generator_id]
-
-        # Delete models.
-        bdb.sql_execute('''
-            DELETE FROM bayesdb_cgpm_model WHERE generator_id = ?
-        ''', (generator_id,))
+            if generator_id in cache.engine:
+                del cache.engine[generator_id]
 
         # Delete categories.
         bdb.sql_execute('''
@@ -198,121 +165,69 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Caller should guarantee a nondegenerate request.
         n = len(modelnos)
         assert 0 < n
-
-        # Get the cache.  It had better not have any models yet.
-        cache = self._cache(bdb)
-        if cache is not None and generator_id in cache.models:
-            assert not any(modelno in cache.models[generator_id]
-                for modelno in modelnos)
+        assert modelnos == range(n)     # XXX incremental model initialization
 
         # Get the schema.
         schema = self._schema(bdb, generator_id)
 
-        # Initialize fresh states.
+        # Initialize an engine.
         variables = schema['variables']
-        states = self._initialize_states(bdb, generator_id, n, variables)
+        engine = self._initialize_engine(bdb, generator_id, n, variables)
 
-        # Initialize fresh CGPMs for each state.
+        # Initialize CGPMs for each state.
         for cgpm_ext in schema['cgpm_composition']:
             cgpm_initializer = self._cgpm_initializer(
                 bdb, generator_id, cgpm_ext)
-            for state in states:
+            for i, state in enumerate(engine.get_states(xrange(n))):
                 cgpm = cgpm_initializer()
                 _token = state.compose_cgpm(cgpm)
+                engine.states[i] = state.to_metadata()
 
-        # Make sure the cache, if available, is ready for models for
-        # this generator.
-        if cache is not None:
-            if generator_id not in cache.models:
-                cache.models[generator_id] = {}
-
-        # Store the newly initialized states.
-        for modelno, state in zip(modelnos, states):
-            # Serialize the state.
-            state_json = json_dumps(state.to_metadata())
-
-            # Store it persistently in the database.
-            bdb.sql_execute('''
-                INSERT INTO bayesdb_cgpm_model
-                    (generator_id, modelno, state_json)
-                    VALUES (?, ?, ?)
-            ''', (generator_id, modelno, state_json))
-
-            # Store it in the cache, if available.
-            if cache is not None:
-                cache.models[generator_id][modelno] = state
+        # Store the newly initialized engine.
+        engine_json = json_dumps(engine.to_metadata())
+        bdb.sql_execute('''
+            UPDATE bayesdb_cgpm_generator
+                SET engine_json = :engine_json
+                WHERE generator_id = :generator_id
+        ''', {'generator_id': generator_id, 'engine_json': engine_json})
 
     def drop_models(self, bdb, generator_id, modelnos=None):
-        # Get the cache.
-        cache = self._cache(bdb)
+        assert modelnos is None
 
-        # Are we dropping all models or only selected ones?
-        if modelnos is None:
-            # All models.
-            if cache is not None:
-                if generator_id in cache.models:
-                    del cache.models[generator_id]
-            bdb.sql_execute('''
-                DELETE FROM bayesdb_cgpm_model WHERE generator_id = ?
-            ''', (generator_id,))
-        else:
-            # Selected models.
-            for modelno in modelnos:
-                bdb.sql_execute('''
-                    DELETE FROM bayesdb_cgpm_model
-                        WHERE generator_id = ? AND modelno = ?
-                ''', (generator_id, modelno))
-                if cache is not None and generator_id in cache.models:
-                    del cache.models[generator_id][modelno]
-                    if len(cache.models[generator_id]) == 0:
-                        del cache.models[generator_id]
+        # Delete the engine.
+        bdb.sql_execute('''
+            UPDATE bayesdb_cgpm_generator SET engine_json = NULL
+                WHERE generator_id = ?
+        ''', (generator_id,))
+
+        # Delete it from the cache too if necessary.
+        cache = self._cache(bdb)
+        if cache is not None and generator_id in cache.engine:
+            del cache.engine[generator_id]
 
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
             max_seconds=None, ckpt_iterations=None, ckpt_seconds=None):
+        assert modelnos is None
+
         if ckpt_iterations is not None or ckpt_seconds is not None:
             # XXX
             raise NotImplementedError('cgpm analysis checkpoint')
 
-        with self._engine_states(bdb, generator_id, modelnos):
-            with self._engine_data(bdb, generator_id):
-                # Do the transition.
-                self._engine.transition(
-                    N=iterations, S=max_seconds, multithread=False)
+        # Get the engine.
+        engine = self._engine(bdb, generator_id)
 
-                # Get the cache and make sure if it is available it is
-                # ready for models in this generator.
-                cache = self._cache(bdb)
-                if cache is not None:
-                    if generator_id not in cache.models:
-                        cache.models[generator_id] = {}
+        # Do the transition.
+        engine.transition(N=iterations, S=max_seconds, multithread=False)
 
-                # Enumerate the states -- consecutively numbered, if the
-                # caller didn't specify which ones.
-                if modelnos is None:
-                    modelnos = xrange(len(self._engine.states))
-                for modelno, state in zip(modelnos, self._engine.states):
-                    # Get the actual state, until we persuade engines
-                    # to store states and not serialized states.
-                    state = State.from_metadata(state, rng=bdb.np_prng)
+        # Serialize the engine.
+        engine_json = json_dumps(engine.to_metadata())
 
-                    # Serialize the state.
-                    state_json = json_dumps(state.to_metadata())
-
-                    # Store it persistently in the database.
-                    bdb.sql_execute('''
-                        UPDATE bayesdb_cgpm_model
-                            SET state_json = :state_json
-                            WHERE generator_id = :generator_id
-                                AND modelno = :modelno
-                    ''', {
-                        'generator_id': generator_id,
-                        'modelno': modelno,
-                        'state_json': state_json,
-                    })
-
-                    # Store it in the cache, if available.
-                    if cache is not None:
-                        cache.models[generator_id][modelno] = state
+        # Update the engine.
+        bdb.sql_execute('''
+            UPDATE bayesdb_cgpm_generator
+                SET engine_json = :engine_json
+                WHERE generator_id = :generator_id
+        ''', {'generator_id': generator_id, 'engine_json': engine_json})
 
     def column_dependence_probability(self, bdb, generator_id, modelno,
             colno0, colno1):
@@ -321,13 +236,11 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         if colno0 == colno1:
             return 1
 
-        # Prepare the engine with the requested states.
-        modelnos = None if modelno is None else [modelno]
-        with self._engine_states(bdb, generator_id, modelnos):
-            with self._engine_data(bdb, generator_id):
-                # Go!
-                return self._engine.dependence_probability(
-                    colno0, colno1, multithread=False)
+        # Get the engine.
+        engine = self._engine(bdb, generator_id)
+
+        # Go!
+        return engine.dependence_probability(colno0, colno1, multithread=False)
 
     def column_mutual_information(self, bdb, generator_id, modelno,
             colno0, colno1, numsamples=None):
@@ -335,32 +248,30 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         if numsamples is None:
             numsamples = 1000
 
-        # Prepare the engine with the requested states.
-        modelnos = None if modelno is None else [modelno]
-        with self._engine_states(bdb, generator_id, modelnos):
-            # Go!
-            mi_list = self._engine.mutual_information(
-                colno0, colno1, N=numsamples)
+        # Get the engine.
+        engine = self._engine(bdb, generator_id)
 
-            # Engine gives us a list of samples which it is our
-            # responsibility to integrate over.
-            #
-            # XXX Is this integral correct?  Should it be weighted?
-            return arithmetic_mean(mi_list)
+        # Go!
+        mi_list = engine.mutual_information(colno0, colno1, N=numsamples)
+
+        # Engine gives us a list of samples which it is our
+        # responsibility to integrate over.
+        #
+        # XXX Is this integral correct?  Should it be weighted?
+        return arithmetic_mean(mi_list)
 
     def row_similarity(self, bdb, generator_id, modelno, rowid, target_rowid,
             colnos):
-        # Prepare the engine with the requested states.
-        modelnos = None if modelno is None else [modelno]
-        with self._engine_states(bdb, generator_id, modelnos):
-            # Map the variable and individual indexing.
-            cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
-            cgpm_target_rowid = self._cgpm_rowid(bdb, generator_id,
-                target_rowid)
+        # Map the variable and individual indexing.
+        cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
+        cgpm_target_rowid = self._cgpm_rowid(bdb, generator_id,
+            target_rowid)
 
-            # Go!
-            return self._engine.row_similarity(
-                cgpm_rowid, cgpm_target_rowid, colnos)
+        # Get the engine.
+        engine = self._engine(bdb, generator_id)
+
+        # Go!
+        return engine.row_similarity(cgpm_rowid, cgpm_target_rowid, colnos)
 
     def simulate_joint(self, bdb, generator_id, targets, constraints, modelno,
             num_predictions=None):
@@ -374,14 +285,12 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             colno: self._cgpm_value(bdb, generator_id, colno, value)
             for colno, value in constraints
         }
-        modelnos = None if modelno is None else [modelno]
-        with self._engine_states(bdb, generator_id, modelnos):
-            with self._engine_data(bdb, generator_id):
-                samples = self._engine.simulate(
-                    cgpm_rowid, cgpm_query, cgpm_evidence, N=num_predictions,
-                    multithread=False)
-                weighted_samples = self._engine._process_samples(
-                    samples, cgpm_rowid, cgpm_evidence, multithread=False)
+        engine = self._engine(bdb, generator_id)
+        samples = engine.simulate(
+            cgpm_rowid, cgpm_query, cgpm_evidence, N=num_predictions,
+            multithread=False)
+        weighted_samples = engine._process_samples(
+            samples, cgpm_rowid, cgpm_evidence, multithread=False)
         return [[row[colno] for colno in cgpm_query]
             for row in weighted_samples]
 
@@ -397,41 +306,17 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             colno: self._cgpm_value(bdb, generator_id, colno, value)
             for _r, colno, value in constraints
         }
-        modelnos = None if modelno is None else [modelno]
-        with self._engine_states(bdb, generator_id, modelnos):
-            with self._engine_data(bdb, generator_id):
-                logpdfs = self._engine.logpdf(
-                    cgpm_rowid, cgpm_query, cgpm_evidence, multithread=False)
-                # XXX abstraction violation
-                return self._engine._process_logpdfs(
-                    logpdfs, cgpm_rowid, cgpm_evidence, multithread=False)
+        engine = self._engine(bdb, generator_id)
+        logpdfs = engine.logpdf(
+            cgpm_rowid, cgpm_query, cgpm_evidence, multithread=False)
+        # XXX abstraction violation
+        return engine._process_logpdfs(
+            logpdfs, cgpm_rowid, cgpm_evidence, multithread=False)
 
     def _unique_rowid(self, rowids):
         if len(set(rowids)) != 1:
             raise ValueError('Multiple-row query: %r' % (list(set(rowids)),))
         return rowids[0]
-
-    @contextlib.contextmanager
-    def _engine_states(self, bdb, generator_id, modelnos):
-        # Load the states from the database.
-        states = self._models(bdb, generator_id, modelnos)
-
-        # Prepare the engine with these states.
-        with engine_states(self._engine, states):
-            yield
-
-    @contextlib.contextmanager
-    def _engine_data(self, bdb, generator_id):
-        # Get the variables modelled by feralcat.
-        schema = self._schema(bdb, generator_id)
-        vars = [var for var, _stattype, _dist, _params in schema['variables']]
-
-        # Load the mapped data from the database.
-        data = self._data(bdb, generator_id, vars)
-
-        # Prepare the engine with these data.
-        with engine_X(self._engine, data):
-            yield
 
     def _data(self, bdb, generator_id, vars):
         # Get the column numbers and statistical types.
@@ -464,8 +349,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         return [tuple(map_value(colno, x) for colno, x in zip(colnos, row))
             for row in cursor]
 
-    def _initialize_states(self, bdb, generator_id, nstates, variables):
-        # XXX Parallelize me!  Push me into the engine!
+    def _initialize_engine(self, bdb, generator_id, n, variables):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         def map_var(var):
             return core.bayesdb_variable_number(bdb, population_id, var)
@@ -474,10 +358,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         distargs = [distargs for _n, _st, _cct, distargs in variables]
         vars = [var for var, _stattype, _dist, _params in variables]
         data = self._data(bdb, generator_id, vars)
-        return [
-            State(data, outputs, cctypes=cctypes, distargs=distargs)
-            for _ in xrange(nstates)
-        ]
+        return Engine(
+            data, num_states=n, rng=bdb.np_prng, multithread=False,
+            outputs=outputs, cctypes=cctypes, distargs=distargs)
 
     def _cgpm_initializer(self, bdb, generator_id, cgpm_ext):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
@@ -546,8 +429,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         schema_json = cursor_value(cursor, nullok=True)
         if schema_json is None:
             generator = core.bayesdb_generator_name(bdb, generator_id)
-            raise BQLError(bdb, 'No such CGPM generator %r: %d' %
-                (generator, modelno))
+            raise BQLError(bdb, 'No such CGPM generator: %r' % (generator,))
 
         # Deserialize the schema.
         schema = json.loads(schema_json)
@@ -557,43 +439,30 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             cache.schema[generator_id] = schema
         return schema
 
-    def _models(self, bdb, generator_id, modelno):
-        # Get the model numbers.
-        modelnos = [modelno] if modelno is not None else \
-            core.bayesdb_generator_modelnos(bdb, generator_id)
-
-        # Get the model for each model number.
-        return [self._model(bdb, generator_id, modelno)
-            for modelno in modelnos]
-
-    def _model(self, bdb, generator_id, modelno):
+    def _engine(self, bdb, generator_id):
         # Probe the cache.
         cache = self._cache(bdb)
-        if cache is not None and \
-           generator_id in cache.models and \
-           modelno in cache.models[generator_id]:
-            return cache.models[generator_id][modelno]
+        if cache is not None and generator_id in cache.engine:
+            return cache.engine[generator_id]
 
-        # Not cached.  Load the model from the database.
+        # Not cached.  Load the engine from the database.
         cursor = bdb.sql_execute('''
-            SELECT state_json FROM bayesdb_cgpm_model
-                WHERE generator_id = ? AND modelno = ?
-        ''', (generator_id, modelno))
-        state_json = cursor_value(cursor, nullok=True)
-        if state_json is None:
+            SELECT engine_json FROM bayesdb_cgpm_generator
+                WHERE generator_id = ?
+        ''', (generator_id,))
+        engine_json = cursor_value(cursor)
+        if engine_json is None:
             generator = core.bayesdb_generator_name(bdb, generator_id)
-            raise BQLError(bdb, 'No such model for generator %s: %d' %
-                (repr(generator), modelno))
+            raise BQLError(bdb, 'No models initialized for generator: %r' %
+                (generator,))
 
-        # Deserialize the state.
-        state = State.from_metadata(json.loads(state_json), rng=bdb.np_prng)
+        # Deserialize the engine.
+        engine = Engine.from_metadata(json.loads(engine_json), rng=bdb.np_prng)
 
-        # Cache it, if available.
+        # Cache it, if we can.
         if cache is not None:
-            if generator_id not in cache.models:
-                cache.models[generator_id] = {}
-            cache.models[generator_id][modelno] = state
-        return state
+            cache.engine[generator_id] = engine
+        return engine
 
     # XXX subsampling
     def _cgpm_rowid(self, bdb, generator_id, rowid):
@@ -610,13 +479,16 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             code = cursor_value(cursor, nullok=True)
             if code is None:
                 raise BQLError('Invalid category: %r' % (value,))
+            if core.bayesdb_generator_column_name(bdb, generator_id, colno) \
+               == 'class_of_orbit':
+                assert code < 2
             return code
         return value
 
 class CGPM_Cache(object):
     def __init__(self):
         self.schema = {}
-        self.models = {}
+        self.engine = {}
 
 def _create_schema(bdb, generator_id, schema_ast):
     # Get some parameters.
