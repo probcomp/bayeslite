@@ -255,12 +255,12 @@ class BQLSemantics(object):
     def p_wait_opt_none(self):                  return False
     def p_wait_opt_some(self):                  return True
 
-    def p_simulate_s(self, cols, generator, modelno, constraints, lim):
-        return ast.Simulate(cols, generator, modelno, constraints, lim.limit)
-    def p_simulate_nolimit(self, cols, generator, modelno, constraints):
+    def p_simulate_s(self, cols, population, modelno, constraints, lim):
+        return ast.Simulate(cols, population, modelno, constraints, lim.limit)
+    def p_simulate_nolimit(self, cols, population, modelno, constraints):
         # XXX Report source location.
         self.errors.append('simulate missing limit')
-        return ast.Simulate(cols, generator, modelno, constraints, 0)
+        return ast.Simulate(cols, population, modelno, constraints, 0)
     def p_simulate_columns_one(self, col):
         return [col]
     def p_simulate_columns_many(self, cols, col):
@@ -303,16 +303,16 @@ class BQLSemantics(object):
         self.errors.append("deprecated `ESTIMATE PAIRWISE'"
             ": use `ESTIMATE ... FROM PAIRWISE COLUMNS OF'")
 
-    def p_estby_e(self, quant, cols, generator, modelno):
-        return ast.EstBy(quant, cols, generator, modelno)
+    def p_estby_e(self, quant, cols, population, modelno):
+        return ast.EstBy(quant, cols, population, modelno)
 
-    def p_infer_auto(self, cols, conf, generator, modelno, cond, grouping,
+    def p_infer_auto(self, cols, conf, population, modelno, cond, grouping,
             ord, lim):
-        return ast.InferAuto(cols, conf, generator, modelno, cond, grouping,
+        return ast.InferAuto(cols, conf, population, modelno, cond, grouping,
             ord, lim)
-    def p_infer_explicit(self, cols, generator, modelno, cond, grouping,
+    def p_infer_explicit(self, cols, population, modelno, cond, grouping,
             ord, lim):
-        return ast.InferExplicit(cols, generator, modelno, cond, grouping,
+        return ast.InferExplicit(cols, population, modelno, cond, grouping,
             ord, lim)
 
     def p_infer_auto_columns_one(self, c):      return [c]
