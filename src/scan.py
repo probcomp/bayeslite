@@ -22,7 +22,7 @@ import bayeslite.plex as Plex
 from bayeslite.util import casefold
 
 '''
-grep -o 'K_[A-Z0-9_]*' < grammar.y | sort -u | awk '
+grep -o 'K_[A-Z][A-Z0-9_]*' < grammar.y | sort -u | awk '
 {
     sub("^K_", "", $1)
     # All keywords are US-ASCII, so tolower is the same as casefold.
