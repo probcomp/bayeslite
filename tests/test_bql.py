@@ -993,7 +993,10 @@ def test_parametrized():
                     ' bayesdb_column AS c'
                 ' WHERE p.id = :population_id AND c.name = :name'
                     ' AND p.id = v.population_id'
-                    ' AND p.tabname = c.tabname AND v.colno = c.colno',
+                    ' AND p.tabname = c.tabname AND v.colno = c.colno'
+                ' UNION'
+                ' SELECT colno FROM bayesdb_latent'
+                    ' WHERE population_id = :population_id AND name = :name',
             # ESTIMATE SIMILARITY TO (rowid=1):
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'SELECT bql_row_similarity(1, NULL, _rowid_,'
@@ -1040,7 +1043,10 @@ def test_parametrized():
                     ' bayesdb_column AS c'
                 ' WHERE p.id = :population_id AND c.name = :name'
                     ' AND p.id = v.population_id'
-                    ' AND p.tabname = c.tabname AND v.colno = c.colno',
+                    ' AND p.tabname = c.tabname AND v.colno = c.colno'
+                ' UNION'
+                ' SELECT colno FROM bayesdb_latent'
+                    ' WHERE population_id = :population_id AND name = :name',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             # ESTIMATE SIMILARITY TO (rowid=1):
             'SELECT bql_row_similarity(1, NULL, _rowid_,'
@@ -1075,28 +1081,40 @@ def test_parametrized():
                     ' bayesdb_column AS c'
                 ' WHERE p.id = :population_id AND c.name = :name'
                     ' AND p.id = v.population_id'
-                    ' AND p.tabname = c.tabname AND v.colno = c.colno',
+                    ' AND p.tabname = c.tabname AND v.colno = c.colno'
+                ' UNION'
+                ' SELECT colno FROM bayesdb_latent'
+                    ' WHERE population_id = :population_id AND name = :name',
             'SELECT c.colno'
                 ' FROM bayesdb_population AS p,'
                     ' bayesdb_variable AS v,'
                     ' bayesdb_column AS c'
                 ' WHERE p.id = :population_id AND c.name = :name'
                     ' AND p.id = v.population_id'
-                    ' AND p.tabname = c.tabname AND v.colno = c.colno',
+                    ' AND p.tabname = c.tabname AND v.colno = c.colno'
+                ' UNION'
+                ' SELECT colno FROM bayesdb_latent'
+                    ' WHERE population_id = :population_id AND name = :name',
             'SELECT c.colno'
                 ' FROM bayesdb_population AS p,'
                     ' bayesdb_variable AS v,'
                     ' bayesdb_column AS c'
                 ' WHERE p.id = :population_id AND c.name = :name'
                     ' AND p.id = v.population_id'
-                    ' AND p.tabname = c.tabname AND v.colno = c.colno',
+                    ' AND p.tabname = c.tabname AND v.colno = c.colno'
+                ' UNION'
+                ' SELECT colno FROM bayesdb_latent'
+                    ' WHERE population_id = :population_id AND name = :name',
             'SELECT c.colno'
                 ' FROM bayesdb_population AS p,'
                     ' bayesdb_variable AS v,'
                     ' bayesdb_column AS c'
                 ' WHERE p.id = :population_id AND c.name = :name'
                     ' AND p.id = v.population_id'
-                    ' AND p.tabname = c.tabname AND v.colno = c.colno',
+                    ' AND p.tabname = c.tabname AND v.colno = c.colno'
+                ' UNION'
+                ' SELECT colno FROM bayesdb_latent'
+                    ' WHERE population_id = :population_id AND name = :name',
             'CREATE TEMP TABLE IF NOT EXISTS "sim"'
                 ' ("age" NUMERIC,"RANK" NUMERIC,"division" NUMERIC)',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
@@ -1231,24 +1249,30 @@ def test_parametrized():
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'PRAGMA table_info("t")',
             "SELECT CAST(4 AS INTEGER), CAST(NULL AS INTEGER), 'F'",
-            'SELECT c.colno' \
-                ' FROM bayesdb_population AS p,' \
-                    ' bayesdb_variable AS v,' \
-                    ' bayesdb_column AS c' \
-                ' WHERE p.id = :population_id' \
-                    ' AND c.name = :name' \
-                    ' AND p.id = v.population_id' \
-                    ' AND p.tabname = c.tabname' \
-                    ' AND v.colno = c.colno',
-            'SELECT c.colno' \
-                ' FROM bayesdb_population AS p,' \
-                    ' bayesdb_variable AS v,' \
-                    ' bayesdb_column AS c' \
-                ' WHERE p.id = :population_id' \
-                    ' AND c.name = :name' \
-                    ' AND p.id = v.population_id' \
-                    ' AND p.tabname = c.tabname' \
-                    ' AND v.colno = c.colno',
+            'SELECT c.colno'
+                ' FROM bayesdb_population AS p,'
+                    ' bayesdb_variable AS v,'
+                    ' bayesdb_column AS c'
+                ' WHERE p.id = :population_id'
+                    ' AND c.name = :name'
+                    ' AND p.id = v.population_id'
+                    ' AND p.tabname = c.tabname'
+                    ' AND v.colno = c.colno'
+                ' UNION'
+                ' SELECT colno FROM bayesdb_latent'
+                    ' WHERE population_id = :population_id AND name = :name',
+            'SELECT c.colno'
+                ' FROM bayesdb_population AS p,'
+                    ' bayesdb_variable AS v,'
+                    ' bayesdb_column AS c'
+                ' WHERE p.id = :population_id'
+                    ' AND c.name = :name'
+                    ' AND p.id = v.population_id'
+                    ' AND p.tabname = c.tabname'
+                    ' AND v.colno = c.colno'
+                ' UNION'
+                ' SELECT colno FROM bayesdb_latent'
+                    ' WHERE population_id = :population_id AND name = :name',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'SELECT MAX(_rowid_) FROM "t"',
             'SELECT id FROM bayesdb_generator WHERE population_id = ?',

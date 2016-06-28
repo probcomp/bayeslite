@@ -281,6 +281,9 @@ def execute_phrase(bdb, phrase, bindings=()):
                 DELETE FROM bayesdb_variable WHERE population_id = ?
             ''', (population_id,))
             bdb.sql_execute('''
+                DELETE FROM bayesdb_latent WHERE population_id = ?
+            ''', (population_id,))
+            bdb.sql_execute('''
                 DELETE FROM bayesdb_population WHERE id = ?
             ''', (population_id,))
         return empty_cursor(bdb)
@@ -583,6 +586,11 @@ def _create_population(bdb, phrase):
                 (population_id, colno, stattype)
                 VALUES (?, ?, ?)
         ''', (population_id, colno, casefold(stattype)))
+        if variable.latent:
+            bdb.sql_execute('''
+                INSERT INTO bayesdb_latent (population_id, colno, name)
+                    VALUES (?, ?, ?)
+            ''', (population_id, colno, casefold(name)))
 
 def rename_table(bdb, old, new):
     assert core.bayesdb_has_table(bdb, old)

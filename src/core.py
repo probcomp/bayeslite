@@ -237,6 +237,9 @@ def bayesdb_variable_number(bdb, population_id, name):
                 AND p.id = v.population_id
                 AND p.tabname = c.tabname
                 AND v.colno = c.colno
+        UNION
+        SELECT colno FROM bayesdb_latent
+            WHERE population_id = :population_id AND name = :name
     '''
     cursor = bdb.sql_execute(sql, {
         'population_id': population_id,
@@ -270,17 +273,23 @@ def bayesdb_variable_numbers(bdb, population_id):
 
 def bayesdb_variable_name(bdb, population_id, colno):
     """Return the name a population variable."""
-    sql = '''
-        SELECT c.name
-            FROM bayesdb_population AS p,
-                bayesdb_variable AS v,
-                bayesdb_column AS c
-            WHERE p.id = :population_id
-                AND v.colno = :colno
-                AND p.id = v.population_id
-                AND p.tabname = c.tabname
-                AND v.colno = c.colno
-    '''
+    if colno < 0:
+        sql = '''
+            SELECT name FROM bayesdb_latent
+                WHERE population_id = :population_id AND colno = :colno
+        '''
+    else:
+        sql = '''
+            SELECT c.name
+                FROM bayesdb_population AS p,
+                    bayesdb_variable AS v,
+                    bayesdb_column AS c
+                WHERE p.id = :population_id
+                    AND v.colno = :colno
+                    AND p.id = v.population_id
+                    AND p.tabname = c.tabname
+                    AND v.colno = c.colno
+        '''
     cursor = bdb.sql_execute(sql, {
         'population_id': population_id,
         'colno': colno,
