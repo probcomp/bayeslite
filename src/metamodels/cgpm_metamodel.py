@@ -50,6 +50,7 @@
 
 import contextlib
 import json
+import math
 
 from collections import namedtuple
 
@@ -408,11 +409,25 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         def initialize():
             cgpm = cls(outputs, inputs, rng=bdb.np_prng, *args, **kwds)
             for cgpm_rowid, row in enumerate(data):
-                query = {colno: row[i] for i, colno in enumerate(outputs)}
+                # CGPMs do not uniformly handle null values or missing
+                # values sensibly yet, so until we have that sorted
+                # out we both (a) omit nulls and (b) ignore errors in
+                # incorporate.
+                query = {
+                    colno: row[i]
+                    for i, colno in enumerate(outputs)
+                    if not math.isnan(row[i])
+                }
                 n = len(outputs)
-                evidence = \
-                    {colno: row[n + i] for i, colno in enumerate(inputs)}
-                cgpm.incorporate(cgpm_rowid, query, evidence)
+                evidence = {
+                    colno: row[n + i]
+                    for i, colno in enumerate(inputs)
+                    if not math.isnan(row[n + i])
+                }
+                try:
+                    cgpm.incorporate(cgpm_rowid, query, evidence)
+                except Exception:
+                    pass
             return cgpm
         return initialize
 
