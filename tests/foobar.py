@@ -189,26 +189,42 @@ print bdb.execute('''
     ''').fetchall()
 
 print 'PRED PROB'
-bdb.execute('''
+print bdb.execute('''
     ESTIMATE PREDICTIVE PROBABILITY OF apogee FROM satellites LIMIT 1
     ''').fetchall()
-bdb.execute('''
+print bdb.execute('''
     ESTIMATE PREDICTIVE PROBABILITY OF kepler_cluster_id FROM satellites LIMIT 1
     ''').fetchall()
-bdb.execute('''
+print bdb.execute('''
     ESTIMATE PREDICTIVE PROBABILITY OF kepler_noise FROM satellites LIMIT 1
     ''').fetchall()
-bdb.execute('''
+print bdb.execute('''
     ESTIMATE PREDICTIVE PROBABILITY OF period FROM satellites LIMIT 1
     ''').fetchall()
 
-assert False
+print 'INFERRING EXPLICIT'
+print bdb.execute('''
+    INFER EXPLICIT PREDICT kepler_cluster_id CONFIDENCE kepler_cluster_id_conf
+        FROM satellites LIMIT 2;
+    ''').fetchall()
+
+print bdb.execute('''
+    INFER EXPLICIT PREDICT kepler_noise CONFIDENCE kepler_noise_conf
+        FROM satellites LIMIT 2;
+    ''').fetchall()
+
+print bdb.execute('''
+    INFER EXPLICIT PREDICT apogee CONFIDENCE apogee_conf
+        FROM satellites LIMIT 1;
+    ''').fetchall()
 
 bdb.execute('''
     ESTIMATE PROBABILITY OF period = 42
             GIVEN (apogee = 8 AND perigee = 7)
         BY satellites
     ''').fetchall()
+
+assert False
 
 bdb.execute('''
     SIMULATE apogee, perigee, period FROM satellites LIMIT 100
