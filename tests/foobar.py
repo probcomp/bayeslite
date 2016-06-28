@@ -175,27 +175,20 @@ bdb.execute('''
 
     '''.format(kepler_source))
 
-assert False
 
+print 'INITIALIZING'
 bdb.execute('INITIALIZE 1 MODEL FOR g0')
 
-# Another generator: exponential launch mass instead of normal.
-bdb.execute('''
-    CREATE GENERATOR g1 FOR satellites USING cgpm (
-        launch_mass EXPONENTIAL,
-        MODEL period GIVEN apogee, perigee
-            USING kepler
-        )
-    ''')
-
-bdb.execute('INITIALIZE 1 MODEL IF NOT EXISTS FOR g1')
+print 'ANALYZING'
 bdb.execute('ANALYZE g0 FOR 1 ITERATION WAIT')
-bdb.execute('ANALYZE g1 FOR 1 ITERATION WAIT')
 
+print 'DEP PROB'
 bdb.execute('''
     ESTIMATE DEPENDENCE PROBABILITY
-        FROM PAIRWISE VARIABLES OF satellites
+        OF kepler_cluster_id WITH period BY satellites
     ''').fetchall()
+
+assert False
 
 bdb.execute('''
     ESTIMATE PREDICTIVE PROBABILITY OF period FROM satellites
