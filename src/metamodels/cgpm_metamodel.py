@@ -381,11 +381,20 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             cgpm = cls(outputs, inputs, rng=bdb.np_prng, *args, **kwds)
             for rowid, row in enumerate(data):
                 cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
-                query = {colno: row[i] for i, colno in enumerate(outputs)}
+                query = {
+                    colno: row[i] for i, colno in enumerate(outputs)
+                    if row[i] is not None}
                 n = len(outputs)
-                evidence = \
-                    {colno: row[n + i] for i, colno in enumerate(inputs)}
-                cgpm.incorporate(rowid, query, evidence)
+                evidence = {
+                    colno: row[n+i] for i, colno in enumerate(inputs)
+                    if row[n+i] is not None}
+                # If any input is missing from the evidence or is None,
+                # incorporate will fail. Just keep incorporating and ignore the
+                # failed incorporate.
+                try:
+                    cgpm.incorporate(rowid, query, evidence)
+                except:
+                    continue
             return cgpm
         return initialize
 
