@@ -253,6 +253,12 @@ def bayesdb_variable_number(bdb, population_id, name):
         assert isinstance(row[0], int)
         return row[0]
 
+def bayesdb_variable_names(bdb, population_id):
+    """Return a list of the names of columns modelled in `population_id`."""
+    colnos = bayesdb_variable_numbers(bdb, population_id)
+    return [bayesdb_variable_name(bdb, population_id, colno)
+        for colno in colnos]
+
 def bayesdb_variable_numbers(bdb, population_id):
     """Return a list of the numbers of columns modelled in `population_id`."""
     sql = '''

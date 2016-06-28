@@ -186,6 +186,7 @@ version_py = 'src/version.py'
 lemonade = 'external/lemonade/dist'
 grammars = [
     'src/grammar.y',
+    'src/metamodels/cgpm_grammar.y',
 ]
 
 setup(

@@ -63,6 +63,8 @@ from bayeslite.metamodel import IBayesDBMetamodel
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 
+import cgpm_parse
+
 CGPM_SCHEMA_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('cgpm', 1);
 
@@ -144,30 +146,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                     ' with unknown schema version: %d' % (version,))
 
     def create_generator(self, bdb, generator_id, schema_tokens):
-        # Parse the schema crap.
-        def intersperse(comma, l):
-            if len(l) == 0:
-                return []
-            it = iter(l)
-            result = list(it.next())
-            for l_ in it:
-                result.append(comma)
-                result += l_
-            return result
-        def flatten1(l, f):
-            for x in l:
-                if isinstance(x, list):
-                    f.append('(')
-                    flatten1(x, f)
-                    f.append(')')
-                else:
-                    f.append(x)
-        def flatten(l):
-            f = []
-            flatten1(l, f)
-            return f
-        tokenses = [flatten(tokens) for tokens in schema_tokens]
-        schema = _parse_cgpm_schema(intersperse(',', tokenses))
+        schema_ast = cgpm_parse.parse(schema_tokens)
+        schema = _create_schema(bdb, generator_id, schema_ast)
 
         # Store the schema.
         bdb.sql_execute('''
@@ -699,28 +679,167 @@ class CGPM_Cache(object):
         self.schema = {}
         self.models = {}
 
-def _parse_cgpm_schema(tokens):
-    # XXX MEGA-KLUDGE!
-    def jsonify(x):
-        if isinstance(x, int):
-            return str(x)
-        elif x == '<':
-            return '{'
-        elif x == '>':
-            return '}'
-        elif x == '(':
-            return '['
-        elif x == ')':
-            return ']'
-        elif x == '~':
-            return ':'
-        elif x == ',':
-            return ','
+def _create_schema(bdb, generator_id, schema_ast):
+    # Get some parameters.
+    population_id = core.bayesdb_generator_population(bdb, generator_id)
+    table = core.bayesdb_population_table(bdb, population_id)
+    qt = sqlite3_quote_name(table)
+
+    # State.
+    variables = []
+    categoricals = {}
+    cgpm_composition = []
+    deferred_dist = {}
+    modelled = set()
+
+    # Error-reporting state.
+    duplicate = set()
+    unknown = set()
+    needed = set()
+
+    # Process each clause one by one.
+    for clause in schema_ast:
+
+        if isinstance(clause, cgpm_parse.Basic):
+            # Basic Crosscat component model: one variable to be put
+            # into Crosscat views.
+            var = clause.var
+            dist = clause.dist
+            params = dict(clause.params) # XXX error checking
+
+            # Reject if the variable does not exist.
+            if not core.bayesdb_has_variable(bdb, population_id, var):
+                unknown.add(var)
+                continue
+
+            # Reject if the variable has already been modelled.
+            if var in modelled:
+                duplicate.add(var)
+                continue
+
+            # Add it to the list and mark it modelled.
+            colno = core.bayesdb_variable_number(bdb, population_id, var)
+            stattype = core.bayesdb_variable_stattype(
+                bdb, population_id, colno)
+            variables.append([var, stattype, dist, params])
+            modelled.add(var)
+
+        elif isinstance(clause, cgpm_parse.Foreign):
+            # Foreign model: some set of output variables is to be
+            # modelled by foreign logic, possibly conditional on some
+            # set of input variables.
+            #
+            # Gather up the state for a cgpm_composition record, which
+            # we may have to do incrementally because it must refer to
+            # the distribution types of variables we may not have
+            # seen.
+            name = clause.name
+            outputs = clause.outputs
+            inputs = clause.inputs
+            cctypes = []
+            ccargs = []
+            distargs = {'cctypes': cctypes, 'ccargs': ccargs}
+            kwds = {'distargs': distargs}
+
+            # First make sure all the output variables exist and have
+            # not yet been modelled.
+            for var in clause.outputs:
+                if not core.bayesdb_has_variable(bdb, population_id, var):
+                    unknown.add(var)
+                    continue
+                if var in modelled:
+                    duplicate.add(var)
+                    break
+                modelled.add(var)
+                # XXX check agreement with statistical type
+            else:
+                # Next make sure all the input variables exist, mark
+                # them needed, and record where to put their
+                # distribution type and parameters.
+                for var in inputs:
+                    if not core.bayesdb_has_variable(bdb, population_id, var):
+                        unknown.add(var)
+                        continue
+                    needed.add(var)
+                    # XXX check agreement with statistical type
+                    n = len(cctypes)
+                    assert n == len(ccargs)
+                    cctypes.append(None)
+                    ccargs.append(None)
+                    assert var not in deferred_dist
+                    deferred_dist[var] = (cctypes, ccargs, n)
+                else:
+                    # Finally, add a cgpm_composition record.
+                    cgpm_composition.append({
+                        'name': name,
+                        'inputs': inputs,
+                        'outputs': outputs,
+                        'kwds': kwds,
+                    })
         else:
-            return '"' + x + '"'
-    schema = json.loads(' '.join(map(jsonify, tokens)))
-    # XXX check schema
-    return schema
+            assert False
+
+    # Raise an exception if there were duplicates or unknown
+    # variables.
+    if duplicate:
+        raise BQLError(bdb, 'Duplicate model variables: %r' %
+            (sorted(duplicate),))
+    if unknown:
+        raise BQLError(bdb, 'Unknown model variables: %r' %
+            (sorted(unknown),))
+
+    # Use the default distribution for any variables that remain to be
+    # modelled, excluding any that have statistical types we don't
+    # know about.
+    for var in core.bayesdb_variable_names(bdb, population_id):
+        if var in modelled:
+            continue
+        colno = core.bayesdb_variable_number(bdb, population_id, var)
+        stattype = core.bayesdb_variable_stattype(bdb, population_id, colno)
+        if stattype not in _DEFAULT_DIST:
+            continue
+        dist, params = _DEFAULT_DIST[stattype](bdb, generator_id, var)
+        variables.append([var, stattype, dist, params])
+        modelled.add(var)
+
+    # If there remain any variables that we needed to model, because
+    # others are conditional on them, fail.
+    needed -= modelled
+    if needed:
+        raise BQLError(bdb, 'Unmodellable variables: %r' % (needed,))
+
+    # Assign the deferred distribution types and parameters.  All
+    # should be accounted for by now -- otherwise one of the previous
+    # exceptions should have been raised.
+    for var, stattype, dist, params in variables:
+        if var in deferred_dist:
+            cctypes, ccargs, i = deferred_dist[var]
+            cctypes[i] = dist
+            ccargs[i] = params
+            del deferred_dist[var]
+    assert not deferred_dist
+
+    # Finally, create a CGPM schema.
+    return {
+        'variables': variables,
+        'cgpm_composition': cgpm_composition,
+    }
+
+def _default_categorical(bdb, generator_id, var):
+    table = core.bayesdb_generator_table(bdb, generator_id)
+    qt = sqlite3_quote_name(table)
+    qv = sqlite3_quote_name(var)
+    cursor = bdb.sql_execute('SELECT COUNT(DISTINCT %s) FROM %s' % (qv, qt))
+    k = cursor_value(cursor)
+    return 'categorical', {'k': k}
+
+def _default_numerical(bdb, generator_id, var):
+    return 'normal', {}
+
+_DEFAULT_DIST = {
+    'categorical': _default_categorical,
+    'numerical': _default_numerical,
+}
 
 # XXX Move these utilities elsewhere.
 

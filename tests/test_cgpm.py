@@ -31,7 +31,7 @@ from cgpm.cgpm import CGpm
 class FourWay(CGpm):
     """Generates categorical(4) output on R2 valued input."""
 
-    def __init__(self, outputs, inputs, rng):
+    def __init__(self, outputs, inputs, rng, distargs=None):
         self.rng = rng
         self.probabilities =[
             [.7, .1, .05, .05],
@@ -145,80 +145,19 @@ def test_cgpm():
         }
         bayesdb_register_metamodel(bdb, CGPM_Metamodel(engine, registry))
         bdb.execute('''
-            CREATE GENERATOR g0 FOR satellites USING cgpm (<
-                "variables"~ (
-                    ("apogee", "numerical", "normal", < >),
-                    ("class_of_orbit", "categorical", "categorical", <"k"~ 3>),
-                    ("country_of_operator", "categorical", "categorical",
-                     <"k"~ 4>),
-                    ("launch_mass", "numerical", "normal", < >),
-                    ("perigee", "numerical", "normal", < >)--,
-                    --("period", "numerical", "normal", < >)
-                ),
-                "categoricals"~ <
-                    "1"~ <
-                        "geo"~ 0,
-                        "leo"~ 1,
-                        "meo"~ 2
-                    >,
-                    "2"~ <
-                        "US"~ 0,
-                        "Russia"~ 1,
-                        "China"~ 2,
-                        "Bulgaria"~ 3
-                    >
-                >,
-                "cgpm_composition"~ (
-                    <
-                        "name"~ "linreg",
-                        "inputs"~ ("apogee", "perigee"),
-                        "outputs"~ ("period"),
-                        -- "kwds"~ <"noise"~ 1.0>
-                        "kwds"~ <
-                            "distargs"~ <
-                                "cctypes"~ ("normal", "normal"),
-                                "ccargs"~ (< >, < >)
-                            >
-                        >
-                    >
-                )
-            >)
+            CREATE GENERATOR g0 FOR satellites USING cgpm (
+                MODEL period GIVEN apogee, perigee
+                    USING linreg
+            )
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR g0')
         # Another generator: exponential launch mass instead of normal.
         bdb.execute('''
-            CREATE GENERATOR g1 FOR satellites USING cgpm (<
-                "variables"~ (
-                    ("apogee", "numerical", "normal", < >),
-                    ("class_of_orbit", "categorical", "categorical", <"k"~ 3>),
-                    ("country_of_operator", "categorical", "categorical",
-                     <"k"~ 4>),
-                    ("launch_mass", "numerical", "exponential", < >),
-                    ("perigee", "numerical", "normal", < >)--,
-                    --("period", "numerical", "normal", < >)
-                ),
-                "categoricals"~ <
-                    "1"~ <
-                        "geo"~ 0,
-                        "leo"~ 1,
-                        "meo"~ 2
-                    >,
-                    "2"~ <
-                        "US"~ 0,
-                        "Russia"~ 1,
-                        "China"~ 2,
-                        "Bulgaria"~ 3
-                    >
-                >,
-                "cgpm_composition"~ (
-                    <
-                        "name"~ "kepler",
-                        "inputs"~ ("apogee", "perigee"),
-                        "outputs"~ ("period")
-                        -- "kwds"~ <"noise"~ 1.0>
-                    >
-                )
-            >)
+            CREATE GENERATOR g1 FOR satellites USING cgpm (
+                launch_mass EXPONENTIAL,
+                MODEL period GIVEN apogee, perigee
+                    USING kepler
+            )
         ''')
         bdb.execute('INITIALIZE 1 MODEL IF NOT EXISTS FOR g1')
         bdb.execute('ANALYZE g0 FOR 1 ITERATION WAIT')
