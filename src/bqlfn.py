@@ -27,7 +27,7 @@ from bayeslite.sqlite3_util import sqlite3_quote_name
 
 from bayeslite.math_util import ieee_exp
 from bayeslite.math_util import logmeanexp
-from bayeslite.math_util import logsumexp_weighted
+from bayeslite.math_util import logavgexp_weighted
 from bayeslite.util import casefold
 
 def bayesdb_install_bql(db, cookie):
@@ -341,7 +341,7 @@ def _bql_logpdf(bdb, population_id, targets, constraints):
     metamodels = [core.bayesdb_generator_metamodel(bdb, g) for g in generators]
     loglikelihoods = map(loglikelihood, generators, metamodels)
     logpdfs = map(logpdf, generators, metamodels)
-    return logsumexp_weighted(loglikelihoods, logpdfs)
+    return logavgexp_weighted(loglikelihoods, logpdfs)
 
 ### BayesDB row functions
 

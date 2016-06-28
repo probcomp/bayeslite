@@ -92,7 +92,7 @@ def logmeanexp(array):
     #   = logsumexp(logprobs) - log(len(logprobs))
     return logsumexp(noninfs) - math.log(len(array))
 
-def logsumexp_weighted(log_W, log_A):
+def logavgexp_weighted(log_W, log_A):
     # Given log W_0, log W_1, ..., log W_{n-1} and log A_0, log A_1,
     # ... log A_{n-1}, compute
     #

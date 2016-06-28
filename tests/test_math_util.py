@@ -123,7 +123,7 @@ def test_logmeanexp():
     assert math.isnan(logmeanexp([nan, -3]))
     assert math.isnan(logmeanexp([nan]))
 
-def test_logsumexp_weighted():
+def test_logavgexp_weighted():
     # XXX Expand me!
     assert relerr(-1000 - logsumexp([500, -500]) + math.log(2),
-            logsumexp_weighted([500, -500], [-1500, -500])) < 1e-15
+            logavgexp_weighted([500, -500], [-1500, -500])) < 1e-15
