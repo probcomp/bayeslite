@@ -413,10 +413,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         outputs = [map_var(var) for var, _st, _cct, _da in variables]
         cctypes = [cctype for _n, _st, cctype, _da in variables]
         distargs = [distargs for _n, _st, _cct, distargs in variables]
-        vars = [var for var, _stattype, _dist, _params in variables]
-        data = self._data(bdb, generator_id, vars)
+        gpmcc_vars = [var for var, _stattype, _dist, _params in variables]
+        gpmcc_data = self._data(bdb, generator_id, gpmcc_vars)
         return Engine(
-            data, num_states=n, rng=bdb.np_prng, multithread=False,
+            gpmcc_data, num_states=n, rng=bdb.np_prng, multithread=False,
             outputs=outputs, cctypes=cctypes, distargs=distargs)
 
     def _cgpm_initializer(self, bdb, generator_id, cgpm_ext):
@@ -431,11 +431,11 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         if name not in self._cgpm_registry:
             raise BQLError(bdb, 'Unknown CGPM: %s' % (repr(name),))
         cls = self._cgpm_registry[name]
-        vars = cgpm_ext['outputs'] + cgpm_ext['inputs']
-        data = self._data(bdb, generator_id, vars)
+        cgpm_vars = cgpm_ext['outputs'] + cgpm_ext['inputs']
+        cgpm_data = self._data(bdb, generator_id, cgpm_vars)
         def initialize():
             cgpm = cls(outputs, inputs, rng=bdb.np_prng, *args, **kwds)
-            for cgpm_rowid, row in enumerate(data):
+            for cgpm_rowid, row in enumerate(cgpm_data):
                 # CGPMs do not uniformly handle null values or missing
                 # values sensibly yet, so until we have that sorted
                 # out we both (a) omit nulls and (b) ignore errors in
