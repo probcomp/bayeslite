@@ -630,8 +630,9 @@ def _create_schema(bdb, generator_id, schema_ast):
                     assert n == len(ccargs)
                     cctypes.append(None)
                     ccargs.append(None)
-                    assert var not in deferred_dist
-                    deferred_dist[var] = (cctypes, ccargs, n)
+                    if var not in deferred_dist:
+                        deferred_dist[var] = []
+                    deferred_dist[var].append((cctypes, ccargs, n))
                 else:
                     # Finally, add a cgpm_composition record.
                     cgpm_composition.append({
@@ -682,9 +683,9 @@ def _create_schema(bdb, generator_id, schema_ast):
     # exceptions should have been raised.
     for var, stattype, dist, params in variables:
         if var in deferred_dist:
-            cctypes, ccargs, i = deferred_dist[var]
-            cctypes[i] = dist
-            ccargs[i] = params
+            for cctypes, ccargs, i in deferred_dist[var]:
+                cctypes[i] = dist
+                ccargs[i] = params
             del deferred_dist[var]
     assert not deferred_dist
 
