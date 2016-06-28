@@ -831,13 +831,11 @@ def test_trivial_commands():
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('infer explicit predict agee with confidence 0.9'
                 ' from p')
-        bdb.execute('''
-            create population pe for t0(
-                guess(*),
-                age numerical,
-                rank numerical
-            )
-        ''')
+        guess.bayesdb_guess_population(bdb, 'pe', 't0',
+            overrides={
+                'age': 'numerical',
+                'rank': 'numerical',
+            })
         bdb.execute('create generator pe_cc for pe using crosscat()')
         with pytest.raises(bayeslite.BQLError):
             # No models to analyze.
@@ -1005,34 +1003,35 @@ def test_parametrized():
                 ' with respect to (estimate * from columns of p limit ?)'
                 ' from p;',
                 (1,)) == [
-            'SELECT COUNT(*) FROM bayesdb_generator'
+            'SELECT COUNT(*) FROM bayesdb_population'
                 ' WHERE name = ?',
-            'SELECT id FROM bayesdb_generator'
+            'SELECT id FROM bayesdb_population'
                 ' WHERE name = ?',
-            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
-            'SELECT COUNT(*) FROM bayesdb_generator'
+            'SELECT tabname FROM bayesdb_population WHERE id = ?',
+            'SELECT COUNT(*) FROM bayesdb_population'
                 ' WHERE name = ?',
-            'SELECT id FROM bayesdb_generator'
+            'SELECT id FROM bayesdb_population'
                 ' WHERE name = ?',
             # ESTIMATE * FROM COLUMNS OF:
             'SELECT c.name AS name'
-                ' FROM bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc,'
+                ' FROM bayesdb_population AS p,'
+                    ' bayesdb_variable AS v,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = 1 AND gc.generator_id = g.id'
-                    ' AND c.tabname = g.tabname AND c.colno = gc.colno'
+                ' WHERE p.id = 1 AND v.population_id = p.id'
+                    ' AND c.tabname = p.tabname AND c.colno = v.colno'
                 ' LIMIT ?1',
             'SELECT c.colno'
-                ' FROM bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc,'
+                ' FROM bayesdb_population AS p,'
+                    ' bayesdb_variable AS v,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = :generator_id AND c.name = :column_name'
-                    ' AND g.id = gc.generator_id'
-                    ' AND g.tabname = c.tabname AND gc.colno = c.colno',
-            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
+                ' WHERE p.id = :population_id AND c.name = :column_name'
+                    ' AND p.id = v.population_id'
+                    ' AND p.tabname = c.tabname AND v.colno = c.colno',
+            'SELECT tabname FROM bayesdb_population WHERE id = ?',
             # ESTIMATE SIMILARITY TO (rowid=1):
             'SELECT bql_row_similarity(1, NULL, _rowid_,'
                 ' (SELECT _rowid_ FROM "t" WHERE ("rowid" = 1)), 0) FROM "t"',
+            'SELECT id FROM bayesdb_generator WHERE population_id = ?',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
             'SELECT modelno FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ?',
