@@ -125,6 +125,7 @@ keywords = {
     "when": grammar.K_WHEN,
     "where": grammar.K_WHERE,
     "with": grammar.K_WITH,
+    "within": grammar.K_WITHIN,
 }
 def scan_name(_scanner, text):
     return keywords.get(text) or keywords.get(casefold(text)) or \

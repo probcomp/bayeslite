@@ -203,7 +203,7 @@ estpairrow(e)		::= K_ESTIMATE K_PAIRWISE K_ROW error T_SEMI.
 estpaircol(e)		::= K_ESTIMATE K_PAIRWISE error T_SEMI.
 
 estby(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
-				K_BY generator_name(generator)
+				K_BY|K_WITHIN generator_name(generator)
 				usingmodel_opt(modelno).
 
 infer(auto)		::= K_INFER infer_auto_columns(cols)
@@ -670,6 +670,7 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 	/* K_WHEN */
 	K_WHERE
 	K_WITH
+	K_WITHIN
 	.
 
 /*
