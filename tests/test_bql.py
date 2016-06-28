@@ -1091,10 +1091,10 @@ def test_parametrized():
                     ' AND p.tabname = c.tabname AND v.colno = c.colno',
             'CREATE TEMP TABLE IF NOT EXISTS "sim"'
                 ' ("age" NUMERIC,"RANK" NUMERIC,"division" NUMERIC)',
+            'SELECT tabname FROM bayesdb_population WHERE id = ?',
+            'SELECT MAX(_rowid_) FROM "t"',
             'SELECT id FROM bayesdb_generator WHERE population_id = ?',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
-            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
-            'SELECT MAX(_rowid_) FROM "t"',
             'SELECT metadata_json FROM bayesdb_crosscat_metadata'
                 ' WHERE generator_id = ?',
             'SELECT modelno FROM bayesdb_crosscat_theta'
@@ -1766,28 +1766,28 @@ def test_nested_simulate():
 
 def test_checkpoint__ci_slow():
     with test_core.t1() as (bdb, population_id, generator_id):
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 10 iterations checkpoint 1 iteration'
+        bdb.execute('initialize 1 model for p1_cc')
+        bdb.execute('analyze p1_cc for 10 iterations checkpoint 1 iteration'
             ' wait')
-        bdb.execute('analyze t1_cc for 5 seconds checkpoint 1 second wait')
-        bdb.execute('drop models from t1_cc')
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 5 iterations checkpoint 1 second wait')
+        bdb.execute('analyze p1_cc for 5 seconds checkpoint 1 second wait')
+        bdb.execute('drop models from p1_cc')
+        bdb.execute('initialize 1 model for p1_cc')
+        bdb.execute('analyze p1_cc for 5 iterations checkpoint 1 second wait')
         sql = '''
             select iterations from bayesdb_generator_model
                 where generator_id = ?
         '''
         assert bdb.execute(sql, (generator_id,)).fetchvalue() == 5
-        bdb.execute('drop models from t1_cc')
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 1 iteration checkpoint 2 iterations'
+        bdb.execute('drop models from p1_cc')
+        bdb.execute('initialize 1 model for p1_cc')
+        bdb.execute('analyze p1_cc for 1 iteration checkpoint 2 iterations'
             ' wait')
         sql = '''
             select iterations from bayesdb_generator_model
                 where generator_id = ?
         '''
         assert bdb.execute(sql, (generator_id,)).fetchvalue() == 1
-        bdb.execute('analyze t1_cc for 1 iteration checkpoint 0 seconds wait')
+        bdb.execute('analyze p1_cc for 1 iteration checkpoint 0 seconds wait')
 
 def test_infer_confidence__ci_slow():
     with test_core.t1() as (bdb, _population_id, _generator_id):
