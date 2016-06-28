@@ -580,6 +580,12 @@ def _create_schema(bdb, generator_id, schema_ast):
     needed = set()
     invalid_latent = set()
 
+    def _retrieve_stattype_dist_params(var):
+        colno = core.bayesdb_variable_number(bdb, population_id, var)
+        stattype = core.bayesdb_variable_stattype(bdb, population_id, colno)
+        dist, params = _DEFAULT_DIST[stattype](bdb, generator_id, var)
+        return stattype, dist, params
+
     # Process each clause one by one.
     for clause in schema_ast:
 
@@ -640,10 +646,6 @@ def _create_schema(bdb, generator_id, schema_ast):
                     duplicate.add(var)
                     break
                 modelled.add(var)
-                # If the var is an input to another CGPM, no longer deferred.
-                if var in deferred_dist:
-                    del deferred_dist[var]
-                # XXX check agreement with statistical type
             else:
                 # Next make sure all the input variables exist, mark
                 # them needed, and record where to put their
@@ -654,14 +656,11 @@ def _create_schema(bdb, generator_id, schema_ast):
                         continue
                     needed.add(var)
                     # XXX check agreement with statistical type
-                    n = len(cctypes)
-                    assert n == len(ccargs)
-                    cctypes.append(None)
-                    ccargs.append(None)
-                    if var in deferred_dist:
-                        assert var in needed
-                    else:
-                        deferred_dist[var] = (cctypes, ccargs, n)
+                    assert len(cctypes) == len(ccargs)
+                    # Retrieve the default dist and params.
+                    _, dist, params = _retrieve_stattype_dist_params(var)
+                    cctypes.append(dist)
+                    ccargs.append(params)
                 else:
                     # Finally, add a cgpm_composition record.
                     cgpm_composition.append({
@@ -694,10 +693,9 @@ def _create_schema(bdb, generator_id, schema_ast):
         colno = core.bayesdb_variable_number(bdb, population_id, var)
         if colno < 0:
             continue
-        stattype = core.bayesdb_variable_stattype(bdb, population_id, colno)
+        stattype, dist, params = _retrieve_stattype_dist_params(var)
         if stattype not in _DEFAULT_DIST:
-            continue
-        dist, params = _DEFAULT_DIST[stattype](bdb, generator_id, var)
+            assert False    # XXX Why would you be here, anyway?
         variables.append([var, stattype, dist, params])
         modelled.add(var)
 
@@ -706,17 +704,6 @@ def _create_schema(bdb, generator_id, schema_ast):
     needed -= modelled
     if needed:
         raise BQLError(bdb, 'Unmodellable variables: %r' % (needed,))
-
-    # Assign the deferred distribution types and parameters.  All
-    # should be accounted for by now -- otherwise one of the previous
-    # exceptions should have been raised.
-    for var, stattype, dist, params in variables:
-        if var in deferred_dist:
-            cctypes, ccargs, i = deferred_dist[var]
-            cctypes[i] = dist
-            ccargs[i] = params
-            del deferred_dist[var]
-    assert not deferred_dist
 
     # Finally, create a CGPM schema.
     return {
