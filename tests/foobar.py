@@ -177,7 +177,7 @@ bdb.execute('''
 
 
 print 'INITIALIZING'
-bdb.execute('INITIALIZE 1 MODEL FOR g0')
+bdb.execute('INITIALIZE 2 MODELS FOR g0')
 
 print 'ANALYZING'
 bdb.execute('ANALYZE g0 FOR 1 ITERATION WAIT')
@@ -218,18 +218,19 @@ print bdb.execute('''
         FROM satellites LIMIT 1;
     ''').fetchall()
 
-bdb.execute('''
+print 'ESTIMATING PROBABILITY OF'
+
+print bdb.execute('''
     ESTIMATE PROBABILITY OF period = 42
             GIVEN (apogee = 8 AND perigee = 7)
         BY satellites
     ''').fetchall()
 
-assert False
+print 'SIMULATING JOINT'
 
-bdb.execute('''
+print bdb.execute('''
     SIMULATE apogee, perigee, period FROM satellites LIMIT 100
     ''').fetchall()
 
 bdb.execute('DROP MODELS FROM g0')
 bdb.execute('DROP GENERATOR g0')
-bdb.execute('DROP GENERATOR g1')
