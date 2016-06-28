@@ -274,7 +274,7 @@ def bql_column_mutual_information(bdb, population_id, _modelno, colno0, colno1,
 def bql_column_value_probability(bdb, population_id, _modelno, colno, value,
         *constraint_args):
     # A nonexistent (`unobserved') row id.
-    fake_row_id = -1
+    fake_row_id = core.bayesdb_population_fresh_row_id(bdb, population_id)
     constraints = []
     i = 0
     while i < len(constraint_args):
@@ -303,7 +303,7 @@ def bql_column_value_probability(bdb, population_id, _modelno, colno, value,
 # https://github.com/probcomp/bayeslite/issues/360
 def bql_pdf_joint(bdb, population_id, _modelno, *args):
     # A nonexistent (`unobserved') row id.
-    fake_row_id = -1
+    fake_row_id = core.bayesdb_population_fresh_row_id(bdb, population_id)
     i = 0
     targets = []
     while i < len(args):
@@ -402,7 +402,7 @@ def bayesdb_simulate(bdb, population_id, constraints, colnos,
     The results are simulated from the predictive distribution on
     fresh rows.
     """
-    fake_rowid = -1
+    fake_rowid = core.bayesdb_population_fresh_row_id(bdb, population_id)
     targets = [(fake_rowid, colno) for colno in colnos]
     if constraints:
         constraints = [(fake_rowid, colno, value)

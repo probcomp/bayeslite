@@ -76,6 +76,6 @@ def test_subsample():
         cursor = bdb.sql_execute(sql, (gid,))
         assert [row[0] for row in cursor] != range(1, 100 + 1)
         bdb.execute('DROP GENERATOR hosp_sub_cc')
-        bdb.execute('DROP GENERATOR hosp_ufull_cc')
+        bdb.execute('DROP GENERATOR hosp_full_cc')
         bdb.execute('DROP POPULATION hospitals_sub')
         bdb.execute('DROP POPULATION hospitals_full')
