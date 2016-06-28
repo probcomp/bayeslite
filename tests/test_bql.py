@@ -1718,23 +1718,19 @@ def test_guess_all():
 def test_misc_errors():
     with test_core.t1() as (bdb, _population_id, _generator_id):
         with pytest.raises(bayeslite.BQLError):
-            # p1 already exists as a generator.
-            bdb.execute('create table p1 as simulate weight from p1'
-                ' limit 1')
-        with pytest.raises(bayeslite.BQLError):
             # t1 already exists as a table.
             bdb.execute('create table t1 as simulate weight from p1'
                 ' limit 1')
         with pytest.raises(bayeslite.BQLError):
-            # t1x does not exist as a generator or table.
+            # t1x does not exist as a population.
             bdb.execute('create table t1_sim as simulate weight from t1x'
                 ' limit 1')
         with pytest.raises(bayeslite.BQLError):
-            # p1 does not have a column waught.
+            # p1 does not have a variable waught.
             bdb.execute('create table t1_sim as simulate waught from p1'
                 ' limit 1')
         with pytest.raises(bayeslite.BQLError):
-            # p1 does not have a column agee.
+            # p1 does not have a variable agee.
             bdb.execute('create table t1_sim as simulate weight from p1'
                 ' given agee = 42 limit 1')
         with bdb.savepoint():
@@ -1742,44 +1738,34 @@ def test_misc_errors():
             with pytest.raises(bayeslite.BQLError):
                 # t1 already exists as a table.
                 bdb.execute('alter table t2 rename to t1')
-            with pytest.raises(bayeslite.BQLError):
-                # p1 already exists as a generator.
-                bdb.execute('alter table t2 rename to p1')
         with pytest.raises(NotImplementedError):
             # Renaming columns is not yet implemented.
             bdb.execute('alter table t1 rename weight to mass')
         with pytest.raises(bayeslite.BQLError):
             # xcat does not exist as a metamodel.
-            bdb.execute('create generator t1_xc for t1 using xcat(guess(*))')
+            bdb.execute('create generator p1_xc for p1 using xcat()')
         with pytest.raises(bayeslite.BQLError):
-            # t1 already exists as a table.
-            bdb.execute('create generator t1 for t1 using crosscat(guess(*))')
-        with pytest.raises(bayeslite.BQLError):
-            # p1 already exists as a generator.
-            bdb.execute('create generator p1 for t1'
-                ' using crosscat(guess(*))')
+            # p1 already exists as a population.
+            bdb.execute('create generator p1_cc for p1'
+                ' using crosscat()')
         with pytest.raises(bayeslite.BQLError):
             # multinomial is not a known statistical type.
-            bdb.execute('create generator t1_xc for t1'
-                ' using crosscat(weight multinomial)')
+            bdb.execute('create population q1 for t1 (weight multinomial)')
         with pytest.raises(bayeslite.BQLError):
-            # t1_xc does not exist as a generator.
-            bdb.execute('alter generator t1_xc rename to t1_xcat')
-        with pytest.raises(bayeslite.BQLError):
-            # t1 already exists as a table.
-            bdb.execute('alter generator p1 rename to t1')
+            # p1_xc does not exist as a generator.
+            bdb.execute('alter generator p1_xc rename to p1_xcat')
         with bdb.savepoint():
-            bdb.execute('create generator t1_xc for t1'
-                ' using crosscat(guess(*))')
+            bdb.execute('create generator p1_xc for p1'
+                ' using crosscat()')
             with pytest.raises(bayeslite.BQLError):
-                # t1_xc already exists as a generator.
-                bdb.execute('alter generator p1 rename to t1_xc')
+                # p1_xc already exists as a generator.
+                bdb.execute('alter generator p1_cc rename to p1_xc')
         with pytest.raises(NotImplementedError):
             # Need WAIT.
-            bdb.execute('analyze p1 for 1 iteration')
+            bdb.execute('analyze p1_cc for 1 iteration')
         with bdb.savepoint():
-            bdb.execute('initialize 1 model for p1')
-            bdb.execute('analyze p1 for 1 iteration wait')
+            bdb.execute('initialize 1 model for p1_cc')
+            bdb.execute('analyze p1_cc for 1 iteration wait')
             with pytest.raises(apsw.SQLError):
                 bdb.execute('select'
                     ' nonexistent((simulate age from p1 limit 1));')
@@ -1804,7 +1790,7 @@ def test_misc_errors():
                 bdb.execute('estimate similarity to (rowid=1)'
                     ' with respect to (agee) from p1')
             except bayeslite.BQLError as e:
-                assert 'No such columns in generator:' in str(e)
+                assert 'No such columns in population:' in str(e)
                 raise
 
 def test_nested_simulate():
