@@ -27,6 +27,7 @@ from bayeslite.sqlite3_util import sqlite3_quote_name
 
 from bayeslite.math_util import ieee_exp
 from bayeslite.math_util import logmeanexp
+from bayeslite.math_util import logsumexp_weighted
 from bayeslite.util import casefold
 
 def bayesdb_install_bql(db, cookie):
@@ -286,16 +287,7 @@ def bql_column_value_probability(bdb, population_id, _modelno, colno, value,
         constraints.append((fake_row_id, constraint_colno, constraint_value))
         i += 2
     targets = [(fake_row_id, colno, value)]
-    def generator_logpdf(generator_id):
-        metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-        loglikelihood = metamodel.logpdf_joint(
-            bdb, generator_id, constraints, [], None)
-        logpdf = metamodel.logpdf_joint(
-            bdb, generator_id, targets, constraints, None)
-        return logpdf + loglikelihood
-    logp = logmeanexp(
-        map(generator_logpdf,
-            core.bayesdb_population_generators(bdb, population_id)))
+    logp = _bql_logpdf(bdb, population_id, targets, constraints)
     return ieee_exp(logp)
 
 # XXX This is silly.  We should return log densities, not densities.
@@ -325,17 +317,31 @@ def bql_pdf_joint(bdb, population_id, _modelno, *args):
         c_value = args[i + 1]
         constraints.append((fake_row_id, c_colno, c_value))
         i += 2
-    def generator_logpdf(generator_id):
-        metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-        loglikelihood = metamodel.logpdf_joint(
-            bdb, generator_id, constraints, [], None)
-        logpdf = metamodel.logpdf_joint(
-            bdb, generator_id, targets, constraints, None)
-        return logpdf + loglikelihood
-    logp = logmeanexp(
-        map(generator_logpdf,
-            core.bayesdb_population_generators(bdb, population_id)))
+    logp = _bql_logpdf(bdb, population_id, targets, constraints)
     return ieee_exp(logp)
+
+def _bql_logpdf(bdb, population_id, targets, constraints):
+    # P(T | C) = \sum_M P(T, M | C)
+    # = \sum_M P(T | C, M) P(M | C)
+    # = \sum_M P(T | C, M) P(M) P(C | M) / P(C)
+    # = \sum_M P(T | C, M) P(M) P(C | M) / \sum_M' P(C, M')
+    # = \sum_M P(T | C, M) P(M) P(C | M) / \sum_M' P(C | M') P(M')
+    #
+    # For a generator M, logpdf(M) computes P(T | C, M), and
+    # loglikelihood(M) computes P(C | M).  For now, we weigh each
+    # generator uniformly; eventually, we ought to allow the user to
+    # specify a prior weight (XXX and update some kind of posterior
+    # weight?).
+    def logpdf(generator_id, metamodel):
+        return metamodel.logpdf_joint(
+            bdb, generator_id, targets, constraints, None)
+    def loglikelihood(generator_id, metamodel):
+        return metamodel.logpdf_joint(bdb, generator_id, constraints, [], None)
+    generators = core.bayesdb_population_generators(bdb, population_id)
+    metamodels = [core.bayesdb_generator_metamodel(bdb, g) for g in generators]
+    loglikelihoods = map(loglikelihood, generators, metamodels)
+    logpdfs = map(logpdf, generators, metamodels)
+    return logsumexp_weighted(loglikelihoods, logpdfs)
 
 ### BayesDB row functions
 

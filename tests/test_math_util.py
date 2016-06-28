@@ -125,9 +125,5 @@ def test_logmeanexp():
 
 def test_logsumexp_weighted():
     # XXX Expand me!
-    assert logsumexp_weighted([500, -500], [-1500, -500]) == \
-        -1000 + math.log(2)
-
-def test_logmeanexp_weighted():
-    # XXX Expand me!
-    assert logmeanexp_weighted([500, -500], [-1500, -500]) == -1000
+    assert relerr(-1000 + logsumexp([500, -500]) + math.log(2),
+            logsumexp_weighted([500, -500], [-1500, -500])) < 1e-15
