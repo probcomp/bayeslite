@@ -183,16 +183,26 @@ print 'ANALYZING'
 bdb.execute('ANALYZE g0 FOR 1 ITERATION WAIT')
 
 print 'DEP PROB'
-bdb.execute('''
+print bdb.execute('''
     ESTIMATE DEPENDENCE PROBABILITY
         OF kepler_cluster_id WITH period BY satellites
     ''').fetchall()
 
-assert False
-
+print 'PRED PROB'
 bdb.execute('''
-    ESTIMATE PREDICTIVE PROBABILITY OF period FROM satellites
+    ESTIMATE PREDICTIVE PROBABILITY OF apogee FROM satellites LIMIT 1
     ''').fetchall()
+bdb.execute('''
+    ESTIMATE PREDICTIVE PROBABILITY OF kepler_cluster_id FROM satellites LIMIT 1
+    ''').fetchall()
+bdb.execute('''
+    ESTIMATE PREDICTIVE PROBABILITY OF kepler_noise FROM satellites LIMIT 1
+    ''').fetchall()
+bdb.execute('''
+    ESTIMATE PREDICTIVE PROBABILITY OF period FROM satellites LIMIT 1
+    ''').fetchall()
+
+assert False
 
 bdb.execute('''
     ESTIMATE PROBABILITY OF period = 42
