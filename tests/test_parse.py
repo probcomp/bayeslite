@@ -495,16 +495,18 @@ def test_trivial_commands():
             launch_mass numerical,
             perigee numerical,
             apogee numerical,
-            period numerical
+            period numerical,
+            latent kepler_error numerical
         )
     ''') == \
         [ast.CreatePop(False, 'satellites', 'satellites_ucs', [
-            ('country_of_operator', 'categorical'),
-            ('orbit_type', 'categorical'),
-            ('launch_mass', 'numerical'),
-            ('perigee', 'numerical'),
-            ('apogee', 'numerical'),
-            ('period', 'numerical'),
+            ast.PopVar(False, 'country_of_operator', 'categorical'),
+            ast.PopVar(False, 'orbit_type', 'categorical'),
+            ast.PopVar(False, 'launch_mass', 'numerical'),
+            ast.PopVar(False, 'perigee', 'numerical'),
+            ast.PopVar(False, 'apogee', 'numerical'),
+            ast.PopVar(False, 'period', 'numerical'),
+            ast.PopVar(True, 'kepler_error', 'numerical'),
         ])]
     assert parse_bql_string('drop population satellites') == \
         [ast.DropPop(False, 'satellites')]
