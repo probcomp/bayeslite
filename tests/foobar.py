@@ -167,14 +167,11 @@ bayesdb_register_metamodel(bdb, cgpmt)
 bdb.execute('''
     CREATE GENERATOR g0 FOR satellites USING cgpm (
         MODEL kepler_cluster_id, kepler_noise, period
-            GIVEN apogee, perigee
-            USING venturescript
-                (source = "
-                    {}
-                    "))
+            GIVEN apogee, perigee USING venturescript (source = "{}");
 
+        MODEL perigee GIVEN apogee USING linreg;
+        )
     '''.format(kepler_source))
-
 
 print 'INITIALIZING'
 bdb.execute('INITIALIZE 2 MODELS FOR g0')
