@@ -111,9 +111,11 @@ def test_cgpm():
         for l, f in [
             ('geo', lambda x, y: x + y**2),
             ('leo', lambda x, y: math.sin(x + y)),
+            (None, lambda x, y: x + y**2),
+            (None, lambda x, y: math.sin(x + y)),
         ]:
-            for x in xrange(10):
-                for y in xrange(10):
+            for x in xrange(5):
+                for y in xrange(5):
                     countries = ['US', 'Russia', 'China', 'Bulgaria']
                     country = countries[random.randrange(len(countries))]
                     mass = random.gauss(1000, 50)
@@ -154,7 +156,7 @@ def test_cgpm():
             CREATE GENERATOR g1 FOR satellites USING cgpm (
                 launch_mass EXPONENTIAL,
                 MODEL period GIVEN apogee, perigee
-                    USING kepler
+                    USING kepler (quagga = eland)
             )
         ''')
         bdb.execute('INITIALIZE 1 MODEL IF NOT EXISTS FOR g1')

@@ -50,6 +50,7 @@
 
 import contextlib
 import json
+import math
 
 from collections import namedtuple
 
@@ -72,6 +73,14 @@ CREATE TABLE bayesdb_cgpm_generator (
                             REFERENCES bayesdb_generator(id),
     schema_json         BLOB NOT NULL,
     engine_json         BLOB
+);
+
+CREATE TABLE bayesdb_cgpm_individual (
+    generator_id        INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    table_rowid         INTEGER NOT NULL,
+    cgpm_rowid          INTEGER NOT NULL,
+    UNIQUE(generator_id, table_rowid),
+    UNIQUE(generator_id, cgpm_rowid)
 );
 
 CREATE TABLE bayesdb_cgpm_category (
@@ -116,11 +125,13 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 VALUES (?, ?)
         ''', (generator_id, json_dumps(schema)))
 
-        # Assign codes to categories and consecutive column numbers to
-        # the modelled variables.
+        # Get the underlying population and table.
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         table = core.bayesdb_population_table(bdb, population_id)
         qt = sqlite3_quote_name(table)
+
+        # Assign codes to categories and consecutive column numbers to
+        # the modelled variables.
         vars_cursor = bdb.sql_execute('''
             SELECT v.colno, c.name, v.stattype
                 FROM bayesdb_variable AS v,
@@ -143,6 +154,18 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                             VALUES (?, ?, ?, ?)
                     ''', (generator_id, colno, value, code))
 
+        # Assign contiguous 0-indexed ids to the individuals in the
+        # table.
+        #
+        # XXX subsampling
+        cursor = bdb.sql_execute('SELECT _rowid_ FROM %s' % (qt,))
+        for cgpm_rowid, (table_rowid,) in enumerate(cursor):
+            bdb.sql_execute('''
+                INSERT INTO bayesdb_cgpm_individual
+                    (generator_id, table_rowid, cgpm_rowid)
+                    VALUES (?, ?, ?)
+            ''', (generator_id, table_rowid, cgpm_rowid))
+
     def drop_generator(self, bdb, generator_id):
         # Flush any cached schema or engines.
         cache = self._cache_nocreate(bdb)
@@ -155,6 +178,11 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Delete categories.
         bdb.sql_execute('''
             DELETE FROM bayesdb_cgpm_category WHERE generator_id = ?
+        ''', (generator_id,))
+
+        # Delete individual rowid mappings.
+        bdb.sql_execute('''
+            DELETE FROM bayesdb_cgpm_individual WHERE generator_id = ?
         ''', (generator_id,))
 
         # Delete generator.
@@ -342,7 +370,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Get a cursor.
         #
         # XXX Subsampling?
-        cursor = bdb.sql_execute('SELECT %s FROM %s' % (qexpressions, qt))
+        cursor = bdb.sql_execute('SELECT %s FROM %s ORDER BY _rowid_ ASC' %
+            (qexpressions, qt))
 
         # Map values to codes.
         def map_value(colno, value):
@@ -379,22 +408,26 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         data = self._data(bdb, generator_id, vars)
         def initialize():
             cgpm = cls(outputs, inputs, rng=bdb.np_prng, *args, **kwds)
-            for rowid, row in enumerate(data):
-                cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
+            for cgpm_rowid, row in enumerate(data):
+                # CGPMs do not uniformly handle null values or missing
+                # values sensibly yet, so until we have that sorted
+                # out we both (a) omit nulls and (b) ignore errors in
+                # incorporate.
                 query = {
-                    colno: row[i] for i, colno in enumerate(outputs)
-                    if row[i] is not None}
+                    colno: row[i]
+                    for i, colno in enumerate(outputs)
+                    if not math.isnan(row[i])
+                }
                 n = len(outputs)
                 evidence = {
-                    colno: row[n+i] for i, colno in enumerate(inputs)
-                    if row[n+i] is not None}
-                # If any input is missing from the evidence or is None,
-                # incorporate will fail. Just keep incorporating and ignore the
-                # failed incorporate.
+                    colno: row[n + i]
+                    for i, colno in enumerate(inputs)
+                    if not math.isnan(row[n + i])
+                }
                 try:
-                    cgpm.incorporate(rowid, query, evidence)
-                except:
-                    continue
+                    cgpm.incorporate(cgpm_rowid, query, evidence)
+                except Exception:
+                    pass
             return cgpm
         return initialize
 
@@ -474,11 +507,17 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             cache.engine[generator_id] = engine
         return engine
 
-    # XXX subsampling
-    def _cgpm_rowid(self, bdb, generator_id, rowid):
-        return rowid
+    def _cgpm_rowid(self, bdb, generator_id, table_rowid):
+        cursor = bdb.sql_execute('''
+            SELECT cgpm_rowid FROM bayesdb_cgpm_individual
+                WHERE generator_id = ? AND table_rowid = ?
+        ''', (generator_id, table_rowid))
+        cgpm_rowid = cursor_value(cursor, nullok=True)
+        return cgpm_rowid if cgpm_rowid is not None else -1
 
     def _cgpm_value(self, bdb, generator_id, colno, value):
+        if value is None:
+            return float('NaN')
         stattype = core.bayesdb_generator_column_stattype(
             bdb, generator_id, colno)
         if casefold(stattype) == 'categorical':
@@ -487,11 +526,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                     WHERE generator_id = ? AND colno = ? AND value = ?
             ''', (generator_id, colno, value))
             code = cursor_value(cursor, nullok=True)
-            # if code is None:
-            #     raise BQLError('Invalid category: %r' % (value,))
-            # if core.bayesdb_generator_column_name(bdb, generator_id, colno) \
-            #    == 'class_of_orbit':
-            #     assert code < 2
+            if code is None:
+                raise BQLError('Invalid category: %r' % (value,))
             return code
         return value
 
@@ -567,7 +603,6 @@ def _create_schema(bdb, generator_id, schema_ast):
             ccargs = []
             distargs = {'cctypes': cctypes, 'ccargs': ccargs}
             kwds = {'distargs': distargs}
-            kwds.update(clause.params)
 
             # First make sure all the output variables exist and have
             # not yet been modelled.
