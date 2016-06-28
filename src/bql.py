@@ -205,8 +205,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                     if casefold(table) == casefold(cmd.name):
                         # Go via a temporary table.
                         temp = table + '_temp'
-                        while core.bayesdb_has_table(bdb, temp) or \
-                              core.bayesdb_has_generator(bdb, temp):
+                        while core.bayesdb_has_table(bdb, temp):
                             temp += '_temp'
                         rename_table(bdb, table, temp)
                         rename_table(bdb, temp, cmd.name)
@@ -216,10 +215,6 @@ def execute_phrase(bdb, phrase, bindings=()):
                         if core.bayesdb_has_table(bdb, cmd.name):
                             raise BQLError(bdb, 'Name already defined as table'
                                 ': %s' %
-                                (repr(cmd.name),))
-                        if core.bayesdb_has_generator(bdb, cmd.name):
-                            raise BQLError(bdb, 'Name already defined'
-                                ' as generator: %s' %
                                 (repr(cmd.name),))
                         rename_table(bdb, table, cmd.name)
                     # Remember the new name for subsequent commands.
@@ -583,9 +578,7 @@ def _create_population(bdb, phrase):
 
 def rename_table(bdb, old, new):
     assert core.bayesdb_has_table(bdb, old)
-    assert not core.bayesdb_has_generator(bdb, old)
     assert not core.bayesdb_has_table(bdb, new)
-    assert not core.bayesdb_has_generator(bdb, new)
     # Rename the SQL table.
     qo = sqlite3_quote_name(old)
     qn = sqlite3_quote_name(new)
@@ -606,6 +599,11 @@ def rename_table(bdb, old, new):
         UPDATE bayesdb_generator SET tabname = ? WHERE tabname = ?
     '''
     bdb.sql_execute(update_generators_sql, (new, old))
+    # Update bayesdb_population to use the new name.
+    update_populations_sql = '''
+        UPDATE bayesdb_population SET tabname = ? WHERE tabname = ?
+    '''
+    bdb.sql_execute(update_populations_sql, (new, old))
 
 def empty_cursor(bdb):
     return None
