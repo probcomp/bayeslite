@@ -136,6 +136,14 @@ CREATE TABLE bayesdb_variable (
 	PRIMARY KEY(population_id, colno)
 );
 
+CREATE TABLE bayesdb_latent (
+	population_id	INTEGER NOT NULL REFERENCES bayesdb_population(id),
+	colno		INTEGER NOT NULL,
+	name		TEXT COLLATE NOCASE NOT NULL,
+	PRIMARY KEY(population_id, colno),
+	UNIQUE(population_id, name)
+);
+
 INSERT INTO bayesdb_variable (population_id, colno, stattype)
     SELECT p.id, gc.colno, gc.stattype
         FROM bayesdb_population AS p, bayesdb_generator AS g,
