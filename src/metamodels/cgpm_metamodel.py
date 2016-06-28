@@ -640,6 +640,9 @@ def _create_schema(bdb, generator_id, schema_ast):
                     duplicate.add(var)
                     break
                 modelled.add(var)
+                # If the var is an input to another CGPM, no longer deferred.
+                if var in deferred_dist:
+                    del deferred_dist[var]
                 # XXX check agreement with statistical type
             else:
                 # Next make sure all the input variables exist, mark
@@ -655,8 +658,10 @@ def _create_schema(bdb, generator_id, schema_ast):
                     assert n == len(ccargs)
                     cctypes.append(None)
                     ccargs.append(None)
-                    assert var not in deferred_dist
-                    deferred_dist[var] = (cctypes, ccargs, n)
+                    if var in deferred_dist:
+                        assert var in needed
+                    else:
+                        deferred_dist[var] = (cctypes, ccargs, n)
                 else:
                     # Finally, add a cgpm_composition record.
                     cgpm_composition.append({
