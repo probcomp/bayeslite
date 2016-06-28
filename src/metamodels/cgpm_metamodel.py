@@ -563,7 +563,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
     def _from_numeric(self, bdb, generator_id, colno, value):
         """Convert value in cgpm to equivalent bayeslite format."""
         if math.isnan(value):
-            return value
+            return None
         stattype = core.bayesdb_generator_column_stattype(
             bdb, generator_id, colno)
         if casefold(stattype) == 'categorical':
