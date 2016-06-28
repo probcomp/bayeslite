@@ -603,6 +603,7 @@ def _create_schema(bdb, generator_id, schema_ast):
             ccargs = []
             distargs = {'cctypes': cctypes, 'ccargs': ccargs}
             kwds = {'distargs': distargs}
+            kwds.update(clause.params)
 
             # First make sure all the output variables exist and have
             # not yet been modelled.
