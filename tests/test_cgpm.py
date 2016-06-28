@@ -162,7 +162,7 @@ def test_cgpm():
         bdb.execute('ANALYZE g1 FOR 1 ITERATION WAIT')
         bdb.execute('''
             ESTIMATE DEPENDENCE PROBABILITY
-                FROM PAIRWISE COLUMNS OF satellites
+                FROM PAIRWISE VARIABLES OF satellites
         ''').fetchall()
         bdb.execute('''
             ESTIMATE PREDICTIVE PROBABILITY OF period FROM satellites
