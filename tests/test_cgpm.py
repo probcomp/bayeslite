@@ -30,7 +30,7 @@ from cgpm.cgpm import CGpm
 class FourWay(CGpm):
     """Generates categorical(4) output on R2 valued input."""
 
-    def __init__(self, outputs, inputs, rng, distargs=None):
+    def __init__(self, outputs, inputs, rng, quagga=None, distargs=None):
         self.rng = rng
         self.probabilities =[
             [.7, .1, .05, .05],
