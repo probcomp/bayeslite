@@ -501,6 +501,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         return cgpm_rowid if cgpm_rowid is not None else -1
 
     def _cgpm_value(self, bdb, generator_id, colno, value):
+        if value is None:
+            return float('NaN')
         stattype = core.bayesdb_generator_column_stattype(
             bdb, generator_id, colno)
         if casefold(stattype) == 'categorical':
