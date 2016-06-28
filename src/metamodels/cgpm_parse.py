@@ -32,6 +32,7 @@ grep -o 'K_[A-Z][A-Z0-9_]*' < cgpm_grammar.y | sort -u | awk '
 KEYWORDS = {
     'given': cgpm_grammar.K_GIVEN,
     'model': cgpm_grammar.K_MODEL,
+    'subsample': cgpm_grammar.K_SUBSAMPLE,
     'using': cgpm_grammar.K_USING,
 }
 
@@ -125,6 +126,8 @@ class CGPM_Semantics(object):
         return Basic(var, dist, params)
     def p_clause_foreign(self, outputs, inputs, name, params):
         return Foreign(outputs, inputs, name, params)
+    def p_clause_subsamp(self, n):
+        return Subsample(n)
 
     def p_dist_name(self, dist):                return casefold(dist)
     def p_foreign_name(self, foreign):          return casefold(foreign)
@@ -154,4 +157,8 @@ Foreign = namedtuple('Foreign', [
     'inputs',
     'name',
     'params',
+])
+
+Subsample = namedtuple('Subsample', [
+    'n',
 ])

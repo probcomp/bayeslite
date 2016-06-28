@@ -24,6 +24,7 @@ from cgpm.regressions.linreg import LinearRegression
 from bayeslite import bayesdb_open
 from bayeslite import bayesdb_register_metamodel
 from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
+from bayeslite.util import cursor_value
 
 # XXX KLUDGE TAKEN FROM cgpm/tests/test_gpmcc_simple_composite.py
 from cgpm.cgpm import CGpm
@@ -155,14 +156,20 @@ def test_cgpm():
             )
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR g0')
+        c = bdb.execute('SELECT COUNT(*) FROM bayesdb_cgpm_individual')
+        n = c.fetchvalue()
         # Another generator: exponential launch mass instead of normal.
         bdb.execute('''
             CREATE GENERATOR g1 FOR satellites USING cgpm (
                 launch_mass EXPONENTIAL,
                 MODEL period GIVEN apogee, perigee
-                    USING kepler (quagga = eland)
+                    USING kepler (quagga = eland),
+                SUBSAMPLE 20
             )
         ''')
+        c_ = bdb.execute('SELECT COUNT(*) FROM bayesdb_cgpm_individual')
+        n_ = c_.fetchvalue()
+        assert n_ - n == 20
         bdb.execute('INITIALIZE 1 MODEL IF NOT EXISTS FOR g1')
         bdb.execute('ANALYZE g0 FOR 1 ITERATION WAIT')
         bdb.execute('ANALYZE g1 FOR 1 ITERATION WAIT')

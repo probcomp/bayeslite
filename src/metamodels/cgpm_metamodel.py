@@ -157,9 +157,25 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Assign contiguous 0-indexed ids to the individuals in the
         # table.
-        #
-        # XXX subsampling
-        cursor = bdb.sql_execute('SELECT _rowid_ FROM %s' % (qt,))
+        if schema['subsample']:
+            k = schema['subsample']
+            n = cursor_value(
+                bdb.sql_execute('SELECT COUNT(*) FROM %s' % (qt,)))
+            cursor = bdb.sql_execute(
+                'SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC' % (qt,))
+            uniform = bdb._prng.weakrandom_uniform
+            # https://en.wikipedia.org/wiki/Reservoir_sampling
+            samples = []
+            for i, row in enumerate(cursor):
+                if i < k:
+                    samples.append(row)
+                else:
+                    r = uniform(i + 1)
+                    if r < k:
+                        samples[r] = row
+            cursor = samples
+        else:
+            cursor = bdb.sql_execute('SELECT _rowid_ FROM %s' % (qt,))
         for cgpm_rowid, (table_rowid,) in enumerate(cursor):
             bdb.sql_execute('''
                 INSERT INTO bayesdb_cgpm_individual
@@ -388,17 +404,19 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Create SQL expressions to cast each variable to the correct
         # affinity for its statistical type.
-        qexpressions = ','.join('CAST(%s AS %s)' %
+        qexpressions = ','.join('CAST(t.%s AS %s)' %
                 ('NULL' if colno < 0 else sqlite3_quote_name(var),
                     sqlite3_quote_name(core.bayesdb_stattype_affinity(bdb,
                             stattype)))
             for var, (colno, stattype) in zip(vars, zip(colnos, stattypes)))
 
         # Get a cursor.
-        #
-        # XXX Subsampling?
-        cursor = bdb.sql_execute('SELECT %s FROM %s ORDER BY _rowid_ ASC' %
-            (qexpressions, qt))
+        cursor = bdb.sql_execute('''
+            SELECT %s FROM %s AS t, bayesdb_cgpm_individual AS ci
+                WHERE ci.generator_id = ?
+                    AND ci.table_rowid = t._rowid_
+            ORDER BY t._rowid_ ASC
+        ''' % (qexpressions, qt), (generator_id,))
 
         # Map values to codes.
         def map_value(colno, value):
@@ -595,8 +613,8 @@ def _create_schema(bdb, generator_id, schema_ast):
     variables = []
     categoricals = {}
     cgpm_composition = []
-    deferred_dist = {}
     modelled = set()
+    subsample = None
 
     # Error-reporting state.
     duplicate = set()
@@ -693,6 +711,12 @@ def _create_schema(bdb, generator_id, schema_ast):
                         'outputs': outputs,
                         'kwds': kwds,
                     })
+
+        elif isinstance(clause, cgpm_parse.Subsample):
+            if subsample is not None:
+                raise BQLError(bdb, 'Duplicate subsample: %r' % (clause.n,))
+            subsample = clause.n
+
         else:
             assert False
 
@@ -733,6 +757,7 @@ def _create_schema(bdb, generator_id, schema_ast):
     return {
         'variables': variables,
         'cgpm_composition': cgpm_composition,
+        'subsample': subsample,
     }
 
 def _default_categorical(bdb, generator_id, var):
