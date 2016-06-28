@@ -145,11 +145,11 @@ wait_opt(none)		::= .
 wait_opt(some)		::= K_WAIT.
 
 simulate(s)		::= K_SIMULATE simulate_columns(cols)
-				K_FROM generator_name(generator)
+				K_FROM population_name(population)
 				usingmodel_opt(modelno)
 				given_opt(constraints) limit(lim).
 simulate(nolimit)	::= K_SIMULATE simulate_columns(cols)
-				K_FROM generator_name(generator)
+				K_FROM population_name(population)
 				usingmodel_opt(modelno)
 				given_opt(constraints).
 
@@ -203,17 +203,17 @@ estpairrow(e)		::= K_ESTIMATE K_PAIRWISE K_ROW error T_SEMI.
 estpaircol(e)		::= K_ESTIMATE K_PAIRWISE error T_SEMI.
 
 estby(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
-				K_BY|K_WITHIN generator_name(generator)
+				K_BY|K_WITHIN population_name(population)
 				usingmodel_opt(modelno).
 
 infer(auto)		::= K_INFER infer_auto_columns(cols)
 				withconf_opt(conf)
-				K_FROM generator_name(generator)
+				K_FROM population_name(population)
 				usingmodel_opt(modelno)
 				where(cond) group_by(grouping) order_by(ord)
 				limit_opt(lim).
 infer(explicit)		::= K_INFER K_EXPLICIT infer_exp_columns(cols)
-				K_FROM generator_name(generator)
+				K_FROM population_name(population)
 				usingmodel_opt(modelno)
 				where(cond) group_by(grouping) order_by(ord)
 				limit_opt(lim).
