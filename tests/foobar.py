@@ -163,7 +163,7 @@ cgpmt = CGPM_Metamodel(
     cgpm_registry={
         'venturescript': VsCGpm,
         'linreg': LinearRegression,
-        # 'forest': RandomForest,
+        'forest': RandomForest,
         })
 bayesdb_register_metamodel(bdb, cgpmt)
 
@@ -173,6 +173,8 @@ bdb.execute('''
         MODEL kepler_cluster_id, kepler_noise, period GIVEN apogee, perigee
             USING venturescript (source = "{}"),
         MODEL perigee GIVEN apogee USING linreg,
+        MODEL class_of_orbit GIVEN apogee, period, perigee
+            USING forest (k = 4),
         )
     '''.format(kepler_source))
 
@@ -230,7 +232,7 @@ print bdb.execute('''
 print 'SIMULATING JOINT'
 
 print bdb.execute('''
-    SIMULATE apogee, perigee, period FROM satellites LIMIT 100
+    SIMULATE apogee, perigee, period FROM satellites LIMIT 4
     ''').fetchall()
 
 bdb.execute('DROP MODELS FROM g0')
