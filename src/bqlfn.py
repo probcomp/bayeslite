@@ -380,16 +380,23 @@ def bql_row_column_predictive_probability(bdb, population_id, _modelno, rowid,
 
 def bql_predict(bdb, population_id, modelno, colno, rowid, threshold,
         numsamples=None):
-    # XXX Do real imputation here!
-    generator_id = core.bayesdb_population_generators(bdb, population_id)[0]
+    # XXX Randomly sample 1 generator from the population, until we figure out
+    # how to aggregate imputations across different hypotheses.
+    generator_ids = core.bayesdb_population_generators(bdb, population_id)
+    index = bdb.np_prng.randint(0, high=len(generator_ids))
+    generator_id = generator_ids[index]
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
     return metamodel.predict(bdb, generator_id, modelno, colno, rowid,
         threshold, numsamples=numsamples)
 
-def bql_predict_confidence(bdb, generator_id, modelno, colno, rowid,
+def bql_predict_confidence(bdb, population_id, modelno, colno, rowid,
         numsamples=None):
     # XXX Do real imputation here!
-    generator_id = core.bayesdb_population_generators(bdb, population_id)[0]
+    # XXX Randomly sample 1 generator from the population, until we figure out
+    # how to aggregate imputations across different hypotheses.
+    generator_ids = core.bayesdb_population_generators(bdb, population_id)
+    index = bdb.np_prng.randint(0, high=len(generator_ids))
+    generator_id = generator_ids[index]
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
     value, confidence = metamodel.predict_confidence(bdb, generator_id,
         modelno, colno, rowid, numsamples=numsamples)

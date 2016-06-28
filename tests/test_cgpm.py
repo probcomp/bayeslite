@@ -177,6 +177,14 @@ def test_cgpm():
         bdb.execute('''
             SIMULATE apogee, perigee, period FROM satellites LIMIT 100
         ''').fetchall()
+        bdb.execute('''
+            INFER EXPLICIT PREDICT apogee
+                CONFIDENCE apogee_confidence FROM satellites LIMIT 2
+        ''').fetchall()
+        bdb.execute('''
+            INFER EXPLICIT PREDICT class_of_orbit
+                CONFIDENCE class_of_orbit_confidence FROM satellites LIMIT 2
+        ''').fetchall()
         bdb.execute('DROP MODELS FROM g0')
         bdb.execute('DROP GENERATOR g0')
         bdb.execute('DROP GENERATOR g1')

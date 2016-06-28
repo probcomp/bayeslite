@@ -52,6 +52,7 @@ import contextlib
 import json
 import math
 
+from collections import Counter
 from collections import namedtuple
 
 from cgpm.crosscat.engine import Engine
@@ -301,6 +302,30 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Go!
         return engine.row_similarity(cgpm_rowid, cgpm_target_rowid, colnos)
+
+    def predict_confidence(self, bdb, generator_id, modelno, colno, rowid,
+            numsamples=None):
+        if not numsamples:
+            numsamples = 200
+        assert numsamples > 0
+        def _impute_categorical(sample):
+            counts = Counter(s[0] for s in sample)
+            mode_count = max(counts[v] for v in counts)
+            pred = iter(v for v in counts if counts[v] == mode_count).next()
+            conf = float(mode_count) / numsamples
+            return pred, conf
+        def _impute_numerical(sample):
+            pred = sum(s[0] for s in sample) / float(len(sample))
+            conf = 0 # XXX Punt confidence for now
+            return pred, conf
+        sample = self.simulate_joint(
+            bdb, generator_id, [(rowid, colno)], [], modelno, numsamples)
+        stattype = core.bayesdb_variable_stattype(
+            bdb, core.bayesdb_generator_population(bdb, generator_id), colno)
+        if stattype == 'categorical': # XXX Right way to find the stattype?
+            return _impute_categorical(sample)
+        else:
+            return _impute_numerical(sample)
 
     def simulate_joint(self, bdb, generator_id, targets, constraints, modelno,
             num_predictions=None):
