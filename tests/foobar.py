@@ -19,8 +19,10 @@ import numpy as np
 import random                   # XXX
 
 #from cgpm.regressions.forest import RandomForest
+from cgpm.regressions.forest import RandomForest
 from cgpm.regressions.linreg import LinearRegression
 from cgpm.venturescript.vscgpm import VsCGpm
+
 from cgpm.utils import general as gu
 
 from bayeslite import bayesdb_open
@@ -161,18 +163,20 @@ cgpmt = CGPM_Metamodel(
     cgpm_registry={
         'venturescript': VsCGpm,
         'linreg': LinearRegression,
+        # 'forest': RandomForest,
         })
 bayesdb_register_metamodel(bdb, cgpmt)
 
 bdb.execute('''
     CREATE GENERATOR g0 FOR satellites USING cgpm (
-        MODEL kepler_cluster_id, kepler_noise, period
-            GIVEN apogee, perigee USING venturescript (source = "{}");
-
-        MODEL perigee GIVEN apogee USING linreg;
+        apogee NORMAL,
+        MODEL kepler_cluster_id, kepler_noise, period GIVEN apogee, perigee
+            USING venturescript (source = "{}"),
+        MODEL perigee GIVEN apogee USING linreg,
         )
     '''.format(kepler_source))
 
+# -- MODEL country_of_operator GIVEN class_of_orbit USING forest;
 print 'INITIALIZING'
 bdb.execute('INITIALIZE 2 MODELS FOR g0')
 

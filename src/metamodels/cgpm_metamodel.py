@@ -306,7 +306,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
     def predict_confidence(self, bdb, generator_id, modelno, colno, rowid,
             numsamples=None):
         if not numsamples:
-            numsamples = 200
+            numsamples = 2
         assert numsamples > 0
         def _impute_categorical(sample):
             counts = Counter(s[0] for s in sample)
