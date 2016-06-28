@@ -377,17 +377,19 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Create SQL expressions to cast each variable to the correct
         # affinity for its statistical type.
-        qexpressions = ','.join('CAST(%s AS %s)' %
+        qexpressions = ','.join('CAST(t.%s AS %s)' %
                 ('NULL' if colno < 0 else sqlite3_quote_name(var),
                     sqlite3_quote_name(core.bayesdb_stattype_affinity(bdb,
                             stattype)))
             for var, (colno, stattype) in zip(vars, zip(colnos, stattypes)))
 
         # Get a cursor.
-        #
-        # XXX Subsampling?
-        cursor = bdb.sql_execute('SELECT %s FROM %s ORDER BY _rowid_ ASC' %
-            (qexpressions, qt))
+        cursor = bdb.sql_execute('''
+            SELECT %s FROM %s AS t, bayesdb_cgpm_individual AS ci
+                WHERE ci.generator_id = ?
+                    AND ci.table_rowid = t._rowid_
+            ORDER BY t._rowid_ ASC
+        ''' % (qexpressions, qt), (generator_id,))
 
         # Map values to codes.
         def map_value(colno, value):
