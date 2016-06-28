@@ -112,24 +112,32 @@ def test_trivial_population():
 def test_conditional_probability(seed):
     with test_core.t1(seed=seed) as (bdb, _population_id, _generator_id):
         bdb.execute('drop generator p1_cc')
-        bdb.execute('''create generator p1_cond_prob_cc for p1 using
-                       crosscat(age numerical, weight numerical,
-                           dependent(age, weight));''')
+        bdb.execute('drop population p1')
+        bdb.execute('''
+            create population p1 for t1 (
+                age numerical,
+                weight numerical
+            )
+        ''')
+        bdb.execute('''
+            create generator p1_cond_prob_cc for p1 using crosscat (
+                dependent(age, weight)
+            )
+        ''')
         bdb.execute('initialize 1 model for p1_cond_prob_cc')
         bdb.execute('analyze p1_cond_prob_cc for 1 iteration wait')
         q0 = 'estimate probability of age = 8 by p1'
         q1 = 'estimate probability of age = 8 given () by p1'
         age_is_8 = bdb.execute(q0).fetchvalue()
         assert age_is_8 == bdb.execute(q1).fetchvalue()
-        q2 = '''estimate probability of age = 8 given (weight = 16)
-                by p1'''
+        q2 = 'estimate probability of age = 8 given (weight = 16) by p1'
         age_is_8_given_weight_is_16 = bdb.execute(q2).fetchvalue()
         assert age_is_8 < age_is_8_given_weight_is_16
 
         probs = bdb.execute(
             'estimate probability of value 8 given (weight = 16)'
-            ' from columns of p1').fetchall()
-        assert [(age_is_8_given_weight_is_16,), (0,)] == probs
+            " from columns of p1").fetchall()
+        assert [(age_is_8_given_weight_is_16,), (0.0,)] == probs
 
 @stochastic(max_runs=2, min_passes=1)
 def test_joint_probability(seed):
