@@ -119,6 +119,7 @@ keywords = {
     "unset": grammar.K_UNSET,
     "using": grammar.K_USING,
     "value": grammar.K_VALUE,
+    "variables": grammar.K_VARIABLES,
     "wait": grammar.K_WAIT,
     "when": grammar.K_WHEN,
     "where": grammar.K_WHERE,

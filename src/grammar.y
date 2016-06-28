@@ -255,11 +255,12 @@ as(some)		::= K_AS L_NAME(name).
 from_sel_opt(empty)	::= .
 from_sel_opt(nonempty)	::= K_FROM select_tables(tables).
 
-from_est(row)		::= K_FROM generator_name(name).
-from_est(pairrow)	::= K_FROM K_PAIRWISE generator_name(name).
-from_est(col)		::= K_FROM K_COLUMNS K_OF generator_name(name).
-from_est(paircol)	::= K_FROM K_PAIRWISE K_COLUMNS K_OF
-				generator_name(name) for(subcols).
+from_est(row)		::= K_FROM population_name(name).
+from_est(pairrow)	::= K_FROM K_PAIRWISE population_name(name).
+from_est(col)		::= K_FROM K_COLUMNS|K_VARIABLES
+				K_OF population_name(name).
+from_est(paircol)	::= K_FROM K_PAIRWISE K_COLUMNS|K_VARIABLES K_OF
+				population_name(name) for(subcols).
 
 /* Vestige of a former design.  Remove me!  */
 usingmodel_opt(all)	::= .
@@ -662,6 +663,7 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 	K_UNSET
 	K_USING
 	K_VALUE
+	K_VARIABLES
 	K_WAIT
 	/* K_WHEN */
 	K_WHERE
