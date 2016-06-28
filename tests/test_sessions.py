@@ -222,7 +222,7 @@ def test_sessions_error_metamodel():
         ''')
         tr = sescap.SessionOrchestrator(bdb)
         cursor = bdb.execute('''
-            ESTIMATE PREDICTIVE PROBABILITY OF age FROM p
+            ESTIMATE PREDICTIVE PROBABILITY OF age FROM p1
         ''')
         with pytest.raises(Boom):
             cursor.fetchall()

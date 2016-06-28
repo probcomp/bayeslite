@@ -198,4 +198,4 @@ def test_impossible_nontransitive_dependency():
         # XXX Currently CrossCat throws a RuntimeError, we should fix
         # the CrossCat exception hierarchy.
         with pytest.raises(RuntimeError):
-            bdb.execute('INITIALIZE 10 MODELS FOR bar')
+            bdb.execute('INITIALIZE 10 MODELS FOR bar_cc')

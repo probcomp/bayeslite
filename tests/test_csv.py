@@ -135,7 +135,7 @@ def test_csv_import_schema():
             )
         ''')
         bdb.execute('''
-            CREATE GENERATOR p_employees_cc for p_employees USING crosscat''
+            CREATE GENERATOR p_employees_cc for p_employees USING crosscat ()
         ''')
         bdb.execute('estimate height from p_employees').fetchall()
         with pytest.raises(bayeslite.BQLError):

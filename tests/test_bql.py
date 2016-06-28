@@ -1078,7 +1078,7 @@ def test_parametrized():
                     ' AND p.tabname = c.tabname AND v.colno = c.colno',
             'SELECT c.colno'
                 ' FROM bayesdb_population AS p,'
-                    ' bayesdb_population_column AS v,'
+                    ' bayesdb_variable AS v,'
                     ' bayesdb_column AS c'
                 ' WHERE p.id = :population_id AND c.name = :name'
                     ' AND p.id = v.population_id'

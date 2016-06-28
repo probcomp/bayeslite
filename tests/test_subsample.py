@@ -51,16 +51,17 @@ def test_subsample():
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR hosp_sub_cc')
         bdb.execute('ANALYZE hosp_sub_cc FOR 1 ITERATION WAIT')
-        bdb.execute('ESTIMATE SIMILARITY TO (_rowid_=2) FROM hosp_sub'
+        bdb.execute('ESTIMATE SIMILARITY TO (_rowid_=2) FROM hospitals_sub'
             ' WHERE _rowid_ = 1 OR _rowid_ = 101').fetchall()
-        bdb.execute('ESTIMATE SIMILARITY TO (_rowid_=102) FROM hosp_sub'
+        bdb.execute('ESTIMATE SIMILARITY TO (_rowid_=102) FROM hospitals_sub'
             ' WHERE _rowid_ = 1 OR _rowid_ = 101').fetchall()
         bdb.execute('ESTIMATE PREDICTIVE PROBABILITY OF mdcr_spnd_amblnc'
-            ' FROM hosp_sub WHERE _rowid_ = 1 OR _rowid_ = 101').fetchall()
-        bdb.execute('ESTIMATE SIMILARITY FROM PAIRWISE hosp_sub'
+            ' FROM hospitals_sub'
+            ' WHERE _rowid_ = 1 OR _rowid_ = 101').fetchall()
+        bdb.execute('ESTIMATE SIMILARITY FROM PAIRWISE hospitals_sub'
             ' WHERE (r0._rowid_ = 1 OR r0._rowid_ = 101) AND'
                 ' (r1._rowid_ = 1 OR r1._rowid_ = 101)').fetchall()
-        bdb.execute('INFER mdcr_spnd_amblnc FROM hosp_sub'
+        bdb.execute('INFER mdcr_spnd_amblnc FROM hospitals_sub'
             ' WHERE _rowid_ = 1 OR _rowid_ = 101').fetchall()
         sql = '''
             SELECT sql_rowid FROM bayesdb_crosscat_subsample
@@ -75,6 +76,6 @@ def test_subsample():
         cursor = bdb.sql_execute(sql, (gid,))
         assert [row[0] for row in cursor] != range(1, 100 + 1)
         bdb.execute('DROP GENERATOR hosp_sub_cc')
-        bdb.execute('DROP GENERATOR hosp_full_cc')
+        bdb.execute('DROP GENERATOR hosp_ufull_cc')
         bdb.execute('DROP POPULATION hospitals_sub')
         bdb.execute('DROP POPULATION hospitals_full')
