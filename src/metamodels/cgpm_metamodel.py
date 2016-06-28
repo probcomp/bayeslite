@@ -455,6 +455,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                     cgpm.incorporate(cgpm_rowid, query, evidence)
                 except Exception:
                     pass
+            # XXX WHATTA LUDICROUS LINE
+            cgpm.transition(N=1)
             return cgpm
         return initialize
 

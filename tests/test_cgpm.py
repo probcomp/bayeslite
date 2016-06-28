@@ -60,7 +60,11 @@ class FourWay(CGpm):
 
     def incorporate(self, rowid, observations, evidence=None):
         pass
+
     def unincorporate(self, rowid, observations, evidence=None):
+        pass
+
+    def transition(self, N=None):
         pass
 
     @staticmethod
