@@ -71,7 +71,8 @@ command(drop_pop)	::= K_DROP K_POPULATION ifexists(ifexists)
 
 pop_schema(one)		::= pop_var(var).
 pop_schema(many)	::= pop_schema(schema) T_COMMA pop_var(var).
-pop_var(v)		::= column_name(name) stattype(st).
+pop_var(manifest)	::= column_name(name) stattype(st).
+pop_var(latent)		::= K_LATENT column_name(name) stattype(st).
 stattype(st)		::= L_NAME(name).
 
 /* XXX Temporary generators?  */
@@ -623,6 +624,7 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 	K_ISNULL
 	K_ITERATION
 	K_ITERATIONS
+	K_LATENT
 	K_LIKE
 	K_LIMIT
 	K_MATCH

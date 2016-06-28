@@ -182,7 +182,10 @@ class BQLSemantics(object):
 
     def p_pop_schema_one(self, var):            return [var]
     def p_pop_schema_many(self, schema, var): schema.append(var); return schema
-    def p_pop_var_v(self, name, st):            return (name, st)
+    def p_pop_var_manifest(self, name, st):
+        return ast.PopVar(False, name, st)
+    def p_pop_var_latent(self, name, st):
+        return ast.PopVar(True, name, st)
     def p_stattype_st(self, name):              return name
 
     def p_command_creategen(self, name, ifnotexists, pop, metamodel, schema):

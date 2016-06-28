@@ -131,7 +131,7 @@ CREATE TABLE bayesdb_population (
 
 CREATE TABLE bayesdb_variable (
 	population_id	INTEGER NOT NULL REFERENCES bayesdb_population(id),
-	colno		INTEGER NOT NULL CHECK (0 <= colno),
+	colno		INTEGER NOT NULL,
 	stattype	TEXT NOT NULL REFERENCES bayesdb_stattype(name),
 	PRIMARY KEY(population_id, colno)
 );

@@ -128,6 +128,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                     bayesdb_column AS c
                 WHERE p.id = ? AND v.population_id = p.id
                     AND c.tabname = p.tabname AND c.colno = v.colno
+                    AND 0 <= v.colno
         ''', (population_id,))
         for colno, name, stattype in vars_cursor:
             if casefold(stattype) == 'categorical':
@@ -333,10 +334,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Create SQL expressions to cast each variable to the correct
         # affinity for its statistical type.
         qexpressions = ','.join('CAST(%s AS %s)' %
-                (sqlite3_quote_name(var),
+                ('NULL' if colno < 0 else sqlite3_quote_name(var),
                     sqlite3_quote_name(core.bayesdb_stattype_affinity(bdb,
                             stattype)))
-            for var, stattype in zip(vars, stattypes))
+            for var, (colno, stattype) in zip(vars, zip(colnos, stattypes)))
 
         # Get a cursor.
         #
@@ -507,6 +508,7 @@ def _create_schema(bdb, generator_id, schema_ast):
     duplicate = set()
     unknown = set()
     needed = set()
+    invalid_latent = set()
 
     # Process each clause one by one.
     for clause in schema_ast:
@@ -528,8 +530,13 @@ def _create_schema(bdb, generator_id, schema_ast):
                 duplicate.add(var)
                 continue
 
-            # Add it to the list and mark it modelled.
+            # Reject if it is a latent variable.
             colno = core.bayesdb_variable_number(bdb, population_id, var)
+            if colno < 0:
+                invalid_latent.add(var)
+                continue
+
+            # Add it to the list and mark it modelled.
             stattype = core.bayesdb_variable_stattype(
                 bdb, population_id, colno)
             variables.append([var, stattype, dist, params])
@@ -598,14 +605,19 @@ def _create_schema(bdb, generator_id, schema_ast):
     if unknown:
         raise BQLError(bdb, 'Unknown model variables: %r' %
             (sorted(unknown),))
+    if invalid_latent:
+        raise BQLError(bdb, 'Invalid latent variables: %r' %
+            (sorted(invalid_latent),))
 
     # Use the default distribution for any variables that remain to be
-    # modelled, excluding any that have statistical types we don't
-    # know about.
+    # modelled, excluding any that are latent or that have statistical
+    # types we don't know about.
     for var in core.bayesdb_variable_names(bdb, population_id):
         if var in modelled:
             continue
         colno = core.bayesdb_variable_number(bdb, population_id, var)
+        if colno < 0:
+            continue
         stattype = core.bayesdb_variable_stattype(bdb, population_id, colno)
         if stattype not in _DEFAULT_DIST:
             continue

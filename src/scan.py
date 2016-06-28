@@ -78,6 +78,7 @@ keywords = {
     "isnull": grammar.K_ISNULL,
     "iteration": grammar.K_ITERATION,
     "iterations": grammar.K_ITERATIONS,
+    "latent": grammar.K_LATENT,
     "like": grammar.K_LIKE,
     "limit": grammar.K_LIMIT,
     "match": grammar.K_MATCH,

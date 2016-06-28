@@ -528,6 +528,7 @@ def _create_population(bdb, phrase):
     duplicates = set()
     missing = set()
     invalid = set()
+    nlatent = 0
     colno_sql = '''
         SELECT colno FROM bayesdb_column
             WHERE tabname = :table AND name = :column_name
@@ -535,10 +536,17 @@ def _create_population(bdb, phrase):
     stattype_sql = '''
         SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype
     '''
-    for name, stattype in phrase.schema:
+    for variable in phrase.schema:
+        latent = variable.latent
+        name = variable.name
+        stattype = variable.stattype
         name_folded = casefold(name)
         if name_folded in variable_map:
             duplicates.add(name)
+            continue
+        if latent:
+            nlatent += 1
+            variable_map[casefold(name)] = -nlatent
             continue
         cursor = bdb.sql_execute(colno_sql, {
             'table': phrase.table,
@@ -567,9 +575,9 @@ def _create_population(bdb, phrase):
         raise BQLError(bdb, 'Invalid statistical types: %r' % (list(invalid),))
 
     # Insert variable records.
-    for name, stattype in phrase.schema:
-        colno = variable_map[casefold(name)]
-        stattype = casefold(stattype)
+    for variable in phrase.schema:
+        colno = variable_map[casefold(variable.name)]
+        stattype = casefold(variable.stattype)
         bdb.sql_execute('''
             INSERT INTO bayesdb_variable
                 (population_id, colno, stattype)

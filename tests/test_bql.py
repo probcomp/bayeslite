@@ -101,6 +101,12 @@ def test_trivial_population():
         # XXX if (not) exists
         bdb.execute('create population p for t(age numerical)')
         bdb.execute('drop population p')
+        bdb.execute('''
+            create population p for t (
+                age numerical, latent cluster categorical
+            )
+        ''')
+        bdb.execute('drop population p')
 
 @stochastic(max_runs=2, min_passes=1)
 def test_conditional_probability(seed):

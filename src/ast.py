@@ -77,6 +77,11 @@ DropPop = namedtuple('DropPop', [
     'ifexists',
     'name',
 ])
+PopVar = namedtuple('PopVar', [
+    'latent',
+    'name',
+    'stattype',
+])
 
 CreateGen = namedtuple('CreateGen', [
     'name',                     # XXX name
