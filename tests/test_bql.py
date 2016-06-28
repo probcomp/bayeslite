@@ -765,7 +765,7 @@ def test_trivial_commands():
         bdb.execute('estimate count(*) from p').fetchall()
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate count(*) from p_cc')
-        bdb.execute('alter generator p0_cc renamee to P0_cc')
+        bdb.execute('alter generator p0_cc rename to P0_cc')
         bdb.execute('analyze p0_cc for 1 iteration wait')
         colno = core.bayesdb_generator_column_number(bdb, generator_id,
             'gender')
@@ -973,7 +973,7 @@ def test_parametrized():
                     ' bayesdb_variable AS v,'
                     ' bayesdb_column AS c'
                 ' WHERE p.id = 1 AND v.population_id = p.id'
-                    ' AND c.tabname = g.tabname AND c.colno = v.colno'
+                    ' AND c.tabname = p.tabname AND c.colno = v.colno'
                 ' LIMIT 1',
             'SELECT c.colno'
                 ' FROM bayesdb_population AS p,'
@@ -1353,12 +1353,8 @@ def test_create_table_ifnotexists_as_simulate():
         with open(fname, 'rU') as f:
             bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
             # If not exists table tests
-            bdb.execute('''
-                create population p for t (
-                    guess(*),
-                    age numerical
-                )
-            ''')
+            guess.bayesdb_guess_population(bdb, 'p', 't',
+                overrides={'age': 'numerical'})
             bdb.execute('create generator p_cc for p using crosscat()')
             bdb.execute('initialize 1 model for p_cc')
             bdb.execute('analyze p_cc for 1 iteration wait')
@@ -1388,7 +1384,7 @@ def test_createtab():
         with pytest.raises(apsw.SQLError):
             bdb.execute('drop table t')
         bdb.execute('drop table if exists t')
-        with pytest.raises(apsw.SQLError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('drop population p')
         bdb.execute('drop population if exists p')
         with pytest.raises(bayeslite.BQLError):
@@ -1402,33 +1398,20 @@ def test_createtab():
             with open(fname, 'rU') as f:
                 bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True, ifnotexists=True)
-        bdb.execute('''
-            create population p for t (
-                guess(*),
-                age numerical
-            )
-        ''')
+        guess.bayesdb_guess_population(bdb, 'p', 't',
+            overrides={'age': 'numerical'})
         bdb.execute('create generator t_cc for t using crosscat ()')
         with pytest.raises(bayeslite.BQLError):
             # Redefining population.
-            bdb.execute('''
-                create population p for t (
-                    guess(*),
-                    age ignore
-                )
-            ''')
+            bdb.execute('create population p for t (age numerical)')
         with pytest.raises(bayeslite.BQLError):
             # Redefining generator.
             bdb.execute('create generator p_cc for p using crosscat')
         # Make sure ignore columns work.
         #
         # XXX Also check key columns.
-        bdb.execute('''
-            create population p0 for t (
-                guess(*),
-                age ignore
-            )
-        ''')
+        guess.bayesdb_guess_population(bdb, 'p', 't',
+            overrides={'age': 'ignore'})
         bdb.execute('drop population p0')
         population_id = core.bayesdb_get_population(bdb, 'p')
         colno = core.bayesdb_variable_number(bdb, population_id, 'age')
