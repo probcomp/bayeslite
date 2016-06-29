@@ -560,7 +560,7 @@ def _create_population(bdb, phrase):
             colno = row[0]
             assert isinstance(colno, int)
             cursor = bdb.sql_execute(stattype_sql, {'stattype': stattype})
-            if cursor_value(cursor) == 0:
+            if cursor_value(cursor) == 0 and stattype != 'ignore':
                 invalid.add(stattype)
                 continue
             variable_map[name] = colno
@@ -578,6 +578,8 @@ def _create_population(bdb, phrase):
         name = casefold(variable.name)
         colno = variable_map[name]
         stattype = casefold(variable.stattype)
+        if stattype == 'ignore':
+            continue
         bdb.sql_execute('''
             INSERT INTO bayesdb_variable
                 (population_id, name, colno, stattype)
