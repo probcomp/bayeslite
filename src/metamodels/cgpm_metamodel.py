@@ -580,6 +580,11 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
     def _from_numeric(self, bdb, generator_id, colno, value):
         """Convert value in cgpm to equivalent bayeslite format."""
+        # XXX Latent variables are not associated with an entry in
+        # bayesdb_cgpm_category, so just pass through whatever value cgpm
+        # returns.
+        if colno < 0:
+            return value
         if math.isnan(value):
             return None
         stattype = core.bayesdb_generator_column_stattype(
