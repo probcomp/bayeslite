@@ -576,21 +576,23 @@ def compile_simulate(bdb, simulate, out):
         for _colno, name, sqltype, _nonnull, _default, _primary in cursor:
             assert casefold(name) not in column_sqltypes
             column_sqltypes[casefold(name)] = sqltype
+        cursor = bdb.sql_execute('''
+            SELECT name, stattype FROM bayesdb_variable
+                WHERE population_id = ? AND colno < 0
+        ''', (population_id,))
+        for name, stattype in cursor:
+            assert casefold(name) not in column_sqltypes
+            sqltype = core.bayesdb_stattype_affinity(bdb, stattype)
+            column_sqltypes[casefold(name)] = sqltype
         assert 0 < len(column_sqltypes)
         for column_name in column_names:
             if casefold(column_name) not in column_sqltypes:
-                raise BQLError(bdb, 'No such column'
-                    ' in population %s table %s: %s' %
-                    (repr(simulate.population),
-                     repr(table),
-                     repr(column_name)))
+                raise BQLError(bdb, 'No such variable in population %r: %r' %
+                    (simulate.population, column_name))
         for column_name, _expression in simulate.constraints:
             if casefold(column_name) not in column_sqltypes:
-                raise BQLError(bdb, 'No such column'
-                    ' in population %s table %s: %s' %
-                    (repr(simulate.population),
-                     repr(table),
-                     repr(column_name)))
+                raise BQLError(bdb, 'No such variable in population %r: %r' %
+                    (simulate.population, column_name))
         # XXX Move to compiler.py.
         subout = out.subquery()
         subout.write('SELECT ')
