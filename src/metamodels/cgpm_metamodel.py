@@ -377,11 +377,14 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Create SQL expressions to cast each variable to the correct
         # affinity for its statistical type.
-        qexpressions = ','.join('CAST(%s AS %s)' %
-                ('NULL' if colno < 0 else 't.' + sqlite3_quote_name(var),
-                    sqlite3_quote_name(core.bayesdb_stattype_affinity(bdb,
-                            stattype)))
-            for var, (colno, stattype) in zip(vars, zip(colnos, stattypes)))
+        def cast(var, colno, stattype):
+            if colno < 0:
+                return 'NULL'
+            qv = sqlite3_quote_name(var)
+            affinity = core.bayesdb_stattype_affinity(bdb, stattype)
+            qa = sqlite3_quote_name(affinity)
+            return 'CAST(t.%s AS %s)' % (qv, qa)
+        qexpressions = ','.join(map(cast, vars, colnos, stattypes))
 
         # Get a cursor.
         cursor = bdb.sql_execute('''
