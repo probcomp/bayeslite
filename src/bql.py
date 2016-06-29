@@ -579,18 +579,19 @@ def _create_population(bdb, phrase):
 
     # Insert variable records.
     for variable in phrase.schema:
-        colno = variable_map[casefold(variable.name)]
+        name = casefold(variable.name)
+        colno = variable_map[name]
         stattype = casefold(variable.stattype)
         bdb.sql_execute('''
             INSERT INTO bayesdb_variable
                 (population_id, colno, stattype)
                 VALUES (?, ?, ?)
-        ''', (population_id, colno, casefold(stattype)))
+        ''', (population_id, colno, stattype))
         if variable.latent:
             bdb.sql_execute('''
                 INSERT INTO bayesdb_latent (population_id, colno, name)
                     VALUES (?, ?, ?)
-            ''', (population_id, colno, casefold(variable.name)))
+            ''', (population_id, colno, name))
 
 def rename_table(bdb, old, new):
     assert core.bayesdb_has_table(bdb, old)
