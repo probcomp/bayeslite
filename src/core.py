@@ -279,6 +279,9 @@ def bayesdb_variable_stattype(bdb, population_id, colno):
         return row[0]
 
 def bayesdb_population_cell_value(bdb, population_id, rowid, colno):
+    if colno < 0:
+        # Latent variables do not appear in the table.
+        return None
     table_name = bayesdb_population_table(bdb, population_id)
     var = bayesdb_variable_name(bdb, population_id, colno)
     qt = sqlite3_quote_name(table_name)
