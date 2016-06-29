@@ -404,8 +404,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Create SQL expressions to cast each variable to the correct
         # affinity for its statistical type.
-        qexpressions = ','.join('CAST(t.%s AS %s)' %
-                ('NULL' if colno < 0 else sqlite3_quote_name(var),
+        qexpressions = ','.join('CAST(%s AS %s)' %
+                ('NULL' if colno < 0 else 't.' + sqlite3_quote_name(var),
                     sqlite3_quote_name(core.bayesdb_stattype_affinity(bdb,
                             stattype)))
             for var, (colno, stattype) in zip(vars, zip(colnos, stattypes)))
