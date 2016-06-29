@@ -224,7 +224,15 @@ def bayesdb_has_variable(bdb, population_id, name):
         'population_id': population_id,
         'name': name,
     })
-    return cursor_value(cursor)
+    if cursor_value(cursor):
+        return True
+    cursor = bdb.sql_execute('''
+        SELECT COUNT(*) FROM bayesdb_latent
+            WHERE population_id = ? AND name = ?
+    ''', (population_id, name))
+    if cursor_value(cursor):
+        return True
+    return False
 
 def bayesdb_variable_number(bdb, population_id, name):
     """Return the column number of a population variable."""
