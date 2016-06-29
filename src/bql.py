@@ -101,6 +101,14 @@ def execute_phrase(bdb, phrase, bindings=()):
                     (phrase.simulation.population,))
             population_id = core.bayesdb_get_population(
                 bdb, phrase.simulation.population)
+            generator_id = None
+            if phrase.simulation.generator is not None:
+                if not core.bayesdb_has_generator(bdb,
+                        phrase.simulation.generator):
+                    raise BQLError(bdb, 'No such generator: %r' %
+                        (phrase.simulation.generator,))
+                generator_id = core.bayesdb_get_generator(
+                    bdb, phrase.simulation.generator)
             table = core.bayesdb_population_table(bdb, population_id)
             qn = sqlite3_quote_name(phrase.name)
             qt = sqlite3_quote_name(table)
@@ -129,10 +137,6 @@ def execute_phrase(bdb, phrase, bindings=()):
             with compiler.compiling_paren(bdb, out, 'CAST(', ' AS INTEGER)'):
                 compiler.compile_nobql_expression(bdb,
                     phrase.simulation.nsamples, out)
-            out.write(', ')
-            with compiler.compiling_paren(bdb, out, 'CAST(', ' AS INTEGER)'):
-                compiler.compile_nobql_expression(bdb,
-                    phrase.simulation.modelno, out)
             for _column_name, expression in phrase.simulation.constraints:
                 out.write(', ')
                 compiler.compile_nobql_expression(bdb, expression, out)
@@ -143,12 +147,10 @@ def execute_phrase(bdb, phrase, bindings=()):
             assert len(cursor) == 1
             nsamples = cursor[0][0]
             assert isinstance(nsamples, int)
-            modelno = cursor[0][1]
-            assert modelno is None or isinstance(modelno, int)
             constraints = [
                 (core.bayesdb_variable_number(bdb, population_id, var), value)
                 for (var, _expression), value in
-                    zip(phrase.simulation.constraints, cursor[0][2:])
+                    zip(phrase.simulation.constraints, cursor[0][1:])
             ]
             colnos = [
                 core.bayesdb_variable_number(bdb, population_id, var)
@@ -165,7 +167,8 @@ def execute_phrase(bdb, phrase, bindings=()):
                 INSERT INTO %s (%s) VALUES (%s)
             ''' % (qn, ','.join(qcns), ','.join('?' for qcn in qcns))
             for row in bqlfn.bayesdb_simulate(bdb, population_id, constraints,
-                    colnos, modelno=modelno, numpredictions=nsamples):
+                    colnos, generator_id=generator_id,
+                    numpredictions=nsamples):
                 bdb.sql_execute(insert_sql, row)
         return empty_cursor(bdb)
 

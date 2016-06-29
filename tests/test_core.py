@@ -448,8 +448,8 @@ def test_twocolumn(exname, colno0, colno1):
         pytest.skip('Not enough columns in %s.' % (exname,))
     with analyzed_bayesdb_population(examples[exname](), 1, 1) \
             as (bdb, population_id, generator_id):
-        bqlfn.bql_column_correlation(bdb, population_id, colno0, colno1)
-        bdb.sql_execute('select bql_column_correlation(?, ?, ?)',
+        bqlfn.bql_column_correlation(bdb, population_id, None, colno0, colno1)
+        bdb.sql_execute('select bql_column_correlation(?, NULL, ?, ?)',
             (population_id, colno0, colno1)).fetchall()
         bqlfn.bql_column_dependence_probability(bdb, population_id, None,
             colno0, colno1)

@@ -384,9 +384,7 @@ def test_select_bql():
                         ast.ExpLit(ast.LitInt(8)),
                     )),
                     [ast.ColListSub(
-                        ast.EstCols([ast.SelColAll(None)], 't',
-                            ast.ExpLit(ast.LitNull(None)),
-                            None,
+                        ast.EstCols([ast.SelColAll(None)], 't', None, None,
                             [ast.Ord(ast.ExpBQLProbFn(
                                     ast.ExpLit(ast.LitInt(4)),
                                     []),
@@ -466,8 +464,7 @@ def test_select_bql():
         [ast.Select(ast.SELQUANT_ALL, [
                 ast.SelColExp(ast.ExpCol(None, 'key'), None),
                 ast.SelColSub('t',
-                    ast.EstCols([ast.SelColAll(None)], 't',
-                        ast.ExpLit(ast.LitNull(None)), None,
+                    ast.EstCols([ast.SelColAll(None)], 't', None, None,
                         [ast.Ord(ast.ExpBQLDepProb('c', None), ast.ORD_DESC)],
                         ast.Lim(ast.ExpLit(ast.LitInt(4)), None)))
             ],
@@ -589,7 +586,7 @@ def test_trivial_commands():
                     ast.SelColExp(ast.ExpCol(None, 'x'), None),
                     ast.PredCol('x', 'xi', 'xc'),
                 ],
-                't_cc', ast.ExpLit(ast.LitNull(None)), None, None, None, None,
+                't_cc', None, None, None, None, None,
             ))]
 
 def test_parametrized():
@@ -698,24 +695,23 @@ def test_simulate():
     assert parse_bql_string('create table s as'
             ' simulate x from t limit 10') == \
         [ast.CreateTabSim(False, False, 's',
-            ast.Simulate(['x'], 't', ast.ExpLit(ast.LitNull(None)), [],
-                ast.ExpLit(ast.LitInt(10))))]
+            ast.Simulate(['x'], 't', None, [], ast.ExpLit(ast.LitInt(10))))]
     assert parse_bql_string('create table if not exists s as'
             ' simulate x, y from t given z = 0 limit 10') == \
         [ast.CreateTabSim(False, True, 's',
-            ast.Simulate(['x', 'y'], 't', ast.ExpLit(ast.LitNull(None)),
+            ast.Simulate(['x', 'y'], 't', None,
                 [('z', ast.ExpLit(ast.LitInt(0)))],
                 ast.ExpLit(ast.LitInt(10))))]
     assert parse_bql_string('create temp table s as'
             ' simulate x, y from t given z = 0 limit 10') == \
         [ast.CreateTabSim(True, False, 's',
-            ast.Simulate(['x', 'y'], 't', ast.ExpLit(ast.LitNull(None)),
+            ast.Simulate(['x', 'y'], 't', None,
                 [('z', ast.ExpLit(ast.LitInt(0)))],
                 ast.ExpLit(ast.LitInt(10))))]
     assert parse_bql_string('create temp table if not exists s as'
             ' simulate x, y from t given z = 0, w = 1 limit 10') == \
         [ast.CreateTabSim(True, True, 's',
-            ast.Simulate(['x', 'y'], 't', ast.ExpLit(ast.LitNull(None)),
+            ast.Simulate(['x', 'y'], 't', None,
                 [
                     ('z', ast.ExpLit(ast.LitInt(0))),
                     ('w', ast.ExpLit(ast.LitInt(1))),

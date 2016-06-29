@@ -85,6 +85,8 @@ keywords = {
     "minute": grammar.K_MINUTE,
     "minutes": grammar.K_MINUTES,
     "model": grammar.K_MODEL,
+    "modeled": grammar.K_MODELED,
+    "modelled": grammar.K_MODELLED,
     "models": grammar.K_MODELS,
     "mutual": grammar.K_MUTUAL,
     "not": grammar.K_NOT,

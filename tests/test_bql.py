@@ -386,7 +386,7 @@ def test_estimate_bql():
         bql2sql('estimate mutual information using 42 samples from p1;')
     # XXX Should be SELECT, not ESTIMATE, here?
     assert bql2sql('estimate correlation of age with weight from p1;') == \
-        'SELECT bql_column_correlation(1, 2, 3) FROM "t1";'
+        'SELECT bql_column_correlation(1, NULL, 2, 3) FROM "t1";'
     with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
         bql2sql('estimate correlation with age from p1;')
@@ -529,7 +529,7 @@ def test_estimate_columns_trivial():
             ' mutual information using 42 samples > 0.5;')
     assert bql2sql('estimate * from columns of p1 order by' +
             ' correlation with age desc;') == \
-        prefix + ' ORDER BY bql_column_correlation(1, 2, c.colno) DESC;'
+        prefix + ' ORDER BY bql_column_correlation(1, NULL, 2, c.colno) DESC;'
     with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
         bql2sql('estimate * from columns of p1 order by' +
@@ -603,7 +603,7 @@ def test_estimate_pairwise_trivial():
             ' where dependence probability with weight > 0.5;')
     assert bql2sql('estimate correlation from pairwise columns of p1'
             ' where dependence probability > 0.5;') == \
-        prefix + 'bql_column_correlation(1, c0.colno, c1.colno)' + \
+        prefix + 'bql_column_correlation(1, NULL, c0.colno, c1.colno)' + \
         infix + ' AND' \
         ' (bql_column_dependence_probability(1, NULL, c0.colno, c1.colno)' \
             ' > 0.5);'
@@ -629,13 +629,13 @@ def test_estimate_pairwise_trivial():
             ' where mutual information with weight using 42 samples > 0.5;')
     assert bql2sql('estimate correlation from pairwise columns of p1' +
             ' where mutual information > 0.5;') == \
-        prefix + 'bql_column_correlation(1, c0.colno, c1.colno)' + \
+        prefix + 'bql_column_correlation(1, NULL, c0.colno, c1.colno)' + \
         infix + ' AND' + \
         ' (bql_column_mutual_information(1, NULL, c0.colno, c1.colno, NULL)' \
             ' > 0.5);'
     assert bql2sql('estimate correlation from pairwise columns of p1' +
             ' where mutual information using 42 samples > 0.5;') == \
-        prefix + 'bql_column_correlation(1, c0.colno, c1.colno)' + \
+        prefix + 'bql_column_correlation(1, NULL, c0.colno, c1.colno)' + \
         infix + ' AND' + \
         ' (bql_column_mutual_information(1, NULL, c0.colno, c1.colno, 42)' \
             ' > 0.5);'
@@ -655,9 +655,9 @@ def test_estimate_pairwise_trivial():
             ' where correlation with weight > 0.5;')
     assert bql2sql('estimate correlation from pairwise columns of p1'
             ' where correlation > 0.5;') == \
-        prefix + 'bql_column_correlation(1, c0.colno, c1.colno)' + \
+        prefix + 'bql_column_correlation(1, NULL, c0.colno, c1.colno)' + \
         infix + ' AND' + \
-        ' (bql_column_correlation(1, c0.colno, c1.colno) > 0.5);'
+        ' (bql_column_correlation(1, NULL, c0.colno, c1.colno) > 0.5);'
     with pytest.raises(bayeslite.BQLError):
         # Makes no sense.
         bql2sql('estimate dependence probability'
@@ -1060,7 +1060,7 @@ def test_parametrized():
             'SELECT id FROM bayesdb_population WHERE name = ?',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'PRAGMA table_info("t")',
-            "SELECT CAST(4 AS INTEGER), CAST(NULL AS INTEGER), 'F'",
+            "SELECT CAST(4 AS INTEGER), 'F'",
             'SELECT colno FROM bayesdb_variable'
                 ' WHERE population_id = ? AND name = ?',
             'SELECT colno FROM bayesdb_variable'
@@ -1202,7 +1202,9 @@ def test_parametrized():
             'SELECT id FROM bayesdb_population WHERE name = ?',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'PRAGMA table_info("t")',
-            "SELECT CAST(4 AS INTEGER), CAST(NULL AS INTEGER), 'F'",
+            'SELECT name, stattype FROM bayesdb_variable'
+                ' WHERE population_id = ? AND colno < 0',
+            "SELECT CAST(4 AS INTEGER), 'F'",
             'SELECT colno FROM bayesdb_variable'
                 ' WHERE population_id = ? AND name = ?',
             'SELECT colno FROM bayesdb_variable'
