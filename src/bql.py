@@ -590,7 +590,7 @@ def _create_population(bdb, phrase):
             bdb.sql_execute('''
                 INSERT INTO bayesdb_latent (population_id, colno, name)
                     VALUES (?, ?, ?)
-            ''', (population_id, colno, casefold(name)))
+            ''', (population_id, colno, casefold(variable.name)))
 
 def rename_table(bdb, old, new):
     assert core.bayesdb_has_table(bdb, old)

@@ -103,7 +103,9 @@ def test_trivial_population():
         bdb.execute('drop population p')
         bdb.execute('''
             create population p for t (
-                age numerical, latent cluster categorical
+                age numerical,
+                latent cluster categorical,
+                latent error numerical
             )
         ''')
         bdb.execute('drop population p')
