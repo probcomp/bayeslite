@@ -1103,11 +1103,10 @@ def compile_pdf_joint(bdb, population_id, modelno, targets, constraints,
     for t_col, t_exp in targets:
         t_colno = core.bayesdb_variable_number(bdb, population_id,
             t_col)
-        assert t_colno != -1
         out.write(', %d, ' % (t_colno,))
         compile_expression(bdb, t_exp, bql_compiler, out)
     if 0 < len(constraints):
-        out.write(', -1')
+        out.write(', NULL')
         compile_constraints(bdb, population_id, constraints, bql_compiler, out)
     out.write(')')
 

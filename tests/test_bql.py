@@ -325,13 +325,13 @@ def test_estimate_bql():
         'SELECT bql_pdf_joint(1, NULL, 3, 20) FROM "t1";'
     assert bql2sql('estimate probability of weight = 20 given (age = 8)'
             'from p1;') == \
-        'SELECT bql_pdf_joint(1, NULL, 3, 20, -1, 2, 8) FROM "t1";'
+        'SELECT bql_pdf_joint(1, NULL, 3, 20, NULL, 2, 8) FROM "t1";'
     assert bql2sql('estimate probability of (weight = 20, age = 8)'
             ' from p1;') == \
         'SELECT bql_pdf_joint(1, NULL, 3, 20, 2, 8) FROM "t1";'
     assert bql2sql('estimate probability of (weight = 20, age = 8)'
             " given (label = 'mumble') from p1;") == \
-        "SELECT bql_pdf_joint(1, NULL, 3, 20, 2, 8, -1, 1, 'mumble')" \
+        "SELECT bql_pdf_joint(1, NULL, 3, 20, 2, 8, NULL, 1, 'mumble')" \
             ' FROM "t1";'
     assert bql2sql('estimate probability of weight = (c + 1) from p1;') == \
         'SELECT bql_pdf_joint(1, NULL, 3, ("c" + 1)) FROM "t1";'

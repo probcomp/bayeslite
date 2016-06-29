@@ -299,7 +299,7 @@ def bql_pdf_joint(bdb, population_id, _modelno, *args):
     i = 0
     targets = []
     while i < len(args):
-        if args[i] == -1:
+        if args[i] is None:
             i += 1
             break
         if i + 1 == len(args):
