@@ -117,10 +117,7 @@ bdb.sql_execute('''
         country_of_operator,
         launch_mass,
         perigee,
-        period,
-        -- Exposed variables.
-        kepler_noise,
-        kepler_cluster_id
+        period
         )
     ''')
 
@@ -150,13 +147,13 @@ bdb.execute('''
         launch_mass NUMERICAL,
         perigee NUMERICAL,
         period NUMERICAL,
-        kepler_noise NUMERICAL,
-        kepler_cluster_id CATEGORICAL
+        LATENT kepler_noise NUMERICAL,
+        LATENT kepler_cluster_id CATEGORICAL
         )
     ''')
 
 bdb.execute('''
-    ESTIMATE CORRELATION FROM PAIRWISE COLUMNS OF satellites
+    ESTIMATE CORRELATION FROM PAIRWISE VARIABLES OF satellites
     ''').fetchall()
 
 cgpmt = CGPM_Metamodel(
@@ -180,7 +177,7 @@ bdb.execute('''
 
 # -- MODEL country_of_operator GIVEN class_of_orbit USING forest;
 print 'INITIALIZING'
-bdb.execute('INITIALIZE 2 MODELS FOR g0')
+bdb.execute('INITIALIZE 1 MODELS FOR g0')
 
 print 'ANALYZING'
 bdb.execute('ANALYZE g0 FOR 1 ITERATION WAIT')
@@ -232,7 +229,7 @@ print bdb.execute('''
 print 'SIMULATING JOINT'
 
 print bdb.execute('''
-    SIMULATE apogee, perigee, period FROM satellites LIMIT 4
+    SIMULATE kepler_cluster_id, apogee, perigee, period FROM satellites LIMIT 4
     ''').fetchall()
 
 bdb.execute('DROP MODELS FROM g0')
