@@ -538,15 +538,14 @@ def _create_population(bdb, phrase):
     '''
     for variable in phrase.schema:
         latent = variable.latent
-        name = variable.name
-        stattype = variable.stattype
-        name_folded = casefold(name)
-        if name_folded in variable_map:
+        name = casefold(variable.name)
+        stattype = casefold(variable.stattype)
+        if name in variable_map:
             duplicates.add(name)
             continue
         if latent:
             nlatent += 1
-            variable_map[casefold(name)] = -nlatent
+            variable_map[name] = -nlatent
             continue
         cursor = bdb.sql_execute(colno_sql, {
             'table': phrase.table,
@@ -561,10 +560,10 @@ def _create_population(bdb, phrase):
             colno = row[0]
             assert isinstance(colno, int)
             cursor = bdb.sql_execute(stattype_sql, {'stattype': stattype})
-            if cursor_value(cursor) == 0:
+            if cursor_value(cursor) == 0 and stattype != 'ignore':
                 invalid.add(stattype)
                 continue
-            variable_map[casefold(name)] = colno
+            variable_map[name] = colno
     # XXX Would be nice to report these simultaneously.
     if missing:
         raise BQLError(bdb, 'No such columns in table %r: %r' %
@@ -579,6 +578,8 @@ def _create_population(bdb, phrase):
         name = casefold(variable.name)
         colno = variable_map[name]
         stattype = casefold(variable.stattype)
+        if stattype == 'ignore':
+            continue
         bdb.sql_execute('''
             INSERT INTO bayesdb_variable
                 (population_id, name, colno, stattype)
