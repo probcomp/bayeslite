@@ -125,7 +125,7 @@ for l, f in [
     ('geo', lambda x, y: x + y**2),
     ('leo', lambda x, y: math.sin(x + y)),
 ]:
-    for x in xrange(10):
+    for x in xrange(1000):
         for y in xrange(10):
             countries = ['US', 'Russia', 'China', 'Bulgaria']
             country = countries[random.randrange(len(countries))]
@@ -172,6 +172,7 @@ bdb.execute('''
         MODEL perigee GIVEN apogee USING linreg,
         MODEL class_of_orbit GIVEN apogee, period, perigee
             USING forest (k = 4),
+        SUBSAMPLE 100,
         )
     '''.format(kepler_source))
 
