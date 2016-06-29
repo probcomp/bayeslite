@@ -188,7 +188,9 @@ class BQLSemantics(object):
         return ast.PopVar(True, name, st)
     def p_stattype_st(self, name):              return name
 
-    def p_command_creategen(self, name, ifnotexists, pop, metamodel, schema):
+    def p_command_creategen(self, ifnotexists0, name, ifnotexists1, pop,
+            metamodel, schema):
+        ifnotexists = ifnotexists0 or ifnotexists1
         return ast.CreateGen(name, ifnotexists, pop, metamodel, schema)
     def p_command_dropgen(self, ifexists, name):
         return ast.DropGen(ifexists, name)

@@ -76,8 +76,9 @@ pop_var(latent)		::= K_LATENT column_name(name) stattype(st).
 stattype(st)		::= L_NAME(name).
 
 /* XXX Temporary generators?  */
-command(creategen)	::= K_CREATE K_GENERATOR generator_name(name)
-				ifnotexists(ifnotexists)
+command(creategen)	::= K_CREATE K_GENERATOR ifnotexists(ifnotexists0)
+				generator_name(name)
+				ifnotexists(ifnotexists1)
 				K_FOR population_name(pop)
 				K_USING metamodel_name(metamodel)
 				T_LROUND generator_schema(schema) T_RROUND.
