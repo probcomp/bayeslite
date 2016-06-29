@@ -132,23 +132,23 @@ CREATE TABLE bayesdb_population (
 CREATE TABLE bayesdb_variable (
 	population_id	INTEGER NOT NULL REFERENCES bayesdb_population(id),
 	colno		INTEGER NOT NULL,
-	stattype	TEXT NOT NULL REFERENCES bayesdb_stattype(name),
-	PRIMARY KEY(population_id, colno)
-);
-
-CREATE TABLE bayesdb_latent (
-	population_id	INTEGER NOT NULL REFERENCES bayesdb_population(id),
-	colno		INTEGER NOT NULL,
-	name		TEXT COLLATE NOCASE NOT NULL,
+        name            TEXT COLLATE NOCASE NOT NULL,
+	stattype	TEXT COLLATE NOCASE NOT NULL
+				REFERENCES bayesdb_stattype(name),
 	PRIMARY KEY(population_id, colno),
 	UNIQUE(population_id, name)
 );
 
-INSERT INTO bayesdb_variable (population_id, colno, stattype)
-    SELECT p.id, gc.colno, gc.stattype
-        FROM bayesdb_population AS p, bayesdb_generator AS g,
-            bayesdb_generator_column AS gc
-        WHERE p.name = g.name AND g.id = gc.generator_id;
+INSERT INTO bayesdb_variable (population_id, name, colno, stattype)
+    SELECT p.id, c.name, gc.colno, gc.stattype
+        FROM bayesdb_population AS p,
+            bayesdb_generator AS g,
+            bayesdb_generator_column AS gc,
+            bayesdb_column AS c
+        WHERE p.name = g.name
+            AND g.id = gc.generator_id
+            AND p.tabname = c.tabname
+            AND gc.colno = c.colno;
 
 -- Adapt each existing generator to a single population.
 INSERT INTO bayesdb_population (name, tabname)

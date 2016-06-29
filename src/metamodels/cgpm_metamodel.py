@@ -133,13 +133,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Assign codes to categories and consecutive column numbers to
         # the modelled variables.
         vars_cursor = bdb.sql_execute('''
-            SELECT v.colno, c.name, v.stattype
-                FROM bayesdb_variable AS v,
-                    bayesdb_population AS p,
-                    bayesdb_column AS c
-                WHERE p.id = ? AND v.population_id = p.id
-                    AND c.tabname = p.tabname AND c.colno = v.colno
-                    AND 0 <= v.colno
+            SELECT colno, name, stattype FROM bayesdb_variable
+                WHERE population_id = ? AND 0 <= colno
         ''', (population_id,))
         for colno, name, stattype in vars_cursor:
             if casefold(stattype) == 'categorical':
