@@ -210,59 +210,19 @@ def bayesdb_population_generators(bdb, population_id):
 
 def bayesdb_has_variable(bdb, population_id, name):
     """True if the population has a given variable."""
-    sql = '''
-        SELECT COUNT(*)
-            FROM bayesdb_population AS p,
-                bayesdb_variable AS v,
-                bayesdb_column AS c
-            WHERE p.id = :population_id AND c.name = :name
-                AND p.id = v.population_id
-                AND p.tabname = c.tabname
-                AND v.colno = c.colno
-    '''
-    cursor = bdb.sql_execute(sql, {
-        'population_id': population_id,
-        'name': name,
-    })
-    if cursor_value(cursor):
-        return True
     cursor = bdb.sql_execute('''
-        SELECT COUNT(*) FROM bayesdb_latent
+        SELECT COUNT(*) FROM bayesdb_variable
             WHERE population_id = ? AND name = ?
     ''', (population_id, name))
-    if cursor_value(cursor):
-        return True
-    return False
+    return cursor_value(cursor) != 0
 
 def bayesdb_variable_number(bdb, population_id, name):
     """Return the column number of a population variable."""
-    sql = '''
-        SELECT c.colno
-            FROM bayesdb_population AS p,
-                bayesdb_variable AS v,
-                bayesdb_column AS c
-            WHERE p.id = :population_id AND c.name = :name
-                AND p.id = v.population_id
-                AND p.tabname = c.tabname
-                AND v.colno = c.colno
-        UNION
-        SELECT colno FROM bayesdb_latent
-            WHERE population_id = :population_id AND name = :name
-    '''
-    cursor = bdb.sql_execute(sql, {
-        'population_id': population_id,
-        'name': name,
-    })
-    try:
-        row = cursor.next()
-    except StopIteration:
-        population = bayesdb_population_name(bdb, population_id)
-        raise ValueError('No such column in population %r: %r' %
-            (population, name))
-    else:
-        assert len(row) == 1
-        assert isinstance(row[0], int)
-        return row[0]
+    cursor = bdb.sql_execute('''
+        SELECT colno FROM bayesdb_variable
+            WHERE population_id = ? AND name = ?
+    ''', (population_id, name))
+    return cursor_value(cursor)
 
 def bayesdb_variable_names(bdb, population_id):
     """Return a list of the names of columns modelled in `population_id`."""
@@ -281,36 +241,10 @@ def bayesdb_variable_numbers(bdb, population_id):
 
 def bayesdb_variable_name(bdb, population_id, colno):
     """Return the name a population variable."""
-    if colno < 0:
-        sql = '''
-            SELECT name FROM bayesdb_latent
-                WHERE population_id = :population_id AND colno = :colno
-        '''
-    else:
-        sql = '''
-            SELECT c.name
-                FROM bayesdb_population AS p,
-                    bayesdb_variable AS v,
-                    bayesdb_column AS c
-                WHERE p.id = :population_id
-                    AND v.colno = :colno
-                    AND p.id = v.population_id
-                    AND p.tabname = c.tabname
-                    AND v.colno = c.colno
-        '''
-    cursor = bdb.sql_execute(sql, {
-        'population_id': population_id,
-        'colno': colno,
-    })
-    try:
-        row = cursor.next()
-    except StopIteration:
-        population = bayesdb_population_name(bdb, population_id)
-        raise ValueError('No such variable in population %r: %d' %
-            (population, colno))
-    else:
-        assert len(row) == 1
-        return row[0]
+    cursor = bdb.sql_execute('''
+        SELECT name FROM bayesdb_variable WHERE population_id = ? AND colno = ?
+    ''', (population_id, colno))
+    return cursor_value(cursor)
 
 def bayesdb_variable_stattype(bdb, population_id, colno):
     """Return the statistical type of a population variable."""
@@ -345,6 +279,9 @@ def bayesdb_variable_stattype(bdb, population_id, colno):
         return row[0]
 
 def bayesdb_population_cell_value(bdb, population_id, rowid, colno):
+    if colno < 0:
+        # Latent variables do not appear in the table.
+        return None
     table_name = bayesdb_population_table(bdb, population_id)
     var = bayesdb_variable_name(bdb, population_id, colno)
     qt = sqlite3_quote_name(table_name)

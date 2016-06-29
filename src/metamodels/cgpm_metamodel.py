@@ -134,13 +134,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Assign codes to categories and consecutive column numbers to
         # the modelled variables.
         vars_cursor = bdb.sql_execute('''
-            SELECT v.colno, c.name, v.stattype
-                FROM bayesdb_variable AS v,
-                    bayesdb_population AS p,
-                    bayesdb_column AS c
-                WHERE p.id = ? AND v.population_id = p.id
-                    AND c.tabname = p.tabname AND c.colno = v.colno
-                    AND 0 <= v.colno
+            SELECT colno, name, stattype FROM bayesdb_variable
+                WHERE population_id = ? AND 0 <= colno
         ''', (population_id,))
         for colno, name, stattype in vars_cursor:
             if casefold(stattype) == 'categorical':
@@ -404,11 +399,14 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Create SQL expressions to cast each variable to the correct
         # affinity for its statistical type.
-        qexpressions = ','.join('CAST(%s AS %s)' %
-                ('NULL' if colno < 0 else 't.' + sqlite3_quote_name(var),
-                    sqlite3_quote_name(core.bayesdb_stattype_affinity(bdb,
-                            stattype)))
-            for var, (colno, stattype) in zip(vars, zip(colnos, stattypes)))
+        def cast(var, colno, stattype):
+            if colno < 0:
+                return 'NULL'
+            qv = sqlite3_quote_name(var)
+            affinity = core.bayesdb_stattype_affinity(bdb, stattype)
+            qa = sqlite3_quote_name(affinity)
+            return 'CAST(t.%s AS %s)' % (qv, qa)
+        qexpressions = ','.join(map(cast, vars, colnos, stattypes))
 
         # Get a cursor.
         cursor = bdb.sql_execute('''
