@@ -533,6 +533,14 @@ def test_trivial_commands():
             ['pqr', 'categorical'],
             ['lmn', 'cyclic'],
         ])]
+    # XXX Schema of [[]] instead of [] is kinda wacky.  Fix?  (But
+    # make sure the empty-parens and no-parens cases are equivalent.)
+    assert parse_bql_string('create generator t_cc'
+            ' for t using crosscat()') == \
+        [ast.CreateGen('t_cc', False, 't', 'crosscat', [[]])]
+    assert parse_bql_string('create generator t_cc'
+            ' for t using crosscat') == \
+        [ast.CreateGen('t_cc', False, 't', 'crosscat', [[]])]
     assert parse_bql_string('initialize 1 model for t;') == \
         [ast.InitModels(False, 't', 1)]
     assert parse_bql_string('initialize 1 model if not exists for t;') == \

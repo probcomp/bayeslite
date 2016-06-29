@@ -202,6 +202,8 @@ class BQLSemantics(object):
     def p_altergen_cmd_renamegen(self, name):
         return ast.AlterGenRenameGen(name)
 
+    def p_generator_schema_opt_none(self):      return [[]]
+    def p_generator_schema_opt_some(self, s):   return s
     def p_generator_schema_one(self, s):        return [s]
     def p_generator_schema_many(self, ss, s):   ss.append(s); return ss
     def p_generator_schemum_empty(self):        return []
