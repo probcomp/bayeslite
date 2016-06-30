@@ -96,8 +96,9 @@ CREATE TABLE bayesdb_cgpm_category (
 '''
 
 class CGPM_Metamodel(IBayesDBMetamodel):
-    def __init__(self, cgpm_registry):
+    def __init__(self, cgpm_registry, multithread=None):
         self._cgpm_registry = cgpm_registry
+        self._ncpu = multithread
 
     def name(self):
         return 'cgpm'
@@ -218,12 +219,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Initialize CGPMs for each state.
         for cgpm_ext in schema['cgpm_composition']:
-            cgpm_initializer = self._cgpm_initializer(
-                bdb, generator_id, cgpm_ext)
-            for i, state in enumerate(engine.get_states(xrange(n))):
-                cgpm = cgpm_initializer()
-                _token = state.compose_cgpm(cgpm)
-                engine.states[i] = state.to_metadata()
+            cgpms = [self._initialize_cgpm(bdb, generator_id, cgpm_ext)
+                for _ in xrange(n)]
+            engine.compose_cgpm(cgpms, N=1, multithread=self._ncpu)
 
         # Store the newly initialized engine.
         engine_json = json_dumps(engine.to_metadata())
@@ -259,7 +257,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         engine = self._engine(bdb, generator_id)
 
         # Do the transition.
-        engine.transition(N=iterations, S=max_seconds, multithread=False)
+        engine.transition(N=iterations, S=max_seconds, multithread=self._ncpu)
 
         # Serialize the engine.
         engine_json = json_dumps(engine.to_metadata())
@@ -282,7 +280,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         engine = self._engine(bdb, generator_id)
 
         # Go!
-        return engine.dependence_probability(colno0, colno1, multithread=False)
+        return engine.dependence_probability(colno0, colno1,
+            multithread=self._ncpu)
 
     def column_mutual_information(self, bdb, generator_id, modelno,
             colno0, colno1, numsamples=None):
@@ -294,7 +293,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         engine = self._engine(bdb, generator_id)
 
         # Go!
-        mi_list = engine.mutual_information(colno0, colno1, N=numsamples)
+        mi_list = engine.mutual_information(colno0, colno1, N=numsamples,
+            multithread=self._ncpu)
 
         # Engine gives us a list of samples which it is our
         # responsibility to integrate over.
@@ -313,7 +313,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         engine = self._engine(bdb, generator_id)
 
         # Go!
-        return engine.row_similarity(cgpm_rowid, cgpm_target_rowid, colnos)
+        return engine.row_similarity(cgpm_rowid, cgpm_target_rowid, colnos,
+            multithread=self._ncpu)
 
     def predict_confidence(self, bdb, generator_id, modelno, colno, rowid,
             numsamples=None):
@@ -354,9 +355,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         engine = self._engine(bdb, generator_id)
         samples = engine.simulate(
             cgpm_rowid, cgpm_query, cgpm_evidence, N=num_predictions,
-            multithread=False)
+            multithread=self._ncpu)
         weighted_samples = engine._process_samples(
-            samples, cgpm_rowid, cgpm_evidence, multithread=False)
+            samples, cgpm_rowid, cgpm_evidence, multithread=self._ncpu)
         def map_value(colno, value):
             return self._from_numeric(bdb, generator_id, colno, value)
         return [[map_value(colno, row[colno]) for colno in cgpm_query]
@@ -376,10 +377,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         }
         engine = self._engine(bdb, generator_id)
         logpdfs = engine.logpdf(
-            cgpm_rowid, cgpm_query, cgpm_evidence, multithread=False)
+            cgpm_rowid, cgpm_query, cgpm_evidence, multithread=self._ncpu)
         # XXX abstraction violation
         return engine._process_logpdfs(
-            logpdfs, cgpm_rowid, cgpm_evidence, multithread=False)
+            logpdfs, cgpm_rowid, cgpm_evidence, multithread=self._ncpu)
 
     def _unique_rowid(self, rowids):
         if len(set(rowids)) != 1:
@@ -433,10 +434,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         gpmcc_vars = [var for var, _stattype, _dist, _params in variables]
         gpmcc_data = self._data(bdb, generator_id, gpmcc_vars)
         return Engine(
-            gpmcc_data, num_states=n, rng=bdb.np_prng, multithread=False,
+            gpmcc_data, num_states=n, rng=bdb.np_prng, multithread=self._ncpu,
             outputs=outputs, cctypes=cctypes, distargs=distargs)
 
-    def _cgpm_initializer(self, bdb, generator_id, cgpm_ext):
+    def _initialize_cgpm(self, bdb, generator_id, cgpm_ext):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         def map_var(var):
             return core.bayesdb_variable_number(bdb, population_id, var)
@@ -450,32 +451,28 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         cls = self._cgpm_registry[name]
         cgpm_vars = cgpm_ext['outputs'] + cgpm_ext['inputs']
         cgpm_data = self._data(bdb, generator_id, cgpm_vars)
-        def initialize():
-            cgpm = cls(outputs, inputs, rng=bdb.np_prng, *args, **kwds)
-            for cgpm_rowid, row in enumerate(cgpm_data):
-                # CGPMs do not uniformly handle null values or missing
-                # values sensibly yet, so until we have that sorted
-                # out we both (a) omit nulls and (b) ignore errors in
-                # incorporate.
-                query = {
-                    colno: row[i]
-                    for i, colno in enumerate(outputs)
-                    if not math.isnan(row[i])
-                }
-                n = len(outputs)
-                evidence = {
-                    colno: row[n + i]
-                    for i, colno in enumerate(inputs)
-                    if not math.isnan(row[n + i])
-                }
-                try:
-                    cgpm.incorporate(cgpm_rowid, query, evidence)
-                except Exception:
-                    pass
-            # XXX WHATTA LUDICROUS LINE
-            cgpm.transition(N=1)
-            return cgpm
-        return initialize
+        cgpm = cls(outputs, inputs, rng=bdb.np_prng, *args, **kwds)
+        for cgpm_rowid, row in enumerate(cgpm_data):
+            # CGPMs do not uniformly handle null values or missing
+            # values sensibly yet, so until we have that sorted
+            # out we both (a) omit nulls and (b) ignore errors in
+            # incorporate.
+            query = {
+                colno: row[i]
+                for i, colno in enumerate(outputs)
+                if not math.isnan(row[i])
+            }
+            n = len(outputs)
+            evidence = {
+                colno: row[n + i]
+                for i, colno in enumerate(inputs)
+                if not math.isnan(row[n + i])
+            }
+            try:
+                cgpm.incorporate(cgpm_rowid, query, evidence)
+            except Exception:
+                pass
+        return cgpm
 
     def _cache(self, bdb):
         # If there's no BayesDB-wide cache, there's no CGPM cache.
