@@ -448,7 +448,9 @@ def bayesdb_simulate(bdb, population_id, constraints, colnos,
         for generator_id in generator_ids]
     loglikelihoods = map(loglikelihood, generator_ids, metamodels)
     likelihoods = map(math.exp, loglikelihoods)
-    countses = bdb.np_prng.multinomial(numpredictions, likelihoods, size=1)
+    total_likelihood = sum(likelihoods)
+    probabilities = [likelihood/total_likelihood for likelihood in likelihoods]
+    countses = bdb.np_prng.multinomial(numpredictions, probabilities, size=1)
     counts = countses[0]
     rowses = map(simulate, generator_ids, metamodels, counts)
     all_rows = [row for rows in rowses for row in rows]
