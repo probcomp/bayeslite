@@ -777,6 +777,7 @@ def _default_numerical(bdb, generator_id, var):
 
 _DEFAULT_DIST = {
     'categorical': _default_categorical,
+    'cyclic': _default_numerical, # XXX can't do cyclic yet
     'numerical': _default_numerical,
 }
 
