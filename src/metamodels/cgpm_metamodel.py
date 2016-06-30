@@ -62,6 +62,7 @@ import bayeslite.core as core
 from bayeslite.exception import BQLError
 from bayeslite.metamodel import IBayesDBMetamodel
 from bayeslite.sqlite3_util import sqlite3_quote_name
+from bayeslite.stats import arithmetic_mean
 from bayeslite.util import casefold
 
 import cgpm_parse
@@ -776,6 +777,7 @@ def _default_numerical(bdb, generator_id, var):
 
 _DEFAULT_DIST = {
     'categorical': _default_categorical,
+    'cyclic': _default_numerical, # XXX can't do cyclic yet
     'numerical': _default_numerical,
 }
 

@@ -76,11 +76,12 @@ pop_var(latent)		::= K_LATENT column_name(name) stattype(st).
 stattype(st)		::= L_NAME(name).
 
 /* XXX Temporary generators?  */
-command(creategen)	::= K_CREATE K_GENERATOR generator_name(name)
-				ifnotexists(ifnotexists)
+command(creategen)	::= K_CREATE K_GENERATOR ifnotexists(ifnotexists0)
+				generator_name(name)
+				ifnotexists(ifnotexists1)
 				K_FOR population_name(pop)
 				K_USING metamodel_name(metamodel)
-				T_LROUND generator_schema(schema) T_RROUND.
+				generator_schema_opt(schema).
 command(dropgen)	::= K_DROP K_GENERATOR ifexists(ifexists)
 				generator_name(name).
 command(altergen)	::= K_ALTER K_GENERATOR generator_name(generator)
@@ -90,6 +91,9 @@ altergen_cmds(one)	::= altergen_cmd(cmd).
 altergen_cmds(many)	::= altergen_cmds(cmds) T_COMMA altergen_cmd(cmd).
 
 altergen_cmd(renamegen)	::= K_RENAME K_TO generator_name(name).
+
+generator_schema_opt(none)	::= .
+generator_schema_opt(some)	::= T_LROUND generator_schema(s) T_RROUND.
 
 generator_schema(one)	::= generator_schemum(s).
 generator_schema(many)	::= generator_schema(ss) T_COMMA generator_schemum(s).
@@ -146,11 +150,11 @@ wait_opt(some)		::= K_WAIT.
 
 simulate(s)		::= K_SIMULATE simulate_columns(cols)
 				K_FROM population_name(population)
-				usingmodel_opt(modelno)
+				modelledby_opt(generator)
 				given_opt(constraints) limit(lim).
 simulate(nolimit)	::= K_SIMULATE simulate_columns(cols)
 				K_FROM population_name(population)
-				usingmodel_opt(modelno)
+				modelledby_opt(generator)
 				given_opt(constraints).
 
 simulate_columns(one)	::= column_name(col).
@@ -192,7 +196,7 @@ select(s)		::= K_SELECT select_quant(quant) select_columns(cols)
 
 estimate(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
 				from_est(tabs)
-				usingmodel_opt(modelno)
+				modelledby_opt(generator)
 				where(cond)
 				group_by(grouping)
 				order_by(ord)
@@ -204,17 +208,17 @@ estpaircol(e)		::= K_ESTIMATE K_PAIRWISE error T_SEMI.
 
 estby(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
 				K_BY|K_WITHIN population_name(population)
-				usingmodel_opt(modelno).
+				modelledby_opt(generator).
 
 infer(auto)		::= K_INFER infer_auto_columns(cols)
 				withconf_opt(conf)
 				K_FROM population_name(population)
-				usingmodel_opt(modelno)
+				modelledby_opt(generator)
 				where(cond) group_by(grouping) order_by(ord)
 				limit_opt(lim).
 infer(explicit)		::= K_INFER K_EXPLICIT infer_exp_columns(cols)
 				K_FROM population_name(population)
-				usingmodel_opt(modelno)
+				modelledby_opt(generator)
 				where(cond) group_by(grouping) order_by(ord)
 				limit_opt(lim).
 
@@ -263,8 +267,8 @@ from_est(col)		::= K_FROM K_COLUMNS|K_VARIABLES
 from_est(paircol)	::= K_FROM K_PAIRWISE K_COLUMNS|K_VARIABLES K_OF
 				population_name(name) for(subcols).
 
-/* Vestige of a former design.  Remove me!  */
-usingmodel_opt(all)	::= .
+modelledby_opt(none)	::= .
+modelledby_opt(some)	::= K_MODELED|K_MODELLED K_BY generator_name(gen).
 
 /* XXX Allow all kinds of joins.  */
 select_tables(one)	::= select_table(t).
