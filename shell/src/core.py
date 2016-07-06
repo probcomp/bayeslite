@@ -479,22 +479,22 @@ class Shell(cmd.Cmd):
             self.stdout.write(traceback.format_exc())
 
     def dot_guess(self, line):
-        '''guess data generator
-        <generator> <table>
+        '''guess population schema
+        <population> <table>
 
-        Create a generator named <generator> for the table <table>,
-        guessing the statistical types of the columns in <table>.
+        Create a population named <population> with variables
+        corresponding to columns in table <table>, heuristically
+        guessing their statistical types.
         '''
         # XXX Lousy, lousy tokenizer.
         tokens = line.split()
         if len(tokens) != 2:
-            self.stdout.write('Usage: .guess <generator> <table>\n')
+            self.stdout.write('Usage: .guess <population> <table>\n')
             return
-        generator = tokens[0]
+        population = tokens[0]
         table = tokens[1]
         try:
-            guess.bayesdb_guess_generator(self._bdb, generator, table,
-                                          self._metamodel)
+            guess.bayesdb_guess_population(self._bdb, population, table)
         except Exception:
             self.stdout.write(traceback.format_exc())
 
