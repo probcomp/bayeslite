@@ -121,8 +121,8 @@ def test_guess_population():
         # Population already exists.
         bayesdb_guess_population(bdb, 'p', 't')
     assert bdb.sql_execute('SELECT * FROM bayesdb_variable').fetchall() == [
-        (1, 1, 'categorical'),
-        (1, 2, 'numerical'),
+        (1, 1, 'y', 'categorical'),
+        (1, 2, 'z', 'numerical'),
     ]
 
 def isqrt(n):
