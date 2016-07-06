@@ -460,7 +460,8 @@ def execute_phrase(bdb, phrase, bindings=()):
             iterations=phrase.iterations,
             max_seconds=phrase.seconds,
             ckpt_iterations=phrase.ckpt_iterations,
-            ckpt_seconds=phrase.ckpt_seconds)
+            ckpt_seconds=phrase.ckpt_seconds,
+            program=phrase.program)
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.DropModels):

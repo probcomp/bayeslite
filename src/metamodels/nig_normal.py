@@ -158,7 +158,12 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                     bdb.sql_execute(delete_models_sql, (generator_id, modelno))
 
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
-            max_seconds=None, ckpt_iterations=None, ckpt_seconds=None):
+            max_seconds=None, ckpt_iterations=None, ckpt_seconds=None,
+            program=None):
+        if program is not None:
+            # XXX
+            raise NotImplementedError('nig_normal analysis programs')
+
         # Ignore analysis timing control, because one step reaches the
         # posterior anyway.
         # NOTE: Does not update the model iteration count.  This would

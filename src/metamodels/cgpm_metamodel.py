@@ -246,12 +246,16 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             del cache.engine[generator_id]
 
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
-            max_seconds=None, ckpt_iterations=None, ckpt_seconds=None):
+            max_seconds=None, ckpt_iterations=None, ckpt_seconds=None,
+            program=None):
         assert modelnos is None
 
         if ckpt_iterations is not None or ckpt_seconds is not None:
             # XXX
             raise NotImplementedError('cgpm analysis checkpoint')
+        if program is not None:
+            # XXX
+            raise NotImplementedError('cgpm analysis programs')
 
         # Get the engine.
         engine = self._engine(bdb, generator_id)
