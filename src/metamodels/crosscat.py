@@ -575,6 +575,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
              core.bayesdb_generator_column_stattype(bdb, generator_id, colno))
             for colno in core.bayesdb_generator_column_numbers(
                 bdb, generator_id)
+            if 0 <= colno
         ]
         table = core.bayesdb_generator_table(bdb, generator_id)
 
