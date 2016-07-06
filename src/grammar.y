@@ -113,7 +113,8 @@ command(init_models)	::= K_INITIALIZE L_INTEGER(n) K_MODEL|K_MODELS
 command(analyze_models)	::= K_ANALYZE generator_name(generator)
 				anmodelset_opt(models) anlimit(anlimit)
 				anckpt_opt(anckpt)
-				wait_opt(wait).
+				wait_opt(wait)
+				analysis_program_opt(program).
 command(drop_models)	::= K_DROP K_MODEL|K_MODELS modelset_opt(models)
 				K_FROM generator_name(generator).
 
@@ -147,6 +148,13 @@ anduration(seconds)	::= L_INTEGER(n) K_SECOND|K_SECONDS.
 
 wait_opt(none)		::= .
 wait_opt(some)		::= K_WAIT.
+
+analysis_program_opt(none)	::= .
+analysis_program_opt(some)	::= T_LROUND analysis_program(p) T_RROUND.
+analysis_program(empty)		::= .
+analysis_program(nonempty)	::= analysis_program(p) analysis_token(t).
+analysis_token(compound)	::= T_LROUND analysis_program(p) T_RROUND.
+analysis_token(primitive)	::= ANY(t).
 
 simulate(s)		::= K_SIMULATE simulate_columns(cols)
 				K_FROM population_name(population)
