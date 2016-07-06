@@ -20,6 +20,8 @@ import tempfile
 import crosscat.LocalEngine
 
 import bayeslite
+
+from bayeslite.exception import BQLError
 from bayeslite.metamodels.crosscat import CrosscatMetamodel
 
 
@@ -80,7 +82,7 @@ def test_codebook_value_map():
                 ('jackie', 18, 'LA'), ('rocker', 22, 'DC')
         ''')
         bdb.execute('ANALYZE dummy_cc FOR 20 ITERATIONS WAIT')
-        with pytest.raises(KeyError):
+        with pytest.raises(BQLError):
             bdb.execute('SIMULATE age FROM dummy_pop GIVEN city = LA LIMIT 5')
 
 def test_empty_codebook():
