@@ -69,7 +69,6 @@ class Shell(cmd.Cmd):
         self._installcmd('guess', self.dot_guess)
         self._installcmd('help', self.dot_help)
         self._installcmd('hook', self.dot_hook)
-        self._installcmd('legacymodels', self.dot_legacymodels)
         self._installcmd('open', self.dot_open)
         self._installcmd('pythexec', self.dot_pythexec)
         self._installcmd('python', self.dot_python)
@@ -496,33 +495,6 @@ class Shell(cmd.Cmd):
         try:
             guess.bayesdb_guess_generator(self._bdb, generator, table,
                                           self._metamodel)
-        except Exception:
-            self.stdout.write(traceback.format_exc())
-
-    def dot_legacymodels(self, line):
-        '''load legacy models
-        <generator> <table> </path/to/models.pkl.gz>
-
-        Create a Crosscat generator named <generator> for the table
-        <table> from the legacy models stored in
-        </path/to/models.pkl.gz>.
-        '''
-        # XXX Lousy, lousy tokenizer.
-        tokens = line.split()
-        if len(tokens) != 3:
-            self.stdout.write('Usage:'
-                              ' .legacymodels <generator> <table>'
-                              ' </path/to/models.pkl.gz>\n')
-            return
-        generator = tokens[0]
-        table = tokens[1]
-        pathname = tokens[2]
-        try:
-            bayeslite.bayesdb_load_legacy_models(self._bdb, generator, table,
-                                                 self._metamodel, pathname,
-                                                 create=True)
-        except IOError as e:
-            self.stdout.write('%s\n' % (e,))
         except Exception:
             self.stdout.write(traceback.format_exc())
 

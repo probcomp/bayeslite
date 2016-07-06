@@ -114,7 +114,6 @@ include src/grammar.sha256
 include src/grammar.y
 include tests/dha.csv
 include tests/dha_codebook.csv
-include tests/dha_models.pkl.gz
 include tests/test_bql.py
 include tests/test_codebook.py
 include tests/test_column_dep.py
@@ -123,7 +122,6 @@ include tests/test_correlation.py
 include tests/test_csv.py
 include tests/test_geweke.py
 include tests/test_guess.py
-include tests/test_legacy.py
 include tests/test_math_util.py
 include tests/test_metamodels.py
 include tests/test_parse.py

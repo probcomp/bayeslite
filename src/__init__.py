@@ -72,7 +72,6 @@ from bayeslite.bayesdb import IBayesDBTracer
 from bayeslite.codebook import bayesdb_load_codebook_csv_file
 from bayeslite.exception import BayesDBException
 from bayeslite.exception import BQLError
-from bayeslite.legacy_models import bayesdb_load_legacy_models
 from bayeslite.metamodel import IBayesDBMetamodel
 from bayeslite.metamodel import bayesdb_builtin_metamodel
 from bayeslite.metamodel import bayesdb_deregister_metamodel
@@ -102,7 +101,6 @@ __all__ = [
     'BayesDBTxnError',
     'bayesdb_deregister_metamodel',
     'bayesdb_load_codebook_csv_file',
-    'bayesdb_load_legacy_models',
     'bayesdb_open',
     'bayesdb_read_csv',
     'bayesdb_read_csv_file',
