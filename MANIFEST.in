@@ -110,7 +110,6 @@ include shell/scripts/bayeslite
 include shell/tests/test_pretty.py
 include shell/tests/test_shell.py
 include shell/tests/thooks.py
-include src/grammar.sha256
 include src/grammar.y
 include tests/dha.csv
 include tests/dha_codebook.csv
