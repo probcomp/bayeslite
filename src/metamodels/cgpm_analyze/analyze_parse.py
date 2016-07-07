@@ -30,8 +30,8 @@ grep -o 'K_[A-Z][A-Z0-9_]*' < analyze_grammar.y | sort -u | awk '
 '''
 
 KEYWORDS = {
-    'variables' : analyze_grammar.K_VARIABLES,
-    'ignore'    : analyze_grammar.K_IGNORE,
+    'skip': analyze_grammar.K_SKIP,
+    'variables': analyze_grammar.K_VARIABLES,
 }
 
 PUNCTUATION = {
@@ -41,10 +41,10 @@ PUNCTUATION = {
     ';': analyze_grammar.T_SEMI,
 }
 
-def parse(tokenses):
+def parse(tokens):
     semantics = CGpmAnalyzeSemantics()
     parser = analyze_grammar.Parser(semantics)
-    for token in tokenize(tokenses):
+    for token in tokenize(tokens):
         print token
         semantics.context.append(token)
         if len(semantics.context) > 10:
@@ -55,8 +55,9 @@ def parse(tokenses):
     assert semantics.schema is not None
     return semantics.schema
 
-def tokenize(tokenses):
-    for token in intersperse(',', [flatten(tokens) for tokens in tokenses]):
+
+def tokenize(tokens):
+    for token in tokens:
         if isinstance(token, str):
             if casefold(token) in KEYWORDS:
                 yield KEYWORDS[casefold(token)], token
@@ -70,28 +71,6 @@ def tokenize(tokenses):
             raise IOError('Invalid token: %r' % (token,))
     yield 0, ''                 # EOF
 
-def intersperse(comma, l):
-    if len(l) == 0:
-        return []
-    it = iter(l)
-    result = list(it.next())
-    for l_ in it:
-        result.append(comma)
-        result += l_
-    return result
-
-def flatten(l):
-    def flatten1(l, f):
-        for x in l:
-            if isinstance(x, list):
-                f.append('(')
-                flatten1(x, f)
-                f.append(')')
-            else:
-                f.append(x)
-    f = []
-    flatten1(l, f)
-    return f
 
 class CGpmAnalyzeSemantics(object):
     def __init__(self):
@@ -110,16 +89,21 @@ class CGpmAnalyzeSemantics(object):
             self.errors.append("Syntax error near [%s] after [%s]" % (
                 text, ' '.join([str(t) for (_t, t) in self.context[:-1]])))
 
-    def p_variables(self, cols):
-        return Variables(cols)
-    def p_ignore(self, cols):
-        return Ignore(cols)
+    def p_anlaysis_start(self, ps):             self.phrases = ps
 
-    def p_column_list_one(self, col):
-        return [col]
-    def p_column_list_many(self, cols, col):
-        cols.append(col);
-        return col
+    def p_phrases_none(self):                   return []
+    def p_phrases_one(self, p):                 return [p]
+    def p_phrases_many(self, ps, p):
+        if p: ps.append(p);
+        return ps
+
+    def p_phrase_none(self,):                   return None
+    def p_phrase_variables(self, cols):         return Variables(cols)
+    def p_phrase_skip(self, cols):              return Skip(cols)
+
+    def p_column_list_one(self, col):           return [col]
+    def p_column_list_many(self, cols, col):    cols.append(col); return cols
+    def p_column_name_n(self, name):            return name
 
 Variables = namedtuple('Variables', ['vars',])
 Ignore = namedtuple('Ignore', ['vars',])

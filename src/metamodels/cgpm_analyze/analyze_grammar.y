@@ -22,10 +22,16 @@
  */
 
 
-variables           ::= K_VARIABLES column_list(cols) T_SEMI.
-ignore              ::= K_IGNORE column_list(cols) T_SEMI.
+anlaysis(start)     ::= phrases(ps).
+
+phrases(none)       ::= .
+phrases(one)        ::= phrase(p).
+phrases(many)       ::= phrases(ps) T_SEMI phrase(p).
+
+phrase(variables)   ::= K_VARIABLES column_list(cols).
+phrase(skip)        ::= K_SKIP column_list(cols).
 
 column_list(one)    ::= column_name(col).
 column_list(many)   ::= column_list(cols) T_COMMA column_name(col).
 
-column_name         ::= L_NAME(name).
+column_name(n)      ::= L_NAME(name).
