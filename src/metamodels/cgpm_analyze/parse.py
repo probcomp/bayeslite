@@ -19,29 +19,29 @@ from collections import namedtuple
 from bayeslite.exception import BQLParseError
 from bayeslite.util import casefold
 
-import analyze_grammar
+import grammar
 
 '''
-grep -o 'K_[A-Z][A-Z0-9_]*' < analyze_grammar.y | sort -u | awk '
+grep -o 'K_[A-Z][A-Z0-9_]*' < grammar.y | sort -u | awk '
 {
     sub("^K_", "", $1);
-    printf("    '\''%s'\'': analyze_grammar.K_%s,\n", tolower($1), $1);
+    printf("    '\''%s'\'': grammar.K_%s,\n", tolower($1), $1);
 }'
 '''
 
 KEYWORDS = {
-    'skip': analyze_grammar.K_SKIP,
-    'variables': analyze_grammar.K_VARIABLES,
+    'skip': grammar.K_SKIP,
+    'variables': grammar.K_VARIABLES,
 }
 
 PUNCTUATION = {
-    ',': analyze_grammar.T_COMMA,
-    ';': analyze_grammar.T_SEMI,
+    ',': grammar.T_COMMA,
+    ';': grammar.T_SEMI,
 }
 
 def parse(tokens):
     semantics = CGpmAnalyzeSemantics()
-    parser = analyze_grammar.Parser(semantics)
+    parser = grammar.Parser(semantics)
     for token in tokenize(tokens):
         semantics.context.append(token)
         if len(semantics.context) > 10:
@@ -61,9 +61,9 @@ def tokenize(tokens):
             elif token in PUNCTUATION:
                 yield PUNCTUATION[token], token
             else:               # XXX check for alphanumeric/_
-                yield analyze_grammar.L_NAME, token
+                yield grammar.L_NAME, token
         elif isinstance(token, (int, float)):
-            yield analyze_grammar.L_NUMBER, token
+            yield grammar.L_NUMBER, token
         else:
             raise IOError('Invalid token: %r' % (token,))
     yield 0, ''                 # EOF
@@ -108,44 +108,3 @@ Variables = namedtuple('Variables', [
 Skip = namedtuple('Skip', [
     'vars',
 ])
-
-if __name__ == '__main__':
-    tokens = [
-        'SKIPS', 'a', ',', 'b', ';',        # XXX Why does this not raise?
-        'VARIABLES', 'a', ',', 'b', ';',
-        'SKIP', 'a', ';'
-    ]
-    print parse(tokens)
-    # [None, Variables(vars=['a', 'b']), Skip(vars=['a'])]
-
-    tokens = [
-        'VARIABLES', 'a', ',', 'b', ';',
-        'SKIP', 'a',    ';',
-        'SKIPS', 'a', ',', 'b', ';'
-    ]
-    print parse(tokens)
-    # [Variables(vars=['a', 'b']), Skip(vars=['a'])]
-
-    tokens = [
-        'VARIABLES', 'a', ',', 'b', ';',
-        'SKIP', 'a', ',', ';',
-        'SKIPS', 'a', ',', 'b', ';'
-    ]
-    print parse(tokens)
-    # [Variables(vars=['a', 'b']), Skip(vars=['a', 'SKIPS'])]
-
-    tokens = [
-        'VARIABLES', 'a', ',', 'b', ';',
-        'SKIP', 'a', ',', ';',
-        'SKIPS', ',', 'a', ',', 'b', ';'
-    ]
-    print parse(tokens)
-    # [Variables(vars=['a', 'b']), Skip(vars=['a', 'SKIPS', 'a', 'b'])]
-
-    tokens = [
-        'VARIABLES', 'a', ',', 'b', ';',
-        'SKIP', 'a', ',', ';',
-        'SKIP', 'a', ',', 'b', ';'
-    ]
-    print parse(tokens)
-    # [Variables(vars=['a', 'b']), Skip(vars=['a', 'a', 'b'])]

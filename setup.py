@@ -186,7 +186,8 @@ version_py = 'src/version.py'
 lemonade = 'external/lemonade/dist'
 grammars = [
     'src/grammar.y',
-    'src/metamodels/cgpm_grammar.y',
+    'src/metamodels/cgpm_analyze/grammar.y',
+    'src/metamodels/cgpm_schema/grammar.y',
 ]
 
 setup(
@@ -213,6 +214,8 @@ setup(
     packages=[
         'bayeslite',
         'bayeslite.metamodels',
+        'bayeslite.metamodels.cgpm_schema',
+        'bayeslite.metamodels.cgpm_analyze',
         'bayeslite.plex',
         'bayeslite.shell',
         'bayeslite.weakprng',
