@@ -16,6 +16,7 @@
 
 """Miscellaneous utilities."""
 
+import json
 import math
 
 def unique(array):
