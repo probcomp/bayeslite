@@ -20,6 +20,8 @@ import tempfile
 import crosscat.LocalEngine
 
 import bayeslite
+
+from bayeslite.exception import BQLError
 from bayeslite.metamodels.crosscat import CrosscatMetamodel
 
 
@@ -49,12 +51,12 @@ def test_codebook_value_map():
         ANALYZE dummy_cc
         SIMULATE specifying `city` = `LA` (throws KeyError)
     '''
-    
+
     with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
         cc = crosscat.LocalEngine.LocalEngine(seed=0)
         ccme = CrosscatMetamodel(cc)
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
-        
+
         bayeslite.bayesdb_read_csv(bdb,'dummy', dummy_data,
             header=True,create=True)
 
@@ -65,24 +67,23 @@ def test_codebook_value_map():
                 tempbook.name)
 
         bdb.execute('''
-            CREATE GENERATOR dummy_cc FOR dummy
-                USING crosscat(
-                    GUESS(*),
-                    kerberos IGNORE,
-                    age NUMERICAL,
-                    city CATEGORICAL
-                )
+            CREATE POPULATION dummy_pop FOR dummy (
+                kerberos IGNORE,
+                age NUMERICAL,
+                city CATEGORICAL
+            )
         ''')
+        bdb.execute('CREATE GENERATOR dummy_cc FOR dummy_pop USING crosscat')
         bdb.execute('INITIALIZE 10 MODELS FOR dummy_cc')
         bdb.execute('ANALYZE dummy_cc FOR 20 ITERATIONS WAIT')
-        bdb.execute('SIMULATE age FROM dummy_cc GIVEN city = RIO LIMIT 5')
+        bdb.execute('SIMULATE age FROM dummy_pop GIVEN city = RIO LIMIT 5')
         bdb.sql_execute('''
             INSERT INTO dummy (kerberos, age, city) VALUES
                 ('jackie', 18, 'LA'), ('rocker', 22, 'DC')
         ''')
         bdb.execute('ANALYZE dummy_cc FOR 20 ITERATIONS WAIT')
-        with pytest.raises(KeyError):
-            bdb.execute('SIMULATE age FROM dummy_cc GIVEN city = LA LIMIT 5')
+        with pytest.raises(BQLError):
+            bdb.execute('SIMULATE age FROM dummy_pop GIVEN city = LA LIMIT 5')
 
 def test_empty_codebook():
     with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:

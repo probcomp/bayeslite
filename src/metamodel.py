@@ -151,7 +151,8 @@ class IBayesDBMetamodel(object):
         raise NotImplementedError
 
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
-            max_seconds=None, ckpt_iterations=None, ckpt_seconds=None):
+            max_seconds=None, ckpt_iterations=None, ckpt_seconds=None,
+            program=None):
         """Analyze the specified model numbers of a generator.
 
         If none are specified, analyze all of them.
@@ -163,6 +164,7 @@ class IBayesDBMetamodel(object):
             results of analysis to the database
         :param int ckpt_seconds: number of seconds before committing results of
             anlaysis to the database
+        :param object program: None, or list of tokens of analysis program
         """
         raise NotImplementedError
 

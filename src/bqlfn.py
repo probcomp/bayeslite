@@ -449,6 +449,9 @@ def bayesdb_simulate(bdb, population_id, constraints, colnos,
     loglikelihoods = map(loglikelihood, generator_ids, metamodels)
     likelihoods = map(math.exp, loglikelihoods)
     total_likelihood = sum(likelihoods)
+    if total_likelihood == 0:
+        # XXX Show the constraints with symbolic names.
+        raise BQLError(bdb, 'Impossible constraints: %r' % (constraints,))
     probabilities = [likelihood/total_likelihood for likelihood in likelihoods]
     countses = bdb.np_prng.multinomial(numpredictions, probabilities, size=1)
     counts = countses[0]

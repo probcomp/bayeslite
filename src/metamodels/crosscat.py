@@ -575,6 +575,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
              core.bayesdb_generator_column_stattype(bdb, generator_id, colno))
             for colno in core.bayesdb_generator_column_numbers(
                 bdb, generator_id)
+            if 0 <= colno
         ]
         table = core.bayesdb_generator_table(bdb, generator_id)
 
@@ -863,7 +864,12 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     del cc_cache.thetas[generator_id]
 
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
-            max_seconds=None, ckpt_iterations=None, ckpt_seconds=None):
+            max_seconds=None, ckpt_iterations=None, ckpt_seconds=None,
+            program=None):
+        if program is not None:
+            # XXX
+            raise NotImplementedError('crosscat analysis programs')
+
         # XXX What about a schema change or insert in the middle of
         # analysis?
         M_c = self._crosscat_metadata(bdb, generator_id)

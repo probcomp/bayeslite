@@ -69,7 +69,6 @@ class Shell(cmd.Cmd):
         self._installcmd('guess', self.dot_guess)
         self._installcmd('help', self.dot_help)
         self._installcmd('hook', self.dot_hook)
-        self._installcmd('legacymodels', self.dot_legacymodels)
         self._installcmd('open', self.dot_open)
         self._installcmd('pythexec', self.dot_pythexec)
         self._installcmd('python', self.dot_python)
@@ -480,49 +479,22 @@ class Shell(cmd.Cmd):
             self.stdout.write(traceback.format_exc())
 
     def dot_guess(self, line):
-        '''guess data generator
-        <generator> <table>
+        '''guess population schema
+        <population> <table>
 
-        Create a generator named <generator> for the table <table>,
-        guessing the statistical types of the columns in <table>.
+        Create a population named <population> with variables
+        corresponding to columns in table <table>, heuristically
+        guessing their statistical types.
         '''
         # XXX Lousy, lousy tokenizer.
         tokens = line.split()
         if len(tokens) != 2:
-            self.stdout.write('Usage: .guess <generator> <table>\n')
+            self.stdout.write('Usage: .guess <population> <table>\n')
             return
-        generator = tokens[0]
+        population = tokens[0]
         table = tokens[1]
         try:
-            guess.bayesdb_guess_generator(self._bdb, generator, table,
-                                          self._metamodel)
-        except Exception:
-            self.stdout.write(traceback.format_exc())
-
-    def dot_legacymodels(self, line):
-        '''load legacy models
-        <generator> <table> </path/to/models.pkl.gz>
-
-        Create a Crosscat generator named <generator> for the table
-        <table> from the legacy models stored in
-        </path/to/models.pkl.gz>.
-        '''
-        # XXX Lousy, lousy tokenizer.
-        tokens = line.split()
-        if len(tokens) != 3:
-            self.stdout.write('Usage:'
-                              ' .legacymodels <generator> <table>'
-                              ' </path/to/models.pkl.gz>\n')
-            return
-        generator = tokens[0]
-        table = tokens[1]
-        pathname = tokens[2]
-        try:
-            bayeslite.bayesdb_load_legacy_models(self._bdb, generator, table,
-                                                 self._metamodel, pathname,
-                                                 create=True)
-        except IOError as e:
-            self.stdout.write('%s\n' % (e,))
+            guess.bayesdb_guess_population(self._bdb, population, table)
         except Exception:
             self.stdout.write(traceback.format_exc())
 
@@ -537,8 +509,9 @@ class Shell(cmd.Cmd):
         tokens = line.split()
         if len(tokens) == 0:
             self.stdout.write('Usage: .describe table(s) [<table>...]\n')
+            self.stdout.write('       .describe population(s) [<pop>...]\n')
+            self.stdout.write('       .describe variables <pop>\n')
             self.stdout.write('       .describe generator(s) [<gen>...]\n')
-            self.stdout.write('       .describe columns <gen>\n')
             self.stdout.write('       .describe model(s) <gen> [<model>...]\n')
             return
         if casefold(tokens[0]) == 'table' or \
@@ -570,6 +543,31 @@ class Shell(cmd.Cmd):
             ''' % (qualifier,)
             with self._bdb.savepoint():
                 pretty.pp_cursor(self.stdout, self._bdb.execute(sql, params))
+        elif casefold(tokens[0]) in ('population', 'populations'):
+            params = None
+            qualifier = None
+            if len(tokens) == 1:
+                params = ()
+                qualifier = '1'
+            else:
+                params = tokens[1:]
+                names = ','.join('?%d' % (i + 1,) for i in xrange(len(params)))
+                qualifier = '(name IN (%s))' % (names,)
+                ok = True
+                for population in params:
+                    if not core.bayesdb_has_population(self._bdb, population):
+                        self.stdout.write('No such population: %s\n' %
+                            (repr(population),))
+                        ok = False
+                if not ok:
+                    return
+            with self._bdb.savepoint():
+                cursor = self._bdb.sql_execute('''
+                    SELECT id, name, tabname
+                        FROM bayesdb_population
+                        WHERE %s
+                ''' % (qualifier,), params)
+                pretty.pp_cursor(self.stdout, cursor)
         elif casefold(tokens[0]) == 'generator' or \
                 casefold(tokens[0]) == 'generators':
             params = None
@@ -599,29 +597,30 @@ class Shell(cmd.Cmd):
             with self._bdb.savepoint():
                 pretty.pp_cursor(self.stdout,
                     self._bdb.sql_execute(sql, params))
-        elif casefold(tokens[0]) == 'columns':
+        elif casefold(tokens[0]) == 'variables':
             if len(tokens) != 2:
-                self.stdout.write('Describe columns of what generator?\n')
+                self.stdout.write('Usage: .describe variables <population>\n')
                 return
-            generator = tokens[1]
+            population = tokens[1]
             with self._bdb.savepoint():
-                if not core.bayesdb_has_generator(self._bdb, generator):
-                    self.stdout.write('No such generator: %s\n' %
-                        (repr(generator),))
+                if not core.bayesdb_has_population(self._bdb, population):
+                    self.stdout.write('No such population: %r\n' %
+                        (population,))
                     return
-                generator_id = core.bayesdb_get_generator(self._bdb, generator)
+                population_id = core.bayesdb_get_population(
+                    self._bdb, population)
                 sql = '''
                     SELECT c.colno AS colno, c.name AS name,
-                            gc.stattype AS stattype, c.shortname AS shortname
-                        FROM bayesdb_generator AS g,
+                            v.stattype AS stattype, c.shortname AS shortname
+                        FROM bayesdb_population AS p,
                             (bayesdb_column AS c LEFT OUTER JOIN
-                                bayesdb_generator_column AS gc
+                                bayesdb_variable AS v
                                 USING (colno))
-                        WHERE g.id = ? AND g.id = gc.generator_id
-                            AND g.tabname = c.tabname
+                        WHERE p.id = ? AND p.id = v.population_id
+                            AND p.tabname = c.tabname
                         ORDER BY colno ASC;
                 '''
-                cursor = self._bdb.sql_execute(sql, (generator_id,))
+                cursor = self._bdb.sql_execute(sql, (population_id,))
                 pretty.pp_cursor(self.stdout, cursor)
         elif casefold(tokens[0]) == 'model' or \
                 casefold(tokens[0]) == 'models':
@@ -665,5 +664,5 @@ class Shell(cmd.Cmd):
         else:
             self.stdout.write('Usage: .describe table(s) [<table>...]\n')
             self.stdout.write('       .describe generator(s) [<gen>...]\n')
-            self.stdout.write('       .describe columns <gen>\n')
+            self.stdout.write('       .describe variables <pop>\n')
             self.stdout.write('       .describe model(s) <gen> [<model>...]\n')

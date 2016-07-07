@@ -218,7 +218,7 @@ class BQLSemantics(object):
     def p_command_init_models(self, n, ifnotexists, generator):
         return ast.InitModels(ifnotexists, generator, n)
     def p_command_analyze_models(self, generator, models, anlimit, anckpt,
-            wait):
+            wait, program):
         self._ensure_wizard_mode(generator)
         iterations = anlimit[1] if anlimit[0] == 'iterations' else None
         seconds = anlimit[1] if anlimit[0] == 'seconds' else None
@@ -228,7 +228,7 @@ class BQLSemantics(object):
             ckpt_iterations = anckpt[1] if anckpt[0] == 'iterations' else None
             ckpt_seconds = anckpt[1] if anckpt[0] == 'seconds' else None
         return ast.AnalyzeModels(generator, models, iterations, seconds,
-            ckpt_iterations, ckpt_seconds, wait)
+            ckpt_iterations, ckpt_seconds, wait, program)
     def p_command_drop_models(self, models, generator):
         return ast.DropModels(generator, models)
 
@@ -258,6 +258,13 @@ class BQLSemantics(object):
 
     def p_wait_opt_none(self):                  return False
     def p_wait_opt_some(self):                  return True
+
+    def p_analysis_program_opt_none(self):      return None
+    def p_analysis_program_opt_some(self, p):   return p
+    def p_analysis_program_empty(self):         return []
+    def p_analysis_program_nonempty(self, p, t): p += t; return p
+    def p_analysis_token_compound(self, p):     return ['('] + p + [')']
+    def p_analysis_token_primitive(self, t):    return [t]
 
     def p_simulate_s(self, cols, population, generator, constraints, lim):
         return ast.Simulate(cols, population, generator, constraints,
