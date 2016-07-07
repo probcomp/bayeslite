@@ -103,3 +103,7 @@ def cursor_value(cursor, nullok=None):
     if len(row) != 1:
         raise ValueError('Non-unit cursor')
     return row[0]
+
+def json_dumps(obj):
+    """Return a JSON string of obj, compactly and deterministically."""
+    return json.dumps(obj, sort_keys=True)

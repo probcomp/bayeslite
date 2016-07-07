@@ -66,6 +66,7 @@ from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.stats import arithmetic_mean
 from bayeslite.util import casefold
 from bayeslite.util import cursor_value
+from bayeslite.util import json_dumps
 
 import cgpm_schema.parse
 
@@ -783,8 +784,3 @@ _DEFAULT_DIST = {
     'cyclic': _default_numerical, # XXX can't do cyclic yet
     'numerical': _default_numerical,
 }
-
-# XXX Move these utilities elsewhere.
-
-def json_dumps(obj):
-    return json.dumps(obj, sort_keys=True)
