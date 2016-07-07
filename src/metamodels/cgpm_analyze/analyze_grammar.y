@@ -24,12 +24,12 @@
 
 anlaysis(start)     ::= phrases(ps).
 
-phrases(none)       ::= .
 phrases(one)        ::= phrase(p).
 phrases(many)       ::= phrases(ps) T_SEMI phrase(p).
 
 phrase(variables)   ::= K_VARIABLES column_list(cols).
 phrase(skip)        ::= K_SKIP column_list(cols).
+phrase(none)        ::= .
 
 column_list(one)    ::= column_name(col).
 column_list(many)   ::= column_list(cols) T_COMMA column_name(col).
