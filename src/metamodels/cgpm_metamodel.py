@@ -61,6 +61,7 @@ import bayeslite.core as core
 
 from bayeslite.exception import BQLError
 from bayeslite.metamodel import IBayesDBMetamodel
+from bayeslite.metamodel import bayesdb_metamodel_version
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.stats import arithmetic_mean
 from bayeslite.util import casefold
@@ -784,12 +785,6 @@ _DEFAULT_DIST = {
 }
 
 # XXX Move these utilities elsewhere.
-
-def bayesdb_metamodel_version(bdb, mm_name):
-    cursor = bdb.sql_execute('''
-        SELECT version FROM bayesdb_metamodel WHERE name = ?
-    ''', (mm_name,))
-    return cursor_value(cursor, nullok=True)
 
 def json_dumps(obj):
     return json.dumps(obj, sort_keys=True)

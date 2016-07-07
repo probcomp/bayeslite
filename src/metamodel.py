@@ -40,6 +40,8 @@ implications of the data in the table::
        print x
 """
 
+from bayeslite.util import cursor_value
+
 builtin_metamodels = []
 builtin_metamodel_names = set()
 
@@ -73,6 +75,12 @@ def bayesdb_deregister_metamodel(bdb, metamodel):
     assert name in bdb.metamodels
     assert bdb.metamodels[name] == metamodel
     del bdb.metamodels[name]
+
+def bayesdb_metamodel_version(bdb, mm_name):
+    cursor = bdb.sql_execute('''
+        SELECT version FROM bayesdb_metamodel WHERE name = ?
+    ''', (mm_name,))
+    return cursor_value(cursor, nullok=True)
 
 class IBayesDBMetamodel(object):
     """BayesDB metamodel interface.
