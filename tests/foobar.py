@@ -18,6 +18,8 @@ import math
 import numpy as np
 import random                   # XXX
 
+import pytest
+
 #from cgpm.regressions.forest import RandomForest
 from cgpm.regressions.forest import RandomForest
 from cgpm.regressions.linreg import LinearRegression
@@ -183,8 +185,33 @@ bdb.execute('''
 print 'INITIALIZING'
 bdb.execute('INITIALIZE 1 MODELS FOR g0')
 
-print 'ANALYZING'
-bdb.execute('ANALYZE g0 FOR 1 ITERATION WAIT')
+print 'ANALYZING EVERYONE'
+bdb.execute("""
+  ANALYZE g0 FOR 1 ITERATION WAIT(
+    ;
+  );""")
+
+print 'ANALYZING ONLY SOME'
+bdb.execute("""
+  ANALYZE g0 FOR 1 ITERATION WAIT(
+    VARIABLES kepler_cluster_id;
+  );""")
+
+# Analyze all but kepler_cluster_id.
+print 'ANALYZING SKIPPING SOME'
+bdb.execute("""
+  ANALYZE g0 FOR 1 ITERATION WAIT(
+    SKIP kepler_cluster_id, kepler_noise, period;
+  );""")
+
+# Disallow both SKIP and VARIABLES clauses.
+with pytest.raises(Exception):
+  bdb.execute("""
+    ANALYZE g0 FOR 1 ITERATION WAIT(
+      SKIP kepler_cluster_id;
+      VARIABLES apogee, perigee;
+    );""")
+
 
 print 'DEP PROB'
 print bdb.execute('''

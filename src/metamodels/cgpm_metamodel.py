@@ -66,6 +66,7 @@ from bayeslite.stats import arithmetic_mean
 from bayeslite.util import casefold
 
 import cgpm_schema.parse
+import cgpm_analyze.parse
 
 CGPM_SCHEMA_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('cgpm', 1);
@@ -221,7 +222,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         for cgpm_ext in schema['cgpm_composition']:
             cgpms = [self._initialize_cgpm(bdb, generator_id, cgpm_ext)
                 for _ in xrange(n)]
-            engine.compose_cgpm(cgpms, N=1, multithread=self._ncpu)
+            engine.compose_cgpm(cgpms, multithread=self._ncpu)
 
         # Store the newly initialized engine.
         engine_json = json_dumps(engine.to_metadata())
@@ -252,16 +253,70 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         if ckpt_iterations is not None or ckpt_seconds is not None:
             # XXX
-            raise NotImplementedError('cgpm analysis checkpoint')
-        if program is not None:
-            # XXX
-            raise NotImplementedError('cgpm analysis programs')
+            raise NotImplementedError('CGpm analysis checkpoint not supported.')
+
+        if program is None:
+            program = []
+
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
+
+        def retrieve_analyze_variables(ast):
+            # Transition all variables by default.
+            if len(ast) == 0:
+                variables = core.bayesdb_variable_names(bdb, population_id)
+            # Exactly 1 clause supported.
+            elif len(ast) == 1:
+                clause = ast[0]
+                # Transition user specified variables only.
+                if isinstance(clause, cgpm_analyze.parse.Variables):
+                    variables = clause.vars
+                # Transition all variables except user specified skip.
+                elif isinstance(clause, cgpm_analyze.parse.Skip):
+                    variables = filter(
+                        lambda v: v not in clause.vars,
+                        core.bayesdb_variable_names(bdb, population_id))
+                # Unknown/impossible clause.
+                else:
+                    raise ValueError('Unknown clause in ANALYZE: %s.' % ast)
+            # Crash if more than 1 clause.
+            else:
+                raise ValueError('1 clause permitted in ANALYZE: %s.' % ast)
+            return variables
+
+        def foreign(varname):
+            schema = self._schema(bdb, generator_id)
+            return all(v[0]!=varname for v in schema['variables'])
+
+        # Retrieve target variables.
+        analyze_ast = cgpm_analyze.parse.parse(program)
+        variables = retrieve_analyze_variables(analyze_ast)
+        varnames_gpmcc = [v for v in variables if not foreign(v)]
+        varnames_foreign = [v for v in variables if foreign(v)]
 
         # Get the engine.
         engine = self._engine(bdb, generator_id)
 
-        # Do the transition.
-        engine.transition(N=iterations, S=max_seconds, multithread=self._ncpu)
+        # Transition gpmcc variables.
+        if varnames_gpmcc:
+            print varnames_gpmcc
+            varnos_gpmcc = [
+                core.bayesdb_variable_number(bdb, population_id, v)
+                for v in varnames_gpmcc
+            ]
+            engine.transition(
+                N=iterations, S=max_seconds, cols=varnos_gpmcc,
+                multithread=self._ncpu)
+
+        # Transition foreign variables.
+        if varnames_foreign:
+            print varnames_foreign
+            varnos_foreign = [
+                core.bayesdb_variable_number(bdb, population_id, v)
+                for v in varnames_foreign
+            ]
+            engine.transition_foreign(
+                N=iterations, S=max_seconds, cols=varnos_foreign,
+                multithread=self._ncpu)
 
         # Serialize the engine.
         engine_json = json_dumps(engine.to_metadata())
