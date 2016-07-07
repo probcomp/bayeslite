@@ -65,7 +65,7 @@ from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.stats import arithmetic_mean
 from bayeslite.util import casefold
 
-import cgpm_parse
+import cgpm_schema.parse
 
 CGPM_SCHEMA_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('cgpm', 1);
@@ -119,7 +119,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                     ' with unknown schema version: %d' % (version,))
 
     def create_generator(self, bdb, generator_id, schema_tokens):
-        schema_ast = cgpm_parse.parse(schema_tokens)
+        schema_ast = cgpm_schema.parse.parse(schema_tokens)
         schema = _create_schema(bdb, generator_id, schema_ast)
 
         # Store the schema.
@@ -636,7 +636,7 @@ def _create_schema(bdb, generator_id, schema_ast):
     # Process each clause one by one.
     for clause in schema_ast:
 
-        if isinstance(clause, cgpm_parse.Basic):
+        if isinstance(clause, cgpm_schema.parse.Basic):
             # Basic Crosscat component model: one variable to be put
             # into Crosscat views.
             var = clause.var
@@ -665,7 +665,7 @@ def _create_schema(bdb, generator_id, schema_ast):
             variables.append([var, stattype, dist, params])
             modelled.add(var)
 
-        elif isinstance(clause, cgpm_parse.Foreign):
+        elif isinstance(clause, cgpm_schema.parse.Foreign):
             # Foreign model: some set of output variables is to be
             # modelled by foreign logic, possibly conditional on some
             # set of input variables.
@@ -717,7 +717,7 @@ def _create_schema(bdb, generator_id, schema_ast):
                         'kwds': kwds,
                     })
 
-        elif isinstance(clause, cgpm_parse.Subsample):
+        elif isinstance(clause, cgpm_schema.parse.Subsample):
             if subsample is not None:
                 raise BQLError(bdb, 'Duplicate subsample: %r' % (clause.n,))
             subsample = clause.n

@@ -19,33 +19,33 @@ from collections import namedtuple
 from bayeslite.exception import BQLParseError
 from bayeslite.util import casefold
 
-import cgpm_grammar
+import grammar
 
 '''
-grep -o 'K_[A-Z][A-Z0-9_]*' < cgpm_grammar.y | sort -u | awk '
+grep -o 'K_[A-Z][A-Z0-9_]*' < grammar.y | sort -u | awk '
 {
     sub("^K_", "", $1);
-    printf("    '\''%s'\'': cgpm_grammar.K_%s,\n", tolower($1), $1);
+    printf("    '\''%s'\'': grammar.K_%s,\n", tolower($1), $1);
 }'
 '''
 
 KEYWORDS = {
-    'given': cgpm_grammar.K_GIVEN,
-    'model': cgpm_grammar.K_MODEL,
-    'subsample': cgpm_grammar.K_SUBSAMPLE,
-    'using': cgpm_grammar.K_USING,
+    'given': grammar.K_GIVEN,
+    'model': grammar.K_MODEL,
+    'subsample': grammar.K_SUBSAMPLE,
+    'using': grammar.K_USING,
 }
 
 PUNCTUATION = {
-    '(': cgpm_grammar.T_LROUND,
-    ')': cgpm_grammar.T_RROUND,
-    ',': cgpm_grammar.T_COMMA,
-    '=': cgpm_grammar.T_EQ,
+    '(': grammar.T_LROUND,
+    ')': grammar.T_RROUND,
+    ',': grammar.T_COMMA,
+    '=': grammar.T_EQ,
 }
 
 def parse(tokenses):
     semantics = CGPM_Semantics()
-    parser = cgpm_grammar.Parser(semantics)
+    parser = grammar.Parser(semantics)
     for token in tokenize(tokenses):
         semantics.context.append(token)
         if len(semantics.context) > 10:
@@ -64,9 +64,9 @@ def tokenize(tokenses):
             elif token in PUNCTUATION:
                 yield PUNCTUATION[token], token
             else:               # XXX check for alphanumeric/_
-                yield cgpm_grammar.L_NAME, token
+                yield grammar.L_NAME, token
         elif isinstance(token, (int, float)):
-            yield cgpm_grammar.L_NUMBER, token
+            yield grammar.L_NUMBER, token
         else:
             raise IOError('Invalid token: %r' % (token,))
     yield 0, ''                 # EOF

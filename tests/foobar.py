@@ -112,6 +112,7 @@ bdb = bayesdb_open(':memory:')
 
 bdb.sql_execute('''
     CREATE TABLE satellites_ucs (
+        name,
         apogee,
         class_of_orbit,
         country_of_operator,
@@ -125,22 +126,24 @@ for l, f in [
     ('geo', lambda x, y: x + y**2),
     ('leo', lambda x, y: math.sin(x + y)),
 ]:
-    for x in xrange(10):
+    for x in xrange(1000):
         for y in xrange(10):
             countries = ['US', 'Russia', 'China', 'Bulgaria']
             country = countries[random.randrange(len(countries))]
+            name = 'sat-%s-%d' % (country, random.randrange(10**8))
             mass = random.gauss(1000, 50)
             bdb.sql_execute('''
                 INSERT INTO satellites_ucs
-                    (country_of_operator, launch_mass, class_of_orbit,
+                    (name, country_of_operator, launch_mass, class_of_orbit,
                         apogee, perigee, period)
-                    VALUES (?,?,?,?,?,?)
-            ''', (country, mass, l, x, y, f(x, y)))
+                    VALUES (?,?,?,?,?,?,?)
+            ''', (name, country, mass, l, x, y, f(x, y)))
 
 D = bdb.sql_execute('SELECT * FROM satellites_ucs').fetchall()
 
 bdb.execute('''
     CREATE POPULATION satellites FOR satellites_ucs (
+        name IGNORE,
         apogee NUMERICAL,
         class_of_orbit CATEGORICAL,
         country_of_operator CATEGORICAL,
@@ -172,6 +175,7 @@ bdb.execute('''
         MODEL perigee GIVEN apogee USING linreg,
         MODEL class_of_orbit GIVEN apogee, period, perigee
             USING forest (k = 4),
+        SUBSAMPLE 100,
         )
     '''.format(kepler_source))
 

@@ -16,6 +16,7 @@
 
 import math
 import numpy as np
+import pytest
 import random                   # XXX
 
 #from cgpm.regressions.forest import RandomForest
@@ -28,6 +29,7 @@ from bayeslite.util import cursor_value
 
 # XXX KLUDGE TAKEN FROM cgpm/tests/test_gpmcc_simple_composite.py
 from cgpm.cgpm import CGpm
+from cgpm.utils import general as gu
 class FourWay(CGpm):
     """Generates categorical(4) output on R2 valued input."""
 
@@ -178,9 +180,10 @@ def test_cgpm():
             ESTIMATE DEPENDENCE PROBABILITY
                 FROM PAIRWISE VARIABLES OF satellites
         ''').fetchall()
-        bdb.execute('''
-            ESTIMATE PREDICTIVE PROBABILITY OF period FROM satellites
-        ''').fetchall()
+        with pytest.raises(AssertionError):
+            bdb.execute('''
+                ESTIMATE PREDICTIVE PROBABILITY OF period FROM satellites
+            ''').fetchall()
         bdb.execute('''
             ESTIMATE PROBABILITY OF period = 42
                     GIVEN (apogee = 8 AND perigee = 7)
