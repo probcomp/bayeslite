@@ -43,7 +43,6 @@ def parse(tokens):
     semantics = CGpmAnalyzeSemantics()
     parser = analyze_grammar.Parser(semantics)
     for token in tokenize(tokens):
-        print token
         semantics.context.append(token)
         if len(semantics.context) > 10:
             semantics.context.pop(0)
@@ -108,7 +107,8 @@ Skip = namedtuple('Skip', ['vars',])
 if __name__ == '__main__':
     # VARIABLES a, b,c, d;
     tokens = [
-        'SKIP', 'a', ',', 'b', ';',
+        'SKIPS', 'a', ',', 'b', ';',        # XXX Why does this not raise?
         'VARIABLES', 'a', ',', 'b', ';',
-        'SKIP', 'a', ';']
+        'SKIP', 'a', ';'
+    ]
     print parse(tokens)
