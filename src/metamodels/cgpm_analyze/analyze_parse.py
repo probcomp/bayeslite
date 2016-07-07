@@ -55,6 +55,7 @@ def parse(tokens):
 
 def tokenize(tokens):
     for token in tokens:
+        print token
         if isinstance(token, str):
             if casefold(token) in KEYWORDS:
                 yield KEYWORDS[casefold(token)], token
@@ -101,8 +102,13 @@ class CGpmAnalyzeSemantics(object):
     def p_column_list_many(self, cols, col):    cols.append(col); return cols
     def p_column_name_n(self, name):            return name
 
-Variables = namedtuple('Variables', ['vars',])
-Skip = namedtuple('Skip', ['vars',])
+Variables = namedtuple('Variables', [
+    'vars',
+])
+
+Skip = namedtuple('Skip', [
+    'vars',
+])
 
 if __name__ == '__main__':
     # VARIABLES a, b,c, d;
