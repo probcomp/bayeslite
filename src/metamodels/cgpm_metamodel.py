@@ -64,6 +64,7 @@ from bayeslite.metamodel import IBayesDBMetamodel
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.stats import arithmetic_mean
 from bayeslite.util import casefold
+from bayeslite.util import cursor_value
 
 import cgpm_schema.parse
 
@@ -789,33 +790,6 @@ def bayesdb_metamodel_version(bdb, mm_name):
         SELECT version FROM bayesdb_metamodel WHERE name = ?
     ''', (mm_name,))
     return cursor_value(cursor, nullok=True)
-
-def cursor_row(cursor, nullok=None):
-    if nullok is None:
-        nullok = False
-    try:
-        row = cursor.next()
-    except StopIteration:
-        if nullok:
-            return None
-        raise ValueError('Empty cursor')
-    else:
-        try:
-            cursor.next()
-        except StopIteration:
-            pass
-        else:
-            raise ValueError('Multiple-result cursor')
-        return row
-
-def cursor_value(cursor, nullok=None):
-    row = cursor_row(cursor, nullok)
-    if row is None:
-        assert nullok
-        return None
-    if len(row) != 1:
-        raise ValueError('Non-unit cursor')
-    return row[0]
 
 def json_dumps(obj):
     return json.dumps(obj, sort_keys=True)

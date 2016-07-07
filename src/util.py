@@ -77,19 +77,29 @@ def casefold(string):
     # XXX Not really right, but it'll do for now.
     return string.upper().lower()
 
-def cursor_value(cursor):
+def cursor_row(cursor, nullok=None):
+    if nullok is None:
+        nullok = False
     try:
         row = cursor.next()
     except StopIteration:
+        if nullok:
+            return None
         raise ValueError('Empty cursor')
-    try:
-        cursor.next()
-    except StopIteration:
-        pass
     else:
-        raise ValueError('Cursor with >1 result')
-    if len(row) == 0:
-        raise ValueError('Empty cursor result')
-    if 1 < len(row):
-        raise ValueError('Excessive cursor result')
+        try:
+            cursor.next()
+        except StopIteration:
+            pass
+        else:
+            raise ValueError('Multiple-result cursor')
+        return row
+
+def cursor_value(cursor, nullok=None):
+    row = cursor_row(cursor, nullok)
+    if row is None:
+        assert nullok
+        return None
+    if len(row) != 1:
+        raise ValueError('Non-unit cursor')
     return row[0]
