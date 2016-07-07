@@ -55,7 +55,6 @@ def parse(tokens):
 
 def tokenize(tokens):
     for token in tokens:
-        print token
         if isinstance(token, str):
             if casefold(token) in KEYWORDS:
                 yield KEYWORDS[casefold(token)], token
@@ -111,10 +110,42 @@ Skip = namedtuple('Skip', [
 ])
 
 if __name__ == '__main__':
-    # VARIABLES a, b,c, d;
     tokens = [
         'SKIPS', 'a', ',', 'b', ';',        # XXX Why does this not raise?
         'VARIABLES', 'a', ',', 'b', ';',
         'SKIP', 'a', ';'
     ]
     print parse(tokens)
+    # [None, Variables(vars=['a', 'b']), Skip(vars=['a'])]
+
+    tokens = [
+        'VARIABLES', 'a', ',', 'b', ';',
+        'SKIP', 'a',    ';',
+        'SKIPS', 'a', ',', 'b', ';'
+    ]
+    print parse(tokens)
+    # [Variables(vars=['a', 'b']), Skip(vars=['a'])]
+
+    tokens = [
+        'VARIABLES', 'a', ',', 'b', ';',
+        'SKIP', 'a', ',', ';',
+        'SKIPS', 'a', ',', 'b', ';'
+    ]
+    print parse(tokens)
+    # [Variables(vars=['a', 'b']), Skip(vars=['a', 'SKIPS'])]
+
+    tokens = [
+        'VARIABLES', 'a', ',', 'b', ';',
+        'SKIP', 'a', ',', ';',
+        'SKIPS', ',', 'a', ',', 'b', ';'
+    ]
+    print parse(tokens)
+    # [Variables(vars=['a', 'b']), Skip(vars=['a', 'SKIPS', 'a', 'b'])]
+
+    tokens = [
+        'VARIABLES', 'a', ',', 'b', ';',
+        'SKIP', 'a', ',', ';',
+        'SKIP', 'a', ',', 'b', ';'
+    ]
+    print parse(tokens)
+    # [Variables(vars=['a', 'b']), Skip(vars=['a', 'a', 'b'])]
