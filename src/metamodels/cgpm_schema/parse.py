@@ -51,8 +51,10 @@ def parse(tokenses):
         if len(semantics.context) > 10:
             semantics.context.pop(0)
         parser.feed(token)
-    if semantics.failed or semantics.errors:
-        raise BQLParseError('\n'.join(semantics.errors))
+    if semantics.errors:
+        raise BQLParseError(semantics.errors)
+    if semantics.failed:
+        raise BQLParseError(['parse failed mysteriously'])
     assert semantics.schema is not None
     return semantics.schema
 
@@ -108,6 +110,8 @@ class CGPM_Semantics(object):
 
     def syntax_error(self, (token, text)):
         if token == -1:         # error
+            self.errors.append('Bad token: %r' % (text,))
+        else:
             self.errors.append("Syntax error near [%s] after [%s]" % (
                 text, ' '.join([str(t) for (_t, t) in self.context[:-1]])))
 
