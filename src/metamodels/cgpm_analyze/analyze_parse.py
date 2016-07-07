@@ -52,8 +52,8 @@ def parse(tokens):
         parser.feed(token)
     if semantics.failed or semantics.errors:
         raise BQLParseError('\n'.join(semantics.errors))
-    assert semantics.schema is not None
-    return semantics.schema
+    assert semantics.phrases is not None
+    return semantics.phrases
 
 
 def tokenize(tokens):
@@ -77,7 +77,7 @@ class CGpmAnalyzeSemantics(object):
         self.context = []
         self.errors = []
         self.failed = False
-        self.schema = None
+        self.phrases = None
 
     def accept(self):
         pass
@@ -94,7 +94,7 @@ class CGpmAnalyzeSemantics(object):
     def p_phrases_none(self):                   return []
     def p_phrases_one(self, p):                 return [p]
     def p_phrases_many(self, ps, p):
-        if p: ps.append(p);
+        if p: ps.append(p)
         return ps
 
     def p_phrase_none(self,):                   return None
@@ -106,4 +106,4 @@ class CGpmAnalyzeSemantics(object):
     def p_column_name_n(self, name):            return name
 
 Variables = namedtuple('Variables', ['vars',])
-Ignore = namedtuple('Ignore', ['vars',])
+Skip = namedtuple('Skip', ['vars',])
