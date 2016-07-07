@@ -88,7 +88,7 @@ class CGpmAnalyzeSemantics(object):
 
     def p_anlaysis_start(self, ps):             self.phrases = ps
 
-    def p_phrases_one(self, p):                 return [p]
+    def p_phrases_one(self, p):                 return [p] if p else []
     def p_phrases_many(self, ps, p):
         if p: ps.append(p)
         return ps
