@@ -105,7 +105,7 @@ kepler_source = """
     (mh default one (* N 1000)))]
 """
 
-def test_cgpm_extravaganza():
+def test_cgpm_extravaganza__ci_slow():
     with bayesdb_open(':memory:') as bdb:
         # XXX Use the real satellites data instead of this bogosity?
         bdb.sql_execute('''
