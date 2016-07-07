@@ -14,40 +14,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-# XXX TODO:
-#
-# [DONE] Teach analysis to update CGPMs too.
-# [DONE] Kludge up Kepler's laws in Python.
-# [DONE] Test hand-kludged CGPM registry.
-# - Write stupid schema parser.  Adapt axch's?
-# [DONE] Teach INITIALIZE MODELS to take a model_config argument for real:
-#   . INITIALIZE 10 MODELS FOR <population> (x POISSON, y ...)
-#   . rename model_config -> model schema
-#   . Meaning: prior and likelihood model?  Or, `just SP'...
-# [DONE] Introduce named model schemas:
-#   . CREATE MODEL SCHEMA <schema> FOR <population> (...)
-#   . INITIALIZE 40 MODELS FOR <population> USING <model schema>
-# - Make populations metamodel-independent.
-# - Change the nomenclature:
-#   . generator -> population
-#   . model schema -> metamodel
-#   . row -> individual
-#   . column -> variable
-#   . metamodel -> ???
-# - Adopt VentureScript CGPM.
-#
-# XXX Future TODO:
-#
-# - Rename keyword BY ---> WITHIN?
-# - Conjecture more elaborate predicates on models?
-#   . ANALYZE <population> MODELS WHERE DEP. PROB. OF X WITH Y > 0.5
-#   . (What happens if predicate changes during analysis?)
-#   . ESTIMATE PROBABILITY OF x = 1 GIVEN (y = 2) WITHIN <population>
-#         USING MODELS WHERE DEP. PROB. OF x WITH y > 0.5
-# - Introduce additional statistical types: count, boolean, &c.
-#   . Clarify that `statistical type' means `support'.
-# - Subsampling, per-model subsampling...
-
 import contextlib
 import json
 import math
