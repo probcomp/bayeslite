@@ -283,40 +283,16 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 raise ValueError('1 clause permitted in ANALYZE: %s.' % ast)
             return variables
 
-        def foreign(varname):
-            schema = self._schema(bdb, generator_id)
-            return all(v[0]!=varname for v in schema['variables'])
-
         # Retrieve target variables.
         analyze_ast = cgpm_analyze.parse.parse(program)
         variables = retrieve_analyze_variables(analyze_ast)
-        varnames_gpmcc = [v for v in variables if not foreign(v)]
-        varnames_foreign = [v for v in variables if foreign(v)]
+        varnos = [core.bayesdb_variable_number(bdb, population_id, v)
+            for v in variables]
 
-        # Get the engine.
+        # Run transition.
         engine = self._engine(bdb, generator_id)
-
-        # Transition gpmcc variables.
-        if varnames_gpmcc:
-            print varnames_gpmcc
-            varnos_gpmcc = [
-                core.bayesdb_variable_number(bdb, population_id, v)
-                for v in varnames_gpmcc
-            ]
-            engine.transition(
-                N=iterations, S=max_seconds, cols=varnos_gpmcc,
-                multithread=self._ncpu)
-
-        # Transition foreign variables.
-        if varnames_foreign:
-            print varnames_foreign
-            varnos_foreign = [
-                core.bayesdb_variable_number(bdb, population_id, v)
-                for v in varnames_foreign
-            ]
-            engine.transition_foreign(
-                N=iterations, S=max_seconds, cols=varnos_foreign,
-                multithread=self._ncpu)
+        engine.transition(
+            N=iterations, S=max_seconds, cols=varnos, multithread=self._ncpu)
 
         # Serialize the engine.
         engine_json = json_dumps(engine.to_metadata())
