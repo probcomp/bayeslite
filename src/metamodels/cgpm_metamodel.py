@@ -739,14 +739,13 @@ def _create_schema(bdb, generator_id, schema_ast):
                     _, dist, params = _retrieve_stattype_dist_params(var)
                     cctypes.append(dist)
                     ccargs.append(params)
-                else:
-                    # Finally, add a cgpm_composition record.
-                    cgpm_composition.append({
-                        'name': name,
-                        'inputs': inputs,
-                        'outputs': outputs,
-                        'kwds': kwds,
-                    })
+                # Finally, add a cgpm_composition record.
+                cgpm_composition.append({
+                    'name': name,
+                    'inputs': inputs,
+                    'outputs': outputs,
+                    'kwds': kwds,
+                })
 
         elif isinstance(clause, cgpm_schema.parse.Subsample):
             if subsample is not None:
