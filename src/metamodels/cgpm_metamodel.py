@@ -648,6 +648,7 @@ def _create_schema(bdb, generator_id, schema_ast):
     # State.
     variables = []
     categoricals = {}
+    declared_latents = []
     cgpm_composition = []
     modelled = set()
     subsample = None
@@ -695,6 +696,18 @@ def _create_schema(bdb, generator_id, schema_ast):
                 bdb, population_id, colno)
             variables.append([var, stattype, dist, params])
             modelled.add(var)
+
+        elif isinstance(clause, cgpm_schema.parse.Latent):
+            # Reject if the latent variable has already been declared.
+            if any(l[0] == clause.name for l in declared_latents):
+                duplicate.add(clause.name)
+
+            # XXX FILL ME XXX
+
+            # Register the latent variable name and stattype into bayesdb.
+            # Do something related to the error checking data structures.
+
+            declared_latents.append((clause.name, clause.stattype))
 
         elif isinstance(clause, cgpm_schema.parse.Foreign):
             # Foreign model: some set of output variables is to be
@@ -753,7 +766,7 @@ def _create_schema(bdb, generator_id, schema_ast):
             subsample = clause.n
 
         else:
-            assert False
+            raise BQLError(bdb, 'Unknown clause: %r' % (clause,))
 
     # Raise an exception if there were duplicates or unknown
     # variables.

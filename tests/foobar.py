@@ -152,6 +152,7 @@ bdb.execute('''
         launch_mass NUMERICAL,
         perigee NUMERICAL,
         period NUMERICAL,
+
         LATENT kepler_noise NUMERICAL,
         LATENT kepler_cluster_id CATEGORICAL
         )
@@ -172,11 +173,18 @@ bayesdb_register_metamodel(bdb, cgpmt)
 bdb.execute('''
     CREATE GENERATOR g0 FOR satellites USING cgpm (
         apogee NORMAL,
+
+        LATENT kepler_cluster_id NUMERICAL,
+        LATENT kepler_noise NUMERICAL,
+
         MODEL kepler_cluster_id, kepler_noise, period GIVEN apogee, perigee
             USING venturescript (source = "{}"),
+
         MODEL perigee GIVEN apogee USING linreg,
+
         MODEL class_of_orbit GIVEN apogee, period, perigee
             USING forest (k = 4),
+
         SUBSAMPLE 100,
         )
     '''.format(kepler_source))

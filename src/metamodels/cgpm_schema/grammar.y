@@ -34,6 +34,7 @@ clause(basic)		::= var(var) dist(dist) param_opt(params).
 clause(foreign)		::= K_MODEL vars(outputs) given_opt(inputs)
 			K_USING foreign(name) param_opt(params).
 clause(subsamp)		::= K_SUBSAMPLE L_NUMBER(n).
+clause(latent)		::= K_LATENT var(var) stattype(st).
 
 dist(name)			::= L_NAME(dist).
 foreign(name)		::= L_NAME(foreign).
@@ -44,6 +45,8 @@ given_opt(some)		::= K_GIVEN vars(vars).
 vars(one)			::= var(var).
 vars(many)			::= vars(vars) T_COMMA var(var).
 var(name)			::= L_NAME(var).
+
+stattype(s)			::= L_NAME(st).
 
 param_opt(none)		::= .
 param_opt(some)		::= T_LROUND params(ps) T_RROUND.

@@ -31,6 +31,7 @@ grep -o 'K_[A-Z][A-Z0-9_]*' < grammar.y | sort -u | awk '
 
 KEYWORDS = {
     'given': grammar.K_GIVEN,
+    'latent': grammar.K_LATENT,
     'model': grammar.K_MODEL,
     'subsample': grammar.K_SUBSAMPLE,
     'using': grammar.K_USING,
@@ -132,6 +133,8 @@ class CGPM_Semantics(object):
         return Foreign(outputs, inputs, name, params)
     def p_clause_subsamp(self, n):
         return Subsample(n)
+    def p_clause_latent(self, var, st):
+        return Latent(var, st)
 
     def p_dist_name(self, dist):                return casefold(dist)
     def p_foreign_name(self, foreign):          return casefold(foreign)
@@ -142,6 +145,8 @@ class CGPM_Semantics(object):
     def p_vars_one(self, var):                  return [var]
     def p_vars_many(self, vars, var):           vars.append(var); return vars
     def p_var_name(self, var):                  return var
+
+    def p_stattype_s(self, st):                   return st
 
     def p_param_opt_none(self):                 return []
     def p_param_opt_some(self, ps):             return ps
@@ -165,4 +170,9 @@ Foreign = namedtuple('Foreign', [
 
 Subsample = namedtuple('Subsample', [
     'n',
+])
+
+Latent = namedtuple('Latent', [
+    'name',
+    'stattype',
 ])
