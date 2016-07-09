@@ -21,34 +21,34 @@
  * - L_ means a lexeme, which has useful associated text, e.g. an integer.
  */
 
-cgpm(empty)	::= .
-cgpm(schema)	::= schema(s).
+cgpm(empty)			::= .
+cgpm(schema)		::= schema(s).
 
-schema(one)	::= clause(c).
-schema(some)	::= schema(s) T_COMMA clause_opt(c).
+schema(one)			::= clause(c).
+schema(some)		::= schema(s) T_COMMA clause_opt(c).
 
-clause_opt(none)::= .
-clause_opt(some)::= clause(c).
+clause_opt(none)	::= .
+clause_opt(some)	::= clause(c).
 
-clause(basic)	::= var(var) dist(dist) param_opt(params).
-clause(foreign)	::= K_MODEL vars(outputs) given_opt(inputs)
+clause(basic)		::= var(var) dist(dist) param_opt(params).
+clause(foreign)		::= K_MODEL vars(outputs) given_opt(inputs)
 			K_USING foreign(name) param_opt(params).
-clause(subsamp)	::= K_SUBSAMPLE L_NUMBER(n).
+clause(subsamp)		::= K_SUBSAMPLE L_NUMBER(n).
 
-dist(name)	::= L_NAME(dist).
-foreign(name)	::= L_NAME(foreign).
+dist(name)			::= L_NAME(dist).
+foreign(name)		::= L_NAME(foreign).
 
-given_opt(none)	::= .
-given_opt(some)	::= K_GIVEN vars(vars).
+given_opt(none)		::= .
+given_opt(some)		::= K_GIVEN vars(vars).
 
-vars(one)	::= var(var).
-vars(many)	::= vars(vars) T_COMMA var(var).
-var(name)	::= L_NAME(var).
+vars(one)			::= var(var).
+vars(many)			::= vars(vars) T_COMMA var(var).
+var(name)			::= L_NAME(var).
 
-param_opt(none)	::= .
-param_opt(some)	::= T_LROUND params(ps) T_RROUND.
-params(one)	::= param(param).
-params(many)	::= params(params) T_COMMA param(param).
+param_opt(none)		::= .
+param_opt(some)		::= T_LROUND params(ps) T_RROUND.
+params(one)			::= param(param).
+params(many)		::= params(params) T_COMMA param(param).
 
-param(num)	::= L_NAME(p) T_EQ L_NUMBER(num).
-param(nam)	::= L_NAME(p) T_EQ L_NAME(nam).
+param(num)			::= L_NAME(p) T_EQ L_NUMBER(num).
+param(nam)			::= L_NAME(p) T_EQ L_NAME(nam).
