@@ -144,9 +144,9 @@ class CGPM_Semantics(object):
 
     def p_vars_one(self, var):                  return [var]
     def p_vars_many(self, vars, var):           vars.append(var); return vars
-    def p_var_name(self, var):                  return var
+    def p_var_name(self, var):                  return casefold(var)
 
-    def p_stattype_s(self, st):                   return st
+    def p_stattype_s(self, st):                 return st
 
     def p_param_opt_none(self):                 return []
     def p_param_opt_some(self, ps):             return ps

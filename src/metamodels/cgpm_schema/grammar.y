@@ -44,6 +44,7 @@ given_opt(some)     ::= K_GIVEN vars(vars).
 
 vars(one)           ::= var(var).
 vars(many)          ::= vars(vars) T_COMMA var(var).
+
 var(name)           ::= L_NAME(var).
 
 stattype(s)         ::= L_NAME(st).
