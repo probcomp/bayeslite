@@ -510,6 +510,12 @@ def test_trivial_commands():
             ['pqr', 'categorical'],
             ['lmn', 'cyclic'],
         ])]
+    assert parse_bql_string('create generator t_cc for t using crosscat'
+            '''("numerical" "nume""rical", 'qua''gga' categorical)''') == \
+        [ast.CreateGen(False, 't_cc', False, 't', 'crosscat', [
+            ['numerical', 'nume"rical'],
+            [('string', "qua'gga"), 'categorical'],
+        ])]
     assert parse_bql_string('initialize 1 model for t;') == \
         [ast.InitModels(False, 't', 1, None)]
     assert parse_bql_string('initialize 1 model if not exists for t;') == \
