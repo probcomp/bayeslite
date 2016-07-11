@@ -103,6 +103,11 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         table = core.bayesdb_population_table(bdb, population_id)
         qt = sqlite3_quote_name(table)
 
+        # Assign latent variable numbers.
+        for var, stattype in sorted(schema['latents'].iteritems()):
+            core.bayesdb_add_latent(
+                bdb, population_id, generator_id, var, stattype)
+
         # Assign codes to categories and consecutive column numbers to
         # the modelled variables.
         vars_cursor = bdb.sql_execute('''
@@ -617,9 +622,10 @@ def _create_schema(bdb, generator_id, schema_ast):
     # State.
     variables = []
     categoricals = {}
-    declared_latents = []
+    latents = {}
     cgpm_composition = []
     modelled = set()
+    default_modelled = set()
     subsample = None
 
     # Error-reporting state.
@@ -627,6 +633,7 @@ def _create_schema(bdb, generator_id, schema_ast):
     unknown = set()
     needed = set()
     invalid_latent = set()
+    must_exist = []
 
     def _retrieve_stattype_dist_params(var):
         colno = core.bayesdb_variable_number(bdb, population_id, var)
@@ -660,23 +667,31 @@ def _create_schema(bdb, generator_id, schema_ast):
                 invalid_latent.add(var)
                 continue
 
-            # Add it to the list and mark it modelled.
+            # Add it to the list and mark it modelled by default.
             stattype = core.bayesdb_variable_stattype(
                 bdb, population_id, colno)
             variables.append([var, stattype, dist, params])
             modelled.add(var)
+            default_modelled.add(var)
 
         elif isinstance(clause, cgpm_schema.parse.Latent):
-            # Reject if the latent variable has already been declared.
-            if any(l[0] == clause.name for l in declared_latents):
-                duplicate.add(clause.name)
+            var = clause.name
+            stattype = clause.stattype
 
-            # XXX FILL ME XXX
+            # Reject if the variable has already been modelled by the
+            # default model.
+            if var in default_modelled:
+                duplicate.add(var)
+                continue
 
-            # Register the latent variable name and stattype into bayesdb.
-            # Do something related to the error checking data structures.
+            # Reject if the variable even *exists* in the population
+            # at all yet.
+            if core.bayesdb_has_variable(bdb, population_id, var):
+                duplicate.add(var)
+                continue
 
-            declared_latents.append((clause.name, clause.stattype))
+            # Add it to the set of latent variables.
+            latents[var] = stattype
 
         elif isinstance(clause, cgpm_schema.parse.Foreign):
             # Foreign model: some set of output variables is to be
@@ -699,9 +714,7 @@ def _create_schema(bdb, generator_id, schema_ast):
             # First make sure all the output variables exist and have
             # not yet been modelled.
             for var in clause.outputs:
-                if not core.bayesdb_has_variable(bdb, population_id, var):
-                    unknown.add(var)
-                    continue
+                must_exist.append(var)
                 if var in modelled:
                     duplicate.add(var)
                     break
@@ -711,9 +724,7 @@ def _create_schema(bdb, generator_id, schema_ast):
                 # them needed, and record where to put their
                 # distribution type and parameters.
                 for var in inputs:
-                    if not core.bayesdb_has_variable(bdb, population_id, var):
-                        unknown.add(var)
-                        continue
+                    must_exist.append(var)
                     needed.add(var)
                     # XXX check agreement with statistical type
                     assert len(cctypes) == len(ccargs)
@@ -736,6 +747,15 @@ def _create_schema(bdb, generator_id, schema_ast):
 
         else:
             raise BQLError(bdb, 'Unknown clause: %r' % (clause,))
+
+    # Make sure all the outputs and inputs exist, either in the
+    # population or as latents in this generator.
+    for var in must_exist:
+        if core.bayesdb_has_variable(bdb, population_id, var):
+            continue
+        if var in latents:
+            continue
+        missing.add(var)
 
     # Raise an exception if there were duplicates or unknown
     # variables.
@@ -775,6 +795,7 @@ def _create_schema(bdb, generator_id, schema_ast):
         'variables': variables,
         'cgpm_composition': cgpm_composition,
         'subsample': subsample,
+        'latents': latents,
     }
 
 def _default_categorical(bdb, generator_id, var):
