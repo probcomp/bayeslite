@@ -139,8 +139,7 @@ def test_cgpm():
                 country_of_operator CATEGORICAL,
                 launch_mass NUMERICAL,
                 perigee NUMERICAL,
-                period NUMERICAL,
-                latent kepler_error NUMERICAL
+                period NUMERICAL
             )
         ''')
         bdb.execute('''

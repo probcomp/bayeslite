@@ -532,7 +532,6 @@ def _create_population(bdb, phrase):
     duplicates = set()
     missing = set()
     invalid = set()
-    nlatent = 0
     colno_sql = '''
         SELECT colno FROM bayesdb_column
             WHERE tabname = :table AND name = :column_name
@@ -541,15 +540,10 @@ def _create_population(bdb, phrase):
         SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype
     '''
     for variable in phrase.schema:
-        latent = variable.latent
         name = casefold(variable.name)
         stattype = casefold(variable.stattype)
         if name in variable_map:
             duplicates.add(name)
-            continue
-        if latent:
-            nlatent += 1
-            variable_map[name] = -nlatent
             continue
         cursor = bdb.sql_execute(colno_sql, {
             'table': phrase.table,

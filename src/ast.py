@@ -78,7 +78,6 @@ DropPop = namedtuple('DropPop', [
     'name',
 ])
 PopVar = namedtuple('PopVar', [
-    'latent',
     'name',
     'stattype',
 ])

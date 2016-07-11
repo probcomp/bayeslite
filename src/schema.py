@@ -131,12 +131,15 @@ CREATE TABLE bayesdb_population (
 
 CREATE TABLE bayesdb_variable (
 	population_id	INTEGER NOT NULL REFERENCES bayesdb_population(id),
+	generator_id	INTEGER REFERENCES bayesdb_generator(id),
 	colno		INTEGER NOT NULL,
-        name            TEXT COLLATE NOCASE NOT NULL,
+	name		TEXT COLLATE NOCASE NOT NULL,
 	stattype	TEXT COLLATE NOCASE NOT NULL
 				REFERENCES bayesdb_stattype(name),
 	PRIMARY KEY(population_id, colno),
-	UNIQUE(population_id, name)
+	UNIQUE(population_id, name),
+	UNIQUE(generator_id, colno),
+	UNIQUE(generator_id, name)
 );
 
 INSERT INTO bayesdb_variable (population_id, name, colno, stattype)

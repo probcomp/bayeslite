@@ -278,6 +278,23 @@ def bayesdb_variable_stattype(bdb, population_id, colno):
         assert len(row) == 1
         return row[0]
 
+def bayesdb_add_latent(bdb, population_id, generator_id, var, stattype):
+    """Add a generator's latent variable to a population.
+
+    NOTE: To be used ONLY by a metamodel's create_generator method
+    when establishing any latent variables of that generator.
+    """
+    with bdb.savepoint():
+        cursor = bdb.sql_execute('''
+            SELECT MIN(colno) FROM bayesdb_variable WHERE population_id = ?
+        ''', (population_id,))
+        colno = min(-1, cursor_value(cursor) - 1)
+        bdb.sql_execute('''
+            INSERT INTO bayesdb_variable
+                (population_id, colno, name, stattype)
+                VALUES (?, ?, ?, ?)
+        ''', (population_id, colno, var, stattype))
+
 def bayesdb_population_cell_value(bdb, population_id, rowid, colno):
     if colno < 0:
         # Latent variables do not appear in the table.

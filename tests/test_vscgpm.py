@@ -145,9 +145,7 @@ def test_cgpm_extravaganza__ci_slow():
                 country_of_operator CATEGORICAL,
                 launch_mass NUMERICAL,
                 perigee NUMERICAL,
-                period NUMERICAL,
-                LATENT kepler_noise NUMERICAL,
-                LATENT kepler_cluster_id CATEGORICAL
+                period NUMERICAL
             )
         ''')
 
