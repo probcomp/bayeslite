@@ -16,6 +16,7 @@
 
 import math
 import numpy as np
+import pytest
 import random                   # XXX
 
 #from cgpm.regressions.forest import RandomForest
@@ -165,6 +166,8 @@ def test_cgpm_extravaganza__ci_slow():
         bdb.execute('''
             CREATE GENERATOR g0 FOR satellites USING cgpm (
                 apogee NORMAL,
+                LATENT kepler_cluster_id NUMERICAL,
+                LATENT kepler_noise NUMERICAL,
                 MODEL kepler_cluster_id, kepler_noise, period
                     GIVEN apogee, perigee
                     USING venturescript (source = "{}"),
@@ -177,6 +180,30 @@ def test_cgpm_extravaganza__ci_slow():
 
         # -- MODEL country_of_operator GIVEN class_of_orbit USING forest;
         bdb.execute('INITIALIZE 1 MODELS FOR g0')
+        bdb.execute('ANALYZE g0 FOR 1 iteration WAIT (;)')
+        bdb.execute('''
+            ANALYZE g0 FOR 1 iteration WAIT (VARIABLES kepler_cluster_id)
+        ''')
+        bdb.execute('''
+            ANALYZE g0 FOR 1 iteration WAIT (
+                SKIP kepler_cluster_id, kepler_noise, period;
+            )
+        ''')
+        with pytest.raises(Exception):
+            # Disallow both SKIP and VARIABLES clauses.
+            #
+            # XXX Catch a more specific exception.
+            bdb.execute('''
+                ANALYZE g0 FOR 1 ITERATION WAIT (
+                    SKIP kepler_cluster_id;
+                    VARIABLES apogee, perigee;
+                )
+            ''')
+        bdb.execute('''
+            ANALYZE g0 FOR 1 iteration WAIT (
+                SKIP kepler_cluster_id, kepler_noise, period;
+            )
+        ''')
         bdb.execute('ANALYZE g0 FOR 1 ITERATION WAIT')
 
         bdb.execute('''

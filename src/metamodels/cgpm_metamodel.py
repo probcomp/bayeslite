@@ -35,6 +35,7 @@ from bayeslite.util import cursor_value
 from bayeslite.util import json_dumps
 
 import cgpm_schema.parse
+import cgpm_analyze.parse
 
 CGPM_SCHEMA_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('cgpm', 1);
@@ -190,7 +191,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         for cgpm_ext in schema['cgpm_composition']:
             cgpms = [self._initialize_cgpm(bdb, generator_id, cgpm_ext)
                 for _ in xrange(n)]
-            engine.compose_cgpm(cgpms, N=1, multithread=self._ncpu)
+            engine.compose_cgpm(cgpms, multithread=self._ncpu)
 
         # Store the newly initialized engine.
         engine_json = json_dumps(engine.to_metadata())
@@ -221,16 +222,46 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         if ckpt_iterations is not None or ckpt_seconds is not None:
             # XXX
-            raise NotImplementedError('cgpm analysis checkpoint')
-        if program is not None:
-            # XXX
-            raise NotImplementedError('cgpm analysis programs')
+            raise NotImplementedError('CGpm analysis checkpoint not supported.')
 
-        # Get the engine.
+        if program is None:
+            program = []
+
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
+
+        def retrieve_analyze_variables(ast):
+            # Transition all variables by default.
+            if len(ast) == 0:
+                variables = core.bayesdb_variable_names(bdb, population_id)
+            # Exactly 1 clause supported.
+            elif len(ast) == 1:
+                clause = ast[0]
+                # Transition user specified variables only.
+                if isinstance(clause, cgpm_analyze.parse.Variables):
+                    variables = clause.vars
+                # Transition all variables except user specified skip.
+                elif isinstance(clause, cgpm_analyze.parse.Skip):
+                    variables = filter(
+                        lambda v: v not in clause.vars,
+                        core.bayesdb_variable_names(bdb, population_id))
+                # Unknown/impossible clause.
+                else:
+                    raise ValueError('Unknown clause in ANALYZE: %s.' % ast)
+            # Crash if more than 1 clause.
+            else:
+                raise ValueError('1 clause permitted in ANALYZE: %s.' % ast)
+            return variables
+
+        # Retrieve target variables.
+        analyze_ast = cgpm_analyze.parse.parse(program)
+        variables = retrieve_analyze_variables(analyze_ast)
+        varnos = [core.bayesdb_variable_number(bdb, population_id, v)
+            for v in variables]
+
+        # Run transition.
         engine = self._engine(bdb, generator_id)
-
-        # Do the transition.
-        engine.transition(N=iterations, S=max_seconds, multithread=self._ncpu)
+        engine.transition(
+            N=iterations, S=max_seconds, cols=varnos, multithread=self._ncpu)
 
         # Serialize the engine.
         engine_json = json_dumps(engine.to_metadata())
@@ -323,7 +354,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         cgpm_query = [colno for _r, colno in targets]
         cgpm_evidence = {
             colno: self._to_numeric(bdb, generator_id, colno, value)
-            for colno, value in constraints
+            for _r, colno, value in constraints
         }
         engine = self._engine(bdb, generator_id)
         samples = engine.simulate(
@@ -586,6 +617,7 @@ def _create_schema(bdb, generator_id, schema_ast):
     # State.
     variables = []
     categoricals = {}
+    declared_latents = []
     cgpm_composition = []
     modelled = set()
     subsample = None
@@ -634,6 +666,18 @@ def _create_schema(bdb, generator_id, schema_ast):
             variables.append([var, stattype, dist, params])
             modelled.add(var)
 
+        elif isinstance(clause, cgpm_schema.parse.Latent):
+            # Reject if the latent variable has already been declared.
+            if any(l[0] == clause.name for l in declared_latents):
+                duplicate.add(clause.name)
+
+            # XXX FILL ME XXX
+
+            # Register the latent variable name and stattype into bayesdb.
+            # Do something related to the error checking data structures.
+
+            declared_latents.append((clause.name, clause.stattype))
+
         elif isinstance(clause, cgpm_schema.parse.Foreign):
             # Foreign model: some set of output variables is to be
             # modelled by foreign logic, possibly conditional on some
@@ -677,14 +721,13 @@ def _create_schema(bdb, generator_id, schema_ast):
                     _, dist, params = _retrieve_stattype_dist_params(var)
                     cctypes.append(dist)
                     ccargs.append(params)
-                else:
-                    # Finally, add a cgpm_composition record.
-                    cgpm_composition.append({
-                        'name': name,
-                        'inputs': inputs,
-                        'outputs': outputs,
-                        'kwds': kwds,
-                    })
+                # Finally, add a cgpm_composition record.
+                cgpm_composition.append({
+                    'name': name,
+                    'inputs': inputs,
+                    'outputs': outputs,
+                    'kwds': kwds,
+                })
 
         elif isinstance(clause, cgpm_schema.parse.Subsample):
             if subsample is not None:
@@ -692,7 +735,7 @@ def _create_schema(bdb, generator_id, schema_ast):
             subsample = clause.n
 
         else:
-            assert False
+            raise BQLError(bdb, 'Unknown clause: %r' % (clause,))
 
     # Raise an exception if there were duplicates or unknown
     # variables.
