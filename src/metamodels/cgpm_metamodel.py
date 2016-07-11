@@ -385,7 +385,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         cgpm_query = [colno for _r, colno in targets]
         cgpm_evidence = {
             colno: self._to_numeric(bdb, generator_id, colno, value)
-            for colno, value in constraints
+            for _r, colno, value in constraints
         }
         engine = self._engine(bdb, generator_id)
         samples = engine.simulate(
