@@ -147,25 +147,22 @@ def execute_phrase(bdb, phrase, bindings=()):
             assert len(cursor) == 1
             nsamples = cursor[0][0]
             assert isinstance(nsamples, int)
-            constraints = [
-                (core.bayesdb_variable_number(bdb, population_id, generator_id,
-                        var),
-                    value)
-                for (var, _expression), value in
-                    zip(phrase.simulation.constraints, cursor[0][1:])
-            ]
-            colnos = [
-                core.bayesdb_variable_number(bdb, population_id, generator_id,
-                    var)
-                for var in column_names
-            ]
+            def map_var(var):
+                return core.bayesdb_variable_number(bdb, population_id,
+                    generator_id, var)
+            def map_constraint(((var, _expression), value)):
+                return (map_var(var), value)
+            constraints = map(map_constraint,
+                zip(phrase.simulation.constraints, cursor[0][1:]))
+            colnos = map(map_var, column_names)
+            schema = ','.join('%s %s' %
+                    (qcn, column_sqltypes[casefold(column_name)])
+                for qcn, column_name in zip(qcns, column_names))
             bdb.sql_execute('CREATE %sTABLE %s%s (%s)' %
                 ('TEMP ' if phrase.temp else '',
                  'IF NOT EXISTS ' if phrase.ifnotexists else '',
                  qn,
-                 ','.join('%s %s' %
-                        (qcn, column_sqltypes[casefold(column_name)])
-                    for qcn, column_name in zip(qcns, column_names))))
+                 schema))
             insert_sql = '''
                 INSERT INTO %s (%s) VALUES (%s)
             ''' % (qn, ','.join(qcns), ','.join('?' for qcn in qcns))
