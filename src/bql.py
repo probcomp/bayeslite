@@ -315,7 +315,8 @@ def execute_phrase(bdb, phrase, bindings=()):
                         VALUES (?, ?, ?, ?)
                 ''', (phrase.name, table, population_id, metamodel.name()))
                 generator_id = core.bayesdb_get_generator(bdb, phrase.name)
-                # XXX omit needless bayesdb_generator_column table
+                # XXX Omit needless bayesdb_generator_column table --
+                # Github issue #441.
                 bdb.sql_execute('''
                     INSERT INTO bayesdb_generator_column
                         (generator_id, colno, stattype)
