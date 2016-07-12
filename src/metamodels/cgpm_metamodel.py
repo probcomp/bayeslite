@@ -741,9 +741,11 @@ def _create_schema(bdb, generator_id, schema_ast):
                 for var in inputs:
                     must_exist.append(var)
                     needed.add(var)
-                    # XXX check agreement with statistical type
                     assert len(cctypes) == len(ccargs)
                     # Retrieve the default dist and params.
+                    #
+                    # XXX Can't use a latent variable here -- see
+                    # Github issue #445.
                     _, dist, params = _retrieve_stattype_dist_params(var)
                     cctypes.append(dist)
                     ccargs.append(params)
