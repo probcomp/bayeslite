@@ -356,7 +356,8 @@ def bql_row_similarity(bdb, population_id, generator_id, rowid, target_rowid,
     if target_rowid is None:
         raise BQLError(bdb, 'No such target row for SIMILARITY')
     if len(colnos) == 0:
-        colnos = core.bayesdb_variable_numbers(bdb, population_id)
+        colnos = core.bayesdb_variable_numbers(bdb, population_id,
+            generator_id)
     def generator_similarity(generator_id):
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
         return metamodel.row_similarity(bdb, generator_id, None, rowid,

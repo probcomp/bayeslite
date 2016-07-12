@@ -1194,7 +1194,8 @@ def compile_column_lists(bdb, population_id, generator_id, column_lists,
         else:
             out.write(', ')
         if isinstance(collist, ast.ColListAll):
-            colnos = core.bayesdb_variable_numbers(bdb, population_id)
+            colnos = core.bayesdb_variable_numbers(bdb, population_id,
+                generator_id)
             out.write(', '.join(str(colno) for colno in colnos))
         elif isinstance(collist, ast.ColListLit):
             unknown = set()

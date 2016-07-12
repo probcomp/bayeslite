@@ -237,7 +237,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         def retrieve_analyze_variables(ast):
             # Transition all variables by default.
             if len(ast) == 0:
-                variables = core.bayesdb_variable_names(bdb, population_id)
+                variables = core.bayesdb_variable_names(bdb, population_id,
+                    generator_id)
             # Exactly 1 clause supported.
             elif len(ast) == 1:
                 clause = ast[0]
@@ -248,7 +249,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 elif isinstance(clause, cgpm_analyze.parse.Skip):
                     variables = filter(
                         lambda v: v not in clause.vars,
-                        core.bayesdb_variable_names(bdb, population_id))
+                        core.bayesdb_variable_names(bdb, population_id,
+                            generator_id))
                 # Unknown/impossible clause.
                 else:
                     raise ValueError('Unknown clause in ANALYZE: %s.' % ast)
@@ -672,7 +674,7 @@ def _create_schema(bdb, generator_id, schema_ast):
 
             # Get the column number.
             colno = core.bayesdb_variable_number(bdb, population_id, None, var)
-            assert not colno < 0
+            assert 0 <= colno
 
             # Add it to the list and mark it modelled by default.
             stattype = core.bayesdb_variable_stattype(
@@ -785,12 +787,11 @@ def _create_schema(bdb, generator_id, schema_ast):
     # Use the default distribution for any variables that remain to be
     # modelled, excluding any that are latent or that have statistical
     # types we don't know about.
-    for var in core.bayesdb_variable_names(bdb, population_id):
+    for var in core.bayesdb_variable_names(bdb, population_id, None):
         if var in modelled:
             continue
         colno = core.bayesdb_variable_number(bdb, population_id, None, var)
-        if colno < 0:
-            continue
+        assert 0 <= colno
         stattype, dist, params = _retrieve_stattype_dist_params(var)
         if stattype not in _DEFAULT_DIST:
             assert False    # XXX Why would you be here, anyway?
