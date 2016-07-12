@@ -309,22 +309,48 @@ def execute_phrase(bdb, phrase, bindings=()):
                                    'Name already defined as generator: %s' %
                         (repr(phrase.name),))
             else:
+                # Insert a record into bayesdb_generator and get the
+                # assigned id.
                 bdb.sql_execute('''
                     INSERT INTO bayesdb_generator
                         (name, tabname, population_id, metamodel)
                         VALUES (?, ?, ?, ?)
                 ''', (phrase.name, table, population_id, metamodel.name()))
                 generator_id = core.bayesdb_get_generator(bdb, phrase.name)
+
+                # Populate bayesdb_generator_column.
+                #
                 # XXX Omit needless bayesdb_generator_column table --
                 # Github issue #441.
                 bdb.sql_execute('''
                     INSERT INTO bayesdb_generator_column
                         (generator_id, colno, stattype)
-                        SELECT ?, colno, stattype
+                        SELECT :generator_id, colno, stattype
                             FROM bayesdb_variable
-                            WHERE population_id = ?
-                ''', (generator_id, population_id))
+                            WHERE population_id = :population_id
+                                AND generator_id IS NULL
+                ''', {
+                    'generator_id': generator_id,
+                    'population_id': population_id,
+                })
+
+                # Do any metamodel-specific initialization.
                 metamodel.create_generator(bdb, generator_id, phrase.schema)
+
+                # Populate bayesdb_generator_column with any latent
+                # variables that metamodel.create_generator has added
+                # with bayesdb_add_latent.
+                bdb.sql_execute('''
+                    INSERT INTO bayesdb_generator_column
+                        (generator_id, colno, stattype)
+                        SELECT :generator_id, colno, stattype
+                            FROM bayesdb_variable
+                            WHERE population_id = :population_id
+                                AND generator_id = :generator_id
+                ''', {
+                    'generator_id': generator_id,
+                    'population_id': population_id,
+                })
 
         # All done.  Nothing to return.
         return empty_cursor(bdb)

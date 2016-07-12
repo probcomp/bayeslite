@@ -26,6 +26,8 @@ from cgpm.venturescript.vscgpm import VsCGpm
 
 from cgpm.utils import general as gu
 
+import bayeslite.core as core
+
 from bayeslite import bayesdb_open
 from bayeslite import bayesdb_register_metamodel
 from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
@@ -175,6 +177,10 @@ def test_cgpm_extravaganza__ci_slow():
                 SUBSAMPLE 100,
             )
         '''.format(kepler_source))
+
+        generator_id = core.bayesdb_get_generator(bdb, 'g0')
+        assert core.bayesdb_generator_column_numbers(bdb, generator_id) == \
+            [-2, -1, 1, 2, 3, 4, 5, 6]
 
         # -- MODEL country_of_operator GIVEN class_of_orbit USING forest;
         bdb.execute('INITIALIZE 1 MODELS FOR g0')
