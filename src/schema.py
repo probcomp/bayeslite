@@ -131,7 +131,8 @@ CREATE TABLE bayesdb_population (
 
 CREATE TABLE bayesdb_variable (
 	population_id	INTEGER NOT NULL REFERENCES bayesdb_population(id),
-	generator_id	INTEGER REFERENCES bayesdb_generator(id),
+	generator_id	INTEGER REFERENCES bayesdb_generator(id)
+				ON DELETE CASCADE,
 	colno		INTEGER NOT NULL,
 	name		TEXT COLLATE NOCASE NOT NULL,
 	stattype	TEXT COLLATE NOCASE NOT NULL

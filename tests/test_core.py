@@ -568,9 +568,9 @@ def test_crosscat_constraints():
             )
         ''')
         pid = core.bayesdb_get_population(bdb, 'p1')
-        assert core.bayesdb_variable_number(bdb, pid, 'label') == 1
-        assert core.bayesdb_variable_number(bdb, pid, 'age') == 2
-        assert core.bayesdb_variable_number(bdb, pid, 'weight') == 3
+        assert core.bayesdb_variable_number(bdb, pid, None, 'label') == 1
+        assert core.bayesdb_variable_number(bdb, pid, None, 'age') == 2
+        assert core.bayesdb_variable_number(bdb, pid, None, 'weight') == 3
         gid = core.bayesdb_get_generator(bdb, 'p1_cc')
         from bayeslite.metamodels.crosscat import crosscat_cc_colno
         assert crosscat_cc_colno(bdb, gid, 1) == 0

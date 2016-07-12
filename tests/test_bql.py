@@ -454,7 +454,8 @@ def test_estimate_columns_trivial():
     prefix1 = ' FROM bayesdb_population AS p,' \
         ' bayesdb_variable AS v, bayesdb_column AS c' \
         ' WHERE p.id = 1 AND v.population_id = p.id' \
-        ' AND c.tabname = p.tabname AND c.colno = v.colno'
+        ' AND c.tabname = p.tabname AND c.colno = v.colno' \
+        ' AND v.generator_id IS NULL'
     prefix = prefix0 + prefix1
     assert bql2sql('estimate * from columns of p1;') == \
         prefix + ';'
@@ -557,6 +558,8 @@ def test_estimate_pairwise_trivial():
     infix0 += ' AND v0.population_id = p.id AND v1.population_id = p.id'
     infix0 += ' AND c0.tabname = p.tabname AND c0.colno = v0.colno'
     infix0 += ' AND c1.tabname = p.tabname AND c1.colno = v1.colno'
+    infix0 += ' AND v0.generator_id IS NULL'
+    infix0 += ' AND v1.generator_id IS NULL'
     infix += infix0
     assert bql2sql('estimate dependence probability'
             ' from pairwise columns of p1;') == \
@@ -695,6 +698,7 @@ def test_estimate_pairwise_selected_columns():
         ' AND v0.population_id = p.id AND v1.population_id = p.id' \
         ' AND c0.tabname = p.tabname AND c0.colno = v0.colno' \
         ' AND c1.tabname = p.tabname AND c1.colno = v1.colno' \
+        ' AND v0.generator_id IS NULL AND v1.generator_id IS NULL' \
         ' AND c0.colno IN (1, 2) AND c1.colno IN (1, 2);'
     assert bql2sql('estimate dependence probability'
             ' from pairwise columns of p1'
@@ -710,6 +714,7 @@ def test_estimate_pairwise_selected_columns():
         ' AND v0.population_id = p.id AND v1.population_id = p.id' \
         ' AND c0.tabname = p.tabname AND c0.colno = v0.colno' \
         ' AND c1.tabname = p.tabname AND c1.colno = v1.colno' \
+        ' AND v0.generator_id IS NULL AND v1.generator_id IS NULL' \
         ' AND c0.colno IN (3, 1) AND c1.colno IN (3, 1);'
 
 def test_select_columns_subquery():
@@ -980,9 +985,11 @@ def test_parametrized():
                     ' bayesdb_column AS c'
                 ' WHERE p.id = 1 AND v.population_id = p.id'
                     ' AND c.tabname = p.tabname AND c.colno = v.colno'
+                    ' AND v.generator_id IS NULL'
                 ' LIMIT 1',
             'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ? AND name = ?',
+                ' WHERE population_id = ? AND generator_id IS NULL'
+                    ' AND name = ?',
             # ESTIMATE SIMILARITY TO (rowid=1):
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'SELECT bql_row_similarity(1, NULL, _rowid_,'
@@ -1022,9 +1029,11 @@ def test_parametrized():
                     ' bayesdb_column AS c'
                 ' WHERE p.id = 1 AND v.population_id = p.id'
                     ' AND c.tabname = p.tabname AND c.colno = v.colno'
+                    ' AND v.generator_id IS NULL'
                 ' LIMIT ?1',
             'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ? AND name = ?',
+                ' WHERE population_id = ? AND generator_id IS NULL'
+                    ' AND name = ?',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             # ESTIMATE SIMILARITY TO (rowid=1):
             'SELECT bql_row_similarity(1, NULL, _rowid_,'
@@ -1054,13 +1063,17 @@ def test_parametrized():
             'PRAGMA table_info("t")',
             "SELECT CAST(4 AS INTEGER), 'F'",
             'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ? AND name = ?',
+                ' WHERE population_id = ? AND generator_id IS NULL'
+                    ' AND name = ?',
             'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ? AND name = ?',
+                ' WHERE population_id = ? AND generator_id IS NULL'
+                    ' AND name = ?',
             'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ? AND name = ?',
+                ' WHERE population_id = ? AND generator_id IS NULL'
+                    ' AND name = ?',
             'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ? AND name = ?',
+                ' WHERE population_id = ? AND generator_id IS NULL'
+                    ' AND name = ?',
             'CREATE TEMP TABLE IF NOT EXISTS "sim"'
                 ' ("age" NUMERIC,"RANK" NUMERIC,"division" NUMERIC)',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
@@ -1194,13 +1207,13 @@ def test_parametrized():
             'SELECT id FROM bayesdb_population WHERE name = ?',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'PRAGMA table_info("t")',
-            'SELECT name, stattype FROM bayesdb_variable'
-                ' WHERE population_id = ? AND colno < 0',
             "SELECT CAST(4 AS INTEGER), 'F'",
             'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ? AND name = ?',
+                ' WHERE population_id = ? AND generator_id IS NULL'
+                    ' AND name = ?',
             'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ? AND name = ?',
+                ' WHERE population_id = ? AND generator_id IS NULL'
+                    ' AND name = ?',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'SELECT MAX(_rowid_) FROM "t"',
             'SELECT id FROM bayesdb_generator WHERE population_id = ?',
@@ -1440,7 +1453,7 @@ def test_createtab():
             overrides=[('age', 'ignore')])
         bdb.execute('drop population p0')
         population_id = core.bayesdb_get_population(bdb, 'p')
-        colno = core.bayesdb_variable_number(bdb, population_id, 'age')
+        colno = core.bayesdb_variable_number(bdb, population_id, None, 'age')
         assert core.bayesdb_variable_stattype(bdb, population_id, colno) == \
             'numerical'
         bdb.execute('initialize 1 model for p_cc')

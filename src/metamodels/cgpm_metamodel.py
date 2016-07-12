@@ -260,7 +260,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Retrieve target variables.
         analyze_ast = cgpm_analyze.parse.parse(program)
         variables = retrieve_analyze_variables(analyze_ast)
-        varnos = [core.bayesdb_variable_number(bdb, population_id, v)
+        varnos = [core.bayesdb_variable_number(bdb, population_id,
+                generator_id, v)
             for v in variables]
 
         # Run transition.
@@ -399,7 +400,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
     def _data(self, bdb, generator_id, vars):
         # Get the column numbers and statistical types.
         population_id = core.bayesdb_generator_population(bdb, generator_id)
-        colnos = [core.bayesdb_variable_number(bdb, population_id, var)
+        colnos = [core.bayesdb_variable_number(bdb, population_id,
+                generator_id, var)
             for var in vars]
         stattypes = [core.bayesdb_variable_stattype(bdb, population_id, colno)
             for colno in colnos]
@@ -436,7 +438,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
     def _initialize_engine(self, bdb, generator_id, n, variables):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         def map_var(var):
-            return core.bayesdb_variable_number(bdb, population_id, var)
+            return core.bayesdb_variable_number(bdb, population_id,
+                generator_id, var)
         outputs = [map_var(var) for var, _st, _cct, _da in variables]
         cctypes = [cctype for _n, _st, cctype, _da in variables]
         distargs = [distargs for _n, _st, _cct, distargs in variables]
@@ -449,7 +452,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
     def _initialize_cgpm(self, bdb, generator_id, cgpm_ext):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         def map_var(var):
-            return core.bayesdb_variable_number(bdb, population_id, var)
+            return core.bayesdb_variable_number(bdb, population_id,
+                generator_id, var)
         name = cgpm_ext['name']
         outputs = map(map_var, cgpm_ext['outputs'])
         inputs = map(map_var, cgpm_ext['inputs'])
@@ -632,11 +636,11 @@ def _create_schema(bdb, generator_id, schema_ast):
     duplicate = set()
     unknown = set()
     needed = set()
-    invalid_latent = set()
+    existing_latent = set()
     must_exist = []
 
     def _retrieve_stattype_dist_params(var):
-        colno = core.bayesdb_variable_number(bdb, population_id, var)
+        colno = core.bayesdb_variable_number(bdb, population_id, None, var)
         stattype = core.bayesdb_variable_stattype(bdb, population_id, colno)
         dist, params = _DEFAULT_DIST[stattype](bdb, generator_id, var)
         return stattype, dist, params
@@ -652,7 +656,7 @@ def _create_schema(bdb, generator_id, schema_ast):
             params = dict(clause.params) # XXX error checking
 
             # Reject if the variable does not exist.
-            if not core.bayesdb_has_variable(bdb, population_id, var):
+            if not core.bayesdb_has_variable(bdb, population_id, None, var):
                 unknown.add(var)
                 continue
 
@@ -661,11 +665,14 @@ def _create_schema(bdb, generator_id, schema_ast):
                 duplicate.add(var)
                 continue
 
-            # Reject if it is a latent variable.
-            colno = core.bayesdb_variable_number(bdb, population_id, var)
-            if colno < 0:
-                invalid_latent.add(var)
+            # Reject if the variable is latent.
+            if core.bayesdb_has_latent(bdb, population_id, var):
+                existing_latent.add(var)
                 continue
+
+            # Get the column number.
+            colno = core.bayesdb_variable_number(bdb, population_id, None, var)
+            assert not colno < 0
 
             # Add it to the list and mark it modelled by default.
             stattype = core.bayesdb_variable_stattype(
@@ -686,8 +693,14 @@ def _create_schema(bdb, generator_id, schema_ast):
 
             # Reject if the variable even *exists* in the population
             # at all yet.
-            if core.bayesdb_has_variable(bdb, population_id, var):
+            if core.bayesdb_has_variable(bdb, population_id, None, var):
                 duplicate.add(var)
+                continue
+
+            # Reject if the variable is already latent, from another
+            # generator.
+            if core.bayesdb_has_latent(bdb, population_id, var):
+                existing_latent.add(var)
                 continue
 
             # Add it to the set of latent variables.
@@ -751,7 +764,7 @@ def _create_schema(bdb, generator_id, schema_ast):
     # Make sure all the outputs and inputs exist, either in the
     # population or as latents in this generator.
     for var in must_exist:
-        if core.bayesdb_has_variable(bdb, population_id, var):
+        if core.bayesdb_has_variable(bdb, population_id, None, var):
             continue
         if var in latents:
             continue
@@ -765,9 +778,9 @@ def _create_schema(bdb, generator_id, schema_ast):
     if unknown:
         raise BQLError(bdb, 'Unknown model variables: %r' %
             (sorted(unknown),))
-    if invalid_latent:
-        raise BQLError(bdb, 'Invalid latent variables: %r' %
-            (sorted(invalid_latent),))
+    if existing_latent:
+        raise BQLError(bdb, 'Latent variables already defined: %r' %
+            (sorted(existing_latent),))
 
     # Use the default distribution for any variables that remain to be
     # modelled, excluding any that are latent or that have statistical
@@ -775,7 +788,7 @@ def _create_schema(bdb, generator_id, schema_ast):
     for var in core.bayesdb_variable_names(bdb, population_id):
         if var in modelled:
             continue
-        colno = core.bayesdb_variable_number(bdb, population_id, var)
+        colno = core.bayesdb_variable_number(bdb, population_id, None, var)
         if colno < 0:
             continue
         stattype, dist, params = _retrieve_stattype_dist_params(var)

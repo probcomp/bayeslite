@@ -148,12 +148,15 @@ def execute_phrase(bdb, phrase, bindings=()):
             nsamples = cursor[0][0]
             assert isinstance(nsamples, int)
             constraints = [
-                (core.bayesdb_variable_number(bdb, population_id, var), value)
+                (core.bayesdb_variable_number(bdb, population_id, generator_id,
+                        var),
+                    value)
                 for (var, _expression), value in
                     zip(phrase.simulation.constraints, cursor[0][1:])
             ]
             colnos = [
-                core.bayesdb_variable_number(bdb, population_id, var)
+                core.bayesdb_variable_number(bdb, population_id, generator_id,
+                    var)
                 for var in column_names
             ]
             bdb.sql_execute('CREATE %sTABLE %s%s (%s)' %
