@@ -30,6 +30,7 @@ import bayeslite.core as core
 
 from bayeslite import bayesdb_open
 from bayeslite import bayesdb_register_metamodel
+from bayeslite.exception import BQLError
 from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
 
 # ------------------------------------------------------------------------------
@@ -163,6 +164,25 @@ def test_cgpm_extravaganza__ci_slow():
         cgpmt = CGPM_Metamodel(cgpm_registry)
         bayesdb_register_metamodel(bdb, cgpmt)
 
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                CREATE GENERATOR g0 FOR satellites USING cgpm (
+                    apoge NORMAL
+                )
+            ''')
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                CREATE GENERATOR g0 FOR satellites USING cgpm (
+                    MODEL perigee GIVEN apoge USING linreg
+                )
+            ''')
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                CREATE GENERATOR g0 FOR satellites USING cgpm (
+                    LATENT apogee NUMERICAL
+                )
+            ''')
+
         bdb.execute('''
             CREATE GENERATOR g0 FOR satellites USING cgpm (
                 apogee NORMAL,
@@ -172,7 +192,8 @@ def test_cgpm_extravaganza__ci_slow():
                     GIVEN apogee, perigee
                     USING venturescript (source = "{}"),
                 MODEL perigee GIVEN apogee USING linreg,
-                MODEL class_of_orbit GIVEN apogee, period, perigee
+                MODEL class_of_orbit
+                    GIVEN apogee, period, perigee, kepler_noise
                     USING forest (k = 4),
                 SUBSAMPLE 100,
             )
