@@ -587,10 +587,78 @@ def test_trivial_commands():
             ast.InferExplicit(
                 [
                     ast.SelColExp(ast.ExpCol(None, 'x'), None),
-                    ast.PredCol('x', 'xi', 'xc'),
+                    ast.PredCol('x', 'xi', 'xc', None),
                 ],
                 't_cc', None, None, None, None, None,
             ))]
+
+def test_infer_trivial():
+    assert parse_bql_string('infer x from p') == \
+        [ast.InferAuto([ast.InfColOne('x', None)], ast.ExpLit(ast.LitInt(0)),
+            None, 'p', None, None, None, None, None)]
+
+def test_infer_conf():
+    assert parse_bql_string('infer x with confidence 0.9 from p') == \
+        [ast.InferAuto([ast.InfColOne('x', None)],
+            ast.ExpLit(ast.LitFloat(0.9)), None, 'p', None, None, None, None,
+            None)]
+
+def test_infer_samples():
+    assert parse_bql_string('infer x using 42 samples from p') == \
+        [ast.InferAuto([ast.InfColOne('x', None)],
+            ast.ExpLit(ast.LitInt(0)), ast.ExpLit(ast.LitInt(42)), 'p', None,
+            None, None, None, None)]
+
+def test_infer_conf_samples():
+    assert parse_bql_string('infer x with confidence 0.9 using 42 samples'
+            ' from p') == \
+        [ast.InferAuto([ast.InfColOne('x', None)],
+            ast.ExpLit(ast.LitInt(.9)), ast.ExpLit(ast.LitInt(42)), 'p', None,
+            None, None, None, None)]
+
+def test_infer_explicit():
+    assert parse_bql_string('infer explicit x, predict y with confidence 0.9,'
+            ' predict p with confidence 0.8 as q, predict u confidence v,'
+            ' predict a as b confidence c,'
+            ' predict h confidence k using 42 samples'
+            ' from p') == \
+        [ast.InferExplicit([
+                ast.SelColExp(ast.ExpCol(None, 'x'), None),
+                ast.SelColExp(
+                    ast.ExpBQLPredict('y', ast.ExpLit(ast.LitFloat(.9)), None),
+                    None,
+                ),
+                ast.SelColExp(
+                    ast.ExpBQLPredict('p', ast.ExpLit(ast.LitFloat(.8)), None),
+                    'q',
+                ),
+                ast.PredCol('u', None, 'v', None),
+                ast.PredCol('a', 'b', 'c', None),
+                ast.PredCol('h', None, 'k', ast.ExpLit(ast.LitInt(42))),
+            ],
+            'p', None, None, None, None, None)]
+
+def test_infer_explicit_samples():
+    assert parse_bql_string('infer explicit x, predict y with confidence 0.9,'
+            ' predict p with confidence 0.8 as q, predict u confidence v,'
+            ' predict a as b confidence c,'
+            ' predict h confidence k using 42 samples'
+            ' from p') == \
+        [ast.InferExplicit([
+                ast.SelColExp(ast.ExpCol(None, 'x'), None),
+                ast.SelColExp(
+                    ast.ExpBQLPredict('y', ast.ExpLit(ast.LitFloat(.9)), None),
+                    None,
+                ),
+                ast.SelColExp(
+                    ast.ExpBQLPredict('p', ast.ExpLit(ast.LitFloat(.8)), None),
+                    'q',
+                ),
+                ast.PredCol('u', None, 'v', None),
+                ast.PredCol('a', 'b', 'c', None),
+                ast.PredCol('h', None, 'k', ast.ExpLit(ast.LitInt(42))),
+            ],
+            'p', None, None, None, None, None)]
 
 def test_parametrized():
     assert parse_bql_string('select * from t where id = ?;') == \
@@ -734,8 +802,8 @@ def test_is_bql():
     assert ast.is_bql(ast.ExpBQLDepProb('c0', 'c1'))
     assert ast.is_bql(ast.ExpBQLMutInf('c0', 'c1', 100))
     assert ast.is_bql(ast.ExpBQLCorrel('c0', 'c1'))
-    assert ast.is_bql(ast.ExpBQLPredict('c', ast.ExpLit(ast.LitInt(0.5))))
-    assert ast.is_bql(ast.ExpBQLPredictConf('c'))
+    assert ast.is_bql(ast.ExpBQLPredict('c', ast.ExpLit(ast.LitInt(.5)), None))
+    assert ast.is_bql(ast.ExpBQLPredictConf('c', None))
 
 @contextlib.contextmanager
 def raises_str(klass, string):

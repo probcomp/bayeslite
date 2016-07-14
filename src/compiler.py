@@ -400,7 +400,7 @@ def compile_infer_auto(bdb, infer, out):
     def map_column(col, name):
         exp = ast.ExpCol(None, col)
         if core.bayesdb_has_variable(bdb, population_id, generator_id, col):
-            pred = ast.ExpBQLPredict(col, confidence)
+            pred = ast.ExpBQLPredict(col, confidence, infer.nsamples)
             exp = ast.ExpApp(False, 'IFNULL', [exp, pred])
         if name is None:
             name = col
@@ -554,7 +554,7 @@ def compile_select_column(bdb, selcol, i, named, bql_compiler, out):
             out.write(' AS ')
             compile_name(bdb, selcol.name, out)
     elif isinstance(selcol, ast.PredCol):
-        bql = ast.ExpBQLPredictConf(selcol.column)
+        bql = ast.ExpBQLPredictConf(selcol.column, selcol.nsamples)
         bql_compiler.compile_bql(bdb, bql, out)
         out.write(' AS c%u' % (i,))
     else:

@@ -219,6 +219,7 @@ estby(e)		::= K_ESTIMATE select_quant(quant) select_columns(cols)
 
 infer(auto)		::= K_INFER infer_auto_columns(cols)
 				withconf_opt(conf)
+				nsamples_opt(nsamp)
 				K_FROM population_name(population)
 				modelledby_opt(generator)
 				where(cond) group_by(grouping) order_by(ord)
@@ -247,7 +248,8 @@ infer_exp_columns(many)	::= infer_exp_columns(cs) T_COMMA
 
 infer_exp_column(sel)	::= select_column(c).
 infer_exp_column(pred)	::= K_PREDICT column_name(col) as(name)
-				K_CONFIDENCE column_name(confname).
+				K_CONFIDENCE column_name(confname)
+				nsamples_opt(nsamp).
 
 select_quant(distinct)	::= K_DISTINCT.
 select_quant(all)	::= K_ALL.
@@ -501,7 +503,8 @@ bqlfn(mutinf)		::= K_MUTUAL K_INFORMATION ofwith(cols)
 				nsamples_opt(nsamp).
 bqlfn(correl)		::= K_CORRELATION ofwith(cols).
 bqlfn(correl_pval)	::= K_CORRELATION K_PVALUE ofwith(cols).
-bqlfn(predict)		::= K_PREDICT column_name(col) withconf(conf).
+bqlfn(predict)		::= K_PREDICT column_name(col) withconf(conf)
+				nsamples_opt(nsamp).
 bqlfn(primary)		::= primary(p).
 
 /*

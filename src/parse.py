@@ -315,10 +315,10 @@ class BQLSemantics(object):
     def p_estby_e(self, quant, cols, population, generator):
         return ast.EstBy(quant, cols, population, generator)
 
-    def p_infer_auto(self, cols, conf, population, generator, cond, grouping,
-            ord, lim):
-        return ast.InferAuto(cols, conf, population, generator, cond, grouping,
-            ord, lim)
+    def p_infer_auto(self, cols, conf, nsamp, population, generator, cond,
+            grouping, ord, lim):
+        return ast.InferAuto(cols, conf, nsamp, population, generator, cond,
+            grouping, ord, lim)
     def p_infer_explicit(self, cols, population, generator, cond, grouping,
             ord, lim):
         return ast.InferExplicit(cols, population, generator, cond, grouping,
@@ -343,8 +343,8 @@ class BQLSemantics(object):
     def p_infer_exp_columns_one(self, c):       return [c]
     def p_infer_exp_columns_many(self, cs, c):  cs.append(c); return cs
     def p_infer_exp_column_sel(self, c):        return c
-    def p_infer_exp_column_pred(self, col, name, confname):
-        return ast.PredCol(col, name, confname)
+    def p_infer_exp_column_pred(self, col, name, confname, nsamp):
+        return ast.PredCol(col, name, confname, nsamp)
 
     def p_select_quant_distinct(self):          return ast.SELQUANT_DISTINCT
     def p_select_quant_all(self):               return ast.SELQUANT_ALL
@@ -537,9 +537,10 @@ class BQLSemantics(object):
     def p_bqlfn_mutinf(self, cols, nsamp):
         return ast.ExpBQLMutInf(cols[0], cols[1], nsamp)
     def p_bqlfn_correl(self, cols):             return ast.ExpBQLCorrel(*cols)
-    def p_bqlfn_correl_pval(self, cols):        return ast.ExpBQLCorrelPval(*cols)
-    def p_bqlfn_predict(self, col, conf):       return ast.ExpBQLPredict(col,
-                                                    conf)
+    def p_bqlfn_correl_pval(self, cols):
+        return ast.ExpBQLCorrelPval(*cols)
+    def p_bqlfn_predict(self, col, conf, nsamp):
+        return ast.ExpBQLPredict(col, conf, nsamp)
     def p_bqlfn_primary(self, p):               return p
 
     def p_wrt_none(self):                       return [ast.ColListAll()]

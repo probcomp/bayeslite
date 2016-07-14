@@ -199,6 +199,7 @@ PredCol = namedtuple('PredCol', [
     'column',                   # XXX name
     'name',                     # XXX name
     'confname',                 # XXX name
+    'nsamples',                 # Exp* or None
 ])
 
 SelTab = namedtuple('SelTab', [
@@ -209,6 +210,7 @@ SelTab = namedtuple('SelTab', [
 InferAuto = namedtuple('InferAuto', [
     'columns',                  # [InfCol* or PredCol]
     'confidence',               # Exp* or None (implied 0)
+    'nsamples',                 # Exp* or None
     'population',               # XXX name
     'generator',                # XXX name
     'condition',                # Exp* or None (unconditional)
@@ -346,8 +348,10 @@ ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
 ExpBQLMutInf = namedtuple('ExpBQLMutInf', ['column0', 'column1', 'nsamples'])
 ExpBQLCorrel = namedtuple('ExpBQLCorrel', ['column0', 'column1'])
 ExpBQLCorrelPval = namedtuple('ExpBQLCorrelPval', ['column0', 'column1'])
-ExpBQLPredict = namedtuple('ExpBQLPredict', ['column', 'confidence'])
-ExpBQLPredictConf = namedtuple('ExpBQLPredictConf', ['column'])
+ExpBQLPredict = namedtuple('ExpBQLPredict', [
+    'column', 'confidence', 'nsamples',
+])
+ExpBQLPredictConf = namedtuple('ExpBQLPredictConf', ['column', 'nsamples'])
 
 def is_bql(exp):
     if isinstance(exp, ExpBQLPredProb):
