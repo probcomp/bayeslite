@@ -252,18 +252,12 @@ def bayesdb_variable_names(bdb, population_id, generator_id):
 
 def bayesdb_variable_numbers(bdb, population_id, generator_id):
     """Return a list of the numbers of columns modelled in `population_id`."""
-    if generator_id is None:
-        cursor = bdb.sql_execute('''
-            SELECT colno FROM bayesdb_variable
-                WHERE population_id = ? AND generator_id IS NULL
-                ORDER BY colno ASC
-        ''', (population_id,))
-    else:
-        cursor = bdb.sql_execute('''
-            SELECT colno FROM bayesdb_variable
-                WHERE population_id = ? AND generator_id = ?
-                ORDER BY colno ASC
-        ''', (population_id, generator_id))
+    cursor = bdb.sql_execute('''
+        SELECT colno FROM bayesdb_variable
+            WHERE population_id = ?
+                AND (generator_id IS NULL OR generator_id = ?)
+            ORDER BY colno ASC
+    ''', (population_id, generator_id))
     return [colno for (colno,) in cursor]
 
 def bayesdb_variable_name(bdb, population_id, colno):
