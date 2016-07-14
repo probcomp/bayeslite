@@ -772,7 +772,7 @@ def _create_schema(bdb, generator_id, schema_ast):
             continue
         if var in latents:
             continue
-        missing.add(var)
+        unknown.add(var)
 
     # Raise an exception if there were duplicates or unknown
     # variables.
