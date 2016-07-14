@@ -643,12 +643,6 @@ def _create_schema(bdb, generator_id, schema_ast):
     existing_latent = set()
     must_exist = []
 
-    def _retrieve_stattype_dist_params(var):
-        colno = core.bayesdb_variable_number(bdb, population_id, None, var)
-        stattype = core.bayesdb_variable_stattype(bdb, population_id, colno)
-        dist, params = _DEFAULT_DIST[stattype](bdb, generator_id, var)
-        return stattype, dist, params
-
     # Process each clause one by one.
     for clause in schema_ast:
 
