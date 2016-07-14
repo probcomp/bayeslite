@@ -988,7 +988,8 @@ def test_parametrized():
                     ' AND v.generator_id IS NULL'
                 ' LIMIT 1',
             'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ? AND generator_id IS NULL'
+                ' WHERE population_id = ?'
+                    ' AND (generator_id IS NULL OR generator_id = ?)'
                     ' AND name = ?',
             # ESTIMATE SIMILARITY TO (rowid=1):
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
@@ -1032,7 +1033,8 @@ def test_parametrized():
                     ' AND v.generator_id IS NULL'
                 ' LIMIT ?1',
             'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ? AND generator_id IS NULL'
+                ' WHERE population_id = ?'
+                    ' AND (generator_id IS NULL OR generator_id = ?)'
                     ' AND name = ?',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             # ESTIMATE SIMILARITY TO (rowid=1):
@@ -1063,16 +1065,20 @@ def test_parametrized():
             'PRAGMA table_info("t")',
             "SELECT CAST(4 AS INTEGER), 'F'",
             'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ? AND generator_id IS NULL'
+                ' WHERE population_id = ?'
+                    ' AND (generator_id IS NULL OR generator_id = ?)'
                     ' AND name = ?',
             'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ? AND generator_id IS NULL'
+                ' WHERE population_id = ?'
+                    ' AND (generator_id IS NULL OR generator_id = ?)'
                     ' AND name = ?',
             'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ? AND generator_id IS NULL'
+                ' WHERE population_id = ?'
+                    ' AND (generator_id IS NULL OR generator_id = ?)'
                     ' AND name = ?',
             'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ? AND generator_id IS NULL'
+                ' WHERE population_id = ?'
+                    ' AND (generator_id IS NULL OR generator_id = ?)'
                     ' AND name = ?',
             'CREATE TEMP TABLE IF NOT EXISTS "sim"'
                 ' ("age" NUMERIC,"RANK" NUMERIC,"division" NUMERIC)',
@@ -1209,10 +1215,12 @@ def test_parametrized():
             'PRAGMA table_info("t")',
             "SELECT CAST(4 AS INTEGER), 'F'",
             'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ? AND generator_id IS NULL'
+                ' WHERE population_id = ?'
+                    ' AND (generator_id IS NULL OR generator_id = ?)'
                     ' AND name = ?',
             'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ? AND generator_id IS NULL'
+                ' WHERE population_id = ?'
+                    ' AND (generator_id IS NULL OR generator_id = ?)'
                     ' AND name = ?',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'SELECT MAX(_rowid_) FROM "t"',

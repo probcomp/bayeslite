@@ -214,34 +214,22 @@ def bayesdb_has_variable(bdb, population_id, generator_id, name):
     generator_id is None for manifest variables and the id of a
     generator for variables that may be latent.
     """
-    if generator_id is None:
-        cursor = bdb.sql_execute('''
-            SELECT COUNT(*) FROM bayesdb_variable
-                WHERE population_id = ? AND generator_id IS NULL AND name = ?
-        ''', (population_id, name))
-    else:
-        cursor = bdb.sql_execute('''
-            SELECT COUNT(*) FROM bayesdb_variable
-                WHERE population_id = ?
-                    AND (generator_id IS NULL OR generator_id = ?)
-                    AND name = ?
-        ''', (population_id, generator_id, name))
+    cursor = bdb.sql_execute('''
+        SELECT COUNT(*) FROM bayesdb_variable
+            WHERE population_id = ?
+                AND (generator_id IS NULL OR generator_id = ?)
+                AND name = ?
+    ''', (population_id, generator_id, name))
     return cursor_value(cursor) != 0
 
 def bayesdb_variable_number(bdb, population_id, generator_id, name):
     """Return the column number of a population variable."""
-    if generator_id is None:
-        cursor = bdb.sql_execute('''
-            SELECT colno FROM bayesdb_variable
-                WHERE population_id = ? AND generator_id IS NULL AND name = ?
-        ''', (population_id, name))
-    else:
-        cursor = bdb.sql_execute('''
-            SELECT colno FROM bayesdb_variable
-                WHERE population_id = ?
-                    AND (generator_id IS NULL OR generator_id = ?)
-                    AND name = ?
-        ''', (population_id, generator_id, name))
+    cursor = bdb.sql_execute('''
+        SELECT colno FROM bayesdb_variable
+            WHERE population_id = ?
+                AND (generator_id IS NULL OR generator_id = ?)
+                AND name = ?
+    ''', (population_id, generator_id, name))
     return cursor_value(cursor)
 
 def bayesdb_variable_names(bdb, population_id, generator_id):
