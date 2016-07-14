@@ -392,7 +392,7 @@ def test_t1_analysis_iter_deadline__ci_slow():
 def test_t1_predict(rowid, colno, confidence):
     with analyzed_bayesdb_population(t1(), 1, 1) as (bdb, pop_id, gen_id):
         if rowid == 0: rowid = bayesdb_maxrowid(bdb, pop_id)
-        bqlfn.bql_predict(bdb, pop_id, None, colno, rowid, confidence)
+        bqlfn.bql_predict(bdb, pop_id, None, colno, rowid, confidence, None)
 
 @pytest.mark.parametrize('colnos,constraints,numpredictions',
     [(colnos, constraints, numpred)

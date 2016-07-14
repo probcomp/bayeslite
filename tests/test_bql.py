@@ -385,19 +385,33 @@ def test_estimate_bql():
     with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
         bql2sql('estimate correlation from p1;')
+
+def test_infer_bql():
     with pytest.raises(bayeslite.BQLError):
         # No PREDICT outside INFER.
         bql2sql('estimate predict age with confidence 0.9 from p1;')
     assert bql2sql('infer explicit predict age with confidence 0.9'
             ' from p1;') == \
-        'SELECT bql_predict(1, NULL, 2, _rowid_, 0.9) FROM "t1";'
+        'SELECT bql_predict(1, NULL, 2, _rowid_, 0.9, NULL) FROM "t1";'
+    assert bql2sql('infer explicit'
+            ' predict age with confidence 0.9 using 42 samples'
+            ' from p1;') == \
+        'SELECT bql_predict(1, NULL, 2, _rowid_, 0.9, 42) FROM "t1";'
     assert bql2sql('infer explicit rowid, age,'
             ' predict age confidence age_conf from p1') == \
         'SELECT c0 AS "rowid", c1 AS "age",' \
             ' bql_json_get(c2, \'value\') AS "age",' \
             ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
-                ' bql_predict_confidence(1, NULL, 2, _rowid_) AS c2' \
+                ' bql_predict_confidence(1, NULL, 2, _rowid_, NULL) AS c2' \
+                ' FROM "t1");'
+    assert bql2sql('infer explicit rowid, age,'
+            ' predict age confidence age_conf using 42 samples from p1') == \
+        'SELECT c0 AS "rowid", c1 AS "age",' \
+            ' bql_json_get(c2, \'value\') AS "age",' \
+            ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
+            ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
+                ' bql_predict_confidence(1, NULL, 2, _rowid_, 42) AS c2' \
                 ' FROM "t1");'
     assert bql2sql('infer explicit rowid, age,'
             ' predict age as age_inf confidence age_conf from p1') == \
@@ -405,28 +419,71 @@ def test_estimate_bql():
             ' bql_json_get(c2, \'value\') AS "age_inf",' \
             ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
-                ' bql_predict_confidence(1, NULL, 2, _rowid_) AS c2' \
+                ' bql_predict_confidence(1, NULL, 2, _rowid_, NULL) AS c2' \
+                ' FROM "t1");'
+    assert bql2sql('infer explicit rowid, age,'
+            ' predict age as age_inf confidence age_conf using 87 samples'
+            ' from p1') == \
+        'SELECT c0 AS "rowid", c1 AS "age",' \
+            ' bql_json_get(c2, \'value\') AS "age_inf",' \
+            ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
+            ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
+                ' bql_predict_confidence(1, NULL, 2, _rowid_, 87) AS c2' \
                 ' FROM "t1");'
     assert bql2sql('infer rowid, age, weight from p1') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0)) AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0, NULL))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0, NULL))' \
+            ' AS "weight"' \
+        ' FROM "t1";'
+    assert bql2sql('infer rowid, age, weight using (1+2) samples from p1') \
+        == \
+        'SELECT "rowid" AS "rowid",' \
+        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0, (1 + 2)))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0, (1 + 2)))' \
             ' AS "weight"' \
         ' FROM "t1";'
     assert bql2sql('infer rowid, age, weight with confidence 0.9 from p1') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9)) AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9, NULL))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9, NULL))' \
+            ' AS "weight"' \
+        ' FROM "t1";'
+    assert bql2sql('infer rowid, age, weight with confidence 0.9'
+            ' using sqrt(2) samples'
+            ' from p1') \
+        == \
+        'SELECT "rowid" AS "rowid",' \
+        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9, "sqrt"(2)))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9,' \
+                ' "sqrt"(2)))' \
             ' AS "weight"' \
         ' FROM "t1";'
     assert bql2sql('infer rowid, age, weight with confidence 0.9 from p1'
             ' where label = \'foo\'') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9)) AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9, NULL))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9, NULL))' \
+            ' AS "weight"' \
+        ' FROM "t1"' \
+        ' WHERE ("label" = \'foo\');'
+    assert bql2sql('infer rowid, age, weight with confidence 0.9'
+            ' using 42 samples'
+            ' from p1'
+            ' where label = \'foo\'') \
+        == \
+        'SELECT "rowid" AS "rowid",' \
+        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9, 42))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9, 42))' \
             ' AS "weight"' \
         ' FROM "t1"' \
         ' WHERE ("label" = \'foo\');'
@@ -435,17 +492,46 @@ def test_estimate_bql():
                 ' = \'foo\'') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9)) AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9, NULL))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9, NULL))' \
             ' AS "weight"' \
         ' FROM "t1"' \
-        ' WHERE ("ifnull"("label", bql_predict(1, NULL, 1, _rowid_, 0.7))' \
+        ' WHERE ("ifnull"("label",' \
+                ' bql_predict(1, NULL, 1, _rowid_, 0.7, NULL))' \
+            ' = \'foo\');'
+    assert bql2sql('infer rowid, age, weight with confidence 0.9'
+            ' using 42 samples'
+            ' from p1'
+            ' where ifnull(label, predict label with confidence 0.7'
+                   ' using 73 samples)'
+                ' = \'foo\'') \
+        == \
+        'SELECT "rowid" AS "rowid",' \
+        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9, 42))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9, 42))' \
+            ' AS "weight"' \
+        ' FROM "t1"' \
+        ' WHERE ("ifnull"("label",' \
+                ' bql_predict(1, NULL, 1, _rowid_, 0.7, 73))' \
             ' = \'foo\');'
     assert bql2sql('infer rowid, * from p1') == \
         'SELECT "rowid" AS "rowid", "id" AS "id",' \
-        ' "IFNULL"("label", bql_predict(1, NULL, 1, _rowid_, 0)) AS "label",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0)) AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0))' \
+        ' "IFNULL"("label", bql_predict(1, NULL, 1, _rowid_, 0, NULL))' \
+            ' AS "label",' \
+        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0, NULL))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0, NULL))' \
+            ' AS "weight"' \
+        ' FROM "t1";'
+    assert bql2sql('infer rowid, * using 1 samples from p1') == \
+        'SELECT "rowid" AS "rowid", "id" AS "id",' \
+        ' "IFNULL"("label", bql_predict(1, NULL, 1, _rowid_, 0, 1))' \
+            ' AS "label",' \
+        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0, 1))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0, 1))' \
             ' AS "weight"' \
         ' FROM "t1";'
 
