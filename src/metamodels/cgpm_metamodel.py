@@ -19,6 +19,7 @@ import json
 import math
 
 from collections import Counter
+from collections import defaultdict
 from collections import namedtuple
 
 from cgpm.crosscat.engine import Engine
@@ -633,6 +634,7 @@ def _create_schema(bdb, generator_id, schema_ast):
     modelled = set()
     default_modelled = set()
     subsample = None
+    deferred = defaultdict(lambda: [])
 
     # Error-reporting state.
     duplicate = set()
@@ -741,14 +743,11 @@ def _create_schema(bdb, generator_id, schema_ast):
                 for var in inputs:
                     must_exist.append(var)
                     needed.add(var)
-                    assert len(cctypes) == len(ccargs)
-                    # Retrieve the default dist and params.
-                    #
-                    # XXX Can't use a latent variable here -- see
-                    # Github issue #445.
-                    _, dist, params = _retrieve_stattype_dist_params(var)
-                    cctypes.append(dist)
-                    ccargs.append(params)
+                    i = len(cctypes)
+                    assert i == len(ccargs)
+                    cctypes.append(None)
+                    ccargs.append(None)
+                    deferred[var].append((cctypes, ccargs, i))
                 # Finally, add a cgpm_composition record.
                 cgpm_composition.append({
                     'name': name,
@@ -786,6 +785,24 @@ def _create_schema(bdb, generator_id, schema_ast):
         raise BQLError(bdb, 'Latent variables already defined: %r' %
             (sorted(existing_latent),))
 
+    # Fill in the deferred statistical type assignments.
+    for var, deferred1 in deferred.iteritems():
+        if var in latents:
+            stattype = latents[var]
+        else:
+            colno = core.bayesdb_variable_number(bdb, population_id, None, var)
+            stattype = core.bayesdb_variable_stattype(
+                bdb, population_id, colno)
+        stattype = casefold(stattype)
+        # XXX Fail gracefully if we don't know about this statistical
+        # type.  Github issue #455.
+        cctype, ccargs1 = _DEFAULT_DIST[stattype](bdb, generator_id, var)
+        for cctypes, ccargs, i in deferred1:
+            assert cctypes[i] is None
+            assert ccargs[i] is None
+            cctypes[i] = cctype
+            ccargs[i] = ccargs1
+
     # Use the default distribution for any variables that remain to be
     # modelled, excluding any that are latent or that have statistical
     # types we don't know about.
@@ -794,9 +811,11 @@ def _create_schema(bdb, generator_id, schema_ast):
             continue
         colno = core.bayesdb_variable_number(bdb, population_id, None, var)
         assert 0 <= colno
-        stattype, dist, params = _retrieve_stattype_dist_params(var)
-        if stattype not in _DEFAULT_DIST:
-            assert False    # XXX Why would you be here, anyway?
+        # XXX Fail gracefully if we don't know about this statistical
+        # type.  Github issue #455.
+        stattype = core.bayesdb_variable_stattype(bdb, population_id, colno)
+        stattype = casefold(stattype)
+        dist, params = _DEFAULT_DIST[stattype](bdb, generator_id, var)
         variables.append([var, stattype, dist, params])
         modelled.add(var)
 
