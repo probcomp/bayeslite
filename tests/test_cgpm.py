@@ -290,3 +290,67 @@ def test_unknown_stattype():
                 MODEL period GIVEN relaunches USING linreg
             )
         ''')
+
+def test_bad_analyze_vars():
+    with bayesdb_open(':memory:') as bdb:
+        bdb.sql_execute('''
+            CREATE TABLE satellites_ucs (
+                apogee,
+                class_of_orbit,
+                country_of_operator,
+                launch_mass,
+                perigee,
+                period
+        )''')
+        for l, f in [
+            ('geo', lambda x, y: x + y**2),
+            ('leo', lambda x, y: math.sin(x + y)),
+            (None, lambda x, y: x + y**2),
+            (None, lambda x, y: math.sin(x + y)),
+        ]:
+            for x in xrange(5):
+                for y in xrange(5):
+                    countries = ['US', 'Russia', 'China', 'Bulgaria']
+                    country = countries[random.randrange(len(countries))]
+                    mass = random.gauss(1000, 50)
+                    bdb.sql_execute('''
+                        INSERT INTO satellites_ucs
+                            (country_of_operator, launch_mass, class_of_orbit,
+                                apogee, perigee, period)
+                            VALUES (?,?,?,?,?,?)
+                    ''', (country, mass, l, x, y, f(x, y)))
+        bdb.execute('''
+            CREATE POPULATION satellites FOR satellites_ucs (
+                apogee NUMERICAL,
+                class_of_orbit CATEGORICAL,
+                country_of_operator CATEGORICAL,
+                launch_mass NUMERICAL,
+                perigee NUMERICAL,
+                period NUMERICAL
+            )
+        ''')
+        registry = {
+            'kepler': Kepler,
+            'linreg': LinearRegression,
+        }
+        bayesdb_register_metamodel(bdb, CGPM_Metamodel(registry))
+        bdb.execute('''
+            CREATE GENERATOR satellites_cgpm FOR satellites USING cgpm
+        ''')
+        bdb.execute('INITIALIZE 1 MODEL FOR satellites_cgpm')
+        bdb.execute('ANALYZE satellites_cgpm FOR 1 ITERATION WAIT ()')
+        bdb.execute('ANALYZE satellites_cgpm FOR 1 ITERATION WAIT')
+        with pytest.raises(BQLError):
+            # Unknown variable `perige'.
+            bdb.execute('''
+                ANALYZE satellites_cgpm FOR 1 ITERATION WAIT (
+                    VARIABLES period, perige
+                )
+            ''')
+        with pytest.raises(BQLError):
+            # Unknown variable `perige'.
+            bdb.execute('''
+                ANALYZE satellites_cgpm FOR 1 ITERATION WAIT (
+                    SKIP period, perige
+                )
+            ''')

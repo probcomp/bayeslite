@@ -243,13 +243,32 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 clause = ast[0]
                 # Transition user specified variables only.
                 if isinstance(clause, cgpm_analyze.parse.Variables):
-                    variables = clause.vars
+                    included = set()
+                    unknown = set()
+                    for var in clause.vars:
+                        if not core.bayesdb_has_variable(bdb, population_id,
+                                generator_id, var):
+                            unknown.add(var)
+                        included.add(var)
+                    if unknown:
+                        raise BQLError(bdb, 'Unknown variables in ANALYZE: %r'
+                            % (sorted(unknown),))
+                    variables = sorted(included)
                 # Transition all variables except user specified skip.
                 elif isinstance(clause, cgpm_analyze.parse.Skip):
-                    variables = filter(
-                        lambda v: v not in clause.vars,
-                        core.bayesdb_variable_names(bdb, population_id,
-                            generator_id))
+                    excluded = set()
+                    unknown = set()
+                    for var in clause.vars:
+                        if not core.bayesdb_has_variable(bdb, population_id,
+                                generator_id, var):
+                            unknown.add(var)
+                        excluded.add(var)
+                    if unknown:
+                        raise BQLError(bdb, 'Unknown variables in ANALYZE: %r'
+                            % (sorted(unknown),))
+                    all_vars = core.bayesdb_variable_names(
+                        bdb, population_id, generator_id)
+                    variables = sorted(all_vars - excluded)
                 # Unknown/impossible clause.
                 else:
                     raise ValueError('Unknown clause in ANALYZE: %s.' % ast)
