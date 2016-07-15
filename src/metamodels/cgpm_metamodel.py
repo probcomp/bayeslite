@@ -14,13 +14,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import contextlib
 import json
 import math
 
 from collections import Counter
 from collections import defaultdict
-from collections import namedtuple
 
 from cgpm.crosscat.engine import Engine
 
@@ -624,11 +622,9 @@ def _create_schema(bdb, generator_id, schema_ast):
     # Get some parameters.
     population_id = core.bayesdb_generator_population(bdb, generator_id)
     table = core.bayesdb_population_table(bdb, population_id)
-    qt = sqlite3_quote_name(table)
 
     # State.
     variables = []
-    categoricals = {}
     latents = {}
     cgpm_composition = []
     modelled = set()
