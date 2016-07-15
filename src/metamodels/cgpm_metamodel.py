@@ -628,6 +628,7 @@ def _create_schema(bdb, generator_id, schema_ast):
 
     # State.
     variables = []
+    variable_dist = {}
     categoricals = {}
     latents = {}
     cgpm_composition = []
@@ -642,6 +643,7 @@ def _create_schema(bdb, generator_id, schema_ast):
     needed = set()
     existing_latent = set()
     must_exist = []
+    unknown_stattype = {}
 
     # Process each clause one by one.
     for clause in schema_ast:
@@ -676,6 +678,8 @@ def _create_schema(bdb, generator_id, schema_ast):
             stattype = core.bayesdb_variable_stattype(
                 bdb, population_id, colno)
             variables.append([var, stattype, dist, params])
+            assert var not in variable_dist
+            variable_dist[var] = (stattype, dist, params)
             modelled.add(var)
             default_modelled.add(var)
 
@@ -724,31 +728,32 @@ def _create_schema(bdb, generator_id, schema_ast):
 
             # First make sure all the output variables exist and have
             # not yet been modelled.
-            for var in clause.outputs:
+            for var in outputs:
                 must_exist.append(var)
                 if var in modelled:
                     duplicate.add(var)
-                    break
+                    continue
                 modelled.add(var)
-            else:
-                # Next make sure all the input variables exist, mark
-                # them needed, and record where to put their
-                # distribution type and parameters.
-                for var in inputs:
-                    must_exist.append(var)
-                    needed.add(var)
-                    i = len(cctypes)
-                    assert i == len(ccargs)
-                    cctypes.append(None)
-                    ccargs.append(None)
-                    deferred[var].append((cctypes, ccargs, i))
-                # Finally, add a cgpm_composition record.
-                cgpm_composition.append({
-                    'name': name,
-                    'inputs': inputs,
-                    'outputs': outputs,
-                    'kwds': kwds,
-                })
+
+            # Next make sure all the input variables exist, mark them
+            # needed, and record where to put their distribution type
+            # and parameters.
+            for var in inputs:
+                must_exist.append(var)
+                needed.add(var)
+                i = len(cctypes)
+                assert i == len(ccargs)
+                cctypes.append(None)
+                ccargs.append(None)
+                deferred[var].append((cctypes, ccargs, i))
+
+            # Finally, add a cgpm_composition record.
+            cgpm_composition.append({
+                'name': name,
+                'inputs': inputs,
+                'outputs': outputs,
+                'kwds': kwds,
+            })
 
         elif isinstance(clause, cgpm_schema.parse.Subsample):
             if subsample is not None:
@@ -779,23 +784,16 @@ def _create_schema(bdb, generator_id, schema_ast):
         raise BQLError(bdb, 'Latent variables already defined: %r' %
             (sorted(existing_latent),))
 
-    # Fill in the deferred statistical type assignments.
-    for var, deferred1 in deferred.iteritems():
-        if var in latents:
-            stattype = latents[var]
-        else:
-            colno = core.bayesdb_variable_number(bdb, population_id, None, var)
-            stattype = core.bayesdb_variable_stattype(
-                bdb, population_id, colno)
+    def default_dist(var, stattype):
         stattype = casefold(stattype)
-        # XXX Fail gracefully if we don't know about this statistical
-        # type.  Github issue #455.
-        cctype, ccargs1 = _DEFAULT_DIST[stattype](bdb, generator_id, var)
-        for cctypes, ccargs, i in deferred1:
-            assert cctypes[i] is None
-            assert ccargs[i] is None
-            cctypes[i] = cctype
-            ccargs[i] = ccargs1
+        if stattype not in _DEFAULT_DIST:
+            if var in unknown_stattype:
+                assert unknown_stattype[var] == stattype
+            else:
+                unknown_stattype[var] = stattype
+            return None
+        dist, params = _DEFAULT_DIST[stattype](bdb, generator_id, var)
+        return dist, params
 
     # Use the default distribution for any variables that remain to be
     # modelled, excluding any that are latent or that have statistical
@@ -805,13 +803,61 @@ def _create_schema(bdb, generator_id, schema_ast):
             continue
         colno = core.bayesdb_variable_number(bdb, population_id, None, var)
         assert 0 <= colno
-        # XXX Fail gracefully if we don't know about this statistical
-        # type.  Github issue #455.
         stattype = core.bayesdb_variable_stattype(bdb, population_id, colno)
-        stattype = casefold(stattype)
-        dist, params = _DEFAULT_DIST[stattype](bdb, generator_id, var)
+        distparams = default_dist(var, stattype)
+        if distparams is None:
+            continue
+        dist, params = distparams
         variables.append([var, stattype, dist, params])
+        assert var not in variable_dist
+        variable_dist[var] = (stattype, dist, params)
         modelled.add(var)
+
+    # Fill in the deferred statistical type assignments.
+    for var in sorted(deferred.iterkeys()):
+        # Check whether the variable is modelled.  If not, skip -- we
+        # will fail later because this variable is guaranteed to also
+        # be in needed.
+        if var not in modelled:
+            assert var in needed
+            continue
+
+        # Determine (possibly fictitious) distribution and parameters.
+        if var in default_modelled:
+            # Manifest variable modelled by default Crosscat model.
+            assert var in variable_dist
+            stattype, dist, params = variable_dist[var]
+        else:
+            # Modelled by a foreign model.  Assign a fictitious
+            # default distribution because the 27B/6 of CGPM requires
+            # this.
+            if var in latents:
+                # Latent variable modelled by a foreign model.  Use
+                # the statistical type specified for it.
+                stattype = latents[var]
+            else:
+                # Manifest variable modelled by a foreign model.  Use
+                # the statistical type in the population.
+                assert core.bayesdb_has_variable(bdb, population_id, None, var)
+                colno = core.bayesdb_variable_number(
+                    bdb, population_id, None, var)
+                stattype = core.bayesdb_variable_stattype(
+                    bdb, population_id, colno)
+            distparams = default_dist(var, stattype)
+            if distparams is None:
+                continue
+            dist, params = distparams
+
+        # Assign the distribution and parameters.
+        for cctypes, ccargs, i in deferred[var]:
+            assert cctypes[i] is None
+            assert ccargs[i] is None
+            cctypes[i] = dist
+            ccargs[i] = params
+
+    if unknown_stattype:
+        raise BQLError(bdb, 'Unknown statistical types for variables: %r' %
+            (sorted(unknown_stattype.iteritems(),)))
 
     # If there remain any variables that we needed to model, because
     # others are conditional on them, fail.

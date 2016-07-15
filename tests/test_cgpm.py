@@ -24,6 +24,7 @@ from cgpm.regressions.linreg import LinearRegression
 
 from bayeslite import bayesdb_open
 from bayeslite import bayesdb_register_metamodel
+from bayeslite.exception import BQLError
 from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
 from bayeslite.util import cursor_value
 
@@ -203,3 +204,88 @@ def test_cgpm():
         bdb.execute('DROP MODELS FROM g0')
         bdb.execute('DROP GENERATOR g0')
         bdb.execute('DROP GENERATOR g1')
+
+def test_unknown_stattype():
+    with bayesdb_open(':memory:') as bdb:
+        bdb.sql_execute('''
+            CREATE TABLE satellites_ucs (
+                apogee,
+                class_of_orbit,
+                country_of_operator,
+                launch_mass,
+                perigee,
+                period,
+                relaunches
+        )''')
+        for l, f in [
+            ('geo', lambda x, y: x + y**2),
+            ('leo', lambda x, y: math.sin(x + y)),
+            (None, lambda x, y: x + y**2),
+            (None, lambda x, y: math.sin(x + y)),
+        ]:
+            for x in xrange(5):
+                for y in xrange(5):
+                    countries = ['US', 'Russia', 'China', 'Bulgaria']
+                    country = countries[random.randrange(len(countries))]
+                    mass = random.gauss(1000, 50)
+                    bdb.sql_execute('''
+                        INSERT INTO satellites_ucs
+                            (country_of_operator, launch_mass, class_of_orbit,
+                                apogee, perigee, period, relaunches)
+                            VALUES (?,?,?,?,?,?,?)
+                    ''', (country, mass, l, x, y, f(x, y), x + y))
+        # Nobody will ever create a QUAGGA statistical type!
+        with pytest.raises(BQLError):
+            # No such statistical type at the moment.
+            bdb.execute('''
+                CREATE POPULATION satellites FOR satellites_ucs (
+                    apogee NUMERICAL,
+                    class_of_orbit CATEGORICAL,
+                    country_of_operator CATEGORICAL,
+                    launch_mass NUMERICAL,
+                    perigee NUMERICAL,
+                    period NUMERICAL,
+                    relaunches QUAGGA
+                )
+            ''')
+        # Invent the statistical type.
+        bdb.sql_execute('INSERT INTO bayesdb_stattype VALUES (?)', ('quagga',))
+        bdb.execute('''
+            CREATE POPULATION satellites FOR satellites_ucs (
+                apogee NUMERICAL,
+                class_of_orbit CATEGORICAL,
+                country_of_operator CATEGORICAL,
+                launch_mass NUMERICAL,
+                perigee NUMERICAL,
+                period NUMERICAL,
+                relaunches QUAGGA
+            )
+        ''')
+        registry = {
+            'kepler': Kepler,
+            'linreg': LinearRegression,
+        }
+        bayesdb_register_metamodel(bdb, CGPM_Metamodel(registry))
+        with pytest.raises(BQLError):
+            # Can't model QUAGGA by default.
+            bdb.execute('CREATE GENERATOR g0 FOR satellites USING cgpm')
+        with pytest.raises(BQLError):
+            # Can't model QUAGGA as input.
+            bdb.execute('''
+                CREATE GENERATOR g0 FOR satellites USING cgpm (
+                    MODEL relaunches GIVEN apogee USING linreg,
+                    MODEL period GIVEN relaunches USING linreg
+                )
+            ''')
+        # Can model QUAGGA with an explicit distribution family.
+        bdb.execute('''
+            CREATE GENERATOR g0 FOR satellites USING cgpm (
+                relaunches POISSON
+            )
+        ''')
+        bdb.execute('''
+            CREATE GENERATOR g1 FOR satellites USING cgpm (
+                relaunches POISSON,
+                MODEL period GIVEN relaunches USING linreg
+            )
+        ''')
