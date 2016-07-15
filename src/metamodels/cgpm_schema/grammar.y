@@ -32,6 +32,7 @@ clause_opt(some)    ::= clause(c).
 
 clause(basic)       ::= var(var) dist(dist) param_opt(params).
 clause(foreign)     ::= K_MODEL vars(outputs) given_opt(inputs)
+            exposing_opt(latents)
             K_USING foreign(name) param_opt(params).
 clause(subsamp)     ::= K_SUBSAMPLE L_NUMBER(n).
 clause(latent)      ::= K_LATENT var(var) stattype(st).
@@ -42,11 +43,16 @@ foreign(name)       ::= L_NAME(foreign).
 given_opt(none)     ::= .
 given_opt(some)     ::= K_GIVEN vars(vars).
 
+exposing_opt(none)  ::= .
+exposing_opt(some)  ::= K_EXPOSING latents(ls).
+
 vars(one)           ::= var(var).
 vars(many)          ::= vars(vars) T_COMMA var(var).
 
-var(name)           ::= L_NAME(var).
+latents(one)        ::= var(v) stattype(s).
+latents(many)       ::= latents(ls) T_COMMA var(v) stattype(s).
 
+var(name)           ::= L_NAME(var).
 stattype(s)         ::= L_NAME(st).
 
 param_opt(none)     ::= .

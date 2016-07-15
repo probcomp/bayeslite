@@ -30,6 +30,7 @@ grep -o 'K_[A-Z][A-Z0-9_]*' < grammar.y | sort -u | awk '
 '''
 
 KEYWORDS = {
+    'exposing': grammar.K_EXPOSING,
     'given': grammar.K_GIVEN,
     'latent': grammar.K_LATENT,
     'model': grammar.K_MODEL,
@@ -129,8 +130,8 @@ class CGPM_Semantics(object):
 
     def p_clause_basic(self, var, dist, params):
         return Basic(var, dist, params)
-    def p_clause_foreign(self, outputs, inputs, name, params):
-        return Foreign(outputs, inputs, name, params)
+    def p_clause_foreign(self, outputs, inputs, latents, name, params):
+        return Foreign(outputs, inputs, latents, name, params)
     def p_clause_subsamp(self, n):
         return Subsample(n)
     def p_clause_latent(self, var, st):
@@ -142,9 +143,16 @@ class CGPM_Semantics(object):
     def p_given_opt_none(self):                 return []
     def p_given_opt_some(self, vars):           return vars
 
+    def p_exposing_opt_none(self):              return []
+    def p_exposing_opt_some(self, ls):          return ls
+
     def p_vars_one(self, var):                  return [var]
     def p_vars_many(self, vars, var):           vars.append(var); return vars
+
     def p_var_name(self, var):                  return casefold(var)
+
+    def p_latents_one(self, v, s):              return [(v,s)]
+    def p_latents_many(self, ls, v, s):         ls.append((v,s)); return ls
 
     def p_stattype_s(self, st):                 return st
 
@@ -164,6 +172,7 @@ Basic = namedtuple('Basic', [
 Foreign = namedtuple('Foreign', [
     'outputs',
     'inputs',
+    'latents',
     'name',
     'params',
 ])

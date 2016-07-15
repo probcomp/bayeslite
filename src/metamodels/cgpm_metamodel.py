@@ -14,6 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import itertools
 import json
 import math
 
@@ -33,8 +34,8 @@ from bayeslite.util import casefold
 from bayeslite.util import cursor_value
 from bayeslite.util import json_dumps
 
-import cgpm_schema.parse
 import cgpm_analyze.parse
+import cgpm_schema.parse
 
 CGPM_SCHEMA_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('cgpm', 1);
@@ -645,6 +646,12 @@ def _create_schema(bdb, generator_id, schema_ast):
         dist, params = _DEFAULT_DIST[stattype](bdb, generator_id, var)
         return stattype, dist, params
 
+    # XXX WHATTA HACK: Convert EXPOSED into top-level latents.
+    exposed = itertools.chain.from_iterable([c.latents for c in schema_ast
+        if isinstance(c, cgpm_schema.parse.Foreign)])
+    new_latents = [cgpm_schema.parse.Latent(v,s) for (v,s) in exposed]
+    schema_ast.extend(new_latents)
+
     # Process each clause one by one.
     for clause in schema_ast:
 
@@ -723,6 +730,10 @@ def _create_schema(bdb, generator_id, schema_ast):
             distargs = {'cctypes': cctypes, 'ccargs': ccargs}
             kwds = {'distargs': distargs}
             kwds.update(clause.params)
+
+            # XXX WHATT HACK. For CGPMs that support EXPOSING, the last L
+            # variables in outputs correspond to the latents.
+            outputs.extend([l[0] for l in clause.latents])
 
             # First make sure all the output variables exist and have
             # not yet been modelled.
