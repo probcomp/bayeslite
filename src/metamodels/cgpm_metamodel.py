@@ -14,13 +14,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import contextlib
 import json
 import math
 
 from collections import Counter
 from collections import defaultdict
-from collections import namedtuple
 
 from cgpm.crosscat.engine import Engine
 
@@ -67,9 +65,9 @@ CREATE TABLE bayesdb_cgpm_category (
 '''
 
 class CGPM_Metamodel(IBayesDBMetamodel):
-    def __init__(self, cgpm_registry, multithread=None):
+    def __init__(self, cgpm_registry, multiprocess=None):
         self._cgpm_registry = cgpm_registry
-        self._ncpu = multithread
+        self._ncpu = multiprocess
 
     def name(self):
         return 'cgpm'
@@ -197,7 +195,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         for cgpm_ext in schema['cgpm_composition']:
             cgpms = [self._initialize_cgpm(bdb, generator_id, cgpm_ext)
                 for _ in xrange(n)]
-            engine.compose_cgpm(cgpms, multithread=self._ncpu)
+            engine.compose_cgpm(cgpms, multiprocess=self._ncpu)
 
         # Store the newly initialized engine.
         engine_json = json_dumps(engine.to_metadata())
@@ -270,7 +268,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Run transition.
         engine = self._engine(bdb, generator_id)
         engine.transition(
-            N=iterations, S=max_seconds, cols=varnos, multithread=self._ncpu)
+            N=iterations, S=max_seconds, cols=varnos, multiprocess=self._ncpu)
 
         # Serialize the engine.
         engine_json = json_dumps(engine.to_metadata())
@@ -294,7 +292,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Go!
         return engine.dependence_probability(colno0, colno1,
-            multithread=self._ncpu)
+            multiprocess=self._ncpu)
 
     def column_mutual_information(self, bdb, generator_id, modelno,
             colno0, colno1, numsamples=None):
@@ -307,7 +305,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Go!
         mi_list = engine.mutual_information(colno0, colno1, N=numsamples,
-            multithread=self._ncpu)
+            multiprocess=self._ncpu)
 
         # Engine gives us a list of samples which it is our
         # responsibility to integrate over.
@@ -327,7 +325,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Go!
         return engine.row_similarity(cgpm_rowid, cgpm_target_rowid, colnos,
-            multithread=self._ncpu)
+            multiprocess=self._ncpu)
 
     def predict_confidence(self, bdb, generator_id, modelno, colno, rowid,
             numsamples=None):
@@ -368,9 +366,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         engine = self._engine(bdb, generator_id)
         samples = engine.simulate(
             cgpm_rowid, cgpm_query, cgpm_evidence, N=num_predictions,
-            multithread=self._ncpu)
+            multiprocess=self._ncpu)
         weighted_samples = engine._process_samples(
-            samples, cgpm_rowid, cgpm_evidence, multithread=self._ncpu)
+            samples, cgpm_rowid, cgpm_evidence, multiprocess=self._ncpu)
         def map_value(colno, value):
             return self._from_numeric(bdb, generator_id, colno, value)
         return [[map_value(colno, row[colno]) for colno in cgpm_query]
@@ -390,10 +388,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         }
         engine = self._engine(bdb, generator_id)
         logpdfs = engine.logpdf(
-            cgpm_rowid, cgpm_query, cgpm_evidence, multithread=self._ncpu)
+            cgpm_rowid, cgpm_query, cgpm_evidence, multiprocess=self._ncpu)
         # XXX abstraction violation
         return engine._process_logpdfs(
-            logpdfs, cgpm_rowid, cgpm_evidence, multithread=self._ncpu)
+            logpdfs, cgpm_rowid, cgpm_evidence, multiprocess=self._ncpu)
 
     def _unique_rowid(self, rowids):
         if len(set(rowids)) != 1:
@@ -449,7 +447,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         gpmcc_vars = [var for var, _stattype, _dist, _params in variables]
         gpmcc_data = self._data(bdb, generator_id, gpmcc_vars)
         return Engine(
-            gpmcc_data, num_states=n, rng=bdb.np_prng, multithread=self._ncpu,
+            gpmcc_data, num_states=n, rng=bdb.np_prng, multiprocess=self._ncpu,
             outputs=outputs, cctypes=cctypes, distargs=distargs)
 
     def _initialize_cgpm(self, bdb, generator_id, cgpm_ext):
@@ -624,12 +622,10 @@ def _create_schema(bdb, generator_id, schema_ast):
     # Get some parameters.
     population_id = core.bayesdb_generator_population(bdb, generator_id)
     table = core.bayesdb_population_table(bdb, population_id)
-    qt = sqlite3_quote_name(table)
 
     # State.
     variables = []
     variable_dist = {}
-    categoricals = {}
     latents = {}
     cgpm_composition = []
     modelled = set()

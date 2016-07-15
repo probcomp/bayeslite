@@ -151,7 +151,8 @@ def test_cgpm():
             'kepler': Kepler,
             'linreg': LinearRegression,
         }
-        bayesdb_register_metamodel(bdb, CGPM_Metamodel(registry))
+        bayesdb_register_metamodel(
+            bdb, CGPM_Metamodel(registry, multiprocess=0))
         bdb.execute('''
             CREATE GENERATOR g0 FOR satellites USING cgpm (
                 MODEL period GIVEN apogee, perigee
