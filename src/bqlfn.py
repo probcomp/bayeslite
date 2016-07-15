@@ -42,8 +42,8 @@ def bayesdb_install_bql(db, cookie):
     function("bql_row_similarity", -1, bql_row_similarity)
     function("bql_row_column_predictive_probability", 4,
         bql_row_column_predictive_probability)
-    function("bql_predict", 5, bql_predict)
-    function("bql_predict_confidence", 4, bql_predict_confidence)
+    function("bql_predict", 6, bql_predict)
+    function("bql_predict_confidence", 5, bql_predict_confidence)
     function("bql_json_get", 2, bql_json_get)
     function("bql_pdf_joint", -1, bql_pdf_joint)
 
@@ -387,7 +387,7 @@ def bql_row_column_predictive_probability(bdb, population_id, generator_id,
 ### Predict and simulate
 
 def bql_predict(bdb, population_id, generator_id, colno, rowid, threshold,
-        numsamples=None):
+        numsamples):
     # XXX Randomly sample 1 generator from the population, until we figure out
     # how to aggregate imputations across different hypotheses.
     if generator_id is None:
@@ -399,7 +399,7 @@ def bql_predict(bdb, population_id, generator_id, colno, rowid, threshold,
         threshold, numsamples=numsamples)
 
 def bql_predict_confidence(bdb, population_id, generator_id, colno, rowid,
-        numsamples=None):
+        numsamples):
     # XXX Do real imputation here!
     # XXX Randomly sample 1 generator from the population, until we figure out
     # how to aggregate imputations across different hypotheses.
