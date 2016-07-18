@@ -337,9 +337,10 @@ def compile_infer_explicit(bdb, infer, named, out):
     population_id = core.bayesdb_get_population(bdb, infer.population)
     generator_id = None
     if infer.generator is not None:
-        if not core.bayesdb_has_generator(bdb, infer.generator):
+        if not core.bayesdb_has_generator(bdb, population_id, infer.generator):
             raise BQLError(bdb, 'No such generator: %s' % (infer.generator,))
-        generator_id = core.bayesdb_get_generator(bdb, infer.generator)
+        generator_id = core.bayesdb_get_generator(
+            bdb, population_id, infer.generator)
     bql_compiler = BQLCompiler_1Row_Infer(population_id, generator_id)
     compile_select_columns(bdb, infer.columns, named, bql_compiler, out)
     table_name = core.bayesdb_population_table(bdb, population_id)
@@ -393,9 +394,10 @@ def compile_infer_auto(bdb, infer, out):
     table = core.bayesdb_population_table(bdb, population_id)
     generator_id = None
     if infer.generator is not None:
-        if not core.bayesdb_has_generator(bdb, infer.generator):
+        if not core.bayesdb_has_generator(bdb, population_id, infer.generator):
             raise BQLError(bdb, 'No such generator: %s' % (infer.generator,))
-        generator_id = core.bayesdb_get_generator(bdb, infer.generator)
+        generator_id = core.bayesdb_get_generator(
+            bdb, population_id, infer.generator)
     confidence = infer.confidence
     def map_column(col, name):
         exp = ast.ExpCol(None, col)
@@ -431,10 +433,12 @@ def compile_estimate(bdb, estimate, out):
     population_id = core.bayesdb_get_population(bdb, estimate.population)
     generator_id = None
     if estimate.generator is not None:
-        if not core.bayesdb_has_generator(bdb, estimate.generator):
+        if not core.bayesdb_has_generator(
+                bdb, population_id, estimate.generator):
             raise BQLError(bdb, 'No such generator: %s' %
                 (estimate.generator,))
-        generator_id = core.bayesdb_get_generator(bdb, estimate.generator)
+        generator_id = core.bayesdb_get_generator(
+            bdb, population_id, estimate.generator)
     bql_compiler = BQLCompiler_1Row(population_id, generator_id)
     named = True
     compile_select_columns(bdb, estimate.columns, named, bql_compiler, out)
@@ -493,10 +497,11 @@ def compile_estimate_by(bdb, estby, out):
     population_id = core.bayesdb_get_population(bdb, estby.population)
     generator_id = None
     if estby.generator is not None:
-        if not core.bayesdb_has_generator(bdb, estby.generator):
+        if not core.bayesdb_has_generator(bdb, population_id, estby.generator):
             raise BQLError(bdb, 'No such generator: %s' %
                 (estby.generator,))
-        generator_id = core.bayesdb_get_generator(bdb, estby.generator)
+        generator_id = core.bayesdb_get_generator(
+            bdb, population_id, estby.generator)
     bql_compiler = BQLCompiler_Const(population_id, generator_id)
     named = True
     compile_select_columns(bdb, estby.columns, named, bql_compiler, out)
@@ -590,10 +595,12 @@ def compile_simulate(bdb, simulate, out):
         population_id = core.bayesdb_get_population(bdb, simulate.population)
         generator_id = None
         if simulate.generator is not None:
-            if not core.bayesdb_has_generator(bdb, simulate.generator):
+            if not core.bayesdb_has_generator(
+                    bdb, population_id, simulate.generator):
                 raise BQLError(bdb, 'No such generator: %r' %
                     (simulate.generator,))
-            generator_id = core.bayesdb_get_generator(bdb, simulate.generator)
+            generator_id = core.bayesdb_get_generator(
+                bdb, population_id, simulate.generator)
         table = core.bayesdb_population_table(bdb, population_id)
         qtt = sqlite3_quote_name(temptable)
         qt = sqlite3_quote_name(table)
@@ -673,9 +680,11 @@ def compile_estcols(bdb, estcols, out):
     population_id = core.bayesdb_get_population(bdb, estcols.population)
     generator_id = None
     if estcols.generator is not None:
-        if not core.bayesdb_has_generator(bdb, estcols.generator):
+        if not core.bayesdb_has_generator(
+                bdb, population_id, estcols.generator):
             raise BQLError(bdb, 'No such generator: %r' % (estcols.generator,))
-        generator_id = core.bayesdb_get_generator(bdb, estcols.generator)
+        generator_id = core.bayesdb_get_generator(
+            bdb, population_id, estcols.generator)
     colno_exp = 'c.colno'       # XXX
     bql_compiler = BQLCompiler_1Col(population_id, generator_id, colno_exp)
     out.write('SELECT')
@@ -752,10 +761,12 @@ def compile_estpaircols(bdb, estpaircols, out):
     population_id = core.bayesdb_get_population(bdb, estpaircols.population)
     generator_id = None
     if estpaircols.generator is not None:
-        if not core.bayesdb_has_generator(bdb, estpaircols.generator):
+        if not core.bayesdb_has_generator(
+                bdb, population_id, estpaircols.generator):
             raise BQLError(bdb, 'No such generator: %r' %
                 (estpaircols.generator,))
-        generator_id = core.bayesdb_get_generator(bdb, estpaircols.generator)
+        generator_id = core.bayesdb_get_generator(
+            bdb, population_id, estpaircols.generator)
     bql_compiler = BQLCompiler_2Col(population_id, generator_id,
         colno0_exp, colno1_exp)
     out.write('SELECT'
@@ -833,10 +844,12 @@ def compile_estpairrow(bdb, estpairrow, out):
     population_id = core.bayesdb_get_population(bdb, estpairrow.population)
     generator_id = None
     if estpairrow.generator is not None:
-        if not core.bayesdb_has_generator(bdb, estpairrow.generator):
+        if not core.bayesdb_has_generator(
+                bdb, population_id, estpairrow.generator):
             raise BQLError(bdb, 'No such generator: %r' %
                 (estpairrow.generator,))
-        generator_id = core.bayesdb_get_generator(bdb, estpairrow.generator)
+        generator_id = core.bayesdb_get_generator(
+            bdb, population_id, estpairrow.generator)
     rowid0_exp = 'r0._rowid_'
     rowid1_exp = 'r1._rowid_'
     bql_compiler = BQLCompiler_2Row(population_id, generator_id,

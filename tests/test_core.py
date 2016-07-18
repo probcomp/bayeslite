@@ -152,7 +152,7 @@ def bayesdb_population(mkbdb, tab, pop, gen, table_schema, data, columns,
         bdb.execute('CREATE GENERATOR %s FOR %s USING %s(%s)' %
             (qg, qp, qmm, ','.join(columns)))
         population_id = core.bayesdb_get_population(bdb, pop)
-        generator_id = core.bayesdb_get_generator(bdb, gen)
+        generator_id = core.bayesdb_get_generator(bdb, population_id, gen)
         yield bdb, population_id, generator_id
 
 @contextlib.contextmanager
@@ -571,7 +571,7 @@ def test_crosscat_constraints():
         assert core.bayesdb_variable_number(bdb, pid, None, 'label') == 1
         assert core.bayesdb_variable_number(bdb, pid, None, 'age') == 2
         assert core.bayesdb_variable_number(bdb, pid, None, 'weight') == 3
-        gid = core.bayesdb_get_generator(bdb, 'p1_cc')
+        gid = core.bayesdb_get_generator(bdb, pid, 'p1_cc')
         from bayeslite.metamodels.crosscat import crosscat_cc_colno
         assert crosscat_cc_colno(bdb, gid, 1) == 0
         assert crosscat_cc_colno(bdb, gid, 2) == 1

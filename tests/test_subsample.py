@@ -69,10 +69,10 @@ def test_subsample():
                 ORDER BY cc_row_id ASC
                 LIMIT 100
         '''
-        gid_full = bayesdb_get_generator(bdb, 'hosp_full_cc')
+        gid_full = bayesdb_get_generator(bdb, None, 'hosp_full_cc')
         cursor = bdb.sql_execute(sql, (gid_full,))
         assert [row[0] for row in cursor] == range(1, 100 + 1)
-        gid = bayesdb_get_generator(bdb, 'hosp_sub_cc')
+        gid = bayesdb_get_generator(bdb, None, 'hosp_sub_cc')
         cursor = bdb.sql_execute(sql, (gid,))
         assert [row[0] for row in cursor] != range(1, 100 + 1)
         bdb.execute('DROP GENERATOR hosp_sub_cc')

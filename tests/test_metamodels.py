@@ -108,28 +108,30 @@ def _test_example(bdb, exname):
     # Create a population.
     assert not core.bayesdb_has_population(bdb, p)
     bdb.execute(p_bql)
+    p_id = core.bayesdb_get_population(bdb, p)
 
     # Create a generator.  Make sure savepoints work for this.
-    assert not core.bayesdb_has_generator(bdb, g)
+    assert not core.bayesdb_has_generator(bdb, p_id, g)
     with pytest.raises(Exception):
         with bdb.savepoint():
             bdb.execute(g_bqlbad0)
-    assert not core.bayesdb_has_generator(bdb, g)
+    assert not core.bayesdb_has_generator(bdb, p_id, g)
     with pytest.raises(Exception):
         with bdb.savepoint():
             bdb.execute(g_bqlbad1)
-    assert not core.bayesdb_has_generator(bdb, g)
+    assert not core.bayesdb_has_generator(bdb, p_id, g)
     with bdb.savepoint_rollback():
         bdb.execute(g_bql)
-        assert core.bayesdb_has_generator(bdb, g)
-    assert not core.bayesdb_has_generator(bdb, g)
+        assert core.bayesdb_has_generator(bdb, p_id, g)
+    assert not core.bayesdb_has_generator(bdb, p_id, g)
     bdb.execute(g_bql)
-    assert core.bayesdb_has_generator(bdb, g)
+    assert core.bayesdb_has_generator(bdb, p_id, g)
+    assert not core.bayesdb_has_generator(bdb, p_id+1, g)
     with pytest.raises(Exception):
         bdb.execute(g_bql)
-    assert core.bayesdb_has_generator(bdb, g)
+    assert core.bayesdb_has_generator(bdb, p_id, g)
 
-    gid = core.bayesdb_get_generator(bdb, g)
+    gid = core.bayesdb_get_generator(bdb, p_id, g)
     assert not core.bayesdb_generator_has_model(bdb, gid, 0)
     assert [] == core.bayesdb_generator_modelnos(bdb, gid)
     with bdb.savepoint_rollback():
@@ -160,15 +162,16 @@ def _test_example(bdb, exname):
     #     bdb.execute('DROP GENERATOR %s' % (qg,))
     with bdb.savepoint_rollback():
         bdb.execute('DROP GENERATOR %s' % (qg,))
-        assert not core.bayesdb_has_generator(bdb, g)
-    assert core.bayesdb_has_generator(bdb, g)
+        assert not core.bayesdb_has_generator(bdb, None, g)
+    assert core.bayesdb_has_generator(bdb, p_id, g)
     with bdb.savepoint_rollback():
         bdb.execute('DROP GENERATOR %s' % (qg,))
-        assert not core.bayesdb_has_generator(bdb, g)
+        assert not core.bayesdb_has_generator(bdb, None, g)
         bdb.execute(g_bql)
-        assert core.bayesdb_has_generator(bdb, g)
-    assert core.bayesdb_has_generator(bdb, g)
-    assert gid == core.bayesdb_get_generator(bdb, g)
+        assert core.bayesdb_has_generator(bdb, None, g)
+    assert core.bayesdb_has_generator(bdb, p_id, g)
+    assert core.bayesdb_has_generator(bdb, None, g)
+    assert gid == core.bayesdb_get_generator(bdb, p_id, g)
 
     # Test dropping models.
     with bdb.savepoint_rollback():
@@ -189,10 +192,11 @@ def _retest_example(bdb, exname):
     qg = bql_quote_name(g)
 
     bayeslite.bayesdb_register_metamodel(bdb, mm())
+    p_id = core.bayesdb_get_population(bdb, p)
 
     assert core.bayesdb_has_table(bdb, t)
-    assert core.bayesdb_has_generator(bdb, g)
-    gid = core.bayesdb_get_generator(bdb, g)
+    assert core.bayesdb_has_generator(bdb, p_id, g)
+    gid = core.bayesdb_get_generator(bdb, p_id, g)
     assert core.bayesdb_generator_has_model(bdb, gid, 0)
     assert core.bayesdb_generator_has_model(bdb, gid, 1)
     bdb.execute('ANALYZE %s FOR 1 ITERATION WAIT' % (qg,))

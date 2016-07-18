@@ -103,12 +103,12 @@ def execute_phrase(bdb, phrase, bindings=()):
                 bdb, phrase.simulation.population)
             generator_id = None
             if phrase.simulation.generator is not None:
-                if not core.bayesdb_has_generator(bdb,
-                        phrase.simulation.generator):
+                if not core.bayesdb_has_generator(
+                        bdb, population_id, phrase.simulation.generator):
                     raise BQLError(bdb, 'No such generator: %r' %
                         (phrase.simulation.generator,))
                 generator_id = core.bayesdb_get_generator(
-                    bdb, phrase.simulation.generator)
+                    bdb, population_id, phrase.simulation.generator)
             table = core.bayesdb_population_table(bdb, population_id)
             qn = sqlite3_quote_name(phrase.name)
             qt = sqlite3_quote_name(table)
@@ -303,7 +303,7 @@ def execute_phrase(bdb, phrase, bindings=()):
         metamodel = bdb.metamodels[phrase.metamodel]
 
         with bdb.savepoint():
-            if core.bayesdb_has_generator(bdb, phrase.name):
+            if core.bayesdb_has_generator(bdb, population_id, phrase.name):
                 if not phrase.ifnotexists:
                     raise BQLError(bdb,
                                    'Name already defined as generator: %s' %
@@ -316,7 +316,8 @@ def execute_phrase(bdb, phrase, bindings=()):
                         (name, tabname, population_id, metamodel)
                         VALUES (?, ?, ?, ?)
                 ''', (phrase.name, table, population_id, metamodel.name()))
-                generator_id = core.bayesdb_get_generator(bdb, phrase.name)
+                generator_id = core.bayesdb_get_generator(
+                    bdb, population_id, phrase.name)
 
                 # Populate bayesdb_generator_column.
                 #
@@ -357,12 +358,12 @@ def execute_phrase(bdb, phrase, bindings=()):
 
     if isinstance(phrase, ast.DropGen):
         with bdb.savepoint():
-            if not core.bayesdb_has_generator(bdb, phrase.name):
+            if not core.bayesdb_has_generator(bdb, None, phrase.name):
                 if phrase.ifexists:
                     return empty_cursor(bdb)
                 raise BQLError(bdb, 'No such generator: %s' %
                     (repr(phrase.name),))
-            generator_id = core.bayesdb_get_generator(bdb, phrase.name)
+            generator_id = core.bayesdb_get_generator(bdb, None, phrase.name)
             metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
 
             # Metamodel-specific destruction.
@@ -386,10 +387,10 @@ def execute_phrase(bdb, phrase, bindings=()):
     if isinstance(phrase, ast.AlterGen):
         with bdb.savepoint():
             generator = phrase.generator
-            if not core.bayesdb_has_generator(bdb, generator):
+            if not core.bayesdb_has_generator(bdb, None, generator):
                 raise BQLError(bdb, 'No such generator: %s' %
                     (repr(generator),))
-            generator_id = core.bayesdb_get_generator(bdb, generator)
+            generator_id = core.bayesdb_get_generator(bdb, None, generator)
             for cmd in phrase.commands:
                 if isinstance(cmd, ast.AlterGenRenameGen):
                     # Make sure nothing else has this name.
@@ -398,7 +399,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                             raise BQLError(bdb, 'Name already defined as table'
                                 ': %s' %
                                 (repr(cmd.name),))
-                        if core.bayesdb_has_generator(bdb, cmd.name):
+                        if core.bayesdb_has_generator(bdb, None, cmd.name):
                             raise BQLError(bdb, 'Name already defined'
                                 ' as generator: %s' %
                                 (repr(cmd.name),))
@@ -419,10 +420,10 @@ def execute_phrase(bdb, phrase, bindings=()):
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.InitModels):
-        if not core.bayesdb_has_generator(bdb, phrase.generator):
+        if not core.bayesdb_has_generator(bdb, None, phrase.generator):
             raise BQLError(bdb, 'No such generator: %s' %
                 (phrase.generator,))
-        generator_id = core.bayesdb_get_generator(bdb, phrase.generator)
+        generator_id = core.bayesdb_get_generator(bdb, None, phrase.generator)
         modelnos = range(phrase.nmodels)
 
         with bdb.savepoint():
@@ -476,10 +477,10 @@ def execute_phrase(bdb, phrase, bindings=()):
         # progress in case of ^C in the middle.
         #
         # XXX Put these warning somewhere more appropriate.
-        if not core.bayesdb_has_generator(bdb, phrase.generator):
+        if not core.bayesdb_has_generator(bdb, None, phrase.generator):
             raise BQLError(bdb, 'No such generator: %s' %
                 (phrase.generator,))
-        generator_id = core.bayesdb_get_generator(bdb, phrase.generator)
+        generator_id = core.bayesdb_get_generator(bdb, None, phrase.generator)
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
         # XXX Should allow parameters for iterations and ckpt/iter.
         metamodel.analyze_models(bdb, generator_id,
@@ -493,7 +494,8 @@ def execute_phrase(bdb, phrase, bindings=()):
 
     if isinstance(phrase, ast.DropModels):
         with bdb.savepoint():
-            generator_id = core.bayesdb_get_generator(bdb, phrase.generator)
+            generator_id = core.bayesdb_get_generator(
+                bdb, None, phrase.generator)
             metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
             modelnos = None
             if phrase.modelnos is not None:

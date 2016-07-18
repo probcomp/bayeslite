@@ -876,7 +876,7 @@ def test_trivial_commands():
         bdb.execute('initialize 2 models for p_cc')
         bdb.execute('initialize 1 model if not exists for p_cc')
         bdb.execute('initialize 2 models if not exists for p_cc')
-        generator_id = core.bayesdb_get_generator(bdb, 'p_cc')
+        generator_id = core.bayesdb_get_generator(bdb, None, 'p_cc')
         assert core.bayesdb_generator_table(bdb, generator_id) == 't'
         bdb.execute('alter table t rename to t')
         assert core.bayesdb_generator_table(bdb, generator_id) == 't'

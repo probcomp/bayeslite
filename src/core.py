@@ -157,7 +157,7 @@ def bayesdb_table_guarantee_columns(bdb, table):
             raise ValueError('No such table: %s' % (repr(table),))
 
 def bayesdb_has_population(bdb, name):
-    """True if there is a populatoin named `name` in `bdb`."""
+    """True if there is a population named `name` in `bdb`."""
     sql = 'SELECT COUNT(*) FROM bayesdb_population WHERE name = ?'
     return 0 != cursor_value(bdb.sql_execute(sql, (name,)))
 
@@ -343,12 +343,20 @@ def bayesdb_population_fresh_row_id(bdb, population_id):
         max_rowid = 0
     return max_rowid + 1   # Synthesize a non-existent SQLite row id
 
-def bayesdb_has_generator(bdb, name):
+def bayesdb_has_generator(bdb, population_id, name):
     """True if there is a generator named `name` in `bdb`."""
-    sql = 'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?'
-    return 0 != cursor_value(bdb.sql_execute(sql, (name,)))
+    if population_id is None:
+        sql = 'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?'
+        cursor = bdb.sql_execute(sql, (name,))
+    else:
+        sql = '''
+            SELECT COUNT(*) FROM bayesdb_generator
+                WHERE name = ? AND population_id = ?
+        '''
+        cursor = bdb.sql_execute(sql, (name, population_id))
+    return 0 != cursor_value(cursor)
 
-def bayesdb_get_generator(bdb, name):
+def bayesdb_get_generator(bdb, population_id, name):
     """Return the id of the generator named `name` in `bdb`.
 
     The id is persistent across savepoints: ids are 64-bit integers
@@ -357,8 +365,15 @@ def bayesdb_get_generator(bdb, name):
     `bdb` must have a generator named `name`.  If you're not sure,
     call :func:`bayesdb_has_generator` first.
     """
-    sql = 'SELECT id FROM bayesdb_generator WHERE name = ?'
-    cursor = bdb.sql_execute(sql, (name,))
+    if population_id is None:
+        sql = 'SELECT id FROM bayesdb_generator WHERE name = ?'
+        cursor = bdb.sql_execute(sql, (name,))
+    else:
+        sql = '''
+            SELECT id FROM bayesdb_generator
+                WHERE name = ? AND population_id = ?
+        '''
+        cursor = bdb.sql_execute(sql, (name, population_id))
     try:
         row = cursor.next()
     except StopIteration:

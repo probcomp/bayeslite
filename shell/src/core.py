@@ -583,7 +583,8 @@ class Shell(cmd.Cmd):
                 '''.format(names=names)
                 ok = True
                 for generator in params:
-                    if not core.bayesdb_has_generator(self._bdb, generator):
+                    if not core.bayesdb_has_generator(
+                            self._bdb, None, generator):
                         self.stdout.write('No such generator: %s\n' %
                             (repr(generator),))
                         ok = False
@@ -629,11 +630,12 @@ class Shell(cmd.Cmd):
                 return
             generator = tokens[1]
             with self._bdb.savepoint():
-                if not core.bayesdb_has_generator(self._bdb, generator):
+                if not core.bayesdb_has_generator(self._bdb, None, generator):
                     self.stdout.write('No such generator: %s\n' %
                         (repr(generator),))
                     return
-                generator_id = core.bayesdb_get_generator(self._bdb, generator)
+                generator_id = core.bayesdb_get_generator(
+                    self._bdb, None, generator)
                 qualifier = None
                 if len(tokens) == 2:
                     qualifier = '1'
