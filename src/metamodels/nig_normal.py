@@ -32,6 +32,7 @@ import bayeslite.metamodel as metamodel
 
 from bayeslite.exception import BQLError
 from bayeslite.math_util import logmeanexp
+from bayeslite.metamodel import bayesdb_metamodel_version
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
 nig_normal_schema_1 = '''
@@ -82,17 +83,8 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
 
     def register(self, bdb):
         with bdb.savepoint():
-            schema_sql = 'SELECT version FROM bayesdb_metamodel WHERE name = ?'
-            cursor = bdb.sql_execute(schema_sql, (self.name(),))
-            version = None
-            try:
-                row = cursor.next()
-            except StopIteration:
-                version = 0
-            else:
-                version = row[0]
-            assert version is not None
-            if version == 0:
+            version = bayesdb_metamodel_version(bdb, self.name())
+            if version is None:
                 bdb.sql_execute(nig_normal_schema_1)
                 version = 1
             if version != 1:
