@@ -27,6 +27,7 @@ interface for the NIG-Normal model.
 import math
 import random
 
+import bayeslite.core as core
 import bayeslite.metamodel as metamodel
 
 from bayeslite.exception import BQLError
@@ -100,29 +101,31 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                 raise BQLError(bdb, 'NIG-Normal already installed'
                     ' with unknown schema version: %d' % (version,))
 
-    def create_generator(self, bdb, table, schema, instantiate):
-        # The schema is the column list. May want to change this later
-        # to make room for specifying the hyperparameters, etc.
+    def create_generator(self, bdb, generator_id, schema):
+        # XXX Do something with the schema.
         insert_column_sql = '''
             INSERT INTO bayesdb_nig_normal_column
                 (generator_id, colno, count, sum, sumsq)
                 VALUES (:generator_id, :colno, :count, :sum, :sumsq)
         '''
-        with bdb.savepoint():
-            generator_id, column_list = instantiate(schema)
-            for (colno, column_name, stattype) in column_list:
-                if not stattype == 'numerical':
-                    raise BQLError(bdb, 'NIG-Normal only supports'
-                        ' numerical columns, but %s is %s'
-                        % (repr(column_name), repr(stattype)))
-                (count, xsum, sumsq) = data_suff_stats(bdb, table, column_name)
-                bdb.sql_execute(insert_column_sql, {
-                    'generator_id': generator_id,
-                    'colno': colno,
-                    'count': count,
-                    'sum': xsum,
-                    'sumsq': sumsq,
-                })
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        table = core.bayesdb_population_table(bdb, population_id)
+        for colno in core.bayesdb_variable_numbers(bdb, population_id, None):
+            column_name = core.bayesdb_variable_name(bdb, population_id, colno)
+            stattype = core.bayesdb_variable_stattype(
+                bdb, population_id, colno)
+            if not stattype == 'numerical':
+                raise BQLError(bdb, 'NIG-Normal only supports'
+                    ' numerical columns, but %s is %s'
+                    % (repr(column_name), repr(stattype)))
+            (count, xsum, sumsq) = data_suff_stats(bdb, table, column_name)
+            bdb.sql_execute(insert_column_sql, {
+                'generator_id': generator_id,
+                'colno': colno,
+                'count': count,
+                'sum': xsum,
+                'sumsq': sumsq,
+            })
 
     def drop_generator(self, bdb, generator_id):
         with bdb.savepoint():
