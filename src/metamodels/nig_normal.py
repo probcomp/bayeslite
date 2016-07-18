@@ -93,9 +93,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                 version = row[0]
             assert version is not None
             if version == 0:
-                # XXX WHATTAKLUDGE!
-                for stmt in nig_normal_schema_1.split(';'):
-                    bdb.sql_execute(stmt)
+                bdb.sql_execute(nig_normal_schema_1)
                 version = 1
             if version != 1:
                 raise BQLError(bdb, 'NIG-Normal already installed'
