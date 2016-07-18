@@ -29,6 +29,7 @@ def test_nig_normal_smoke():
         bdb.execute('initialize 1 model for g')
         bdb.execute('analyze g for 1 iteration wait')
         bdb.execute('estimate probability of x = 50 from p').fetchall()
+        bdb.execute('simulate x from p limit 1').fetchall()
         bdb.execute('drop models from g')
         bdb.execute('drop generator g')
         bdb.execute('drop population p')
