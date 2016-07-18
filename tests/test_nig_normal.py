@@ -25,7 +25,7 @@ def test_nig_normal_smoke():
         for x in xrange(100):
             bdb.sql_execute('insert into t(x) values(?)', (x,))
         bdb.execute('create population p for t(x numerical)')
-        bdb.execute('create generator g for p using nig_normal(x normal)')
+        bdb.execute('create generator g for p using nig_normal')
         bdb.execute('initialize 1 model for g')
         bdb.execute('analyze g for 1 iteration wait')
         bdb.execute('estimate probability of x = 50 from p').fetchall()
