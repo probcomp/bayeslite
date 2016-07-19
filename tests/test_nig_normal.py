@@ -462,3 +462,57 @@ def test_nig_normal_latent_2var_conditional_smoke():
         bdb.execute('drop generator g1')
         bdb.execute('drop population p')
         bdb.execute('drop table t')
+
+def test_nig_normal_latent_2var2lat_conditional_smoke():
+    with bayesdb_open(':memory:') as bdb:
+        bayesdb_register_metamodel(bdb, NIGNormalMetamodel())
+        bdb.sql_execute('create table t(x, y)')
+        for x in xrange(100):
+            bdb.sql_execute('insert into t(x, y) values(?, ?)',
+                (x, x*x - 100))
+        bdb.execute('create population p for t(x numerical, y numerical)')
+        bdb.execute('create generator g0 for p using nig_normal')
+        bdb.execute('''
+            create generator g1 for p using nig_normal(
+                xe deviation(x),
+                ye deviation(y)
+            )
+        ''')
+        bdb.execute('initialize 1 model for g0')
+        bdb.execute('analyze g0 for 1 iteration wait')
+        bdb.execute('initialize 1 model for g1')
+        bdb.execute('analyze g1 for 1 iteration wait')
+
+        # latent given latent
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                estimate probability of xe = 1 given (ye = -1) within p
+            ''').fetchall()
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                estimate probability of xe = 1 given (ye = -1) within p
+                     modelled by g0
+            ''').fetchall()
+        bdb.execute('''
+            estimate probability of xe = 1 given (ye = -1) within p
+                 modelled by g1
+        ''').fetchall()
+
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                simulate xe from p given ye = -1 limit 1
+            ''').fetchall()
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                simulate xe from p modelled by g0 given ye = -1 limit 1
+            ''').fetchall()
+        bdb.execute('''
+            simulate xe from p modelled by g1 given ye = -1 limit 1
+        ''').fetchall()
+
+        bdb.execute('drop models from g0')
+        bdb.execute('drop generator g0')
+        bdb.execute('drop models from g1')
+        bdb.execute('drop generator g1')
+        bdb.execute('drop population p')
+        bdb.execute('drop table t')
