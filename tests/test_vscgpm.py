@@ -17,12 +17,6 @@
 import math
 import numpy as np
 import pytest
-import random                   # XXX
-
-#from cgpm.regressions.forest import RandomForest
-from cgpm.regressions.forest import RandomForest
-from cgpm.regressions.linreg import LinearRegression
-from cgpm.venturescript.vscgpm import VsCGpm
 
 from cgpm.utils import general as gu
 
@@ -110,6 +104,13 @@ kepler_source = """
 """
 
 def test_cgpm_extravaganza__ci_slow():
+    try:
+        from cgpm.regressions.forest import RandomForest
+        from cgpm.regressions.linreg import LinearRegression
+        from cgpm.venturescript.vscgpm import VsCGpm
+    except ImportError:
+        pytest.skip('no sklearn or venturescript')
+        return
     with bayesdb_open(':memory:') as bdb:
         # XXX Use the real satellites data instead of this bogosity?
         bdb.sql_execute('''
@@ -130,9 +131,10 @@ def test_cgpm_extravaganza__ci_slow():
             for x in xrange(1000):
                 for y in xrange(10):
                     countries = ['US', 'Russia', 'China', 'Bulgaria']
-                    country = countries[random.randrange(len(countries))]
-                    name = 'sat-%s-%d' % (country, random.randrange(10**8))
-                    mass = random.gauss(1000, 50)
+                    country = countries[bdb._np_prng.randint(0, len(countries))]
+                    name = 'sat-%s-%d' % (
+                        country, bdb._np_prng.randint(0, 10**8))
+                    mass = bdb._np_prng.normal(1000, 50)
                     bdb.sql_execute('''
                         INSERT INTO satellites_ucs
                             (name, country_of_operator, launch_mass,

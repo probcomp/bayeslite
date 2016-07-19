@@ -17,10 +17,10 @@
 import math
 import numpy as np
 import pytest
-import random                   # XXX
 
-#from cgpm.regressions.forest import RandomForest
-from cgpm.regressions.linreg import LinearRegression
+from cgpm.cgpm import CGpm
+from cgpm.dummy.fourway import FourWay
+from cgpm.utils import general as gu
 
 from bayeslite import bayesdb_open
 from bayeslite import bayesdb_register_metamodel
@@ -28,84 +28,15 @@ from bayeslite.exception import BQLError
 from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
 from bayeslite.util import cursor_value
 
-# XXX KLUDGE TAKEN FROM cgpm/tests/test_gpmcc_simple_composite.py
-from cgpm.cgpm import CGpm
-from cgpm.utils import general as gu
-class FourWay(CGpm):
-    """Generates categorical(4) output on R2 valued input."""
-
-    def __init__(self, outputs, inputs, rng, quagga=None, distargs=None):
-        self.rng = rng
-        self.probabilities =[
-            [.7, .1, .05, .05],
-            [.1, .8, .1, .1],
-            [.1, .15, .65, .1],
-            [.1, .05, .1, .75]]
-        assert len(outputs) == 1
-        assert len(inputs) == 2
-        self.outputs = list(outputs)
-        self.inputs = list(inputs)
-
-    def simulate(self, rowid, query, evidence=None, N=None):
-        if N is not None:
-            return [self.simulate(rowid, query, evidence) for i in xrange(N)]
-        regime = self.lookup_quadrant(
-            evidence[self.inputs[0]], evidence[self.inputs[1]])
-        x = gu.pflip(self.probabilities[regime], rng=self.rng)
-        return {self.outputs[0]: x}
-
-    def logpdf(self, rowid, query, evidence=None):
-        x = query[self.outputs[0]]
-        if int(x) != x: return -float('inf')
-        if not (0 <= x <= 3): return -float('inf')
-        regime = self.lookup_quadrant(
-            evidence[self.inputs[0]] + 1e-5, evidence[self.inputs[1]] + 1e-5)
-        return np.log(self.probabilities[regime][int(x)])
-
-    def incorporate(self, rowid, observations, evidence=None):
-        pass
-
-    def unincorporate(self, rowid, observations, evidence=None):
-        pass
-
-    def transition(self, N=None):
-        pass
-
-    @staticmethod
-    def lookup_quadrant(y0, y1):
-        if y0 > 0 and y1 > 0: return 0
-        if y0 < 0 and y1 > 0: return 1
-        if y0 > 0 and y1 < 0: return 2
-        if y0 < 0 and y1 < 0: return 3
-        raise ValueError('Invalid value: %s' % str((y0, y1)))
-
-    @staticmethod
-    def retrieve_y_for_x(x):
-        if x == 0: return [2, 2]
-        if x == 1: return [-2, 2]
-        if x == 2: return [2, -2]
-        if x == 3: return [-2, -2]
-        raise ValueError('Invalid value: %s' % str(x))
-
-    def to_metadata(self):
-        metadata = {}
-        metadata['outputs'] = self.outputs
-        metadata['inputs'] = self.inputs
-        metadata['factory'] = (__name__, 'FourWay')
-        return metadata
-
-    @classmethod
-    def from_metadata(cls, metadata, rng):
-        return cls(metadata['outputs'], metadata['inputs'], rng)
-
-RandomForest = FourWay
-# XXX END KLUDGE
-
-# XXX KLUDGE UNTIL WE HAVE A KEPLER'S LAWS
-Kepler = RandomForest
-# XXX END KLUDGE
+# Use dummy, quick version of Kepler's laws.
+Kepler = FourWay
 
 def test_cgpm():
+    try:
+        from cgpm.regressions.linreg import LinearRegression
+    except ImportError:
+        pytest.skip('no sklearn or venturescript')
+        return
     with bayesdb_open(':memory:') as bdb:
         bdb.sql_execute('''
             CREATE TABLE satellites_ucs (
@@ -125,8 +56,8 @@ def test_cgpm():
             for x in xrange(5):
                 for y in xrange(5):
                     countries = ['US', 'Russia', 'China', 'Bulgaria']
-                    country = countries[random.randrange(len(countries))]
-                    mass = random.gauss(1000, 50)
+                    country = countries[bdb._np_prng.randint(0, len(countries))]
+                    mass = bdb._np_prng.normal(1000, 50)
                     bdb.sql_execute('''
                         INSERT INTO satellites_ucs
                             (country_of_operator, launch_mass, class_of_orbit,
@@ -167,7 +98,7 @@ def test_cgpm():
             CREATE GENERATOR g1 FOR satellites USING cgpm (
                 launch_mass EXPONENTIAL,
                 MODEL period GIVEN apogee, perigee
-                    USING kepler (quagga = eland),
+                    USING kepler,
                 SUBSAMPLE 20
             )
         ''')
@@ -207,6 +138,11 @@ def test_cgpm():
         bdb.execute('DROP GENERATOR g1')
 
 def test_unknown_stattype():
+    try:
+        from cgpm.regressions.linreg import LinearRegression
+    except ImportError:
+        pytest.skip('no sklearn or venturescript')
+        return
     with bayesdb_open(':memory:') as bdb:
         bdb.sql_execute('''
             CREATE TABLE satellites_ucs (
@@ -227,8 +163,8 @@ def test_unknown_stattype():
             for x in xrange(5):
                 for y in xrange(5):
                     countries = ['US', 'Russia', 'China', 'Bulgaria']
-                    country = countries[random.randrange(len(countries))]
-                    mass = random.gauss(1000, 50)
+                    country = countries[bdb._np_prng.randint(0, len(countries))]
+                    mass = bdb._np_prng.normal(1000, 50)
                     bdb.sql_execute('''
                         INSERT INTO satellites_ucs
                             (country_of_operator, launch_mass, class_of_orbit,
@@ -292,6 +228,11 @@ def test_unknown_stattype():
         ''')
 
 def test_bad_analyze_vars():
+    try:
+        from cgpm.regressions.linreg import LinearRegression
+    except ImportError:
+        pytest.skip('no sklearn or venturescript')
+        return
     with bayesdb_open(':memory:') as bdb:
         bdb.sql_execute('''
             CREATE TABLE satellites_ucs (
@@ -311,8 +252,8 @@ def test_bad_analyze_vars():
             for x in xrange(5):
                 for y in xrange(5):
                     countries = ['US', 'Russia', 'China', 'Bulgaria']
-                    country = countries[random.randrange(len(countries))]
-                    mass = random.gauss(1000, 50)
+                    country = countries[bdb._np_prng.randint(0, len(countries))]
+                    mass = bdb._np_prng.normal(1000, 50)
                     bdb.sql_execute('''
                         INSERT INTO satellites_ucs
                             (country_of_operator, launch_mass, class_of_orbit,
