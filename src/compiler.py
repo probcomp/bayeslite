@@ -753,8 +753,8 @@ def compile_estcols(bdb, estcols, out):
 
 def compile_estpaircols(bdb, estpaircols, out):
     assert isinstance(estpaircols, ast.EstPairCols)
-    colno0_exp = 'c0.colno'     # XXX
-    colno1_exp = 'c1.colno'     # XXX
+    colno0_exp = 'v0.colno'     # XXX
+    colno1_exp = 'v1.colno'     # XXX
     if not core.bayesdb_has_population(bdb, estpaircols.population):
         raise BQLError(bdb, 'No such population: %s' %
             (estpaircols.population,))
@@ -770,7 +770,7 @@ def compile_estpaircols(bdb, estpaircols, out):
     bql_compiler = BQLCompiler_2Col(population_id, generator_id,
         colno0_exp, colno1_exp)
     out.write('SELECT'
-        ' %d AS population_id, c0.name AS name0, c1.name AS name1' %
+        ' %d AS population_id, v0.name AS name0, v1.name AS name1' %
         (population_id,))
     if len(estpaircols.columns) == 1 and estpaircols.columns[0][1] is None:
         # XXX Compatibility with existing queries.
@@ -786,26 +786,26 @@ def compile_estpaircols(bdb, estpaircols, out):
                 out.write(' AS %s' % (sqlite3_quote_name(name),))
     out.write(' FROM'
         ' bayesdb_population AS p,'
-        ' bayesdb_variable AS v0, bayesdb_column AS c0,'
-        ' bayesdb_variable AS v1, bayesdb_column AS c1'
+        ' bayesdb_variable AS v0,'
+        ' bayesdb_variable AS v1'
         ' WHERE p.id = %(population_id)d'
-        ' AND v0.population_id = p.id AND v1.population_id = p.id'
-        ' AND c0.tabname = p.tabname AND c0.colno = v0.colno'
-        ' AND c1.tabname = p.tabname AND c1.colno = v1.colno' %
+        ' AND v0.population_id = p.id AND v1.population_id = p.id' %
               {'population_id': population_id})
     if generator_id is None:
         out.write(' AND v0.generator_id IS NULL')
         out.write(' AND v1.generator_id IS NULL')
     else:
-        out.write(' AND v0.generator_id = %d' % (generator_id,))
-        out.write(' AND v1.generator_id = %d' % (generator_id,))
+        out.write(' AND (v0.generator_id IS NULL OR v0.generator_id = %d)'
+            % (generator_id,))
+        out.write(' AND (v1.generator_id IS NULL OR v1.generator_id = %d)'
+            % (generator_id,))
     if estpaircols.subcolumns is not None:
         # XXX Would be nice not to duplicate these column lists.
-        out.write(' AND c0.colno IN ')
+        out.write(' AND v0.colno IN ')
         with compiling_paren(bdb, out, '(', ')'):
             compile_column_lists(bdb, population_id, generator_id,
                 estpaircols.subcolumns, bql_compiler, out)
-        out.write(' AND c1.colno IN ')
+        out.write(' AND v1.colno IN ')
         with compiling_paren(bdb, out, '(', ')'):
             compile_column_lists(bdb, population_id, generator_id,
                 estpaircols.subcolumns, bql_compiler, out)

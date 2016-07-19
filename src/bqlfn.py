@@ -68,6 +68,12 @@ def bql_variable_stattypes_and_data(bdb, population_id, colno0, colno1):
 
 # Two-column function:  CORRELATION [OF <col0> WITH <col1>]
 def bql_column_correlation(bdb, population_id, _generator_id, colno0, colno1):
+    if colno0 < 0:
+        raise BQLError(bdb, 'No correlation for latent variable: %r' %
+            (core.bayesdb_variable_name(bdb, population_id, colno0),))
+    if colno1 < 0:
+        raise BQLError(bdb, 'No correlation for latent variable: %r' %
+            (core.bayesdb_variable_name(bdb, population_id, colno1),))
     (st0, st1, data0, data1) = bql_variable_stattypes_and_data(bdb,
         population_id, colno0, colno1)
     if (st0, st1) not in correlation_methods:
@@ -78,6 +84,12 @@ def bql_column_correlation(bdb, population_id, _generator_id, colno0, colno1):
 # Two-column function:  CORRELATION PVALUE [OF <col0> WITH <col1>]
 def bql_column_correlation_pvalue(bdb, population_id, _generator_id, colno0,
         colno1):
+    if colno0 < 0:
+        raise BQLError(bdb, 'No correlation p-value for latent variable: %r' %
+            (core.bayesdb_variable_name(bdb, population_id, colno0),))
+    if colno1 < 0:
+        raise BQLError(bdb, 'No correlation p-value for latent variable: %r' %
+            (core.bayesdb_variable_name(bdb, population_id, colno1),))
     (st0, st1, data0, data1) = bql_variable_stattypes_and_data(bdb,
         population_id, colno0, colno1)
     if (st0, st1) not in correlation_p_methods:
