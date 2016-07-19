@@ -55,15 +55,16 @@ def test_nig_normal_latent_smoke():
         bdb.execute('analyze g1 for 1 iteration wait')
 
         # PROBABILITY OF x = v
-        bdb.execute('estimate probability of x = 50 from p').fetchall()
+        bdb.execute('estimate probability of x = 50 within p').fetchall()
         with pytest.raises(BQLError):
-            bdb.execute('estimate probability of xe = 1 from p').fetchall()
+            bdb.execute('estimate probability of xe = 1 within p').fetchall()
         with pytest.raises(BQLError):
             bdb.execute('''
-                estimate probability of xe = 1 from p modelled by g0
+                estimate probability of xe = 1 within p modelled by g0
             ''').fetchall()
-        bdb.execute(
-            'estimate probability of xe = 1 from p modelled by g1').fetchall()
+        bdb.execute('''
+            estimate probability of xe = 1 within p modelled by g1
+        ''').fetchall()
 
         # PREDICTIVE PROBABILITY OF x
         bdb.execute('estimate predictive probability of x from p').fetchall()
