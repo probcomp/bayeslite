@@ -77,7 +77,6 @@ def test_cgpm():
         bdb.execute('''
             estimate correlation from pairwise columns of satellites
         ''').fetchall()
-        XXX = bdb.sql_execute('SELECT * FROM satellites_ucs').fetchall()
         registry = {
             'kepler': Kepler,
             'linreg': LinearRegression,
