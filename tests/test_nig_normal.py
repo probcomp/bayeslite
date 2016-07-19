@@ -510,6 +510,32 @@ def test_nig_normal_latent_2var2lat_conditional_smoke():
             simulate xe from p modelled by g1 given ye = -1 limit 1
         ''').fetchall()
 
+        with pytest.raises(BQLError):
+            bdb.execute(
+                'estimate dependence probability of xe with ye within p')
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                estimate dependence probability of xe with ye within p
+                    modelled by g0
+            ''')
+        bdb.execute('''
+            estimate dependence probability of xe with ye within p
+                modelled by g1
+        ''')
+
+        with pytest.raises(BQLError):
+            bdb.execute(
+                'estimate mutual information of xe with ye within p')
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                estimate mutual information of xe with ye within p
+                    modelled by g0
+            ''')
+        bdb.execute('''
+            estimate mutual information of xe with ye within p
+                modelled by g1
+        ''')
+
         bdb.execute('drop models from g0')
         bdb.execute('drop generator g0')
         bdb.execute('drop models from g1')
