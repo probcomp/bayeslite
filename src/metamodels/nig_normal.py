@@ -368,12 +368,12 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
     def predict_confidence(self, bdb, generator_id, modelno, colno, rowid,
             numsamples=None):
         if colno < 0:
-            return 0            # deviation of mode from mean is zero
+            return (0, 1)       # deviation of mode from mean is zero
         if modelno is None:
             modelnos = self._modelnos(bdb, generator_id)
             modelno = self.prng.choice(modelnos)
         mus, _sigmas = self._model_mus_sigmas(bdb, generator_id, modelno)
-        return mus[colno]
+        return (mus[colno], 1.)
 
     def insert(self, bdb, generator_id, item):
         (_, colno, value) = item

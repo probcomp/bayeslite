@@ -109,6 +109,22 @@ def test_nig_normal_latent_smoke():
         '''):
             assert p_xe is None, 'rowid %r p(xe) %r' % (r, p_xe)
 
+        # INFER/PREDICT
+        bdb.execute(
+            'INFER EXPLICIT PREDICT x CONFIDENCE x_c FROM p').fetchall()
+        with pytest.raises(ValueError):
+            bdb.execute(
+                'INFER EXPLICIT PREDICT xe CONFIDENCE xe_c FROM p').fetchall()
+        with pytest.raises(ValueError):
+            bdb.execute('''
+                INFER EXPLICIT PREDICT xe CONFIDENCE xe_c FROM p
+                    MODELLED BY g0
+            ''').fetchall()
+        bdb.execute('''
+            INFER EXPLICIT PREDICT xe CONFIDENCE xe_c FROM p
+                MODELLED BY g1
+        ''').fetchall()
+
         # SIMULATE x
         bdb.execute('simulate x from p limit 1').fetchall()
         with pytest.raises(BQLError):
