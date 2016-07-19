@@ -28,8 +28,12 @@ from bayeslite.exception import BQLError
 from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
 from bayeslite.util import cursor_value
 
-# Use dummy, quick version of Kepler's laws.
-Kepler = FourWay
+# Use dummy, quick version of Kepler's laws.  Allow an extra
+# distribution argument to make sure it gets passed through.
+class Kepler(FourWay):
+    def __init__(self, outputs, inputs, quagga=None, *args, **kwargs):
+        assert quagga == 'eland'
+        return super(Kepler, self).__init__(outputs, inputs, *args, **kwargs)
 
 def test_cgpm():
     try:
@@ -97,7 +101,7 @@ def test_cgpm():
             CREATE GENERATOR g1 FOR satellites USING cgpm (
                 launch_mass EXPONENTIAL,
                 MODEL period GIVEN apogee, perigee
-                    USING kepler,
+                    USING kepler(quagga = eland),
                 SUBSAMPLE 20
             )
         ''')
