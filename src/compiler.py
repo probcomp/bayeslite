@@ -1186,6 +1186,10 @@ def compile_pdf_joint(bdb, population_id, generator_id, targets, constraints,
         bql_compiler, out):
     out.write('bql_pdf_joint(%d, %s' % (population_id, nullor(generator_id)))
     for t_col, t_exp in targets:
+        if not core.bayesdb_has_variable(
+                bdb, population_id, generator_id, t_col):
+            raise BQLError(bdb, 'No such column in population %s: %s' %
+                (population_id, t_col))
         t_colno = core.bayesdb_variable_number(bdb, population_id,
             generator_id, t_col)
         out.write(', %d, ' % (t_colno,))

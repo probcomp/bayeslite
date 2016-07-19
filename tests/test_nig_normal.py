@@ -56,11 +56,9 @@ def test_nig_normal_latent_smoke():
 
         # PROBABILITY OF x = v
         bdb.execute('estimate probability of x = 50 from p').fetchall()
-        # XXX Wrong -- should be BQLError.  Github issue #438.
-        with pytest.raises(ValueError):
+        with pytest.raises(BQLError):
             bdb.execute('estimate probability of xe = 1 from p').fetchall()
-        # XXX Wrong -- should be BQLError.  Github issue #438.
-        with pytest.raises(ValueError):
+        with pytest.raises(BQLError):
             bdb.execute('''
                 estimate probability of xe = 1 from p modelled by g0
             ''').fetchall()
@@ -180,6 +178,24 @@ def test_nig_normal_latent_2var_smoke():
             estimate 1
                 from pairwise variables of p modelled by g1
         ''').fetchall())
+
+        # SIMULATE LATENT VARIABLE
+        assert 10 == len(bdb.execute('''
+            simulate xe from p modeled by g1 limit 10;
+        ''').fetchall())
+        assert 10 == len(bdb.execute('''
+            simulate y, xe from p modeled by g1 limit 10;
+        ''').fetchall())
+        # Cannot simulate the latent xe from the population p.
+        with pytest.raises(BQLError):
+            assert 10 == len(bdb.execute('''
+                simulate xe from p limit 10;
+            ''').fetchall())
+        # Cannot simulate the latent xe from the generator g0.
+        with pytest.raises(BQLError):
+            assert 10 == len(bdb.execute('''
+                simulate xe from p modeled by g0 limit 10;
+            ''').fetchall())
 
         bdb.execute('drop models from g0')
         bdb.execute('drop generator g0')
