@@ -268,7 +268,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                             % (sorted(unknown),))
                     all_vars = core.bayesdb_variable_names(
                         bdb, population_id, generator_id)
-                    variables = sorted(all_vars - excluded)
+                    variables = sorted(set(all_vars) - excluded)
                 # Unknown/impossible clause.
                 else:
                     raise ValueError('Unknown clause in ANALYZE: %s.' % ast)
