@@ -16,6 +16,8 @@
 
 import pytest
 
+import bayeslite.core as core
+
 from bayeslite import BQLError
 from bayeslite import bayesdb_open
 from bayeslite import bayesdb_register_metamodel
@@ -37,6 +39,33 @@ def test_nig_normal_smoke():
         bdb.execute('drop generator g')
         bdb.execute('drop population p')
         bdb.execute('drop table t')
+
+def test_nig_normal_latent_numbering():
+    with bayesdb_open(':memory:') as bdb:
+        bayesdb_register_metamodel(bdb, NIGNormalMetamodel())
+        bdb.sql_execute('create table t(id integer primary key, x, y)')
+        for x in xrange(100):
+            bdb.sql_execute('insert into t(x, y) values(?, ?)', (x, x*x - 100))
+        bdb.execute('create population p for t(x numerical, y numerical)')
+
+        assert core.bayesdb_has_population(bdb, 'p')
+        pid = core.bayesdb_get_population(bdb, 'p')
+        assert core.bayesdb_variable_numbers(bdb, pid, None) == [1, 2]
+
+        bdb.execute('create generator g0 for p using nig_normal')
+        bdb.execute('''
+            create generator g1 for p using nig_normal(xe deviation(x))
+        ''')
+
+        assert core.bayesdb_has_generator(bdb, pid, 'g0')
+        g0 = core.bayesdb_get_generator(bdb, pid, 'g0')
+        assert core.bayesdb_has_generator(bdb, pid, 'g1')
+        g1 = core.bayesdb_get_generator(bdb, pid, 'g1')
+        assert core.bayesdb_variable_numbers(bdb, pid, None) == [1, 2]
+        assert core.bayesdb_variable_numbers(bdb, pid, g0) == [1, 2]
+        assert core.bayesdb_generator_column_numbers(bdb, g0) == [1, 2]
+        assert core.bayesdb_variable_numbers(bdb, pid, g1) == [-1, 1, 2]
+        assert core.bayesdb_generator_column_numbers(bdb, g1) == [-1, 1, 2]
 
 def test_nig_normal_latent_smoke():
     with bayesdb_open(':memory:') as bdb:
