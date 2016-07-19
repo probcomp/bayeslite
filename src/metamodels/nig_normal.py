@@ -350,6 +350,31 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                 all_sigmas[modelno][colno] = sigma
             return (all_mus, all_sigmas)
 
+    def column_dependence_probability(self, bdb, generator_id, modelno, colno0,
+            colno1):
+        # XXX Fix me!
+        return 0
+
+    def column_mutual_information(self, bdb, generator_id, modelno, colno0,
+            colno1, numsamples):
+        # XXX Fix me!
+        return 0
+
+    def row_similarity(self, bdb, generator_id, modelno, rowid, target_rowid,
+            colnos):
+        # XXX Fix me!
+        return 0
+
+    def predict_confidence(self, bdb, generator_id, modelno, colno, rowid,
+            numsamples=None):
+        if colno < 0:
+            return 0            # deviation of mode from mean is zero
+        if modelno is None:
+            modelnos = self._modelnos(bdb, generator_id)
+            modelno = self.prng.choice(modelnos)
+        mus, _sigmas = self._model_mus_sigmas(bdb, generator_id, modelno)
+        return mus[colno]
+
     def insert(self, bdb, generator_id, item):
         (_, colno, value) = item
         # Theoretically, I am supposed to detect and report attempted
