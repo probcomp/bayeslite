@@ -287,7 +287,7 @@ def test_nig_normal_latent_2var_smoke():
                 from pairwise variables of p modelled by g0
         ''').fetchall())
         assert 9 == len(bdb.execute('''
-            estimate 1
+            estimate dependence probability, mutual information
                 from pairwise variables of p modelled by g1
         ''').fetchall())
 
