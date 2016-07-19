@@ -34,6 +34,7 @@ from bayeslite.exception import BQLError
 from bayeslite.math_util import logmeanexp
 from bayeslite.metamodel import bayesdb_metamodel_version
 from bayeslite.sqlite3_util import sqlite3_quote_name
+from bayeslite.util import cursor_value
 
 nig_normal_schema_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('nig_normal', 1);
@@ -63,6 +64,22 @@ CREATE TABLE bayesdb_nig_normal_model (
 );
 '''
 
+nig_normal_schema_2 = '''
+UPDATE bayesdb_metamodel SET version = 2 WHERE name = 'nig_normal';
+
+CREATE TABLE bayesdb_nig_normal_deviation (
+    population_id       INTEGER NOT NULL REFERENCES bayesdb_population(id),
+    generator_id        INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    deviation_colno     INTEGER NOT NULL,
+    observed_colno      INTEGER NOT NULL,
+    PRIMARY KEY(generator_id, deviation_colno),
+    FOREIGN KEY(generator_id, deviation_colno)
+        REFERENCES bayesdb_variable(generator_id, colno),
+    FOREIGN KEY(population_id, observed_colno)
+        REFERENCES bayesdb_variable(population_id, colno)
+);
+'''
+
 class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
     """Normal-Inverse-Gamma-Normal metamodel for BayesDB.
 
@@ -87,7 +104,10 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             if version is None:
                 bdb.sql_execute(nig_normal_schema_1)
                 version = 1
-            if version != 1:
+            if version == 1:
+                bdb.sql_execute(nig_normal_schema_2)
+                version = 2
+            if version != 2:
                 raise BQLError(bdb, 'NIG-Normal already installed'
                     ' with unknown schema version: %d' % (version,))
 
@@ -117,6 +137,34 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                 'sumsq': sumsq,
             })
 
+        # XXX Make the schema a little more flexible.
+        if schema == [[]]:
+            return
+        for clause in schema:
+            if not (len(clause) == 3 and \
+                    isinstance(clause[0], str) and \
+                    clause[1] == 'deviation' and \
+                    isinstance(clause[2], list) and \
+                    len(clause[2]) == 1 and \
+                    isinstance(clause[2][0], str)):
+                raise BQLError(bdb, 'Invalid nig_normal clause: %r' %
+                    (clause,))
+            dev_var = clause[0]
+            obs_var = clause[2][0]
+            if not core.bayesdb_has_variable(bdb, population_id, None,
+                    obs_var):
+                raise BQLError(bdb, 'No such variable: %r' % (obs_var,))
+            obs_colno = core.bayesdb_variable_number(bdb, population_id, None,
+                obs_var)
+            dev_colno = core.bayesdb_add_latent(bdb, population_id,
+                generator_id, dev_var, 'numerical')
+            bdb.sql_execute('''
+                INSERT INTO bayesdb_nig_normal_deviation
+                    (population_id, generator_id, deviation_colno,
+                        observed_colno)
+                    VALUES (?, ?, ?, ?)
+            ''', (population_id, generator_id, dev_colno, obs_colno))
+
     def drop_generator(self, bdb, generator_id):
         with bdb.savepoint():
             self.drop_models(bdb, generator_id)
@@ -125,6 +173,11 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                     WHERE generator_id = ?
             '''
             bdb.sql_execute(delete_columns_sql, (generator_id,))
+            delete_deviations_sql = '''
+                DELETE FROM bayesdb_nig_normal_deviation
+                    WHERE generator_id = ?
+            '''
+            bdb.sql_execute(delete_deviations_sql, (generator_id,))
 
     def initialize_models(self, bdb, generator_id, modelnos):
         insert_sample_sql = '''
@@ -218,9 +271,21 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                 modelnos = self._modelnos(bdb, generator_id)
                 modelno = self.prng.choice(modelnos)
             (mus, sigmas) = self._model_mus_sigmas(bdb, generator_id, modelno)
-            return [[self.prng.gauss(mus[colno], sigmas[colno])
+            return [[self._simulate_1(bdb, generator_id, mus, sigmas, colno)
                      for (_, colno) in targets]
                     for _ in range(num_predictions)]
+
+    def _simulate_1(self, bdb, generator_id, mus, sigmas, colno):
+        if colno < 0:
+            dev_colno = colno
+            cursor = bdb.sql_execute('''
+                SELECT observed_colno FROM bayesdb_nig_normal_deviation
+                    WHERE generator_id = ? AND deviation_colno = ?
+            ''', (generator_id, dev_colno))
+            obs_colno = cursor_value(cursor)
+            return self.prng.gauss(0, sigmas[obs_colno])
+        else:
+            return self.prng.gauss(mus[colno], sigmas[colno])
 
     def _model_mus_sigmas(self, bdb, generator_id, modelno):
         # TODO Filter in the database by the columns I will actually use?
@@ -245,11 +310,25 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # in simulate_joint.
         (all_mus, all_sigmas) = self._all_mus_sigmas(bdb, generator_id)
         def model_log_pdf(modelno):
-            return sum(logpdf_gaussian(value, all_mus[modelno][colno],
-                           all_sigmas[modelno][colno])
-                       for (_, colno, value) in targets)
+            mus = all_mus[modelno]
+            sigmas = all_sigmas[modelno]
+            def logpdf_1((_, colno, x)):
+                return self._logpdf_1(bdb, generator_id, mus, sigmas, colno, x)
+            return sum(map(logpdf_1, targets))
         modelwise = [model_log_pdf(m) for m in sorted(all_mus.keys())]
         return logmeanexp(modelwise)
+
+    def _logpdf_1(self, bdb, generator_id, mus, sigmas, colno, x):
+        if colno < 0:
+            dev_colno = colno
+            cursor = bdb.sql_execute('''
+                SELECT observed_colno FROM bayesdb_nig_normal_deviation
+                    WHERE generator_id = ? AND deviation_colno = ?
+            ''', (generator_id, dev_colno))
+            obs_colno = cursor_value(cursor)
+            return logpdf_gaussian(x, 0, sigmas[obs_colno])
+        else:
+            return logpdf_gaussian(x, mus[colno], sigmas[colno])
 
     def _all_mus_sigmas(self, bdb, generator_id):
         params_sql = '''
