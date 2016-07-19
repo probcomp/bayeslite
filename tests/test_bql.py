@@ -667,28 +667,26 @@ def test_estimate_columns_trivial():
         ' ORDER BY "mutinf" DESC;'
 
 def test_estimate_pairwise_trivial():
-    prefix = 'SELECT 1 AS population_id, c0.name AS name0, c1.name AS name1, '
+    prefix = 'SELECT 1 AS population_id, v0.name AS name0, v1.name AS name1, '
     infix = ' AS value'
     infix0 = ' FROM bayesdb_population AS p,'
-    infix0 += ' bayesdb_variable AS v0, bayesdb_column AS c0,'
-    infix0 += ' bayesdb_variable AS v1, bayesdb_column AS c1'
+    infix0 += ' bayesdb_variable AS v0,'
+    infix0 += ' bayesdb_variable AS v1'
     infix0 += ' WHERE p.id = 1'
     infix0 += ' AND v0.population_id = p.id AND v1.population_id = p.id'
-    infix0 += ' AND c0.tabname = p.tabname AND c0.colno = v0.colno'
-    infix0 += ' AND c1.tabname = p.tabname AND c1.colno = v1.colno'
     infix0 += ' AND v0.generator_id IS NULL'
     infix0 += ' AND v1.generator_id IS NULL'
     infix += infix0
     assert bql2sql('estimate dependence probability'
             ' from pairwise columns of p1;') == \
         prefix + \
-        'bql_column_dependence_probability(1, NULL, c0.colno, c1.colno)' + \
+        'bql_column_dependence_probability(1, NULL, v0.colno, v1.colno)' + \
         infix + ';'
     assert bql2sql('estimate mutual information'
             ' from pairwise columns of p1 where'
             ' (probability of age = 0) > 0.5;') == \
         prefix + \
-        'bql_column_mutual_information(1, NULL, c0.colno, c1.colno, NULL)' + \
+        'bql_column_mutual_information(1, NULL, v0.colno, v1.colno, NULL)' + \
         infix + \
         ' AND (bql_pdf_joint(1, NULL, 2, 0) > 0.5);'
     with pytest.raises(bayeslite.BQLError):
@@ -716,9 +714,9 @@ def test_estimate_pairwise_trivial():
             ' where dependence probability with weight > 0.5;')
     assert bql2sql('estimate correlation from pairwise columns of p1'
             ' where dependence probability > 0.5;') == \
-        prefix + 'bql_column_correlation(1, NULL, c0.colno, c1.colno)' + \
+        prefix + 'bql_column_correlation(1, NULL, v0.colno, v1.colno)' + \
         infix + ' AND' \
-        ' (bql_column_dependence_probability(1, NULL, c0.colno, c1.colno)' \
+        ' (bql_column_dependence_probability(1, NULL, v0.colno, v1.colno)' \
             ' > 0.5);'
     with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
@@ -742,15 +740,15 @@ def test_estimate_pairwise_trivial():
             ' where mutual information with weight using 42 samples > 0.5;')
     assert bql2sql('estimate correlation from pairwise columns of p1' +
             ' where mutual information > 0.5;') == \
-        prefix + 'bql_column_correlation(1, NULL, c0.colno, c1.colno)' + \
+        prefix + 'bql_column_correlation(1, NULL, v0.colno, v1.colno)' + \
         infix + ' AND' + \
-        ' (bql_column_mutual_information(1, NULL, c0.colno, c1.colno, NULL)' \
+        ' (bql_column_mutual_information(1, NULL, v0.colno, v1.colno, NULL)' \
             ' > 0.5);'
     assert bql2sql('estimate correlation from pairwise columns of p1' +
             ' where mutual information using 42 samples > 0.5;') == \
-        prefix + 'bql_column_correlation(1, NULL, c0.colno, c1.colno)' + \
+        prefix + 'bql_column_correlation(1, NULL, v0.colno, v1.colno)' + \
         infix + ' AND' + \
-        ' (bql_column_mutual_information(1, NULL, c0.colno, c1.colno, 42)' \
+        ' (bql_column_mutual_information(1, NULL, v0.colno, v1.colno, 42)' \
             ' > 0.5);'
     with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
@@ -768,9 +766,9 @@ def test_estimate_pairwise_trivial():
             ' where correlation with weight > 0.5;')
     assert bql2sql('estimate correlation from pairwise columns of p1'
             ' where correlation > 0.5;') == \
-        prefix + 'bql_column_correlation(1, NULL, c0.colno, c1.colno)' + \
+        prefix + 'bql_column_correlation(1, NULL, v0.colno, v1.colno)' + \
         infix + ' AND' + \
-        ' (bql_column_correlation(1, NULL, c0.colno, c1.colno) > 0.5);'
+        ' (bql_column_correlation(1, NULL, v0.colno, v1.colno) > 0.5);'
     with pytest.raises(bayeslite.BQLError):
         # Makes no sense.
         bql2sql('estimate dependence probability'
@@ -781,9 +779,9 @@ def test_estimate_pairwise_trivial():
             ' from pairwise columns of p1'
             ' where depprob > 0.5 order by mutinf desc') == \
         prefix + \
-        'bql_column_dependence_probability(1, NULL, c0.colno, c1.colno)' \
+        'bql_column_dependence_probability(1, NULL, v0.colno, v1.colno)' \
         ' AS "depprob",' \
-        ' bql_column_mutual_information(1, NULL, c0.colno, c1.colno, NULL)' \
+        ' bql_column_mutual_information(1, NULL, v0.colno, v1.colno, NULL)' \
         ' AS "mutinf"' + \
         infix0 + \
         ' AND ("depprob" > 0.5)' \
@@ -806,34 +804,30 @@ def test_estimate_pairwise_row():
 def test_estimate_pairwise_selected_columns():
     assert bql2sql('estimate dependence probability'
             ' from pairwise columns of p1 for label, age') == \
-        'SELECT 1 AS population_id, c0.name AS name0, c1.name AS name1,' \
-        ' bql_column_dependence_probability(1, NULL, c0.colno, c1.colno)' \
+        'SELECT 1 AS population_id, v0.name AS name0, v1.name AS name1,' \
+        ' bql_column_dependence_probability(1, NULL, v0.colno, v1.colno)' \
             ' AS value' \
         ' FROM bayesdb_population AS p,' \
-        ' bayesdb_variable AS v0, bayesdb_column AS c0,' \
-        ' bayesdb_variable AS v1, bayesdb_column AS c1' \
+        ' bayesdb_variable AS v0,' \
+        ' bayesdb_variable AS v1' \
         ' WHERE p.id = 1' \
         ' AND v0.population_id = p.id AND v1.population_id = p.id' \
-        ' AND c0.tabname = p.tabname AND c0.colno = v0.colno' \
-        ' AND c1.tabname = p.tabname AND c1.colno = v1.colno' \
         ' AND v0.generator_id IS NULL AND v1.generator_id IS NULL' \
-        ' AND c0.colno IN (1, 2) AND c1.colno IN (1, 2);'
+        ' AND v0.colno IN (1, 2) AND v1.colno IN (1, 2);'
     assert bql2sql('estimate dependence probability'
             ' from pairwise columns of p1'
             ' for (ESTIMATE * FROM COLUMNS OF p1'
                 ' ORDER BY name DESC LIMIT 2)') == \
-        'SELECT 1 AS population_id, c0.name AS name0, c1.name AS name1,' \
-        ' bql_column_dependence_probability(1, NULL, c0.colno, c1.colno)' \
+        'SELECT 1 AS population_id, v0.name AS name0, v1.name AS name1,' \
+        ' bql_column_dependence_probability(1, NULL, v0.colno, v1.colno)' \
             ' AS value' \
         ' FROM bayesdb_population AS p,' \
-        ' bayesdb_variable AS v0, bayesdb_column AS c0,' \
-        ' bayesdb_variable AS v1, bayesdb_column AS c1' \
+        ' bayesdb_variable AS v0,' \
+        ' bayesdb_variable AS v1' \
         ' WHERE p.id = 1' \
         ' AND v0.population_id = p.id AND v1.population_id = p.id' \
-        ' AND c0.tabname = p.tabname AND c0.colno = v0.colno' \
-        ' AND c1.tabname = p.tabname AND c1.colno = v1.colno' \
         ' AND v0.generator_id IS NULL AND v1.generator_id IS NULL' \
-        ' AND c0.colno IN (3, 1) AND c1.colno IN (3, 1);'
+        ' AND v0.colno IN (3, 1) AND v1.colno IN (3, 1);'
 
 def test_select_columns_subquery():
     assert bql2sql('select id, t1.(estimate * from columns of p1'
