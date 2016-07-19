@@ -35,7 +35,7 @@ def test_cgpm():
     try:
         from cgpm.regressions.linreg import LinearRegression
     except ImportError:
-        pytest.skip('no sklearn or venturescript')
+        pytest.skip('no sklearn')
         return
     with bayesdb_open(':memory:') as bdb:
         bdb.sql_execute('''
@@ -141,7 +141,7 @@ def test_unknown_stattype():
     try:
         from cgpm.regressions.linreg import LinearRegression
     except ImportError:
-        pytest.skip('no sklearn or venturescript')
+        pytest.skip('no sklearn')
         return
     with bayesdb_open(':memory:') as bdb:
         bdb.sql_execute('''
@@ -231,7 +231,7 @@ def test_bad_analyze_vars():
     try:
         from cgpm.regressions.linreg import LinearRegression
     except ImportError:
-        pytest.skip('no sklearn or venturescript')
+        pytest.skip('no sklearn')
         return
     with bayesdb_open(':memory:') as bdb:
         bdb.sql_execute('''
