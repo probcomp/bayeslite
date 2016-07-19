@@ -303,6 +303,7 @@ def bayesdb_add_latent(bdb, population_id, generator_id, var, stattype):
                 (population_id, generator_id, colno, name, stattype)
                 VALUES (?, ?, ?, ?, ?)
         ''', (population_id, generator_id, colno, var, stattype))
+        return colno
 
 def bayesdb_has_latent(bdb, population_id, var):
     """True if the population has a latent variable by the given name."""
