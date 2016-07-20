@@ -595,6 +595,11 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         """Convert value in bayeslite to equivalent cgpm format."""
         if value is None:
             return float('NaN')
+        # XXX Latent variables are not associated with an entry in
+        # bayesdb_cgpm_category, so just pass through whatever value
+        # the user supplied, as a float.
+        if colno < 0:
+            return float(value)
         stattype = core.bayesdb_generator_column_stattype(
             bdb, generator_id, colno)
         if casefold(stattype) == 'categorical':
