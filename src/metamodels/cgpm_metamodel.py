@@ -725,6 +725,11 @@ def _create_schema(bdb, generator_id, schema_ast):
                 existing_latent.add(var)
                 continue
 
+            # Reject if we've already processed it.
+            if var in latents:
+                duplicate.add(var)
+                continue
+
             # Add it to the set of latent variables.
             latents[var] = stattype
 
