@@ -14,12 +14,16 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from __future__ import division
+
+import contextlib
 import math
 import numpy as np
 import pytest
 
 from cgpm.cgpm import CGpm
 from cgpm.dummy.fourway import FourWay
+from cgpm.dummy.piecewise import PieceWise
 from cgpm.utils import general as gu
 
 from bayeslite import bayesdb_open
@@ -27,6 +31,164 @@ from bayeslite import bayesdb_register_metamodel
 from bayeslite.exception import BQLError
 from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
 from bayeslite.util import cursor_value
+
+@contextlib.contextmanager
+def cgpm_smoke_bdb():
+    with bayesdb_open(':memory:') as bdb:
+        registry = {
+            'piecewise': PieceWise,
+        }
+        bayesdb_register_metamodel(
+            bdb, CGPM_Metamodel(registry, multiprocess=0))
+
+        bdb.sql_execute('CREATE TABLE t (output, cat, input)')
+        for i in xrange(10):
+            for j in xrange(10):
+                for k in xrange(10):
+                    output = i + j/(k + 1)
+                    cat = -1 if (i + j*k) % 2 else +1
+                    input = (i*j - k)**2
+                    if i % 2:
+                        output = None
+                    if j % 2:
+                        cat = None
+                    if k % 2:
+                        input = None
+                    bdb.sql_execute('''
+                        INSERT INTO t (output, cat, input) VALUES (?, ?, ?)
+                    ''', (output, cat, input))
+
+        bdb.execute('''
+            CREATE POPULATION p FOR t (
+                output NUMERICAL,
+                cat CATEGORICAL,
+                input NUMERICAL
+            )
+        ''')
+
+        yield bdb
+
+def cgpm_smoke_tests(bdb, gen, vars):
+    modelledby = 'MODELLED BY %s' % (gen,) if gen else ''
+    for var in vars:
+        bdb.execute('''
+            ESTIMATE PROBABILITY OF %s = 1 WITHIN p %s
+        ''' % (var, modelledby)).fetchall()
+        bdb.execute('''
+            SIMULATE %s FROM p %s LIMIT 1
+        ''' % (var, modelledby)).fetchall()
+        bdb.execute('''
+            INFER %s FROM p %s LIMIT 1
+        ''' % (var, modelledby)).fetchall()
+
+def test_cgpm_smoke():
+    with cgpm_smoke_bdb() as bdb:
+
+        # Default model.
+        bdb.execute('CREATE GENERATOR g_default FOR p USING cgpm')
+        bdb.execute('INITIALIZE 1 MODEL FOR g_default')
+        bdb.execute('ANALYZE g_default FOR 1 ITERATION WAIT')
+        cgpm_smoke_tests(bdb, 'g_default', ['output', 'cat', 'input'])
+
+        # Custom model for output and cat.
+        bdb.execute('''
+            CREATE GENERATOR g_manifest FOR p USING cgpm (
+                MODEL output, cat GIVEN input USING piecewise
+            )
+        ''')
+        bdb.execute('INITIALIZE 1 MODEL FOR g_manifest')
+        bdb.execute('ANALYZE g_manifest FOR 1 ITERATION WAIT')
+        cgpm_smoke_tests(bdb, 'g_manifest', ['output', 'cat', 'input'])
+
+        # Custom model for latent output, manifest output.
+        bdb.execute('''
+            CREATE GENERATOR g_latout FOR p USING cgpm (
+                LATENT output_ NUMERICAL,
+                MODEL output_, cat GIVEN input USING piecewise
+            )
+        ''')
+        bdb.execute('INITIALIZE 1 MODEL FOR g_latout')
+        bdb.execute('ANALYZE g_latout FOR 1 ITERATION WAIT')
+        cgpm_smoke_tests(bdb, 'g_latout',
+            ['output', 'output_', 'cat', 'input'])
+
+        # Custom model for manifest out, latent cat.
+        bdb.execute('''
+            CREATE GENERATOR g_latcat FOR p USING cgpm (
+                LATENT cat_ CATEGORICAL,
+                MODEL output, cat_ GIVEN input USING piecewise
+            )
+        ''')
+        bdb.execute('INITIALIZE 1 MODEL FOR g_latcat')
+        bdb.execute('ANALYZE g_latcat FOR 1 ITERATION WAIT')
+        cgpm_smoke_tests(bdb, 'g_latcat', ['output', 'cat', 'cat_', 'input'])
+
+        # Custom chained model.
+        bdb.execute('''
+            CREATE GENERATOR g_chain FOR p USING cgpm (
+                LATENT midput NUMERICAL,
+                LATENT excat NUMERICAL,
+                MODEL midput, cat GIVEN input USING piecewise,
+                MODEL output, excat GIVEN midput USING piecewise
+            )
+        ''')
+        bdb.execute('INITIALIZE 1 MODEL FOR g_chain')
+        bdb.execute('ANALYZE g_chain FOR 1 ITERATION WAIT')
+        cgpm_smoke_tests(bdb, 'g_chain',
+            ['output', 'excat', 'midput', 'cat', 'input'])
+
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                CREATE GENERATOR g_error_typo FOR p USING cgpm (uot NORMAL)
+            ''')
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                CREATE GENERATOR g_error_typo_manifest FOR p USING cgpm (
+                    MODEL output, cat GIVEN ni USING piecewise
+                )
+            ''')
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                CREATE GENERATOR g_error_typo_output FOR p USING cgpm (
+                    MODEL output, dog GIVEN input USING piecewise
+                )
+            ''')
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                CREATE GENERATOR g_error_dup_manifest FOR p USING cgpm (
+                    input NORMAL,
+                    input LOGNORMAL
+                )
+            ''')
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                CREATE GENERATOR g_error_dup_latent FOR p USING cgpm (
+                    LATENT output_error NUMERICAL,
+                    LATENT output_error CATEGORICAL,
+                    MODEL output_error, cat GIVEN input USING piecewise
+                )
+            ''')
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                CREATE GENERATOR g_error_latent_exists FOR p USING cgpm (
+                    LATENT output_ NUMERICAL,
+                    MODEL output_, cat GIVEN input USING piecewise
+                )
+            ''')
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                CREATE GENERATOR g_error_latent_manifest FOR p USING cgpm (
+                    LATENT output NUMERICAL,
+                    MODEL output, cat GIVEN input USING piecewise
+                )
+            ''')
+
+        cgpm_smoke_tests(bdb, None, ['output', 'cat', 'input'])
+
+        # XXX Check each operation independently: simulate, logpdf, impute.
+        for var in ['output_', 'cat_', 'midput', 'excat']:
+            with pytest.raises(BQLError):
+                cgpm_smoke_tests(bdb, None, [var])
 
 # Use dummy, quick version of Kepler's laws.  Allow an extra
 # distribution argument to make sure it gets passed through.
