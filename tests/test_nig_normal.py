@@ -134,8 +134,9 @@ def test_nig_normal_latent_smoke():
                 'simulate x, xe from p modelled by g0 limit 1').fetchall()
         bdb.execute('simulate x, xe from p modelled by g1 limit 1').fetchall()
 
-        assert 100*100 == \
-            len(bdb.execute('estimate similarity from pairwise p').fetchall())
+        assert 100 == len(bdb.execute('''
+            estimate similarity from pairwise p limit 100
+        ''').fetchall())
         assert 1 == len(bdb.execute('''
             estimate similarity from pairwise p modelled by g0 limit 1
         ''').fetchall())
