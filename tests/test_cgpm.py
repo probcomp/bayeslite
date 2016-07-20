@@ -197,7 +197,7 @@ class Kepler(FourWay):
         assert quagga == 'eland'
         return super(Kepler, self).__init__(outputs, inputs, *args, **kwargs)
 
-def test_cgpm():
+def test_cgpm_kepler():
     try:
         from cgpm.regressions.linreg import LinearRegression
     except ImportError:
