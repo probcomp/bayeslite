@@ -351,6 +351,8 @@ def _bql_logpdf(bdb, population_id, generator_id, targets, constraints):
         return metamodel.logpdf_joint(
             bdb, generator_id, targets, constraints, None)
     def loglikelihood(generator_id, metamodel):
+        if not constraints:
+            return 0
         return metamodel.logpdf_joint(bdb, generator_id, constraints, [], None)
     generator_ids = [generator_id] if generator_id is not None else \
         core.bayesdb_population_generators(bdb, population_id)
