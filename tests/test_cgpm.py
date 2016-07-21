@@ -42,9 +42,9 @@ def cgpm_smoke_bdb():
             bdb, CGPM_Metamodel(registry, multiprocess=0))
 
         bdb.sql_execute('CREATE TABLE t (output, cat, input)')
-        for i in xrange(10):
-            for j in xrange(10):
-                for k in xrange(10):
+        for i in xrange(3):
+            for j in xrange(3):
+                for k in xrange(3):
                     output = i + j/(k + 1)
                     cat = -1 if (i + j*k) % 2 else +1
                     input = (i*j - k)**2
