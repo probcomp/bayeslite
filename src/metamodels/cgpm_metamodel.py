@@ -745,9 +745,20 @@ def _create_schema(bdb, generator_id, schema_ast):
             name = clause.name
             outputs = clause.outputs
             inputs = clause.inputs
-            cctypes = []
-            ccargs = []
-            distargs = {'cctypes': cctypes, 'ccargs': ccargs}
+            output_stattypes = []
+            output_statargs = []
+            input_stattypes = []
+            input_statargs = []
+            distargs = {
+                'inputs': {
+                    'stattypes': input_stattypes,
+                    'statargs': input_statargs
+                },
+                'outputs': {
+                    'stattypes': output_stattypes,
+                    'statargs': output_statargs,
+                }
+            }
             kwds = {'distargs': distargs}
             kwds.update(clause.params)
 
@@ -766,11 +777,11 @@ def _create_schema(bdb, generator_id, schema_ast):
             for var in inputs:
                 must_exist.append(var)
                 needed.add(var)
-                i = len(cctypes)
-                assert i == len(ccargs)
-                cctypes.append(None)
-                ccargs.append(None)
-                deferred[var].append((cctypes, ccargs, i))
+                i = len(input_stattypes)
+                assert i == len(input_statargs)
+                input_stattypes.append(None)
+                input_statargs.append(None)
+                deferred[var].append((input_stattypes, input_statargs, i))
 
             # Finally, add a cgpm_composition record.
             cgpm_composition.append({
