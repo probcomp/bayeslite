@@ -655,7 +655,7 @@ def _create_schema(bdb, generator_id, schema_ast):
     modelled = set()
     default_modelled = set()
     subsample = None
-    deferred = defaultdict(lambda: [])
+    deferred_input = defaultdict(lambda: [])
 
     # Error-reporting state.
     duplicate = set()
@@ -743,8 +743,10 @@ def _create_schema(bdb, generator_id, schema_ast):
             # the distribution types of variables we may not have
             # seen.
             name = clause.name
+
             outputs = clause.outputs
             inputs = clause.inputs
+
             output_stattypes = []
             output_statargs = []
             input_stattypes = []
@@ -781,7 +783,7 @@ def _create_schema(bdb, generator_id, schema_ast):
                 assert i == len(input_statargs)
                 input_stattypes.append(None)
                 input_statargs.append(None)
-                deferred[var].append((input_stattypes, input_statargs, i))
+                deferred_input[var].append((input_stattypes, input_statargs, i))
 
             # Finally, add a cgpm_composition record.
             cgpm_composition.append({
@@ -849,8 +851,8 @@ def _create_schema(bdb, generator_id, schema_ast):
         variable_dist[var] = (stattype, dist, params)
         modelled.add(var)
 
-    # Fill in the deferred statistical type assignments.
-    for var in sorted(deferred.iterkeys()):
+    # Fill in the deferred_input statistical type assignments.
+    for var in sorted(deferred_input.iterkeys()):
         # Check whether the variable is modelled.  If not, skip -- we
         # will fail later because this variable is guaranteed to also
         # be in needed.
@@ -885,7 +887,7 @@ def _create_schema(bdb, generator_id, schema_ast):
             dist, params = distparams
 
         # Assign the distribution and parameters.
-        for cctypes, ccargs, i in deferred[var]:
+        for cctypes, ccargs, i in deferred_input[var]:
             assert cctypes[i] is None
             assert ccargs[i] is None
             cctypes[i] = dist
