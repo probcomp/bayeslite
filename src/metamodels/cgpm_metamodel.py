@@ -655,7 +655,8 @@ def _create_schema(bdb, generator_id, schema_ast):
     modelled = set()
     default_modelled = set()
     subsample = None
-    deferred = defaultdict(lambda: [])
+    deferred_input = defaultdict(lambda: [])
+    deferred_output = dict()
 
     # Error-reporting state.
     duplicate = set()
@@ -745,9 +746,21 @@ def _create_schema(bdb, generator_id, schema_ast):
             name = clause.name
             outputs = clause.outputs
             inputs = clause.inputs
-            cctypes = []
-            ccargs = []
-            distargs = {'cctypes': cctypes, 'ccargs': ccargs}
+
+            output_stattypes = []
+            output_statargs = []
+            input_stattypes = []
+            input_statargs = []
+            distargs = {
+                'inputs': {
+                    'stattypes': input_stattypes,
+                    'statargs': input_statargs
+                },
+                'outputs': {
+                    'stattypes': output_stattypes,
+                    'statargs': output_statargs,
+                }
+            }
             kwds = {'distargs': distargs}
             kwds.update(clause.params)
 
@@ -759,6 +772,12 @@ def _create_schema(bdb, generator_id, schema_ast):
                     duplicate.add(var)
                     continue
                 modelled.add(var)
+                # Add the output statistical type and its parameters.
+                i = len(output_stattypes)
+                assert i == len(output_statargs)
+                output_stattypes.append(None)
+                output_statargs.append(None)
+                deferred_output[var] = (output_stattypes, output_statargs, i)
 
             # Next make sure all the input variables exist, mark them
             # needed, and record where to put their distribution type
@@ -766,11 +785,11 @@ def _create_schema(bdb, generator_id, schema_ast):
             for var in inputs:
                 must_exist.append(var)
                 needed.add(var)
-                i = len(cctypes)
-                assert i == len(ccargs)
-                cctypes.append(None)
-                ccargs.append(None)
-                deferred[var].append((cctypes, ccargs, i))
+                i = len(input_stattypes)
+                assert i == len(input_statargs)
+                input_stattypes.append(None)
+                input_statargs.append(None)
+                deferred_input[var].append((input_stattypes, input_statargs, i))
 
             # Finally, add a cgpm_composition record.
             cgpm_composition.append({
@@ -838,8 +857,8 @@ def _create_schema(bdb, generator_id, schema_ast):
         variable_dist[var] = (stattype, dist, params)
         modelled.add(var)
 
-    # Fill in the deferred statistical type assignments.
-    for var in sorted(deferred.iterkeys()):
+    # Fill in the deferred_input statistical type assignments.
+    for var in sorted(deferred_input.iterkeys()):
         # Check whether the variable is modelled.  If not, skip -- we
         # will fail later because this variable is guaranteed to also
         # be in needed.
@@ -874,11 +893,45 @@ def _create_schema(bdb, generator_id, schema_ast):
             dist, params = distparams
 
         # Assign the distribution and parameters.
-        for cctypes, ccargs, i in deferred[var]:
+        for cctypes, ccargs, i in deferred_input[var]:
             assert cctypes[i] is None
             assert ccargs[i] is None
             cctypes[i] = dist
             ccargs[i] = params
+
+    # Fill in the deferred_output statistical type assignments. The need to be
+    # in the form NUMERICAL or CATEGORICAL.
+    for var in deferred_output:
+        if var in latents:
+            # Latent variable modelled by a foreign model.  Use
+            # the statistical type specified for it.
+            var_stattype = casefold(latents[var])
+            if var_stattype not in _DEFAULT_DIST:
+                if var in unknown_stattype:
+                    assert unknown_stattype[var] == var_stattype
+                else:
+                    unknown_stattype[var] = var_stattype
+            # XXX Cannot specify statargs for a latent variable. Trying to using
+            # default_dist might lookup the counts for unique values of the
+            # categorical in the base table causing a failure.
+            var_statargs = {}
+        else:
+            # Manifest variable modelled by a foreign model.  Use
+            # the statistical type and arguments from the population.
+            assert core.bayesdb_has_variable(bdb, population_id, None, var)
+            colno = core.bayesdb_variable_number(bdb, population_id, None, var)
+            var_stattype = core.bayesdb_variable_stattype(
+                bdb, population_id, colno)
+            distparams = default_dist(var, var_stattype)
+            if distparams is None:
+                continue
+            _, var_statargs = distparams
+
+        stattypes, statargs, i = deferred_output[var]
+        assert stattypes[i] is None
+        assert statargs[i] is None
+        stattypes[i] = var_stattype
+        statargs[i] = var_statargs
 
     if unknown_stattype:
         raise BQLError(bdb, 'Unknown statistical types for variables: %r' %
