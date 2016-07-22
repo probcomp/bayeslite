@@ -423,3 +423,52 @@ def test_bad_analyze_vars():
                     SKIP period, perige
                 )
             ''')
+
+def test_output_stattypes():
+    try:
+        from cgpm.factor.factor import FactorAnalysis
+    except ImportError:
+        pytest.skip('no sklearn')
+        return
+    with cgpm_dummy_satellites_bdb() as bdb:
+        bdb.execute('''
+            CREATE POPULATION satellites FOR satellites_ucs (
+                apogee NUMERICAL,
+                country_of_operator CATEGORICAL,
+                launch_mass NUMERICAL
+            )
+        ''')
+        registry = {
+            'factor_analysis': FactorAnalysis,
+        }
+        bayesdb_register_metamodel(bdb, CGPM_Metamodel(registry))
+        # Creating factor analysis with categorical manifest should crash.
+        bdb.execute('''
+            CREATE GENERATOR satellites_g0 FOR satellites USING cgpm(
+                LATENT pc_1 NUMERICAL,
+                MODEL apogee, country_of_operator, pc_1
+                    USING factor_analysis(L=1)
+            )
+        ''')
+        with pytest.raises(ValueError):
+            bdb.execute('INITIALIZE 1 MODEL FOR satellites_g0')
+        # Creating factor analysis with categorical latent should crash.
+        bdb.execute('''
+            CREATE GENERATOR satellites_g1 FOR satellites USING cgpm(
+                LATENT pc_2 CATEGORICAL,
+                MODEL apogee, launch_mass, pc_2
+                    USING factor_analysis(L=1)
+            )
+        ''')
+        with pytest.raises(ValueError):
+            bdb.execute('INITIALIZE 1 MODEL FOR satellites_g1')
+        # Creating factor analysis with all numerical should be ok.
+        bdb.execute('''
+            CREATE GENERATOR satellites_g2 FOR satellites USING cgpm(
+                LATENT pc_3 NUMERICAL,
+                MODEL apogee, launch_mass, pc_3
+                    USING factor_analysis(L=1)
+            )
+        ''')
+        bdb.execute('INITIALIZE 1 MODEL FOR satellites_g2')
+        bdb.execute('ANALYZE satellites_g2 FOR 2 ITERATION WAIT;')
