@@ -656,6 +656,7 @@ def _create_schema(bdb, generator_id, schema_ast):
     default_modelled = set()
     subsample = None
     deferred_input = defaultdict(lambda: [])
+    deferred_output = dict()
 
     # Error-reporting state.
     duplicate = set()
@@ -743,7 +744,6 @@ def _create_schema(bdb, generator_id, schema_ast):
             # the distribution types of variables we may not have
             # seen.
             name = clause.name
-
             outputs = clause.outputs
             inputs = clause.inputs
 
@@ -772,6 +772,12 @@ def _create_schema(bdb, generator_id, schema_ast):
                     duplicate.add(var)
                     continue
                 modelled.add(var)
+                # Add the output statistical type and its parameters.
+                i = len(output_stattypes)
+                assert i == len(output_statargs)
+                output_stattypes.append(None)
+                output_statargs.append(None)
+                deferred_output[var] = (output_stattypes, output_statargs, i)
 
             # Next make sure all the input variables exist, mark them
             # needed, and record where to put their distribution type
@@ -892,6 +898,40 @@ def _create_schema(bdb, generator_id, schema_ast):
             assert ccargs[i] is None
             cctypes[i] = dist
             ccargs[i] = params
+
+    # Fill in the deferred_output statistical type assignments. The need to be
+    # in the form NUMERICAL or CATEGORICAL.
+    for var in deferred_output:
+        if var in latents:
+            # Latent variable modelled by a foreign model.  Use
+            # the statistical type specified for it.
+            var_stattype = casefold(latents[var])
+            if var_stattype not in _DEFAULT_DIST:
+                if var in unknown_stattype:
+                    assert unknown_stattype[var] == var_stattype
+                else:
+                    unknown_stattype[var] = var_stattype
+            # XXX Cannot specify statargs for a latent variable. Trying to using
+            # default_dist might lookup the counts for unique values of the
+            # categorical in the base table causing a failure.
+            var_statargs = {}
+        else:
+            # Manifest variable modelled by a foreign model.  Use
+            # the statistical type and arguments from the population.
+            assert core.bayesdb_has_variable(bdb, population_id, None, var)
+            colno = core.bayesdb_variable_number(bdb, population_id, None, var)
+            var_stattype = core.bayesdb_variable_stattype(
+                bdb, population_id, colno)
+            distparams = default_dist(var, var_stattype)
+            if distparams is None:
+                continue
+            _, var_statargs = distparams
+
+        stattypes, statargs, i = deferred_output[var]
+        assert stattypes[i] is None
+        assert statargs[i] is None
+        stattypes[i] = var_stattype
+        statargs[i] = var_statargs
 
     if unknown_stattype:
         raise BQLError(bdb, 'Unknown statistical types for variables: %r' %
