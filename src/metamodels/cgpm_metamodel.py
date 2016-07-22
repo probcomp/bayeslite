@@ -821,12 +821,12 @@ def _create_schema(bdb, generator_id, schema_ast):
     if duplicate:
         raise BQLError(bdb, 'Duplicate model variables: %r' %
             (sorted(duplicate),))
-    if unknown:
-        raise BQLError(bdb, 'Unknown model variables: %r' %
-            (sorted(unknown),))
     if existing_latent:
         raise BQLError(bdb, 'Latent variables already defined: %r' %
             (sorted(existing_latent),))
+    if unknown:
+        raise BQLError(bdb, 'Unknown model variables: %r' %
+            (sorted(unknown),))
 
     def default_dist(var, stattype):
         stattype = casefold(stattype)
