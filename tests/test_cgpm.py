@@ -68,6 +68,37 @@ def cgpm_smoke_bdb():
 
         yield bdb
 
+@contextlib.contextmanager
+def cgpm_dummy_satellites_bdb():
+    with bayesdb_open(':memory:') as bdb:
+        bdb.sql_execute('''
+            CREATE TABLE satellites_ucs (
+                apogee,
+                class_of_orbit,
+                country_of_operator,
+                launch_mass,
+                perigee,
+                period
+        )''')
+        for l, f in [
+            ('geo', lambda x, y: x + y**2),
+            ('leo', lambda x, y: math.sin(x + y)),
+            (None, lambda x, y: x + y**2),
+            (None, lambda x, y: math.sin(x + y)),
+        ]:
+            for x in xrange(5):
+                for y in xrange(5):
+                    countries = ['US', 'Russia', 'China', 'Bulgaria']
+                    country = countries[bdb._np_prng.randint(0, len(countries))]
+                    mass = bdb._np_prng.normal(1000, 50)
+                    bdb.sql_execute('''
+                        INSERT INTO satellites_ucs
+                            (country_of_operator, launch_mass, class_of_orbit,
+                                apogee, perigee, period)
+                            VALUES (?,?,?,?,?,?)
+                    ''', (country, mass, l, x, y, f(x, y)))
+        yield bdb
+
 def cgpm_smoke_tests(bdb, gen, vars):
     modelledby = 'MODELLED BY %s' % (gen,) if gen else ''
     for var in vars:
@@ -203,33 +234,7 @@ def test_cgpm_kepler():
     except ImportError:
         pytest.skip('no sklearn')
         return
-    with bayesdb_open(':memory:') as bdb:
-        bdb.sql_execute('''
-            CREATE TABLE satellites_ucs (
-                apogee,
-                class_of_orbit,
-                country_of_operator,
-                launch_mass,
-                perigee,
-                period
-        )''')
-        for l, f in [
-            ('geo', lambda x, y: x + y**2),
-            ('leo', lambda x, y: math.sin(x + y)),
-            (None, lambda x, y: x + y**2),
-            (None, lambda x, y: math.sin(x + y)),
-        ]:
-            for x in xrange(5):
-                for y in xrange(5):
-                    countries = ['US', 'Russia', 'China', 'Bulgaria']
-                    country = countries[bdb._np_prng.randint(0, len(countries))]
-                    mass = bdb._np_prng.normal(1000, 50)
-                    bdb.sql_execute('''
-                        INSERT INTO satellites_ucs
-                            (country_of_operator, launch_mass, class_of_orbit,
-                                apogee, perigee, period)
-                            VALUES (?,?,?,?,?,?)
-                    ''', (country, mass, l, x, y, f(x, y)))
+    with cgpm_dummy_satellites_bdb() as bdb:
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs (
                 apogee NUMERICAL,
@@ -308,34 +313,18 @@ def test_unknown_stattype():
     except ImportError:
         pytest.skip('no sklearn')
         return
-    with bayesdb_open(':memory:') as bdb:
-        bdb.sql_execute('''
-            CREATE TABLE satellites_ucs (
-                apogee,
-                class_of_orbit,
-                country_of_operator,
-                launch_mass,
-                perigee,
-                period,
-                relaunches
-        )''')
-        for l, f in [
-            ('geo', lambda x, y: x + y**2),
-            ('leo', lambda x, y: math.sin(x + y)),
-            (None, lambda x, y: x + y**2),
-            (None, lambda x, y: math.sin(x + y)),
-        ]:
-            for x in xrange(5):
-                for y in xrange(5):
-                    countries = ['US', 'Russia', 'China', 'Bulgaria']
-                    country = countries[bdb._np_prng.randint(0, len(countries))]
-                    mass = bdb._np_prng.normal(1000, 50)
-                    bdb.sql_execute('''
-                        INSERT INTO satellites_ucs
-                            (country_of_operator, launch_mass, class_of_orbit,
-                                apogee, perigee, period, relaunches)
-                            VALUES (?,?,?,?,?,?,?)
-                    ''', (country, mass, l, x, y, f(x, y), x + y))
+    with cgpm_dummy_satellites_bdb() as bdb:
+        # Add a column called relaunches, sum of apogee and perigee.
+        bdb.sql_execute('ALTER TABLE satellites_ucs ADD COLUMN relaunches')
+        n_rows = bdb.sql_execute('''
+            SELECT COUNT(*) FROM satellites_ucs
+        ''').next()[0]
+        for rowid in xrange(n_rows):
+            bdb.sql_execute('''
+                UPDATE satellites_ucs
+                    SET relaunches = (SELECT apogee + perigee)
+                    WHERE _rowid_ = ?
+            ''', (rowid+1,))
         # Nobody will ever create a QUAGGA statistical type!
         with pytest.raises(BQLError):
             # No such statistical type at the moment.
@@ -398,33 +387,7 @@ def test_bad_analyze_vars():
     except ImportError:
         pytest.skip('no sklearn')
         return
-    with bayesdb_open(':memory:') as bdb:
-        bdb.sql_execute('''
-            CREATE TABLE satellites_ucs (
-                apogee,
-                class_of_orbit,
-                country_of_operator,
-                launch_mass,
-                perigee,
-                period
-        )''')
-        for l, f in [
-            ('geo', lambda x, y: x + y**2),
-            ('leo', lambda x, y: math.sin(x + y)),
-            (None, lambda x, y: x + y**2),
-            (None, lambda x, y: math.sin(x + y)),
-        ]:
-            for x in xrange(5):
-                for y in xrange(5):
-                    countries = ['US', 'Russia', 'China', 'Bulgaria']
-                    country = countries[bdb._np_prng.randint(0, len(countries))]
-                    mass = bdb._np_prng.normal(1000, 50)
-                    bdb.sql_execute('''
-                        INSERT INTO satellites_ucs
-                            (country_of_operator, launch_mass, class_of_orbit,
-                                apogee, perigee, period)
-                            VALUES (?,?,?,?,?,?)
-                    ''', (country, mass, l, x, y, f(x, y)))
+    with cgpm_dummy_satellites_bdb() as bdb:
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs (
                 apogee NUMERICAL,
