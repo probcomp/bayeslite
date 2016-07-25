@@ -458,13 +458,21 @@ class CGPM_Metamodel(IBayesDBMetamodel):
     def _initialize_engine(self, bdb, generator_id, n, variables):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         def map_var(var):
-            return core.bayesdb_variable_number(bdb, population_id,
-                generator_id, var)
-        outputs = [map_var(var) for var, _st, _cct, _da in variables]
-        cctypes = [cctype for _n, _st, cctype, _da in variables]
-        distargs = [distargs for _n, _st, _cct, distargs in variables]
-        gpmcc_vars = [var for var, _stattype, _dist, _params in variables]
-        gpmcc_data = self._data(bdb, generator_id, gpmcc_vars)
+            return core.bayesdb_variable_number(
+                bdb, population_id, generator_id, var)
+        # If no variables in the population modeled by the gpmcc, then create 1
+        # dummy variable with one measurement. The design space for how to
+        # refactor cgpm.crosscat.State to initialize without any variables is
+        # not simple, so we will live with this workaround for now.
+        if not variables:
+            (outputs, cctypes, distargs, gpmcc_data) = \
+                [7**10], ['bernoulli'], [None], [[0]]
+        else:
+            outputs = [map_var(var) for var, _st, _cct, _da in variables]
+            cctypes = [cctype for _n, _st, cctype, _da in variables]
+            distargs = [distargs for _n, _st, _cct, distargs in variables]
+            gpmcc_vars = [var for var, _stattype, _dist, _params in variables]
+            gpmcc_data = self._data(bdb, generator_id, gpmcc_vars)
         return Engine(
             gpmcc_data, num_states=n, rng=bdb.np_prng, multiprocess=self._ncpu,
             outputs=outputs, cctypes=cctypes, distargs=distargs)
