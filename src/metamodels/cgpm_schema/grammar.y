@@ -25,14 +25,16 @@ cgpm(empty)         ::= .
 cgpm(schema)        ::= schema(s).
 
 schema(one)         ::= clause(c).
-schema(some)        ::= schema(s) T_COMMA clause_opt(c).
+schema(some)        ::= schema(s) T_SEMI|T_COMMA clause_opt(c).
 
 clause_opt(none)    ::= .
 clause_opt(some)    ::= clause(c).
 
 clause(basic)       ::= var(var) dist(dist) param_opt(params).
-clause(foreign)     ::= K_MODEL vars(outputs) given_opt(inputs)
-            K_USING foreign(name) param_opt(params).
+clause(foreign)     ::=
+            K_MODEL vars(outputs) given_opt(inputs)
+                exposing_opt(exposed)
+                K_USING foreign(name) param_opt(params).
 clause(subsamp)     ::= K_SUBSAMPLE L_NUMBER(n).
 clause(latent)      ::= K_LATENT var(var) stattype(st).
 
@@ -41,6 +43,12 @@ foreign(name)       ::= L_NAME(foreign).
 
 given_opt(none)     ::= .
 given_opt(some)     ::= K_GIVEN vars(vars).
+
+exposing_opt(none)  ::= .
+exposing_opt(one)  ::= K_EXPOSING exposed(exp).
+
+exposed(one)        ::= var(v) stattype(s).
+exposed(many)       ::= exposed(exp) T_COMMA var(v) stattype(s).
 
 vars(one)           ::= var(var).
 vars(many)          ::= vars(vars) T_COMMA var(var).

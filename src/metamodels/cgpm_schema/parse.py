@@ -30,6 +30,7 @@ grep -o 'K_[A-Z][A-Z0-9_]*' < grammar.y | sort -u | awk '
 '''
 
 KEYWORDS = {
+    'exposing': grammar.K_EXPOSING,
     'given': grammar.K_GIVEN,
     'latent': grammar.K_LATENT,
     'model': grammar.K_MODEL,
@@ -42,6 +43,7 @@ PUNCTUATION = {
     ')': grammar.T_RROUND,
     ',': grammar.T_COMMA,
     '=': grammar.T_EQ,
+    ';': grammar.T_SEMI,
 }
 
 def parse(tokenses):
@@ -129,8 +131,8 @@ class CGPM_Semantics(object):
 
     def p_clause_basic(self, var, dist, params):
         return Basic(var, dist, params)
-    def p_clause_foreign(self, outputs, inputs, name, params):
-        return Foreign(outputs, inputs, name, params)
+    def p_clause_foreign(self, outputs, inputs, exposed, name, params):
+        return Foreign(outputs, inputs, exposed, name, params)
     def p_clause_subsamp(self, n):
         return Subsample(n)
     def p_clause_latent(self, var, st):
@@ -141,6 +143,12 @@ class CGPM_Semantics(object):
 
     def p_given_opt_none(self):                 return []
     def p_given_opt_some(self, vars):           return vars
+
+    def p_exposing_opt_none(self):              return []
+    def p_exposing_opt_one(self, exp):          return exp
+
+    def p_exposed_one(self, v, s):              return [(v,s)]
+    def p_exposed_many(self, exp, v, s):        exp.append((v,s)); return exp
 
     def p_vars_one(self, var):                  return [var]
     def p_vars_many(self, vars, var):           vars.append(var); return vars
@@ -164,6 +172,7 @@ Basic = namedtuple('Basic', [
 Foreign = namedtuple('Foreign', [
     'outputs',
     'inputs',
+    'exposed',
     'name',
     'params',
 ])
