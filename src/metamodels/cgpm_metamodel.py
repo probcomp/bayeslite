@@ -14,6 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import itertools
 import json
 import math
 
@@ -673,6 +674,13 @@ def _create_schema(bdb, generator_id, schema_ast):
     existing_latent = set()
     must_exist = []
     unknown_stattype = {}
+
+    # XXX Convert all EXPOSED claues to latent clauses.
+    target_clauses = [c.exposed for c in schema_ast
+        if isinstance(c, cgpm_schema.parse.Foreign) and len(c.exposed) > 0]
+    new_latents = list(itertools.chain.from_iterable(target_clauses))
+    new_clauses = [cgpm_schema.parse.Latent(v,s) for (v,s) in new_latents]
+    schema_ast.extend(new_clauses)
 
     # Process each clause one by one.
     for clause in schema_ast:
