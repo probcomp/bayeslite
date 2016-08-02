@@ -30,7 +30,8 @@ grep -o 'K_[A-Z][A-Z0-9_]*' < grammar.y | sort -u | awk '
 '''
 
 KEYWORDS = {
-    'exposing': grammar.K_EXPOSING,
+    'and': grammar.K_AND,
+    'category': grammar.K_CATEGORY,
     'expose': grammar.K_EXPOSE,
     'for': grammar.K_FOR,
     'given': grammar.K_GIVEN,
@@ -39,7 +40,6 @@ KEYWORDS = {
     'override': grammar.K_OVERRIDE,
     'subsample': grammar.K_SUBSAMPLE,
     'using': grammar.K_USING,
-
 }
 
 PUNCTUATION = {

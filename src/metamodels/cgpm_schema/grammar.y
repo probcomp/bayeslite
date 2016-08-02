@@ -30,7 +30,8 @@ schema(some)        ::= schema(s) T_SEMI|T_COMMA clause_opt(c).
 clause_opt(none)    ::= .
 clause_opt(some)    ::= clause(c).
 
-clause(basic)       ::= var(var) dist(dist) param_opt(params).
+clause(basic)       ::= K_OVERRIDE K_CATEGORY K_MODEL K_FOR
+            var(var) K_USING dist(dist) param_opt(params).
 clause(foreign)     ::=
             K_OVERRIDE K_MODEL K_FOR vars(outputs) given_opt(inputs)
                 exposing_opt(exposed)
