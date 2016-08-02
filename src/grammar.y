@@ -70,9 +70,10 @@ command(drop_pop)	::= K_DROP K_POPULATION ifexists(ifexists)
  */
 
 pop_schema(one)		::= pop_clause(cl).
-pop_schema(many)	::= pop_schema(schema) T_COMMA pop_clause(cl).
+pop_schema(many)	::= pop_schema(schema) T_SEMI pop_clause(cl).
 
 pop_clause(model)   ::= model_opt column_name(name) as_opt stattype(st).
+pop_clause(ignore)  ::= K_IGNORE pop_ignore_columns(cols).
 
 model_opt(none)		::= .
 model_opt(one)		::= K_MODEL.
@@ -81,6 +82,9 @@ as_opt(none)        ::= .
 as_opt(one)         ::= K_AS.
 
 stattype(st)        ::= L_NAME(name).
+
+pop_ignore_columns(one)   ::= column_name(c).
+pop_ignore_columns(many)  ::= pop_ignore_columns(cols) T_COMMA column_name(c).
 
 /* XXX Temporary generators?  */
 command(creategen)	::= K_CREATE K_GENERATOR|K_METAMODEL
@@ -648,6 +652,7 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 	K_GROUP
 	K_HAVING
 	K_IF
+	K_IGNORE
 	K_IN
 	K_INFER
 	K_INFORMATION

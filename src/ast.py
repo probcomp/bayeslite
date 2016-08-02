@@ -77,11 +77,16 @@ DropPop = namedtuple('DropPop', [
     'ifexists',
     'name',
 ])
-PopVar = namedtuple('PopVar', [
+PopModelVar = namedtuple('PopModelVar', [
     'name',
     'stattype',
 ])
-
+PopGuessVar = namedtuple('PopGuessVars', [
+    'name',
+])
+PopIgnoreVars = namedtuple('PopIgnoreVars', [
+    'names',
+])
 CreateGen = namedtuple('CreateGen', [
     'name',                     # XXX name
     'ifnotexists',              # boolean

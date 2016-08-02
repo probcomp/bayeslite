@@ -71,6 +71,7 @@ keywords = {
     "group": grammar.K_GROUP,
     "having": grammar.K_HAVING,
     "if": grammar.K_IF,
+    "ignore": grammar.K_IGNORE,
     "in": grammar.K_IN,
     "infer": grammar.K_INFER,
     "information": grammar.K_INFORMATION,
