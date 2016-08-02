@@ -75,16 +75,17 @@ pop_var(manifest)	::= column_name(name) stattype(st).
 stattype(st)		::= L_NAME(name).
 
 /* XXX Temporary generators?  */
-command(creategen)	::= K_CREATE K_GENERATOR ifnotexists(ifnotexists0)
+command(creategen)	::= K_CREATE K_GENERATOR|K_METAMODEL
+				ifnotexists(ifnotexists0)
 				generator_name(name)
 				ifnotexists(ifnotexists1)
 				K_FOR population_name(pop)
 				K_USING metamodel_name(metamodel)
 				generator_schema_opt(schema).
-command(dropgen)	::= K_DROP K_GENERATOR ifexists(ifexists)
+command(dropgen)	::= K_DROP K_GENERATOR|K_METAMODEL ifexists(ifexists)
 				generator_name(name).
-command(altergen)	::= K_ALTER K_GENERATOR generator_name(generator)
-				altergen_cmds(cmds).
+command(altergen)	::= K_ALTER K_GENERATOR|K_METAMODEL
+				generator_name(generator) altergen_cmds(cmds).
 
 altergen_cmds(one)	::= altergen_cmd(cmd).
 altergen_cmds(many)	::= altergen_cmds(cmds) T_COMMA altergen_cmd(cmd).
@@ -642,6 +643,7 @@ typearg(negative)	::= T_MINUS L_INTEGER(i).
 	K_LIKE
 	K_LIMIT
 	K_MATCH
+	K_METAMODEL
 	K_MINUTE
 	K_MINUTES
 	K_MODEL
