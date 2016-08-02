@@ -595,17 +595,12 @@ def _create_population(bdb, phrase):
     else:
         pop_guess_vars = [(t, 'numerical') for t in pop_guess]
 
-    print pop_model_vars
-    print pop_ignore_vars
-    print pop_guess_vars
-
     # Pool all the variables and statistical types together.
     pop_all_vars = pop_model_vars + pop_ignore_vars + pop_guess_vars
 
     # Check that everyone in the population is modeled. known contain all the
     # variables for which a policy is known.
     known = [casefold(t[0]) for t in pop_all_vars]
-    print known
     not_found = [t for t in base_table_columns if casefold(t) not in known]
     if not_found:
         raise BQLError(
