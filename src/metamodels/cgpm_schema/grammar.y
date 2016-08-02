@@ -32,7 +32,7 @@ clause_opt(some)    ::= clause(c).
 
 clause(basic)       ::= var(var) dist(dist) param_opt(params).
 clause(foreign)     ::=
-            K_MODEL vars(outputs) given_opt(inputs)
+            K_OVERRIDE K_MODEL K_FOR vars(outputs) given_opt(inputs)
                 exposing_opt(exposed)
                 K_USING foreign(name) param_opt(params).
 clause(subsamp)     ::= K_SUBSAMPLE L_NUMBER(n).
@@ -45,7 +45,7 @@ given_opt(none)     ::= .
 given_opt(some)     ::= K_GIVEN vars(vars).
 
 exposing_opt(none)  ::= .
-exposing_opt(one)  ::= K_EXPOSING exposed(exp).
+exposing_opt(one)  ::= K_EXPOSING|K_EXPOSE exposed(exp).
 
 exposed(one)        ::= var(v) stattype(s).
 exposed(many)       ::= exposed(exp) T_COMMA var(v) stattype(s).
