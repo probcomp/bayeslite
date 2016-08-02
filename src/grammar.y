@@ -58,9 +58,14 @@ k_column_opt		::= K_COLUMN.
 command(create_pop)	::= K_CREATE K_POPULATION ifnotexists(ifnotexists)
 				population_name(name)
 				K_FOR table_name(table)
+				with_schema_opt
 				T_LROUND pop_schema(schema) T_RROUND.
 command(drop_pop)	::= K_DROP K_POPULATION ifexists(ifexists)
 				population_name(name).
+
+with_schema_opt ::= .
+with_schema_opt	::= K_WITH K_SCHEMA.
+
 /*
  * XXX alter population xyz
  *	rename to pqr
