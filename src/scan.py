@@ -246,6 +246,8 @@ class BQLScanner(Plex.Scanner):
         (whitespace,            Plex.IGNORE),
         (line_comment,          Plex.IGNORE),
         (Plex.Str(";"),         grammar.T_SEMI),
+        (Plex.Str("{"),         grammar.T_LCURLY),
+        (Plex.Str("}"),         grammar.T_RCURLY),
         (Plex.Str("("),         grammar.T_LROUND),
         (Plex.Str(")"),         grammar.T_RROUND),
         (Plex.Str("+"),         grammar.T_PLUS),

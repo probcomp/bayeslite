@@ -59,7 +59,7 @@ command(create_pop)	::= K_CREATE K_POPULATION ifnotexists(ifnotexists)
 				population_name(name)
 				K_FOR table_name(table)
 				with_schema_opt
-				T_LROUND pop_schema(schema) T_RROUND.
+				T_LROUND|T_LCURLY pop_schema(schema) T_RROUND|T_RCURLY.
 command(drop_pop)	::= K_DROP K_POPULATION ifexists(ifexists)
 				population_name(name).
 
@@ -118,7 +118,8 @@ runtime_name_opt(none)		::= .
 runtime_name_opt(one)		::= K_USING metamodel_name(metamodel).
 
 generator_schema_opt(none)	::= .
-generator_schema_opt(some)	::= T_LROUND generator_schema(s) T_RROUND.
+generator_schema_opt(some)	::=
+					T_LROUND|T_LCURLY generator_schema(s) T_RROUND|T_RCURLY.
 
 generator_schema(one)	::= generator_schemum(s).
 generator_schema(many)	::= generator_schema(ss) T_COMMA generator_schemum(s).
