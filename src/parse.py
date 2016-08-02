@@ -200,6 +200,9 @@ class BQLSemantics(object):
     def p_altergen_cmd_renamegen(self, name):
         return ast.AlterGenRenameGen(name)
 
+    def p_runtime_name_opt_none(self):              return None
+    def p_runtime_name_opt_one(self, metamodel):    return metamodel
+
     def p_generator_schema_opt_none(self):      return [[]]
     def p_generator_schema_opt_some(self, s):   return s
     def p_generator_schema_one(self, s):        return [s]

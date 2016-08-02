@@ -296,11 +296,14 @@ def execute_phrase(bdb, phrase, bindings=()):
         population_id = core.bayesdb_get_population(bdb, phrase.population)
         table = core.bayesdb_population_table(bdb, population_id)
 
-        # Find the metamodel.
-        if phrase.metamodel not in bdb.metamodels:
+        # Find the metamodel, or use the default.
+        metamodel_name = phrase.metamodel
+        if phrase.metamodel is None:
+            metamodel_name = 'cgpm'
+        if metamodel_name not in bdb.metamodels:
             raise BQLError(bdb, 'No such metamodel: %s' %
-                (repr(phrase.metamodel),))
-        metamodel = bdb.metamodels[phrase.metamodel]
+                (repr(metamodel_name),))
+        metamodel = bdb.metamodels[metamodel_name]
 
         # Find the baseline.
         if phrase.baseline is not None\

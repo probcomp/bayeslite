@@ -81,7 +81,7 @@ command(creategen)	::= K_CREATE K_GENERATOR|K_METAMODEL
 				ifnotexists(ifnotexists1)
 				K_FOR population_name(pop)
 				baseline_opt(baseline)
-				K_USING metamodel_name(metamodel)
+				runtime_name_opt(metamodel)
 				generator_schema_opt(schema).
 command(dropgen)	::= K_DROP K_GENERATOR|K_METAMODEL ifexists(ifexists)
 				generator_name(name).
@@ -92,6 +92,9 @@ altergen_cmds(one)	::= altergen_cmd(cmd).
 altergen_cmds(many)	::= altergen_cmds(cmds) T_COMMA altergen_cmd(cmd).
 
 altergen_cmd(renamegen)	::= K_RENAME K_TO generator_name(name).
+
+runtime_name_opt(none)		::= .
+runtime_name_opt(one)		::= K_USING metamodel_name(metamodel).
 
 generator_schema_opt(none)	::= .
 generator_schema_opt(some)	::= T_LROUND generator_schema(s) T_RROUND.
