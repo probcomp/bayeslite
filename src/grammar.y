@@ -69,16 +69,18 @@ command(drop_pop)	::= K_DROP K_POPULATION ifexists(ifexists)
  *	set statistical type ...
  */
 
-pop_schema(one)		::= pop_var(var).
-pop_schema(many)	::= pop_schema(schema) T_COMMA pop_var(var).
-pop_var(manifest)	::= model_opt column_name(name) as_opt stattype(st).
-stattype(st)		::= L_NAME(name).
+pop_schema(one)		::= pop_clause(cl).
+pop_schema(many)	::= pop_schema(schema) T_COMMA pop_clause(cl).
+
+pop_clause(model)   ::= model_opt column_name(name) as_opt stattype(st).
 
 model_opt(none)		::= .
 model_opt(one)		::= K_MODEL.
 
 as_opt(none)        ::= .
 as_opt(one)         ::= K_AS.
+
+stattype(st)        ::= L_NAME(name).
 
 /* XXX Temporary generators?  */
 command(creategen)	::= K_CREATE K_GENERATOR|K_METAMODEL

@@ -180,9 +180,9 @@ class BQLSemantics(object):
     def p_command_drop_pop(self, ifexists, name):
         return ast.DropPop(ifexists, name)
 
-    def p_pop_schema_one(self, var):            return [var]
-    def p_pop_schema_many(self, schema, var): schema.append(var); return schema
-    def p_pop_var_manifest(self, name, st):     return ast.PopVar(name, st)
+    def p_pop_schema_one(self, cl):             return [cl]
+    def p_pop_schema_many(self, schema, cl):    schema.append(cl); return schema
+    def p_pop_clause_model(self, name, st):     return ast.PopVar(name, st)
     def p_stattype_st(self, name):              return name
 
     def p_model_opt_none(self):              return None
