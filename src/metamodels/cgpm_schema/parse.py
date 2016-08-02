@@ -151,6 +151,9 @@ class CGPM_Semantics(object):
     def p_exposing_opt_none(self):              return []
     def p_exposing_opt_one(self, exp):          return exp
 
+    def p_and_opt_none(self):                   return None
+    def p_and_opt_one(self):                    return None
+
     def p_exposed_one(self, v, s):              return [(v,s)]
     def p_exposed_many(self, exp, v, s):        exp.append((v,s)); return exp
 

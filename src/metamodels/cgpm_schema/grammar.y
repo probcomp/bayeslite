@@ -46,7 +46,10 @@ given_opt(none)     ::= .
 given_opt(some)     ::= K_GIVEN vars(vars).
 
 exposing_opt(none)  ::= .
-exposing_opt(one)  ::= K_EXPOSING|K_EXPOSE exposed(exp).
+exposing_opt(one)   ::= and_opt K_EXPOSE exposed(exp).
+
+and_opt(none)       ::= .
+and_opt(one)        ::= K_AND.
 
 exposed(one)        ::= var(v) stattype(s).
 exposed(many)       ::= exposed(exp) T_COMMA var(v) stattype(s).
