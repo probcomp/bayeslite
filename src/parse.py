@@ -192,8 +192,8 @@ class BQLSemantics(object):
     def p_as_opt_one(self):                  return None
     def p_stattype_st(self, name):           return name
 
-    def p_pop_ignore_columns_one(self, c):          return [c]
-    def p_pop_ignore_columns_many(self, cols, c):   cols.append(c); return c
+    def p_pop_columns_one(self, c):          return [c]
+    def p_pop_columns_many(self, cols, c):   cols.append(c); return c
 
     def p_command_creategen(self, ifnotexists0, name, ifnotexists1, pop,
             baseline, metamodel, schema):
