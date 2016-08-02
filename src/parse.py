@@ -186,9 +186,10 @@ class BQLSemantics(object):
     def p_stattype_st(self, name):              return name
 
     def p_command_creategen(self, ifnotexists0, name, ifnotexists1, pop,
-            metamodel, schema):
+            baseline, metamodel, schema):
         ifnotexists = ifnotexists0 or ifnotexists1
-        return ast.CreateGen(name, ifnotexists, pop, metamodel, schema)
+        return ast.CreateGen(
+            name, ifnotexists, pop, baseline, metamodel, schema)
     def p_command_dropgen(self, ifexists, name):
         return ast.DropGen(ifexists, name)
     def p_command_altergen(self, generator, cmds):
@@ -235,6 +236,11 @@ class BQLSemantics(object):
     def p_ifexists_some(self):                  return True
     def p_ifnotexists_none(self):               return False
     def p_ifnotexists_some(self):               return True
+
+    def p_baseline_opt_none(self):              return None
+    def p_baseline_opt_some(self, baseline):    return baseline
+
+    def p_baseline_name_bl(self, name):         return name
 
     def p_anmodelset_opt_none(self):            return None
     def p_anmodelset_opt_some(self, m):         return sorted(m)

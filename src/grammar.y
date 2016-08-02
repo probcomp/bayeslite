@@ -80,6 +80,7 @@ command(creategen)	::= K_CREATE K_GENERATOR|K_METAMODEL
 				generator_name(name)
 				ifnotexists(ifnotexists1)
 				K_FOR population_name(pop)
+				baseline_opt(baseline)
 				K_USING metamodel_name(metamodel)
 				generator_schema_opt(schema).
 command(dropgen)	::= K_DROP K_GENERATOR|K_METAMODEL ifexists(ifexists)
@@ -127,6 +128,11 @@ ifnotexists(some)	::= K_IF K_NOT K_EXISTS.
 
 anmodelset_opt(none)	::= .
 anmodelset_opt(some)	::= K_MODEL|K_MODELS modelset(m).
+
+baseline_opt(none)	::= .
+baseline_opt(some)	::= K_WITH K_BASELINE baseline_name(baseline).
+
+baseline_name(bl) 	::= L_NAME(name).
 
 modelset_opt(none)	::= .
 modelset_opt(some)	::= modelset(m).

@@ -86,6 +86,7 @@ CreateGen = namedtuple('CreateGen', [
     'name',                     # XXX name
     'ifnotexists',              # boolean
     'population',               # XXX name
+    'baseline',                 # XXX name
     'metamodel',                # XXX name
     'schema',                   # nested list of tokens
 ])

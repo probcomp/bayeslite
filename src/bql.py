@@ -302,6 +302,12 @@ def execute_phrase(bdb, phrase, bindings=()):
                 (repr(phrase.metamodel),))
         metamodel = bdb.metamodels[phrase.metamodel]
 
+        # Find the baseline.
+        if phrase.baseline is not None\
+                and casefold(phrase.baseline) != 'crosscat':
+            raise BQLError(bdb, 'No such baseline: %s' %
+                (repr(phrase.baseline),))
+
         with bdb.savepoint():
             if core.bayesdb_has_generator(bdb, population_id, phrase.name):
                 if not phrase.ifnotexists:

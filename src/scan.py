@@ -36,6 +36,7 @@ keywords = {
     "and": grammar.K_AND,
     "as": grammar.K_AS,
     "asc": grammar.K_ASC,
+    "baseline": grammar.K_BASELINE,
     "begin": grammar.K_BEGIN,
     "between": grammar.K_BETWEEN,
     "btable": grammar.K_BTABLE,
