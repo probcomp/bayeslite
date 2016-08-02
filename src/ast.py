@@ -81,8 +81,8 @@ PopModelVars = namedtuple('PopModelVars', [
     'names',
     'stattype',
 ])
-PopGuessVar = namedtuple('PopGuessVars', [
-    'name',
+PopGuessVars = namedtuple('PopGuessVars', [
+    'names',
 ])
 PopIgnoreVars = namedtuple('PopIgnoreVars', [
     'names',

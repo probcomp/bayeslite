@@ -558,16 +558,59 @@ def _create_population(bdb, phrase):
     # underlying table.
     core.bayesdb_table_guarantee_columns(bdb, phrase.table)
 
+    # Retrieve all columns from the base table. The user is required to provide
+    # a strategy for each single variable, either MODEL, IGNORE, or GUESS.
+    base_table_columns = core.bayesdb_table_column_names(bdb, phrase.table)
+    seen_columns = []
+
     # Create the population record and get the assigned id.
     bdb.sql_execute('''
         INSERT INTO bayesdb_population (name, tabname) VALUES (?, ?)
     ''', (phrase.name, phrase.table))
     population_id = core.bayesdb_get_population(bdb, phrase.name)
 
-    # Extract the population columns and stattypes as pairs.
+    # Extract the population column names and stattypes as pairs.
     pop_model_vars = list(itertools.chain.from_iterable(
         [[(name, s.stattype) for name in s.names]
         for s in phrase.schema if isinstance(s, ast.PopModelVars)]))
+
+    # Extract the ignored columns.
+    pop_ignore_vars = list(itertools.chain.from_iterable(
+        [[(name, 'ignore') for name in s.names]
+        for s in phrase.schema if isinstance(s, ast.PopIgnoreVars)]))
+
+    # Extract the guessed columns.
+    pop_guess = list(itertools.chain.from_iterable(
+        [s.names for s in phrase.schema if isinstance(s, ast.PopGuessVars)]))
+    if '*' in pop_guess:
+        # Do not allow * to coincide with other variables.
+        if len(pop_guess) > 1:
+            raise BQLError(
+                bdb, 'Cannot use wildcard GUESS with variables names: %r'
+                % (pop_guess, ))
+        # Retrieve all variables in the base table.
+        avoid = set(casefold(t[0]) for t in pop_model_vars + pop_ignore_vars)
+        pop_guess_vars = [(t, 'numerical') for t in base_table_columns
+            if casefold(t) not in avoid]
+    else:
+        pop_guess_vars = [(t, 'numerical') for t in pop_guess]
+
+    print pop_model_vars
+    print pop_ignore_vars
+    print pop_guess_vars
+
+    # Pool all the variables and statistical types together.
+    pop_all_vars = pop_model_vars + pop_ignore_vars + pop_guess_vars
+
+    # Check that everyone in the population is modeled. known contain all the
+    # variables for which a policy is known.
+    known = [casefold(t[0]) for t in pop_all_vars]
+    print known
+    not_found = [t for t in base_table_columns if casefold(t) not in known]
+    if not_found:
+        raise BQLError(
+            bdb, 'Cannot determine a modeling policy for variables: %r'
+            % (not_found, ))
 
     # Get a map from variable name to colno.  Check
     # - for duplicates,
@@ -584,7 +627,7 @@ def _create_population(bdb, phrase):
     stattype_sql = '''
         SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype
     '''
-    for nm, st in pop_model_vars:
+    for nm, st in pop_all_vars:
         name = casefold(nm)
         stattype = casefold(st)
         if name in variable_map:
@@ -617,7 +660,7 @@ def _create_population(bdb, phrase):
         raise BQLError(bdb, 'Invalid statistical types: %r' % (list(invalid),))
 
     # Insert variable records.
-    for nm, st in pop_model_vars:
+    for nm, st in pop_all_vars:
         name = casefold(nm)
         colno = variable_map[name]
         stattype = casefold(st)

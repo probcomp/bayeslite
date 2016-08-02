@@ -184,7 +184,8 @@ class BQLSemantics(object):
     def p_pop_schema_many(self, schema, cl):    schema.append(cl); return schema
 
     def p_pop_clause_model(self, cols, st):  return ast.PopModelVars(cols, st)
-    def p_pop_clause_ignore(self, cols):     return ast.PopIgnoreVars(vars)
+    def p_pop_clause_ignore(self, cols):     return ast.PopIgnoreVars(cols)
+    def p_pop_clause_guess(self, cols):      return ast.PopGuessVars(cols)
 
     def p_model_opt_none(self):              return None
     def p_model_opt_one(self):               return None
@@ -194,6 +195,12 @@ class BQLSemantics(object):
 
     def p_pop_columns_one(self, c):          return [c]
     def p_pop_columns_many(self, cols, c):   cols.append(c); return cols
+
+    def p_pop_columns_guess_one(self, c):           return [c]
+    def p_pop_columns_guess_many(self, cols, c):    cols.append(c); return cols
+
+    def p_guess_column_star(self):          return '*' # XXX
+    def p_guess_column_one(self, c):        return c # XXX
 
     def p_command_creategen(self, ifnotexists0, name, ifnotexists1, pop,
             baseline, metamodel, schema):
