@@ -314,8 +314,8 @@ def execute_phrase(bdb, phrase, bindings=()):
         with bdb.savepoint():
             if core.bayesdb_has_generator(bdb, population_id, phrase.name):
                 if not phrase.ifnotexists:
-                    raise BQLError(bdb,
-                                   'Name already defined as generator: %s' %
+                    raise BQLError(
+                        bdb, 'Name already defined as generator: %s' %
                         (repr(phrase.name),))
             else:
                 # Insert a record into bayesdb_generator and get the
