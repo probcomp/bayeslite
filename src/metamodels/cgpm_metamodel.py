@@ -115,7 +115,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 WHERE population_id = ? AND 0 <= colno
         ''', (population_id,))
         for colno, name, stattype in vars_cursor:
-            if casefold(stattype) == 'categorical':
+            if _is_categorical(stattype):
                 qn = sqlite3_quote_name(name)
                 cursor = bdb.sql_execute('''
                     SELECT DISTINCT %s FROM %s WHERE %s IS NOT NULL
@@ -366,7 +366,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             bdb, generator_id, [(rowid, colno)], [], modelno, numsamples)
         stattype = core.bayesdb_variable_stattype(
             bdb, core.bayesdb_generator_population(bdb, generator_id), colno)
-        if stattype == 'categorical': # XXX Right way to find the stattype?
+        if _is_categorical(stattype):
             return _impute_categorical(sample)
         else:
             return _impute_numerical(sample)
@@ -611,7 +611,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             return float(value)
         stattype = core.bayesdb_generator_column_stattype(
             bdb, generator_id, colno)
-        if casefold(stattype) == 'categorical':
+        if _is_categorical(stattype):
             cursor = bdb.sql_execute('''
                 SELECT code FROM bayesdb_cgpm_category
                     WHERE generator_id = ? AND colno = ? AND value = ?
@@ -634,7 +634,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             return None
         stattype = core.bayesdb_generator_column_stattype(
             bdb, generator_id, colno)
-        if casefold(stattype) == 'categorical':
+        if _is_categorical(stattype):
             cursor = bdb.sql_execute('''
                 SELECT value FROM bayesdb_cgpm_category
                     WHERE generator_id = ? AND colno = ? AND code = ?
@@ -978,8 +978,15 @@ def _default_categorical(bdb, generator_id, var):
 def _default_numerical(bdb, generator_id, var):
     return 'normal', {}
 
+def _is_categorical(stattype):
+    return casefold(stattype) in ['categorical', 'nominal']
+
 _DEFAULT_DIST = {
-    'categorical': _default_categorical,
-    'cyclic': _default_numerical, # XXX can't do cyclic yet
-    'numerical': _default_numerical,
+    'categorical':      _default_categorical,
+    'counts':           _default_numerical,     # XXX change to poisson.
+    'cyclic':           _default_numerical,     # XXX change to von mises.
+    'magnitude':        _default_numerical,     # XXX change to lognormal.
+    'nominal':          _default_categorical,
+    'numerical':        _default_numerical,
+    'numericalranged':  _default_numerical,     # XXX change to beta.
 }

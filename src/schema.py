@@ -19,7 +19,7 @@ from bayeslite.util import cursor_value
 
 APPLICATION_ID = 0x42594442
 STALE_VERSIONS = (1,)
-USABLE_VERSIONS = (5, 6, 7, 8)
+USABLE_VERSIONS = (5, 6, 7, 8, 9)
 
 LATEST_VERSION = USABLE_VERSIONS[-1]
 
@@ -164,6 +164,16 @@ UPDATE bayesdb_generator
         (SELECT p.id FROM bayesdb_population AS p WHERE p.tabname = tabname);
 '''
 
+bayesdb_schema_8to9 = '''
+PRAGMA user_version = 9;
+
+INSERT INTO bayesdb_stattype VALUES ('counts');
+INSERT INTO bayesdb_stattype VALUES ('magnitude');
+INSERT INTO bayesdb_stattype VALUES ('nominal');
+INSERT INTO bayesdb_stattype VALUES ('numericalranged');
+'''
+
+
 ### BayesDB SQLite setup
 
 def bayesdb_install_schema(bdb, version=None, compatible=None):
@@ -241,6 +251,10 @@ def _upgrade_schema(bdb, current_version=None, desired_version=None):
         with bdb.transaction():
             bdb.sql_execute(bayesdb_schema_7to8)
         current_version = 8
+    if current_version == 8 and current_version < desired_version:
+        with bdb.transaction():
+            bdb.sql_execute(bayesdb_schema_8to9)
+        current_version = 9
     bdb.sql_execute('PRAGMA integrity_check')
     bdb.sql_execute('PRAGMA foreign_key_check')
 

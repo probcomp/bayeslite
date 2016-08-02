@@ -639,6 +639,10 @@ _STATTYPE_TO_AFFINITY = dict((casefold(st), casefold(af)) for st, af in (
     ('categorical', 'text'),
     ('cyclic', 'real'),
     ('numerical', 'real'),
+    ('counts', 'real'),
+    ('magnitude', 'real'),
+    ('nominal', 'text'),
+    ('numericalranged', 'real'),
 ))
 def bayesdb_stattype_affinity(_bdb, stattype):
     return _STATTYPE_TO_AFFINITY[casefold(stattype)]
