@@ -196,11 +196,8 @@ class BQLSemantics(object):
     def p_pop_columns_one(self, c):          return [c]
     def p_pop_columns_many(self, cols, c):   cols.append(c); return cols
 
-    def p_pop_columns_guess_one(self, c):           return [c]
-    def p_pop_columns_guess_many(self, cols, c):    cols.append(c); return cols
-
-    def p_guess_column_star(self):          return '*' # XXX
-    def p_guess_column_one(self, c):        return c # XXX
+    def p_pop_columns_guess_star(self):       return '*'
+    def p_pop_columns_guess_list(self, cols): return cols
 
     def p_command_creategen(self, ifnotexists0, name, ifnotexists1, pop,
             baseline, metamodel, schema):

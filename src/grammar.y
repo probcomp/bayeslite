@@ -83,14 +83,11 @@ pop_clause(guess)   ::= K_GUESS stattypes_for_opt pop_columns_guess(cols).
 
 stattype(st)        ::= L_NAME(name).
 
+pop_columns_guess(star)	::=	T_LROUND T_STAR T_RROUND.
+pop_columns_guess(list)	::=	pop_columns(cols).
+
 pop_columns(one)   ::= column_name(c).
 pop_columns(many)  ::= pop_columns(cols) T_COMMA column_name(c).
-
-pop_columns_guess(one)	::= guess_column(c).
-pop_columns_guess(many)	::= pop_columns_guess(cols) T_COMMA guess_column(c).
-
-guess_column(star)	::= T_STAR.
-guess_column(one)	::= column_name(c).
 
 stattypes_for_opt  	::= .
 stattypes_for_opt	::= K_STATTYPES K_FOR.
