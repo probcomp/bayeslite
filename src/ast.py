@@ -77,8 +77,8 @@ DropPop = namedtuple('DropPop', [
     'ifexists',
     'name',
 ])
-PopModelVar = namedtuple('PopModelVar', [
-    'name',
+PopModelVars = namedtuple('PopModelVars', [
+    'names',
     'stattype',
 ])
 PopGuessVar = namedtuple('PopGuessVars', [

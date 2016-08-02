@@ -23,6 +23,8 @@ on, are compiled into SQL; commands, as in ``CREATE TABLE``,
 language) are executed directly.
 """
 
+import itertools
+
 import apsw
 
 import bayeslite.ast as ast
@@ -562,6 +564,11 @@ def _create_population(bdb, phrase):
     ''', (phrase.name, phrase.table))
     population_id = core.bayesdb_get_population(bdb, phrase.name)
 
+    # Extract the population columns and stattypes as pairs.
+    pop_model_vars = list(itertools.chain.from_iterable(
+        [[(name, s.stattype) for name in s.names]
+        for s in phrase.schema if isinstance(s, ast.PopModelVars)]))
+
     # Get a map from variable name to colno.  Check
     # - for duplicates,
     # - for nonexistent columns,
@@ -577,30 +584,29 @@ def _create_population(bdb, phrase):
     stattype_sql = '''
         SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype
     '''
-    for clause in phrase.schema:
-        if isinstance(clause, ast.PopModelVar):
-            name = casefold(clause.name)
-            stattype = casefold(clause.stattype)
-            if name in variable_map:
-                duplicates.add(name)
+    for nm, st in pop_model_vars:
+        name = casefold(nm)
+        stattype = casefold(st)
+        if name in variable_map:
+            duplicates.add(name)
+            continue
+        cursor = bdb.sql_execute(colno_sql, {
+            'table': phrase.table,
+            'column_name': name,
+        })
+        try:
+            row = cursor.next()
+        except StopIteration:
+            missing.add(name)
+            continue
+        else:
+            colno = row[0]
+            assert isinstance(colno, int)
+            cursor = bdb.sql_execute(stattype_sql, {'stattype': stattype})
+            if cursor_value(cursor) == 0 and stattype != 'ignore':
+                invalid.add(stattype)
                 continue
-            cursor = bdb.sql_execute(colno_sql, {
-                'table': phrase.table,
-                'column_name': name,
-            })
-            try:
-                row = cursor.next()
-            except StopIteration:
-                missing.add(name)
-                continue
-            else:
-                colno = row[0]
-                assert isinstance(colno, int)
-                cursor = bdb.sql_execute(stattype_sql, {'stattype': stattype})
-                if cursor_value(cursor) == 0 and stattype != 'ignore':
-                    invalid.add(stattype)
-                    continue
-                variable_map[name] = colno
+            variable_map[name] = colno
     # XXX Would be nice to report these simultaneously.
     if missing:
         raise BQLError(bdb, 'No such columns in table %r: %r' %
@@ -611,18 +617,17 @@ def _create_population(bdb, phrase):
         raise BQLError(bdb, 'Invalid statistical types: %r' % (list(invalid),))
 
     # Insert variable records.
-    for clause in phrase.schema:
-        if isinstance(clause, ast.PopModelVar):
-            name = casefold(clause.name)
-            colno = variable_map[name]
-            stattype = casefold(clause.stattype)
-            if stattype == 'ignore':
-                continue
-            bdb.sql_execute('''
-                INSERT INTO bayesdb_variable
-                    (population_id, name, colno, stattype)
-                    VALUES (?, ?, ?, ?)
-            ''', (population_id, name, colno, stattype))
+    for nm, st in pop_model_vars:
+        name = casefold(nm)
+        colno = variable_map[name]
+        stattype = casefold(st)
+        if stattype == 'ignore':
+            continue
+        bdb.sql_execute('''
+            INSERT INTO bayesdb_variable
+                (population_id, name, colno, stattype)
+                VALUES (?, ?, ?, ?)
+        ''', (population_id, name, colno, stattype))
 
 def rename_table(bdb, old, new):
     assert core.bayesdb_has_table(bdb, old)

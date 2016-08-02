@@ -72,14 +72,8 @@ command(drop_pop)	::= K_DROP K_POPULATION ifexists(ifexists)
 pop_schema(one)		::= pop_clause(cl).
 pop_schema(many)	::= pop_schema(schema) T_SEMI pop_clause(cl).
 
-pop_clause(model)   ::= model_opt column_name(name) as_opt stattype(st).
+pop_clause(model)   ::= K_MODEL pop_columns(cols) K_AS stattype(st).
 pop_clause(ignore)  ::= K_IGNORE pop_columns(cols).
-
-model_opt(none)		::= .
-model_opt(one)		::= K_MODEL.
-
-as_opt(none)        ::= .
-as_opt(one)         ::= K_AS.
 
 stattype(st)        ::= L_NAME(name).
 
