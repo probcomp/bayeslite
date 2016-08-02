@@ -185,6 +185,11 @@ class BQLSemantics(object):
     def p_pop_var_manifest(self, name, st):     return ast.PopVar(name, st)
     def p_stattype_st(self, name):              return name
 
+    def p_model_opt_none(self):              return None
+    def p_model_opt_one(self):               return None
+    def p_as_opt_none(self):                 return None
+    def p_as_opt_one(self):                  return None
+
     def p_command_creategen(self, ifnotexists0, name, ifnotexists1, pop,
             baseline, metamodel, schema):
         ifnotexists = ifnotexists0 or ifnotexists1
