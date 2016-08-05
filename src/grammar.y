@@ -38,6 +38,10 @@ command(commit)     ::= K_COMMIT.
 command(createtab_as)   ::= K_CREATE temp_opt(temp) K_TABLE
                 ifnotexists(ifnotexists)
                 table_name(name) K_AS query(query).
+command(createtab_csv)   ::=
+                K_CREATE temp_opt(temp) K_TABLE
+                ifnotexists(ifnotexists)
+                table_name(name) K_FROM pathname(csv).
 command(droptab)    ::= K_DROP K_TABLE ifexists(ifexists) table_name(name).
 command(altertab)   ::= K_ALTER K_TABLE table_name(table)
                 altertab_cmds(cmds).
@@ -51,6 +55,8 @@ altertab_cmd(renamecol) ::= K_RENAME k_column_opt column_name(old)
 
 k_column_opt        ::= .
 k_column_opt        ::= K_COLUMN.
+
+pathname(p)         ::= L_NAME(name).
 
 /*
  * BQL Model Definition Language

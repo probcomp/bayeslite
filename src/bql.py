@@ -34,6 +34,7 @@ import bayeslite.core as core
 import bayeslite.txn as txn
 
 from bayeslite.exception import BQLError
+from bayeslite.read_csv import bayesdb_read_csv_file
 from bayeslite.schema import bayesdb_schema_required
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
@@ -86,6 +87,13 @@ def execute_phrase(bdb, phrase, bindings=()):
             winders, unwinders = out.getwindings()
             with compiler.bayesdb_wind(bdb, winders, unwinders):
                 bdb.sql_execute(out.getvalue(), out.getbindings())
+        return empty_cursor(bdb)
+
+    if isinstance(phrase, ast.CreateTabCsv):
+        # Already has a savepoint.
+        bayesdb_read_csv_file(
+            bdb, phrase.name, phrase.csv, header=True, create=True,
+            ifnotexists=phrase.ifnotexists)
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.CreateTabSim):

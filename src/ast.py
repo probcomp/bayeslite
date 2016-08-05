@@ -47,6 +47,13 @@ CreateTabSim = namedtuple('CreateTabSim', [
     'name',                     # XXX name
     'simulation',               # Simulate
 ])
+CreateTabCsv = namedtuple('CreateTabCsv', [
+    # XXX Database name, &c.
+    'temp',                     # boolean
+    'ifnotexists',              # boolean
+    'name',                     # XXX name
+    'csv',                      # csv filename string
+])
 DropTab = namedtuple('DropTab', [
     # XXX Database name, &c.
     'ifexists',

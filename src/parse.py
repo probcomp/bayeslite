@@ -162,10 +162,14 @@ class BQLSemantics(object):
             return ast.CreateTabSim(temp, ifnotexists, name, query)
         else:
             return ast.CreateTabAs(temp, ifnotexists, name, query)
+    def p_command_createtab_csv(self, temp, ifnotexists, name, csv):
+        return ast.CreateTabCsv(temp, ifnotexists, name, csv)
     def p_command_droptab(self, ifexists, name):
         return ast.DropTab(ifexists, name)
     def p_command_altertab(self, table, cmds):
         return ast.AlterTab(table, cmds)
+
+    def p_pathname_p(self, name):               return name
 
     def p_altertab_cmds_one(self, cmd):         return [cmd]
     def p_altertab_cmds_many(self, cmds, cmd):  cmds.append(cmd); return cmds
