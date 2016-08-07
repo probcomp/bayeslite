@@ -248,6 +248,8 @@ class BQLScanner(Plex.Scanner):
         (Plex.Str(";"),         grammar.T_SEMI),
         (Plex.Str("{"),         grammar.T_LCURLY),
         (Plex.Str("}"),         grammar.T_RCURLY),
+        (Plex.Str("["),         grammar.T_LSQUARE),
+        (Plex.Str("]"),         grammar.T_RSQUARE),
         (Plex.Str("("),         grammar.T_LROUND),
         (Plex.Str(")"),         grammar.T_RROUND),
         (Plex.Str("+"),         grammar.T_PLUS),

@@ -157,10 +157,22 @@ ifnotexists(some)   ::= K_IF K_NOT K_EXISTS.
 anmodelset_opt(none)    ::= .
 anmodelset_opt(some)    ::= K_MODEL|K_MODELS modelset(m).
 
+/* XXX Hackery for WITH BASELINE  */
 baseline_opt(none)  ::= .
-baseline_opt(some)  ::= K_WITH K_BASELINE baseline_name(baseline).
+baseline_opt(some)  ::=
+                K_WITH K_BASELINE baseline_name(baseline) param_opt(params).
 
 baseline_name(bl)   ::= L_NAME(name).
+
+param_opt(none)     ::= .
+param_opt(some)     ::= T_LSQUARE params(ps) T_RSQUARE.
+
+params(one)         ::= param(param).
+params(many)        ::= params(params) T_COMMA param(param).
+
+param(num)          ::= L_NAME(p) T_EQ L_STRING(num).
+param(nam)          ::= L_NAME(p) T_EQ L_NAME(nam).
+/* XXX Temporary generators?  */
 
 modelset_opt(none)  ::= .
 modelset_opt(some)  ::= modelset(m).

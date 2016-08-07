@@ -72,6 +72,12 @@ AlterTabRenameCol = namedtuple('AlterTabRenameCol', [
     'new',                      # XXX name
 ])
 
+# XXX Hackery for baselines.
+Baseline = namedtuple('Baseline', [
+    'name',
+    'params',
+])
+
 ### BQL Model Definition Language
 
 CreatePop = namedtuple('CreatePop', [

@@ -317,7 +317,7 @@ def execute_phrase(bdb, phrase, bindings=()):
 
         # Find the baseline.
         if phrase.baseline is not None\
-                and casefold(phrase.baseline) != 'crosscat':
+                and casefold(phrase.baseline.name) != 'crosscat':
             raise BQLError(bdb, 'No such baseline: %s' %
                 (repr(phrase.baseline),))
 
