@@ -88,9 +88,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 raise BQLError(bdb, 'CGPM already installed'
                     ' with unknown schema version: %d' % (version,))
 
-    def create_generator(self, bdb, generator_id, schema_tokens):
+    def create_generator(self, bdb, generator_id, schema_tokens, **kwargs):
         schema_ast = cgpm_schema.parse.parse(schema_tokens)
-        schema = _create_schema(bdb, generator_id, schema_ast)
+        schema = _create_schema(bdb, generator_id, schema_ast, **kwargs)
 
         # Store the schema.
         bdb.sql_execute('''
@@ -651,7 +651,7 @@ class CGPM_Cache(object):
         self.schema = {}
         self.engine = {}
 
-def _create_schema(bdb, generator_id, schema_ast):
+def _create_schema(bdb, generator_id, schema_ast, **kwargs):
     # Get some parameters.
     population_id = core.bayesdb_generator_population(bdb, generator_id)
     table = core.bayesdb_population_table(bdb, population_id)
@@ -675,12 +675,27 @@ def _create_schema(bdb, generator_id, schema_ast):
     must_exist = []
     unknown_stattype = {}
 
-    # XXX Convert all EXPOSED claues to latent clauses.
+    # XXX Convert all EXPOSED clauses to latent clauses.
     target_clauses = [c.exposed for c in schema_ast
         if isinstance(c, cgpm_schema.parse.Foreign) and len(c.exposed) > 0]
     new_latents = list(itertools.chain.from_iterable(target_clauses))
     new_clauses = [cgpm_schema.parse.Latent(v,s) for (v,s) in new_latents]
     schema_ast.extend(new_clauses)
+
+    # XXX Convert the baseline to a Foreign clause.
+    baseline = kwargs.get('baseline', None)
+    if baseline is not None and casefold(baseline.name) != 'crosscat':
+        # Retrieve all variable names in the population
+        outputs = core.bayesdb_variable_names(bdb, population_id, None)
+        # Convert string arguments to integers.
+        ps, vs = zip(*baseline.params)
+        vs_new = [int(v) for v in vs if v.isdigit()]
+        params = zip(ps, vs_new)
+        # Create the clause.
+        clause = cgpm_schema.parse.Foreign(
+            outputs, [], [], baseline.name, params)
+        # And add append it to the schema_ast.
+        schema_ast.append(clause)
 
     # Process each clause one by one.
     for clause in schema_ast:
