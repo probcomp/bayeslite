@@ -56,7 +56,7 @@ altertab_cmd(renamecol) ::= K_RENAME k_column_opt column_name(old)
 k_column_opt        ::= .
 k_column_opt        ::= K_COLUMN.
 
-pathname(p)         ::= L_NAME(name).
+pathname(p)         ::= L_STRING(name).
 
 /*
  * BQL Model Definition Language
