@@ -166,7 +166,8 @@ class CGPM_Semantics(object):
     def p_param_opt_none(self):                 return []
     def p_param_opt_some(self, ps):             return ps
     def p_params_one(self, param):              return [param]
-    def p_params_many(self, ps, p):             ps.append(p); return ps
+    def p_params_many(self, params, param):
+        params.append(param); return params
     def p_param_num(self, p, num):              return (p, num)
     def p_param_nam(self, p, nam):              return (p, nam)
 
