@@ -315,12 +315,6 @@ def execute_phrase(bdb, phrase, bindings=()):
                 (repr(metamodel_name),))
         metamodel = bdb.metamodels[metamodel_name]
 
-        # Find the baseline.
-        if phrase.baseline is not None\
-                and casefold(phrase.baseline) != 'crosscat':
-            raise BQLError(bdb, 'No such baseline: %s' %
-                (repr(phrase.baseline),))
-
         with bdb.savepoint():
             if core.bayesdb_has_generator(bdb, population_id, phrase.name):
                 if not phrase.ifnotexists:
@@ -355,7 +349,8 @@ def execute_phrase(bdb, phrase, bindings=()):
                 })
 
                 # Do any metamodel-specific initialization.
-                metamodel.create_generator(bdb, generator_id, phrase.schema)
+                metamodel.create_generator(
+                    bdb, generator_id, phrase.schema, baseline=phrase.baseline)
 
                 # Populate bayesdb_generator_column with any latent
                 # variables that metamodel.create_generator has added

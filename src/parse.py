@@ -258,10 +258,23 @@ class BQLSemantics(object):
     def p_ifnotexists_none(self):               return False
     def p_ifnotexists_some(self):               return True
 
+    # XXX Hackery for baselines.
     def p_baseline_opt_none(self):              return None
-    def p_baseline_opt_some(self, baseline):    return baseline
+    def p_baseline_opt_some(self, baseline, params):
+        return ast.Baseline(name=baseline, params=params)
 
     def p_baseline_name_bl(self, name):         return name
+
+    def p_param_opt_none(self):                 return []
+    def p_param_opt_some(self, ps):             return ps
+
+    def p_params_one(self, param):              return [param]
+    def p_params_many(self, params, param):
+        params.append(param); return params
+
+    def p_param_p(self, p, v):                  return (p, v)
+
+    # XXX Hackery for baselines.
 
     def p_anmodelset_opt_none(self):            return None
     def p_anmodelset_opt_some(self, m):         return sorted(m)
