@@ -687,9 +687,9 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
     if baseline is not None and casefold(baseline.name) != 'crosscat':
         # Retrieve all variable names in the population
         outputs = core.bayesdb_variable_names(bdb, population_id, None)
-        # Convert string arguments to integers.
+        # Convert the LITERAL namedtuples to their raw values.
         ps, vs = zip(*baseline.params)
-        vs_new = [int(v) for v in vs if v.isdigit()]
+        vs_new = [v.value for v in vs]
         params = zip(ps, vs_new)
         # Create the clause.
         clause = cgpm_schema.parse.Foreign(

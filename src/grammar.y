@@ -170,8 +170,7 @@ param_opt(some)     ::= T_LSQUARE params(ps) T_RSQUARE.
 params(one)         ::= param(param).
 params(many)        ::= params(params) T_COMMA param(param).
 
-param(num)          ::= L_NAME(p) T_EQ L_STRING(num).
-param(nam)          ::= L_NAME(p) T_EQ L_NAME(nam).
+param(p)            ::= L_NAME(p) T_EQ literal(v).
 /* XXX Temporary generators?  */
 
 modelset_opt(none)  ::= .
