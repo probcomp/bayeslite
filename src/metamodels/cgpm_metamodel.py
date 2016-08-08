@@ -675,12 +675,19 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
     must_exist = []
     unknown_stattype = {}
 
-    # XXX Convert all EXPOSED clauses to latent clauses.
-    target_clauses = [c.exposed for c in schema_ast
+    # XXX Convert all Foreign.exposed lists to Latent clauses.
+    # Retrieve Foreign clauses with exposed variables.
+    foreign_clauses = [c for c in schema_ast
         if isinstance(c, cgpm_schema.parse.Foreign) and len(c.exposed) > 0]
-    new_latents = list(itertools.chain.from_iterable(target_clauses))
-    new_clauses = [cgpm_schema.parse.Latent(v,s) for (v,s) in new_latents]
-    schema_ast.extend(new_clauses)
+    # Add the exposed variables to Foreign.outputs
+    for fc in foreign_clauses:
+        fc.outputs.extend([e[0] for e in fc.exposed])
+    # Convert exposed entries into Latent clauses.
+    latent_vars = list(itertools.chain.from_iterable(
+        c.exposed for c in foreign_clauses))
+    latent_clauses = [cgpm_schema.parse.Latent(v,s) for (v,s) in latent_vars]
+    # Append the Latent clauses to the ast.
+    schema_ast.extend(latent_clauses)
 
     # XXX Convert the baseline to a Foreign clause.
     baseline = kwargs.get('baseline', None)
