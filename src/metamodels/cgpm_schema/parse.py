@@ -34,11 +34,14 @@ KEYWORDS = {
     'category': grammar.K_CATEGORY,
     'expose': grammar.K_EXPOSE,
     'for': grammar.K_FOR,
+    'generative': grammar.K_GENERATIVE,
     'given': grammar.K_GIVEN,
     'latent': grammar.K_LATENT,
     'model': grammar.K_MODEL,
     'override': grammar.K_OVERRIDE,
+    'set': grammar.K_SET,
     'subsample': grammar.K_SUBSAMPLE,
+    'to': grammar.K_TO,
     'using': grammar.K_USING,
 }
 

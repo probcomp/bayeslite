@@ -30,10 +30,12 @@ schema(some)        ::= schema(s) T_SEMI|T_COMMA clause_opt(c).
 clause_opt(none)    ::= .
 clause_opt(some)    ::= clause(c).
 
-clause(basic)       ::= K_OVERRIDE K_CATEGORY K_MODEL K_FOR
-            var(var) K_USING dist(dist) param_opt(params).
+clause(basic)       ::=
+            K_SET K_CATEGORY K_MODEL K_FOR
+            var(var) K_USING|K_TO dist(dist) param_opt(params).
 clause(foreign)     ::=
-            K_OVERRIDE K_MODEL K_FOR vars(outputs) given_opt(inputs)
+                K_OVERRIDE generative_opt K_MODEL K_FOR vars(outputs)
+                given_opt(inputs)
                 exposing_opt(exposed)
                 K_USING foreign(name) param_opt(params).
 clause(subsamp)     ::= K_SUBSAMPLE L_NUMBER(n).
@@ -41,6 +43,9 @@ clause(latent)      ::= K_LATENT var(var) stattype(st).
 
 dist(name)          ::= L_NAME(dist).
 foreign(name)       ::= L_NAME(foreign).
+
+generative_opt      ::= .
+generative_opt      ::= K_GENERATIVE.
 
 given_opt(none)     ::= .
 given_opt(some)     ::= K_GIVEN vars(vars).
