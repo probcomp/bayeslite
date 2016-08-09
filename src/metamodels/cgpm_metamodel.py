@@ -585,7 +585,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 (generator,))
 
         # Deserialize the engine.
-        engine = Engine.from_metadata(json.loads(engine_json), rng=bdb.np_prng)
+        engine = Engine.from_metadata(
+            json.loads(engine_json), rng=bdb.np_prng, multiprocess=self._ncpu)
 
         # Cache it, if we can.
         if cache is not None:
