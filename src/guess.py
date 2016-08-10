@@ -286,3 +286,6 @@ def count_values(column):
     for v in column:
         counts[v] += 1
     return counts
+
+def guess_to_schema():
+    print "hello world"
