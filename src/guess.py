@@ -287,7 +287,7 @@ def count_values(column):
         counts[v] += 1
     return counts
 
-def guess_to_schema((guesser, bdb, tablename, group_output_by_type, col_names=[]):
+def guess_to_schema(guesser, bdb, tablename, group_output_by_type, col_names=[]):
     """
     The function converts guessed stattypes and reasons into the MML format for a schema (as a string).
     It produces this output for the variables in col_names(all columns by default) in tablename in bdb using guesser. 
