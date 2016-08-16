@@ -34,6 +34,7 @@ import bayeslite.core as core
 import bayeslite.txn as txn
 
 from bayeslite.exception import BQLError
+from bayeslite.guess import bayesdb_guess_stattypes
 from bayeslite.read_csv import bayesdb_read_csv_file
 from bayeslite.schema import bayesdb_schema_required
 from bayeslite.sqlite3_util import sqlite3_quote_name
@@ -582,7 +583,7 @@ def _create_population(bdb, phrase):
         [[(name, 'ignore') for name in s.names]
         for s in phrase.schema if isinstance(s, ast.PopIgnoreVars)]))
 
-    # Extract the guessed columns.
+    # Extract the columns to guess.
     pop_guess = list(itertools.chain.from_iterable(
         [s.names for s in phrase.schema if isinstance(s, ast.PopGuessVars)]))
     if '*' in pop_guess:
@@ -593,16 +594,20 @@ def _create_population(bdb, phrase):
                 % (pop_guess, ))
         # Retrieve all variables in the base table.
         avoid = set(casefold(t[0]) for t in pop_model_vars + pop_ignore_vars)
-        pop_guess_vars = [(t, 'numerical') for t in base_table_columns
-            if casefold(t) not in avoid]
-    else:
-        pop_guess_vars = [(t, 'numerical') for t in pop_guess]
+        pop_guess = [t for t in base_table_columns if casefold(t) not in avoid]
+    # Perform the guessing.
+    qt = sqlite3_quote_name(phrase.table)
+    qcns = ','.join(map(sqlite3_quote_name, pop_guess))
+    cursor = bdb.sql_execute('SELECT %s FROM %s' % (qcns, qt))
+    rows = cursor.fetchall()
+    pop_guess_stattypes = bayesdb_guess_stattypes(pop_guess, rows)
+    pop_guess_vars = zip(pop_guess, pop_guess_stattypes)
 
     # Pool all the variables and statistical types together.
     pop_all_vars = pop_model_vars + pop_ignore_vars + pop_guess_vars
 
-    # Check that everyone in the population is modeled. known contain all the
-    # variables for which a policy is known.
+    # Check that everyone in the population is modeled.
+    # `known` contains all the variables for which a policy is known.
     known = [casefold(t[0]) for t in pop_all_vars]
     not_found = [t for t in base_table_columns if casefold(t) not in known]
     if not_found:
