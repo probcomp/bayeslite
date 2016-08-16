@@ -596,12 +596,15 @@ def _create_population(bdb, phrase):
         avoid = set(casefold(t[0]) for t in pop_model_vars + pop_ignore_vars)
         pop_guess = [t for t in base_table_columns if casefold(t) not in avoid]
     # Perform the guessing.
-    qt = sqlite3_quote_name(phrase.table)
-    qcns = ','.join(map(sqlite3_quote_name, pop_guess))
-    cursor = bdb.sql_execute('SELECT %s FROM %s' % (qcns, qt))
-    rows = cursor.fetchall()
-    pop_guess_stattypes = bayesdb_guess_stattypes(pop_guess, rows)
-    pop_guess_vars = zip(pop_guess, pop_guess_stattypes)
+    if pop_guess:
+        qt = sqlite3_quote_name(phrase.table)
+        qcns = ','.join(map(sqlite3_quote_name, pop_guess))
+        cursor = bdb.sql_execute('SELECT %s FROM %s' % (qcns, qt))
+        rows = cursor.fetchall()
+        pop_guess_stattypes = bayesdb_guess_stattypes(pop_guess, rows)
+        pop_guess_vars = zip(pop_guess, pop_guess_stattypes)
+    else:
+        pop_guess_vars = []
 
     # Pool all the variables and statistical types together.
     pop_all_vars = pop_model_vars + pop_ignore_vars + pop_guess_vars
