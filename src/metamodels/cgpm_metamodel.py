@@ -691,8 +691,13 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
     schema_ast.extend(latent_clauses)
 
     # XXX Convert the baseline to a Foreign clause.
+    # Currently the baselines do not accept a schema, and will fail if
+    # `schema_ast` has any entries.
     baseline = kwargs.get('baseline', None)
     if baseline is not None and casefold(baseline.name) != 'crosscat':
+        if schema_ast:
+            raise BQLError(
+                bdb, 'Cannot accept schema with baseline: %s.' % schema_ast)
         # Retrieve all variable names in the population
         outputs = core.bayesdb_variable_names(bdb, population_id, None)
         # Convert the LITERAL namedtuples to their raw values.
