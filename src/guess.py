@@ -289,8 +289,10 @@ def count_values(column):
 
 def guess_to_schema(guesser, bdb, tablename, group_output_by_type, col_names=[]):
     """
-    The function converts guessed stattypes and reasons into the MML format for a schema (as a string).
-    It produces this output for the variables in col_names(all columns by default) in tablename in bdb using guesser. 
+    The function converts guessed stattypes and reasons into the MML 
+    format for a schema (as a string).
+    It produces this output for the variables in col_names(all columns by 
+    default) in tablename in bdb using guesser. 
 
 
     Parameters
@@ -304,8 +306,10 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type, col_names=[])
     group_output_by_type : bool
         Whether to group the variables by their guessed type 
     col_names : list(str), optional
-        Particular columns to guess the type of. [] by default -- includes all columns in the table. 
-        If a guesser does not take specific columns as input, it will ignore this parameter. 
+        Particular columns to guess the type of. [] by default -- includes 
+        all columns in the table. 
+        If a guesser does not take specific columns as input, it will ignore 
+        this parameter. 
 
 
     Returns
@@ -364,19 +368,25 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type, col_names=[])
                     schema += "\t " + var 
 
                     #don't append a comma for last item in list
-                    if not i == len(var_list) - 1:
+                    if i != len(var_list) - 1:
                         schema += ","
 
                     if len(reason) > 0:
-                        schema += " #" + reason #add reason as a comment
+                        schema += " '''#" + reason #add reason as a comment
 
-                    if stattype != 'IGNORE':
-                        schema += os.linesep
+                    schema += os.linesep #each variable (and reason) on a separate line 
+                    
+                    if len(reason) > 0: #if reason commented on previous line, need 
+                    #triple quote to re-enter schema string 
+                        schema += "'''"
                 
-                if stattype == 'IGNORE':
-                    schema += ";" + os.linesep 
-                else:  
-                    schema += "AS " + os.linesep + "\t" + stattype + ";" + os.linesep
+                if stattype != 'IGNORE':
+                    schema += "AS " + os.linesep + "\t" + stattype
+                    
+                schema += ";" + os.linesep
+                
+        schema = schema[:-2] #strip last semicolon and newline - not needed at end of schema
+
     else:  
         for var in guesses.keys():
             if len(var) > 0:
@@ -385,17 +395,24 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type, col_names=[])
                 guessed_reason = guessed_type_reason[1]
 
                 if guessed_type in ["key", "ignore"]: #ignore keys too  
-                    schema += "IGNORE " + var + ";"
+                    schema += "IGNORE " + var 
                 else:
-                    schema += "MODEL " + var + " AS " + guessed_type.upper() + ";"
+                    schema += "MODEL " + var + " AS " + guessed_type.upper() 
+                
+                if i != len(guesses.keys()) - 1: #append a semicolon if not last var in schema
+                    schema += ";"
 
                 if len(guessed_reason) > 0:
-                    schema += " #" + guessed_reason
+                    schema += "'''#" + guessed_reason 
                 else:
                     if guessed_type == "key":
-                        schema += " #This variable is a key."
+                        schema += "'''#This variable is a key." 
 
                 schema += os.linesep
+                
+                if len(guessed_reason) > 0 or guessed_type == "key": #if reason 
+                #commented on previous line, need triple quote to re-enter schema string
+                    schema += "'''" + os.linesep #for readability
 
             else:
                 warnings.warn("Encountered a zero-length column name. Please revise the .csv such that all columns have headers.")
