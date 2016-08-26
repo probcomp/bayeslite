@@ -25,6 +25,7 @@ cyclic.
 
 import collections
 import math
+import os 
 
 import bayeslite.core as core
 
@@ -287,6 +288,68 @@ def count_values(column):
         counts[v] += 1
     return counts
 
+def guesser_wrapper(guesser, bdb, tablename, col_names):
+        """
+        Standardizes running different guesser functions. Produces a dictionary output
+        mapping column names to (guessed stattype, reason) pairs. Called by guess_to_schema.
+
+        Parameters
+        ----------
+
+        guesser : function 
+            Stattype guesser function 
+        bdb : bdb object 
+        tablename : str 
+            Name of the table within bdb
+        col_names : list(str), optional 
+            Particular columns to guess the type of
+
+
+        Returns
+        -------
+        guesses_dict : dict 
+            Map of column_name(str):[guessed type(str), reason(str)]
+
+        """
+        try:
+            guesses_dict = guesser(bdb, tablename) #function(params) format for bdbcontrib guesser
+            
+            return guesses_dict
+        except:
+            pass
+        try:
+            #copied the following 4 lines from bayesdb_guess_generator which serve as setup for 
+            #bayesdb_guess_stattypes, so that we can run bayesdb_guess_stattypes (or a similarly 
+            #spec'd function) directly.
+            qt = sqlite3_quote_name(tablename)
+            
+            if len(col_names) > 0:
+                col_select_str = ', '.join(col_names)
+                cursor = bdb.sql_execute('SELECT ' + col_select_str + ' FROM %s' % (qt,))
+            else:
+                cursor = bdb.sql_execute('SELECT * FROM %s' % (qt,))
+                
+            column_names = [d[0] for d in cursor.description]
+            rows = cursor.fetchall()
+            
+            guesses = guesser(column_names, rows) #function(params) for bayeslite guesser
+                
+            #dictionary for column name:(guessed type, reason)
+            guesses_dict = {}
+            
+            for i in xrange(len(column_names)):
+                cur_guess = guesses[i]
+                col_name = column_names[i]
+                
+                if type(cur_guess) == str: #the guess is just a type, not with a reason 
+                    guesses_dict[col_name] = [cur_guess, ""] #append a blank reason 
+                else: #assume a (type, reason) pair
+                    guesses_dict[col_name] = list(cur_guess) #cast to a list in case it's a tuple 
+                
+            return guesses_dict 
+        except:
+            pass
+
 def guess_to_schema(guesser, bdb, tablename, group_output_by_type, col_names=[]):
     """
     The function converts guessed stattypes and reasons into the MML 
@@ -418,65 +481,3 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type, col_names=[])
                 warnings.warn("Encountered a zero-length column name. Please revise the .csv such that all columns have headers.")
             
     return schema
-
-    def guesser_wrapper(guesser, bdb, tablename, col_names):
-        """
-        Standardizes running different guesser functions. Produces a dictionary output
-        mapping column names to (guessed stattype, reason) pairs. Called by guess_to_schema.
-
-        Parameters
-        ----------
-
-        guesser : function 
-            Stattype guesser function 
-        bdb : bdb object 
-        tablename : str 
-            Name of the table within bdb
-        col_names : list(str), optional 
-            Particular columns to guess the type of
-
-
-        Returns
-        -------
-        guesses_dict : dict 
-            Map of column_name(str):[guessed type(str), reason(str)]
-
-        """
-        try:
-            guesses_dict = guesser(bdb, tablename) #function(params) format for bdbcontrib guesser
-            
-            return guesses_dict
-        except:
-            pass
-        try:
-            #copied the following 4 lines from bayesdb_guess_generator which serve as setup for 
-            #bayesdb_guess_stattypes, so that we can run bayesdb_guess_stattypes (or a similarly 
-            #spec'd function) directly.
-            qt = sqlite3_quote_name(tablename)
-            
-            if len(col_names) > 0:
-                col_select_str = ', '.join(col_names)
-                cursor = bdb.sql_execute('SELECT ' + col_select_str + ' FROM %s' % (qt,))
-            else:
-                cursor = bdb.sql_execute('SELECT * FROM %s' % (qt,))
-                
-            column_names = [d[0] for d in cursor.description]
-            rows = cursor.fetchall()
-            
-            guesses = guesser(column_names, rows) #function(params) for bayeslite guesser
-                
-            #dictionary for column name:(guessed type, reason)
-            guesses_dict = {}
-            
-            for i in xrange(len(column_names)):
-                cur_guess = guesses[i]
-                col_name = column_names[i]
-                
-                if type(cur_guess) == str: #the guess is just a type, not with a reason 
-                    guesses_dict[col_name] = [cur_guess, ""] #append a blank reason 
-                else: #assume a (type, reason) pair
-                    guesses_dict[col_name] = list(cur_guess) #cast to a list in case it's a tuple 
-                
-            return guesses_dict 
-        except:
-            pass
