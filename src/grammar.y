@@ -61,6 +61,8 @@ pathname(p)         ::= L_STRING(name).
 /*
  * BQL Model Definition Language
  */
+command(guess_schema)   ::= K_GUESS K_SCHEMA K_FOR table_name(table).
+
 command(create_pop) ::= K_CREATE K_POPULATION ifnotexists(ifnotexists)
                 population_name(name)
                 K_FOR table_name(table)
