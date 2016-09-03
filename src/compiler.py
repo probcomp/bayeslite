@@ -302,9 +302,10 @@ def compile_infer_explicit_predict(bdb, infer, out):
             vcn = col.column if col.name is None else col.name
             qvcn = sqlite3_quote_name(vcn)
             out.write("bql_json_get(c%u, 'value') AS %s" % (i, qvcn))
-            out.write(', ')
-            qccn = sqlite3_quote_name(col.confname)
-            out.write("bql_json_get(c%u, 'confidence') AS %s" % (i, qccn))
+            if col.confname is not None:
+                out.write(', ')
+                qccn = sqlite3_quote_name(col.confname)
+                out.write("bql_json_get(c%u, 'confidence') AS %s" % (i, qccn))
         elif isinstance(col, ast.SelColExp):
             out.write('c%u' % (i,))
             if col.name is not None:

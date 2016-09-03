@@ -372,9 +372,6 @@ class BQLSemantics(object):
     def p_infer_auto_column_one(self, col, name):
         return ast.InfColOne(col, name)
 
-    def p_conf_opt_none(self):                  return None
-    def p_conf_opt_some(self, conf):            return conf
-
     def p_withconf_opt_none(self):
         return ast.ExpLit(ast.LitInt(0))
     def p_withconf_opt_some(self, conf):        return conf
@@ -385,6 +382,9 @@ class BQLSemantics(object):
     def p_infer_exp_column_sel(self, c):        return c
     def p_infer_exp_column_pred(self, col, name, confname, nsamp):
         return ast.PredCol(col, name, confname, nsamp)
+
+    def p_conf_opt_none(self):                  return None
+    def p_conf_opt_some(self, confname):        return confname
 
     def p_select_quant_distinct(self):          return ast.SELQUANT_DISTINCT
     def p_select_quant_all(self):               return ast.SELQUANT_ALL
