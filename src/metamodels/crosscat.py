@@ -566,7 +566,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             raise BQLError(bdb, 'Crosscat already installed'
                 ' with unknown schema version: %d' % (version,))
 
-    def create_generator(self, bdb, generator_id, schema):
+    def create_generator(self, bdb, generator_id, schema, **kwargs):
         parsed_schema = crosscat_generator_schema.parse(
             schema, subsample_default=self._subsample)
         column_list = [
