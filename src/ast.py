@@ -100,6 +100,15 @@ PopGuessVars = namedtuple('PopGuessVars', [
 PopIgnoreVars = namedtuple('PopIgnoreVars', [
     'names',
 ])
+AlterPop = namedtuple('AlterPop', [
+    'population',                # XXX name
+    'commands',                 # AlterGen*
+])
+AlterPopStatType = namedtuple('AlterGenRenameGen', [
+    'names',
+    'stattype',
+])
+
 CreateGen = namedtuple('CreateGen', [
     'name',                     # XXX name
     'ifnotexists',              # boolean

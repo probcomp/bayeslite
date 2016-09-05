@@ -299,6 +299,50 @@ def execute_phrase(bdb, phrase, bindings=()):
             ''', (population_id,))
         return empty_cursor(bdb)
 
+    if isinstance(phrase, ast.AlterPop):
+        with bdb.savepoint():
+            population = phrase.population
+            if not core.bayesdb_has_population(bdb, population):
+                raise BQLError(bdb, 'No such population: %s' %
+                    (repr(population),))
+            population_id = core.bayesdb_get_population(bdb, population)
+            for cmd in phrase.commands:
+                if isinstance(cmd, ast.AlterPopStatType):
+                    # Check the no metamodels are defined for this population.
+                    generators = core.bayesdb_population_generators(
+                        bdb, population_id)
+                    if generators:
+                        raise BQLError(bdb, 'Cannot update statistical types '
+                            'for population %s, it has metamodels: %s'
+                            % (repr(population), repr(generators),))
+                    # Check all the variables are in the population.
+                    unknown = [c for c in cmd.names if not
+                        core.bayesdb_has_variable(bdb, population_id, None, c)]
+                    if unknown:
+                        raise BQLError(bdb, 'No such variables in population'
+                            ': %s' % (repr(unknown)))
+                    # Check the statistical type is valid.
+                    if not core.bayesdb_has_stattype(bdb, cmd.stattype):
+                        raise BQLError(bdb, 'Invalid statistical type'
+                            ': %r' % (repr(cmd.stattype),))
+                    # Perform the stattype update.
+                    colnos = [
+                        core.bayesdb_variable_number(
+                            bdb, population_id, None, c) for c in cmd.names
+                    ]
+                    qcolnos = ','.join('%d' % (colno,) for colno in colnos)
+                    update_stattype_sql = '''
+                        UPDATE bayesdb_variable SET stattype = ?
+                            WHERE population_id = ? AND colno IN (%s)
+                    ''' % (qcolnos,)
+                    bdb.sql_execute(
+                        update_stattype_sql,
+                        (casefold(cmd.stattype), population_id,))
+                else:
+                    assert False, 'Invalid ALTER POPULATION command: %s' % \
+                        (repr(cmd),)
+        return empty_cursor(bdb)
+
     if isinstance(phrase, ast.CreateGen):
         # Find the population.
         if not core.bayesdb_has_population(bdb, phrase.population):

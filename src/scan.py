@@ -112,13 +112,14 @@ keywords = {
     "rollback": grammar.K_ROLLBACK,
     "row": grammar.K_ROW,
     "samples": grammar.K_SAMPLES,
+    "schema": grammar.K_SCHEMA,
     "second": grammar.K_SECOND,
     "seconds": grammar.K_SECONDS,
     "select": grammar.K_SELECT,
     "set": grammar.K_SET,
-    "schema": grammar.K_SCHEMA,
     "similarity": grammar.K_SIMILARITY,
     "simulate": grammar.K_SIMULATE,
+    "stattype": grammar.K_STATTYPE,
     "stattypes": grammar.K_STATTYPES,
     "table": grammar.K_TABLE,
     "temp": grammar.K_TEMP,
@@ -135,6 +136,7 @@ keywords = {
     "with": grammar.K_WITH,
     "within": grammar.K_WITHIN,
 }
+
 def scan_name(_scanner, text):
     return keywords.get(text) or keywords.get(casefold(text)) or \
         grammar.L_NAME;

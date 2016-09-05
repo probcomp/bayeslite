@@ -183,6 +183,13 @@ class BQLSemantics(object):
         return ast.CreatePop(ifnotexists, name, table, schema)
     def p_command_drop_pop(self, ifexists, name):
         return ast.DropPop(ifexists, name)
+    def p_command_alterpop(self, population, cmds):
+        return ast.AlterPop(population, cmds)
+
+    def p_alterpop_cmds_one(self, cmd):         return [cmd]
+    def p_alterpop_cmds_many(self, cmds, cmd):  cmds.append(cmd); return cmds
+    def p_alterpop_cmd_stattype(self, cols, stattype):
+        return ast.AlterPopStatType(cols, stattype)
 
     def p_pop_schema_one(self, cl):             return [cl]
     def p_pop_schema_many(self, schema, cl):    schema.append(cl); return schema

@@ -80,6 +80,15 @@ with_schema_opt ::= K_WITH K_SCHEMA.
  *  set statistical type ...
  */
 
+command(alterpop)  ::= K_ALTER K_POPULATION
+                population_name(population) alterpop_cmds(cmds).
+
+alterpop_cmds(one)  ::= alterpop_cmd(cmd).
+alterpop_cmds(many) ::= alterpop_cmds(cmds) T_COMMA alterpop_cmd(cmd).
+
+alterpop_cmd(stattype) ::= K_SET K_STATTYPES|K_STATTYPE
+                K_FOR|K_OF pop_columns(cols) K_TO stattype(stattype).
+
 pop_schema(one)     ::= pop_clause(cl).
 pop_schema(many)    ::= pop_schema(schema) T_SEMI pop_clause(cl).
 
