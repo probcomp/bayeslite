@@ -22,47 +22,54 @@ import bayeslite
 
 from bayeslite.util import cursor_value
 
+csv_hdr = 'a,b,c,name,nick,age,muppet,animal\n'
+
 csv_data = '''1,2,3,foo,bar,nan,"",quagga
 4,5,6,baz,quux,42.0,"",eland
 7,8,6,zot,mumble,87.0,"zoot",caribou
 '''
 
-csv_hdr = 'a,b,c,name,nick,age,muppet,animal\n'
-
 csv_hdrdata = csv_hdr + csv_data
 
 def test_read_csv():
     with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
+
         f = StringIO.StringIO(csv_data)
         with pytest.raises(ValueError):
             # Table must already exist for create=False.
             bayeslite.bayesdb_read_csv(bdb, 't', f, header=False, create=False,
                 ifnotexists=False)
+
         f = StringIO.StringIO(csv_data)
         with pytest.raises(ValueError):
             # Must pass create=True for ifnotexists=True.
             bayeslite.bayesdb_read_csv(bdb, 't', f, header=False, create=False,
                 ifnotexists=True)
+
         f = StringIO.StringIO(csv_data)
         with pytest.raises(ValueError):
             # Must pass create=False for header=False.
             bayeslite.bayesdb_read_csv(bdb, 't', f, header=False, create=True,
                 ifnotexists=False)
+
         f = StringIO.StringIO(csv_data)
         with pytest.raises(ValueError):
             # Must pass create=False for header=False.
             bayeslite.bayesdb_read_csv(bdb, 't', f, header=False, create=True,
                 ifnotexists=True)
+
         f = StringIO.StringIO(csv_hdrdata)
         with pytest.raises(ValueError):
             # Table must already exist for create=False.
             bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=False,
                 ifnotexists=False)
+
         f = StringIO.StringIO(csv_hdrdata)
         with pytest.raises(ValueError):
             # Must pass create=True for ifnotexists=True.
             bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=False,
                 ifnotexists=True)
+
         f = StringIO.StringIO(csv_hdrdata)
         with pytest.raises(ValueError):
             with bdb.savepoint():
@@ -77,6 +84,7 @@ def test_read_csv():
             with bdb.savepoint():
                 bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True, ifnotexists=False)
+
         f = StringIO.StringIO(csv_hdrdata)
         bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True,
             ifnotexists=False)
@@ -88,6 +96,7 @@ def test_read_csv():
             (4,5,6,'baz','quux',42.0,u'',u'eland'),
             (7,8,6,'zot','mumble',87.0,u'zoot',u'caribou'),
         ]
+
         f = StringIO.StringIO(csv_hdr)
         bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True,
             ifnotexists=True)
@@ -97,10 +106,12 @@ def test_read_csv():
             'CREATE TABLE "t"' \
             '("a" NUMERIC,"b" NUMERIC,"c" NUMERIC,"name" NUMERIC,' \
             '"nick" NUMERIC,"age" NUMERIC,"muppet" NUMERIC,"animal" NUMERIC)'
+
         f = StringIO.StringIO(csv_data)
         bayeslite.bayesdb_read_csv(bdb, 't', f, header=False, create=False,
             ifnotexists=False)
         assert bdb.sql_execute('SELECT * FROM t').fetchall() == data + data
+
         f = StringIO.StringIO(csv_hdrdata)
         bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=False,
             ifnotexists=False)
