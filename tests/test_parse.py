@@ -487,35 +487,43 @@ def test_trivial_precedence_error():
 def test_trivial_commands():
     assert parse_bql_string('''
         create population satellites for satellites_ucs (
-            country_of_operator categorical,
-            orbit_type categorical,
-            launch_mass numerical,
-            perigee numerical,
-            apogee numerical,
-            period numerical
+            MODEL country_of_operator, orbit_type AS categorical;
+            MODEL launch_mass AS numerical;
+            MODEL perigee AS numerical;
+            MODEL apogee, period AS numerical
         )
     ''') == \
         [ast.CreatePop(False, 'satellites', 'satellites_ucs', [
-            ast.PopVar('country_of_operator', 'categorical'),
-            ast.PopVar('orbit_type', 'categorical'),
-            ast.PopVar('launch_mass', 'numerical'),
-            ast.PopVar('perigee', 'numerical'),
-            ast.PopVar('apogee', 'numerical'),
-            ast.PopVar('period', 'numerical'),
+            ast.PopModelVars(
+                ['country_of_operator', 'orbit_type'], 'categorical'),
+            ast.PopModelVars(['launch_mass'], 'numerical'),
+            ast.PopModelVars(['perigee'], 'numerical'),
+            ast.PopModelVars(['apogee', 'period'], 'numerical'),
         ])]
     assert parse_bql_string('drop population satellites') == \
         [ast.DropPop(False, 'satellites')]
     assert parse_bql_string('create generator t_cc for t using crosscat'
             '(xyz numerical, pqr categorical, lmn cyclic)') == \
-        [ast.CreateGen('t_cc', False, 't', 'crosscat', [
+        [ast.CreateGen('t_cc', False, 't', None, 'crosscat', [
             ['xyz', 'numerical'],
             ['pqr', 'categorical'],
             ['lmn', 'cyclic'],
         ])]
+    assert parse_bql_string('create generator t_cc for t with baseline crosscat'
+            '(xyz numerical, pqr categorical, lmn cyclic)') == \
+        [ast.CreateGen(
+            't_cc', False, 't',
+            ast.Baseline('crosscat', []),
+            None,       # Defaults to cgpm.
+            [
+                ['xyz', 'numerical'],
+                ['pqr', 'categorical'],
+                ['lmn', 'cyclic'],
+        ])]
     assert parse_bql_string('create generator t_cc if not exists'
             ' for t using crosscat'
             '(xyz numerical, pqr categorical, lmn cyclic)') == \
-        [ast.CreateGen('t_cc', True, 't', 'crosscat', [
+        [ast.CreateGen('t_cc', True, 't', None, 'crosscat', [
             ['xyz', 'numerical'],
             ['pqr', 'categorical'],
             ['lmn', 'cyclic'],
@@ -523,7 +531,7 @@ def test_trivial_commands():
     assert parse_bql_string('create generator if not exists t_cc'
             ' for t using crosscat'
             '(xyz numerical, pqr categorical, lmn cyclic)') == \
-        [ast.CreateGen('t_cc', True, 't', 'crosscat', [
+        [ast.CreateGen('t_cc', True, 't', None, 'crosscat', [
             ['xyz', 'numerical'],
             ['pqr', 'categorical'],
             ['lmn', 'cyclic'],
@@ -532,10 +540,10 @@ def test_trivial_commands():
     # make sure the empty-parens and no-parens cases are equivalent.)
     assert parse_bql_string('create generator t_cc'
             ' for t using crosscat()') == \
-        [ast.CreateGen('t_cc', False, 't', 'crosscat', [[]])]
+        [ast.CreateGen('t_cc', False, 't', None, 'crosscat', [[]])]
     assert parse_bql_string('create generator t_cc'
             ' for t using crosscat') == \
-        [ast.CreateGen('t_cc', False, 't', 'crosscat', [[]])]
+        [ast.CreateGen('t_cc', False, 't', None, 'crosscat', [[]])]
     assert parse_bql_string('initialize 1 model for t;') == \
         [ast.InitModels(False, 't', 1)]
     assert parse_bql_string('initialize 1 model if not exists for t;') == \
