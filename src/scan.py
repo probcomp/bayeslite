@@ -30,6 +30,7 @@ grep -o 'K_[A-Z][A-Z0-9_]*' < grammar.y | sort -u | awk '
 }'
 '''
 keywords = {
+    "accuracy": grammar.K_ACCURACY,
     "all": grammar.K_ALL,
     "alter": grammar.K_ALTER,
     "analyze": grammar.K_ANALYZE,

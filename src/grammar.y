@@ -213,7 +213,7 @@ analysis_token(primitive)   ::= ANY(t).
 simulate(s)     ::= K_SIMULATE simulate_columns(cols)
                 K_FROM population_name(population)
                 modelledby_opt(generator)
-                given_opt(constraints) limit(lim).
+                given_opt(constraints) limit(lim) accuracy_opt(acc).
 simulate(nolimit)   ::= K_SIMULATE simulate_columns(cols)
                 K_FROM population_name(population)
                 modelledby_opt(generator)
@@ -370,6 +370,9 @@ order_key(k)        ::= expression(e) order_sense(s).
 order_sense(none)   ::= .
 order_sense(asc)    ::= K_ASC.
 order_sense(desc)   ::= K_DESC.
+
+accuracy_opt(none)  ::= .
+accuracy_opt(some)  ::= K_ACCURACY L_INTEGER(acc).
 
 limit_opt(none)     ::= .
 limit_opt(some)     ::= limit(lim).

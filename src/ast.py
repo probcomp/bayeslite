@@ -157,6 +157,7 @@ Simulate = namedtuple('Simulate', [
     'generator',                # XXX name
     'constraints',              # [(XXX name, Exp*)]
     'nsamples',                 # Exp* or None
+    'accuracy',                 # int or None
 ])
 
 def is_query(phrase):

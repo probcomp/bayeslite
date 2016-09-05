@@ -372,7 +372,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             return _impute_numerical(sample)
 
     def simulate_joint(self, bdb, generator_id, targets, constraints, modelno,
-            num_predictions=None):
+            num_predictions=None, accuracy=None):
         if num_predictions is None:
             num_predictions = 1
         rowid = self._unique_rowid(
@@ -386,7 +386,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         engine = self._engine(bdb, generator_id)
         samples = engine.simulate(
             cgpm_rowid, cgpm_query, cgpm_evidence, N=num_predictions,
-            multiprocess=self._ncpu)
+            accuracy=accuracy, multiprocess=self._ncpu)
         weighted_samples = engine._process_samples(
             samples, cgpm_rowid, cgpm_evidence, multiprocess=self._ncpu)
         def map_value(colno, value):
@@ -408,7 +408,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         }
         engine = self._engine(bdb, generator_id)
         logpdfs = engine.logpdf(
-            cgpm_rowid, cgpm_query, cgpm_evidence, multiprocess=self._ncpu)
+            cgpm_rowid, cgpm_query, cgpm_evidence, accuracy=None,
+            multiprocess=self._ncpu)
         # XXX abstraction violation
         return engine._process_logpdfs(
             logpdfs, cgpm_rowid, cgpm_evidence, multiprocess=self._ncpu)

@@ -774,28 +774,44 @@ def test_simulate():
     assert parse_bql_string('create table s as'
             ' simulate x from t limit 10') == \
         [ast.CreateTabSim(False, False, 's',
-            ast.Simulate(['x'], 't', None, [], ast.ExpLit(ast.LitInt(10))))]
+            ast.Simulate(
+                ['x'], 't', None,
+                [],
+                ast.ExpLit(ast.LitInt(10)),
+                None)
+        )]
     assert parse_bql_string('create table if not exists s as'
-            ' simulate x, y from t given z = 0 limit 10') == \
+            ' simulate x, y from t given z = 0 limit 10 accuracy 2') == \
         [ast.CreateTabSim(False, True, 's',
-            ast.Simulate(['x', 'y'], 't', None,
+            ast.Simulate(
+                ['x', 'y'], 't', None,
                 [('z', ast.ExpLit(ast.LitInt(0)))],
-                ast.ExpLit(ast.LitInt(10))))]
+                ast.ExpLit(ast.LitInt(10)),
+                2)
+        )]
     assert parse_bql_string('create temp table s as'
             ' simulate x, y from t given z = 0 limit 10') == \
         [ast.CreateTabSim(True, False, 's',
-            ast.Simulate(['x', 'y'], 't', None,
+            ast.Simulate(
+                ['x', 'y'], 't', None,
                 [('z', ast.ExpLit(ast.LitInt(0)))],
-                ast.ExpLit(ast.LitInt(10))))]
-    assert parse_bql_string('create temp table if not exists s as'
-            ' simulate x, y from t given z = 0, w = 1 limit 10') == \
+                ast.ExpLit(ast.LitInt(10)),
+                None),
+        )]
+    assert parse_bql_string(
+            'create temp table if not exists s as'
+            ' simulate x, y from t given z = 0, w = 1'
+            ' limit 10 accuracy 19') == \
         [ast.CreateTabSim(True, True, 's',
-            ast.Simulate(['x', 'y'], 't', None,
+            ast.Simulate(
+                ['x', 'y'], 't', None,
                 [
                     ('z', ast.ExpLit(ast.LitInt(0))),
                     ('w', ast.ExpLit(ast.LitInt(1))),
                 ],
-                ast.ExpLit(ast.LitInt(10))))]
+                ast.ExpLit(ast.LitInt(10)),
+                19)
+        )]
 
 def test_is_bql():
     assert ast.is_bql(ast.ExpLit(ast.LitInt(0))) == False

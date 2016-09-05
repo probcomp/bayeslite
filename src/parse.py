@@ -310,13 +310,13 @@ class BQLSemantics(object):
     def p_analysis_token_compound(self, p):     return ['('] + p + [')']
     def p_analysis_token_primitive(self, t):    return [t]
 
-    def p_simulate_s(self, cols, population, generator, constraints, lim):
+    def p_simulate_s(self, cols, population, generator, constraints, lim, acc):
         return ast.Simulate(cols, population, generator, constraints,
-            lim.limit)
+            lim.limit, acc)
     def p_simulate_nolimit(self, cols, population, generator, constraints):
         # XXX Report source location.
         self.errors.append('simulate missing limit')
-        return ast.Simulate(cols, population, generator, constraints, 0)
+        return ast.Simulate(cols, population, generator, constraints, 0, None)
     def p_simulate_columns_one(self, col):
         return [col]
     def p_simulate_columns_many(self, cols, col):
@@ -465,6 +465,9 @@ class BQLSemantics(object):
 
     def p_limit_opt_none(self):                 return None
     def p_limit_opt_some(self, lim):            return lim
+
+    def p_accuracy_opt_none(self):              return None
+    def p_accuracy_opt_some(self, acc):         return acc
 
     def p_limit_n(self, limit):                 return ast.Lim(limit, None)
     def p_limit_offset(self, limit, offset):    return ast.Lim(limit, offset)

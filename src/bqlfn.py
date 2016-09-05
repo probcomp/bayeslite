@@ -432,7 +432,7 @@ def bql_json_get(bdb, blob, key):
     return json.loads(blob)[key]
 
 def bayesdb_simulate(bdb, population_id, constraints, colnos,
-        generator_id=None, numpredictions=1):
+        generator_id=None, numpredictions=1, accuracy=None):
     """Simulate rows from a generative model, subject to constraints.
 
     Returns a list of `numpredictions` tuples, with a value for each
@@ -456,20 +456,25 @@ def bayesdb_simulate(bdb, population_id, constraints, colnos,
     def simulate(generator_id, metamodel, n):
         return metamodel.simulate_joint(
             bdb, generator_id, targets,
-            constraints, None, num_predictions=n)
+            constraints, None, num_predictions=n, accuracy=accuracy)
     generator_ids = [generator_id] if generator_id is not None else \
         core.bayesdb_population_generators(bdb, population_id)
     metamodels = [core.bayesdb_generator_metamodel(bdb, generator_id)
         for generator_id in generator_ids]
-    loglikelihoods = map(loglikelihood, generator_ids, metamodels)
-    likelihoods = map(math.exp, loglikelihoods)
-    total_likelihood = sum(likelihoods)
-    if total_likelihood == 0:
-        # XXX Show the constraints with symbolic names.
-        raise BQLError(bdb, 'Impossible constraints: %r' % (constraints,))
-    probabilities = [likelihood/total_likelihood for likelihood in likelihoods]
-    countses = bdb.np_prng.multinomial(numpredictions, probabilities, size=1)
-    counts = countses[0]
+    if len(generator_ids) > 1:
+        loglikelihoods = map(loglikelihood, generator_ids, metamodels)
+        likelihoods = map(math.exp, loglikelihoods)
+        total_likelihood = sum(likelihoods)
+        if total_likelihood == 0:
+            # XXX Show the constraints with symbolic names.
+            raise BQLError(bdb, 'Impossible constraints: %r' % (constraints,))
+        probabilities = [likelihood/total_likelihood
+            for likelihood in likelihoods]
+        countses = bdb.np_prng.multinomial(
+            numpredictions, probabilities, size=1)
+        counts = countses[0]
+    else:
+        counts = [numpredictions]
     rowses = map(simulate, generator_ids, metamodels, counts)
     all_rows = [row for rows in rowses for row in rows]
     assert all(isinstance(row, (tuple, list)) for row in all_rows)

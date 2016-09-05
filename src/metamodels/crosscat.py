@@ -1109,7 +1109,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         return value, confidence
 
     def simulate_joint(self, bdb, generator_id, targets, constraints,
-            modelno, num_predictions=1):
+            modelno, num_predictions=1, accuracy=None):
         M_c = self._crosscat_metadata(bdb, generator_id)
         X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
         X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)

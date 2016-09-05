@@ -179,7 +179,8 @@ def execute_phrase(bdb, phrase, bindings=()):
             ''' % (qn, ','.join(qcns), ','.join('?' for qcn in qcns))
             for row in bqlfn.bayesdb_simulate(bdb, population_id, constraints,
                     colnos, generator_id=generator_id,
-                    numpredictions=nsamples):
+                    numpredictions=nsamples,
+                    accuracy=phrase.simulation.accuracy):
                 bdb.sql_execute(insert_sql, row)
         return empty_cursor(bdb)
 
