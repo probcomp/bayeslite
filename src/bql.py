@@ -645,8 +645,14 @@ def _create_population(bdb, phrase):
         qcns = ','.join(map(sqlite3_quote_name, pop_guess))
         cursor = bdb.sql_execute('SELECT %s FROM %s' % (qcns, qt))
         rows = cursor.fetchall()
+        # XXX This function returns a stattype called `key`, which we will add
+        # to the pop_ignore_vars.
         pop_guess_stattypes = bayesdb_guess_stattypes(pop_guess, rows)
         pop_guess_vars = zip(pop_guess, pop_guess_stattypes)
+        migrate = [(col, st) for col, st in pop_guess_vars if st=='key']
+        for col, st in migrate:
+            pop_guess_vars.remove((col,st))
+            pop_ignore_vars.append((col, 'ignore'))
     else:
         pop_guess_vars = []
 
