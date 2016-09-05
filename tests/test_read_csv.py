@@ -70,6 +70,13 @@ def test_read_csv():
                 bdb.sql_execute('CREATE TABLE t(x)')
                 bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True, ifnotexists=False)
+        with pytest.raises(IOError):
+            # Table must have no empty values in header.
+            csv_hdrdata_prime = csv_hdrdata[1:]
+            f = StringIO.StringIO(csv_hdrdata_prime)
+            with bdb.savepoint():
+                bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
+                    create=True, ifnotexists=False)
         f = StringIO.StringIO(csv_hdrdata)
         bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True,
             ifnotexists=False)
