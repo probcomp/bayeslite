@@ -91,10 +91,16 @@ def execute_phrase(bdb, phrase, bindings=()):
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.CreateTabCsv):
-        # Already has a savepoint.
-        bayesdb_read_csv_file(
-            bdb, phrase.name, phrase.csv, header=True, create=True,
-            ifnotexists=phrase.ifnotexists)
+        with bdb.savepoint():
+            table_exists = core.bayesdb_has_table(bdb, phrase.name)
+            if table_exists:
+                if phrase.ifnotexists:
+                    return empty_cursor(bdb)
+                else:
+                    raise BQLError(bdb, 'Table already exists: %s' %
+                        (repr(phrase.name),))
+            bayesdb_read_csv_file(
+                bdb, phrase.name, phrase.csv, header=True, create=True)
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.CreateTabSim):
