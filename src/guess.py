@@ -290,14 +290,13 @@ def count_values(column):
     return counts
 
 def guesser_wrapper(guesser, bdb, tablename, col_names):
-        """
-        Standardizes running different guesser functions. Produces a dictionary
-        output mapping column names to (guessed stattype, reason) pairs. Called
-        by guess_to_schema.
+        """Standardizes execution of different guesser functions.
+
+        Produces a dictionary output mapping column names to (guessed stattype,
+        reason) pairs. Called by `guess_to_schema`.
 
         Parameters
         ----------
-
         guesser : function
             Stattype guesser function.
         bdb : bdb object
@@ -305,7 +304,6 @@ def guesser_wrapper(guesser, bdb, tablename, col_names):
             Name of the table within bdb.
         col_names : list(str), optional
             Particular columns to guess the type of.
-
 
         Returns
         -------
@@ -316,10 +314,12 @@ def guesser_wrapper(guesser, bdb, tablename, col_names):
         try:
             # Try input format of the bdbcontrib guesser function.
             guesses_dict = guesser(bdb, tablename)
-
             return guesses_dict
+        #XXX FIXME: Specify an exception type to capture.
         except:
             pass
+
+        #XXX FIXME: Why is this code in a try-except block?
         try:
             # Copied the following four lines from bayesdb_guess_generator,
             # which serve as setup for bayesdb_guess_stattypes, so that we can
@@ -343,16 +343,13 @@ def guesser_wrapper(guesser, bdb, tablename, col_names):
             # Dictionary for column name:(guessed type, reason).
             guesses_dict = {}
 
-            for i in xrange(len(column_names)):
-                cur_guess = guesses[i]
-                col_name = column_names[i]
-
+            for cur_guess, col_name in zip(guesses, column_names):
                 # If the guess is just a type without a reason, append a blank
                 # reason.
                 if isinstance(cur_guess, str):
                     guesses_dict[col_name] = [cur_guess, '']
                 # Else assume a (type, reason) pair and cast to a list in case
-                # it's a tuple.
+                # it is a tuple.
                 else:
                     guesses_dict[col_name] = list(cur_guess)
 
@@ -360,24 +357,21 @@ def guesser_wrapper(guesser, bdb, tablename, col_names):
         except:
             pass
 
-def guess_to_schema(guesser, bdb, tablename, group_output_by_type,
-    col_names=[]):
-    """
-    The function converts guessed stattypes and reasons into the MML
-    format for a schema (as a string).
-    It produces this output for the variables in col_names(all columns by
-    default) in tablename in bdb using guesser.
+def guess_to_schema(guesser, bdb, tablename, group_output_by_type=None,
+        col_names=None):
+    """Converts guessed stattypes and reasons into MML format for a schema.
 
+    It produces this output for the variables in `col_names` (all columns by
+    default) of `tablename` in `bdb` using `guesser`.
 
     Parameters
     ----------
-
     guesser : function
-        Stattype guesser function.
+        Statistical data type guesser function.
     bdb : bdb object
     tablename : str
         Name of the table within bdb.
-    group_output_by_type : bool
+    group_output_by_type : bool, optional.
         Whether to group the variables by their guessed type.
     col_names : list(str), optional
         Particular columns to guess the type of. [] by default -- includes
@@ -388,15 +382,19 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type,
 
     Returns
     -------
-
     schema : str
         Describes a schema in MML format.
 
     """
-    guesses = guesser_wrapper(guesser, bdb, tablename, col_names)
-    schema = ''
+    if col_names is None:
+        col_names = []
+    if group_output_by_type is None:
+        group_output_by_type = True
 
-    if group_output_by_type:
+    guesses = guesser_wrapper(guesser, bdb, tablename, col_names)
+
+    def grouped_schema():
+        schema = ''
         categorical = []
         numerical = []
         ignore = []
@@ -418,16 +416,17 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type,
                         ignore.append([var, guessed_reason])
                     else:
                         ignore.append([var, 'This variable is a key.'])
-            else:
-                warnings.warn('''Encountered a zero-length column name. Please
-                    revise the .csv such that all columns have headers.''')
+            else: # XXX TODO: Convert warning into a BQLError.
+                warnings.warn(
+                    'Encountered a zero-length column name. Please '
+                    'revise the .csv such that all columns have headers.')
 
-        stattype_var_list_pairs = [['CATEGORICAL', categorical],
-                ['NUMERICAL', numerical], ['IGNORE', ignore]]
+        stattype_var_list_pairs = [
+            ['CATEGORICAL', categorical],
+            ['NUMERICAL', numerical], ['IGNORE', ignore]
+        ]
 
-        for pair in stattype_var_list_pairs:
-            stattype = pair[0]
-            var_list = pair[1]
+        for stattype, var_list in stattype_var_list_pairs:
             # Remove any empty-string variable names.
             var_list = filter(None, var_list)
 
@@ -464,13 +463,15 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type,
                 if stattype != 'IGNORE':
                     schema += 'AS %s \t %s' % (os.linesep, stattype,)
 
-                schema += '; %s' % (os.linesep,)
+                schema += ';%s' % (os.linesep,)
 
         # Strip last semicolon and newline - not needed at end of schema.
         schema = schema[:-2]
+        return schema
 
-    else:
-        for var in guesses.keys():
+    def ungrouped_schema():
+        schema = ''
+        for i, var in enumerate(guesses.keys()):
             if len(var) > 0:
                 guessed_type_reason = guesses[var]
                 guessed_type = guessed_type_reason[0].lower()
@@ -498,9 +499,10 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type,
                 # re-enter schema string.
                 if len(guessed_reason) > 0 or guessed_type == 'key':
                     schema += "''' %s" % (os.linesep,)
+            else: # XXX TODO: Convert warning into a BQLError.
+                warnings.warn(
+                    'Encountered a zero-length column name. Please '
+                    'revise the .csv such that all columns have headers.')
+        return schema
 
-            else:
-                warnings.warn('''Encountered a zero-length column name. Please
-                    revise the .csv such that all columns have headers.''')
-
-    return schema
+    return grouped_schema() if group_output_by_type else ungrouped_schema()

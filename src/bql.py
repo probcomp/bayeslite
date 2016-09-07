@@ -283,8 +283,11 @@ def execute_phrase(bdb, phrase, bindings=()):
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.GuessSchema):
-        schema = guess.guess_to_schema(guess.bayesdb_guess_stattypes,
-            bdb, phrase.table, True)
+        if not core.bayesdb_has_table(bdb, phrase.table):
+            raise BQLError(bdb, 'No such table : %s' % phrase.table)
+        schema = guess.guess_to_schema(
+            guess.bayesdb_guess_stattypes,
+            bdb, phrase.table)
         # Print schema to console, so user can edit it and/or copy/paste it into
         # the schema definition when creating a population.
         print schema
