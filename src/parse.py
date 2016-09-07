@@ -179,6 +179,9 @@ class BQLSemantics(object):
         return ast.AlterTabRenameCol(old, new)
 
     # BQL Model Definition Language
+    def p_command_guess_schema(self, table):
+        return ast.GuessSchema(table)
+
     def p_command_create_pop(self, ifnotexists, name, table, schema):
         return ast.CreatePop(ifnotexists, name, table, schema)
     def p_command_drop_pop(self, ifexists, name):

@@ -31,6 +31,7 @@ import bayeslite.ast as ast
 import bayeslite.bqlfn as bqlfn
 import bayeslite.compiler as compiler
 import bayeslite.core as core
+import bayeslite.guess as guess
 import bayeslite.txn as txn
 
 from bayeslite.exception import BQLError
@@ -279,6 +280,14 @@ def execute_phrase(bdb, phrase, bindings=()):
                 else:
                     assert False, 'Invalid alter table command: %s' % \
                         (cmd,)
+        return empty_cursor(bdb)
+
+    if isinstance(phrase, ast.GuessSchema):
+        schema = guess.guess_to_schema(guess.bayesdb_guess_stattypes,
+            bdb, phrase.table, True)
+        # Print schema to console, so user can edit it and/or copy/paste it into
+        # the schema definition when creating a population.
+        print schema
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.CreatePop):
