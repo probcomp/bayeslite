@@ -26,6 +26,7 @@ cyclic.
 import collections
 import math
 import os
+import warnings
 
 import bayeslite.core as core
 
@@ -422,7 +423,7 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type,
                     revise the .csv such that all columns have headers.''')
 
         stattype_var_list_pairs = [['CATEGORICAL', categorical],
-        ['NUMERICAL', numerical], ['IGNORE', ignore]]
+                ['NUMERICAL', numerical], ['IGNORE', ignore]]
 
         for pair in stattype_var_list_pairs:
             stattype = pair[0]
