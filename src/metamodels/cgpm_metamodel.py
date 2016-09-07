@@ -236,19 +236,22 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         def retrieve_analyze_variables(ast):
             # Transition all variables by default.
-            if len(ast) == 0:
-                variables = core.bayesdb_variable_names(bdb, population_id,
-                    generator_id)
-            # Exactly 1 clause supported.
-            elif len(ast) == 1:
-                clause = ast[0]
+            variables = None
+
+            # Exactly 1 VARIABLES or SKIP clause supported for simplicity.
+            seen_variables, seen_skip, seen_optimized = False, False, False
+            for clause in ast:
                 # Transition user specified variables only.
                 if isinstance(clause, cgpm_analyze.parse.Variables):
+                    if seen_variables or seen_skip:
+                        raise BQLError(bdb,
+                            'Only 1 VARIABLES or SKIP clause allowed in ANALYZE')
+                    seen_variables = True
                     included = set()
                     unknown = set()
                     for var in clause.vars:
-                        if not core.bayesdb_has_variable(bdb, population_id,
-                                generator_id, var):
+                        if not core.bayesdb_has_variable(
+                                bdb, population_id, generator_id, var):
                             unknown.add(var)
                         included.add(var)
                     if unknown:
@@ -257,11 +260,15 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                     variables = sorted(included)
                 # Transition all variables except user specified skip.
                 elif isinstance(clause, cgpm_analyze.parse.Skip):
+                    if seen_variables or seen_skip:
+                        raise BQLError(bdb,
+                            'Only 1 VARIABLES or SKIP clause allowed in ANALYZE')
+                    seen_skip = True
                     excluded = set()
                     unknown = set()
                     for var in clause.vars:
-                        if not core.bayesdb_has_variable(bdb, population_id,
-                                generator_id, var):
+                        if not core.bayesdb_has_variable(
+                                bdb, population_id, generator_id, var):
                             unknown.add(var)
                         excluded.add(var)
                     if unknown:
@@ -270,25 +277,49 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                     all_vars = core.bayesdb_variable_names(
                         bdb, population_id, generator_id)
                     variables = sorted(set(all_vars) - excluded)
+                elif isinstance(clause, cgpm_analyze.parse.Optimized):
+                    seen_optimized = True
                 # Unknown/impossible clause.
                 else:
                     raise ValueError('Unknown clause in ANALYZE: %s.' % ast)
-            # Crash if more than 1 clause.
-            else:
-                raise ValueError('1 clause permitted in ANALYZE: %s.' % ast)
-            return variables
 
-        # Retrieve target variables.
+            if variables is None:
+                variables = core.bayesdb_variable_names(
+                    bdb, population_id, generator_id)
+
+            varnos = [core.bayesdb_variable_number(
+                bdb, population_id, generator_id, v) for v in variables]
+
+            # TODO Perform error checking if the OPTIMIZED clause is used.
+            # In particular, the variables in OPTIMIZED must correspond
+            # EXACTLY to the variables that are modeled by the CrossCat
+            # baseline. Avoided this check for now since the nature of a
+            # variable is not stored in the bdb. For now, just check the
+            # user did not include a VARIABLES clause.
+            if seen_optimized:
+                if seen_variables:
+                    raise BQLError(bdb, 'OPTIMIZED incompatible with VARIABLES')
+                # TODO Check if varnos are exactly the CrossCat variables.
+                # raise BQLError(bdb,
+                #     'The OPTIMIZED phrase in ANALYZE must target all the '
+                #     'variables modeled by the baseline, only. '
+                #     'Use SKIP to explicitly ignore analysis of overriden '
+                #     'variables')
+
+            return varnos, seen_optimized
+
+        # Retrieve target variables and whether optimized.
         analyze_ast = cgpm_analyze.parse.parse(program)
-        variables = retrieve_analyze_variables(analyze_ast)
-        varnos = [core.bayesdb_variable_number(bdb, population_id,
-                generator_id, v)
-            for v in variables]
+        varnos, optimized = retrieve_analyze_variables(analyze_ast)
 
-        # Run transition.
         engine = self._engine(bdb, generator_id)
-        engine.transition(
-            N=iterations, S=max_seconds, cols=varnos, multiprocess=self._ncpu)
+        if optimized:
+            engine.transition_lovecat(
+                N=iterations, S=max_seconds, multiprocess=self._ncpu)
+        else:
+            engine.transition(
+                N=iterations, S=max_seconds, cols=varnos,
+                multiprocess=self._ncpu)
 
         # Serialize the engine.
         engine_json = json_dumps(engine.to_metadata())
