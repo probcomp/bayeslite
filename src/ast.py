@@ -81,8 +81,7 @@ Baseline = namedtuple('Baseline', [
 ### BQL Model Definition Language
 GuessSchema = namedtuple('GuessSchema', [
     'table'
-    ])
-
+])
 CreatePop = namedtuple('CreatePop', [
     'ifnotexists',
     'name',

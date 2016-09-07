@@ -25,7 +25,7 @@ cyclic.
 
 import collections
 import math
-import os 
+import os
 
 import bayeslite.core as core
 
@@ -185,7 +185,7 @@ def bayesdb_guess_stattypes(column_names, rows, null_values=None,
                 column = [row[ci] for row in rows]
                 ints = integerify(column)
                 if ints:
-                   column = ints 
+                   column = ints
                 if not keyable_p(column):
                     raise ValueError('Column non-unique but specified as key'
                         ': %s' % (repr(column_name),))
@@ -290,194 +290,216 @@ def count_values(column):
 
 def guesser_wrapper(guesser, bdb, tablename, col_names):
         """
-        Standardizes running different guesser functions. Produces a dictionary output
-        mapping column names to (guessed stattype, reason) pairs. Called by guess_to_schema.
+        Standardizes running different guesser functions. Produces a dictionary
+        output mapping column names to (guessed stattype, reason) pairs. Called
+        by guess_to_schema.
 
         Parameters
         ----------
 
-        guesser : function 
-            Stattype guesser function 
-        bdb : bdb object 
-        tablename : str 
-            Name of the table within bdb
-        col_names : list(str), optional 
-            Particular columns to guess the type of
+        guesser : function
+            Stattype guesser function.
+        bdb : bdb object
+        tablename : str
+            Name of the table within bdb.
+        col_names : list(str), optional
+            Particular columns to guess the type of.
 
 
         Returns
         -------
-        guesses_dict : dict 
-            Map of column_name(str):[guessed type(str), reason(str)]
+        guesses_dict : dict
+            Map of column_name(str):[guessed type(str), reason(str)].
 
         """
         try:
-            guesses_dict = guesser(bdb, tablename) #function(params) format for bdbcontrib guesser
-            
+            # Try input format of the bdbcontrib guesser function.
+            guesses_dict = guesser(bdb, tablename)
+
             return guesses_dict
         except:
             pass
         try:
-            #copied the following 4 lines from bayesdb_guess_generator which serve as setup for 
-            #bayesdb_guess_stattypes, so that we can run bayesdb_guess_stattypes (or a similarly 
-            #spec'd function) directly.
+            # Copied the following four lines from bayesdb_guess_generator,
+            # which serve as setup for bayesdb_guess_stattypes, so that we can
+            # run bayesdb_guess_stattypes (or a similarly spec'd function)
+            # directly.
             qt = sqlite3_quote_name(tablename)
-            
+
             if len(col_names) > 0:
                 col_select_str = ', '.join(col_names)
-                cursor = bdb.sql_execute('SELECT ' + col_select_str + ' FROM %s' % (qt,))
+                cursor = bdb.sql_execute(
+                    'SELECT %s FROM %s' % (col_select_str, qt,))
             else:
                 cursor = bdb.sql_execute('SELECT * FROM %s' % (qt,))
-                
+
             column_names = [d[0] for d in cursor.description]
             rows = cursor.fetchall()
-            
-            guesses = guesser(column_names, rows) #function(params) for bayeslite guesser
-                
-            #dictionary for column name:(guessed type, reason)
+
+            # Try input format of the bayeslite guesser function.
+            guesses = guesser(column_names, rows)
+
+            # Dictionary for column name:(guessed type, reason).
             guesses_dict = {}
-            
+
             for i in xrange(len(column_names)):
                 cur_guess = guesses[i]
                 col_name = column_names[i]
-                
-                if type(cur_guess) == str: #the guess is just a type, not with a reason 
-                    guesses_dict[col_name] = [cur_guess, ""] #append a blank reason 
-                else: #assume a (type, reason) pair
-                    guesses_dict[col_name] = list(cur_guess) #cast to a list in case it's a tuple 
-                
-            return guesses_dict 
+
+                # If the guess is just a type without a reason, append a blank
+                # reason.
+                if isinstance(cur_guess, str):
+                    guesses_dict[col_name] = [cur_guess, '']
+                # Else assume a (type, reason) pair and cast to a list in case
+                # it's a tuple.
+                else:
+                    guesses_dict[col_name] = list(cur_guess)
+
+            return guesses_dict
         except:
             pass
 
-def guess_to_schema(guesser, bdb, tablename, group_output_by_type, col_names=[]):
+def guess_to_schema(guesser, bdb, tablename, group_output_by_type,
+    col_names=[]):
     """
-    The function converts guessed stattypes and reasons into the MML 
+    The function converts guessed stattypes and reasons into the MML
     format for a schema (as a string).
-    It produces this output for the variables in col_names(all columns by 
-    default) in tablename in bdb using guesser. 
+    It produces this output for the variables in col_names(all columns by
+    default) in tablename in bdb using guesser.
 
 
     Parameters
     ----------
 
     guesser : function
-        Stattype guesser function
+        Stattype guesser function.
     bdb : bdb object
     tablename : str
-        Name of the table within bdb
+        Name of the table within bdb.
     group_output_by_type : bool
-        Whether to group the variables by their guessed type 
+        Whether to group the variables by their guessed type.
     col_names : list(str), optional
-        Particular columns to guess the type of. [] by default -- includes 
-        all columns in the table. 
-        If a guesser does not take specific columns as input, it will ignore 
-        this parameter. 
+        Particular columns to guess the type of. [] by default -- includes
+        all columns in the table.
+        If a guesser does not take specific columns as input, it will ignore
+        this parameter.
 
 
     Returns
     -------
 
     schema : str
-        describes a schema in MML format 
+        Describes a schema in MML format.
 
     """
     guesses = guesser_wrapper(guesser, bdb, tablename, col_names)
-    schema = ""
-    
+    schema = ''
+
     if group_output_by_type:
-        categorical = [] 
+        categorical = []
         numerical = []
         ignore = []
-        
+
         for var in guesses.keys():
             guessed_type_reason = guesses[var]
             guessed_type = guessed_type_reason[0].lower()
             guessed_reason = guessed_type_reason[1]
-            
+
             if len(var) > 0:
-                if guessed_type == "categorical":
+                if guessed_type == 'categorical':
                     categorical.append([var, guessed_reason])
-                elif guessed_type == "numerical":
+                elif guessed_type == 'numerical':
                     numerical.append([var, guessed_reason])
-                elif guessed_type == "ignore": 
+                elif guessed_type == 'ignore':
                     ignore.append([var, guessed_reason])
-                elif guessed_type == "key":
+                elif guessed_type == 'key':
                     if len(guessed_reason) > 0:
                         ignore.append([var, guessed_reason])
                     else:
-                        ignore.append([var, "This variable is a key."])
+                        ignore.append([var, 'This variable is a key.'])
             else:
-                warnings.warn("Encountered a zero-length column name. Please revise the .csv such that all columns have headers.")
-      
-        stattype_var_list_pairs = [['CATEGORICAL', categorical], ['NUMERICAL', numerical], ['IGNORE', ignore]]
-    
+                warnings.warn('''Encountered a zero-length column name. Please
+                    revise the .csv such that all columns have headers.''')
+
+        stattype_var_list_pairs = [['CATEGORICAL', categorical],
+        ['NUMERICAL', numerical], ['IGNORE', ignore]]
+
         for pair in stattype_var_list_pairs:
             stattype = pair[0]
             var_list = pair[1]
-            var_list = filter(None, var_list) #remove any empty-string variable names
-            
+            # Remove any empty-string variable names.
+            var_list = filter(None, var_list)
+
             if len(var_list) > 0:
                 if stattype == 'IGNORE':
-                    schema += "IGNORE " 
+                    schema += 'IGNORE '
                 else:
-                    schema += "MODEL " + os.linesep + " "
+                    schema += 'MODEL %s ' % (os.linesep,)
 
                 for i in xrange(len(var_list)):
-                    var_reason = var_list[i] #list of variable and reason it was classified as such 
+                    # List of variable and reason it was classified as such.
+                    var_reason = var_list[i]
                     var = var_reason[0]
                     reason = var_reason[1]
 
-                    schema += "\t " + var 
+                    schema += '\t %s' % (var,)
 
-                    #don't append a comma for last item in list
+                    # Don't append a comma for last item in list.
                     if i != len(var_list) - 1:
-                        schema += ","
+                        schema += ','
 
                     if len(reason) > 0:
-                        schema += " '''#" + reason #add reason as a comment
+                        # Add reason as a comment.
+                        schema += " '''# %s" % (reason,)
 
-                    schema += os.linesep #each variable (and reason) on a separate line 
-                    
-                    if len(reason) > 0: #if reason commented on previous line, need 
-                    #triple quote to re-enter schema string 
+                    # Each variable (and reason) on a separate line.
+                    schema += os.linesep
+
+                    # If reason was commented on previous line, need triple
+                    # quote to re-enter schema string.
+                    if len(reason) > 0:
                         schema += "'''"
-                
-                if stattype != 'IGNORE':
-                    schema += "AS " + os.linesep + "\t" + stattype
-                    
-                schema += ";" + os.linesep
-                
-        schema = schema[:-2] #strip last semicolon and newline - not needed at end of schema
 
-    else:  
+                if stattype != 'IGNORE':
+                    schema += 'AS %s \t %s' % (os.linesep, stattype,)
+
+                schema += '; %s' % (os.linesep,)
+
+        # Strip last semicolon and newline - not needed at end of schema.
+        schema = schema[:-2]
+
+    else:
         for var in guesses.keys():
             if len(var) > 0:
                 guessed_type_reason = guesses[var]
                 guessed_type = guessed_type_reason[0].lower()
                 guessed_reason = guessed_type_reason[1]
 
-                if guessed_type in ["key", "ignore"]: #ignore keys too  
-                    schema += "IGNORE " + var 
+                # Ignore the type key as well as ignore.
+                if guessed_type in ['key', 'ignore']:
+                    schema += 'IGNORE %s' % (var,)
                 else:
-                    schema += "MODEL " + var + " AS " + guessed_type.upper() 
-                
-                if i != len(guesses.keys()) - 1: #append a semicolon if not last var in schema
-                    schema += ";"
+                    schema += 'MODEL %s AS %s' % (var, guessed_type.upper(),)
+
+                # Append a semicolon if not last var in schema.
+                if i != len(guesses.keys()) - 1:
+                    schema += ';'
 
                 if len(guessed_reason) > 0:
-                    schema += "'''#" + guessed_reason 
+                    schema += "'''# %s" % (guessed_reason,)
                 else:
-                    if guessed_type == "key":
-                        schema += "'''#This variable is a key." 
+                    if guessed_type == 'key':
+                        schema += "'''# This variable is a key."
 
                 schema += os.linesep
-                
-                if len(guessed_reason) > 0 or guessed_type == "key": #if reason 
-                #commented on previous line, need triple quote to re-enter schema string
-                    schema += "'''" + os.linesep #for readability
+
+                # If reason was commented on previous line, need triple quote to
+                # re-enter schema string.
+                if len(guessed_reason) > 0 or guessed_type == 'key':
+                    schema += "''' %s" % (os.linesep,)
 
             else:
-                warnings.warn("Encountered a zero-length column name. Please revise the .csv such that all columns have headers.")
-            
+                warnings.warn('''Encountered a zero-length column name. Please
+                    revise the .csv such that all columns have headers.''')
+
     return schema
