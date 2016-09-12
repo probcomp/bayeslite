@@ -19,7 +19,7 @@
 The heuristics implemented here are ad-hoc, and do not implement any
 sort of Bayesian model selection.  They are based on crude attempts to
 parse data as numbers, and on fixed parameters for distinguishing
-categorical and numerical data.  No columns are ever guessed to be
+nominal and numerical data.  No columns are ever guessed to be
 cyclic.
 """
 
@@ -99,10 +99,10 @@ def bayesdb_guess_stattypes(column_names, rows, null_values=None,
     :param set null_values: values to nullify.
     :param int numcat_count: number of distinct values below which
         columns whose values can all be parsed as numbers will be
-        considered categorical anyway
+        considered nominal anyway
     :param real numcat_ratio: ratio of distinct values to total values
         below which columns whose values can all be parsed as numbers
-        will be considered categorical anyway
+        will be considered nominal anyway
     :param real distinct_ratio: ratio of distinct values to total values
         above which a column will be ignored as a pseudo-key
         (only if count > numcat_count).
@@ -244,7 +244,7 @@ def guess_column_stattype(column, **kwargs):
         len(counts) / float(len(column)) > kwargs['distinct_ratio']):
         return 'ignore'
     else:
-        return 'categorical'
+        return 'nominal'
 
 
 def nullify(null_values, rows, ci):
@@ -396,7 +396,7 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type=None,
 
     def grouped_schema():
         schema = ''
-        categorical = []
+        nominal = []
         numerical = []
         ignore = []
 
@@ -406,8 +406,8 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type=None,
             guessed_reason = guessed_type_reason[1]
 
             if len(var) > 0:
-                if guessed_type == 'categorical':
-                    categorical.append([var, guessed_reason])
+                if guessed_type == 'nominal':
+                    nominal.append([var, guessed_reason])
                 elif guessed_type == 'numerical':
                     numerical.append([var, guessed_reason])
                 elif guessed_type == 'ignore':
@@ -423,7 +423,7 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type=None,
                     'revise the .csv such that all columns have headers.')
 
         stattype_var_list_pairs = [
-            ['CATEGORICAL', categorical],
+            ['NOMINAL', nominal],
             ['NUMERICAL', numerical], ['IGNORE', ignore]
         ]
 
