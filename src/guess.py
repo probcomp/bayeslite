@@ -273,8 +273,10 @@ def keyable_p(column):
     if any(v is None or (isinstance(v, float) and math.isnan(v))
            for v in column):
         return False
-    return len(column) == len(unique(column)) and all(float(v).is_integer() for
-        v in column)
+    if all(isinstance(v, float) for v in column) and all(float(v).is_integer() \
+        for v in column):
+        return False
+    return len(column) == len(unique(column))
 
 def numerical_p(column, count_cutoff, ratio_cutoff):
     nu = len(unique([v for v in column if not math.isnan(v)]))
@@ -320,43 +322,39 @@ def guesser_wrapper(guesser, bdb, tablename, col_names):
         except:
             pass
 
-        #XXX FIXME: Why is this code in a try-except block?
-        try:
-            # Copied the following four lines from bayesdb_guess_generator,
-            # which serve as setup for bayesdb_guess_stattypes, so that we can
-            # run bayesdb_guess_stattypes (or a similarly spec'd function)
-            # directly.
-            qt = sqlite3_quote_name(tablename)
+        # Copied the following four lines from bayesdb_guess_generator,
+        # which serve as setup for bayesdb_guess_stattypes, so that we can
+        # run bayesdb_guess_stattypes (or a similarly spec'd function)
+        # directly.
+        qt = sqlite3_quote_name(tablename)
 
-            if len(col_names) > 0:
-                col_select_str = ', '.join(col_names)
-                cursor = bdb.sql_execute(
-                    'SELECT %s FROM %s' % (col_select_str, qt,))
+        if len(col_names) > 0:
+            col_select_str = ', '.join(col_names)
+            cursor = bdb.sql_execute(
+                'SELECT %s FROM %s' % (col_select_str, qt,))
+        else:
+            cursor = bdb.sql_execute('SELECT * FROM %s' % (qt,))
+
+        column_names = [d[0] for d in cursor.description]
+        rows = cursor.fetchall()
+
+        # Try input format of the bayeslite guesser function.
+        guesses = guesser(column_names, rows)
+
+        # Dictionary for column name:(guessed type, reason).
+        guesses_dict = {}
+
+        for cur_guess, col_name in zip(guesses, column_names):
+            # If the guess is just a type without a reason, append a blank
+            # reason.
+            if isinstance(cur_guess, str):
+                guesses_dict[col_name] = [cur_guess, '']
+            # Else assume a (type, reason) pair and cast to a list in case
+            # it is a tuple.
             else:
-                cursor = bdb.sql_execute('SELECT * FROM %s' % (qt,))
+                guesses_dict[col_name] = list(cur_guess)
 
-            column_names = [d[0] for d in cursor.description]
-            rows = cursor.fetchall()
-
-            # Try input format of the bayeslite guesser function.
-            guesses = guesser(column_names, rows)
-
-            # Dictionary for column name:(guessed type, reason).
-            guesses_dict = {}
-
-            for cur_guess, col_name in zip(guesses, column_names):
-                # If the guess is just a type without a reason, append a blank
-                # reason.
-                if isinstance(cur_guess, str):
-                    guesses_dict[col_name] = [cur_guess, '']
-                # Else assume a (type, reason) pair and cast to a list in case
-                # it is a tuple.
-                else:
-                    guesses_dict[col_name] = list(cur_guess)
-
-            return guesses_dict
-        except:
-            pass
+        return guesses_dict
 
 def guess_to_schema(guesser, bdb, tablename, group_output_by_type=None,
         col_names=None):
