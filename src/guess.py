@@ -441,6 +441,10 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type=None,
                     # Don't append a comma for last item in list.
                     if i != len(var_list) - 1:
                         schema += ','
+                    # Add a space between the last variable and 'AS' for proper
+                    # parsing.
+                    else:
+                        schema += ' '
 
                     if len(reason) > 0:
                         # Add reason as a comment.
