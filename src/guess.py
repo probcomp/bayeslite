@@ -26,10 +26,10 @@ cyclic.
 import collections
 import math
 import os
-import warnings
 
 import bayeslite.core as core
 
+from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 from bayeslite.util import unique
@@ -399,21 +399,25 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type=None,
         ignore = []
 
         for var in guesses.keys():
-            guessed_type_reason = guesses[var]
-            guessed_type = guessed_type_reason[0].lower()
-            guessed_reason = guessed_type_reason[1]
+            if len(var) > 0:
+                guessed_type_reason = guesses[var]
+                guessed_type = guessed_type_reason[0].lower()
+                guessed_reason = guessed_type_reason[1]
 
-            if guessed_type == 'nominal':
-                nominal.append([var, guessed_reason])
-            elif guessed_type == 'numerical':
-                numerical.append([var, guessed_reason])
-            elif guessed_type == 'ignore':
-                ignore.append([var, guessed_reason])
-            elif guessed_type == 'key':
-                if len(guessed_reason) > 0:
+                if guessed_type == 'nominal':
+                    nominal.append([var, guessed_reason])
+                elif guessed_type == 'numerical':
+                    numerical.append([var, guessed_reason])
+                elif guessed_type == 'ignore':
                     ignore.append([var, guessed_reason])
-                else:
-                    ignore.append([var, 'This variable is a key.'])
+                elif guessed_type == 'key':
+                    if len(guessed_reason) > 0:
+                        ignore.append([var, guessed_reason])
+                    else:
+                        ignore.append([var, 'This variable is a key.'])
+            else:
+                raise BQLError(bdb, 'Empty column name(s) in table %s' % \
+                    (tablename,))
 
         stattype_var_list_pairs = [
             ['NOMINAL', nominal],
@@ -470,27 +474,31 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type=None,
     def ungrouped_schema():
         schema = ''
         for i, var in enumerate(guesses.keys()):
-            guessed_type_reason = guesses[var]
-            guessed_type = guessed_type_reason[0].lower()
-            guessed_reason = guessed_type_reason[1]
+            if len(var) > 0:
+                guessed_type_reason = guesses[var]
+                guessed_type = guessed_type_reason[0].lower()
+                guessed_reason = guessed_type_reason[1]
 
-            # Ignore the type key as well as ignore.
-            if guessed_type in ['key', 'ignore']:
-                schema += 'IGNORE %s' % (var,)
+                # Ignore the type key as well as ignore.
+                if guessed_type in ['key', 'ignore']:
+                    schema += 'IGNORE %s' % (var,)
+                else:
+                    schema += 'MODEL %s AS %s' % (var, guessed_type.upper(),)
+
+                # Append a semicolon if not last var in schema.
+                if i != len(guesses.keys()) - 1:
+                    schema += ';'
+
+                if len(guessed_reason) > 0:
+                    schema += "'''# %s" % (guessed_reason,)
+                else:
+                    if guessed_type == 'key':
+                        schema += "'''# This variable is a key."
+
+                schema += os.linesep
             else:
-                schema += 'MODEL %s AS %s' % (var, guessed_type.upper(),)
-
-            # Append a semicolon if not last var in schema.
-            if i != len(guesses.keys()) - 1:
-                schema += ';'
-
-            if len(guessed_reason) > 0:
-                schema += "'''# %s" % (guessed_reason,)
-            else:
-                if guessed_type == 'key':
-                    schema += "'''# This variable is a key."
-
-            schema += os.linesep
+                raise BQLError(bdb, 'Empty column name(s) in table %s' % \
+                    (tablename,))
 
             # If reason was commented on previous line, need triple quote to
             # re-enter schema string.
