@@ -416,7 +416,7 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type=None,
                     else:
                         ignore.append([var, 'This variable is a key.'])
             else:
-                raise BQLError(bdb, 'Empty column name(s) in table %s' % \
+                raise BQLError(bdb, 'Empty column name(s) in table %s' %
                     (tablename,))
 
         stattype_var_list_pairs = [
