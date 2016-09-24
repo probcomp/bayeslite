@@ -144,7 +144,8 @@ def execute_phrase(bdb, phrase, bindings=()):
                         ' in population %r: %s' %
                         (phrase.simulation.population, column_name))
             for column_name, _expression in phrase.simulation.constraints:
-                if casefold(column_name) not in column_sqltypes:
+                if casefold(column_name) not in column_sqltypes and \
+                    casefold(column_name) not in ['rowid', '_rowid_', 'oid']:
                     raise BQLError(bdb, 'No such variable'
                         ' in population %s: %s' %
                         (phrase.simulation.population, column_name))
@@ -166,8 +167,11 @@ def execute_phrase(bdb, phrase, bindings=()):
             nsamples = cursor[0][0]
             assert isinstance(nsamples, int)
             def map_var(var):
-                return core.bayesdb_variable_number(bdb, population_id,
-                    generator_id, var)
+                if var not in ['rowid', '_rowid_' ,'oid']:
+                    return core.bayesdb_variable_number(bdb, population_id,
+                        generator_id, var)
+                else:
+                    return -1
             def map_constraint(((var, _expression), value)):
                 return (map_var(var), value)
             constraints = map(map_constraint,
