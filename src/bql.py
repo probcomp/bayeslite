@@ -169,7 +169,7 @@ def execute_phrase(bdb, phrase, bindings=()):
             nsamples = cursor[0][0]
             assert isinstance(nsamples, int)
             def map_var(var):
-                if var not in ['rowid', '_rowid_' ,'oid']:
+                if var not in ROWID:
                     return core.bayesdb_variable_number(bdb, population_id,
                         generator_id, var)
                 else:
