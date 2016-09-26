@@ -147,7 +147,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                         (phrase.simulation.population, column_name))
             for column_name, _expression in phrase.simulation.constraints:
                 if casefold(column_name) not in column_sqltypes and \
-                    casefold(column_name) not in ROWID:
+                        casefold(column_name) not in ROWID:
                     raise BQLError(bdb, 'No such variable'
                         ' in population %s: %s' %
                         (phrase.simulation.population, column_name))
