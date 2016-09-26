@@ -173,7 +173,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                     return core.bayesdb_variable_number(bdb, population_id,
                         generator_id, var)
                 else:
-                    return -1
+                    return 'ROWID'
             def map_constraint(((var, _expression), value)):
                 return (map_var(var), value)
             constraints = map(map_constraint,

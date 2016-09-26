@@ -446,10 +446,10 @@ def bayesdb_simulate(bdb, population_id, constraints, colnos,
     rowid = None
     if constraints:
         for colno, value in constraints:
-            if colno == -1:
+            if colno == 'ROWID':
                 rowid = value
                 break
-    constraints = [c for c in constraints if c[0] != -1]
+    constraints = [c for c in constraints if c[0] != 'ROWID']
     if rowid is None:
         rowid = core.bayesdb_population_fresh_row_id(bdb, population_id)
     targets = [(rowid, colno) for colno in colnos]
