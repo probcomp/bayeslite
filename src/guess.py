@@ -19,17 +19,17 @@
 The heuristics implemented here are ad-hoc, and do not implement any
 sort of Bayesian model selection.  They are based on crude attempts to
 parse data as numbers, and on fixed parameters for distinguishing
-categorical and numerical data.  No columns are ever guessed to be
+nominal and numerical data.  No columns are ever guessed to be
 cyclic.
 """
 
 import collections
 import math
 import os
-import warnings
 
 import bayeslite.core as core
 
+from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 from bayeslite.util import unique
@@ -99,10 +99,10 @@ def bayesdb_guess_stattypes(column_names, rows, null_values=None,
     :param set null_values: values to nullify.
     :param int numcat_count: number of distinct values below which
         columns whose values can all be parsed as numbers will be
-        considered categorical anyway
+        considered nominal anyway
     :param real numcat_ratio: ratio of distinct values to total values
         below which columns whose values can all be parsed as numbers
-        will be considered categorical anyway
+        will be considered nominal anyway
     :param real distinct_ratio: ratio of distinct values to total values
         above which a column will be ignored as a pseudo-key
         (only if count > numcat_count).
@@ -244,7 +244,7 @@ def guess_column_stattype(column, **kwargs):
         len(counts) / float(len(column)) > kwargs['distinct_ratio']):
         return 'ignore'
     else:
-        return 'categorical'
+        return 'nominal'
 
 
 def nullify(null_values, rows, ci):
@@ -273,8 +273,10 @@ def keyable_p(column):
     if any(v is None or (isinstance(v, float) and math.isnan(v))
            for v in column):
         return False
-    return len(column) == len(unique(column)) and all(float(v).is_integer() for
-        v in column)
+    if all(isinstance(v, float) for v in column) and all(float(v).is_integer() \
+        for v in column):
+        return False
+    return len(column) == len(unique(column))
 
 def numerical_p(column, count_cutoff, ratio_cutoff):
     nu = len(unique([v for v in column if not math.isnan(v)]))
@@ -320,43 +322,39 @@ def guesser_wrapper(guesser, bdb, tablename, col_names):
         except:
             pass
 
-        #XXX FIXME: Why is this code in a try-except block?
-        try:
-            # Copied the following four lines from bayesdb_guess_generator,
-            # which serve as setup for bayesdb_guess_stattypes, so that we can
-            # run bayesdb_guess_stattypes (or a similarly spec'd function)
-            # directly.
-            qt = sqlite3_quote_name(tablename)
+        # Copied the following four lines from bayesdb_guess_generator,
+        # which serve as setup for bayesdb_guess_stattypes, so that we can
+        # run bayesdb_guess_stattypes (or a similarly spec'd function)
+        # directly.
+        qt = sqlite3_quote_name(tablename)
 
-            if len(col_names) > 0:
-                col_select_str = ', '.join(col_names)
-                cursor = bdb.sql_execute(
-                    'SELECT %s FROM %s' % (col_select_str, qt,))
+        if len(col_names) > 0:
+            col_select_str = ', '.join(col_names)
+            cursor = bdb.sql_execute(
+                'SELECT %s FROM %s' % (col_select_str, qt,))
+        else:
+            cursor = bdb.sql_execute('SELECT * FROM %s' % (qt,))
+
+        column_names = [d[0] for d in cursor.description]
+        rows = cursor.fetchall()
+
+        # Try input format of the bayeslite guesser function.
+        guesses = guesser(column_names, rows)
+
+        # Dictionary for column name:(guessed type, reason).
+        guesses_dict = {}
+
+        for cur_guess, col_name in zip(guesses, column_names):
+            # If the guess is just a type without a reason, append a blank
+            # reason.
+            if isinstance(cur_guess, str):
+                guesses_dict[col_name] = [cur_guess, '']
+            # Else assume a (type, reason) pair and cast to a list in case
+            # it is a tuple.
             else:
-                cursor = bdb.sql_execute('SELECT * FROM %s' % (qt,))
+                guesses_dict[col_name] = list(cur_guess)
 
-            column_names = [d[0] for d in cursor.description]
-            rows = cursor.fetchall()
-
-            # Try input format of the bayeslite guesser function.
-            guesses = guesser(column_names, rows)
-
-            # Dictionary for column name:(guessed type, reason).
-            guesses_dict = {}
-
-            for cur_guess, col_name in zip(guesses, column_names):
-                # If the guess is just a type without a reason, append a blank
-                # reason.
-                if isinstance(cur_guess, str):
-                    guesses_dict[col_name] = [cur_guess, '']
-                # Else assume a (type, reason) pair and cast to a list in case
-                # it is a tuple.
-                else:
-                    guesses_dict[col_name] = list(cur_guess)
-
-            return guesses_dict
-        except:
-            pass
+        return guesses_dict
 
 def guess_to_schema(guesser, bdb, tablename, group_output_by_type=None,
         col_names=None):
@@ -396,18 +394,18 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type=None,
 
     def grouped_schema():
         schema = ''
-        categorical = []
+        nominal = []
         numerical = []
         ignore = []
 
         for var in guesses.keys():
-            guessed_type_reason = guesses[var]
-            guessed_type = guessed_type_reason[0].lower()
-            guessed_reason = guessed_type_reason[1]
-
             if len(var) > 0:
-                if guessed_type == 'categorical':
-                    categorical.append([var, guessed_reason])
+                guessed_type_reason = guesses[var]
+                guessed_type = guessed_type_reason[0].lower()
+                guessed_reason = guessed_type_reason[1]
+
+                if guessed_type == 'nominal':
+                    nominal.append([var, guessed_reason])
                 elif guessed_type == 'numerical':
                     numerical.append([var, guessed_reason])
                 elif guessed_type == 'ignore':
@@ -417,13 +415,12 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type=None,
                         ignore.append([var, guessed_reason])
                     else:
                         ignore.append([var, 'This variable is a key.'])
-            else: # XXX TODO: Convert warning into a BQLError.
-                warnings.warn(
-                    'Encountered a zero-length column name. Please '
-                    'revise the .csv such that all columns have headers.')
+            else:
+                raise BQLError(bdb, 'Empty column name(s) in table %s' %
+                    (tablename,))
 
         stattype_var_list_pairs = [
-            ['CATEGORICAL', categorical],
+            ['NOMINAL', nominal],
             ['NUMERICAL', numerical], ['IGNORE', ignore]
         ]
 
@@ -448,6 +445,10 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type=None,
                     # Don't append a comma for last item in list.
                     if i != len(var_list) - 1:
                         schema += ','
+                    # Add a space between the last variable and 'AS' for proper
+                    # parsing.
+                    else:
+                        schema += ' '
 
                     if len(reason) > 0:
                         # Add reason as a comment.
@@ -495,15 +496,15 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type=None,
                         schema += "'''# This variable is a key."
 
                 schema += os.linesep
+            else:
+                raise BQLError(bdb, 'Empty column name(s) in table %s' % \
+                    (tablename,))
 
-                # If reason was commented on previous line, need triple quote to
-                # re-enter schema string.
-                if len(guessed_reason) > 0 or guessed_type == 'key':
-                    schema += "''' %s" % (os.linesep,)
-            else: # XXX TODO: Convert warning into a BQLError.
-                warnings.warn(
-                    'Encountered a zero-length column name. Please '
-                    'revise the .csv such that all columns have headers.')
+            # If reason was commented on previous line, need triple quote to
+            # re-enter schema string.
+            if len(guessed_reason) > 0 or guessed_type == 'key':
+                schema += "''' %s" % (os.linesep,)
+
         return schema
 
     return grouped_schema() if group_output_by_type else ungrouped_schema()
