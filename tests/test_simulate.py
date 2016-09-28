@@ -15,6 +15,8 @@
 #   limitations under the License.
 
 import os
+import cgpm
+import crosscat
 
 import crosscat.LocalEngine
 
@@ -23,6 +25,7 @@ import bayeslite.read_csv as read_csv
 
 from bayeslite.guess import bayesdb_guess_population
 from bayeslite.metamodels.crosscat import CrosscatMetamodel
+from bdbcontrib.bql_utils import query
 
 root = os.path.dirname(os.path.abspath(__file__))
 dha_csv = os.path.join(root, 'dha.csv')
@@ -33,10 +36,7 @@ dha_csv = os.path.join(root, 'dha.csv')
 #
 # XXX This should be a metamodel-independent test.
 def test_simulate_drawconstraint():
-    with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
-        cc = crosscat.LocalEngine.LocalEngine(seed=0)
-        metamodel = CrosscatMetamodel(cc)
-        bayeslite.bayesdb_register_metamodel(bdb, metamodel)
+    with bayeslite.bayesdb_open() as bdb:
         with open(dha_csv, 'rU') as f:
             read_csv.bayesdb_read_csv(bdb, 'dha', f, header=True, create=True)
         bayesdb_guess_population(bdb, 'hospital', 'dha',
@@ -52,3 +52,49 @@ def test_simulate_drawconstraint():
                 LIMIT 100
         ''').fetchall()
         assert [s[0] for s in samples] == [40000] * 100
+
+data = [
+    ('foo', 56),
+    ('bar', 0),
+    ('baz', 1),
+    ('quux', 1),
+    ('zot', 0),
+    ('mumble', 2),
+    ('frotz', 0),
+    ('gargle', 0),
+    ('mumph', 1),
+    ('hunf', 3),
+    ('blort', 0)
+]
+
+def test_simulate_given_rowid():
+    with bayeslite.bayesdb_open() as bdb:
+        bdb.sql_execute('CREATE TABLE t(x TEXT, y NUMERIC)')
+        for row in data:
+            bdb.sql_execute('INSERT INTO t (x, y) VALUES (?, ?)', row)
+        bdb.execute('''
+            CREATE POPULATION t_p FOR t WITH SCHEMA {
+                MODEL y AS NUMERICAL;
+                IGNORE x
+            }
+        ''')
+        bdb.execute('''
+            CREATE GENERATOR t_g FOR t_p;
+        ''')
+        bdb.execute('INITIALIZE 1 MODEL FOR t_g')
+        bdb.execute('ANALYZE t_g FOR 3 ITERATION WAIT')
+        bdb.execute('''CREATE TABLE row1 AS
+            SIMULATE y FROM t_p
+            GIVEN _rowid_ = 1
+            LIMIT 100
+        ''')
+        bdb.execute('''CREATE TABLE row5 AS
+            SIMULATE y FROM t_p
+            GIVEN _rowid_ = 5
+            LIMIT 100
+        ''')
+        row1_avg = query(bdb, 'SELECT AVG(y) FROM row1')
+        row1_avg = row1_avg.iloc[0, 0]
+        row5_avg = query(bdb, 'SELECT AVG(y) FROM row5')
+        row5_avg = row5_avg.iloc[0, 0]
+        print row1_avg > row5_avg
