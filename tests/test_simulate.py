@@ -97,4 +97,5 @@ def test_simulate_given_rowid():
         row1_avg = row1_avg.iloc[0, 0]
         row5_avg = query(bdb, 'SELECT AVG(y) FROM row5')
         row5_avg = row5_avg.iloc[0, 0]
-        assert row1_avg > row5_avg
+        assert row1_avg > row5_avg + 10 # Mean of simulations for row 1 should
+        # be "significantly" larger.
