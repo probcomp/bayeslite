@@ -212,6 +212,23 @@ def bayesdb_guess_stattypes(column_names, rows, null_values=None,
             if stattype == 'key':
                 key = column_name
         stattypes.append(stattype)
+
+    stattype_counts = collections.Counter(stattypes)
+    most_common_stattype = 'nominal'
+    if 'nominal' in stattype_counts.keys():
+        if 'numerical' in stattype_counts.keys():
+            if stattype_counts['nominal'] < stattype_counts['numerical']:
+                most_common_stattype = 'numerical'
+    else:
+        # 'nominal' is not in stattype_counts, but 'numerical' is.
+        if 'numerical' in stattype_counts.keys():
+            most_common_stattype = 'numerical'
+
+    # Replace undetermined stattypes with the most common stattype (numerical or
+    # nominal) in the dataset.
+    for ind, stattype in enumerate(stattypes):
+        if stattype == 'undetermined-numerical':
+            stattypes[ind] = most_common_stattype
     return stattypes
 
 def guess_column_stattype(column, **kwargs):
@@ -225,28 +242,24 @@ def guess_column_stattype(column, **kwargs):
     if most_numerous_count / float(len(column)) > kwargs['nullify_ratio']:
         column = [ None if v == most_numerous_key else v for v in column ]
         return guess_column_stattype(column, **kwargs)
-    numericable = True
-    ints = integerify(column)
-    if ints:
-        column = ints
-    else:
-        floats = floatify(column)
-        if floats:
-            column = floats
-        else:
-            numericable = False
+    numericable = numericable_p(column)
     if not kwargs['have_key'] and keyable_p(column):
         return 'key'
     elif numericable and \
             numerical_p(column, kwargs['numcat_count'], \
-            kwargs['numcat_ratio'])  or not all(float(v).is_integer() for \
-            v in column):
+            kwargs['numcat_ratio']) or not all(float(v).is_integer() for v in \
+            column):
         return 'numerical'
+    elif numericable and len(counts) <= kwargs['numcat_count'] and
+            len(counts) / float(len(column)) < kwargs['distinct_ratio']:
+            return 'nominal'
     elif (len(counts) > kwargs['numcat_count'] and
-        len(counts) / float(len(column)) > kwargs['distinct_ratio']):
+            len(counts) / float(len(column)) > kwargs['distinct_ratio']):
         return 'ignore'
+    elif numericable:
+        return 'undetermined-numerical'
     else:
-        return 'nominal'
+        return 'ignore'
 
 
 def nullify(null_values, rows, ci):
@@ -269,6 +282,19 @@ def floatify(column):
     except (ValueError, TypeError):
         return None
     return result
+
+def numericable_p(column):
+    numericable = True
+    ints = integerify(column)
+    if ints:
+        column = ints
+    else:
+        floats = floatify(column)
+        if floats:
+            column = floats
+        else:
+            numericable = False
+    return numericable
 
 def keyable_p(column):
     # `unique' can't cope with NaNs, so reject them early.
