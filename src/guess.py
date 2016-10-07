@@ -238,7 +238,9 @@ def guess_column_stattype(column, **kwargs):
     if not kwargs['have_key'] and keyable_p(column):
         return 'key'
     elif numericable and \
-        numerical_p(column, kwargs['numcat_count'], kwargs['numcat_ratio']):
+            numerical_p(column, kwargs['numcat_count'], \
+            kwargs['numcat_ratio'])  or not all(float(v).is_integer() for \
+            v in column):
         return 'numerical'
     elif (len(counts) > kwargs['numcat_count'] and
         len(counts) / float(len(column)) > kwargs['distinct_ratio']):
