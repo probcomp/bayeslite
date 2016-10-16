@@ -731,8 +731,11 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
         if isinstance(c, cgpm_schema.parse.Foreign) and len(c.exposed) > 0
     ]
     # Add the exposed variables to Foreign.outputs
+    # Note that this assumes if there are K exposed variables, then they are
+    # necessarily the last K outputs of the fc.outputs.
     for fc in foreign_clauses:
         fc.outputs.extend([e[0] for e in fc.exposed])
+
     # Convert exposed entries into Latent clauses.
     latent_vars = list(itertools.chain.from_iterable(
         c.exposed for c in foreign_clauses))
