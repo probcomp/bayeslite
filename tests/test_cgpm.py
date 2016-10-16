@@ -123,7 +123,9 @@ def test_cgpm_smoke():
         # Custom model for output and cat.
         bdb.execute('''
             CREATE METAMODEL g_manifest FOR p USING cgpm (
-                MODEL output, cat GIVEN input USING piecewise
+                OVERRIDE MODEL FOR output, cat
+                GIVEN input
+                USING piecewise
             )
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR g_manifest')
@@ -133,8 +135,8 @@ def test_cgpm_smoke():
         # Custom model for latent output, manifest output.
         bdb.execute('''
             CREATE METAMODEL g_latout FOR p USING cgpm (
-                LATENT output_ NUMERICAL,
-                MODEL output_, cat GIVEN input USING piecewise
+                LATENT output_ NUMERICAL;
+                OVERRIDE MODEL FOR output_, cat GIVEN input USING piecewise;
             )
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR g_latout')
@@ -145,8 +147,8 @@ def test_cgpm_smoke():
         # Custom model for manifest out, latent cat.
         bdb.execute('''
             CREATE METAMODEL g_latcat FOR p USING cgpm (
-                LATENT cat_ CATEGORICAL,
-                MODEL output, cat_ GIVEN input USING piecewise
+                LATENT cat_ CATEGORICAL;
+                OVERRIDE MODEL FOR output, cat_ GIVEN input USING piecewise
             )
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR g_latcat')
@@ -156,10 +158,10 @@ def test_cgpm_smoke():
         # Custom chained model.
         bdb.execute('''
             CREATE METAMODEL g_chain FOR p USING cgpm (
-                LATENT midput NUMERICAL,
-                LATENT excat NUMERICAL,
-                MODEL midput, cat GIVEN input USING piecewise,
-                MODEL output, excat GIVEN midput USING piecewise
+                LATENT midput NUMERICAL;
+                LATENT excat NUMERICAL;
+                OVERRIDE MODEL FOR midput, cat GIVEN input USING piecewise;
+                OVERRIDE MODEL FOR output, excat GIVEN midput USING piecewise
             )
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR g_chain')
@@ -169,47 +171,51 @@ def test_cgpm_smoke():
 
         with pytest.raises(BQLError):
             bdb.execute('''
-                CREATE METAMODEL g_error_typo FOR p USING cgpm (uot NORMAL)
+                CREATE METAMODEL g_error_typo FOR p USING cgpm (
+                    SET CATEGORY MODEL FOR uot TO NORMAL
+                )
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
                 CREATE METAMODEL g_error_typo_manifest FOR p USING cgpm (
-                    MODEL output, cat GIVEN ni USING piecewise
+                    OVERRIDE MODEL FOR output, cat GIVEN ni USING piecewise
                 )
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
                 CREATE METAMODEL g_error_typo_output FOR p USING cgpm (
-                    MODEL output, dog GIVEN input USING piecewise
+                    OVERRIDE MODEL FOR output, dog GIVEN input USING piecewise;
                 )
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
                 CREATE METAMODEL g_error_dup_manifest FOR p USING cgpm (
-                    input NORMAL,
-                    input LOGNORMAL
+                    SET CATEGORY MODEL FOR input TO NORMAL;
+                    SET CATEGORY MODEL FOR input TO LOGNORMAL
                 )
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
                 CREATE METAMODEL g_error_dup_latent FOR p USING cgpm (
-                    LATENT output_error NUMERICAL,
-                    LATENT output_error CATEGORICAL,
-                    MODEL output_error, cat GIVEN input USING piecewise
+                    LATENT output_error NUMERICAL;
+                    LATENT output_error CATEGORICAL;
+
+                    OVERRIDE MODEL FOR output_error, cat
+                    GIVEN input USING piecewise;
                 )
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
                 CREATE METAMODEL g_error_latent_exists FOR p USING cgpm (
-                    LATENT output_ NUMERICAL,
-                    MODEL output_, cat GIVEN input USING piecewise
+                    LATENT output_ NUMERICAL;
+                    OVERRIDE MODEL FOR output_, cat GIVEN input USING piecewise;
                 )
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
                 CREATE METAMODEL g_error_latent_manifest FOR p USING cgpm (
-                    LATENT output NUMERICAL,
-                    MODEL output, cat GIVEN input USING piecewise
+                    LATENT output NUMERICAL;
+                    OVERRIDE MODEL FOR output, cat GIVEN input USING piecewise;
                 )
             ''')
 
