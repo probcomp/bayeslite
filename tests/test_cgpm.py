@@ -270,7 +270,7 @@ def test_cgpm_kepler():
             )
         ''')
         bdb.execute('''
-            estimate correlation from pairwise columns of satellites
+            ESTIMATE CORRELATION from PAIRWISE VARIABLES OF satellites
         ''').fetchall()
         registry = {
             'kepler': Kepler,
@@ -280,8 +280,9 @@ def test_cgpm_kepler():
             bdb, CGPM_Metamodel(registry, multiprocess=0))
         bdb.execute('''
             CREATE METAMODEL g0 FOR satellites USING cgpm (
-                MODEL period GIVEN apogee, perigee
-                    USING linreg
+                OVERRIDE GENERATIVE MODEL FOR period
+                GIVEN apogee, perigee
+                USING linreg
             )
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR g0')
@@ -290,9 +291,9 @@ def test_cgpm_kepler():
         # Another generator: exponential launch mass instead of normal.
         bdb.execute('''
             CREATE METAMODEL g1 FOR satellites USING cgpm (
-                launch_mass EXPONENTIAL,
-                MODEL period GIVEN apogee, perigee
-                    USING kepler(quagga = eland),
+                SET CATEGORY MODEL FOR launch_mass TO EXPONENTIAL;
+                OVERRIDE MODEL FOR period GIVEN apogee, perigee
+                    USING kepler(quagga = eland);
                 SUBSAMPLE 20
             )
         ''')
@@ -319,17 +320,31 @@ def test_cgpm_kepler():
             SIMULATE apogee, perigee, period FROM satellites LIMIT 100
         ''').fetchall()
         bdb.execute('''
-            INFER EXPLICIT PREDICT apogee
-                CONFIDENCE apogee_confidence FROM satellites LIMIT 2
+            INFER EXPLICIT
+                PREDICT apogee
+                    CONFIDENCE apogee_confidence
+                    USING 5 SAMPLES
+            FROM satellites LIMIT 2
         ''').fetchall()
         results = bdb.execute('''
-            INFER EXPLICIT PREDICT class_of_orbit
-                CONFIDENCE class_of_orbit_confidence FROM satellites LIMIT 2
+            INFER EXPLICIT
+                PREDICT class_of_orbit
+                    CONFIDENCE class_of_orbit_confidence
+            FROM satellites LIMIT 2
         ''').fetchall()
+        assert len(results[0]) == 2
+        assert isinstance(results[0][0], unicode)
+        assert isinstance(results[0][1], float)
+        # No CONFIDENCE specified.
+        results = bdb.execute('''
+            INFER EXPLICIT PREDICT class_of_orbit USING 2 SAMPLES
+            FROM satellites LIMIT 2
+        ''').fetchall()
+        assert len(results[0]) == 1
         assert isinstance(results[0][0], unicode)
         bdb.execute('DROP MODELS FROM g0')
-        bdb.execute('DROP GENERATOR g0')
-        bdb.execute('DROP GENERATOR g1')
+        bdb.execute('DROP METAMODEL g0')
+        bdb.execute('DROP METAMODEL g1')
 
 def test_unknown_stattype():
     try:
