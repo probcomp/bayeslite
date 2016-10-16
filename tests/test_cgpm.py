@@ -493,20 +493,32 @@ def test_output_stattypes():
         bayesdb_register_metamodel(bdb, CGPM_Metamodel(registry))
         # Creating factor analysis with categorical manifest should crash.
         bdb.execute('''
-            CREATE METAMODEL satellites_g0 FOR satellites USING cgpm(
-                LATENT pc_1 NUMERICAL,
-                MODEL apogee, country_of_operator, pc_1
-                    USING factor_analysis(L=1)
+            CREATE METAMODEL satellites_g0 FOR satellites(
+                OVERRIDE MODEL FOR apogee, country_of_operator
+                AND EXPOSE pc_1 NUMERICAL
+                USING factor_analysis(L=1)
             )
         ''')
         with pytest.raises(ValueError):
             bdb.execute('INITIALIZE 1 MODEL FOR satellites_g0')
+        with pytest.raises(BQLError):
+            # Duplicate pc_2 in LATENT and EXPOSE.
+            bdb.execute('''
+                CREATE METAMODEL satellites_g1 FOR satellites(
+                    LATENT pc_2 CATEGORICAL,
+                    OVERRIDE GENERATIVE MODEL FOR
+                        apogee, launch_mass
+                    AND EXPOSE pc_2 CATEGORICAL
+                    USING factor_analysis(L=1)
+                )
+            ''')
         # Creating factor analysis with categorical latent should crash.
         bdb.execute('''
-            CREATE METAMODEL satellites_g1 FOR satellites USING cgpm(
-                LATENT pc_2 CATEGORICAL,
-                MODEL apogee, launch_mass, pc_2
-                    USING factor_analysis(L=1)
+            CREATE METAMODEL satellites_g1 FOR satellites(
+                OVERRIDE GENERATIVE MODEL FOR
+                    apogee, launch_mass
+                AND EXPOSE pc_2 CATEGORICAL
+                USING factor_analysis(L=1)
             )
         ''')
         with pytest.raises(ValueError):
@@ -514,9 +526,10 @@ def test_output_stattypes():
         # Creating factor analysis with all numerical should be ok.
         bdb.execute('''
             CREATE METAMODEL satellites_g2 FOR satellites USING cgpm(
-                LATENT pc_3 NUMERICAL,
-                MODEL apogee, launch_mass, pc_3
-                    USING factor_analysis(L=1)
+                LATENT pc_3 NUMERICAL;
+
+                OVERRIDE MODEL FOR apogee, launch_mass, pc_3
+                USING factor_analysis(L=1)
             )
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR satellites_g2')
