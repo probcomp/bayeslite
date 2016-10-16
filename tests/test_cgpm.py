@@ -34,7 +34,7 @@ from bayeslite.util import cursor_value
 
 @contextlib.contextmanager
 def cgpm_smoke_bdb():
-    with bayesdb_open(':memory:') as bdb:
+    with bayesdb_open(':memory:', builtin_metamodels=False) as bdb:
         registry = {
             'piecewise': PieceWise,
         }
@@ -59,10 +59,9 @@ def cgpm_smoke_bdb():
                     ''', (output, cat, input))
 
         bdb.execute('''
-            CREATE POPULATION p FOR t (
-                output NUMERICAL,
-                cat CATEGORICAL,
-                input NUMERICAL
+            CREATE POPULATION p FOR t WITH SCHEMA(
+                MODEL output, input AS NUMERICAL;
+                MODEL cat AS CATEGORICAL
             )
         ''')
 
@@ -70,7 +69,7 @@ def cgpm_smoke_bdb():
 
 @contextlib.contextmanager
 def cgpm_dummy_satellites_bdb():
-    with bayesdb_open(':memory:') as bdb:
+    with bayesdb_open(':memory:', builtin_metamodels=False) as bdb:
         bdb.sql_execute('''
             CREATE TABLE satellites_ucs (
                 apogee,
@@ -236,13 +235,13 @@ def test_cgpm_kepler():
         return
     with cgpm_dummy_satellites_bdb() as bdb:
         bdb.execute('''
-            CREATE POPULATION satellites FOR satellites_ucs (
-                apogee NUMERICAL,
-                class_of_orbit CATEGORICAL,
-                country_of_operator CATEGORICAL,
-                launch_mass NUMERICAL,
-                perigee NUMERICAL,
-                period NUMERICAL
+            CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
+                MODEL apogee AS NUMERICAL;
+                MODEL class_of_orbit AS CATEGORICAL;
+                MODEL country_of_operator AS CATEGORICAL;
+                MODEL launch_mass AS NUMERICAL;
+                MODEL perigee AS NUMERICAL;
+                MODEL period AS NUMERICAL
             )
         ''')
         bdb.execute('''
@@ -329,27 +328,29 @@ def test_unknown_stattype():
         with pytest.raises(BQLError):
             # No such statistical type at the moment.
             bdb.execute('''
-                CREATE POPULATION satellites FOR satellites_ucs (
-                    apogee NUMERICAL,
-                    class_of_orbit CATEGORICAL,
-                    country_of_operator CATEGORICAL,
-                    launch_mass NUMERICAL,
-                    perigee NUMERICAL,
-                    period NUMERICAL,
-                    relaunches QUAGGA
+                CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
+                    MODEL apogee, perigee, launch_mass, period
+                    AS NUMERICAL;
+
+                    MODEL class_of_orbit, country_of_operator
+                    AS NOMINAL;
+
+                    MODEL relaunches
+                    AS QUAGGA
                 )
             ''')
         # Invent the statistical type.
         bdb.sql_execute('INSERT INTO bayesdb_stattype VALUES (?)', ('quagga',))
         bdb.execute('''
-            CREATE POPULATION satellites FOR satellites_ucs (
-                apogee NUMERICAL,
-                class_of_orbit CATEGORICAL,
-                country_of_operator CATEGORICAL,
-                launch_mass NUMERICAL,
-                perigee NUMERICAL,
-                period NUMERICAL,
-                relaunches QUAGGA
+            CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
+                MODEL apogee, perigee, launch_mass, period
+                AS NUMERICAL;
+
+                MODEL class_of_orbit, country_of_operator
+                AS NOMINAL;
+
+                MODEL relaunches
+                AS QUAGGA
             )
         ''')
         registry = {
@@ -389,13 +390,13 @@ def test_bad_analyze_vars():
         return
     with cgpm_dummy_satellites_bdb() as bdb:
         bdb.execute('''
-            CREATE POPULATION satellites FOR satellites_ucs (
-                apogee NUMERICAL,
-                class_of_orbit CATEGORICAL,
-                country_of_operator CATEGORICAL,
-                launch_mass NUMERICAL,
-                perigee NUMERICAL,
-                period NUMERICAL
+            CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
+                MODEL apogee AS NUMERICAL;
+                MODEL class_of_orbit AS CATEGORICAL;
+                MODEL country_of_operator AS CATEGORICAL;
+                MODEL launch_mass AS NUMERICAL;
+                MODEL perigee AS NUMERICAL;
+                MODEL period AS NUMERICAL
             )
         ''')
         registry = {
@@ -431,11 +432,19 @@ def test_output_stattypes():
         pytest.skip('no sklearn')
         return
     with cgpm_dummy_satellites_bdb() as bdb:
+        # Missing policy for class_of_orbit, perigee, period
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
+                    MODEL apogee, launch_mass AS NUMERICAL;
+                    MODEL country_of_operator AS CATEGORICAL
+                )
+            ''')
         bdb.execute('''
-            CREATE POPULATION satellites FOR satellites_ucs (
-                apogee NUMERICAL,
-                country_of_operator CATEGORICAL,
-                launch_mass NUMERICAL
+            CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
+                IGNORE class_of_orbit, perigee, period;
+                MODEL apogee, launch_mass AS NUMERICAL;
+                MODEL country_of_operator AS CATEGORICAL
             )
         ''')
         registry = {
