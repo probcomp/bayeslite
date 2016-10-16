@@ -428,12 +428,14 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         samples = engine.simulate(
             cgpm_rowid, cgpm_query, cgpm_evidence, N=num_predictions,
             accuracy=accuracy, multiprocess=self._ncpu)
-        weighted_samples = engine._process_samples(
+        weighted_samples = engine._likelihood_weighted_resample(
             samples, cgpm_rowid, cgpm_evidence, multiprocess=self._ncpu)
         def map_value(colno, value):
             return self._from_numeric(bdb, generator_id, colno, value)
-        return [[map_value(colno, row[colno]) for colno in cgpm_query]
-            for row in weighted_samples]
+        return [
+            [map_value(colno, row[colno]) for colno in cgpm_query]
+            for row in weighted_samples
+        ]
 
     def logpdf_joint(self, bdb, generator_id, targets, constraints, modelno):
         rowid = self._unique_rowid(
@@ -451,8 +453,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         logpdfs = engine.logpdf(
             cgpm_rowid, cgpm_query, cgpm_evidence, accuracy=None,
             multiprocess=self._ncpu)
-        # XXX abstraction violation
-        return engine._process_logpdfs(
+        return engine._likelihood_weighted_integrate(
             logpdfs, cgpm_rowid, cgpm_evidence, multiprocess=self._ncpu)
 
     def _unique_rowid(self, rowids):
