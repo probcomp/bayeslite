@@ -405,20 +405,20 @@ def test_unknown_stattype():
             # Can't model QUAGGA as input.
             bdb.execute('''
                 CREATE METAMODEL g0 FOR satellites USING cgpm (
-                    MODEL relaunches GIVEN apogee USING linreg,
-                    MODEL period GIVEN relaunches USING linreg
+                    OVERRIDE MODEL FOR relaunches GIVEN apogee USING linreg;
+                    OVERRIDE MODEL FOR period GIVEN relaunches USING linreg
                 )
             ''')
         # Can model QUAGGA with an explicit distribution family.
         bdb.execute('''
             CREATE METAMODEL g0 FOR satellites USING cgpm (
-                relaunches POISSON
+                SET CATEGORY MODEL FOR relaunches TO POISSON
             )
         ''')
         bdb.execute('''
             CREATE METAMODEL g1 FOR satellites USING cgpm (
-                relaunches POISSON,
-                MODEL period GIVEN relaunches USING linreg
+                SET CATEGORY MODEL FOR relaunches TO POISSON;
+                OVERRIDE MODEL FOR period GIVEN relaunches USING linreg
             )
         ''')
 
