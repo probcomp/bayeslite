@@ -377,9 +377,12 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Get the engine.
         engine = self._engine(bdb, generator_id)
 
-        # Go!
-        return engine.row_similarity(cgpm_rowid, cgpm_target_rowid, colnos,
-            multiprocess=self._ncpu)
+        # Engine gives us a list of similarities which it is our
+        # responsibility to integrate over.
+        similarity_list = engine.row_similarity(
+            cgpm_rowid, cgpm_target_rowid, colnos, multiprocess=self._ncpu)
+
+        return arithmetic_mean(similarity_list)
 
     def predict_confidence(self, bdb, generator_id, modelno, colno, rowid,
             numsamples=None):
