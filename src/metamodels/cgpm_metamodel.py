@@ -333,17 +333,20 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
     def column_dependence_probability(self, bdb, generator_id, modelno,
             colno0, colno1):
-        # Special-case vacuous case of self-dependence.  XXX Caller
-        # should avoid this.
+        # Optimize special-case vacuous case of self-dependence.
+        # XXX Caller should avoid this.
         if colno0 == colno1:
             return 1
 
         # Get the engine.
         engine = self._engine(bdb, generator_id)
 
-        # Go!
-        return engine.dependence_probability(colno0, colno1,
-            multiprocess=self._ncpu)
+        # Engine gives us a list of dependence probabilities which it is our
+        # responsibility to integrate over.
+        depprob_list = engine.dependence_probability(
+            colno0, colno1, multiprocess=self._ncpu)
+
+        return arithmetic_mean(depprob_list)
 
     def column_mutual_information(self, bdb, generator_id, modelno,
             colno0, colno1, numsamples=None):
@@ -360,7 +363,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Engine gives us a list of samples which it is our
         # responsibility to integrate over.
-        #
+
         # XXX Is this integral correct?  Should it be weighted?
         return arithmetic_mean(mi_list)
 
