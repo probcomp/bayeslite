@@ -169,6 +169,18 @@ def test_cgpm_smoke():
         cgpm_smoke_tests(bdb, 'g_chain',
             ['output', 'excat', 'midput', 'cat', 'input'])
 
+        # Override the crosscat category model.
+        bdb.execute('''
+            CREATE METAMODEL g_category_model FOR p USING cgpm (
+                SET CATEGORY MODEL FOR output TO NORMAL;
+                OVERRIDE MODEL FOR input, cat GIVEN output USING piecewise;
+            )
+        ''')
+        bdb.execute('INITIALIZE 1 MODEL FOR g_category_model')
+        bdb.execute('ANALYZE g_category_model FOR 1 ITERATION WAIT')
+        cgpm_smoke_tests(bdb, 'g_category_model',
+            ['output', 'cat', 'input'])
+
         with pytest.raises(BQLError):
             bdb.execute('''
                 CREATE METAMODEL g_error_typo FOR p USING cgpm (
@@ -215,6 +227,13 @@ def test_cgpm_smoke():
             bdb.execute('''
                 CREATE METAMODEL g_error_latent_manifest FOR p USING cgpm (
                     LATENT output NUMERICAL;
+                    OVERRIDE MODEL FOR output, cat GIVEN input USING piecewise;
+                )
+            ''')
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                CREATE METAMODEL g_category_override_dupe FOR p USING cgpm (
+                    SET CATEGORY MODEL FOR output TO LOGNORMAL;
                     OVERRIDE MODEL FOR output, cat GIVEN input USING piecewise;
                 )
             ''')
