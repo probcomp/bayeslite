@@ -65,6 +65,12 @@ data = [
 ]
 
 def test_simulate_given_rowid():
+    # Test simulation of a variable given a rowid. Uses synthetic data with
+    # one variable, in which one value of the variable is different from the
+    # others by an order of magnitude. Thus, simulating the value for that row
+    # should produce values that are significantly different from simulated
+    # values of the variable for another row.
+
     with bayeslite.bayesdb_open() as bdb:
         bdb.sql_execute('CREATE TABLE t(x TEXT, y NUMERIC)')
         for row in data:
