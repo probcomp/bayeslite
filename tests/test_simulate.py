@@ -15,8 +15,6 @@
 #   limitations under the License.
 
 import os
-import cgpm
-import crosscat
 
 import crosscat.LocalEngine
 
@@ -25,7 +23,6 @@ import bayeslite.read_csv as read_csv
 
 from bayeslite.guess import bayesdb_guess_population
 from bayeslite.metamodels.crosscat import CrosscatMetamodel
-from bdbcontrib.bql_utils import query
 
 root = os.path.dirname(os.path.abspath(__file__))
 dha_csv = os.path.join(root, 'dha.csv')
