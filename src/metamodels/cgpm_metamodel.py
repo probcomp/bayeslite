@@ -354,7 +354,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         return arithmetic_mean(depprob_list)
 
     def column_mutual_information(
-            self, bdb, generator_id, modelno, colno0, colno1, numsamples=None):
+            self, bdb, generator_id, modelno, colno0, colno1,
+            constraints=None, numsamples=None):
         # XXX Default number of samples drawn from my arse.
         if numsamples is None:
             numsamples = 1000
@@ -365,7 +366,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Engine gives us a list of samples which it is our
         # responsibility to integrate over.
         mi_list = engine.mutual_information(
-            colno0, colno1, N=numsamples, multiprocess=self._ncpu)
+            colno0, colno1, evidence=constraints, N=numsamples,
+            multiprocess=self._ncpu)
 
         # XXX Is this integral correct?  Should it be weighted?
         return arithmetic_mean(mi_list)

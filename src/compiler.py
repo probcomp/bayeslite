@@ -1292,7 +1292,7 @@ def compile_bql_2col_2(bdb, population_id, generator_id, bqlfn, desc, extra,
     out.write('%s(%d, %s, ' % (bqlfn, population_id, nullor(generator_id)))
     out.write('%s, %s' % (colno0, colno1))
     if extra:
-        extra(bdb, population_id, bql, bql_compiler, out)
+        extra(bdb, population_id, generator_id, bql, bql_compiler, out)
     out.write(')')
 
 def compile_bql_2col_1(bdb, population_id, generator_id, bqlfn, desc, extra,
@@ -1306,7 +1306,7 @@ def compile_bql_2col_1(bdb, population_id, generator_id, bqlfn, desc, extra,
     out.write('%s(%d, %s, ' % (bqlfn, population_id, nullor(generator_id)))
     out.write('%s, %s' % (colno0, colno1_exp))
     if extra:
-        extra(bdb, population_id, bql, bql_compiler, out)
+        extra(bdb, population_id, generator_id, bql, bql_compiler, out)
     out.write(')')
 
 def compile_bql_2col_0(bdb, population_id, generator_id, bqlfn, desc, extra,
@@ -1318,15 +1318,21 @@ def compile_bql_2col_0(bdb, population_id, generator_id, bqlfn, desc, extra,
     out.write('%s(%d, %s, ' % (bqlfn, population_id, nullor(generator_id)))
     out.write('%s, %s' % (colno0_exp, colno1_exp))
     if extra:
-        extra(bdb, population_id, bql, bql_compiler, out)
+        extra(bdb, population_id, generator_id, bql, bql_compiler, out)
     out.write(')')
 
-def compile_mutinf_extra(bdb, population_id, bql, bql_compiler, out):
+def compile_mutinf_extra(bdb, population_id, generator_id, bql, bql_compiler, out):
     out.write(', ')
+
     if bql.nsamples:
         compile_expression(bdb, bql.nsamples, bql_compiler, out)
     else:
         out.write('NULL')
+
+    if bql.constraints:
+        compile_constraints(
+            bdb, population_id, generator_id, bql.constraints,
+            bql_compiler, out)
 
 def compile_nobql_expression(bdb, exp, out):
     bql_compiler = BQLCompiler_None()

@@ -1038,7 +1038,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         return float('NaN') if nmodels == 0 else (float(count)/float(nmodels))
 
     def column_mutual_information(self, bdb, generator_id, modelno, colno0,
-            colno1, numsamples=None):
+            colno1, constraints=None, numsamples=None):
         if numsamples is None:
             numsamples = 100
         X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
