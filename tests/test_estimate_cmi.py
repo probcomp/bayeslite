@@ -14,24 +14,12 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from __future__ import division
-
 import contextlib
 import itertools
-import math
-import numpy as np
 import pytest
 
-from cgpm.cgpm import CGpm
-from cgpm.dummy.fourway import FourWay
-from cgpm.dummy.piecewise import PieceWise
-from cgpm.utils import general as gu
-
 from bayeslite import bayesdb_open
-from bayeslite import bayesdb_register_metamodel
 from bayeslite.exception import BQLError
-from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
-from bayeslite.util import cursor_value
 
 
 @contextlib.contextmanager
@@ -57,6 +45,7 @@ def smoke_bdb():
         bdb.execute('CREATE METAMODEL m2 FOR p;')
         bdb.execute('INITIALIZE 10 MODELS FOR m2;')
         yield bdb
+
 
 def test_estimate_cmi__ci_slow():
     with smoke_bdb() as bdb:
