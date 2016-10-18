@@ -37,7 +37,7 @@ def bayesdb_install_bql(db, cookie):
     function("bql_column_correlation_pvalue", 4, bql_column_correlation_pvalue)
     function("bql_column_dependence_probability", 4,
         bql_column_dependence_probability)
-    function("bql_column_mutual_information", 5, bql_column_mutual_information)
+    function("bql_column_mutual_information", -1, bql_column_mutual_information)
     function("bql_column_value_probability", -1, bql_column_value_probability)
     function("bql_row_similarity", -1, bql_row_similarity)
     function("bql_row_column_predictive_probability", 4,
@@ -275,12 +275,17 @@ def bql_column_dependence_probability(bdb, population_id, generator_id, colno0,
     return stats.arithmetic_mean(depprobs)
 
 # Two-column function:  MUTUAL INFORMATION [OF <col0> WITH <col1>]
-def bql_column_mutual_information(bdb, population_id, generator_id, colno0,
-        colno1, numsamples=None):
+def bql_column_mutual_information(
+        bdb, population_id, generator_id, colno0, colno1,
+        numsamples, *constraint_args):
+    if len(constraint_args) % 2 == 1:
+        raise ValueError('Odd constraint arguments: %s.' % (constraint_args))
+    constraints = dict(zip(constraint_args[::2], constraint_args[1::2])) \
+        if constraint_args else None
     def generator_mutinf(generator_id):
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
         return metamodel.column_mutual_information(bdb, generator_id, None,
-            colno0, colno1, numsamples=numsamples)
+            colno0, colno1, constraints=constraints, numsamples=numsamples)
     generator_ids = [generator_id] if generator_id is not None else \
         core.bayesdb_population_generators(bdb, population_id)
     mutinfs = map(generator_mutinf, generator_ids)

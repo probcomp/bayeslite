@@ -376,7 +376,9 @@ ExpBQLProb = namedtuple('ExpBQLProb', ['targets', 'constraints'])
 ExpBQLProbFn = namedtuple('ExpBQLProbFn', ['value', 'constraints'])
 ExpBQLSim = namedtuple('ExpBQLSim', ['condition', 'column_lists'])
 ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
-ExpBQLMutInf = namedtuple('ExpBQLMutInf', ['column0', 'column1', 'nsamples'])
+ExpBQLMutInf = namedtuple('ExpBQLMutInf', [
+    'column0', 'column1', 'constraints', 'nsamples'
+])
 ExpBQLCorrel = namedtuple('ExpBQLCorrel', ['column0', 'column1'])
 ExpBQLCorrelPval = namedtuple('ExpBQLCorrelPval', ['column0', 'column1'])
 ExpBQLPredict = namedtuple('ExpBQLPredict', [
