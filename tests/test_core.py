@@ -148,7 +148,7 @@ def bayesdb_population(mkbdb, tab, pop, gen, table_schema, data, columns,
         qg = bql_quote_name(gen)
         qmm = bql_quote_name(metamodel_name)
         bdb.execute('CREATE POPULATION %s FOR %s(%s)' %
-            (qp, qt, ','.join(columns)))
+            (qp, qt, ';'.join(['id ignore']+columns)))
         bdb.execute('CREATE GENERATOR %s FOR %s USING %s(%s)' %
             (qg, qp, qmm, ','.join(columns)))
         population_id = core.bayesdb_get_population(bdb, pop)
@@ -555,15 +555,15 @@ def test_crosscat_constraints():
         t1_data(bdb)
         bdb.execute('''
             CREATE POPULATION p1 FOR t1 (
-                label CATEGORICAL,
-                age NUMERICAL,
+                label CATEGORICAL;
+                age NUMERICAL;
                 weight NUMERICAL
             )
         ''')
         bdb.execute('''
             CREATE GENERATOR p1_cc FOR p1 USING crosscat(
-                label CATEGORICAL,
-                age NUMERICAL,
+                label CATEGORICAL;
+                age NUMERICAL;
                 weight NUMERICAL
             )
         ''')

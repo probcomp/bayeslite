@@ -78,7 +78,7 @@ def bayesdb_guess_population(bdb, population, table,
         qp = sqlite3_quote_name(population)
         qcns = map(sqlite3_quote_name, column_names)
         qsts = map(sqlite3_quote_name, stattypes)
-        qs = ','.join(qcn + ' ' + qst for qcn, qst in zip(qcns, qsts))
+        qs = ';'.join(qcn + ' ' + qst for qcn, qst in zip(qcns, qsts))
         bdb.execute('CREATE POPULATION %s FOR %s(%s)' % (qp, qt, qs))
 
 def unzip(l):                   # ???
@@ -422,7 +422,8 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type=None,
 
         stattype_var_list_pairs = [
             ['NOMINAL', nominal],
-            ['NUMERICAL', numerical], ['IGNORE', ignore]
+            ['NUMERICAL', numerical],
+            ['IGNORE', ignore]
         ]
 
         for stattype, var_list in stattype_var_list_pairs:

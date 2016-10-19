@@ -39,8 +39,9 @@ def bql2sql(string, setup=None):
         test_core.t1_data(bdb)
         bdb.execute('''
             create population p1 for t1 (
-                label categorical,
-                age numerical,
+                id ignore;
+                label categorical;
+                age numerical;
                 weight numerical
             )
         ''')
@@ -61,8 +62,9 @@ def bql2sqlparam(string):
         test_core.t1_data(bdb)
         bdb.execute('''
             create population p1 for t1 (
-                label categorical,
-                age numerical,
+                id ignore;
+                label categorical;
+                age numerical;
                 weight numerical
             )
         ''')
@@ -99,7 +101,12 @@ def test_trivial_population():
         with open(fname, 'rU') as f:
             bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
         # XXX if (not) exists
-        bdb.execute('create population p for t(age numerical)')
+        bdb.execute('''
+            create population p for t (
+                guess stattypes for (*);
+                age numerical
+            )
+        ''')
         bdb.execute('drop population p')
 
 @stochastic(max_runs=2, min_passes=1)
@@ -109,8 +116,9 @@ def test_conditional_probability(seed):
         bdb.execute('drop population p1')
         bdb.execute('''
             create population p1 for t1 (
-                age numerical,
-                weight numerical
+                ignore id, label;
+                model age as numerical;
+                model weight as numerical
             )
         ''')
         bdb.execute('''
@@ -1428,11 +1436,11 @@ def test_parametrized():
         ]
         bdb.execute('''
             create population q for t (
-                age NUMERICAL,
-                gender CATEGORICAL,   -- Not binary!
-                salary NUMERICAL,
-                height NUMERICAL,
-                division CATEGORICAL,
+                age NUMERICAL;
+                gender CATEGORICAL;   -- Not binary!
+                salary NUMERICAL;
+                height NUMERICAL;
+                division CATEGORICAL;
                 rank CATEGORICAL
             )
         ''')
@@ -1774,7 +1782,8 @@ def test_predprob_null():
         bdb.sql_execute("insert into foo values (12, NULL, 'down')")
         bdb.execute('''
             create population pfoo for foo (
-                x numerical,
+                id ignore;
+                x numerical;
                 y categorical
             )
         ''')
@@ -1835,7 +1844,12 @@ def test_misc_errors():
                 ' using crosscat()')
         with pytest.raises(bayeslite.BQLError):
             # multinomial is not a known statistical type.
-            bdb.execute('create population q1 for t1 (weight multinomial)')
+            bdb.execute('''
+                create population q1 for t1(
+                    ignore id, label, weight;
+                    weight multinomial
+                )
+            ''')
         with pytest.raises(bayeslite.BQLError):
             # p1_xc does not exist as a generator.
             bdb.execute('alter generator p1_xc rename to p1_xcat')
@@ -1973,7 +1987,8 @@ def test_empty_cursor():
         empty(bdb.sql_execute('INSERT INTO t VALUES(1,2,3)'))
         empty(bdb.sql_execute('INSERT INTO t VALUES(4,5,6)'))
         empty(bdb.sql_execute('INSERT INTO t VALUES(7,8,9)'))
-        empty(bdb.execute('CREATE POPULATION p FOR t (x CATEGORICAL)'))
+        empty(bdb.execute('CREATE POPULATION p FOR t '
+            '(IGNORE z,y; x CATEGORICAL)'))
         empty(bdb.execute('CREATE GENERATOR p_cc FOR p USING crosscat()'))
         empty(bdb.execute('INITIALIZE 1 MODEL FOR p_cc'))
         empty(bdb.execute('DROP GENERATOR p_cc'))
@@ -1992,7 +2007,9 @@ def test_create_generator_ifnotexists():
             bdb.sql_execute('INSERT INTO t VALUES(1,2,3)')
             bdb.execute('''
                 CREATE POPULATION p FOR t (
-                    x NUMERICAL, y NUMERICAL, z CATEGORICAL
+                    x NUMERICAL;
+                    y NUMERICAL;
+                    z CATEGORICAL
                 )
             ''')
             for _i in (0, 1):
