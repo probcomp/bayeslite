@@ -46,7 +46,7 @@ crosscat_schema_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('crosscat', 1);
 
 CREATE TABLE bayesdb_crosscat_disttype (
-    name		TEXT NOT NULL PRIMARY KEY,
+    name		TEXT NOT NULL,
     stattype	TEXT NOT NULL REFERENCES bayesdb_stattype(name),
     default_dist	BOOLEAN NOT NULL,
     UNIQUE(stattype, default_dist)
@@ -56,6 +56,7 @@ INSERT INTO bayesdb_crosscat_disttype (name, stattype, default_dist)
     VALUES
         ('normal_inverse_gamma', 'numerical', 1),
         ('symmetric_dirichlet_discrete', 'categorical', 1),
+        ('symmetric_dirichlet_discrete', 'nominal', 1),
         ('vonmises', 'cyclic', 1);
 
 CREATE TABLE bayesdb_crosscat_metadata (
@@ -1207,14 +1208,19 @@ def create_metadata_categorical(bdb, generator_id, colno):
     }
 
 metadata_creators = {
+    'nominal': create_metadata_categorical,
     'categorical': create_metadata_categorical,
     'cyclic': create_metadata_cyclic,
     'numerical': create_metadata_numerical,
 }
 
+def is_categorical(stattype):
+    return casefold(stattype) in ['categorical', 'nominal']
+
+
 def crosscat_value_to_code(bdb, generator_id, M_c, colno, value):
     stattype = core.bayesdb_generator_column_stattype(bdb, generator_id, colno)
-    if stattype == 'categorical':
+    if is_categorical(stattype):
         # For hysterical raisins, code_to_value and value_to_code are
         # backwards.
         #
@@ -1241,7 +1247,7 @@ def crosscat_value_to_code(bdb, generator_id, M_c, colno, value):
 
 def crosscat_code_to_value(bdb, generator_id, M_c, colno, code):
     stattype = core.bayesdb_generator_column_stattype(bdb, generator_id, colno)
-    if stattype == 'categorical':
+    if is_categorical(stattype):
         if math.isnan(code):
             return None
         cc_colno = crosscat_cc_colno(bdb, generator_id, colno)
