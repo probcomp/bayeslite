@@ -262,6 +262,21 @@ define_correlation_p('cyclic', 'cyclic', correlation_p_pearsonr2)
 define_correlation_p('cyclic', 'numerical', correlation_p_pearsonr2)
 define_correlation_p('numerical', 'cyclic', correlation_p_pearsonr2)
 
+
+# XXX Duplicated definitions for `nominal` and `categorical`.
+define_correlation('nominal', 'nominal', correlation_cramerphi)
+define_correlation('nominal', 'numerical', correlation_anovar2_dc)
+define_correlation('numerical', 'nominal', correlation_anovar2_cd)
+define_correlation('nominal', 'cyclic', correlation_anovar2_dc)
+define_correlation('cyclic', 'nominal', correlation_anovar2_cd)
+
+define_correlation_p('nominal', 'nominal', correlation_p_cramerphi)
+define_correlation_p('nominal', 'numerical', correlation_p_anovar2_dc)
+define_correlation_p('numerical', 'nominal', correlation_p_anovar2_cd)
+define_correlation_p('nominal', 'cyclic', correlation_p_anovar2_dc)
+define_correlation_p('cyclic', 'nominal', correlation_p_anovar2_cd)
+
+
 # Two-column function:  DEPENDENCE PROBABILITY [OF <col0> WITH <col1>]
 def bql_column_dependence_probability(bdb, population_id, generator_id, colno0,
         colno1):
