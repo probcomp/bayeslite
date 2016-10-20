@@ -1175,257 +1175,203 @@ def test_parametrized():
             'SELECT cc_colno FROM bayesdb_crosscat_column'
                 ' WHERE generator_id = ? AND colno = ?',
         ]
-        assert sqltraced_execute('create temp table if not exists sim as'
-                    ' simulate age, RANK, division'
-                    " from p given gender = 'F' limit 4") == [
+
+        assert sqltraced_execute(
+                'create temp table if not exists sim as '
+                'simulate age, RANK, division '
+                'from p given gender = \'F\' limit 4') == [
             'PRAGMA table_info("sim")',
             'SELECT COUNT(*) FROM bayesdb_population WHERE name = ?',
             'SELECT id FROM bayesdb_population WHERE name = ?',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'PRAGMA table_info("t")',
-            "SELECT CAST(4 AS INTEGER), 'F'",
-            'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ?'
-                    ' AND (generator_id IS NULL OR generator_id = ?)'
-                    ' AND name = ?',
-            'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ?'
-                    ' AND (generator_id IS NULL OR generator_id = ?)'
-                    ' AND name = ?',
-            'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ?'
-                    ' AND (generator_id IS NULL OR generator_id = ?)'
-                    ' AND name = ?',
-            'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ?'
-                    ' AND (generator_id IS NULL OR generator_id = ?)'
-                    ' AND name = ?',
-            'CREATE TEMP TABLE IF NOT EXISTS "sim"'
-                ' ("age" NUMERIC,"RANK" NUMERIC,"division" NUMERIC)',
+            'SELECT CAST(4 AS INTEGER), \'F\'',
+            'SELECT colno FROM bayesdb_variable '
+                'WHERE population_id = ? '
+                'AND (generator_id IS NULL OR generator_id = ?) '
+                'AND name = ?',
+            'SELECT colno FROM bayesdb_variable '
+                'WHERE population_id = ? '
+                'AND (generator_id IS NULL OR generator_id = ?) '
+                'AND name = ?',
+            'SELECT colno FROM bayesdb_variable '
+                'WHERE population_id = ? '
+                'AND (generator_id IS NULL OR generator_id = ?) '
+                'AND name = ?',
+            'SELECT colno FROM bayesdb_variable '
+                'WHERE population_id = ? '
+                'AND (generator_id IS NULL OR generator_id = ?) '
+                'AND name = ?',
+            'CREATE TEMP TABLE IF NOT EXISTS "sim" '
+                '("age" NUMERIC,"RANK" NUMERIC,"division" NUMERIC)',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'SELECT MAX(_rowid_) FROM "t"',
             'SELECT id FROM bayesdb_generator WHERE population_id = ?',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
-            'SELECT metadata_json FROM bayesdb_crosscat_metadata'
-                ' WHERE generator_id = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT modelno FROM bayesdb_crosscat_theta'
-                ' WHERE generator_id = ?',
-            'SELECT theta_json FROM bayesdb_crosscat_theta'
-                ' WHERE generator_id = ? AND modelno = ?',
-            'SELECT modelno FROM bayesdb_crosscat_theta'
-                ' WHERE generator_id = ?',
-            'SELECT sql_rowid, cc_row_id FROM bayesdb_crosscat_subsample'
-                ' WHERE generator_id = ? AND sql_rowid IN (8)',
+            'SELECT metadata_json FROM bayesdb_crosscat_metadata WHERE '
+                'generator_id = ?',
+            'SELECT modelno FROM bayesdb_crosscat_theta WHERE generator_id = ?',
+            'SELECT theta_json FROM bayesdb_crosscat_theta '
+                'WHERE generator_id = ? AND modelno = ?',
+            'SELECT modelno FROM bayesdb_crosscat_theta WHERE generator_id = ?',
+            'SELECT sql_rowid, cc_row_id FROM bayesdb_crosscat_subsample '
+                'WHERE generator_id = ? AND sql_rowid IN (8)',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
-            'SELECT c.name, c.colno, gc.stattype'
-                ' FROM bayesdb_column AS c,'
-                    ' bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc'
-                ' WHERE g.id = ? AND c.tabname = g.tabname'
-                    ' AND c.colno = gc.colno'
-                    ' AND gc.generator_id = g.id'
-                ' ORDER BY c.colno ASC',
+            'SELECT c.name, c.colno, gc.stattype FROM bayesdb_column AS c, '
+                'bayesdb_generator AS g, bayesdb_generator_column AS gc '
+                'WHERE g.id = ? AND c.tabname = g.tabname '
+                'AND c.colno = gc.colno AND gc.generator_id = g.id '
+                'ORDER BY c.colno ASC',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
             'SELECT CAST("age" AS "text"),CAST("gender" AS "text"),'
                 'CAST("salary" AS "text"),CAST("height" AS "text"),'
-                'CAST("division" AS "text"),CAST("rank" AS "text")'
-                ' FROM "t" WHERE _rowid_ IN (8) ORDER BY _rowid_ ASC',
-            'SELECT MAX(cc_row_id) + 1 FROM bayesdb_crosscat_subsample'
-                ' WHERE generator_id = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT modelno FROM bayesdb_crosscat_theta'
-                ' WHERE generator_id = ?',
-            'SELECT modelno FROM bayesdb_crosscat_theta'
-                ' WHERE generator_id = ?',
-            'SELECT sql_rowid, cc_row_id FROM bayesdb_crosscat_subsample'
-                ' WHERE generator_id = ? AND sql_rowid IN (8)',
-            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
-            'SELECT c.name, c.colno, gc.stattype'
-                ' FROM bayesdb_column AS c,'
-                    ' bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc'
-                ' WHERE g.id = ? AND c.tabname = g.tabname'
-                    ' AND c.colno = gc.colno'
-                    ' AND gc.generator_id = g.id'
-                ' ORDER BY c.colno ASC',
-            'SELECT CAST("age" AS "text"),CAST("gender" AS "text"),'
-                'CAST("salary" AS "text"),CAST("height" AS "text"),'
-                'CAST("division" AS "text"),CAST("rank" AS "text")'
-                ' FROM "t" WHERE _rowid_ IN (8) ORDER BY _rowid_ ASC',
-            'SELECT MAX(cc_row_id) + 1 FROM bayesdb_crosscat_subsample'
-                ' WHERE generator_id = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
+                'CAST("division" AS "text"),CAST("rank" AS "text") '
+                'FROM "t" WHERE _rowid_ IN (8) ORDER BY _rowid_ ASC',
+            'SELECT MAX(cc_row_id) + 1 FROM bayesdb_crosscat_subsample '
+                'WHERE generator_id = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
             'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
             'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
             'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
             'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
         ]
-        assert sqltraced_execute('select * from (simulate age from p'
-                    " given gender = 'F' limit 4)") == [
+
+        assert sqltraced_execute(
+                'select * from (simulate age from p '
+                'given gender = \'F\' limit 4)') == [
             'PRAGMA table_info("bayesdb_temp_0")',
             'SELECT id FROM bayesdb_population WHERE name = ?',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'PRAGMA table_info("t")',
-            "SELECT CAST(4 AS INTEGER), 'F'",
-            'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ?'
-                    ' AND (generator_id IS NULL OR generator_id = ?)'
-                    ' AND name = ?',
-            'SELECT colno FROM bayesdb_variable'
-                ' WHERE population_id = ?'
-                    ' AND (generator_id IS NULL OR generator_id = ?)'
-                    ' AND name = ?',
+            'SELECT CAST(4 AS INTEGER), \'F\'',
+            'SELECT colno FROM bayesdb_variable '
+                'WHERE population_id = ? '
+                'AND (generator_id IS NULL OR generator_id = ?) '
+                'AND name = ?',
+            'SELECT colno FROM bayesdb_variable '
+                'WHERE population_id = ? '
+                'AND (generator_id IS NULL OR generator_id = ?) '
+                'AND name = ?',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'SELECT MAX(_rowid_) FROM "t"',
             'SELECT id FROM bayesdb_generator WHERE population_id = ?',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
-            'SELECT metadata_json FROM bayesdb_crosscat_metadata'
-                ' WHERE generator_id = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT modelno FROM bayesdb_crosscat_theta'
-                ' WHERE generator_id = ?',
-            'SELECT theta_json FROM bayesdb_crosscat_theta'
-                ' WHERE generator_id = ? AND modelno = ?',
-            'SELECT modelno FROM bayesdb_crosscat_theta'
-                ' WHERE generator_id = ?',
-            'SELECT sql_rowid, cc_row_id FROM bayesdb_crosscat_subsample'
-                ' WHERE generator_id = ? AND sql_rowid IN (8)',
+            'SELECT metadata_json FROM bayesdb_crosscat_metadata '
+                'WHERE generator_id = ?',
+            'SELECT modelno FROM bayesdb_crosscat_theta '
+                'WHERE generator_id = ?',
+            'SELECT theta_json FROM bayesdb_crosscat_theta '
+                'WHERE generator_id = ? AND modelno = ?',
+            'SELECT modelno FROM bayesdb_crosscat_theta '
+                'WHERE generator_id = ?',
+            'SELECT sql_rowid, cc_row_id FROM bayesdb_crosscat_subsample '
+                'WHERE generator_id = ? AND sql_rowid IN (8)',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
-            'SELECT c.name, c.colno, gc.stattype'
-                ' FROM bayesdb_column AS c,'
-                    ' bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc'
-                ' WHERE g.id = ? AND c.tabname = g.tabname'
-                    ' AND c.colno = gc.colno'
-                    ' AND gc.generator_id = g.id'
-                ' ORDER BY c.colno ASC',
+            'SELECT c.name, c.colno, gc.stattype FROM bayesdb_column AS c, '
+                'bayesdb_generator AS g, bayesdb_generator_column AS gc '
+                'WHERE g.id = ? AND c.tabname = g.tabname '
+                'AND c.colno = gc.colno AND gc.generator_id = g.id '
+                'ORDER BY c.colno ASC',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
             'SELECT CAST("age" AS "text"),CAST("gender" AS "text"),'
                 'CAST("salary" AS "text"),CAST("height" AS "text"),'
-                'CAST("division" AS "text"),CAST("rank" AS "text")'
-                ' FROM "t" WHERE _rowid_ IN (8) ORDER BY _rowid_ ASC',
-            'SELECT MAX(cc_row_id) + 1 FROM bayesdb_crosscat_subsample'
-                ' WHERE generator_id = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT modelno FROM bayesdb_crosscat_theta'
-                ' WHERE generator_id = ?',
-            'SELECT modelno FROM bayesdb_crosscat_theta'
-                ' WHERE generator_id = ?',
-            'SELECT sql_rowid, cc_row_id FROM bayesdb_crosscat_subsample'
-                ' WHERE generator_id = ? AND sql_rowid IN (8)',
-            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
-            'SELECT c.name, c.colno, gc.stattype'
-                ' FROM bayesdb_column AS c,'
-                    ' bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc'
-                ' WHERE g.id = ? AND c.tabname = g.tabname'
-                    ' AND c.colno = gc.colno'
-                    ' AND gc.generator_id = g.id'
-                ' ORDER BY c.colno ASC',
-            'SELECT CAST("age" AS "text"),CAST("gender" AS "text"),'
-                'CAST("salary" AS "text"),CAST("height" AS "text"),'
-                'CAST("division" AS "text"),CAST("rank" AS "text")'
-                ' FROM "t" WHERE _rowid_ IN (8) ORDER BY _rowid_ ASC',
-            'SELECT MAX(cc_row_id) + 1 FROM bayesdb_crosscat_subsample'
-                ' WHERE generator_id = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
+                'CAST("division" AS "text"),CAST("rank" AS "text") '
+                'FROM "t" WHERE _rowid_ IN (8) ORDER BY _rowid_ ASC',
+            'SELECT MAX(cc_row_id) + 1 FROM bayesdb_crosscat_subsample '
+                'WHERE generator_id = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
             'CREATE TEMP TABLE "bayesdb_temp_0" ("age" NUMERIC)',
             'INSERT INTO "bayesdb_temp_0" ("age") VALUES (?)',
             'INSERT INTO "bayesdb_temp_0" ("age") VALUES (?)',
