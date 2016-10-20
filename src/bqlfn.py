@@ -269,12 +269,14 @@ define_correlation('nominal', 'numerical', correlation_anovar2_dc)
 define_correlation('numerical', 'nominal', correlation_anovar2_cd)
 define_correlation('nominal', 'cyclic', correlation_anovar2_dc)
 define_correlation('cyclic', 'nominal', correlation_anovar2_cd)
+define_correlation('nominal', 'categorical', correlation_cramerphi)
 
 define_correlation_p('nominal', 'nominal', correlation_p_cramerphi)
 define_correlation_p('nominal', 'numerical', correlation_p_anovar2_dc)
 define_correlation_p('numerical', 'nominal', correlation_p_anovar2_cd)
 define_correlation_p('nominal', 'cyclic', correlation_p_anovar2_dc)
 define_correlation_p('cyclic', 'nominal', correlation_p_anovar2_cd)
+define_correlation('categorical', 'nominal', correlation_cramerphi)
 
 
 # Two-column function:  DEPENDENCE PROBABILITY [OF <col0> WITH <col1>]
