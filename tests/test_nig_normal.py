@@ -46,8 +46,9 @@ def test_nig_normal_latent_numbering():
         bdb.sql_execute('create table t(id integer primary key, x, y)')
         for x in xrange(100):
             bdb.sql_execute('insert into t(x, y) values(?, ?)', (x, x*x - 100))
-        bdb.execute('create population p for t(x numerical, y numerical)')
-
+        bdb.execute('''
+            create population p for t(id ignore; model x,y as numerical)
+        ''')
         assert core.bayesdb_has_population(bdb, 'p')
         pid = core.bayesdb_get_population(bdb, 'p')
         assert core.bayesdb_variable_numbers(bdb, pid, None) == [1, 2]
@@ -246,7 +247,7 @@ def test_nig_normal_latent_2var_smoke():
         for x in xrange(100):
             bdb.sql_execute('insert into t(x, y) values(?, ?)',
                 (x, x*x - 100))
-        bdb.execute('create population p for t(x numerical, y numerical)')
+        bdb.execute('create population p for t(x numerical; y numerical)')
 
         # CORRELATION, CORRELATION PVALUE, without generators.
         assert 4 == len(bdb.execute('''
@@ -324,7 +325,7 @@ def test_nig_normal_latent_2var_conditional_smoke():
         for x in xrange(100):
             bdb.sql_execute('insert into t(x, y) values(?, ?)',
                 (x, x*x - 100))
-        bdb.execute('create population p for t(x numerical, y numerical)')
+        bdb.execute('create population p for t(x numerical; y numerical)')
 
         # CORRELATION, CORRELATION PVALUE, without generators.
         assert 4 == len(bdb.execute('''
@@ -471,7 +472,7 @@ def test_nig_normal_latent_2var2lat_conditional_smoke():
         for x in xrange(100):
             bdb.sql_execute('insert into t(x, y) values(?, ?)',
                 (x, x*x - 100))
-        bdb.execute('create population p for t(x numerical, y numerical)')
+        bdb.execute('create population p for t(x numerical; y numerical)')
         bdb.execute('create generator g0 for p using nig_normal')
         bdb.execute('''
             create generator g1 for p using nig_normal(

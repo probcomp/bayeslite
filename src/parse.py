@@ -197,6 +197,7 @@ class BQLSemantics(object):
     def p_pop_schema_one(self, cl):             return [cl]
     def p_pop_schema_many(self, schema, cl):    schema.append(cl); return schema
 
+    def p_pop_clause_column(self, col, st):  return ast.PopModelVars([col], st)
     def p_pop_clause_model(self, cols, st):  return ast.PopModelVars(cols, st)
     def p_pop_clause_ignore(self, cols):     return ast.PopIgnoreVars(cols)
     def p_pop_clause_guess(self, cols):      return ast.PopGuessVars(cols)

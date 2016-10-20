@@ -26,9 +26,10 @@ import crosscat.MultiprocessingEngine
 import bayeslite
 import bayeslite.bqlfn as bqlfn
 import bayeslite.core as core
-from bayeslite.metamodels.crosscat import CrosscatMetamodel
 import bayeslite.guess as guess
 import bayeslite.metamodel as metamodel
+
+from bayeslite.metamodels.crosscat import CrosscatMetamodel
 
 from bayeslite import bql_quote_name
 from bayeslite.sqlite3_util import sqlite3_connection
@@ -105,7 +106,7 @@ class DotdogMetamodel(metamodel.IBayesDBMetamodel):
                 VALUES ('dotdog', 42)
         '''
         bdb.sql_execute(sql)
-    def create_generator(self, bdb, generator_id, schema_tokens):
+    def create_generator(self, bdb, generator_id, schema_tokens, **kwargs):
         pass
 
 def test_hackmetamodel():
@@ -113,7 +114,7 @@ def test_hackmetamodel():
     bdb.sql_execute('CREATE TABLE t(a INTEGER, b TEXT)')
     bdb.sql_execute("INSERT INTO t (a, b) VALUES (42, 'fnord')")
     bdb.sql_execute('CREATE TABLE u AS SELECT * FROM t')
-    bdb.execute('CREATE POPULATION p FOR t(a NUMERICAL)')
+    bdb.execute('CREATE POPULATION p FOR t(b IGNORE; a NUMERICAL)')
     with pytest.raises(bayeslite.BQLError):
         bdb.execute('CREATE GENERATOR p_cc FOR p USING crosscat(a NUMERICAL)')
     with pytest.raises(bayeslite.BQLError):
@@ -148,7 +149,7 @@ def bayesdb_population(mkbdb, tab, pop, gen, table_schema, data, columns,
         qg = bql_quote_name(gen)
         qmm = bql_quote_name(metamodel_name)
         bdb.execute('CREATE POPULATION %s FOR %s(%s)' %
-            (qp, qt, ','.join(columns)))
+            (qp, qt, ';'.join(columns)))
         bdb.execute('CREATE GENERATOR %s FOR %s USING %s(%s)' %
             (qg, qp, qmm, ','.join(columns)))
         population_id = core.bayesdb_get_population(bdb, pop)
@@ -221,7 +222,7 @@ def t0_data(bdb):
 def t0():
     return bayesdb_population(
         bayesdb(), 't0', 'p0', 'p0_cc', t0_schema, t0_data,
-        columns=['n NUMERICAL'])
+        columns=['id IGNORE', 'n NUMERICAL'])
 
 def test_t0_badname():
     with pytest.raises(bayeslite.BQLError):
@@ -276,26 +277,31 @@ t1_rows = [
 ]
 
 def t1(*args, **kwargs):
-    return bayesdb_population(bayesdb(*args, **kwargs), 't1', 'p1', 'p1_cc',
+    return bayesdb_population(
+        bayesdb(*args, **kwargs), 't1', 'p1', 'p1_cc',
         t1_schema, t1_data,
-        columns=['label CATEGORICAL', 'age NUMERICAL', 'weight NUMERICAL'])
+        columns=['id IGNORE', 'label CATEGORICAL',
+            'age NUMERICAL', 'weight NUMERICAL',])
 
 def t1_sub():
     return bayesdb_population(bayesdb(), 't1', 'p1', 'p1_sub_cc',
         t1_schema, t1_data,
-        columns=['label CATEGORICAL', 'weight NUMERICAL'])
+        columns=['id IGNORE', 'age IGNORE', 'label CATEGORICAL',
+            'weight NUMERICAL',])
 
 def t1_subcat():
     return bayesdb_population(bayesdb(), 't1', 'p1', 'p1_subcat_cc',
         t1_schema, t1_data,
-        columns=['label CATEGORICAL', 'weight CATEGORICAL'])
+        columns=['id IGNORE', 'age IGNORE','label CATEGORICAL',
+            'weight CATEGORICAL'])
 
 def t1_mp():
     crosscat = multiprocessing_crosscat()
     metamodel = CrosscatMetamodel(crosscat)
     return bayesdb_population(bayesdb(metamodel=metamodel),
         't1', 'p1', 'p1_cc', t1_schema, t1_data,
-         columns=['label CATEGORICAL', 'age NUMERICAL', 'weight NUMERICAL'])
+         columns=['id IGNORE','label CATEGORICAL', 'age NUMERICAL',
+            'weight NUMERICAL'])
 
 def t2_schema(bdb):
     bdb.sql_execute('''create table t2 (id, label, age, weight)''')
@@ -312,17 +318,20 @@ def t2_data(bdb):
 def t2():
     return bayesdb_population(
         bayesdb(), 't2', 'p2', 'p2_cc', t2_schema, t2_data,
-        columns=['label CATEGORICAL', 'age CATEGORICAL', 'weight CATEGORICAL'])
+        columns=['id IGNORE','label CATEGORICAL', 'age CATEGORICAL',
+            'weight CATEGORICAL'])
 
 def test_t1_nokey():
     with bayesdb_population(
             bayesdb(), 't1', 'p1', 'p1_cc', t1_schema, t1_data,
-            columns=['age NUMERICAL', 'weight NUMERICAL']):
+            columns=['id IGNORE','label IGNORE', 'age NUMERICAL',
+                'weight NUMERICAL']):
         pass
 
 def test_t1_nocase():
     with bayesdb_population(bayesdb(), 't1', 'p1', 'p1_cc', t1_schema, t1_data,
             columns=[
+                'id IGNORE',
                 'label CATEGORICAL',
                 'age NUMERICAL',
                 'weight NUMERICAL',
@@ -414,10 +423,11 @@ def test_t1_simulate(colnos, constraints, numpredictions):
             # columns.
             #
             # XXX Automatically test the correct exception.
-            constraints = \
-                [(i, core.bayesdb_population_cell_value(
-                            bdb, population_id, rowid, i))
-                    for i in constraints]
+            constraints = [
+                (i, core.bayesdb_population_cell_value(
+                    bdb, population_id, rowid, i))
+                for i in constraints
+            ]
         bqlfn.bayesdb_simulate(bdb, population_id, constraints, colnos,
             numpredictions=numpredictions)
 
@@ -456,12 +466,12 @@ def test_twocolumn(exname, colno0, colno1):
         bdb.sql_execute('select'
             ' bql_column_dependence_probability(?, NULL, ?, ?)',
             (population_id, colno0, colno1)).fetchall()
-        bqlfn.bql_column_mutual_information(bdb, population_id, None, colno0,
-            colno1)
-        bqlfn.bql_column_mutual_information(bdb, population_id, None, colno0,
-            colno1, numsamples=None)
-        bqlfn.bql_column_mutual_information(bdb, population_id, None, colno0,
-            colno1, numsamples=1)
+        bqlfn.bql_column_mutual_information(
+            bdb, population_id, None, colno0, colno1, None)
+        bqlfn.bql_column_mutual_information(
+            bdb, population_id, None, colno0, colno1, None)
+        bqlfn.bql_column_mutual_information(
+            bdb, population_id, None, colno0, colno1, 1)
         bdb.sql_execute('select'
             ' bql_column_mutual_information(?, NULL, ?, ?, NULL)',
             (population_id, colno0, colno1)).fetchall()
@@ -482,7 +492,7 @@ def test_t1_column_value_probability(colno, rowid):
         if rowid == 0:
             rowid = bayesdb_maxrowid(bdb, population_id)
         value = core.bayesdb_population_cell_value(
-            bdb, population_id, rowid, colno0)
+            bdb, population_id, rowid, colno)
         bqlfn.bql_column_value_probability(bdb, population_id, None, colno,
             value)
         table_name = core.bayesdb_population_table(bdb, population_id)
@@ -555,8 +565,9 @@ def test_crosscat_constraints():
         t1_data(bdb)
         bdb.execute('''
             CREATE POPULATION p1 FOR t1 (
-                label CATEGORICAL,
-                age NUMERICAL,
+                id IGNORE;
+                label CATEGORICAL;
+                age NUMERICAL;
                 weight NUMERICAL
             )
         ''')
@@ -586,11 +597,15 @@ def test_crosscat_constraints():
         assert engine._last_Y == [(3, 0, 1), (3, 2, 32)]
         bdb.execute('SIMULATE weight FROM p1 GIVEN age = 8 LIMIT 1').next()
         assert engine._last_Y == [(28, 1, 8)]
+        # Simulate with an unknown nominal value should throw an error.
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('SIMULATE weight FROM p1 GIVEN label = \'q\' LIMIT 1;')
 
 def test_bayesdb_population_fresh_row_id():
     with bayesdb_population(
             bayesdb(), 't1', 'p1', 'p1_cc', t1_schema, lambda x: 0,\
-            columns=['label CATEGORICAL', 'age NUMERICAL', 'weight NUMERICAL'])\
+            columns=['id IGNORE','label CATEGORICAL', 'age NUMERICAL',
+                'weight NUMERICAL'])\
             as (bdb, population_id, generator_id):
         assert core.bayesdb_population_fresh_row_id(bdb, population_id) == 1
         t1_data(bdb)

@@ -28,11 +28,12 @@ def test_correlation():
         bdb.sql_execute('CREATE TABLE u(id, c0, c1, n0, n1, r0, r1)')
         bdb.execute('''
             CREATE POPULATION q FOR u (
-                c0 CATEGORICAL,
-                c1 CATEGORICAL,
-                n0 NUMERICAL,
-                n1 NUMERICAL,
-                r0 CYCLIC,
+                id IGNORE;
+                c0 CATEGORICAL;
+                c1 CATEGORICAL;
+                n0 NUMERICAL;
+                n1 NUMERICAL;
+                r0 CYCLIC;
                 r1 CYCLIC
             )
         ''')
@@ -70,15 +71,16 @@ def test_correlation():
                 row)
         bdb.execute('''
             CREATE POPULATION p FOR t (
-                c0 CATEGORICAL,
-                c1 CATEGORICAL,
-                cx CATEGORICAL,
-                cy CATEGORICAL,
-                n0 NUMERICAL,
-                n1 NUMERICAL,
-                nc NUMERICAL,
-                nl NUMERICAL,
-                nx NUMERICAL,
+                id IGNORE;
+                c0 NOMINAL;
+                c1 NOMINAL;
+                cx NOMINAL;
+                cy NOMINAL;
+                n0 NUMERICAL;
+                n1 NUMERICAL;
+                nc NUMERICAL;
+                nl NUMERICAL;
+                nx NUMERICAL;
                 ny NUMERICAL
             )
         ''')

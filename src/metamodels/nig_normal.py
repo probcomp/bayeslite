@@ -111,7 +111,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                 raise BQLError(bdb, 'NIG-Normal already installed'
                     ' with unknown schema version: %d' % (version,))
 
-    def create_generator(self, bdb, generator_id, schema):
+    def create_generator(self, bdb, generator_id, schema, **kwargs):
         # XXX Do something with the schema.
         insert_column_sql = '''
             INSERT INTO bayesdb_nig_normal_column
@@ -257,8 +257,9 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             return [modelno for (modelno,) in bdb.sql_execute(modelnos_sql,
                 (generator_id,))]
 
-    def simulate_joint(self, bdb, generator_id, targets, _constraints,
-                       modelno=None, num_predictions=1):
+    def simulate_joint(
+            self, bdb, generator_id, targets, _constraints, modelno=None,
+            num_predictions=1, accuracy=None):
         # Note: The constraints are irrelevant because columns are
         # independent in the true distribution (except in the case of
         # shared, unknown hyperparameters), and cells in a column are
@@ -356,7 +357,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         return 0
 
     def column_mutual_information(self, bdb, generator_id, modelno, colno0,
-            colno1, numsamples):
+            colno1, constraints, numsamples):
         # XXX Fix me!
         return 0
 

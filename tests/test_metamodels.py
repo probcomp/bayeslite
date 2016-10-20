@@ -42,7 +42,7 @@ examples = {
         'p',
         'p_cc',
         'CREATE POPULATION p FOR t'
-            '(x NUMERICAL, y CYCLIC, z CATEGORICAL)',
+            '(x NUMERICAL; y CYCLIC; z CATEGORICAL)',
         'CREATE GENERATOR p_cc FOR p USING crosscat()',
         'CREATE GENERATOR p_cc FOR p USING crosscat(DEPENDENT)',
         'CREATE GENERATOR p_cc FOR p USING crosscat(INDEPENDENT)',
@@ -55,7 +55,7 @@ examples = {
         [(0, 1), (1, float('nan')), (2, -1.2)],
         'p',
         'p_sn',
-        'CREATE POPULATION p FOR t(x NUMERICAL, y NUMERICAL)',
+        'CREATE POPULATION p FOR t(x NUMERICAL; y NUMERICAL)',
         'CREATE GENERATOR p_sn FOR p USING std_normal()',
         # XXX Should invent something that fails for
         # metamodel-specific reasons here.

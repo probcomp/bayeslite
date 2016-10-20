@@ -1111,6 +1111,15 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
     def simulate_joint(self, bdb, generator_id, targets, constraints,
             modelno, num_predictions=1, accuracy=None):
         M_c = self._crosscat_metadata(bdb, generator_id)
+        # An invalid constraint value should result in a BQL error.
+        if constraints:
+            for _, colno, value in constraints:
+                try:
+                    crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
+                except KeyError:
+                    # Constraint that has no code
+                    raise BQLError(bdb,
+                        'Unknown constraints: %s' % (repr(constraints)),)
         X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
         X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
         Q, Y, X_L_list, X_D_list = self._crosscat_remap_two(
@@ -1207,14 +1216,19 @@ def create_metadata_categorical(bdb, generator_id, colno):
     }
 
 metadata_creators = {
+    'nominal': create_metadata_categorical,
     'categorical': create_metadata_categorical,
     'cyclic': create_metadata_cyclic,
     'numerical': create_metadata_numerical,
 }
 
+def is_categorical(stattype):
+    return casefold(stattype) in ['categorical', 'nominal']
+
+
 def crosscat_value_to_code(bdb, generator_id, M_c, colno, value):
     stattype = core.bayesdb_generator_column_stattype(bdb, generator_id, colno)
-    if stattype == 'categorical':
+    if is_categorical(stattype):
         # For hysterical raisins, code_to_value and value_to_code are
         # backwards.
         #
@@ -1241,7 +1255,7 @@ def crosscat_value_to_code(bdb, generator_id, M_c, colno, value):
 
 def crosscat_code_to_value(bdb, generator_id, M_c, colno, code):
     stattype = core.bayesdb_generator_column_stattype(bdb, generator_id, colno)
-    if stattype == 'categorical':
+    if is_categorical(stattype):
         if math.isnan(code):
             return None
         cc_colno = crosscat_cc_colno(bdb, generator_id, colno)

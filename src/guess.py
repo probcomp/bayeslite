@@ -67,17 +67,18 @@ def bayesdb_guess_population(bdb, population, table,
         column_names = [d[0] for d in cursor.description]
         rows = cursor.fetchall()
         stattypes = bayesdb_guess_stattypes(column_names, rows, **kwargs)
-        # Skip the key column.
-        column_names, stattypes = \
-            unzip([(cn, st) for cn, st in zip(column_names, stattypes)
-                if st != 'key' and st != 'ignore'])
-        if len(column_names) == 0:
+        # Convert the `key` column to an `ignore`.
+        replace = lambda s: 'ignore' if s == 'key' else s
+        column_names, stattypes = unzip([
+            (cn, replace(st)) for cn, st in zip(column_names, stattypes)
+        ])
+        if len([s for s in stattypes if s != 'ignore']) == 0:
             raise ValueError('Table has no modelled columns: %s' %
                 (repr(table),))
         qp = sqlite3_quote_name(population)
         qcns = map(sqlite3_quote_name, column_names)
         qsts = map(sqlite3_quote_name, stattypes)
-        qs = ','.join(qcn + ' ' + qst for qcn, qst in zip(qcns, qsts))
+        qs = ';'.join(qcn + ' ' + qst for qcn, qst in zip(qcns, qsts))
         bdb.execute('CREATE POPULATION %s FOR %s(%s)' % (qp, qt, qs))
 
 def unzip(l):                   # ???
@@ -421,7 +422,8 @@ def guess_to_schema(guesser, bdb, tablename, group_output_by_type=None,
 
         stattype_var_list_pairs = [
             ['NOMINAL', nominal],
-            ['NUMERICAL', numerical], ['IGNORE', ignore]
+            ['NUMERICAL', numerical],
+            ['IGNORE', ignore]
         ]
 
         for stattype, var_list in stattype_var_list_pairs:

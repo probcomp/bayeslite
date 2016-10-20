@@ -63,11 +63,12 @@ def test_complex_dependencies__ci_slow():
         # Create a population.
         bdb.execute('''
             CREATE POPULATION bar FOR foo (
-                x NUMERICAL,
-                y NUMERICAL,
-                z NUMERICAL,
-                v CATEGORICAL,
-                w CATEGORICAL
+                IGNORE id;
+                MODEL x AS NUMERICAL;
+                MODEL y AS NUMERICAL;
+                MODEL z AS NUMERICAL;
+                MODEL v AS CATEGORICAL;
+                MODEL w AS CATEGORICAL
             )
         ''')
 
@@ -132,8 +133,9 @@ def test_impossible_duplicate_dependency():
         # Create a population.
         bdb.execute('''
             CREATE POPULATION bar FOR foo (
-                a CATEGORICAL,
-                b CATEGORICAL,
+                id IGNORE;
+                a CATEGORICAL;
+                b CATEGORICAL;
                 c CATEGORICAL
             )
         ''')
@@ -175,9 +177,8 @@ def test_impossible_nontransitive_dependency():
 
         bdb.execute('''
             CREATE POPULATION bar FOR foo (
-                a CATEGORICAL,
-                b CATEGORICAL,
-                c CATEGORICAL
+                IGNORE id;
+                MODEL a, b, c AS CATEGORICAL
             )
         ''')
 

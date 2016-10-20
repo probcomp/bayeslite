@@ -68,8 +68,8 @@ def test_codebook_value_map():
 
         bdb.execute('''
             CREATE POPULATION dummy_pop FOR dummy (
-                kerberos IGNORE,
-                age NUMERICAL,
+                kerberos IGNORE;
+                age NUMERICAL;
                 city CATEGORICAL
             )
         ''')

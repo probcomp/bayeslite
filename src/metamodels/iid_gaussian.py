@@ -67,7 +67,7 @@ class StdNormalMetamodel(metamodel.IBayesDBMetamodel):
             if version != 1:
                 raise BQLError(bdb, 'IID-Gaussian already installed'
                     ' with unknown schema version: %d' % (version,))
-    def create_generator(self, bdb, generator_id, schema):
+    def create_generator(self, bdb, generator_id, schema, **kwargs):
         pass
     def drop_generator(self, *args, **kwargs): pass
     def rename_column(self, *args, **kwargs): pass
@@ -75,7 +75,7 @@ class StdNormalMetamodel(metamodel.IBayesDBMetamodel):
     def drop_models(self, *args, **kwargs): pass
     def analyze_models(self, *args, **kwargs): pass
     def simulate_joint(self, _bdb, _generator_id, targets, _constraints,
-            modelno=None, num_predictions=1):
+            modelno=None, num_predictions=1, accuracy=None):
         return [[self.prng.gauss(0, 1) for _ in targets]
                 for _ in range(num_predictions)]
     def logpdf_joint(self, _bdb, _generator_id, targets, _constraints,
