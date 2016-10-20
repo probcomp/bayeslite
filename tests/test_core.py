@@ -492,7 +492,7 @@ def test_t1_column_value_probability(colno, rowid):
         if rowid == 0:
             rowid = bayesdb_maxrowid(bdb, population_id)
         value = core.bayesdb_population_cell_value(
-            bdb, population_id, rowid, colno0)
+            bdb, population_id, rowid, colno)
         bqlfn.bql_column_value_probability(bdb, population_id, None, colno,
             value)
         table_name = core.bayesdb_population_table(bdb, population_id)
@@ -597,6 +597,9 @@ def test_crosscat_constraints():
         assert engine._last_Y == [(3, 0, 1), (3, 2, 32)]
         bdb.execute('SIMULATE weight FROM p1 GIVEN age = 8 LIMIT 1').next()
         assert engine._last_Y == [(28, 1, 8)]
+        # Simulate with an unknown nominal value should throw an error.
+        with pytest.raises(bayeslite.KeyError):
+            bdb.execute('SIMULATE weight FROM p1 GIVEN label = \'q\' LIMIT 1;')
 
 def test_bayesdb_population_fresh_row_id():
     with bayesdb_population(

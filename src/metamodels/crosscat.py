@@ -1112,6 +1112,15 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
     def simulate_joint(self, bdb, generator_id, targets, constraints,
             modelno, num_predictions=1, accuracy=None):
         M_c = self._crosscat_metadata(bdb, generator_id)
+        # An invalid constraint value should result in a BQL error.
+        if constraints:
+            for _, colno, value in constraints:
+                try:
+                    crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
+                except KeyError:
+                    # Constraint that has no code
+                    raise BQLError(bdb,
+                        'Unknown constraints: %s' % (repr(constraints)),)
         X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
         X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
         Q, Y, X_L_list, X_D_list = self._crosscat_remap_two(
