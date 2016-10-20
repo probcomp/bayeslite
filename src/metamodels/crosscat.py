@@ -46,7 +46,7 @@ crosscat_schema_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('crosscat', 1);
 
 CREATE TABLE bayesdb_crosscat_disttype (
-    name		TEXT NOT NULL,
+    name		TEXT NOT NULL PRIMARY KEY,
     stattype	TEXT NOT NULL REFERENCES bayesdb_stattype(name),
     default_dist	BOOLEAN NOT NULL,
     UNIQUE(stattype, default_dist)
@@ -56,7 +56,6 @@ INSERT INTO bayesdb_crosscat_disttype (name, stattype, default_dist)
     VALUES
         ('normal_inverse_gamma', 'numerical', 1),
         ('symmetric_dirichlet_discrete', 'categorical', 1),
-        ('symmetric_dirichlet_discrete', 'nominal', 1),
         ('vonmises', 'cyclic', 1);
 
 CREATE TABLE bayesdb_crosscat_metadata (
