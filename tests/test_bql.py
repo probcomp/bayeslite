@@ -420,12 +420,30 @@ def test_infer_explicit_verbatim_and_predict_confidence():
                 ' bql_predict_confidence(1, NULL, 2, _rowid_, NULL) AS c2' \
                 ' FROM "t1");'
 
+def test_infer_explicit_verbatim_and_predict_noconfidence():
+    assert bql2sql('infer explicit rowid, age,'
+            ' predict age from p1') == \
+        'SELECT c0 AS "rowid", c1 AS "age",' \
+            ' bql_json_get(c2, \'value\') AS "age"' \
+            ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
+                ' bql_predict_confidence(1, NULL, 2, _rowid_, NULL) AS c2' \
+                ' FROM "t1");'
+
 def test_infer_explicit_verbatim_and_predict_confidence_nsamples():
     assert bql2sql('infer explicit rowid, age,'
             ' predict age confidence age_conf using 42 samples from p1') == \
         'SELECT c0 AS "rowid", c1 AS "age",' \
             ' bql_json_get(c2, \'value\') AS "age",' \
             ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
+            ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
+                ' bql_predict_confidence(1, NULL, 2, _rowid_, 42) AS c2' \
+                ' FROM "t1");'
+
+def test_infer_explicit_verbatim_and_predict_noconfidence_nsamples():
+    assert bql2sql('infer explicit rowid, age,'
+            ' predict age using 42 samples from p1') == \
+        'SELECT c0 AS "rowid", c1 AS "age",' \
+            ' bql_json_get(c2, \'value\') AS "age"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
                 ' bql_predict_confidence(1, NULL, 2, _rowid_, 42) AS c2' \
                 ' FROM "t1");'
@@ -440,6 +458,15 @@ def test_infer_explicit_verbatim_and_predict_confidence_as():
                 ' bql_predict_confidence(1, NULL, 2, _rowid_, NULL) AS c2' \
                 ' FROM "t1");'
 
+def test_infer_explicit_verbatim_and_predict_noconfidence_as():
+    assert bql2sql('infer explicit rowid, age,'
+            ' predict age as age_inf from p1') == \
+        'SELECT c0 AS "rowid", c1 AS "age",' \
+            ' bql_json_get(c2, \'value\') AS "age_inf"' \
+            ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
+                ' bql_predict_confidence(1, NULL, 2, _rowid_, NULL) AS c2' \
+                ' FROM "t1");'
+
 def test_infer_explicit_verbatim_and_predict_confidence_as_nsamples():
     assert bql2sql('infer explicit rowid, age,'
             ' predict age as age_inf confidence age_conf using 87 samples'
@@ -447,6 +474,16 @@ def test_infer_explicit_verbatim_and_predict_confidence_as_nsamples():
         'SELECT c0 AS "rowid", c1 AS "age",' \
             ' bql_json_get(c2, \'value\') AS "age_inf",' \
             ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
+            ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
+                ' bql_predict_confidence(1, NULL, 2, _rowid_, 87) AS c2' \
+                ' FROM "t1");'
+
+def test_infer_explicit_verbatim_and_predict_noconfidence_as_nsamples():
+    assert bql2sql('infer explicit rowid, age,'
+            ' predict age as age_inf using 87 samples'
+            ' from p1') == \
+        'SELECT c0 AS "rowid", c1 AS "age",' \
+            ' bql_json_get(c2, \'value\') AS "age_inf"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
                 ' bql_predict_confidence(1, NULL, 2, _rowid_, 87) AS c2' \
                 ' FROM "t1");'
