@@ -404,18 +404,21 @@ def test_select_bql():
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select mutual information with c from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLMutInf('c', None, None), None)],
+            [ast.SelColExp(ast.ExpBQLMutInf('c', None, None, None), None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string(
             'select mutual information of c with d from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLMutInf('c', 'd', None), None)],
+            [ast.SelColExp(ast.ExpBQLMutInf('c', 'd', None, None), None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select mutual information of c with d' +
             ' using (1+2) samples from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLMutInf('c', 'd',
-                    ast.op(ast.OP_ADD, ast.ExpLit(ast.LitInt(1)),
+            [ast.SelColExp(
+                ast.ExpBQLMutInf(
+                    'c', 'd', None,
+                    ast.op(
+                        ast.OP_ADD, ast.ExpLit(ast.LitInt(1)),
                         ast.ExpLit(ast.LitInt(2)))),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
@@ -824,7 +827,7 @@ def test_is_bql():
     assert ast.is_bql(ast.ExpBQLProbFn(ast.ExpLit(ast.LitInt(0)), []))
     assert ast.is_bql(ast.ExpBQLSim(ast.ExpLit(ast.LitInt(0)), []))
     assert ast.is_bql(ast.ExpBQLDepProb('c0', 'c1'))
-    assert ast.is_bql(ast.ExpBQLMutInf('c0', 'c1', 100))
+    assert ast.is_bql(ast.ExpBQLMutInf('c0', 'c1', None, 100))
     assert ast.is_bql(ast.ExpBQLCorrel('c0', 'c1'))
     assert ast.is_bql(ast.ExpBQLPredict('c', ast.ExpLit(ast.LitInt(.5)), None))
     assert ast.is_bql(ast.ExpBQLPredictConf('c', None))
