@@ -148,7 +148,7 @@ def bayesdb_population(mkbdb, tab, pop, gen, table_schema, data, columns,
         qg = bql_quote_name(gen)
         qmm = bql_quote_name(metamodel_name)
         bdb.execute('CREATE POPULATION %s FOR %s(%s)' %
-            (qp, qt, ';'.join(['id ignore']+columns)))
+            (qp, qt, ';'.join(columns)))
         bdb.execute('CREATE GENERATOR %s FOR %s USING %s(%s)' %
             (qg, qp, qmm, ','.join(columns)))
         population_id = core.bayesdb_get_population(bdb, pop)
@@ -276,9 +276,11 @@ t1_rows = [
 ]
 
 def t1(*args, **kwargs):
-    return bayesdb_population(bayesdb(*args, **kwargs), 't1', 'p1', 'p1_cc',
+    return bayesdb_population(
+        bayesdb(*args, **kwargs), 't1', 'p1', 'p1_cc',
         t1_schema, t1_data,
-        columns=['label CATEGORICAL', 'age NUMERICAL', 'weight NUMERICAL'])
+        columns=['id IGNORE', 'label CATEGORICAL',
+            'age NUMERICAL', 'weight NUMERICAL',])
 
 def t1_sub():
     return bayesdb_population(bayesdb(), 't1', 'p1', 'p1_sub_cc',
