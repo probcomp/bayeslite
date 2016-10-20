@@ -1247,6 +1247,10 @@ def test_parametrized():
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
             'SELECT metadata_json FROM bayesdb_crosscat_metadata WHERE '
                 'generator_id = ?',
+            'SELECT stattype FROM bayesdb_generator_column WHERE '
+                'generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
             'SELECT modelno FROM bayesdb_crosscat_theta WHERE generator_id = ?',
             'SELECT theta_json FROM bayesdb_crosscat_theta '
                 'WHERE generator_id = ? AND modelno = ?',
@@ -1359,6 +1363,10 @@ def test_parametrized():
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
             'SELECT metadata_json FROM bayesdb_crosscat_metadata '
                 'WHERE generator_id = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
             'SELECT modelno FROM bayesdb_crosscat_theta '
                 'WHERE generator_id = ?',
             'SELECT theta_json FROM bayesdb_crosscat_theta '
@@ -1447,6 +1455,12 @@ def test_parametrized():
                     ' AND c.colno = gc.colno'
                     ' AND gc.generator_id = g.id'
                 ' ORDER BY c.colno ASC',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
             'SELECT CAST(t."age" AS "real"),CAST(t."gender" AS "text"),'
                     'CAST(t."salary" AS "real"),CAST(t."height" AS "real"),'
                     'CAST(t."division" AS "text"),CAST(t."rank" AS "text")'
