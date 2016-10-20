@@ -38,16 +38,16 @@ def test_guess_stattypes():
     with pytest.raises(ValueError):
         # Too few columns in data.
         bayesdb_guess_stattypes(['a', 'b', 'c'], rows)
-    assert bayesdb_guess_stattypes(n, rows) == ['key', 'categorical']
+    assert bayesdb_guess_stattypes(n, rows) == ['key', 'nominal']
     rows = [[chr(c), c % 2] for c in a_z] + [['q', ord('q') % 2]]
-    # Ignore the first column, rather than calling it categorical, because
+    # Ignore the first column, rather than calling it nominal, because
     # it's almost entirely unique, so one category cannot say much about others.
-    assert bayesdb_guess_stattypes(n, rows) == ['ignore', 'categorical']
+    assert bayesdb_guess_stattypes(n, rows) == ['ignore', 'nominal']
     rows = [[c % 2, chr(c)] for c in a_z]
-    assert bayesdb_guess_stattypes(n, rows) == ['categorical', 'key']
+    assert bayesdb_guess_stattypes(n, rows) == ['nominal', 'key']
     rows = [[c % 2, chr(c)] for c in a_z] + [[0, 'k']]
     # Ignore the second column because it is almost unique, as above.
-    assert bayesdb_guess_stattypes(n, rows) == ['categorical', 'ignore']
+    assert bayesdb_guess_stattypes(n, rows) == ['nominal', 'ignore']
     rows = [[chr(c), i] for i, c in enumerate(a_z)]
     assert bayesdb_guess_stattypes(n, rows) == ['key', 'numerical']
     rows = [[chr(c), math.sqrt(i)] for i, c in enumerate(a_z)]
@@ -57,7 +57,7 @@ def test_guess_stattypes():
     assert bayesdb_guess_stattypes(n, rows) == ['key', 'numerical']
     rows = [[chr(c) + chr(d) + chr(e), isqrt(i)] for i, (c, d, e)
         in enumerate(itertools.product(a_z, a_z, a_z))]
-    assert bayesdb_guess_stattypes(n, rows) == ['key', 'categorical']
+    assert bayesdb_guess_stattypes(n, rows) == ['key', 'nominal']
     rows = [[i, chr(c)] for i, c in enumerate(a_z)]
     # second field is unique, and we already have a key.
     assert bayesdb_guess_stattypes(n, rows) == ['key', 'ignore']
@@ -66,7 +66,7 @@ def test_guess_stattypes():
     assert bayesdb_guess_stattypes(n, rows) == ['numerical', 'key']
     rows = [[isqrt(i), chr(c) + chr(d) + chr(e)] for i, (c, d, e)
         in enumerate(itertools.product(a_z, a_z, a_z))]
-    assert bayesdb_guess_stattypes(n, rows) == ['categorical', 'key']
+    assert bayesdb_guess_stattypes(n, rows) == ['nominal', 'key']
     with pytest.raises(ValueError):
         # Nonunique key.
         bayesdb_guess_stattypes(n, rows, overrides=[('a', 'key')])
@@ -86,15 +86,15 @@ def test_guess_stattypes():
         bayesdb_guess_stattypes(n, rows,
             overrides=[('a', 'key'), ('a', 'key')])
     assert bayesdb_guess_stattypes(n, rows, overrides=[('b', 'key')]) == \
-        ['categorical', 'key']
+        ['nominal', 'key']
     assert bayesdb_guess_stattypes(n, rows, overrides=[('b', 'ignore')]) == \
-        ['categorical', 'ignore']
+        ['nominal', 'ignore']
     assert bayesdb_guess_stattypes(n, rows, overrides=[('a', 'numerical')]) ==\
         ['numerical', 'key']
     rows = [['none' if c < ord('m') else c, chr(c)] for c in a_z]
     # Nullify 'none' because it is in the nullify list.
     # Categorical because <20 remaining.
-    assert bayesdb_guess_stattypes(n, rows) == ['categorical', 'key']
+    assert bayesdb_guess_stattypes(n, rows) == ['nominal', 'key']
     rows = [[3 if c < ord('y') else 5, chr(c)] for c in a_z]
     # Nullify 3 because it holds so many of the values.
     # Ignore because <2 remaining.
@@ -121,7 +121,7 @@ def test_guess_population():
         # Population already exists.
         bayesdb_guess_population(bdb, 'p', 't')
     assert bdb.sql_execute('SELECT * FROM bayesdb_variable').fetchall() == [
-        (1, None, 1, 'y', 'categorical'),
+        (1, None, 1, 'y', 'nominal'),
         (1, None, 2, 'z', 'numerical'),
     ]
 

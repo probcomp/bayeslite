@@ -127,10 +127,11 @@ def test_csv_import_schema():
                 ' a.k.a. sqlite3 is stupid.')
         bdb.execute('''
             CREATE POPULATION p_employees FOR employees (
-                age NUMERICAL,
-                gender CATEGORICAL,
-                salary CYCLIC,
-                division CATEGORICAL,
+                height IGNORE;
+                age NUMERICAL;
+                gender CATEGORICAL;
+                salary CYCLIC;
+                division CATEGORICAL;
                 rank CATEGORICAL
             )
         ''')

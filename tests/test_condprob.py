@@ -27,8 +27,7 @@ def test_conditional_probability_pathologies():
             bdb.sql_execute('insert into t values (?, ?)', row)
         bdb.execute('''
             create population p for t (
-                foo categorical,
-                bar categorical
+                model foo, bar as categorical
             )
         ''')
         bdb.execute('create generator p_cc for p using crosscat()')
