@@ -106,16 +106,12 @@ class IBayesDBMetamodel(object):
         """
         raise NotImplementedError
 
-    def create_generator(self, bdb, table, schema, instantiate):
+    def create_generator(self, bdb, table, schema, **kwargs):
         """Create a generator for a table with the given schema.
 
         Called when executing ``CREATE GENERATOR``.
 
-        Must parse `schema` to determine the column names and
-        statistical types of the generator, and then call
-        `instantiate` with a list of ``(column_name, stattype)``
-        pairs.  `instantiate` will return a generator id and a list of
-        ``(colno, column_name, stattype)`` triples.
+        Must parse `schema` to build the generator.
 
         The generator id and column numbers may be used to create
         metamodel-specific records in the database for the generator
@@ -206,7 +202,7 @@ class IBayesDBMetamodel(object):
         raise NotImplementedError
 
     def simulate_joint(self, bdb, generator_id, targets, constraints, modelno,
-            num_predictions=1):
+            num_predictions=1, accuracy=None):
         """Simulate `targets` from a generator, subject to `constraints`.
 
         Returns a list of lists of values for the specified targets.
@@ -218,6 +214,10 @@ class IBayesDBMetamodel(object):
         `constraints` is a list of ``(rowid, colno, value)`` triples.
 
         `num_predictions` is the number of results to return.
+
+        `accuracy` is a generic parameter (usually int) which specifies the
+        desired accuracy, compute time, etc if the simulations are approximately
+        distributed from the true target.
 
         The results are samples from the distribution on targets,
         independent conditioned on (the latent state of the metamodel
