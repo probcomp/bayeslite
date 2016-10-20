@@ -68,11 +68,11 @@ def bayesdb_guess_population(bdb, population, table,
         rows = cursor.fetchall()
         stattypes = bayesdb_guess_stattypes(column_names, rows, **kwargs)
         # Convert the `key` column to an `ignore`.
-        replace = lambda s: 'ignore' if s=='key' else s
+        replace = lambda s: 'ignore' if s == 'key' else s
         column_names, stattypes = unzip([
             (cn, replace(st)) for cn, st in zip(column_names, stattypes)
         ])
-        if len(column_names) == 0:
+        if len([s for s in stattypes if s != 'ignore']) == 0:
             raise ValueError('Table has no modelled columns: %s' %
                 (repr(table),))
         qp = sqlite3_quote_name(population)
