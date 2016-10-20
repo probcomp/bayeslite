@@ -124,3 +124,11 @@ def test_read_csv():
                 create=False, ifnotexists=False)
         assert bdb.sql_execute('SELECT * FROM t').fetchall() == \
             data + data + data + data
+
+
+        f = StringIO.StringIO(csv_hdrdata)
+        with tempfile.NamedTemporaryFile(prefix='bayeslite') as temp:
+            with open(temp.name, 'w') as f:
+                f.write(csv_hdrdata)
+            bdb.execute('CREATE TABLE t2 FROM \'%s\'' % (temp.name,))
+            assert bdb.sql_execute('SELECT * FROM t2').fetchall() == data
