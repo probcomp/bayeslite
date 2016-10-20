@@ -846,6 +846,14 @@ def test_simulate():
                 ast.ExpLit(ast.LitInt(10)),
                 19)
         )]
+    # Specifying a quantity other than a variable should raise.
+    with pytest.raises(parse.BQLParseError):
+        parse_bql_string(
+            'simulate a, dependence probability of a with b from t limit 10;')
+    with pytest.raises(parse.BQLParseError):
+        parse_bql_string(
+            'create table f as simulate a, dependence probability of a with b '
+            'from t limit 10;')
 
 def test_is_bql():
     assert ast.is_bql(ast.ExpLit(ast.LitInt(0))) == False

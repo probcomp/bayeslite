@@ -222,8 +222,10 @@ simulate(nolimit)   ::= K_SIMULATE simulate_columns(cols)
                 modelledby_opt(generator)
                 given_opt(constraints).
 
-simulate_columns(one)   ::= column_name(col).
-simulate_columns(many)  ::= simulate_columns(cols) T_COMMA column_name(col).
+simulate_columns(one)   ::= simulate_column(col).
+simulate_columns(many)  ::= simulate_columns(cols) T_COMMA simulate_column(col).
+
+simulate_column(c)      ::= bqlfn(col) as(name).
 
 given_opt(none)     ::= .
 given_opt(some)     ::= K_GIVEN constraints(constraints).
@@ -232,6 +234,11 @@ constraints(many)   ::= constraints(cs) T_COMMA constraint(c).
 constraint(c)       ::= column_name(col) T_EQ expression(value).
 constraints_opt(none)   ::= .
 constraints_opt(some)   ::= constraints(cs).
+
+simulate(models)  ::=
+    K_SIMULATE simulate_columns(cols)
+    K_FROM K_MODELS K_OF population_name(population)
+    modelledby_opt(generator).
 
 /*
  * Queries

@@ -238,6 +238,11 @@ SelTab = namedtuple('SelTab', [
     'name',                     # XXX name
 ])
 
+SimCol = namedtuple('SimCol', [
+    'col',
+    'name',
+])
+
 InferAuto = namedtuple('InferAuto', [
     'columns',                  # [InfCol* or PredCol]
     'confidence',               # Exp* or None (implied 0)
