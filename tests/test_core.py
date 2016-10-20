@@ -598,7 +598,7 @@ def test_crosscat_constraints():
         bdb.execute('SIMULATE weight FROM p1 GIVEN age = 8 LIMIT 1').next()
         assert engine._last_Y == [(28, 1, 8)]
         # Simulate with an unknown nominal value should throw an error.
-        with pytest.raises(bayeslite.KeyError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('SIMULATE weight FROM p1 GIVEN label = \'q\' LIMIT 1;')
 
 def test_bayesdb_population_fresh_row_id():
