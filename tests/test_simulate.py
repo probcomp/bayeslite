@@ -33,10 +33,7 @@ dha_csv = os.path.join(root, 'dha.csv')
 #
 # XXX This should be a metamodel-independent test.
 def test_simulate_drawconstraint():
-    with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
-        cc = crosscat.LocalEngine.LocalEngine(seed=0)
-        metamodel = CrosscatMetamodel(cc)
-        bayeslite.bayesdb_register_metamodel(bdb, metamodel)
+    with bayeslite.bayesdb_open() as bdb:
         with open(dha_csv, 'rU') as f:
             read_csv.bayesdb_read_csv(bdb, 'dha', f, header=True, create=True)
         bayesdb_guess_population(bdb, 'hospital', 'dha',
@@ -52,3 +49,109 @@ def test_simulate_drawconstraint():
                 LIMIT 100
         ''').fetchall()
         assert [s[0] for s in samples] == [40000] * 100
+
+data = [
+    ('foo', 56),
+    ('bar', 0),
+    ('baz', 1),
+    ('quux', 1),
+    ('zot', 0),
+    ('mumble', 2),
+    ('frotz', 0),
+    ('gargle', 0),
+    ('mumph', 1),
+    ('hunf', 3),
+    ('blort', 0)
+]
+
+def test_simulate_given_rowid():
+    # Test simulation of a variable given a rowid. Uses synthetic data with
+    # one variable, in which one value of the variable is different from the
+    # others by an order of magnitude. Thus, simulating the value for that row
+    # should produce values that are significantly different from simulated
+    # values of the variable for another row.
+
+    with bayeslite.bayesdb_open() as bdb:
+        bdb.sql_execute('CREATE TABLE t(x TEXT, y NUMERIC)')
+        for row in data:
+            bdb.sql_execute('INSERT INTO t (x, y) VALUES (?, ?)', row)
+        bdb.execute('''
+            CREATE POPULATION t_p FOR t WITH SCHEMA {
+                MODEL y AS NUMERICAL;
+                IGNORE x
+            }
+        ''')
+        bdb.execute('''
+            CREATE GENERATOR t_g FOR t_p;
+        ''')
+        bdb.execute('INITIALIZE 1 MODEL FOR t_g')
+        bdb.execute('ANALYZE t_g FOR 3 ITERATION WAIT')
+        bdb.execute('''CREATE TABLE row1 AS
+            SIMULATE y FROM t_p
+            GIVEN _rowid_ = 1
+            LIMIT 100
+        ''')
+        bdb.execute('''CREATE TABLE row5 AS
+            SIMULATE y FROM t_p
+            GIVEN _rowid_ = 5
+            LIMIT 100
+        ''')
+        row1_avg = bdb.execute('SELECT AVG(y) FROM row1').fetchall()
+        row1_avg = row1_avg[0][0]
+        row5_avg = bdb.execute('SELECT AVG(y) FROM row5').fetchall()
+        row5_avg = row5_avg[0][0]
+        # Mean of simulations for row 1 should be "significantly" larger.
+        assert row1_avg > row5_avg + 10
+
+data_multivariate = [
+    ('foo', 6, 7, None),
+    ('bar', 1, 1, 2),
+    ('baz', 100, 100, 200),
+    ('quux', 1000, 2000, 3000),
+    ('zot', 0, 2, 2),
+    ('mumble', 20, 10, 30),
+    ('frotz', 4, 13, 17),
+    ('gargle', 34, 2, 36),
+    ('mumph', 78, 4, 82),
+    ('hunf', 90, 1, 91),
+    ('blort', 80, 80, 160)
+]
+
+def test_simulate_given_rowid_multivariate():
+    # Test that GIVEN statement can accept a multivariate constraint clause in
+    # which one of the constraints is on _rowid_.
+    with bayeslite.bayesdb_open() as bdb:
+        bdb.sql_execute(
+            'CREATE TABLE t(x TEXT, y NUMERIC, z NUMERIC, w NUMERIC)')
+        for row in data_multivariate:
+            bdb.sql_execute(
+                'INSERT INTO t (x, y, z, w) VALUES (?, ?, ?, ?)', row)
+        bdb.execute('''
+            CREATE POPULATION t_p FOR t WITH SCHEMA {
+                MODEL y, z, w AS NUMERICAL;
+                IGNORE x
+            }
+        ''')
+        bdb.execute('''
+            CREATE GENERATOR t_g FOR t_p;
+        ''')
+        bdb.execute('INITIALIZE 1 MODEL FOR t_g')
+        bdb.execute('ANALYZE t_g FOR 20 ITERATION WAIT ( OPTIMIZED )')
+        bdb.execute('''CREATE TABLE row1_1 AS
+            SIMULATE y FROM t_p
+            GIVEN _rowid_ = 1, w = 3000
+            LIMIT 100
+        ''')
+        bdb.execute('''CREATE TABLE row1_2 AS
+            SIMULATE y FROM t_p
+            GIVEN _rowid_ = 1, w = 1
+            LIMIT 100
+        ''')
+        row1_1_avg = bdb.execute('SELECT AVG(y) FROM row1_1').fetchall()
+        row1_1_avg = row1_1_avg[0][0]
+        row1_2_avg = bdb.execute('SELECT AVG(y) FROM row1_2').fetchall()
+        row1_2_avg = row1_2_avg[0][0]
+        # We expect these values to be close to each other, because conditioning
+        # on _rowid_ decouples the dependencies between other variables in the
+        # CrossCat metamodel.
+        assert abs(row1_1_avg - row1_2_avg) < 2
