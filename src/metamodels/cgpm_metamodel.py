@@ -524,6 +524,17 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             distargs = [distargs for _n, _st, _cct, distargs in variables]
             gpmcc_vars = [var for var, _stattype, _dist, _params in variables]
             gpmcc_data = self._data(bdb, generator_id, gpmcc_vars)
+            # If gpmcc_data has any column which is all null, then crash early
+            # and notify the user of all offending column names.
+            n_rows = len(gpmcc_data[0])
+            nulls = [
+                v for i, v in enumerate(gpmcc_vars)
+                if all(math.isnan(gpmcc_data[r][i]) for r in xrange(n_rows))
+            ]
+            if nulls:
+                raise BQLError(bdb, 'Failed to initialize, '
+                    'columns have all null values: %s' % repr(nulls))
+
         return Engine(
             gpmcc_data, num_states=n, rng=bdb.np_prng, multiprocess=self._ncpu,
             outputs=outputs, cctypes=cctypes, distargs=distargs)

@@ -22,6 +22,7 @@ import numpy as np
 import pytest
 
 from cgpm.cgpm import CGpm
+from cgpm.dummy.barebones import BareBonesCGpm
 from cgpm.dummy.fourway import FourWay
 from cgpm.dummy.piecewise import PieceWise
 from cgpm.utils import general as gu
@@ -534,3 +535,68 @@ def test_output_stattypes():
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR satellites_g2')
         bdb.execute('ANALYZE satellites_g2 FOR 2 ITERATION WAIT;')
+
+def test_initialize_with_all_nulls():
+    # This test ensures that trying to initialize a CGPM metamodel with any
+    # (manifest) column of all null variables will crash.
+    # Initializing an overriden column with all null variables should not
+    # be a problem in general, so we test this case as well.
+
+    with bayesdb_open(':memory:', builtin_metamodels=False) as bdb:
+        registry = {
+            'barebones': BareBonesCGpm,
+        }
+        bayesdb_register_metamodel(
+            bdb, CGPM_Metamodel(registry, multiprocess=0))
+        # Create table with all missing values for a.
+        bdb.sql_execute('''
+            CREATE TABLE t (a REAL, b REAL, c REAL);
+        ''')
+        bdb.sql_execute('INSERT INTO t VALUES (?,?,?)', (None,2,3))
+        bdb.sql_execute('INSERT INTO t VALUES (?,?,?)', (None,3,1))
+        bdb.sql_execute('INSERT INTO t VALUES (?,?,?)', (None,-1,1))
+
+        # Fail when a is numerical and modeled by crosscat.
+        bdb.execute('''
+            CREATE POPULATION p FOR t WITH SCHEMA(
+                MODEL a, b, c AS NUMERICAL
+            )
+        ''')
+        bdb.execute('''
+            CREATE METAMODEL m FOR p WITH BASELINE crosscat;
+        ''')
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                INITIALIZE 2 MODELS FOR m;
+            ''')
+
+        # Fail when a is nominal and modeled by crosscat.
+        bdb.execute('''
+            CREATE POPULATION p2 FOR t WITH SCHEMA(
+                MODEL a AS NOMINAL;
+                MODEL b, c AS NUMERICAL
+            )
+        ''')
+        bdb.execute('CREATE METAMODEL m2 FOR p2 WITH BASELINE crosscat;')
+        with pytest.raises(BQLError):
+            bdb.execute('INITIALIZE 2 MODELS FOR m2;')
+
+        # Succeed when a is ignored.
+        bdb.execute('''
+            CREATE POPULATION p3 FOR t WITH SCHEMA(
+                IGNORE a;
+                MODEL b, c AS NUMERICAL
+            )
+        ''')
+        bdb.execute('CREATE METAMODEL m3 FOR p3 WITH BASELINE crosscat;')
+        bdb.execute('INITIALIZE 2 MODELS FOR m3;')
+
+
+        # Succeed when a is numerical overriden using a dummy CGPM.
+        bdb.execute('''
+            CREATE METAMODEL m4 FOR p WITH BASELINE crosscat(
+                OVERRIDE MODEL FOR a GIVEN b USING barebones
+            )
+        ''')
+        bdb.execute('INITIALIZE 2 MODELS FOR m4;')
+        bdb.execute('ANALYZE m4 FOR 1 ITERATION WAIT;')
