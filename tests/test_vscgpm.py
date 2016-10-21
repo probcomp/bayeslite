@@ -111,7 +111,7 @@ def test_cgpm_extravaganza__ci_slow():
     except ImportError:
         pytest.skip('no sklearn or venturescript')
         return
-    with bayesdb_open(':memory:') as bdb:
+    with bayesdb_open(':memory:', builtin_metamodels=False) as bdb:
         # XXX Use the real satellites data instead of this bogosity?
         bdb.sql_execute('''
             CREATE TABLE satellites_ucs (
@@ -144,12 +144,12 @@ def test_cgpm_extravaganza__ci_slow():
 
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs (
-                name IGNORE,
-                apogee NUMERICAL,
-                class_of_orbit CATEGORICAL,
-                country_of_operator CATEGORICAL,
-                launch_mass NUMERICAL,
-                perigee NUMERICAL,
+                name IGNORE;
+                apogee NUMERICAL;
+                class_of_orbit CATEGORICAL;
+                country_of_operator CATEGORICAL;
+                launch_mass NUMERICAL;
+                perigee NUMERICAL;
                 period NUMERICAL
             )
         ''')
@@ -168,35 +168,42 @@ def test_cgpm_extravaganza__ci_slow():
 
         with pytest.raises(BQLError):
             bdb.execute('''
-                CREATE GENERATOR g0 FOR satellites USING cgpm (
-                    apoge NORMAL
+                CREATE METAMODEL g0 FOR satellites USING cgpm (
+                    SET CATEGORY MODEL FOR apoge TO NORMAL
                 )
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
-                CREATE GENERATOR g0 FOR satellites USING cgpm (
-                    MODEL perigee GIVEN apoge USING linreg
+                CREATE METAMODEL g0 FOR satellites USING cgpm (
+                    OVERRIDE MODEL FOR perigee GIVEN apoge USING linreg
                 )
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
-                CREATE GENERATOR g0 FOR satellites USING cgpm (
+                CREATE METAMODEL g0 FOR satellites USING cgpm (
                     LATENT apogee NUMERICAL
                 )
             ''')
 
         bdb.execute('''
-            CREATE GENERATOR g0 FOR satellites USING cgpm (
-                apogee NORMAL,
-                LATENT kepler_cluster_id NUMERICAL,
-                LATENT kepler_noise NUMERICAL,
-                MODEL kepler_cluster_id, kepler_noise, period
-                    GIVEN apogee, perigee
-                    USING venturescript (source = "{}"),
-                MODEL perigee GIVEN apogee USING linreg,
-                MODEL class_of_orbit
-                    GIVEN apogee, period, perigee, kepler_noise
-                    USING forest (k = 4),
+            CREATE METAMODEL g0 FOR satellites USING cgpm (
+                SET CATEGORY MODEL FOR apogee TO NORMAL;
+
+                LATENT kepler_cluster_id NUMERICAL;
+                LATENT kepler_noise NUMERICAL;
+
+                OVERRIDE MODEL FOR kepler_cluster_id, kepler_noise, period
+                GIVEN apogee, perigee
+                USING venturescript (source = "{}");
+
+                OVERRIDE MODEL FOR
+                    perigee
+                GIVEN apogee USING linreg;
+
+                OVERRIDE MODEL FOR class_of_orbit
+                GIVEN apogee, period, perigee, kepler_noise
+                USING forest (k = 4);
+
                 SUBSAMPLE 100,
             )
         '''.format(kepler_source))
@@ -222,6 +229,8 @@ def test_cgpm_extravaganza__ci_slow():
                 SKIP kepler_cluster_id, kepler_noise, period;
             )
         ''')
+        # OPTIMIZED uses the lovecat backend.
+        bdb.execute('ANALYZE g0 FOR 20 iteration WAIT (OPTIMIZED)')
         with pytest.raises(Exception):
             # Disallow both SKIP and VARIABLES clauses.
             #
@@ -284,6 +293,6 @@ def test_cgpm_extravaganza__ci_slow():
         ''').fetchall()
 
         bdb.execute('DROP MODELS FROM g0')
-        bdb.execute('DROP GENERATOR g0')
+        bdb.execute('DROP METAMODEL g0')
         bdb.execute('DROP POPULATION satellites')
         bdb.execute('DROP TABLE satellites_ucs')
