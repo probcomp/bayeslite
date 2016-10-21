@@ -42,6 +42,8 @@ from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 from bayeslite.util import cursor_value
 
+ROWID = ['rowid', '_rowid_', 'oid']
+
 def execute_phrase(bdb, phrase, bindings=()):
     """Execute the BQL AST phrase `phrase` and return a cursor of results."""
     if isinstance(phrase, ast.Parametrized):
@@ -144,7 +146,8 @@ def execute_phrase(bdb, phrase, bindings=()):
                         ' in population %r: %s' %
                         (phrase.simulation.population, column_name))
             for column_name, _expression in phrase.simulation.constraints:
-                if casefold(column_name) not in column_sqltypes:
+                if casefold(column_name) not in column_sqltypes and \
+                        casefold(column_name) not in ROWID:
                     raise BQLError(bdb, 'No such variable'
                         ' in population %s: %s' %
                         (phrase.simulation.population, column_name))
@@ -166,8 +169,11 @@ def execute_phrase(bdb, phrase, bindings=()):
             nsamples = cursor[0][0]
             assert isinstance(nsamples, int)
             def map_var(var):
-                return core.bayesdb_variable_number(bdb, population_id,
-                    generator_id, var)
+                if var not in ROWID:
+                    return core.bayesdb_variable_number(bdb, population_id,
+                        generator_id, var)
+                else:
+                    return 'ROWID'
             def map_constraint(((var, _expression), value)):
                 return (map_var(var), value)
             constraints = map(map_constraint,
