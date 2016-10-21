@@ -632,6 +632,11 @@ def bayesdb_generator_fresh_row_id(bdb, generator_id):
         max_rowid = 0
     return max_rowid + 1   # Synthesize a non-existent SQLite row id
 
+def bayesdb_rowid_tokens(bdb):
+    tokens = bdb.sql_execute('''
+        SELECT token FROM bayesdb_rowid_tokens
+    ''').fetchall()
+    return [t[0] for t in tokens]
 
 def bayesdb_has_stattype(bdb, stattype):
     sql = 'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype'

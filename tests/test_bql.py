@@ -1223,18 +1223,22 @@ def test_parametrized():
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'PRAGMA table_info("t")',
             'SELECT CAST(4 AS INTEGER), \'F\'',
+            'SELECT token FROM bayesdb_rowid_tokens',
             'SELECT colno FROM bayesdb_variable '
                 'WHERE population_id = ? '
                 'AND (generator_id IS NULL OR generator_id = ?) '
                 'AND name = ?',
+            'SELECT token FROM bayesdb_rowid_tokens',
             'SELECT colno FROM bayesdb_variable '
                 'WHERE population_id = ? '
                 'AND (generator_id IS NULL OR generator_id = ?) '
                 'AND name = ?',
+            'SELECT token FROM bayesdb_rowid_tokens',
             'SELECT colno FROM bayesdb_variable '
                 'WHERE population_id = ? '
                 'AND (generator_id IS NULL OR generator_id = ?) '
                 'AND name = ?',
+            'SELECT token FROM bayesdb_rowid_tokens',
             'SELECT colno FROM bayesdb_variable '
                 'WHERE population_id = ? '
                 'AND (generator_id IS NULL OR generator_id = ?) '
@@ -1243,6 +1247,8 @@ def test_parametrized():
                 '("age" NUMERIC,"RANK" NUMERIC,"division" NUMERIC)',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'SELECT MAX(_rowid_) FROM "t"',
+            'SELECT token FROM bayesdb_rowid_tokens',
+            'SELECT token FROM bayesdb_rowid_tokens',
             'SELECT id FROM bayesdb_generator WHERE population_id = ?',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
             'SELECT metadata_json FROM bayesdb_crosscat_metadata WHERE '
@@ -1359,6 +1365,8 @@ def test_parametrized():
                 'AND name = ?',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'SELECT MAX(_rowid_) FROM "t"',
+            'SELECT token FROM bayesdb_rowid_tokens',
+            'SELECT token FROM bayesdb_rowid_tokens',
             'SELECT id FROM bayesdb_generator WHERE population_id = ?',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
             'SELECT metadata_json FROM bayesdb_crosscat_metadata '

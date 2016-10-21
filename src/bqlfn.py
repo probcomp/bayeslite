@@ -465,11 +465,21 @@ def bayesdb_simulate(bdb, population_id, constraints, colnos,
     The results are simulated from the predictive distribution on
     fresh rows.
     """
-    fake_rowid = core.bayesdb_population_fresh_row_id(bdb, population_id)
-    targets = [(fake_rowid, colno) for colno in colnos]
-    if constraints:
-        constraints = [(fake_rowid, colno, value)
-            for colno, value in constraints]
+    rowid = core.bayesdb_population_fresh_row_id(bdb, population_id)
+    if constraints is not None:
+        user_rowid = [
+            v for c, v in constraints
+            if c in core.bayesdb_rowid_tokens(bdb)
+        ]
+        if len(user_rowid) == 1:
+            rowid = user_rowid[0]
+        elif len(user_rowid) > 1:
+            raise BQLError(bdb, 'Multiple rowids given: %s.' % (constraints,))
+        constraints = [
+            (rowid, c, v) for c, v in constraints
+            if c not in core.bayesdb_rowid_tokens(bdb)
+        ]
+    targets = [(rowid, colno) for colno in colnos]
     def loglikelihood(generator_id, metamodel):
         if not constraints:
             return 0

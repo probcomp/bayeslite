@@ -19,7 +19,7 @@ from bayeslite.util import cursor_value
 
 APPLICATION_ID = 0x42594442
 STALE_VERSIONS = (1,)
-USABLE_VERSIONS = (5, 6, 7, 8, 9)
+USABLE_VERSIONS = (5, 6, 7, 8, 9, 10,)
 
 LATEST_VERSION = USABLE_VERSIONS[-1]
 
@@ -173,6 +173,18 @@ INSERT INTO bayesdb_stattype VALUES ('nominal');
 INSERT INTO bayesdb_stattype VALUES ('numericalranged');
 '''
 
+bayesdb_schema_9to10 = '''
+PRAGMA user_version = 10;
+
+CREATE TABLE bayesdb_rowid_tokens(
+    token        TEXT COLLATE NOCASE NOT NULL PRIMARY KEY
+);
+
+INSERT INTO bayesdb_rowid_tokens VALUES ('_rowid_');
+INSERT INTO bayesdb_rowid_tokens VALUES ('rowid');
+INSERT INTO bayesdb_rowid_tokens VALUES ('oid');
+'''
+
 
 ### BayesDB SQLite setup
 
@@ -255,6 +267,10 @@ def _upgrade_schema(bdb, current_version=None, desired_version=None):
         with bdb.transaction():
             bdb.sql_execute(bayesdb_schema_8to9)
         current_version = 9
+    if current_version == 9 and current_version < desired_version:
+        with bdb.transaction():
+            bdb.sql_execute(bayesdb_schema_9to10)
+        current_version = 10
     bdb.sql_execute('PRAGMA integrity_check')
     bdb.sql_execute('PRAGMA foreign_key_check')
 
