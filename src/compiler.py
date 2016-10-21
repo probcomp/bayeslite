@@ -627,7 +627,9 @@ def compile_simulate(bdb, simulate, out):
                 raise BQLError(bdb, 'No such variable in population %r: %r' %
                     (simulate.population, column_name))
         for column_name, _expression in simulate.constraints:
-            if casefold(column_name) not in column_sqltypes:
+            cn = casefold(column_name)
+            if (cn not in column_sqltypes and
+                    cn not in core.bayesdb_rowid_tokens(bdb)):
                 raise BQLError(bdb, 'No such variable in population %r: %r' %
                     (simulate.population, column_name))
         # XXX Move to compiler.py.
@@ -646,8 +648,11 @@ def compile_simulate(bdb, simulate, out):
         nsamples = cursor[0][0]
         assert isinstance(nsamples, int)
         def map_var(var):
-            return core.bayesdb_variable_number(bdb, population_id,
-                generator_id, var)
+            if casefold(var) not in core.bayesdb_rowid_tokens(bdb):
+                return core.bayesdb_variable_number(
+                    bdb, population_id, generator_id, var)
+            else:
+                return casefold(var)
         def map_constraint(((var, _expression), value)):
             return (map_var(var), value)
         constraints = \

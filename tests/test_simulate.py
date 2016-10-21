@@ -171,3 +171,10 @@ def test_simulate_given_rowid_multivariate():
         # CrossCat metamodel, so the additional condition on w should have no
         # effect.
         assert abs(row1_1_avg - row1_2_avg) < 2
+
+        # A call to SIMULATE without CREATE TABLE.
+        result = bdb.execute('''
+            SIMULATE y FROM t_p
+            GIVEN oid = 1, w = 3 LIMIT 10;
+        ''').fetchall()
+        assert len(result) == 10
