@@ -16,11 +16,14 @@
 
 import os
 
-import bayeslite
-from bayeslite.core import bayesdb_get_generator
-from bayeslite.metamodels.crosscat import CrosscatMetamodel
-import bayeslite.read_csv as read_csv
 import crosscat.LocalEngine
+
+import bayeslite
+import bayeslite.read_csv as read_csv
+
+from bayeslite.core import bayesdb_get_generator
+from bayeslite.guess import bayesdb_guess_population
+from bayeslite.metamodels.crosscat import CrosscatMetamodel
 
 root = os.path.dirname(os.path.abspath(__file__))
 dha_csv = os.path.join(root, 'dha.csv')
@@ -32,32 +35,33 @@ def test_subsample():
         bayeslite.bayesdb_register_metamodel(bdb, metamodel)
         with open(dha_csv, 'rU') as f:
             read_csv.bayesdb_read_csv(bdb, 'dha', f, header=True, create=True)
+        bayesdb_guess_population(bdb, 'hospitals_full', 'dha',
+            overrides=[('name', 'key')])
+        bayesdb_guess_population(bdb, 'hospitals_sub', 'dha',
+            overrides=[('name', 'key')])
         bdb.execute('''
-            CREATE GENERATOR dhacc_full FOR dha USING crosscat (
-                SUBSAMPLE(OFF),
-                GUESS(*),
-                name KEY
+            CREATE GENERATOR hosp_full_cc FOR hospitals_full USING crosscat (
+                SUBSAMPLE(OFF)
             )
         ''')
         bdb.execute('''
-            CREATE GENERATOR dhacc FOR dha USING crosscat (
-                SUBSAMPLE(100),
-                GUESS(*),
-                name KEY
+            CREATE GENERATOR hosp_sub_cc FOR hospitals_sub USING crosscat (
+                SUBSAMPLE(100)
             )
         ''')
-        bdb.execute('INITIALIZE 1 MODEL FOR dhacc')
-        bdb.execute('ANALYZE dhacc FOR 1 ITERATION WAIT')
-        bdb.execute('ESTIMATE SIMILARITY TO (_rowid_=2) FROM dhacc'
+        bdb.execute('INITIALIZE 1 MODEL FOR hosp_sub_cc')
+        bdb.execute('ANALYZE hosp_sub_cc FOR 1 ITERATION WAIT')
+        bdb.execute('ESTIMATE SIMILARITY TO (_rowid_=2) FROM hospitals_sub'
             ' WHERE _rowid_ = 1 OR _rowid_ = 101').fetchall()
-        bdb.execute('ESTIMATE SIMILARITY TO (_rowid_=102) FROM dhacc'
+        bdb.execute('ESTIMATE SIMILARITY TO (_rowid_=102) FROM hospitals_sub'
             ' WHERE _rowid_ = 1 OR _rowid_ = 101').fetchall()
         bdb.execute('ESTIMATE PREDICTIVE PROBABILITY OF mdcr_spnd_amblnc'
-            ' FROM dhacc WHERE _rowid_ = 1 OR _rowid_ = 101').fetchall()
-        bdb.execute('ESTIMATE SIMILARITY FROM PAIRWISE dhacc'
+            ' FROM hospitals_sub'
+            ' WHERE _rowid_ = 1 OR _rowid_ = 101').fetchall()
+        bdb.execute('ESTIMATE SIMILARITY FROM PAIRWISE hospitals_sub'
             ' WHERE (r0._rowid_ = 1 OR r0._rowid_ = 101) AND'
                 ' (r1._rowid_ = 1 OR r1._rowid_ = 101)').fetchall()
-        bdb.execute('INFER mdcr_spnd_amblnc FROM dhacc'
+        bdb.execute('INFER mdcr_spnd_amblnc FROM hospitals_sub'
             ' WHERE _rowid_ = 1 OR _rowid_ = 101').fetchall()
         sql = '''
             SELECT sql_rowid FROM bayesdb_crosscat_subsample
@@ -65,11 +69,13 @@ def test_subsample():
                 ORDER BY cc_row_id ASC
                 LIMIT 100
         '''
-        gid_full = bayesdb_get_generator(bdb, 'dhacc_full')
+        gid_full = bayesdb_get_generator(bdb, None, 'hosp_full_cc')
         cursor = bdb.sql_execute(sql, (gid_full,))
         assert [row[0] for row in cursor] == range(1, 100 + 1)
-        gid = bayesdb_get_generator(bdb, 'dhacc')
+        gid = bayesdb_get_generator(bdb, None, 'hosp_sub_cc')
         cursor = bdb.sql_execute(sql, (gid,))
         assert [row[0] for row in cursor] != range(1, 100 + 1)
-        bdb.execute('DROP GENERATOR dhacc')
-        bdb.execute('DROP GENERATOR dhacc_full')
+        bdb.execute('DROP GENERATOR hosp_sub_cc')
+        bdb.execute('DROP GENERATOR hosp_full_cc')
+        bdb.execute('DROP POPULATION hospitals_sub')
+        bdb.execute('DROP POPULATION hospitals_full')

@@ -40,6 +40,8 @@ implications of the data in the table::
        print x
 """
 
+from bayeslite.util import cursor_value
+
 builtin_metamodels = []
 builtin_metamodel_names = set()
 
@@ -74,6 +76,12 @@ def bayesdb_deregister_metamodel(bdb, metamodel):
     assert bdb.metamodels[name] == metamodel
     del bdb.metamodels[name]
 
+def bayesdb_metamodel_version(bdb, mm_name):
+    cursor = bdb.sql_execute('''
+        SELECT version FROM bayesdb_metamodel WHERE name = ?
+    ''', (mm_name,))
+    return cursor_value(cursor, nullok=True)
+
 class IBayesDBMetamodel(object):
     """BayesDB metamodel interface.
 
@@ -98,16 +106,12 @@ class IBayesDBMetamodel(object):
         """
         raise NotImplementedError
 
-    def create_generator(self, bdb, table, schema, instantiate):
+    def create_generator(self, bdb, table, schema, **kwargs):
         """Create a generator for a table with the given schema.
 
         Called when executing ``CREATE GENERATOR``.
 
-        Must parse `schema` to determine the column names and
-        statistical types of the generator, and then call
-        `instantiate` with a list of ``(column_name, stattype)``
-        pairs.  `instantiate` will return a generator id and a list of
-        ``(colno, column_name, stattype)`` triples.
+        Must parse `schema` to build the generator.
 
         The generator id and column numbers may be used to create
         metamodel-specific records in the database for the generator
@@ -139,7 +143,7 @@ class IBayesDBMetamodel(object):
         """
         raise NotImplementedError
 
-    def initialize_models(self, bdb, generator_id, modelnos, model_config):
+    def initialize_models(self, bdb, generator_id, modelnos):
         """Initialize the specified model numbers for a generator."""
         raise NotImplementedError
 
@@ -151,7 +155,8 @@ class IBayesDBMetamodel(object):
         raise NotImplementedError
 
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
-            max_seconds=None, ckpt_iterations=None, ckpt_seconds=None):
+            max_seconds=None, ckpt_iterations=None, ckpt_seconds=None,
+            program=None):
         """Analyze the specified model numbers of a generator.
 
         If none are specified, analyze all of them.
@@ -163,6 +168,7 @@ class IBayesDBMetamodel(object):
             results of analysis to the database
         :param int ckpt_seconds: number of seconds before committing results of
             anlaysis to the database
+        :param object program: None, or list of tokens of analysis program
         """
         raise NotImplementedError
 
@@ -172,7 +178,7 @@ class IBayesDBMetamodel(object):
         raise NotImplementedError
 
     def column_mutual_information(self, bdb, generator_id, modelno, colno0,
-            colno1, numsamples=100):
+            colno1, constraints=None, numsamples=100):
         """Compute ``MUTUAL INFORMATION OF <col0> WITH <col1>``."""
         raise NotImplementedError
 
@@ -196,7 +202,7 @@ class IBayesDBMetamodel(object):
         raise NotImplementedError
 
     def simulate_joint(self, bdb, generator_id, targets, constraints, modelno,
-            num_predictions=1):
+            num_predictions=1, accuracy=None):
         """Simulate `targets` from a generator, subject to `constraints`.
 
         Returns a list of lists of values for the specified targets.
@@ -208,6 +214,10 @@ class IBayesDBMetamodel(object):
         `constraints` is a list of ``(rowid, colno, value)`` triples.
 
         `num_predictions` is the number of results to return.
+
+        `accuracy` is a generic parameter (usually int) which specifies the
+        desired accuracy, compute time, etc if the simulations are approximately
+        distributed from the true target.
 
         The results are samples from the distribution on targets,
         independent conditioned on (the latent state of the metamodel
@@ -226,13 +236,5 @@ class IBayesDBMetamodel(object):
         `constraints` is a list of ``(rowid, colno, value)`` triples.
 
         `modelno` is a model number or `None`, meaning all models.
-        """
-        raise NotImplementedError
-
-    def insertmany(self, bdb, generator_id, rows):
-        """Insert `rows` into a generator, updating analyses accordingly.
-
-        `rows` is a list of tuples with one value for each column
-        modelled by the generator.
         """
         raise NotImplementedError

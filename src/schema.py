@@ -19,7 +19,7 @@ from bayeslite.util import cursor_value
 
 APPLICATION_ID = 0x42594442
 STALE_VERSIONS = (1,)
-USABLE_VERSIONS = (5, 6, 7)
+USABLE_VERSIONS = (5, 6, 7, 8, 9, 10,)
 
 LATEST_VERSION = USABLE_VERSIONS[-1]
 
@@ -118,6 +118,74 @@ CREATE TABLE bayesdb_session_entries (
 );
 '''
 
+bayesdb_schema_7to8 = '''
+PRAGMA user_version = 8;
+
+CREATE TABLE bayesdb_population (
+	id		INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
+				CHECK (0 < id),
+	name		TEXT COLLATE NOCASE NOT NULL UNIQUE,
+	tabname		TEXT COLLATE NOCASE NOT NULL
+				-- REFERENCES sqlite_master(name)
+);
+
+CREATE TABLE bayesdb_variable (
+	population_id	INTEGER NOT NULL REFERENCES bayesdb_population(id),
+	generator_id	INTEGER REFERENCES bayesdb_generator(id)
+				ON DELETE CASCADE,
+	colno		INTEGER NOT NULL,
+	name		TEXT COLLATE NOCASE NOT NULL,
+	stattype	TEXT COLLATE NOCASE NOT NULL
+				REFERENCES bayesdb_stattype(name),
+	PRIMARY KEY(population_id, colno),
+	UNIQUE(population_id, name),
+	UNIQUE(generator_id, colno),
+	UNIQUE(generator_id, name)
+);
+
+INSERT INTO bayesdb_variable (population_id, name, colno, stattype)
+    SELECT p.id, c.name, gc.colno, gc.stattype
+        FROM bayesdb_population AS p,
+            bayesdb_generator AS g,
+            bayesdb_generator_column AS gc,
+            bayesdb_column AS c
+        WHERE p.name = g.name
+            AND g.id = gc.generator_id
+            AND p.tabname = c.tabname
+            AND gc.colno = c.colno;
+
+-- Adapt each existing generator to a single population.
+INSERT INTO bayesdb_population (name, tabname)
+    SELECT name, tabname FROM bayesdb_generator;
+ALTER TABLE bayesdb_generator
+    ADD COLUMN population_id INTEGER REFERENCES bayesdb_population(id);
+UPDATE bayesdb_generator
+    SET population_id =
+        (SELECT p.id FROM bayesdb_population AS p WHERE p.tabname = tabname);
+'''
+
+bayesdb_schema_8to9 = '''
+PRAGMA user_version = 9;
+
+INSERT INTO bayesdb_stattype VALUES ('counts');
+INSERT INTO bayesdb_stattype VALUES ('magnitude');
+INSERT INTO bayesdb_stattype VALUES ('nominal');
+INSERT INTO bayesdb_stattype VALUES ('numericalranged');
+'''
+
+bayesdb_schema_9to10 = '''
+PRAGMA user_version = 10;
+
+CREATE TABLE bayesdb_rowid_tokens(
+    token        TEXT COLLATE NOCASE NOT NULL PRIMARY KEY
+);
+
+INSERT INTO bayesdb_rowid_tokens VALUES ('_rowid_');
+INSERT INTO bayesdb_rowid_tokens VALUES ('rowid');
+INSERT INTO bayesdb_rowid_tokens VALUES ('oid');
+'''
+
+
 ### BayesDB SQLite setup
 
 def bayesdb_install_schema(bdb, version=None, compatible=None):
@@ -191,6 +259,18 @@ def _upgrade_schema(bdb, current_version=None, desired_version=None):
         with bdb.transaction():
             bdb.sql_execute(bayesdb_schema_6to7)
         current_version = 7
+    if current_version == 7 and current_version < desired_version:
+        with bdb.transaction():
+            bdb.sql_execute(bayesdb_schema_7to8)
+        current_version = 8
+    if current_version == 8 and current_version < desired_version:
+        with bdb.transaction():
+            bdb.sql_execute(bayesdb_schema_8to9)
+        current_version = 9
+    if current_version == 9 and current_version < desired_version:
+        with bdb.transaction():
+            bdb.sql_execute(bayesdb_schema_9to10)
+        current_version = 10
     bdb.sql_execute('PRAGMA integrity_check')
     bdb.sql_execute('PRAGMA foreign_key_check')
 

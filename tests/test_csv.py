@@ -59,8 +59,8 @@ def test_csv_import_onecol_key():
         bayeslite.bayesdb_read_csv(bdb, 'onecol_key', f, header=True,
             create=True)
         with pytest.raises(ValueError):
-            bayeslite.guess.bayesdb_guess_generator(bdb, 'onecol_key_cc',
-                'onecol_key', 'crosscat')
+            bayeslite.guess.bayesdb_guess_population(bdb, 'p_onecol_key',
+                'onecol_key')
 
 def test_csv_import_onecol():
     with bayesdb_csv_stream('foo\n0\none\n2\n0\n') as (bdb, f):
@@ -126,18 +126,22 @@ def test_csv_import_schema():
             raise apsw.SQLError('BQL compiler is broken;'
                 ' a.k.a. sqlite3 is stupid.')
         bdb.execute('''
-            CREATE GENERATOR employees_cc FOR employees USING crosscat(
-                age NUMERICAL,
-                gender CATEGORICAL,
-                salary CYCLIC,
-                division CATEGORICAL,
+            CREATE POPULATION p_employees FOR employees (
+                height IGNORE;
+                age NUMERICAL;
+                gender CATEGORICAL;
+                salary CYCLIC;
+                division CATEGORICAL;
                 rank CATEGORICAL
             )
         ''')
-        bdb.execute('estimate height from employees_cc').fetchall()
+        bdb.execute('''
+            CREATE GENERATOR p_employees_cc for p_employees USING crosscat ()
+        ''')
+        bdb.execute('estimate height from p_employees').fetchall()
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate predict height with confidence 0.9'
-                ' from employees_cc')
+                ' from p_employees')
 
 def test_csv_import_schema_case():
     with bayesdb_csv_stream(csv_data) as (bdb, f):
@@ -153,8 +157,8 @@ def test_csv_import_schema_case():
         ''')
         bayeslite.bayesdb_read_csv(bdb, 'employees', f, header=True,
             create=False)
-        bayeslite.guess.bayesdb_guess_generator(bdb, 'employees_cc',
-            'employees', 'crosscat')
+        bayeslite.guess.bayesdb_guess_population(bdb, 'p_employees',
+            'employees')
 
 def test_csv_import_badschema0():
     with bayesdb_csv_stream(csv_data) as (bdb, f):

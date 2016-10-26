@@ -41,8 +41,8 @@ class TrollMetamodel(metamodel.IBayesDBMetamodel):
             INSERT INTO bayesdb_metamodel (name, version)
                 VALUES (?, 1)
         ''', (self.name(),))
-    def create_generator(self, bdb, table, schema, instantiate):
-        instantiate(schema)
+    def create_generator(self, bdb, generator_id, schema, **kwargs):
+        pass
     def drop_generator(self, *args, **kwargs): pass
     def rename_column(self, *args, **kwargs): pass
     def initialize_models(self, *args, **kwargs): pass
@@ -62,6 +62,4 @@ class TrollMetamodel(metamodel.IBayesDBMetamodel):
         # TODO This is only correct wrt counting measure.  What's the
         # base measure of numericals?
         return 0
-    def insert(self, *args, **kwargs): pass
-    def remove(self, *args, **kwargs): pass
     def infer(self, *args, **kwargs): pass

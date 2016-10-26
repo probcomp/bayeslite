@@ -27,17 +27,18 @@ def test_correlation():
         bayeslite.bayesdb_register_metamodel(bdb, ccme)
         bdb.sql_execute('CREATE TABLE u(id, c0, c1, n0, n1, r0, r1)')
         bdb.execute('''
-            CREATE GENERATOR u_cc FOR u USING crosscat (
-                c0 CATEGORICAL,
-                c1 CATEGORICAL,
-                n0 NUMERICAL,
-                n1 NUMERICAL,
-                r0 CYCLIC,
-                r1 CYCLIC,
+            CREATE POPULATION q FOR u (
+                id IGNORE;
+                c0 CATEGORICAL;
+                c1 CATEGORICAL;
+                n0 NUMERICAL;
+                n1 NUMERICAL;
+                r0 CYCLIC;
+                r1 CYCLIC
             )
         ''')
         assert bdb.execute('ESTIMATE CORRELATION, CORRELATION PVALUE'
-                ' FROM PAIRWISE COLUMNS OF u_cc'
+                ' FROM PAIRWISE COLUMNS OF q'
                 ' WHERE name0 < name1'
                 ' ORDER BY name0, name1').fetchall() == \
             [
@@ -69,21 +70,22 @@ def test_correlation():
             bdb.sql_execute('INSERT INTO t VALUES (?,?,?,?,?,?,?,?,?,?,?)',
                 row)
         bdb.execute('''
-            CREATE GENERATOR t_cc FOR t USING crosscat (
-                c0 CATEGORICAL,
-                c1 CATEGORICAL,
-                cx CATEGORICAL,
-                cy CATEGORICAL,
-                n0 NUMERICAL,
-                n1 NUMERICAL,
-                nc NUMERICAL,
-                nl NUMERICAL,
-                nx NUMERICAL,
+            CREATE POPULATION p FOR t (
+                id IGNORE;
+                c0 NOMINAL;
+                c1 NOMINAL;
+                cx NOMINAL;
+                cy NOMINAL;
+                n0 NUMERICAL;
+                n1 NUMERICAL;
+                nc NUMERICAL;
+                nl NUMERICAL;
+                nx NUMERICAL;
                 ny NUMERICAL
             )
         ''')
         result = bdb.execute('ESTIMATE CORRELATION, CORRELATION PVALUE'
-            ' FROM PAIRWISE COLUMNS OF t_cc'
+            ' FROM PAIRWISE COLUMNS OF p'
             ' WHERE name0 < name1'
             ' ORDER BY name0, name1').fetchall()
         expected = [

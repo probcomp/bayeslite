@@ -47,6 +47,13 @@ CreateTabSim = namedtuple('CreateTabSim', [
     'name',                     # XXX name
     'simulation',               # Simulate
 ])
+CreateTabCsv = namedtuple('CreateTabCsv', [
+    # XXX Database name, &c.
+    'temp',                     # boolean
+    'ifnotexists',              # boolean
+    'name',                     # XXX name
+    'csv',                      # csv filename string
+])
 DropTab = namedtuple('DropTab', [
     # XXX Database name, &c.
     'ifexists',
@@ -64,18 +71,51 @@ AlterTabRenameCol = namedtuple('AlterTabRenameCol', [
     'old',                      # XXX name
     'new',                      # XXX name
 ])
-AlterTabSetDefGen = namedtuple('AlterTabSetDefGen', [
-    'generator',                # XXX name
+
+# XXX Hackery for baselines.
+Baseline = namedtuple('Baseline', [
+    'name',
+    'params',
 ])
-AlterTabUnsetDefGen = namedtuple('AlterTabUnsetDefGen', [])
 
 ### BQL Model Definition Language
+GuessSchema = namedtuple('GuessSchema', [
+    'table'
+])
+CreatePop = namedtuple('CreatePop', [
+    'ifnotexists',
+    'name',
+    'table',
+    'schema',
+])
+DropPop = namedtuple('DropPop', [
+    'ifexists',
+    'name',
+])
+PopModelVars = namedtuple('PopModelVars', [
+    'names',
+    'stattype',
+])
+PopGuessVars = namedtuple('PopGuessVars', [
+    'names',
+])
+PopIgnoreVars = namedtuple('PopIgnoreVars', [
+    'names',
+])
+AlterPop = namedtuple('AlterPop', [
+    'population',                # XXX name
+    'commands',                 # AlterGen*
+])
+AlterPopStatType = namedtuple('AlterGenRenameGen', [
+    'names',
+    'stattype',
+])
 
 CreateGen = namedtuple('CreateGen', [
-    'default',                  # boolean
     'name',                     # XXX name
     'ifnotexists',              # boolean
-    'table',                    # XXX name
+    'population',               # XXX name
+    'baseline',                 # XXX name
     'metamodel',                # XXX name
     'schema',                   # nested list of tokens
 ])
@@ -97,7 +137,6 @@ InitModels = namedtuple('InitModels', [
     'ifnotexists',
     'generator',
     'nmodels',
-    'config',
 ])
 AnalyzeModels = namedtuple('AnalyzeModels', [
     'generator',
@@ -107,6 +146,7 @@ AnalyzeModels = namedtuple('AnalyzeModels', [
     'ckpt_iterations',
     'ckpt_seconds',
     'wait',
+    'program',
 ])
 DropModels = namedtuple('DropModels', [
     'generator',
@@ -115,10 +155,11 @@ DropModels = namedtuple('DropModels', [
 
 Simulate = namedtuple('Simulate', [
     'columns',                  # [XXX name]
+    'population',               # XXX name
     'generator',                # XXX name
-    'modelno',                  # modelno
     'constraints',              # [(XXX name, Exp*)]
     'nsamples',                 # Exp* or None
+    'accuracy',                 # int or None
 ])
 
 def is_query(phrase):
@@ -155,8 +196,8 @@ Select = namedtuple('Select', [
 Estimate = namedtuple('Estimate', [
     'quantifier',               # SELQUANT_*
     'columns',                  # [SelCol*]
+    'population',               # XXX name
     'generator',                # XXX name
-    'modelno',                  # modelno
     'condition',                # Exp* or None (unconditional)
     'grouping',                 # Grouping or None
     'order',                    # [Ord] or None (unordered)
@@ -166,8 +207,8 @@ Estimate = namedtuple('Estimate', [
 EstBy = namedtuple('EstBy', [
     'quantifier',               # SELQUANT_*
     'columns',                  # [(Exp*, XXX name)]
+    'population',               # XXX name
     'generator',                # XXX name
-    'modelno',                  # modelno
 ])
 
 SELQUANT_DISTINCT = 'distinct'
@@ -189,6 +230,7 @@ PredCol = namedtuple('PredCol', [
     'column',                   # XXX name
     'name',                     # XXX name
     'confname',                 # XXX name
+    'nsamples',                 # Exp* or None
 ])
 
 SelTab = namedtuple('SelTab', [
@@ -199,8 +241,9 @@ SelTab = namedtuple('SelTab', [
 InferAuto = namedtuple('InferAuto', [
     'columns',                  # [InfCol* or PredCol]
     'confidence',               # Exp* or None (implied 0)
+    'nsamples',                 # Exp* or None
+    'population',               # XXX name
     'generator',                # XXX name
-    'modelno',                  # modelno
     'condition',                # Exp* or None (unconditional)
     'grouping',                 # Grouping or None
     'order',                    # [Ord] or None (unordered)
@@ -209,8 +252,8 @@ InferAuto = namedtuple('InferAuto', [
 
 InferExplicit = namedtuple('InferExplicit', [
     'columns',                  # [SelCol* or PredCol]
+    'population',               # XXX name
     'generator',                # XXX name
-    'modelno',                  # modelno
     'condition',                # Exp* or None (unconditional)
     'grouping',                 # Grouping or None
     'order',                    # [Ord] or None (unordered)
@@ -225,8 +268,8 @@ InfColOne = namedtuple('InfColOne', [
 
 EstCols = namedtuple('EstCols', [
     'columns',                  # [SelCol*]
+    'population',               # XXX name
     'generator',                # XXX name
-    'modelno',                  # modelno
     'condition',                # Exp* or None (unconditional)
     'order',                    # [Ord] or None (unordered)
     'limit',                    # Lim or None (unlimited),
@@ -234,9 +277,9 @@ EstCols = namedtuple('EstCols', [
 
 EstPairCols = namedtuple('EstPairCols', [
     'columns',                  # [SelCol*]
-    'generator',                # XXX name
+    'population',               # XXX name
     'subcolumns',               # ColList* or None
-    'modelno',                  # modelno
+    'generator',                # XXX name
     'condition',                # Exp* or None (unconditional)
     'order',                    # [Ord] or None (unordered)
     'limit',                    # Lim or None (unlimited),
@@ -244,8 +287,8 @@ EstPairCols = namedtuple('EstPairCols', [
 
 EstPairRow = namedtuple('EstPairRow', [
     'columns',                  # [SelCol*]
+    'population',               # XXX name
     'generator',                # XXX name
-    'modelno',                  # modelno
     'condition',                # Exp* or None (unconditional)
     'order',                    # [Ord] or None (unordered)
     'limit',                    # Lim or None (unlimited),
@@ -333,11 +376,15 @@ ExpBQLProb = namedtuple('ExpBQLProb', ['targets', 'constraints'])
 ExpBQLProbFn = namedtuple('ExpBQLProbFn', ['value', 'constraints'])
 ExpBQLSim = namedtuple('ExpBQLSim', ['condition', 'column_lists'])
 ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
-ExpBQLMutInf = namedtuple('ExpBQLMutInf', ['column0', 'column1', 'nsamples'])
+ExpBQLMutInf = namedtuple('ExpBQLMutInf', [
+    'column0', 'column1', 'constraints', 'nsamples'
+])
 ExpBQLCorrel = namedtuple('ExpBQLCorrel', ['column0', 'column1'])
 ExpBQLCorrelPval = namedtuple('ExpBQLCorrelPval', ['column0', 'column1'])
-ExpBQLPredict = namedtuple('ExpBQLPredict', ['column', 'confidence'])
-ExpBQLPredictConf = namedtuple('ExpBQLPredictConf', ['column'])
+ExpBQLPredict = namedtuple('ExpBQLPredict', [
+    'column', 'confidence', 'nsamples',
+])
+ExpBQLPredictConf = namedtuple('ExpBQLPredictConf', ['column', 'nsamples'])
 
 def is_bql(exp):
     if isinstance(exp, ExpBQLPredProb):
