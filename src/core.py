@@ -26,8 +26,7 @@ a savepoint.
 
 Each table may optionally be modelled by any number of generators,
 representing a parametrized generative model for the table's data,
-according to a named metamodel.  For each table, at most one generator
-may be designated as the default generator for the table.
+according to a named metamodel.
 
 Each generator models a subset of the columns in its table, which are
 called the modelled columns of that generator.  Each column in a
@@ -40,11 +39,6 @@ representing a particular choice of parameters for the parametrized
 generative model.  Models are numbered consecutively for the
 generator, and may be identified uniquely by ``(generator_id,
 modelno)`` or ``(generator_name, modelno)``.
-
-Tables and generators may not share names.  In most contexts, where a
-generator's name is needed, the name of a table with a default
-generator may be substituted.
-
 """
 
 from bayeslite.exception import BQLError
@@ -162,23 +156,208 @@ def bayesdb_table_guarantee_columns(bdb, table):
         if nrows == 0:
             raise ValueError('No such table: %s' % (repr(table),))
 
-def bayesdb_has_generator(bdb, name):
-    """True if there is a generator named `name` in `bdb`.
-
-    Only actual generator names are considered.
-    """
-    sql = 'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?'
+def bayesdb_has_population(bdb, name):
+    """True if there is a population named `name` in `bdb`."""
+    sql = 'SELECT COUNT(*) FROM bayesdb_population WHERE name = ?'
     return 0 != cursor_value(bdb.sql_execute(sql, (name,)))
 
-def bayesdb_has_generator_default(bdb, name):
-    """True if there is a generator or default-modelled table named `name`."""
-    sql = '''
-        SELECT COUNT(*) FROM bayesdb_generator
-            WHERE name = :name OR (defaultp AND tabname = :name)
-    '''
-    return 0 != cursor_value(bdb.sql_execute(sql, {'name': name}))
+def bayesdb_get_population(bdb, name):
+    """Return the id of the population named `name` in `bdb`.
 
-def bayesdb_get_generator(bdb, name):
+    The id is persistent across savepoints: ids are 64-bit integers
+    that increase monotonically and are never reused.
+
+    `bdb` must have a population named `name`.  If you're not sure,
+    call :func:`bayesdb_has_population` first.
+    """
+    sql = 'SELECT id FROM bayesdb_population WHERE name = ?'
+    cursor = bdb.sql_execute(sql, (name,))
+    try:
+        row = cursor.next()
+    except StopIteration:
+        raise ValueError('No such population: %r' % (name,))
+    else:
+        assert isinstance(row[0], int)
+        return row[0]
+
+def bayesdb_population_name(bdb, id):
+    """Return the name of the population with id `id`."""
+    sql = 'SELECT name FROM bayesdb_population WHERE id = ?'
+    cursor = bdb.sql_execute(sql, (id,))
+    try:
+        row = cursor.next()
+    except StopIteration:
+        raise ValueError('No such population id: %r' % (id,))
+    else:
+        return row[0]
+
+def bayesdb_population_table(bdb, id):
+    """Return the name of table of the population with id `id`."""
+    sql = 'SELECT tabname FROM bayesdb_population WHERE id = ?'
+    cursor = bdb.sql_execute(sql, (id,))
+    try:
+        row = cursor.next()
+    except StopIteration:
+        raise ValueError('No such population id: %r' % (id,))
+    else:
+        return row[0]
+
+def bayesdb_population_generators(bdb, population_id):
+    cursor = bdb.sql_execute('''
+        SELECT id FROM bayesdb_generator WHERE population_id = ?
+    ''', (population_id,))
+    return [generator_id for (generator_id,) in cursor]
+
+def bayesdb_has_variable(bdb, population_id, generator_id, name):
+    """True if the population has a given variable.
+
+    generator_id is None for manifest variables and the id of a
+    generator for variables that may be latent.
+    """
+    cursor = bdb.sql_execute('''
+        SELECT COUNT(*) FROM bayesdb_variable
+            WHERE population_id = ?
+                AND (generator_id IS NULL OR generator_id = ?)
+                AND name = ?
+    ''', (population_id, generator_id, name))
+    return cursor_value(cursor) != 0
+
+def bayesdb_variable_number(bdb, population_id, generator_id, name):
+    """Return the column number of a population variable."""
+    cursor = bdb.sql_execute('''
+        SELECT colno FROM bayesdb_variable
+            WHERE population_id = ?
+                AND (generator_id IS NULL OR generator_id = ?)
+                AND name = ?
+    ''', (population_id, generator_id, name))
+    return cursor_value(cursor)
+
+def bayesdb_variable_names(bdb, population_id, generator_id):
+    """Return a list of the names of columns modelled in `population_id`."""
+    colnos = bayesdb_variable_numbers(bdb, population_id, generator_id)
+    return [bayesdb_variable_name(bdb, population_id, colno)
+        for colno in colnos]
+
+def bayesdb_variable_numbers(bdb, population_id, generator_id):
+    """Return a list of the numbers of columns modelled in `population_id`."""
+    cursor = bdb.sql_execute('''
+        SELECT colno FROM bayesdb_variable
+            WHERE population_id = ?
+                AND (generator_id IS NULL OR generator_id = ?)
+            ORDER BY colno ASC
+    ''', (population_id, generator_id))
+    return [colno for (colno,) in cursor]
+
+def bayesdb_variable_name(bdb, population_id, colno):
+    """Return the name a population variable."""
+    cursor = bdb.sql_execute('''
+        SELECT name FROM bayesdb_variable WHERE population_id = ? AND colno = ?
+    ''', (population_id, colno))
+    return cursor_value(cursor)
+
+def bayesdb_variable_stattype(bdb, population_id, colno):
+    """Return the statistical type of a population variable."""
+    sql = '''
+        SELECT stattype FROM bayesdb_variable
+            WHERE population_id = ? AND colno = ?
+    '''
+    cursor = bdb.sql_execute(sql, (population_id, colno))
+    try:
+        row = cursor.next()
+    except StopIteration:
+        population = bayesdb_population_name(bdb, population_id)
+        sql = '''
+            SELECT COUNT(*)
+                FROM bayesdb_population AS p, bayesdb_column AS c
+                WHERE p.id = :population_id
+                    AND p.tabname = c.tabname
+                    AND c.colno = :colno
+        '''
+        cursor = bdb.sql_execute(sql, {
+            'population_id': population_id,
+            'colno': colno,
+        })
+        if cursor_value(cursor) == 0:
+            raise ValueError('No such variable in population %s: %d' %
+                (population, colno))
+        else:
+            raise ValueError('Variable not modelled in population %s: %d' %
+                (population, colno))
+    else:
+        assert len(row) == 1
+        return row[0]
+
+def bayesdb_add_latent(bdb, population_id, generator_id, var, stattype):
+    """Add a generator's latent variable to a population.
+
+    NOTE: To be used ONLY by a metamodel's create_generator method
+    when establishing any latent variables of that generator.
+    """
+    with bdb.savepoint():
+        cursor = bdb.sql_execute('''
+            SELECT MIN(colno) FROM bayesdb_variable WHERE population_id = ?
+        ''', (population_id,))
+        colno = min(-1, cursor_value(cursor) - 1)
+        bdb.sql_execute('''
+            INSERT INTO bayesdb_variable
+                (population_id, generator_id, colno, name, stattype)
+                VALUES (?, ?, ?, ?, ?)
+        ''', (population_id, generator_id, colno, var, stattype))
+        return colno
+
+def bayesdb_has_latent(bdb, population_id, var):
+    """True if the population has a latent variable by the given name."""
+    cursor = bdb.sql_execute('''
+        SELECT COUNT(*) FROM bayesdb_variable
+            WHERE population_id = ? AND name = ? AND generator_id IS NOT NULL
+    ''', (population_id, var))
+    return cursor_value(cursor)
+
+def bayesdb_population_cell_value(bdb, population_id, rowid, colno):
+    if colno < 0:
+        # Latent variables do not appear in the table.
+        return None
+    table_name = bayesdb_population_table(bdb, population_id)
+    var = bayesdb_variable_name(bdb, population_id, colno)
+    qt = sqlite3_quote_name(table_name)
+    qv = sqlite3_quote_name(var)
+    value_sql = 'SELECT %s FROM %s WHERE _rowid_ = ?' % (qv, qt)
+    value_cursor = bdb.sql_execute(value_sql, (rowid,))
+    value = None
+    try:
+        row = value_cursor.next()
+    except StopIteration:
+        population = bayesdb_population_name(bdb, population_id)
+        raise BQLError(bdb, 'No such invidual in population %r: %d' %
+            (population, rowid))
+    else:
+        assert len(row) == 1
+        value = row[0]
+    return value
+
+def bayesdb_population_fresh_row_id(bdb, population_id):
+    table_name = bayesdb_population_table(bdb, population_id)
+    qt = sqlite3_quote_name(table_name)
+    cursor = bdb.sql_execute('SELECT MAX(_rowid_) FROM %s' % (qt,))
+    max_rowid = cursor_value(cursor)
+    if max_rowid is None:
+        max_rowid = 0
+    return max_rowid + 1   # Synthesize a non-existent SQLite row id
+
+def bayesdb_has_generator(bdb, population_id, name):
+    """True if there is a generator named `name` in `bdb`."""
+    if population_id is None:
+        sql = 'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?'
+        cursor = bdb.sql_execute(sql, (name,))
+    else:
+        sql = '''
+            SELECT COUNT(*) FROM bayesdb_generator
+                WHERE name = ? AND population_id = ?
+        '''
+        cursor = bdb.sql_execute(sql, (name, population_id))
+    return 0 != cursor_value(cursor)
+
+def bayesdb_get_generator(bdb, population_id, name):
     """Return the id of the generator named `name` in `bdb`.
 
     The id is persistent across savepoints: ids are 64-bit integers
@@ -187,31 +366,15 @@ def bayesdb_get_generator(bdb, name):
     `bdb` must have a generator named `name`.  If you're not sure,
     call :func:`bayesdb_has_generator` first.
     """
-    sql = 'SELECT id FROM bayesdb_generator WHERE name = ?'
-    cursor = bdb.sql_execute(sql, (name,))
-    try:
-        row = cursor.next()
-    except StopIteration:
-        raise ValueError('No such generator: %s' % (repr(name),))
+    if population_id is None:
+        sql = 'SELECT id FROM bayesdb_generator WHERE name = ?'
+        cursor = bdb.sql_execute(sql, (name,))
     else:
-        assert isinstance(row[0], int)
-        return row[0]
-
-def bayesdb_get_generator_default(bdb, name):
-    """Return the id of the (default) generator named `name` in `bdb`.
-
-    The id is persistent across savepoints: ids are 64-bit integers
-    that increase monotonically and are never reused.
-
-    `bdb` must have a generator named `name`, or a modelled table
-    named `name` with a default generator.  If you're not sure, call
-    :func:`bayesdb_has_generator_default` first.
-    """
-    sql = '''
-        SELECT id FROM bayesdb_generator
-            WHERE name = :name OR (defaultp AND tabname = :name)
-    '''
-    cursor = bdb.sql_execute(sql, {'name': name})
+        sql = '''
+            SELECT id FROM bayesdb_generator
+                WHERE name = ? AND population_id = ?
+        '''
+        cursor = bdb.sql_execute(sql, (name, population_id))
     try:
         row = cursor.next()
     except StopIteration:
@@ -227,7 +390,7 @@ def bayesdb_generator_name(bdb, id):
     try:
         row = cursor.next()
     except StopIteration:
-        raise ValueError('No such generator id: %d' % (repr(id),))
+        raise ValueError('No such generator id: %r' % (id,))
     else:
         return row[0]
 
@@ -249,6 +412,18 @@ def bayesdb_generator_metamodel(bdb, id):
 def bayesdb_generator_table(bdb, id):
     """Return the name of the table of the generator with id `id`."""
     sql = 'SELECT tabname FROM bayesdb_generator WHERE id = ?'
+    cursor = bdb.sql_execute(sql, (id,))
+    try:
+        row = cursor.next()
+    except StopIteration:
+        raise ValueError('No such generator: %s' % (repr(id),))
+    else:
+        assert len(row) == 1
+        return row[0]
+
+def bayesdb_generator_population(bdb, id):
+    """Return the id of the population of the generator with id `id`."""
+    sql = 'SELECT population_id FROM bayesdb_generator WHERE id = ?'
     cursor = bdb.sql_execute(sql, (id,))
     try:
         row = cursor.next()
@@ -457,6 +632,17 @@ def bayesdb_generator_fresh_row_id(bdb, generator_id):
         max_rowid = 0
     return max_rowid + 1   # Synthesize a non-existent SQLite row id
 
+def bayesdb_rowid_tokens(bdb):
+    tokens = bdb.sql_execute('''
+        SELECT token FROM bayesdb_rowid_tokens
+    ''').fetchall()
+    return [t[0] for t in tokens]
+
+def bayesdb_has_stattype(bdb, stattype):
+    sql = 'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype'
+    cursor = bdb.sql_execute(sql, {'stattype': casefold(stattype)})
+    return cursor_value(cursor) > 0
+
 # XXX This should be stored in the database by adding a column to the
 # bayesdb_stattype table -- when we are later willing to contemplate
 # adding statistical types, e.g. COUNT, SCALE, or NONNEGATIVE REAL.
@@ -464,6 +650,11 @@ _STATTYPE_TO_AFFINITY = dict((casefold(st), casefold(af)) for st, af in (
     ('categorical', 'text'),
     ('cyclic', 'real'),
     ('numerical', 'real'),
+    ('counts', 'real'),
+    ('magnitude', 'real'),
+    ('nominal', 'text'),
+    ('numericalranged', 'real'),
 ))
 def bayesdb_stattype_affinity(_bdb, stattype):
+    assert bayesdb_has_stattype(_bdb, stattype)
     return _STATTYPE_TO_AFFINITY[casefold(stattype)]

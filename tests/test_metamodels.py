@@ -39,13 +39,13 @@ examples = {
             (1.82, 3.140, 'bar'),
             (-1, 6.28, 'foo'),
         ],
-        't_cc',
-        'CREATE GENERATOR t_cc FOR t USING crosscat'
-            '(x NUMERICAL, y CYCLIC, z CATEGORICAL)',
-        'CREATE GENERATOR t_cc FOR t USING crosscat'
-            '(x NUMERICAL, y ZAPATISTICAL, z CATEGORICAL)',
-        'CREATE GENERATOR t_cc FOR t USING crosscat'
-            '(x NUMERICAL, y CYCLIC, w CATEGORICAL)',
+        'p',
+        'p_cc',
+        'CREATE POPULATION p FOR t'
+            '(x NUMERICAL; y CYCLIC; z CATEGORICAL)',
+        'CREATE GENERATOR p_cc FOR p USING crosscat()',
+        'CREATE GENERATOR p_cc FOR p USING crosscat(DEPENDENT)',
+        'CREATE GENERATOR p_cc FOR p USING crosscat(INDEPENDENT)',
     ),
     'iid_gaussian': (
         lambda: StdNormalMetamodel(seed=0),
@@ -53,15 +53,14 @@ examples = {
         'CREATE TABLE t(x NUMERIC, y NUMERIC)',
         'INSERT INTO t (x, y) VALUES (?, ?)',
         [(0, 1), (1, float('nan')), (2, -1.2)],
-        't_sn',
-        'CREATE GENERATOR t_sn FOR t USING std_normal'
-            ' (x NUMERICAL, y NUMERICAL)',
+        'p',
+        'p_sn',
+        'CREATE POPULATION p FOR t(x NUMERICAL; y NUMERICAL)',
+        'CREATE GENERATOR p_sn FOR p USING std_normal()',
         # XXX Should invent something that fails for
         # metamodel-specific reasons here.
-        'CREATE GENERATOR t_sn FOR t USING std_normal'
-            ' (x NUMERICAL, z NUMERICAL)',
-        'CREATE GENERATOR t_sn FOR t USING std_normal'
-            ' (x NUMERICAL, z NUMERICAL)',
+        'CREATE GENERATOR p_sn FOR p USING std_normal ...',
+        'CREATE GENERATOR p_sn FOR p USING std_normal ...'
     ),
 }
 
@@ -83,7 +82,7 @@ def test_example(persist, exname):
             _test_example(bdb, exname)
 
 def _test_example(bdb, exname):
-    mm, t, t_sql, data_sql, data, g, g_bql, g_bqlbad0, g_bqlbad1 = \
+    mm, t, t_sql, data_sql, data, p, g, p_bql, g_bql, g_bqlbad0, g_bqlbad1 = \
         examples[exname]
     qt = bql_quote_name(t)
     qg = bql_quote_name(g)
@@ -106,27 +105,33 @@ def _test_example(bdb, exname):
     n = len(data)
     assert bdb.execute('SELECT COUNT(*) FROM %s' % (qt,)).fetchvalue() == n
 
+    # Create a population.
+    assert not core.bayesdb_has_population(bdb, p)
+    bdb.execute(p_bql)
+    p_id = core.bayesdb_get_population(bdb, p)
+
     # Create a generator.  Make sure savepoints work for this.
-    assert not core.bayesdb_has_generator(bdb, g)
+    assert not core.bayesdb_has_generator(bdb, p_id, g)
     with pytest.raises(Exception):
         with bdb.savepoint():
             bdb.execute(g_bqlbad0)
-    assert not core.bayesdb_has_generator(bdb, g)
+    assert not core.bayesdb_has_generator(bdb, p_id, g)
     with pytest.raises(Exception):
         with bdb.savepoint():
             bdb.execute(g_bqlbad1)
-    assert not core.bayesdb_has_generator(bdb, g)
+    assert not core.bayesdb_has_generator(bdb, p_id, g)
     with bdb.savepoint_rollback():
         bdb.execute(g_bql)
-        assert core.bayesdb_has_generator(bdb, g)
-    assert not core.bayesdb_has_generator(bdb, g)
+        assert core.bayesdb_has_generator(bdb, p_id, g)
+    assert not core.bayesdb_has_generator(bdb, p_id, g)
     bdb.execute(g_bql)
-    assert core.bayesdb_has_generator(bdb, g)
+    assert core.bayesdb_has_generator(bdb, p_id, g)
+    assert not core.bayesdb_has_generator(bdb, p_id+1, g)
     with pytest.raises(Exception):
         bdb.execute(g_bql)
-    assert core.bayesdb_has_generator(bdb, g)
+    assert core.bayesdb_has_generator(bdb, p_id, g)
 
-    gid = core.bayesdb_get_generator(bdb, g)
+    gid = core.bayesdb_get_generator(bdb, p_id, g)
     assert not core.bayesdb_generator_has_model(bdb, gid, 0)
     assert [] == core.bayesdb_generator_modelnos(bdb, gid)
     with bdb.savepoint_rollback():
@@ -157,15 +162,16 @@ def _test_example(bdb, exname):
     #     bdb.execute('DROP GENERATOR %s' % (qg,))
     with bdb.savepoint_rollback():
         bdb.execute('DROP GENERATOR %s' % (qg,))
-        assert not core.bayesdb_has_generator(bdb, g)
-    assert core.bayesdb_has_generator(bdb, g)
+        assert not core.bayesdb_has_generator(bdb, None, g)
+    assert core.bayesdb_has_generator(bdb, p_id, g)
     with bdb.savepoint_rollback():
         bdb.execute('DROP GENERATOR %s' % (qg,))
-        assert not core.bayesdb_has_generator(bdb, g)
+        assert not core.bayesdb_has_generator(bdb, None, g)
         bdb.execute(g_bql)
-        assert core.bayesdb_has_generator(bdb, g)
-    assert core.bayesdb_has_generator(bdb, g)
-    assert gid == core.bayesdb_get_generator(bdb, g)
+        assert core.bayesdb_has_generator(bdb, None, g)
+    assert core.bayesdb_has_generator(bdb, p_id, g)
+    assert core.bayesdb_has_generator(bdb, None, g)
+    assert gid == core.bayesdb_get_generator(bdb, p_id, g)
 
     # Test dropping models.
     with bdb.savepoint_rollback():
@@ -180,16 +186,17 @@ def _test_example(bdb, exname):
     bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION WAIT' % (qg,))
 
 def _retest_example(bdb, exname):
-    mm, t, t_sql, data_sql, data, g, g_bql, g_bqlbad0, g_bqlbad1 = \
+    mm, t, t_sql, data_sql, data, p, g, p_bql, g_bql, g_bqlbad0, g_bqlbad1 = \
         examples[exname]
     qt = bql_quote_name(t)
     qg = bql_quote_name(g)
 
     bayeslite.bayesdb_register_metamodel(bdb, mm())
+    p_id = core.bayesdb_get_population(bdb, p)
 
     assert core.bayesdb_has_table(bdb, t)
-    assert core.bayesdb_has_generator(bdb, g)
-    gid = core.bayesdb_get_generator(bdb, g)
+    assert core.bayesdb_has_generator(bdb, p_id, g)
+    gid = core.bayesdb_get_generator(bdb, p_id, g)
     assert core.bayesdb_generator_has_model(bdb, gid, 0)
     assert core.bayesdb_generator_has_model(bdb, gid, 1)
     bdb.execute('ANALYZE %s FOR 1 ITERATION WAIT' % (qg,))

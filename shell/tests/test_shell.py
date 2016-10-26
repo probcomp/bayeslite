@@ -104,17 +104,26 @@ def spawntable():
 
 
 @pytest.fixture
-def spawntablegen(spawntable):
+def spawntablepop(spawntable):
     table, c = spawntable
-    c.sendexpectcmd('.guess dha_cc %s' % (table,))
+    c.sendexpectcmd('.guess hospitals %s' % (table,))
     c.expect_prompt()
-    return table, 'dha_cc', c
+    return table, 'hospitals', c
 
 
 @pytest.fixture
-def spawngen(spawntablegen):
-    table, gen, c = spawntablegen
-    return gen, c
+def spawntablepopgen(spawntablepop):
+    table, pop, c = spawntablepop
+    c.sendexpectcmd(
+        'create generator hospitals_cc for %s using crosscat;' % (pop,))
+    c.expect_prompt()
+    return table, pop, 'hospitals_cc', c
+
+
+@pytest.fixture
+def spawnpop(spawntablepop):
+    table, pop, c = spawntablepop
+    return pop, c
 
 
 # Tests begin
@@ -153,20 +162,19 @@ def test_help_returns_list_of_commands(spawnbdb):
     c = spawnbdb
     c.sendexpectcmd('.help')
     c.expect_lines([
-        '     .codebook    load codebook for table',
-        '          .csv    create table from CSV file',
-        '     .describe    describe BayesDB entities',
-        '        .guess    guess data generator',
-        '         .help    show help for commands',
-        '         .hook    add custom commands from a python source file',
-        ' .legacymodels    load legacy models',
-        '         .open    close existing database and open new one',
-        '     .pythexec    execute a Python statement',
-        '       .python    evaluate a Python expression',
-        '         .read    read a file of shell commands',
-        '          .sql    execute a SQL query',
-        '        .trace    trace queries',
-        '      .untrace    untrace queries',
+        ' .codebook    load codebook for table',
+        '      .csv    create table from CSV file',
+        ' .describe    describe BayesDB entities',
+        '    .guess    guess population schema',
+        '     .help    show help for commands',
+        '     .hook    add custom commands from a python source file',
+        '     .open    close existing database and open new one',
+        ' .pythexec    execute a Python statement',
+        '   .python    evaluate a Python expression',
+        '     .read    read a file of shell commands',
+        '      .sql    execute a SQL query',
+        '    .trace    trace queries',
+        '  .untrace    untrace queries',
         "Type `.help <cmd>' for help on the command <cmd>.",
     ])
     c.expect_prompt()
@@ -204,10 +212,10 @@ def test_dot_csv_dup(spawnbdb):
         c.expect_prompt()
 
 
-def test_describe_columns_without_generator(spawntable):
+def test_describe_columns_without_population(spawntable):
     table, c = spawntable
-    c.sendexpectcmd('.describe columns %s' % (table,))
-    c.expect_lines(['No such generator: %s' % (repr(table),)])
+    c.sendexpectcmd('.describe variables %s' % (table,))
+    c.expect_lines(['No such population: %r' % (table,)])
     c.expect_prompt()
 
 
@@ -229,7 +237,7 @@ def test_bql_select(spawntable):
 
 def test_guess(spawntable):
     table, c = spawntable
-    c.sendexpectcmd('.guess dha_cc %s' % (table,))
+    c.sendexpectcmd('.guess hospitals %s' % (table,))
     c.expect_prompt()
 
 
@@ -253,29 +261,23 @@ def test_sql(spawntable):
     c.expect_prompt()
 
 
-def test_describe_generator(spawntablegen):
-    table, gen, c = spawntablegen
-    generator_output = [
-        'id |   name | tabname | metamodel',
-        '---+--------+---------+----------',
-        ' 1 | dha_cc |     dha |  crosscat',
+def test_describe_population(spawntablepop):
+    table, pop, c = spawntablepop
+    population_output = [
+        'id |      name | tabname',
+        '---+-----------+--------',
+        ' 1 | hospitals |     dha',
     ]
-    c.sendexpectcmd('.describe generator %s' % (table,))
-    c.expect_lines(['No such generator: %s' % (repr(table),),])
+    c.sendexpectcmd('.describe population %s' % (table,))
+    c.expect_lines(['No such population: %r' % (table,),])
     c.expect_prompt()
-    c.sendexpectcmd('.describe generator %s' % (gen,))
-    c.expect_lines(generator_output)
-    c.expect_prompt()
-    c.sendexpectcmd('alter table %s set default generator to %s;' %
-        (table, gen))
-    c.expect_prompt()
-    c.sendexpectcmd('.describe generator %s' % (table,))
-    c.expect_lines(generator_output)
+    c.sendexpectcmd('.describe population %s' % (pop,))
+    c.expect_lines(population_output)
     c.expect_prompt()
 
 
-def test_describe_models(spawntablegen):
-    table, gen, c = spawntablegen
+def test_describe_models(spawntablepopgen):
+    table, pop, gen, c = spawntablepopgen
     # XXX apsw bug: There is no way to discover the description of a
     # cursor that yields no rows.  The best we can do without failing
     # is to assume that such a cursor has no columns either.  This is
@@ -295,17 +297,11 @@ def test_describe_models(spawntablegen):
     c.sendexpectcmd('.describe models %s' % (gen,))
     c.expect_lines(models_output)
     c.expect_prompt()
-    c.sendexpectcmd('alter table %s set default generator to %s;' %
-        (table, gen))
-    c.expect_prompt()
-    c.sendexpectcmd('.describe models %s' % (table,))
-    c.expect_lines(models_output)
-    c.expect_prompt()
 
 
-def test_describe_column_with_generator(spawntablegen):
-    table, gen, c = spawntablegen
-    columns_output = [
+def test_describe_column_with_generator(spawntablepopgen):
+    table, pop, gen, c = spawntablepopgen
+    variables_output = [
         'colno |                name |  stattype | shortname',
         '------+---------------------+-----------+----------',
         '    1 |         N_DEATH_ILL | numerical |      None',
@@ -372,17 +368,11 @@ def test_describe_column_with_generator(spawntablegen):
         '   62 |           CHF_SCORE | numerical |      None',
         '   63 |         PNEUM_SCORE | numerical |      None',
     ]
-    c.sendexpectcmd('.describe columns %s' % (table,))
-    c.expect_lines(['No such generator: %s' % (repr(table),),])
+    c.sendexpectcmd('.describe variables %s' % (table,))
+    c.expect_lines(['No such population: %s' % (repr(table),),])
     c.expect_prompt()
-    c.sendexpectcmd('.describe columns %s' % (gen,))
-    c.expect_lines(columns_output)
-    c.expect_prompt()
-    c.sendexpectcmd('alter table %s set default generator to %s;' %
-        (table, gen))
-    c.expect_prompt()
-    c.sendexpectcmd('.describe columns %s' % (table,))
-    c.expect_lines(columns_output)
+    c.sendexpectcmd('.describe variables %s' % (pop,))
+    c.expect_lines(variables_output)
     c.expect_prompt()
 
 
@@ -396,21 +386,20 @@ def test_hook(spawnbdb):
     c.expect_prompt()
     c.sendexpectcmd('.help')
     c.expect_lines([
-        '     .codebook    load codebook for table',
-        '          .csv    create table from CSV file',
-        '     .describe    describe BayesDB entities',
-        '        .guess    guess data generator',
-        '         .help    show help for commands',
-        '         .hook    add custom commands from a python source file',
-        ' .legacymodels    load legacy models',
-        '       .myhook    myhook help string',
-        '         .open    close existing database and open new one',
-        '     .pythexec    execute a Python statement',
-        '       .python    evaluate a Python expression',
-        '         .read    read a file of shell commands',
-        '          .sql    execute a SQL query',
-        '        .trace    trace queries',
-        '      .untrace    untrace queries',
+        ' .codebook    load codebook for table',
+        '      .csv    create table from CSV file',
+        ' .describe    describe BayesDB entities',
+        '    .guess    guess population schema',
+        '     .help    show help for commands',
+        '     .hook    add custom commands from a python source file',
+        '   .myhook    myhook help string',
+        '     .open    close existing database and open new one',
+        ' .pythexec    execute a Python statement',
+        '   .python    evaluate a Python expression',
+        '     .read    read a file of shell commands',
+        '      .sql    execute a SQL query',
+        '    .trace    trace queries',
+        '  .untrace    untrace queries',
         "Type `.help <cmd>' for help on the command <cmd>."
     ])
     c.expect_prompt()

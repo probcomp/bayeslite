@@ -9,7 +9,7 @@ BQL Data Modelling Commands
 
 .. index:: ``CREATE GENERATOR``
 
-``CREATE [DEFAULT] GENERATOR <name> [IF NOT EXISTS] FOR <table> USING <metamodel> (<schema>)``
+``CREATE GENERATOR <name> [IF NOT EXISTS] FOR <table> USING <metamodel> (<schema>)``
 
    Create a generative model named *name* for the table named *table*
    in the language of *metamodel*.  *Schema* describes the generative
@@ -30,12 +30,6 @@ BQL Data Modelling Commands
           angle CYCLIC          -- treat angle as CYCLIC.
       )
 
-   If ``DEFAULT`` is specified, then *name* will become the default
-   generator of *table*: anywhere a generator is required, *table* may
-   be used in its place, and the generator *name* will be understood.
-   The default generator may be changed with :index:`ALTER TABLE` and
-   :index:`SET DEFAULT GENERATOR` or :index:`UNSET DEFAULT GENERATOR`.
-
 .. index:: ``DROP GENERATOR``
 
 ``DROP GENERATOR [IF EXISTS] <name>``
@@ -46,10 +40,9 @@ BQL Data Modelling Commands
 
 ``ALTER GENERATOR <name> <alterations>``
 
-   Alter the specified properties of the generator named *name*, or of
-   the default generator of the table named *name*.  *Alterations* is
-   a comma-separated list of alterations.  The following alterations
-   are supported:
+   Alter the specified properties of the generator named *name*.
+   *Alterations* is a comma-separated list of alterations.  The
+   following alterations are supported:
 
    .. index:: ``RENAME TO``
 
@@ -62,20 +55,18 @@ BQL Data Modelling Commands
 ``INITIALIZE <n> MODEL[S] [IF NOT EXISTS] FOR <name>``
 
    Perform metamodel-specific initialization of up to *n* models for
-   the generator named *name*, or the default generator of the table
-   named *name*.  *n* must be a literal integer.  If the generator
-   already had models, the ones it had are unchanged.  Models are
-   zero-indexed.
+   the generator named *name*.  *n* must be a literal integer.  If the
+   generator already had models, the ones it had are unchanged.
+   Models are zero-indexed.
 
 .. index:: ``DROP MODELS``
 
 ``DROP MODELS [<modelset>] FROM <name>``
 
-   Drop the specified models from the generator named *name*, or the
-   default generator of the table named *name*.  *Modelset* is a
-   comma-separated list of model numbers or hyphenated model number
-   ranges, inclusive on both bounds.  If *modelset* is omitted, all
-   models are dropped from the generator.
+   Drop the specified models from the generator named *name*.
+   *Modelset* is a comma-separated list of model numbers or hyphenated
+   model number ranges, inclusive on both bounds.  If *modelset* is
+   omitted, all models are dropped from the generator.
 
    Example:
 
@@ -90,9 +81,8 @@ BQL Data Modelling Commands
 ``ANALYZE <name> [MODEL[S] <modelset>] [FOR <duration>] [CHECKPOINT <duration>] WAIT``
 
    Perform metamodel-specific analysis of the specified models of the
-   generator *name*, or of the default generator of the table named
-   *name*.  *Modelset* is a comma-separated list of model numbers or
-   hyphenated model number ranges.  *Duration* is either
+   generator *name*.  *Modelset* is a comma-separated list of model
+   numbers or hyphenated model number ranges.  *Duration* is either
    ``<n> SECOND[S]``, ``<n> MINUTE[S]``, or ``<n> ITERATION[S]``.
 
    The ``FOR`` duration specifies how long to perform analysis.  The

@@ -384,9 +384,7 @@ def test_select_bql():
                         ast.ExpLit(ast.LitInt(8)),
                     )),
                     [ast.ColListSub(
-                        ast.EstCols([ast.SelColAll(None)], 't',
-                            ast.ExpLit(ast.LitNull(None)),
-                            None,
+                        ast.EstCols([ast.SelColAll(None)], 't', None, None,
                             [ast.Ord(ast.ExpBQLProbFn(
                                     ast.ExpLit(ast.LitInt(4)),
                                     []),
@@ -406,20 +404,54 @@ def test_select_bql():
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select mutual information with c from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLMutInf('c', None, None), None)],
+            [ast.SelColExp(ast.ExpBQLMutInf('c', None, None, None), None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string(
             'select mutual information of c with d from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLMutInf('c', 'd', None), None)],
+            [ast.SelColExp(ast.ExpBQLMutInf('c', 'd', None, None), None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select mutual information of c with d' +
             ' using (1+2) samples from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLMutInf('c', 'd',
-                    ast.op(ast.OP_ADD, ast.ExpLit(ast.LitInt(1)),
+            [ast.SelColExp(
+                ast.ExpBQLMutInf(
+                    'c', 'd', None,
+                    ast.op(
+                        ast.OP_ADD, ast.ExpLit(ast.LitInt(1)),
                         ast.ExpLit(ast.LitInt(2)))),
                 None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('''
+            select mutual information with c given (d, a=1) using
+            10 samples from t;
+            ''') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(
+                ast.ExpBQLMutInf(
+                    'c', None,
+                    [('d', ast.ExpLit(ast.LitNull(0))),
+                        ('a',ast.ExpLit(ast.LitInt(1)))],
+                    ast.ExpLit(ast.LitInt(10))
+                ),
+            None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('''
+            select mutual information of b with c
+            given (d, a=1, e, r=2) from t;''') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(
+                ast.ExpBQLMutInf(
+                    'b', 'c',
+                    [
+                        ('d', ast.ExpLit(ast.LitNull(0))),
+                        ('a',ast.ExpLit(ast.LitInt(1))),
+                        ('e', ast.ExpLit(ast.LitNull(0))),
+                        ('r', ast.ExpLit(ast.LitInt(2))),
+                    ],
+                    None
+                ),
+            None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select correlation with c from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
@@ -466,8 +498,7 @@ def test_select_bql():
         [ast.Select(ast.SELQUANT_ALL, [
                 ast.SelColExp(ast.ExpCol(None, 'key'), None),
                 ast.SelColSub('t',
-                    ast.EstCols([ast.SelColAll(None)], 't',
-                        ast.ExpLit(ast.LitNull(None)), None,
+                    ast.EstCols([ast.SelColAll(None)], 't', None, None,
                         [ast.Ord(ast.ExpBQLDepProb('c', None), ast.ORD_DESC)],
                         ast.Lim(ast.ExpLit(ast.LitInt(4)), None)))
             ],
@@ -488,78 +519,188 @@ def test_trivial_precedence_error():
             ' with respect to c from t;')
 
 def test_trivial_commands():
+    assert parse_bql_string('''
+        create population satellites for satellites_ucs (
+            MODEL country_of_operator, orbit_type AS categorical;
+            MODEL launch_mass AS numerical;
+            MODEL perigee AS numerical;
+            MODEL apogee, period AS numerical
+        )
+    ''') == \
+        [ast.CreatePop(False, 'satellites', 'satellites_ucs', [
+            ast.PopModelVars(
+                ['country_of_operator', 'orbit_type'], 'categorical'),
+            ast.PopModelVars(['launch_mass'], 'numerical'),
+            ast.PopModelVars(['perigee'], 'numerical'),
+            ast.PopModelVars(['apogee', 'period'], 'numerical'),
+        ])]
+    assert parse_bql_string('drop population satellites') == \
+        [ast.DropPop(False, 'satellites')]
     assert parse_bql_string('create generator t_cc for t using crosscat'
             '(xyz numerical, pqr categorical, lmn cyclic)') == \
-        [ast.CreateGen(False, 't_cc', False, 't', 'crosscat', [
+        [ast.CreateGen('t_cc', False, 't', None, 'crosscat', [
             ['xyz', 'numerical'],
             ['pqr', 'categorical'],
             ['lmn', 'cyclic'],
         ])]
-    assert parse_bql_string('create default generator t_cc for t using crosscat'
+    assert parse_bql_string('create generator t_cc for t with baseline crosscat'
             '(xyz numerical, pqr categorical, lmn cyclic)') == \
-        [ast.CreateGen(True, 't_cc', False, 't', 'crosscat', [
-            ['xyz', 'numerical'],
-            ['pqr', 'categorical'],
-            ['lmn', 'cyclic'],
+        [ast.CreateGen(
+            't_cc', False, 't',
+            ast.Baseline('crosscat', []),
+            None,       # Defaults to cgpm.
+            [
+                ['xyz', 'numerical'],
+                ['pqr', 'categorical'],
+                ['lmn', 'cyclic'],
         ])]
     assert parse_bql_string('create generator t_cc if not exists'
             ' for t using crosscat'
             '(xyz numerical, pqr categorical, lmn cyclic)') == \
-        [ast.CreateGen(False, 't_cc', True, 't', 'crosscat', [
+        [ast.CreateGen('t_cc', True, 't', None, 'crosscat', [
             ['xyz', 'numerical'],
             ['pqr', 'categorical'],
             ['lmn', 'cyclic'],
         ])]
+    assert parse_bql_string('create generator if not exists t_cc'
+            ' for t using crosscat'
+            '(xyz numerical, pqr categorical, lmn cyclic)') == \
+        [ast.CreateGen('t_cc', True, 't', None, 'crosscat', [
+            ['xyz', 'numerical'],
+            ['pqr', 'categorical'],
+            ['lmn', 'cyclic'],
+        ])]
+    # XXX Schema of [[]] instead of [] is kinda wacky.  Fix?  (But
+    # make sure the empty-parens and no-parens cases are equivalent.)
+    assert parse_bql_string('create generator t_cc'
+            ' for t using crosscat()') == \
+        [ast.CreateGen('t_cc', False, 't', None, 'crosscat', [[]])]
+    assert parse_bql_string('create generator t_cc'
+            ' for t using crosscat') == \
+        [ast.CreateGen('t_cc', False, 't', None, 'crosscat', [[]])]
     assert parse_bql_string('initialize 1 model for t;') == \
-        [ast.InitModels(False, 't', 1, None)]
+        [ast.InitModels(False, 't', 1)]
     assert parse_bql_string('initialize 1 model if not exists for t;') == \
-        [ast.InitModels(True, 't', 1, None)]
+        [ast.InitModels(True, 't', 1)]
     assert parse_bql_string('initialize 2 models for t;') == \
-        [ast.InitModels(False, 't', 2, None)]
+        [ast.InitModels(False, 't', 2)]
     assert parse_bql_string('initialize 2 models if not exists for t;') == \
-        [ast.InitModels(True, 't', 2, None)]
+        [ast.InitModels(True, 't', 2)]
     assert parse_bql_string('analyze t for 1 iteration;') == \
-        [ast.AnalyzeModels('t', None, 1, None, None, None, False)]
+        [ast.AnalyzeModels('t', None, 1, None, None, None, False, None)]
     assert parse_bql_string('analyze t for 1 iteration wait;') == \
-        [ast.AnalyzeModels('t', None, 1, None, None, None, True)]
+        [ast.AnalyzeModels('t', None, 1, None, None, None, True, None)]
     assert parse_bql_string('analyze t for 1 minute;') == \
-        [ast.AnalyzeModels('t', None, None, 60, None, None, False)]
+        [ast.AnalyzeModels('t', None, None, 60, None, None, False, None)]
     assert parse_bql_string('analyze t for 1 minute wait;') == \
-        [ast.AnalyzeModels('t', None, None, 60, None, None, True)]
+        [ast.AnalyzeModels('t', None, None, 60, None, None, True, None)]
     assert parse_bql_string('analyze t for 2 minutes;') == \
-        [ast.AnalyzeModels('t', None, None, 120, None, None, False)]
+        [ast.AnalyzeModels('t', None, None, 120, None, None, False, None)]
     assert parse_bql_string('analyze t for 2 minutes wait;') == \
-        [ast.AnalyzeModels('t', None, None, 120, None, None, True)]
+        [ast.AnalyzeModels('t', None, None, 120, None, None, True, None)]
     assert parse_bql_string('analyze t for 1 second;') == \
-        [ast.AnalyzeModels('t', None, None, 1, None, None, False)]
+        [ast.AnalyzeModels('t', None, None, 1, None, None, False, None)]
     assert parse_bql_string('analyze t for 1 second wait;') == \
-        [ast.AnalyzeModels('t', None, None, 1, None, None, True)]
+        [ast.AnalyzeModels('t', None, None, 1, None, None, True, None)]
     assert parse_bql_string('analyze t for 2 seconds;') == \
-        [ast.AnalyzeModels('t', None, None, 2, None, None, False)]
+        [ast.AnalyzeModels('t', None, None, 2, None, None, False, None)]
     assert parse_bql_string('analyze t for 2 seconds wait;') == \
-        [ast.AnalyzeModels('t', None, None, 2, None, None, True)]
+        [ast.AnalyzeModels('t', None, None, 2, None, None, True, None)]
     assert parse_bql_string('analyze t model 1 for 1 iteration;') == \
-        [ast.AnalyzeModels('t', [1], 1, None, None, None, False)]
+        [ast.AnalyzeModels('t', [1], 1, None, None, None, False, None)]
     assert parse_bql_string('analyze t models 1,2,3 for 1 iteration;') == \
-        [ast.AnalyzeModels('t', [1,2,3], 1, None, None, None, False)]
+        [ast.AnalyzeModels('t', [1,2,3], 1, None, None, None, False, None)]
     assert parse_bql_string('analyze t models 1-3,5 for 1 iteration;') == \
-        [ast.AnalyzeModels('t', [1,2,3,5], 1, None, None, None, False)]
+        [ast.AnalyzeModels('t', [1,2,3,5], 1, None, None, None, False, None)]
     assert parse_bql_string('analyze t for 10 iterations'
             ' checkpoint 3 iterations') == \
-        [ast.AnalyzeModels('t', None, 10, None, 3, None, False)]
+        [ast.AnalyzeModels('t', None, 10, None, 3, None, False, None)]
+    assert parse_bql_string('analyze t for 10 iterations wait'
+            ' (mh(default, one, 10))') == \
+        [ast.AnalyzeModels('t', None, 10, None, None, None, True, [
+            'mh', '(', 'default', ',', 'one', ',', 10, ')'
+        ])]
     assert parse_bql_string('analyze t for 10 seconds'
             ' checkpoint 3 seconds') == \
-        [ast.AnalyzeModels('t', None, None, 10, None, 3, False)]
+        [ast.AnalyzeModels('t', None, None, 10, None, 3, False, None)]
     assert parse_bql_string('create temporary table tx as'
             ' infer explicit x, predict x as xi confidence xc from t_cc') == \
         [ast.CreateTabAs(True, False, 'tx',
             ast.InferExplicit(
                 [
                     ast.SelColExp(ast.ExpCol(None, 'x'), None),
-                    ast.PredCol('x', 'xi', 'xc'),
+                    ast.PredCol('x', 'xi', 'xc', None),
                 ],
-                't_cc', ast.ExpLit(ast.LitNull(None)), None, None, None, None,
+                't_cc', None, None, None, None, None,
             ))]
+
+def test_infer_trivial():
+    assert parse_bql_string('infer x from p') == \
+        [ast.InferAuto([ast.InfColOne('x', None)], ast.ExpLit(ast.LitInt(0)),
+            None, 'p', None, None, None, None, None)]
+
+def test_infer_conf():
+    assert parse_bql_string('infer x with confidence 0.9 from p') == \
+        [ast.InferAuto([ast.InfColOne('x', None)],
+            ast.ExpLit(ast.LitFloat(0.9)), None, 'p', None, None, None, None,
+            None)]
+
+def test_infer_samples():
+    assert parse_bql_string('infer x using 42 samples from p') == \
+        [ast.InferAuto([ast.InfColOne('x', None)],
+            ast.ExpLit(ast.LitInt(0)), ast.ExpLit(ast.LitInt(42)), 'p', None,
+            None, None, None, None)]
+
+def test_infer_conf_samples():
+    assert parse_bql_string('infer x with confidence 0.9 using 42 samples'
+            ' from p') == \
+        [ast.InferAuto([ast.InfColOne('x', None)],
+            ast.ExpLit(ast.LitInt(.9)), ast.ExpLit(ast.LitInt(42)), 'p', None,
+            None, None, None, None)]
+
+def test_infer_explicit():
+    assert parse_bql_string('infer explicit x, predict y with confidence 0.9,'
+            ' predict p with confidence 0.8 as q, predict u confidence v,'
+            ' predict a as b confidence c,'
+            ' predict h confidence k using 42 samples'
+            ' from p') == \
+        [ast.InferExplicit([
+                ast.SelColExp(ast.ExpCol(None, 'x'), None),
+                ast.SelColExp(
+                    ast.ExpBQLPredict('y', ast.ExpLit(ast.LitFloat(.9)), None),
+                    None,
+                ),
+                ast.SelColExp(
+                    ast.ExpBQLPredict('p', ast.ExpLit(ast.LitFloat(.8)), None),
+                    'q',
+                ),
+                ast.PredCol('u', None, 'v', None),
+                ast.PredCol('a', 'b', 'c', None),
+                ast.PredCol('h', None, 'k', ast.ExpLit(ast.LitInt(42))),
+            ],
+            'p', None, None, None, None, None)]
+
+def test_infer_explicit_samples():
+    assert parse_bql_string('infer explicit x, predict y with confidence 0.9,'
+            ' predict p with confidence 0.8 as q, predict u confidence v,'
+            ' predict a as b confidence c,'
+            ' predict h confidence k using 42 samples'
+            ' from p') == \
+        [ast.InferExplicit([
+                ast.SelColExp(ast.ExpCol(None, 'x'), None),
+                ast.SelColExp(
+                    ast.ExpBQLPredict('y', ast.ExpLit(ast.LitFloat(.9)), None),
+                    None,
+                ),
+                ast.SelColExp(
+                    ast.ExpBQLPredict('p', ast.ExpLit(ast.LitFloat(.8)), None),
+                    'q',
+                ),
+                ast.PredCol('u', None, 'v', None),
+                ast.PredCol('a', 'b', 'c', None),
+                ast.PredCol('h', None, 'k', ast.ExpLit(ast.LitInt(42))),
+            ],
+            'p', None, None, None, None, None)]
 
 def test_parametrized():
     assert parse_bql_string('select * from t where id = ?;') == \
@@ -667,77 +808,44 @@ def test_simulate():
     assert parse_bql_string('create table s as'
             ' simulate x from t limit 10') == \
         [ast.CreateTabSim(False, False, 's',
-            ast.Simulate(['x'], 't', ast.ExpLit(ast.LitNull(None)), [],
-                ast.ExpLit(ast.LitInt(10))))]
+            ast.Simulate(
+                ['x'], 't', None,
+                [],
+                ast.ExpLit(ast.LitInt(10)),
+                None)
+        )]
     assert parse_bql_string('create table if not exists s as'
-            ' simulate x, y from t given z = 0 limit 10') == \
+            ' simulate x, y from t given z = 0 limit 10 accuracy 2') == \
         [ast.CreateTabSim(False, True, 's',
-            ast.Simulate(['x', 'y'], 't', ast.ExpLit(ast.LitNull(None)),
+            ast.Simulate(
+                ['x', 'y'], 't', None,
                 [('z', ast.ExpLit(ast.LitInt(0)))],
-                ast.ExpLit(ast.LitInt(10))))]
+                ast.ExpLit(ast.LitInt(10)),
+                2)
+        )]
     assert parse_bql_string('create temp table s as'
             ' simulate x, y from t given z = 0 limit 10') == \
         [ast.CreateTabSim(True, False, 's',
-            ast.Simulate(['x', 'y'], 't', ast.ExpLit(ast.LitNull(None)),
+            ast.Simulate(
+                ['x', 'y'], 't', None,
                 [('z', ast.ExpLit(ast.LitInt(0)))],
-                ast.ExpLit(ast.LitInt(10))))]
-    assert parse_bql_string('create temp table if not exists s as'
-            ' simulate x, y from t given z = 0, w = 1 limit 10') == \
+                ast.ExpLit(ast.LitInt(10)),
+                None),
+        )]
+    assert parse_bql_string(
+            'create temp table if not exists s as'
+            ' simulate x, y from t given z = 0, w = 1'
+            ' limit 10 accuracy 19') == \
         [ast.CreateTabSim(True, True, 's',
-            ast.Simulate(['x', 'y'], 't', ast.ExpLit(ast.LitNull(None)),
+            ast.Simulate(
+                ['x', 'y'], 't', None,
                 [
                     ('z', ast.ExpLit(ast.LitInt(0))),
                     ('w', ast.ExpLit(ast.LitInt(1))),
                 ],
-                ast.ExpLit(ast.LitInt(10))))]
-
-def test_using_model():
-    assert parse_bql_string('simulate x from t using model 42'
-            ' limit 10') == \
-        [ast.Simulate(['x'], 't', ast.ExpLit(ast.LitInt(42)), [],
-            ast.ExpLit(ast.LitInt(10)))]
-    with pytest.raises(parse.BQLParseError):
-        assert parse_bql_string('simulate x from t'
-                ' using model (87)') == \
-            [ast.Simulate(['x'], 't', ast.ExpLit(ast.LitInt(87)), [],
-                ast.ExpLit(ast.LitInt(10)))]
-    assert parse_bql_string('estimate x from t using model (1+2)') == \
-        [ast.Estimate(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpCol(None, 'x'), None)],
-            't',
-            ast.ExpOp(ast.OP_ADD, (
-                ast.ExpLit(ast.LitInt(1)),
-                ast.ExpLit(ast.LitInt(2)),
-            )),
-            None, None, None, None)]
-    assert parse_bql_string('estimate * from columns of t'
-            ' using model modelno') == \
-        [ast.EstCols([ast.SelColAll(None)], 't', ast.ExpCol(None, 'modelno'),
-            None, None, None)]
-    assert parse_bql_string('estimate 42 from columns of t'
-            ' using model modelno') == \
-        [ast.EstCols([(ast.ExpLit(ast.LitInt(42)), None)], 't',
-            ast.ExpCol(None, 'modelno'),
-            None, None, None)]
-    assert parse_bql_string('estimate 42 from pairwise columns of t'
-            ' using model modelno') == \
-        [ast.EstPairCols([(ast.ExpLit(ast.LitInt(42)), None)], 't', None,
-            ast.ExpCol(None, 'modelno'),
-            None, None, None)]
-    assert parse_bql_string('estimate similarity from pairwise t'
-            ' using model modelno') == \
-        [ast.EstPairRow([ast.SelColExp(ast.ExpBQLSim(None, [ast.ColListAll()]),
-                None)],
-            't', ast.ExpCol(None, 'modelno'),
-            None, None, None)]
-    assert parse_bql_string('infer x from t using model modelno') == \
-        [ast.InferAuto([ast.InfColOne('x', None)], ast.ExpLit(ast.LitInt(0)),
-            't', ast.ExpCol(None, 'modelno'),
-            None, None, None, None)]
-    assert parse_bql_string('infer explicit x from t using model modelno') == \
-        [ast.InferExplicit([ast.SelColExp(ast.ExpCol(None, 'x'), None)],
-            't', ast.ExpCol(None, 'modelno'),
-            None, None, None, None)]
+                ast.ExpLit(ast.LitInt(10)),
+                19)
+        )]
 
 def test_is_bql():
     assert ast.is_bql(ast.ExpLit(ast.LitInt(0))) == False
@@ -750,10 +858,10 @@ def test_is_bql():
     assert ast.is_bql(ast.ExpBQLProbFn(ast.ExpLit(ast.LitInt(0)), []))
     assert ast.is_bql(ast.ExpBQLSim(ast.ExpLit(ast.LitInt(0)), []))
     assert ast.is_bql(ast.ExpBQLDepProb('c0', 'c1'))
-    assert ast.is_bql(ast.ExpBQLMutInf('c0', 'c1', 100))
+    assert ast.is_bql(ast.ExpBQLMutInf('c0', 'c1', None, 100))
     assert ast.is_bql(ast.ExpBQLCorrel('c0', 'c1'))
-    assert ast.is_bql(ast.ExpBQLPredict('c', ast.ExpLit(ast.LitInt(0.5))))
-    assert ast.is_bql(ast.ExpBQLPredictConf('c'))
+    assert ast.is_bql(ast.ExpBQLPredict('c', ast.ExpLit(ast.LitInt(.5)), None))
+    assert ast.is_bql(ast.ExpBQLPredictConf('c', None))
 
 @contextlib.contextmanager
 def raises_str(klass, string):

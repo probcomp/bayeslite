@@ -60,22 +60,27 @@ def test_complex_dependencies__ci_slow():
         for row in data:
             bdb.sql_execute('INSERT INTO foo VALUES(?,?,?,?,?,?)', row)
 
-        # Create schema, we will force  IND(x y), IND(x v), and DEP(z v w).
-        bql = '''
-            CREATE GENERATOR bar FOR foo USING crosscat(
-                GUESS(*),
-                id IGNORE,
-                x NUMERICAL,
-                y NUMERICAL,
-                z NUMERICAL,
-                v CATEGORICAL,
-                w CATEGORICAL,
+        # Create a population.
+        bdb.execute('''
+            CREATE POPULATION bar FOR foo (
+                IGNORE id;
+                MODEL x AS NUMERICAL;
+                MODEL y AS NUMERICAL;
+                MODEL z AS NUMERICAL;
+                MODEL v AS CATEGORICAL;
+                MODEL w AS CATEGORICAL
+            )
+        ''')
+
+        # Create a generative population model, we will force IND(x
+        # y), IND(x v), and DEP(z v w).
+        bdb.execute('''
+            CREATE GENERATOR bar_cc FOR bar USING crosscat (
                 INDEPENDENT(x, y),
                 INDEPENDENT(x, v),
                 DEPENDENT(z, v, w)
-            );
-        '''
-        bdb.execute(bql)
+            )
+        ''')
 
         # Prepare the checker function.
         def check_dependencies():
@@ -101,11 +106,11 @@ def test_complex_dependencies__ci_slow():
                     continue
 
         # Test dependency pre-analysis.
-        bdb.execute('INITIALIZE 10 MODELS FOR bar')
+        bdb.execute('INITIALIZE 10 MODELS FOR bar_cc')
         check_dependencies()
 
         # Test dependency post-analysis.
-        bdb.execute('ANALYZE bar for 10 ITERATION WAIT')
+        bdb.execute('ANALYZE bar_cc for 10 ITERATION WAIT')
         check_dependencies()
 
 def test_impossible_duplicate_dependency():
@@ -125,17 +130,23 @@ def test_impossible_duplicate_dependency():
         for row in data:
             bdb.sql_execute('INSERT INTO foo VALUES(?,?,?,?)', row)
 
-        # Create schema, we will force DEP(a c) and IND(a c).
+        # Create a population.
+        bdb.execute('''
+            CREATE POPULATION bar FOR foo (
+                id IGNORE;
+                a CATEGORICAL;
+                b CATEGORICAL;
+                c CATEGORICAL
+            )
+        ''')
+
+        # Create a generative population model, we will force DEP(a c)
+        # and IND(a c).
         bql = '''
-            CREATE GENERATOR bar FOR foo USING crosscat(
-                GUESS(*),
-                id IGNORE,
-                a CATEGORICAL,
-                b CATEGORICAL,
-                c CATEGORICAL,
+            CREATE GENERATOR bar_cc FOR foo USING crosscat (
                 INDEPENDENT(a,b,c),
-                DEPENDENT(a,c),
-            );
+                DEPENDENT(a,c)
+            )
         '''
 
         # An error should be thrown about impossible schema.
@@ -164,19 +175,21 @@ def test_impossible_nontransitive_dependency():
         for row in data:
             bdb.sql_execute('INSERT INTO foo VALUES(?,?,?,?)', row)
 
+        bdb.execute('''
+            CREATE POPULATION bar FOR foo (
+                IGNORE id;
+                MODEL a, b, c AS CATEGORICAL
+            )
+        ''')
+
         # Create schema, we will force DEP(a b), DEP(b c), and IND(a c) which
         # is non-transitive.
         bql = '''
-            CREATE GENERATOR bar FOR foo USING crosscat(
-                GUESS(*),
-                id IGNORE,
-                a CATEGORICAL,
-                b CATEGORICAL,
-                c CATEGORICAL,
+            CREATE GENERATOR bar_cc FOR bar USING crosscat (
                 DEPENDENT(a,b),
                 DEPENDENT(b,c),
                 INDEPENDENT(a,c)
-            );
+            )
         '''
 
         # Creating the generator should succeed.
@@ -186,4 +199,4 @@ def test_impossible_nontransitive_dependency():
         # XXX Currently CrossCat throws a RuntimeError, we should fix
         # the CrossCat exception hierarchy.
         with pytest.raises(RuntimeError):
-            bdb.execute('INITIALIZE 10 MODELS FOR bar')
+            bdb.execute('INITIALIZE 10 MODELS FOR bar_cc')

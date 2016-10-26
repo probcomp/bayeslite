@@ -72,7 +72,6 @@ from bayeslite.bayesdb import IBayesDBTracer
 from bayeslite.codebook import bayesdb_load_codebook_csv_file
 from bayeslite.exception import BayesDBException
 from bayeslite.exception import BQLError
-from bayeslite.legacy_models import bayesdb_load_legacy_models
 from bayeslite.metamodel import IBayesDBMetamodel
 from bayeslite.metamodel import bayesdb_builtin_metamodel
 from bayeslite.metamodel import bayesdb_deregister_metamodel
@@ -102,7 +101,6 @@ __all__ = [
     'BayesDBTxnError',
     'bayesdb_deregister_metamodel',
     'bayesdb_load_codebook_csv_file',
-    'bayesdb_load_legacy_models',
     'bayesdb_open',
     'bayesdb_read_csv',
     'bayesdb_read_csv_file',
@@ -113,10 +111,14 @@ __all__ = [
     'IBayesDBTracer',
 ]
 
+# Register crosscat as a builtin metamodel.
 from bayeslite.metamodels.crosscat import CrosscatMetamodel
 from crosscat.LocalEngine import LocalEngine as CrosscatLocalEngine
-
 bayesdb_builtin_metamodel(CrosscatMetamodel(CrosscatLocalEngine(seed=0)))
+
+# Register cgpm as a builtin metamodel.
+from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
+bayesdb_builtin_metamodel(CGPM_Metamodel({}, multiprocess=True))
 
 import bayeslite.remote
 import os

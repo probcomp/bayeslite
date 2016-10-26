@@ -22,7 +22,7 @@ import bayeslite.plex as Plex
 from bayeslite.util import casefold
 
 '''
-grep -o 'K_[A-Z0-9_]*' < grammar.y | sort -u | awk '
+grep -o 'K_[A-Z][A-Z0-9_]*' < grammar.y | sort -u | awk '
 {
     sub("^K_", "", $1)
     # All keywords are US-ASCII, so tolower is the same as casefold.
@@ -30,12 +30,14 @@ grep -o 'K_[A-Z0-9_]*' < grammar.y | sort -u | awk '
 }'
 '''
 keywords = {
+    "accuracy": grammar.K_ACCURACY,
     "all": grammar.K_ALL,
     "alter": grammar.K_ALTER,
     "analyze": grammar.K_ANALYZE,
     "and": grammar.K_AND,
     "as": grammar.K_AS,
     "asc": grammar.K_ASC,
+    "baseline": grammar.K_BASELINE,
     "begin": grammar.K_BEGIN,
     "between": grammar.K_BETWEEN,
     "btable": grammar.K_BTABLE,
@@ -68,8 +70,10 @@ keywords = {
     "given": grammar.K_GIVEN,
     "glob": grammar.K_GLOB,
     "group": grammar.K_GROUP,
+    "guess": grammar.K_GUESS,
     "having": grammar.K_HAVING,
     "if": grammar.K_IF,
+    "ignore": grammar.K_IGNORE,
     "in": grammar.K_IN,
     "infer": grammar.K_INFER,
     "information": grammar.K_INFORMATION,
@@ -78,12 +82,16 @@ keywords = {
     "isnull": grammar.K_ISNULL,
     "iteration": grammar.K_ITERATION,
     "iterations": grammar.K_ITERATIONS,
+    "latent": grammar.K_LATENT,
     "like": grammar.K_LIKE,
     "limit": grammar.K_LIMIT,
     "match": grammar.K_MATCH,
+    "metamodel": grammar.K_METAMODEL,
     "minute": grammar.K_MINUTE,
     "minutes": grammar.K_MINUTES,
     "model": grammar.K_MODEL,
+    "modeled": grammar.K_MODELED,
+    "modelled": grammar.K_MODELLED,
     "models": grammar.K_MODELS,
     "mutual": grammar.K_MUTUAL,
     "not": grammar.K_NOT,
@@ -94,6 +102,7 @@ keywords = {
     "or": grammar.K_OR,
     "order": grammar.K_ORDER,
     "pairwise": grammar.K_PAIRWISE,
+    "population": grammar.K_POPULATION,
     "predict": grammar.K_PREDICT,
     "predictive": grammar.K_PREDICTIVE,
     "probability": grammar.K_PROBABILITY,
@@ -104,12 +113,15 @@ keywords = {
     "rollback": grammar.K_ROLLBACK,
     "row": grammar.K_ROW,
     "samples": grammar.K_SAMPLES,
+    "schema": grammar.K_SCHEMA,
     "second": grammar.K_SECOND,
     "seconds": grammar.K_SECONDS,
     "select": grammar.K_SELECT,
     "set": grammar.K_SET,
     "similarity": grammar.K_SIMILARITY,
     "simulate": grammar.K_SIMULATE,
+    "stattype": grammar.K_STATTYPE,
+    "stattypes": grammar.K_STATTYPES,
     "table": grammar.K_TABLE,
     "temp": grammar.K_TEMP,
     "temporary": grammar.K_TEMPORARY,
@@ -118,11 +130,14 @@ keywords = {
     "unset": grammar.K_UNSET,
     "using": grammar.K_USING,
     "value": grammar.K_VALUE,
+    "variables": grammar.K_VARIABLES,
     "wait": grammar.K_WAIT,
     "when": grammar.K_WHEN,
     "where": grammar.K_WHERE,
     "with": grammar.K_WITH,
+    "within": grammar.K_WITHIN,
 }
+
 def scan_name(_scanner, text):
     return keywords.get(text) or keywords.get(casefold(text)) or \
         grammar.L_NAME;
@@ -234,6 +249,10 @@ class BQLScanner(Plex.Scanner):
         (whitespace,            Plex.IGNORE),
         (line_comment,          Plex.IGNORE),
         (Plex.Str(";"),         grammar.T_SEMI),
+        (Plex.Str("{"),         grammar.T_LCURLY),
+        (Plex.Str("}"),         grammar.T_RCURLY),
+        (Plex.Str("["),         grammar.T_LSQUARE),
+        (Plex.Str("]"),         grammar.T_RSQUARE),
         (Plex.Str("("),         grammar.T_LROUND),
         (Plex.Str(")"),         grammar.T_RROUND),
         (Plex.Str("+"),         grammar.T_PLUS),

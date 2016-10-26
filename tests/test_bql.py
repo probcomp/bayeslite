@@ -26,13 +26,25 @@ import bayeslite.guess as guess
 import bayeslite.parse as parse
 import bayeslite.metamodels.troll_rng as troll
 
+from bayeslite import bayesdb_open
+
 import test_core
 import test_csv
 
 from stochastic import stochastic
 
 def bql2sql(string, setup=None):
-    with test_core.t1() as (bdb, _table_id):
+    with bayeslite.bayesdb_open(':memory:') as bdb:
+        test_core.t1_schema(bdb)
+        test_core.t1_data(bdb)
+        bdb.execute('''
+            create population p1 for t1 (
+                id ignore;
+                label categorical;
+                age numerical;
+                weight numerical
+            )
+        ''')
         if setup is not None:
             setup(bdb)
         phrases = parse.parse_bql_string(string)
@@ -45,7 +57,17 @@ def bql2sql(string, setup=None):
 
 # XXX Kludgey mess.  Please reorganize.
 def bql2sqlparam(string):
-    with test_core.t1() as (bdb, _table_id):
+    with bayeslite.bayesdb_open(':memory:') as bdb:
+        test_core.t1_schema(bdb)
+        test_core.t1_data(bdb)
+        bdb.execute('''
+            create population p1 for t1 (
+                id ignore;
+                label categorical;
+                age numerical;
+                weight numerical
+            )
+        ''')
         phrases = parse.parse_bql_string(string)
         out0 = StringIO.StringIO()
         for phrase in phrases:
@@ -74,49 +96,72 @@ def empty(cursor):
     with pytest.raises(StopIteration):
         cursor.next()
 
+def test_trivial_population():
+    with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
+        with open(fname, 'rU') as f:
+            bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
+        # XXX if (not) exists
+        bdb.execute('''
+            create population p for t (
+                guess stattypes for (*);
+                age numerical
+            )
+        ''')
+        bdb.execute('drop population p')
+
 @stochastic(max_runs=2, min_passes=1)
 def test_conditional_probability(seed):
-    with test_core.t1(seed=seed) as (bdb, _generator_id):
-        bdb.execute('''create generator t1_cond_prob_cc for t1 using
-                       crosscat(age numerical, weight numerical,
-                           dependent(age, weight));''')
-        bdb.execute('initialize 1 model for t1_cond_prob_cc')
-        bdb.execute('analyze t1_cond_prob_cc for 1 iteration wait')
-        q0 = 'estimate probability of age = 8 by t1_cond_prob_cc'
-        q1 = 'estimate probability of age = 8 given () by t1_cond_prob_cc'
+    with test_core.t1(seed=seed) as (bdb, _population_id, _generator_id):
+        bdb.execute('drop generator p1_cc')
+        bdb.execute('drop population p1')
+        bdb.execute('''
+            create population p1 for t1 (
+                ignore id, label;
+                model age as numerical;
+                model weight as numerical
+            )
+        ''')
+        bdb.execute('''
+            create generator p1_cond_prob_cc for p1 using crosscat (
+                dependent(age, weight)
+            )
+        ''')
+        bdb.execute('initialize 1 model for p1_cond_prob_cc')
+        bdb.execute('analyze p1_cond_prob_cc for 1 iteration wait')
+        q0 = 'estimate probability of age = 8 by p1'
+        q1 = 'estimate probability of age = 8 given () by p1'
         age_is_8 = bdb.execute(q0).fetchvalue()
         assert age_is_8 == bdb.execute(q1).fetchvalue()
-        q2 = '''estimate probability of age = 8 given (weight = 16)
-                by t1_cond_prob_cc'''
+        q2 = 'estimate probability of age = 8 given (weight = 16) by p1'
         age_is_8_given_weight_is_16 = bdb.execute(q2).fetchvalue()
         assert age_is_8 < age_is_8_given_weight_is_16
 
         probs = bdb.execute(
             'estimate probability of value 8 given (weight = 16)'
-            ' from columns of t1_cond_prob_cc').fetchall()
-        assert [(age_is_8_given_weight_is_16,), (0,)] == probs
+            " from columns of p1").fetchall()
+        assert [(age_is_8_given_weight_is_16,), (0.0,)] == probs
 
 @stochastic(max_runs=2, min_passes=1)
 def test_joint_probability(seed):
-    with test_core.t1(seed=seed) as (bdb, _generator_id):
-        bdb.execute('initialize 10 models for t1_cc')
-        bdb.execute('analyze t1_cc for 10 iterations wait')
-        q0 = 'estimate probability of age = 8 by t1_cc'
-        q1 = 'estimate probability of (age = 8) by t1_cc'
+    with test_core.t1(seed=seed) as (bdb, _population_id, _generator_id):
+        bdb.execute('initialize 10 models for p1_cc')
+        bdb.execute('analyze p1_cc for 10 iterations wait')
+        q0 = 'estimate probability of age = 8 by p1'
+        q1 = 'estimate probability of (age = 8) by p1'
         assert bdb.execute(q0).fetchvalue() == bdb.execute(q1).fetchvalue()
-        q1 = 'estimate probability of (age = 8) given () by t1_cc'
+        q1 = 'estimate probability of (age = 8) given () by p1'
         assert bdb.execute(q0).fetchvalue() == bdb.execute(q1).fetchvalue()
-        q2 = 'estimate probability of age = 8 given (weight = 16) by t1_cc'
+        q2 = 'estimate probability of age = 8 given (weight = 16) by p1'
         assert bdb.execute(q0).fetchvalue() < bdb.execute(q2).fetchvalue()
-        q0 = 'estimate probability of age = 8 by t1_cc'
-        q1 = 'estimate probability of (age = 8, weight = 16) by t1_cc'
+        q0 = 'estimate probability of age = 8 by p1'
+        q1 = 'estimate probability of (age = 8, weight = 16) by p1'
         assert bdb.execute(q1).fetchvalue() < bdb.execute(q0).fetchvalue()
         q2 = 'estimate probability of (age = 8, weight = 16)' \
-            " given (label = 'mumble') by t1_cc"
+            " given (label = 'mumble') by p1"
         assert bdb.execute(q1).fetchvalue() < bdb.execute(q2).fetchvalue()
 
 def test_badbql():
-    with test_core.t1() as (bdb, _generator_id):
+    with test_core.t1() as (bdb, _population_id, _generator_id):
         with pytest.raises(ValueError):
             bdb.execute('')
         with pytest.raises(ValueError):
@@ -244,23 +289,23 @@ def test_select_trivial():
 
 def test_estimate_bql():
     assert bql2sql('estimate predictive probability of weight'
-            ' from t1_cc;') == \
+            ' from p1;') == \
         'SELECT bql_row_column_predictive_probability(1, NULL, _rowid_, 3)' \
             ' FROM "t1";'
     assert bql2sql('estimate label, predictive probability of weight'
-            ' from t1_cc;') \
+            ' from p1;') \
         == \
         'SELECT "label",' \
             ' bql_row_column_predictive_probability(1, NULL, _rowid_, 3)' \
             ' FROM "t1";'
     assert bql2sql('estimate predictive probability of weight, label'
-            ' from t1_cc;') \
+            ' from p1;') \
         == \
         'SELECT bql_row_column_predictive_probability(1, NULL, _rowid_, 3),' \
             ' "label"' \
             ' FROM "t1";'
     assert bql2sql('estimate predictive probability of weight + 1'
-            ' from t1_cc;') == \
+            ' from p1;') == \
         'SELECT (bql_row_column_predictive_probability(1, NULL, _rowid_, 3)' \
             ' + 1)' \
             ' FROM "t1";'
@@ -269,237 +314,393 @@ def test_estimate_bql():
         bql2sql('estimate predictive probability of weight;')
     with pytest.raises(parse.BQLParseError):
         # Need at most one generator.
-        bql2sql('estimate predictive probability of weight from t1_cc, t1_cc;')
+        bql2sql('estimate predictive probability of weight from p1, p1;')
     with pytest.raises(parse.BQLParseError):
         # Need a generator name, not a subquery.
         bql2sql('estimate predictive probability of weight from (select 0);')
     with pytest.raises(parse.BQLParseError):
         # Need a column.
-        bql2sql('estimate predictive probability from t1_cc;')
-    assert bql2sql('estimate probability of weight = 20 from t1_cc;') == \
+        bql2sql('estimate predictive probability from p1;')
+    assert bql2sql('estimate probability of weight = 20 from p1;') == \
         'SELECT bql_pdf_joint(1, NULL, 3, 20) FROM "t1";'
     assert bql2sql('estimate probability of weight = 20 given (age = 8)'
-            'from t1_cc;') == \
-        'SELECT bql_pdf_joint(1, NULL, 3, 20, -1, 2, 8) FROM "t1";'
+            'from p1;') == \
+        'SELECT bql_pdf_joint(1, NULL, 3, 20, NULL, 2, 8) FROM "t1";'
     assert bql2sql('estimate probability of (weight = 20, age = 8)'
-            ' from t1_cc;') == \
+            ' from p1;') == \
         'SELECT bql_pdf_joint(1, NULL, 3, 20, 2, 8) FROM "t1";'
     assert bql2sql('estimate probability of (weight = 20, age = 8)'
-            " given (label = 'mumble') from t1_cc;") == \
-        "SELECT bql_pdf_joint(1, NULL, 3, 20, 2, 8, -1, 1, 'mumble')" \
+            " given (label = 'mumble') from p1;") == \
+        "SELECT bql_pdf_joint(1, NULL, 3, 20, 2, 8, NULL, 1, 'mumble')" \
             ' FROM "t1";'
-    assert bql2sql('estimate probability of weight = (c + 1) from t1_cc;') == \
+    assert bql2sql('estimate probability of weight = (c + 1) from p1;') == \
         'SELECT bql_pdf_joint(1, NULL, 3, ("c" + 1)) FROM "t1";'
-    assert bql2sql('estimate probability of weight = f(c) from t1_cc;') == \
+    assert bql2sql('estimate probability of weight = f(c) from p1;') == \
         'SELECT bql_pdf_joint(1, NULL, 3, "f"("c")) FROM "t1";'
-    assert bql2sql('estimate similarity to (rowid = 5) from t1_cc;') == \
+    assert bql2sql('estimate similarity to (rowid = 5) from p1;') == \
         'SELECT bql_row_similarity(1, NULL, _rowid_,' \
         ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5))) FROM "t1";'
     assert bql2sql('estimate similarity to (rowid = 5) with respect to age'
-            ' from t1_cc') == \
+            ' from p1') == \
         'SELECT bql_row_similarity(1, NULL, _rowid_,' \
         ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)), 2) FROM "t1";'
     assert bql2sql('estimate similarity to (rowid = 5)'
-            ' with respect to (age, weight) from t1_cc;') == \
+            ' with respect to (age, weight) from p1;') == \
         'SELECT bql_row_similarity(1, NULL, _rowid_,' \
         ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)), 2, 3) FROM "t1";'
     assert bql2sql('estimate similarity to (rowid = 5) with respect to (*)'
-            ' from t1_cc;') == \
+            ' from p1;') == \
         'SELECT bql_row_similarity(1, NULL, _rowid_,' \
         ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5))) FROM "t1";'
     assert bql2sql('estimate similarity to (rowid = 5)'
-            ' with respect to (age, weight) from t1_cc;') == \
+            ' with respect to (age, weight) from p1;') == \
         'SELECT bql_row_similarity(1, NULL, _rowid_,' \
         ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)), 2, 3) FROM "t1";'
     assert bql2sql('estimate dependence probability of age with weight' +
-        ' from t1_cc;') == \
+        ' from p1;') == \
         'SELECT bql_column_dependence_probability(1, NULL, 2, 3) FROM "t1";'
     with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
-        bql2sql('estimate dependence probability with age from t1_cc;')
+        bql2sql('estimate dependence probability with age from p1;')
     with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
-        bql2sql('estimate dependence probability from t1_cc;')
+        bql2sql('estimate dependence probability from p1;')
     assert bql2sql('estimate mutual information of age with weight' +
-        ' from t1_cc;') == \
+        ' from p1;') == \
         'SELECT bql_column_mutual_information(1, NULL, 2, 3, NULL) FROM "t1";'
     assert bql2sql('estimate mutual information of age with weight' +
-        ' using 42 samples from t1_cc;') == \
+        ' using 42 samples from p1;') == \
         'SELECT bql_column_mutual_information(1, NULL, 2, 3, 42) FROM "t1";'
     with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
-        bql2sql('estimate mutual information with age from t1_cc;')
+        bql2sql('estimate mutual information with age from p1;')
     with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
-        bql2sql('estimate mutual information from t1_cc;')
+        bql2sql('estimate mutual information from p1;')
     with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
         bql2sql('estimate mutual information with age using 42 samples'
-            ' from t1_cc;')
+            ' from p1;')
     with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
-        bql2sql('estimate mutual information using 42 samples from t1_cc;')
+        bql2sql('estimate mutual information using 42 samples from p1;')
     # XXX Should be SELECT, not ESTIMATE, here?
-    assert bql2sql('estimate correlation of age with weight from t1_cc;') == \
-        'SELECT bql_column_correlation(1, 2, 3) FROM "t1";'
+    assert bql2sql('estimate correlation of age with weight from p1;') == \
+        'SELECT bql_column_correlation(1, NULL, 2, 3) FROM "t1";'
     with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
-        bql2sql('estimate correlation with age from t1_cc;')
+        bql2sql('estimate correlation with age from p1;')
     with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
-        bql2sql('estimate correlation from t1_cc;')
+        bql2sql('estimate correlation from p1;')
+
+def test_predict_outside_infer():
     with pytest.raises(bayeslite.BQLError):
         # No PREDICT outside INFER.
-        bql2sql('estimate predict age with confidence 0.9 from t1_cc;')
+        bql2sql('estimate predict age with confidence 0.9 from p1;')
+
+def test_infer_explicit_predict_confidence():
     assert bql2sql('infer explicit predict age with confidence 0.9'
-            ' from t1_cc;') == \
-        'SELECT bql_predict(1, NULL, 2, _rowid_, 0.9) FROM "t1";'
+            ' from p1;') == \
+        'SELECT bql_predict(1, NULL, 2, _rowid_, 0.9, NULL) FROM "t1";'
+
+def test_infer_explicit_predict_confidence_nsamples():
+    assert bql2sql('infer explicit'
+            ' predict age with confidence 0.9 using 42 samples'
+            ' from p1;') == \
+        'SELECT bql_predict(1, NULL, 2, _rowid_, 0.9, 42) FROM "t1";'
+
+def test_infer_explicit_verbatim_and_predict_confidence():
     assert bql2sql('infer explicit rowid, age,'
-            ' predict age confidence age_conf from t1_cc') == \
+            ' predict age confidence age_conf from p1') == \
         'SELECT c0 AS "rowid", c1 AS "age",' \
             ' bql_json_get(c2, \'value\') AS "age",' \
             ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
-                ' bql_predict_confidence(1, NULL, 2, _rowid_) AS c2' \
+                ' bql_predict_confidence(1, NULL, 2, _rowid_, NULL) AS c2' \
                 ' FROM "t1");'
+
+def test_infer_explicit_verbatim_and_predict_noconfidence():
     assert bql2sql('infer explicit rowid, age,'
-            ' predict age as age_inf confidence age_conf from t1_cc') == \
+            ' predict age from p1') == \
+        'SELECT c0 AS "rowid", c1 AS "age",' \
+            ' bql_json_get(c2, \'value\') AS "age"' \
+            ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
+                ' bql_predict_confidence(1, NULL, 2, _rowid_, NULL) AS c2' \
+                ' FROM "t1");'
+
+def test_infer_explicit_verbatim_and_predict_confidence_nsamples():
+    assert bql2sql('infer explicit rowid, age,'
+            ' predict age confidence age_conf using 42 samples from p1') == \
+        'SELECT c0 AS "rowid", c1 AS "age",' \
+            ' bql_json_get(c2, \'value\') AS "age",' \
+            ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
+            ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
+                ' bql_predict_confidence(1, NULL, 2, _rowid_, 42) AS c2' \
+                ' FROM "t1");'
+
+def test_infer_explicit_verbatim_and_predict_noconfidence_nsamples():
+    assert bql2sql('infer explicit rowid, age,'
+            ' predict age using 42 samples from p1') == \
+        'SELECT c0 AS "rowid", c1 AS "age",' \
+            ' bql_json_get(c2, \'value\') AS "age"' \
+            ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
+                ' bql_predict_confidence(1, NULL, 2, _rowid_, 42) AS c2' \
+                ' FROM "t1");'
+
+def test_infer_explicit_verbatim_and_predict_confidence_as():
+    assert bql2sql('infer explicit rowid, age,'
+            ' predict age as age_inf confidence age_conf from p1') == \
         'SELECT c0 AS "rowid", c1 AS "age",' \
             ' bql_json_get(c2, \'value\') AS "age_inf",' \
             ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
-                ' bql_predict_confidence(1, NULL, 2, _rowid_) AS c2' \
+                ' bql_predict_confidence(1, NULL, 2, _rowid_, NULL) AS c2' \
                 ' FROM "t1");'
-    assert bql2sql('infer rowid, age, weight from t1_cc') \
+
+def test_infer_explicit_verbatim_and_predict_noconfidence_as():
+    assert bql2sql('infer explicit rowid, age,'
+            ' predict age as age_inf from p1') == \
+        'SELECT c0 AS "rowid", c1 AS "age",' \
+            ' bql_json_get(c2, \'value\') AS "age_inf"' \
+            ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
+                ' bql_predict_confidence(1, NULL, 2, _rowid_, NULL) AS c2' \
+                ' FROM "t1");'
+
+def test_infer_explicit_verbatim_and_predict_confidence_as_nsamples():
+    assert bql2sql('infer explicit rowid, age,'
+            ' predict age as age_inf confidence age_conf using 87 samples'
+            ' from p1') == \
+        'SELECT c0 AS "rowid", c1 AS "age",' \
+            ' bql_json_get(c2, \'value\') AS "age_inf",' \
+            ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
+            ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
+                ' bql_predict_confidence(1, NULL, 2, _rowid_, 87) AS c2' \
+                ' FROM "t1");'
+
+def test_infer_explicit_verbatim_and_predict_noconfidence_as_nsamples():
+    assert bql2sql('infer explicit rowid, age,'
+            ' predict age as age_inf using 87 samples'
+            ' from p1') == \
+        'SELECT c0 AS "rowid", c1 AS "age",' \
+            ' bql_json_get(c2, \'value\') AS "age_inf"' \
+            ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
+                ' bql_predict_confidence(1, NULL, 2, _rowid_, 87) AS c2' \
+                ' FROM "t1");'
+
+def test_infer_auto():
+    assert bql2sql('infer rowid, age, weight from p1') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0)) AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0, NULL))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0, NULL))' \
             ' AS "weight"' \
         ' FROM "t1";'
-    assert bql2sql('infer rowid, age, weight with confidence 0.9 from t1_cc') \
+
+def test_infer_auto_nsamples():
+    assert bql2sql('infer rowid, age, weight using (1+2) samples from p1') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9)) AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0, (1 + 2)))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0, (1 + 2)))' \
             ' AS "weight"' \
         ' FROM "t1";'
-    assert bql2sql('infer rowid, age, weight with confidence 0.9 from t1_cc'
+
+def test_infer_auto_with_confidence():
+    assert bql2sql('infer rowid, age, weight with confidence 0.9 from p1') \
+        == \
+        'SELECT "rowid" AS "rowid",' \
+        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9, NULL))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9, NULL))' \
+            ' AS "weight"' \
+        ' FROM "t1";'
+
+def test_infer_auto_with_confidence_nsamples():
+    assert bql2sql('infer rowid, age, weight with confidence 0.9'
+            ' using sqrt(2) samples'
+            ' from p1') \
+        == \
+        'SELECT "rowid" AS "rowid",' \
+        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9, "sqrt"(2)))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9,' \
+                ' "sqrt"(2)))' \
+            ' AS "weight"' \
+        ' FROM "t1";'
+
+def test_infer_auto_with_confidence_where():
+    assert bql2sql('infer rowid, age, weight with confidence 0.9 from p1'
             ' where label = \'foo\'') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9)) AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9, NULL))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9, NULL))' \
             ' AS "weight"' \
         ' FROM "t1"' \
         ' WHERE ("label" = \'foo\');'
-    assert bql2sql('infer rowid, age, weight with confidence 0.9 from t1_cc'
+
+def test_infer_auto_with_confidence_nsamples_where():
+    assert bql2sql('infer rowid, age, weight with confidence 0.9'
+            ' using 42 samples'
+            ' from p1'
+            ' where label = \'foo\'') \
+        == \
+        'SELECT "rowid" AS "rowid",' \
+        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9, 42))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9, 42))' \
+            ' AS "weight"' \
+        ' FROM "t1"' \
+        ' WHERE ("label" = \'foo\');'
+
+def test_infer_auto_with_confidence_nsamples_where_predict():
+    assert bql2sql('infer rowid, age, weight with confidence 0.9 from p1'
             ' where ifnull(label, predict label with confidence 0.7)'
                 ' = \'foo\'') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9)) AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9, NULL))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9, NULL))' \
             ' AS "weight"' \
         ' FROM "t1"' \
-        ' WHERE ("ifnull"("label", bql_predict(1, NULL, 1, _rowid_, 0.7))' \
+        ' WHERE ("ifnull"("label",' \
+                ' bql_predict(1, NULL, 1, _rowid_, 0.7, NULL))' \
             ' = \'foo\');'
-    assert bql2sql('infer rowid, * from t1_cc') == \
+
+def test_infer_auto_with_confidence_nsamples_where_predict_nsamples():
+    assert bql2sql('infer rowid, age, weight with confidence 0.9'
+            ' using 42 samples'
+            ' from p1'
+            ' where ifnull(label, predict label with confidence 0.7'
+                   ' using 73 samples)'
+                ' = \'foo\'') \
+        == \
+        'SELECT "rowid" AS "rowid",' \
+        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9, 42))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9, 42))' \
+            ' AS "weight"' \
+        ' FROM "t1"' \
+        ' WHERE ("ifnull"("label",' \
+                ' bql_predict(1, NULL, 1, _rowid_, 0.7, 73))' \
+            ' = \'foo\');'
+
+def test_infer_auto_star():
+    assert bql2sql('infer rowid, * from p1') == \
         'SELECT "rowid" AS "rowid", "id" AS "id",' \
-        ' "IFNULL"("label", bql_predict(1, NULL, 1, _rowid_, 0)) AS "label",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0)) AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0))' \
+        ' "IFNULL"("label", bql_predict(1, NULL, 1, _rowid_, 0, NULL))' \
+            ' AS "label",' \
+        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0, NULL))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0, NULL))' \
+            ' AS "weight"' \
+        ' FROM "t1";'
+
+def test_infer_auto_star_nsamples():
+    assert bql2sql('infer rowid, * using 1 samples from p1') == \
+        'SELECT "rowid" AS "rowid", "id" AS "id",' \
+        ' "IFNULL"("label", bql_predict(1, NULL, 1, _rowid_, 0, 1))' \
+            ' AS "label",' \
+        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0, 1))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0, 1))' \
             ' AS "weight"' \
         ' FROM "t1";'
 
 def test_estimate_columns_trivial():
     prefix0 = 'SELECT c.name AS name'
-    prefix1 = ' FROM bayesdb_generator AS g,' \
-        ' bayesdb_generator_column AS gc, bayesdb_column AS c' \
-        ' WHERE g.id = 1 AND gc.generator_id = g.id' \
-        ' AND c.tabname = g.tabname AND c.colno = gc.colno'
+    prefix1 = ' FROM bayesdb_population AS p,' \
+        ' bayesdb_variable AS v, bayesdb_column AS c' \
+        ' WHERE p.id = 1 AND v.population_id = p.id' \
+        ' AND c.tabname = p.tabname AND c.colno = v.colno' \
+        ' AND v.generator_id IS NULL'
     prefix = prefix0 + prefix1
-    assert bql2sql('estimate * from columns of t1_cc;') == \
+    assert bql2sql('estimate * from columns of p1;') == \
         prefix + ';'
-    assert bql2sql('estimate * from columns of t1_cc where' +
+    assert bql2sql('estimate * from columns of p1 where' +
             ' (probability of value 42) > 0.5') == \
         prefix + \
         ' AND (bql_column_value_probability(1, NULL, c.colno, 42) > 0.5);'
-    assert bql2sql('estimate * from columns of t1_cc'
+    assert bql2sql('estimate * from columns of p1'
             ' where (probability of value 8) > (probability of age = 16)') == \
         prefix + \
         ' AND (bql_column_value_probability(1, NULL, c.colno, 8) >' \
         ' bql_pdf_joint(1, NULL, 2, 16));'
     assert bql2sql('estimate *, probability of value 8 given (age = 8)'
-            ' from columns of t1_cc;') == \
+            ' from columns of p1;') == \
         prefix0 + \
         ', bql_column_value_probability(1, NULL, c.colno, 8, 2, 8)' + \
         prefix1 + ';'
     with pytest.raises(bayeslite.BQLError):
         bql2sql('estimate probability of value 8 given (agee = 8)'
-            ' from columns of t1_cc')
+            ' from columns of p1')
     with pytest.raises(bayeslite.BQLError):
         # PREDICTIVE PROBABILITY makes no sense without row.
-        bql2sql('estimate * from columns of t1_cc where' +
+        bql2sql('estimate * from columns of p1 where' +
             ' predictive probability of x > 0;')
     with pytest.raises(bayeslite.BQLError):
         # SIMILARITY makes no sense without row.
-        bql2sql('estimate * from columns of t1_cc where' +
+        bql2sql('estimate * from columns of p1 where' +
             ' similarity to (rowid = x) with respect to c > 0;')
-    assert bql2sql('estimate * from columns of t1_cc where' +
+    assert bql2sql('estimate * from columns of p1 where' +
             ' dependence probability with age > 0.5;') == \
         prefix + \
         ' AND (bql_column_dependence_probability(1, NULL, 2, c.colno) > 0.5);'
     with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
-        bql2sql('estimate * from columns of t1_cc where' +
+        bql2sql('estimate * from columns of p1 where' +
             ' dependence probability of age with weight > 0.5;')
     with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
-        bql2sql('estimate * from columns of t1_cc'
+        bql2sql('estimate * from columns of p1'
             ' where dependence probability > 0.5;')
-    assert bql2sql('estimate * from columns of t1_cc order by' +
+    assert bql2sql('estimate * from columns of p1 order by' +
             ' mutual information with age;') == \
         prefix + \
         ' ORDER BY bql_column_mutual_information(1, NULL, 2, c.colno, NULL);'
-    assert bql2sql('estimate * from columns of t1_cc order by' +
+    assert bql2sql('estimate * from columns of p1 order by' +
             ' mutual information with age using 42 samples;') == \
         prefix + \
         ' ORDER BY bql_column_mutual_information(1, NULL, 2, c.colno, 42);'
     with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
-        bql2sql('estimate * from columns of t1_cc order by' +
+        bql2sql('estimate * from columns of p1 order by' +
             ' mutual information of age with weight;')
     with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
-        bql2sql('estimate * from columns of t1_cc'
+        bql2sql('estimate * from columns of p1'
             ' where mutual information > 0.5;')
     with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
-        bql2sql('estimate * from columns of t1_cc order by' +
+        bql2sql('estimate * from columns of p1 order by' +
             ' mutual information of age with weight using 42 samples;')
     with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
-        bql2sql('estimate * from columns of t1_cc where' +
+        bql2sql('estimate * from columns of p1 where' +
             ' mutual information using 42 samples > 0.5;')
-    assert bql2sql('estimate * from columns of t1_cc order by' +
+    assert bql2sql('estimate * from columns of p1 order by' +
             ' correlation with age desc;') == \
-        prefix + ' ORDER BY bql_column_correlation(1, 2, c.colno) DESC;'
+        prefix + ' ORDER BY bql_column_correlation(1, NULL, 2, c.colno) DESC;'
     with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
-        bql2sql('estimate * from columns of t1_cc order by' +
+        bql2sql('estimate * from columns of p1 order by' +
             ' correlation of age with weight;')
     with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
-        bql2sql('estimate * from columns of t1_cc where correlation > 0.5;')
+        bql2sql('estimate * from columns of p1 where correlation > 0.5;')
     with pytest.raises(bayeslite.BQLError):
         # Makes no sense.
-        bql2sql('estimate * from columns of t1_cc'
+        bql2sql('estimate * from columns of p1'
             ' where predict age with confidence 0.9 > 30;')
     assert bql2sql('estimate'
             ' *, dependence probability with weight as depprob,'
             ' mutual information with weight as mutinf'
-            ' from columns of t1_cc'
+            ' from columns of p1'
             ' where depprob > 0.5 order by mutinf desc') == \
         prefix0 + \
         ', bql_column_dependence_probability(1, NULL, 3, c.colno)' \
@@ -511,121 +712,121 @@ def test_estimate_columns_trivial():
         ' ORDER BY "mutinf" DESC;'
 
 def test_estimate_pairwise_trivial():
-    prefix = 'SELECT 1 AS generator_id, c0.name AS name0, c1.name AS name1, '
+    prefix = 'SELECT 1 AS population_id, v0.name AS name0, v1.name AS name1, '
     infix = ' AS value'
-    infix0 = ' FROM bayesdb_generator AS g,'
-    infix0 += ' bayesdb_generator_column AS gc0, bayesdb_column AS c0,'
-    infix0 += ' bayesdb_generator_column AS gc1, bayesdb_column AS c1'
-    infix0 += ' WHERE g.id = 1'
-    infix0 += ' AND gc0.generator_id = g.id AND gc1.generator_id = g.id'
-    infix0 += ' AND c0.tabname = g.tabname AND c0.colno = gc0.colno'
-    infix0 += ' AND c1.tabname = g.tabname AND c1.colno = gc1.colno'
+    infix0 = ' FROM bayesdb_population AS p,'
+    infix0 += ' bayesdb_variable AS v0,'
+    infix0 += ' bayesdb_variable AS v1'
+    infix0 += ' WHERE p.id = 1'
+    infix0 += ' AND v0.population_id = p.id AND v1.population_id = p.id'
+    infix0 += ' AND v0.generator_id IS NULL'
+    infix0 += ' AND v1.generator_id IS NULL'
     infix += infix0
     assert bql2sql('estimate dependence probability'
-            ' from pairwise columns of t1_cc;') == \
+            ' from pairwise columns of p1;') == \
         prefix + \
-        'bql_column_dependence_probability(1, NULL, c0.colno, c1.colno)' + \
+        'bql_column_dependence_probability(1, NULL, v0.colno, v1.colno)' + \
         infix + ';'
     assert bql2sql('estimate mutual information'
-            ' from pairwise columns of t1_cc where'
+            ' from pairwise columns of p1 where'
             ' (probability of age = 0) > 0.5;') == \
         prefix + \
-        'bql_column_mutual_information(1, NULL, c0.colno, c1.colno, NULL)' + \
+        'bql_column_mutual_information(1, NULL, v0.colno, v1.colno, NULL)' + \
         infix + \
         ' AND (bql_pdf_joint(1, NULL, 2, 0) > 0.5);'
     with pytest.raises(bayeslite.BQLError):
         # PROBABILITY OF VALUE is 1-column.
-        bql2sql('estimate correlation from pairwise columns of t1_cc where' +
+        bql2sql('estimate correlation from pairwise columns of p1 where' +
             ' (probability of value 0) > 0.5;')
     with pytest.raises(bayeslite.BQLError):
         # PREDICTIVE PROBABILITY OF is a row function.
         bql2sql('estimate dependence probability'
-            ' from pairwise columns of t1_cc' +
+            ' from pairwise columns of p1' +
             ' where predictive probability of x > 0.5;')
     with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
         bql2sql('estimate dependence probability'
-            ' from pairwise columns of t1_cc'
+            ' from pairwise columns of p1'
             ' where dependence probability of age with weight > 0.5;')
     with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
-        bql2sql('estimate mutual information from pairwise columns of t1_cc'
+        bql2sql('estimate mutual information from pairwise columns of p1'
             ' where dependence probability with weight > 0.5;')
     with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
         bql2sql('estimate mutual information using 42 samples'
-            ' from pairwise columns of t1_cc'
+            ' from pairwise columns of p1'
             ' where dependence probability with weight > 0.5;')
-    assert bql2sql('estimate correlation from pairwise columns of t1_cc'
+    assert bql2sql('estimate correlation from pairwise columns of p1'
             ' where dependence probability > 0.5;') == \
-        prefix + 'bql_column_correlation(1, c0.colno, c1.colno)' + \
+        prefix + 'bql_column_correlation(1, NULL, v0.colno, v1.colno)' + \
         infix + ' AND' \
-        ' (bql_column_dependence_probability(1, NULL, c0.colno, c1.colno)' \
+        ' (bql_column_dependence_probability(1, NULL, v0.colno, v1.colno)' \
             ' > 0.5);'
     with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
         bql2sql('estimate dependence probability'
-            ' from pairwise columns of t1_cc'
+            ' from pairwise columns of p1'
             ' where mutual information of age with weight > 0.5;')
     with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
         bql2sql('estimate dependence probability'
-            ' from pairwise columns of t1_cc'
+            ' from pairwise columns of p1'
             ' where mutual information of age with weight using 42 samples'
                 ' > 0.5;')
     with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
-        bql2sql('estimate mutual information from pairwise columns of t1_cc'
+        bql2sql('estimate mutual information from pairwise columns of p1'
             ' where mutual information with weight > 0.5;')
     with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
         bql2sql('estimate mutual information using 42 samples'
-            ' from pairwise columns of t1_cc'
+            ' from pairwise columns of p1'
             ' where mutual information with weight using 42 samples > 0.5;')
-    assert bql2sql('estimate correlation from pairwise columns of t1_cc' +
+    assert bql2sql('estimate correlation from pairwise columns of p1' +
             ' where mutual information > 0.5;') == \
-        prefix + 'bql_column_correlation(1, c0.colno, c1.colno)' + \
+        prefix + 'bql_column_correlation(1, NULL, v0.colno, v1.colno)' + \
         infix + ' AND' + \
-        ' (bql_column_mutual_information(1, NULL, c0.colno, c1.colno, NULL)' \
+        ' (bql_column_mutual_information(1, NULL, v0.colno, v1.colno, NULL)' \
             ' > 0.5);'
-    assert bql2sql('estimate correlation from pairwise columns of t1_cc' +
+    assert bql2sql('estimate correlation from pairwise columns of p1' +
             ' where mutual information using 42 samples > 0.5;') == \
-        prefix + 'bql_column_correlation(1, c0.colno, c1.colno)' + \
+        prefix + 'bql_column_correlation(1, NULL, v0.colno, v1.colno)' + \
         infix + ' AND' + \
-        ' (bql_column_mutual_information(1, NULL, c0.colno, c1.colno, 42)' \
+        ' (bql_column_mutual_information(1, NULL, v0.colno, v1.colno, 42)' \
             ' > 0.5);'
     with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
         bql2sql('estimate dependence probability'
-            ' from pairwise columns of t1_cc'
+            ' from pairwise columns of p1'
             ' where correlation of age with weight > 0.5;')
     with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
-        bql2sql('estimate mutual information from pairwise columns of t1_cc'
+        bql2sql('estimate mutual information from pairwise columns of p1'
             ' where correlation with weight > 0.5;')
     with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
         bql2sql('estimate mutual information using 42 samples'
-            ' from pairwise columns of t1_cc'
+            ' from pairwise columns of p1'
             ' where correlation with weight > 0.5;')
-    assert bql2sql('estimate correlation from pairwise columns of t1_cc'
+    assert bql2sql('estimate correlation from pairwise columns of p1'
             ' where correlation > 0.5;') == \
-        prefix + 'bql_column_correlation(1, c0.colno, c1.colno)' + \
+        prefix + 'bql_column_correlation(1, NULL, v0.colno, v1.colno)' + \
         infix + ' AND' + \
-        ' (bql_column_correlation(1, c0.colno, c1.colno) > 0.5);'
+        ' (bql_column_correlation(1, NULL, v0.colno, v1.colno) > 0.5);'
     with pytest.raises(bayeslite.BQLError):
         # Makes no sense.
         bql2sql('estimate dependence probability'
-            ' from pairwise columns of t1_cc'
+            ' from pairwise columns of p1'
             ' where predict age with confidence 0.9 > 30;')
     assert bql2sql('estimate dependence probability as depprob,'
             ' mutual information as mutinf'
-            ' from pairwise columns of t1_cc'
+            ' from pairwise columns of p1'
             ' where depprob > 0.5 order by mutinf desc') == \
         prefix + \
-        'bql_column_dependence_probability(1, NULL, c0.colno, c1.colno)' \
+        'bql_column_dependence_probability(1, NULL, v0.colno, v1.colno)' \
         ' AS "depprob",' \
-        ' bql_column_mutual_information(1, NULL, c0.colno, c1.colno, NULL)' \
+        ' bql_column_mutual_information(1, NULL, v0.colno, v1.colno, NULL)' \
         ' AS "mutinf"' + \
         infix0 + \
         ' AND ("depprob" > 0.5)' \
@@ -634,11 +835,11 @@ def test_estimate_pairwise_trivial():
 def test_estimate_pairwise_row():
     prefix = 'SELECT r0._rowid_ AS rowid0, r1._rowid_ AS rowid1'
     infix = ' AS value FROM "t1" AS r0, "t1" AS r1'
-    assert bql2sql('estimate similarity from pairwise t1_cc;') == \
+    assert bql2sql('estimate similarity from pairwise p1;') == \
         prefix + ', bql_row_similarity(1, NULL, r0._rowid_, r1._rowid_)' + \
         infix + ';'
     assert bql2sql('estimate similarity with respect to age' +
-            ' from pairwise t1_cc;') == \
+            ' from pairwise p1;') == \
         prefix + ', bql_row_similarity(1, NULL, r0._rowid_, r1._rowid_, 2)' + \
         infix + ';'
     with pytest.raises(bayeslite.BQLError):
@@ -647,36 +848,34 @@ def test_estimate_pairwise_row():
 
 def test_estimate_pairwise_selected_columns():
     assert bql2sql('estimate dependence probability'
-            ' from pairwise columns of t1_cc for label, age') == \
-        'SELECT 1 AS generator_id, c0.name AS name0, c1.name AS name1,' \
-        ' bql_column_dependence_probability(1, NULL, c0.colno, c1.colno)' \
+            ' from pairwise columns of p1 for label, age') == \
+        'SELECT 1 AS population_id, v0.name AS name0, v1.name AS name1,' \
+        ' bql_column_dependence_probability(1, NULL, v0.colno, v1.colno)' \
             ' AS value' \
-        ' FROM bayesdb_generator AS g,' \
-        ' bayesdb_generator_column AS gc0, bayesdb_column AS c0,' \
-        ' bayesdb_generator_column AS gc1, bayesdb_column AS c1' \
-        ' WHERE g.id = 1' \
-        ' AND gc0.generator_id = g.id AND gc1.generator_id = g.id' \
-        ' AND c0.tabname = g.tabname AND c0.colno = gc0.colno' \
-        ' AND c1.tabname = g.tabname AND c1.colno = gc1.colno' \
-        ' AND c0.colno IN (1, 2) AND c1.colno IN (1, 2);'
+        ' FROM bayesdb_population AS p,' \
+        ' bayesdb_variable AS v0,' \
+        ' bayesdb_variable AS v1' \
+        ' WHERE p.id = 1' \
+        ' AND v0.population_id = p.id AND v1.population_id = p.id' \
+        ' AND v0.generator_id IS NULL AND v1.generator_id IS NULL' \
+        ' AND v0.colno IN (1, 2) AND v1.colno IN (1, 2);'
     assert bql2sql('estimate dependence probability'
-            ' from pairwise columns of t1_cc'
-            ' for (ESTIMATE * FROM COLUMNS OF t1_cc'
+            ' from pairwise columns of p1'
+            ' for (ESTIMATE * FROM COLUMNS OF p1'
                 ' ORDER BY name DESC LIMIT 2)') == \
-        'SELECT 1 AS generator_id, c0.name AS name0, c1.name AS name1,' \
-        ' bql_column_dependence_probability(1, NULL, c0.colno, c1.colno)' \
+        'SELECT 1 AS population_id, v0.name AS name0, v1.name AS name1,' \
+        ' bql_column_dependence_probability(1, NULL, v0.colno, v1.colno)' \
             ' AS value' \
-        ' FROM bayesdb_generator AS g,' \
-        ' bayesdb_generator_column AS gc0, bayesdb_column AS c0,' \
-        ' bayesdb_generator_column AS gc1, bayesdb_column AS c1' \
-        ' WHERE g.id = 1' \
-        ' AND gc0.generator_id = g.id AND gc1.generator_id = g.id' \
-        ' AND c0.tabname = g.tabname AND c0.colno = gc0.colno' \
-        ' AND c1.tabname = g.tabname AND c1.colno = gc1.colno' \
-        ' AND c0.colno IN (3, 1) AND c1.colno IN (3, 1);'
+        ' FROM bayesdb_population AS p,' \
+        ' bayesdb_variable AS v0,' \
+        ' bayesdb_variable AS v1' \
+        ' WHERE p.id = 1' \
+        ' AND v0.population_id = p.id AND v1.population_id = p.id' \
+        ' AND v0.generator_id IS NULL AND v1.generator_id IS NULL' \
+        ' AND v0.colno IN (3, 1) AND v1.colno IN (3, 1);'
 
 def test_select_columns_subquery():
-    assert bql2sql('select id, t1.(estimate * from columns of t1_cc'
+    assert bql2sql('select id, t1.(estimate * from columns of p1'
             ' order by name asc limit 2) from t1') == \
         'SELECT "id", "t1"."age", "t1"."label" FROM "t1";'
 
@@ -692,64 +891,64 @@ def test_trivial_commands():
         with open(fname, 'rU') as f:
             bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True,
                 ifnotexists=True)
-        guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+        guess.bayesdb_guess_population(bdb, 'p', 't')
         with pytest.raises(ValueError):
-            guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
-        guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat',
-            ifnotexists=True)
-        bdb.execute('initialize 2 models for t_cc')
+            guess.bayesdb_guess_population(bdb, 'p', 't')
+        guess.bayesdb_guess_population(bdb, 'p', 't', ifnotexists=True)
+        bdb.execute('create generator p_cc for p using crosscat()')
+        bdb.execute('initialize 2 models for p_cc')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('initialize 2 models for t_cc')
-        bdb.execute('drop models from t_cc')
-        bdb.execute('drop models from t_cc')
-        bdb.execute('initialize 2 models for t_cc')
+            bdb.execute('initialize 2 models for p_cc')
+        bdb.execute('drop models from p_cc')
+        bdb.execute('drop models from p_cc')
+        bdb.execute('initialize 2 models for p_cc')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('initialize 2 models for t_cc')
+            bdb.execute('initialize 2 models for p_cc')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('drop models 0-2 from t_cc')
-        bdb.execute('drop models 0-1 from t_cc')
+            bdb.execute('drop models 0-2 from p_cc')
+        bdb.execute('drop models 0-1 from p_cc')
         with bdb.savepoint():
-            bdb.execute('initialize 2 models for t_cc')
-            bdb.execute('drop models 0-1 from t_cc')
+            bdb.execute('initialize 2 models for p_cc')
+            bdb.execute('drop models 0-1 from p_cc')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('drop models 0-1 from t_cc')
-        bdb.execute('initialize 2 models for t_cc')
-        bdb.execute('initialize 1 model if not exists for t_cc')
-        bdb.execute('initialize 2 models if not exists for t_cc')
-        generator_id = core.bayesdb_get_generator(bdb, 't_cc')
+            bdb.execute('drop models 0-1 from p_cc')
+        bdb.execute('initialize 2 models for p_cc')
+        bdb.execute('initialize 1 model if not exists for p_cc')
+        bdb.execute('initialize 2 models if not exists for p_cc')
+        generator_id = core.bayesdb_get_generator(bdb, None, 'p_cc')
         assert core.bayesdb_generator_table(bdb, generator_id) == 't'
         bdb.execute('alter table t rename to t')
         assert core.bayesdb_generator_table(bdb, generator_id) == 't'
         bdb.execute('alter table t rename to T')
         assert core.bayesdb_generator_table(bdb, generator_id) == 'T'
-        bdb.execute('estimate count(*) from t_cc').fetchall()
+        bdb.execute('estimate count(*) from p').fetchall()
         bdb.execute('alter table t rename to t')
         assert core.bayesdb_generator_table(bdb, generator_id) == 't'
-        bdb.execute('alter generator t_cc rename to t0_cc')
-        assert core.bayesdb_generator_name(bdb, generator_id) == 't0_cc'
-        bdb.execute('alter generator t0_cc rename to zot, rename to T0_CC')
-        assert core.bayesdb_generator_name(bdb, generator_id) == 'T0_CC'
-        bdb.execute('alter generator T0_cc rename to T0_cc')
-        assert core.bayesdb_generator_name(bdb, generator_id) == 'T0_cc'
-        bdb.execute('alter generator t0_CC rename to t0_cc')
-        assert core.bayesdb_generator_name(bdb, generator_id) == 't0_cc'
-        bdb.execute('estimate count(*) from t0_cc').fetchall()
+        bdb.execute('alter generator p_cc rename to p0_cc')
+        assert core.bayesdb_generator_name(bdb, generator_id) == 'p0_cc'
+        bdb.execute('alter generator p0_cc rename to zot, rename to P0_CC')
+        assert core.bayesdb_generator_name(bdb, generator_id) == 'P0_CC'
+        bdb.execute('alter generator P0_cc rename to P0_cc')
+        assert core.bayesdb_generator_name(bdb, generator_id) == 'P0_cc'
+        bdb.execute('alter generator p0_CC rename to p0_cc')
+        assert core.bayesdb_generator_name(bdb, generator_id) == 'p0_cc'
+        bdb.execute('estimate count(*) from p').fetchall()
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate count(*) from t_cc')
-        bdb.execute('alter generator t0_cc rename to T0_cc')
-        bdb.execute('analyze t0_cc for 1 iteration wait')
+            bdb.execute('estimate count(*) from p_cc')
+        bdb.execute('alter generator p0_cc rename to P0_cc')
+        bdb.execute('analyze p0_cc for 1 iteration wait')
         colno = core.bayesdb_generator_column_number(bdb, generator_id,
             'gender')
         with pytest.raises(parse.BQLParseError):
             # Rename the table's columns, not the generator's columns.
-            bdb.execute('alter generator t0_cc rename gender to sex')
+            bdb.execute('alter generator p0_cc rename gender to sex')
         with pytest.raises(NotImplementedError): # XXX
             bdb.execute('alter table t rename to t0, rename gender to sex')
             assert core.bayesdb_generator_column_number(bdb, generator_id,
                     'sex') \
                 == colno
-            bdb.execute('analyze t0_cc model 0 for 1 iteration wait')
-            bdb.execute('alter generator t0_cc rename to t_cc')
+            bdb.execute('analyze p0_cc model 0 for 1 iteration wait')
+            bdb.execute('alter generator p0_cc rename to p_cc')
             assert core.bayesdb_generator_column_number(bdb, generator_id,
                     'sex') \
                 == colno
@@ -759,124 +958,66 @@ def test_trivial_commands():
                 assert False, 'Need to fix quoting of unknown columns!'
             with pytest.raises(bayeslite.BQLError):
                 bdb.execute('estimate predict sex with confidence 0.9'
-                    ' from t_cc').fetchall()
+                    ' from p').fetchall()
             bdb.execute('infer explicit predict sex with confidence 0.9'
-                ' from t_cc').fetchall()
+                ' from p').fetchall()
             with pytest.raises(bayeslite.BQLError):
                 bdb.execute('estimate predict gender with confidence 0.9'
-                    ' from t_cc')
+                    ' from p')
             with pytest.raises(bayeslite.BQLError):
                 bdb.execute('infer explicit predict gender with confidence 0.9'
-                    ' from t_cc')
+                    ' from p')
             bdb.execute('alter table t0 rename sex to gender')
             assert core.bayesdb_generator_column_number(bdb, generator_id,
                     'gender') \
                 == colno
-        bdb.execute('alter generator t0_cc rename to t_cc')     # XXX
+        bdb.execute('alter generator p0_cc rename to p_cc')     # XXX
         bdb.execute('alter table t rename to T0')               # XXX
         bdb.sql_execute('create table t0_temp(x)')
         bdb.execute('alter table T0 rename to t0')
         assert bdb.execute('select count(*) from t0_temp').fetchvalue() == 0
         assert bdb.execute('select count(*) from t0').fetchvalue() > 0
         bdb.execute('drop table T0_TEMP')
-        bdb.execute('analyze t_cc model 0 for 1 iteration wait')
-        bdb.execute('analyze t_cc model 1 for 1 iteration wait')
-        bdb.execute('analyze t_cc models 0-1 for 1 iteration wait')
-        bdb.execute('analyze t_cc models 0,1 for 1 iteration wait')
-        bdb.execute('analyze t_cc for 1 iteration wait')
+        bdb.execute('analyze p_cc model 0 for 1 iteration wait')
+        bdb.execute('analyze p_cc model 1 for 1 iteration wait')
+        bdb.execute('analyze p_cc models 0-1 for 1 iteration wait')
+        bdb.execute('analyze p_cc models 0,1 for 1 iteration wait')
+        bdb.execute('analyze p_cc for 1 iteration wait')
         bdb.execute('select * from t0').fetchall()
         bdb.execute('select * from T0').fetchall()
-        bdb.execute('estimate * from t_cc').fetchall()
-        bdb.execute('estimate * from T_CC').fetchall()
-        bdb.execute('estimate similarity from pairwise t_cc').fetchall()
+        bdb.execute('estimate * from p').fetchall()
+        bdb.execute('estimate * from P').fetchall()
+        bdb.execute('estimate similarity from pairwise p').fetchall()
         bdb.execute('select value from'
-            ' (estimate correlation from pairwise columns of t_cc)').fetchall()
+            ' (estimate correlation from pairwise columns of p)').fetchall()
         bdb.execute('infer explicit predict age with confidence 0.9'
-            ' from t_cc').fetchall()
+            ' from p').fetchall()
         bdb.execute('infer explicit predict AGE with confidence 0.9'
-            ' from T_cc').fetchall()
+            ' from P').fetchall()
         bdb.execute('infer explicit predict aGe with confidence 0.9'
-            ' from T_cC').fetchall()
+            ' from P').fetchall()
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate predict agee with confidence 0.9 from t_cc')
+            bdb.execute('estimate predict agee with confidence 0.9 from p')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('infer explicit predict agee with confidence 0.9'
-                ' from t_cc')
-        # Make sure it works with the table too if we create a default
-        # generator.
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate * from t0')
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate * from columns of t0')
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate correlation from pairwise columns of t0')
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate similarity from pairwise t0')
-        bdb.execute('''
-            create default generator t_ccd for t0 using crosscat(
-                age numerical,
-                rank categorical
-            )
-        ''')
-        bdb.execute('initialize 1 model if not exists for t_ccd')
-        bdb.execute('analyze t_ccd for 1 iteration wait')
-        bdb.execute('''
-            create generator t_cce for t0 using crosscat(
-                guess(*),
-                age numerical,
-                rank numerical
-            )
-        ''')
+                ' from p')
+        guess.bayesdb_guess_population(bdb, 'pe', 't0',
+            overrides=[
+                ('age', 'numerical'),
+                ('rank', 'numerical'),
+            ])
+        bdb.execute('create generator pe_cc for pe using crosscat()')
         with pytest.raises(bayeslite.BQLError):
             # No models to analyze.
-            bdb.execute('analyze t_cce for 1 iteration wait')
-        bdb.execute('initialize 1 model if not exists for t_cce')
-        bdb.execute('analyze t_cce for 1 iteration wait')
+            bdb.execute('analyze pe_cc for 1 iteration wait')
+        bdb.execute('initialize 1 model if not exists for pe_cc')
+        bdb.execute('analyze pe_cc for 1 iteration wait')
         bdb.execute('estimate correlation'
-            ' from pairwise columns of t_cce').fetchall()
-        bdb.execute('initialize 2 models if not exists for t0')
-        bdb.execute('analyze t0 for 1 iteration wait')
-        bdb.execute('estimate * from t0').fetchall()
-        bdb.execute('estimate * from columns of t0').fetchall()
-        bdb.execute('estimate * from columns of t0'
-            ' order by dependence probability with age').fetchall()
-        bdb.execute('estimate correlation'
-            ' from pairwise columns of t0').fetchall()
-        bdb.execute('estimate similarity from pairwise t0').fetchall()
-        # XXX Distinguish the two generators somehow.
-        bdb.execute('alter table t0 set default generator to t_cc')
-        bdb.execute('estimate * from t0').fetchall()
-        bdb.execute('estimate * from columns of t0').fetchall()
-        bdb.execute('estimate correlation'
-            ' from pairwise columns of t0').fetchall()
-        bdb.execute('estimate similarity from pairwise t0').fetchall()
-        bdb.execute('alter table t0 unset default generator')
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate * from t0')
-        bdb.execute('alter table t0 rename to t')
-        bdb.execute('alter table t set default generator to t_ccd')
-        bdb.execute('estimate * from t').fetchall()
-        bdb.execute('estimate * from columns of t').fetchall()
-        bdb.execute('estimate correlation'
-            ' from pairwise columns of t').fetchall()
-        bdb.execute('estimate similarity from pairwise t').fetchall()
-        bdb.execute('drop generator t_ccd')
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('initialize 3 models if not exists for t_ccd')
+            ' from pairwise columns of pe').fetchall()
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('initialize 4 models if not exists for t')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('analyze t_ccd for 1 iteration wait')
-        with pytest.raises(bayeslite.BQLError):
             bdb.execute('analyze t0 for 1 iteration wait')
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate * from t_ccd')
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate * from columns of t_ccd')
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate correlation from pairwise columns of t_ccd')
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate similarity from pairwise t_ccd')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate * from t')
         with pytest.raises(bayeslite.BQLError):
@@ -885,21 +1026,13 @@ def test_trivial_commands():
             bdb.execute('estimate correlation from pairwise columns of t')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate similarity from pairwise t')
-        bdb.execute('alter table t set default generator to t_cc')
-        bdb.execute('initialize 6 models if not exists for t_cc')
-        bdb.execute('initialize 7 models if not exists for t')
-        bdb.execute('analyze t_cc for 1 iteration wait')
-        bdb.execute('analyze t for 1 iteration wait')
-        bdb.execute('estimate * from t').fetchall()
-        bdb.execute('estimate * from columns of t').fetchall()
-        bdb.execute('estimate correlation'
-            ' from pairwise columns of t').fetchall()
-        bdb.execute('estimate similarity from pairwise t').fetchall()
+        bdb.execute('initialize 6 models if not exists for p_cc')
+        bdb.execute('analyze p_cc for 1 iteration wait')
 
 def test_trivial_deadline():
-    with test_core.t1() as (bdb, _table_id):
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 1 second wait')
+    with test_core.t1() as (bdb, _population_id, _generator_id):
+        bdb.execute('initialize 1 model for p1_cc')
+        bdb.execute('analyze p1_cc for 1 second wait')
 
 def test_parametrized():
     assert bql2sqlparam('select * from t where id = ?') == \
@@ -969,13 +1102,14 @@ def test_parametrized():
                 bdb.execute(query, *args)
             bdb.sql_untrace(trace)
             return sql
-        bdb.execute('create generator t_cc for t using crosscat(guess(*))')
-        bdb.execute('initialize 1 model for t_cc;')
+        guess.bayesdb_guess_population(bdb, 'p', 't')
+        bdb.execute('create generator p_cc for p using crosscat()')
+        bdb.execute('initialize 1 model for p_cc;')
         iters0 = bdb.sql_execute('select *'
             ' from bayesdb_generator_model').fetchall()
         thetas0 = bdb.sql_execute('select *'
             ' from bayesdb_crosscat_theta').fetchall()
-        bdb.execute('analyze t_cc for 1 iteration wait;')
+        bdb.execute('analyze p_cc for 1 iteration wait;')
         iters1 = bdb.sql_execute('select *'
             ' from bayesdb_generator_model').fetchall()
         thetas1 = bdb.sql_execute('select *'
@@ -983,43 +1117,42 @@ def test_parametrized():
         assert iters0 != iters1
         assert thetas0 != thetas1
         assert traced_execute('estimate similarity to (rowid = 1)'
-                ' with respect to (estimate * from columns of t_cc limit 1)'
-                ' from t_cc;') == [
+                ' with respect to (estimate * from columns of p limit 1)'
+                ' from p;') == [
             'estimate similarity to (rowid = 1)' \
-                ' with respect to (estimate * from columns of t_cc limit 1)' \
-                ' from t_cc;',
+                ' with respect to (estimate * from columns of p limit 1)' \
+                ' from p;',
         ]
         assert sqltraced_execute('estimate similarity to (rowid = 1)'
-                ' with respect to (estimate * from columns of t_cc limit 1)'
-                ' from t_cc;') == [
-            'SELECT COUNT(*) FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
-            'SELECT id FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
-            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
-            'SELECT COUNT(*) FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
-            'SELECT id FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+                ' with respect to (estimate * from columns of p limit 1)'
+                ' from p;') == [
+            'SELECT COUNT(*) FROM bayesdb_population'
+                ' WHERE name = ?',
+            'SELECT id FROM bayesdb_population'
+                ' WHERE name = ?',
+            'SELECT tabname FROM bayesdb_population WHERE id = ?',
+            'SELECT COUNT(*) FROM bayesdb_population'
+                ' WHERE name = ?',
+            'SELECT id FROM bayesdb_population'
+                ' WHERE name = ?',
             # ESTIMATE * FROM COLUMNS OF:
             'SELECT c.name AS name'
-                ' FROM bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc,'
+                ' FROM bayesdb_population AS p,'
+                    ' bayesdb_variable AS v,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = 1 AND gc.generator_id = g.id'
-                    ' AND c.tabname = g.tabname AND c.colno = gc.colno'
+                ' WHERE p.id = 1 AND v.population_id = p.id'
+                    ' AND c.tabname = p.tabname AND c.colno = v.colno'
+                    ' AND v.generator_id IS NULL'
                 ' LIMIT 1',
-            'SELECT c.colno'
-                ' FROM bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc,'
-                    ' bayesdb_column AS c'
-                ' WHERE g.id = :generator_id AND c.name = :column_name'
-                    ' AND g.id = gc.generator_id'
-                    ' AND g.tabname = c.tabname AND gc.colno = c.colno',
+            'SELECT colno FROM bayesdb_variable'
+                ' WHERE population_id = ?'
+                    ' AND (generator_id IS NULL OR generator_id = ?)'
+                    ' AND name = ?',
             # ESTIMATE SIMILARITY TO (rowid=1):
-            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
+            'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'SELECT bql_row_similarity(1, NULL, _rowid_,'
                 ' (SELECT _rowid_ FROM "t" WHERE ("rowid" = 1)), 0) FROM "t"',
+            'SELECT id FROM bayesdb_generator WHERE population_id = ?',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
             'SELECT modelno FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ?',
@@ -1035,37 +1168,36 @@ def test_parametrized():
                 ' WHERE generator_id = ? AND colno = ?',
         ]
         assert sqltraced_execute('estimate similarity to (rowid = 1)'
-                ' with respect to (estimate * from columns of t_cc limit ?)'
-                ' from t_cc;',
+                ' with respect to (estimate * from columns of p limit ?)'
+                ' from p;',
                 (1,)) == [
-            'SELECT COUNT(*) FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
-            'SELECT id FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
-            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
-            'SELECT COUNT(*) FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
-            'SELECT id FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+            'SELECT COUNT(*) FROM bayesdb_population'
+                ' WHERE name = ?',
+            'SELECT id FROM bayesdb_population'
+                ' WHERE name = ?',
+            'SELECT tabname FROM bayesdb_population WHERE id = ?',
+            'SELECT COUNT(*) FROM bayesdb_population'
+                ' WHERE name = ?',
+            'SELECT id FROM bayesdb_population'
+                ' WHERE name = ?',
             # ESTIMATE * FROM COLUMNS OF:
             'SELECT c.name AS name'
-                ' FROM bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc,'
+                ' FROM bayesdb_population AS p,'
+                    ' bayesdb_variable AS v,'
                     ' bayesdb_column AS c'
-                ' WHERE g.id = 1 AND gc.generator_id = g.id'
-                    ' AND c.tabname = g.tabname AND c.colno = gc.colno'
+                ' WHERE p.id = 1 AND v.population_id = p.id'
+                    ' AND c.tabname = p.tabname AND c.colno = v.colno'
+                    ' AND v.generator_id IS NULL'
                 ' LIMIT ?1',
-            'SELECT c.colno'
-                ' FROM bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc,'
-                    ' bayesdb_column AS c'
-                ' WHERE g.id = :generator_id AND c.name = :column_name'
-                    ' AND g.id = gc.generator_id'
-                    ' AND g.tabname = c.tabname AND gc.colno = c.colno',
-            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
+            'SELECT colno FROM bayesdb_variable'
+                ' WHERE population_id = ?'
+                    ' AND (generator_id IS NULL OR generator_id = ?)'
+                    ' AND name = ?',
+            'SELECT tabname FROM bayesdb_population WHERE id = ?',
             # ESTIMATE SIMILARITY TO (rowid=1):
             'SELECT bql_row_similarity(1, NULL, _rowid_,'
                 ' (SELECT _rowid_ FROM "t" WHERE ("rowid" = 1)), 0) FROM "t"',
+            'SELECT id FROM bayesdb_generator WHERE population_id = ?',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
             'SELECT modelno FROM bayesdb_crosscat_theta'
                 ' WHERE generator_id = ?',
@@ -1080,220 +1212,221 @@ def test_parametrized():
             'SELECT cc_colno FROM bayesdb_crosscat_column'
                 ' WHERE generator_id = ? AND colno = ?',
         ]
-        assert sqltraced_execute('create temp table if not exists sim as'
-                    ' simulate age, RANK, division'
-                    " from t_cc given gender = 'F' limit 4") == [
-            'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?',
+
+        assert sqltraced_execute(
+                'create temp table if not exists sim as '
+                'simulate age, RANK, division '
+                'from p given gender = \'F\' limit 4') == [
             'PRAGMA table_info("sim")',
-            'SELECT COUNT(*) FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
-            'SELECT id FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
-            'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
-            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
+            'SELECT COUNT(*) FROM bayesdb_population WHERE name = ?',
+            'SELECT id FROM bayesdb_population WHERE name = ?',
+            'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'PRAGMA table_info("t")',
-            "SELECT CAST(4 AS INTEGER), CAST(NULL AS INTEGER), 'F'",
-            'SELECT c.colno'
-                ' FROM bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc,'
-                    ' bayesdb_column AS c'
-                ' WHERE g.id = :generator_id AND c.name = :column_name'
-                    ' AND g.id = gc.generator_id'
-                    ' AND g.tabname = c.tabname AND gc.colno = c.colno',
-            'SELECT c.colno'
-                ' FROM bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc,'
-                    ' bayesdb_column AS c'
-                ' WHERE g.id = :generator_id AND c.name = :column_name'
-                    ' AND g.id = gc.generator_id'
-                    ' AND g.tabname = c.tabname AND gc.colno = c.colno',
-            'SELECT c.colno'
-                ' FROM bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc,'
-                    ' bayesdb_column AS c'
-                ' WHERE g.id = :generator_id AND c.name = :column_name'
-                    ' AND g.id = gc.generator_id'
-                    ' AND g.tabname = c.tabname AND gc.colno = c.colno',
-            'SELECT c.colno'
-                ' FROM bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc,'
-                    ' bayesdb_column AS c'
-                ' WHERE g.id = :generator_id AND c.name = :column_name'
-                    ' AND g.id = gc.generator_id'
-                    ' AND g.tabname = c.tabname AND gc.colno = c.colno',
-            'CREATE TEMP TABLE IF NOT EXISTS "sim"'
-                ' ("age" NUMERIC,"RANK" NUMERIC,"division" NUMERIC)',
-            'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
-            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
+            'SELECT CAST(4 AS INTEGER), \'F\'',
+            'SELECT token FROM bayesdb_rowid_tokens',
+            'SELECT colno FROM bayesdb_variable '
+                'WHERE population_id = ? '
+                'AND (generator_id IS NULL OR generator_id = ?) '
+                'AND name = ?',
+            'SELECT token FROM bayesdb_rowid_tokens',
+            'SELECT colno FROM bayesdb_variable '
+                'WHERE population_id = ? '
+                'AND (generator_id IS NULL OR generator_id = ?) '
+                'AND name = ?',
+            'SELECT token FROM bayesdb_rowid_tokens',
+            'SELECT colno FROM bayesdb_variable '
+                'WHERE population_id = ? '
+                'AND (generator_id IS NULL OR generator_id = ?) '
+                'AND name = ?',
+            'SELECT token FROM bayesdb_rowid_tokens',
+            'SELECT colno FROM bayesdb_variable '
+                'WHERE population_id = ? '
+                'AND (generator_id IS NULL OR generator_id = ?) '
+                'AND name = ?',
+            'CREATE TEMP TABLE IF NOT EXISTS "sim" '
+                '("age" NUMERIC,"RANK" NUMERIC,"division" NUMERIC)',
+            'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'SELECT MAX(_rowid_) FROM "t"',
-            'SELECT metadata_json FROM bayesdb_crosscat_metadata'
-                ' WHERE generator_id = ?',
-            'SELECT modelno FROM bayesdb_crosscat_theta'
-                ' WHERE generator_id = ?',
-            'SELECT theta_json FROM bayesdb_crosscat_theta'
-                ' WHERE generator_id = ? AND modelno = ?',
-            'SELECT modelno FROM bayesdb_crosscat_theta'
-                ' WHERE generator_id = ?',
-            'SELECT sql_rowid, cc_row_id FROM bayesdb_crosscat_subsample'
-                ' WHERE generator_id = ? AND sql_rowid IN (8)',
+            'SELECT token FROM bayesdb_rowid_tokens',
+            'SELECT token FROM bayesdb_rowid_tokens',
+            'SELECT id FROM bayesdb_generator WHERE population_id = ?',
+            'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
+            'SELECT metadata_json FROM bayesdb_crosscat_metadata WHERE '
+                'generator_id = ?',
+            'SELECT stattype FROM bayesdb_generator_column WHERE '
+                'generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT modelno FROM bayesdb_crosscat_theta WHERE generator_id = ?',
+            'SELECT theta_json FROM bayesdb_crosscat_theta '
+                'WHERE generator_id = ? AND modelno = ?',
+            'SELECT modelno FROM bayesdb_crosscat_theta WHERE generator_id = ?',
+            'SELECT sql_rowid, cc_row_id FROM bayesdb_crosscat_subsample '
+                'WHERE generator_id = ? AND sql_rowid IN (8)',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
-            'SELECT c.name, c.colno, gc.stattype'
-                ' FROM bayesdb_column AS c,'
-                    ' bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc'
-                ' WHERE g.id = ? AND c.tabname = g.tabname'
-                    ' AND c.colno = gc.colno'
-                    ' AND gc.generator_id = g.id'
-                ' ORDER BY c.colno ASC',
+            'SELECT c.name, c.colno, gc.stattype FROM bayesdb_column AS c, '
+                'bayesdb_generator AS g, bayesdb_generator_column AS gc '
+                'WHERE g.id = ? AND c.tabname = g.tabname '
+                'AND c.colno = gc.colno AND gc.generator_id = g.id '
+                'ORDER BY c.colno ASC',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
             'SELECT CAST("age" AS "text"),CAST("gender" AS "text"),'
                 'CAST("salary" AS "text"),CAST("height" AS "text"),'
-                'CAST("division" AS "text"),CAST("rank" AS "text")'
-                ' FROM "t" WHERE _rowid_ IN (8) ORDER BY _rowid_ ASC',
-            'SELECT MAX(cc_row_id) + 1 FROM bayesdb_crosscat_subsample'
-                ' WHERE generator_id = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column'
-                ' WHERE generator_id = ? AND colno = ?',
+                'CAST("division" AS "text"),CAST("rank" AS "text") '
+                'FROM "t" WHERE _rowid_ IN (8) ORDER BY _rowid_ ASC',
+            'SELECT MAX(cc_row_id) + 1 FROM bayesdb_crosscat_subsample '
+                'WHERE generator_id = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
             'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
             'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
             'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
             'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
         ]
-        assert sqltraced_execute('select * from (simulate age from t_cc'
-                    " given gender = 'F' limit 4)") == [
+
+        assert sqltraced_execute(
+                'select * from (simulate age from p '
+                'given gender = \'F\' limit 4)') == [
             'PRAGMA table_info("bayesdb_temp_0")',
-            'SELECT id FROM bayesdb_generator WHERE name = :name' \
-                ' OR (defaultp AND tabname = :name)',
-            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
+            'SELECT id FROM bayesdb_population WHERE name = ?',
+            'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'PRAGMA table_info("t")',
-            "SELECT CAST(4 AS INTEGER), CAST(NULL AS INTEGER), 'F'",
-            'SELECT c.colno' \
-                ' FROM bayesdb_generator AS g,' \
-                    ' bayesdb_generator_column AS gc,' \
-                    ' bayesdb_column AS c' \
-                ' WHERE g.id = :generator_id' \
-                    ' AND c.name = :column_name' \
-                    ' AND g.id = gc.generator_id' \
-                    ' AND g.tabname = c.tabname' \
-                    ' AND gc.colno = c.colno',
-            'SELECT c.colno' \
-                ' FROM bayesdb_generator AS g,' \
-                    ' bayesdb_generator_column AS gc,' \
-                    ' bayesdb_column AS c' \
-                ' WHERE g.id = :generator_id' \
-                    ' AND c.name = :column_name' \
-                    ' AND g.id = gc.generator_id' \
-                    ' AND g.tabname = c.tabname' \
-                    ' AND gc.colno = c.colno',
-            'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
-            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
+            'SELECT CAST(4 AS INTEGER), \'F\'',
+            'SELECT token FROM bayesdb_rowid_tokens',
+            'SELECT colno FROM bayesdb_variable '
+                'WHERE population_id = ? '
+                'AND (generator_id IS NULL OR generator_id = ?) '
+                'AND name = ?',
+            'SELECT token FROM bayesdb_rowid_tokens',
+            'SELECT colno FROM bayesdb_variable '
+                'WHERE population_id = ? '
+                'AND (generator_id IS NULL OR generator_id = ?) '
+                'AND name = ?',
+            'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'SELECT MAX(_rowid_) FROM "t"',
-            'SELECT metadata_json FROM bayesdb_crosscat_metadata' \
-                ' WHERE generator_id = ?',
-            'SELECT modelno FROM bayesdb_crosscat_theta' \
-                ' WHERE generator_id = ?',
-            'SELECT theta_json FROM bayesdb_crosscat_theta'
-                ' WHERE generator_id = ? AND modelno = ?',
-            'SELECT modelno FROM bayesdb_crosscat_theta' \
-                ' WHERE generator_id = ?',
-            'SELECT sql_rowid, cc_row_id FROM bayesdb_crosscat_subsample'
-                ' WHERE generator_id = ? AND sql_rowid IN (8)',
+            'SELECT token FROM bayesdb_rowid_tokens',
+            'SELECT token FROM bayesdb_rowid_tokens',
+            'SELECT id FROM bayesdb_generator WHERE population_id = ?',
+            'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
+            'SELECT metadata_json FROM bayesdb_crosscat_metadata '
+                'WHERE generator_id = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT modelno FROM bayesdb_crosscat_theta '
+                'WHERE generator_id = ?',
+            'SELECT theta_json FROM bayesdb_crosscat_theta '
+                'WHERE generator_id = ? AND modelno = ?',
+            'SELECT modelno FROM bayesdb_crosscat_theta '
+                'WHERE generator_id = ?',
+            'SELECT sql_rowid, cc_row_id FROM bayesdb_crosscat_subsample '
+                'WHERE generator_id = ? AND sql_rowid IN (8)',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
-            'SELECT c.name, c.colno, gc.stattype'
-                ' FROM bayesdb_column AS c,'
-                    ' bayesdb_generator AS g,'
-                    ' bayesdb_generator_column AS gc'
-                ' WHERE g.id = ? AND c.tabname = g.tabname'
-                    ' AND c.colno = gc.colno'
-                    ' AND gc.generator_id = g.id'
-                ' ORDER BY c.colno ASC',
+            'SELECT c.name, c.colno, gc.stattype FROM bayesdb_column AS c, '
+                'bayesdb_generator AS g, bayesdb_generator_column AS gc '
+                'WHERE g.id = ? AND c.tabname = g.tabname '
+                'AND c.colno = gc.colno AND gc.generator_id = g.id '
+                'ORDER BY c.colno ASC',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
             'SELECT CAST("age" AS "text"),CAST("gender" AS "text"),'
                 'CAST("salary" AS "text"),CAST("height" AS "text"),'
-                'CAST("division" AS "text"),CAST("rank" AS "text")'
-                ' FROM "t" WHERE _rowid_ IN (8) ORDER BY _rowid_ ASC',
-            'SELECT MAX(cc_row_id) + 1 FROM bayesdb_crosscat_subsample'
-                ' WHERE generator_id = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column' \
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column' \
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column' \
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column' \
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column' \
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column' \
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column' \
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column' \
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column' \
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column' \
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT stattype FROM bayesdb_generator_column' \
-                ' WHERE generator_id = ? AND colno = ?',
-            'SELECT cc_colno FROM bayesdb_crosscat_column' \
-                ' WHERE generator_id = ? AND colno = ?',
+                'CAST("division" AS "text"),CAST("rank" AS "text") '
+                'FROM "t" WHERE _rowid_ IN (8) ORDER BY _rowid_ ASC',
+            'SELECT MAX(cc_row_id) + 1 FROM bayesdb_crosscat_subsample '
+                'WHERE generator_id = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT stattype FROM bayesdb_generator_column '
+                'WHERE generator_id = ? AND colno = ?',
+            'SELECT cc_colno FROM bayesdb_crosscat_column '
+                'WHERE generator_id = ? AND colno = ?',
             'CREATE TEMP TABLE "bayesdb_temp_0" ("age" NUMERIC)',
             'INSERT INTO "bayesdb_temp_0" ("age") VALUES (?)',
             'INSERT INTO "bayesdb_temp_0" ("age") VALUES (?)',
@@ -1303,21 +1436,22 @@ def test_parametrized():
             'DROP TABLE "bayesdb_temp_0"',
         ]
         bdb.execute('''
-            create generator tu_cc for t using crosscat(
-                age NUMERICAL,
-                gender CATEGORICAL,   -- Not binary!
-                salary NUMERICAL,
-                height NUMERICAL,
-                division CATEGORICAL,
+            create population q for t (
+                age NUMERICAL;
+                gender CATEGORICAL;   -- Not binary!
+                salary NUMERICAL;
+                height NUMERICAL;
+                division CATEGORICAL;
                 rank CATEGORICAL
             )
         ''')
-        bdb.execute('initialize 1 model for tu_cc;')
-        assert sqltraced_execute('analyze tu_cc for 1 iteration wait;') == [
+        bdb.execute('create generator q_cc for q using crosscat()')
+        bdb.execute('initialize 1 model for q_cc;')
+        assert sqltraced_execute('analyze q_cc for 1 iteration wait;') == [
             'SELECT COUNT(*) FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+                ' WHERE name = ?',
             'SELECT id FROM bayesdb_generator'
-                ' WHERE name = :name OR (defaultp AND tabname = :name)',
+                ' WHERE name = ?',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
             'SELECT metadata_json FROM bayesdb_crosscat_metadata'
                 ' WHERE generator_id = ?',
@@ -1331,6 +1465,12 @@ def test_parametrized():
                     ' AND c.colno = gc.colno'
                     ' AND gc.generator_id = g.id'
                 ' ORDER BY c.colno ASC',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
+            'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype',
             'SELECT CAST(t."age" AS "real"),CAST(t."gender" AS "text"),'
                     'CAST(t."salary" AS "real"),CAST(t."height" AS "real"),'
                     'CAST(t."division" AS "text"),CAST(t."rank" AS "text")'
@@ -1387,29 +1527,29 @@ def test_create_table_ifnotexists_as_simulate():
         with open(fname, 'rU') as f:
             bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
             # If not exists table tests
+            guess.bayesdb_guess_population(bdb, 'p', 't',
+                overrides=[('age', 'numerical')])
+            bdb.execute('create generator p_cc for p using crosscat()')
+            bdb.execute('initialize 1 model for p_cc')
+            bdb.execute('analyze p_cc for 1 iteration wait')
             bdb.execute('''
-                create generator t_cc for t using crosscat (
-                    guess(*),
-                    age numerical
-                )
+                create table if not exists u as
+                    simulate age from p limit 10
             ''')
-            bdb.execute('initialize 1 model for t_cc')
-            bdb.execute('analyze t_cc for 1 iteration wait')
-            bdb.execute("create table if not exists u as simulate age from t_cc limit 10")
             bdb.execute("drop table u")
             bdb.execute('''
-                create table if not exists w as simulate age from t_cc
-                    given division=sales limit 10
+                create table if not exists w as simulate age from p
+                    given division='sales' limit 10
             ''')
             bdb.execute("drop table w")
-            bdb.execute("create table u as simulate age from t_cc limit 10")
+            bdb.execute("create table u as simulate age from p limit 10")
             x = bdb.execute("select count (*) from u").fetchvalue()
             bdb.execute('''
-                create table if not exists u as simulate age from t_cc limit 10
+                create table if not exists u as simulate age from p limit 10
             ''')
             bdb.execute('''
-                create table if not exists u as simulate age from t_cc
-                    given division=sales limit 10
+                create table if not exists u as simulate age from p
+                    given division='sales' limit 10
             ''')
             assert x == bdb.execute("select count (*) from u").fetchvalue()
 
@@ -1419,8 +1559,11 @@ def test_createtab():
             bdb.execute('drop table t')
         bdb.execute('drop table if exists t')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('drop generator t_cc')
-        bdb.execute('drop generator if exists t_cc')
+            bdb.execute('drop population p')
+        bdb.execute('drop population if exists p')
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('drop generator p_cc')
+        bdb.execute('drop generator if exists p_cc')
         with open(fname, 'rU') as f:
             bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
         with bdb.savepoint():
@@ -1429,45 +1572,43 @@ def test_createtab():
             with open(fname, 'rU') as f:
                 bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True, ifnotexists=True)
-        bdb.execute('''
-            create generator t_cc for t using crosscat (
-                guess(*),
-                age numerical
-            )
-        ''')
+        guess.bayesdb_guess_population(bdb, 'p', 't',
+            overrides=[('age', 'numerical')])
+        bdb.execute('create generator p_cc for p using crosscat ()')
+        with pytest.raises(bayeslite.BQLError):
+            # Redefining population.
+            bdb.execute('create population p for t (age numerical)')
         with pytest.raises(bayeslite.BQLError):
             # Redefining generator.
-            bdb.execute('''
-                create generator t_cc for t using crosscat (
-                    guess(*),
-                    age ignore
-                )
-            ''')
+            bdb.execute('create generator p_cc for p using crosscat ()')
         # Make sure ignore columns work.
         #
         # XXX Also check key columns.
-        bdb.execute('''
-            create generator t_cc0 for t using crosscat (
-                guess(*),
-                age ignore
-            )
-        ''')
-        bdb.execute('drop generator t_cc0')
-        generator_id = core.bayesdb_get_generator(bdb, 't_cc')
-        colno = core.bayesdb_generator_column_number(bdb, generator_id, 'age')
-        assert core.bayesdb_generator_column_stattype(bdb, generator_id,
-                colno) == 'numerical'
-        bdb.execute('initialize 1 model for t_cc')
+        guess.bayesdb_guess_population(bdb, 'p0', 't',
+            overrides=[('age', 'ignore')])
+        bdb.execute('drop population p0')
+        population_id = core.bayesdb_get_population(bdb, 'p')
+        colno = core.bayesdb_variable_number(bdb, population_id, None, 'age')
+        assert core.bayesdb_variable_stattype(bdb, population_id, colno) == \
+            'numerical'
+        bdb.execute('initialize 1 model for p_cc')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('drop table t')
-        bdb.execute('drop generator t_cc')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('drop generator t_cc')
-        bdb.execute('drop generator if exists t_cc')
+            bdb.execute('drop population p')
+        bdb.execute('drop generator p_cc')
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('drop generator p_cc')
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('drop table t')
+        bdb.execute('drop generator if exists p_cc')
+        bdb.execute('drop population p')
+        bdb.execute('drop population if exists p')
         bdb.execute('drop table t')
+        bdb.execute('drop table if exists t')
         with open(fname, 'rU') as f:
             bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
-        guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
+        guess.bayesdb_guess_population(bdb, 'p', 't')
         bdb.execute("create table u as select * from t where gender = 'F'")
         assert bql_execute(bdb, 'select * from u') == [
             (23, 'F', 81000, 67, 'data science', 3),
@@ -1532,14 +1673,14 @@ def test_txn():
                 bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True)
             bdb.execute('SELECT * FROM t').fetchall()
-            guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
-            bdb.execute('ESTIMATE * FROM t_cc').fetchall()
+            guess.bayesdb_guess_population(bdb, 'p', 't')
+            bdb.execute('ESTIMATE * FROM p').fetchall()
         finally:
             bdb.execute('ROLLBACK')
         with pytest.raises(apsw.SQLError):
             bdb.execute('SELECT * FROM t')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('ESTIMATE * FROM t_cc')
+            bdb.execute('ESTIMATE * FROM p')
 
         # Make sure CREATE and DROP both work in the transaction.
         bdb.execute('BEGIN')
@@ -1548,20 +1689,20 @@ def test_txn():
                 bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True)
             bdb.execute('SELECT * FROM t').fetchall()
-            guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
-            bdb.execute('ESTIMATE * FROM t_cc').fetchall()
+            guess.bayesdb_guess_population(bdb, 'p', 't')
+            bdb.execute('ESTIMATE * FROM p').fetchall()
             with pytest.raises(bayeslite.BQLError):
                 bdb.execute('DROP TABLE t')
-            bdb.execute('DROP GENERATOR t_cc')
+            bdb.execute('DROP POPULATION p')
             with pytest.raises(bayeslite.BQLError):
-                bdb.execute('ESTIMATE * FROM t_cc')
+                bdb.execute('ESTIMATE * FROM p')
             bdb.execute('DROP TABLE t')
             with pytest.raises(apsw.SQLError):
                 bdb.execute('SELECT * FROM t')
         finally:
             bdb.execute('ROLLBACK')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('ESTIMATE * FROM t_cc')
+            bdb.execute('ESTIMATE * FROM p')
         with pytest.raises(apsw.SQLError):
             bdb.execute('SELECT * FROM t')
 
@@ -1572,20 +1713,20 @@ def test_txn():
                 bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True)
             bdb.execute('SELECT * FROM t').fetchall()
-            guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
-            bdb.execute('ESTIMATE * FROM t_cc').fetchall()
+            guess.bayesdb_guess_population(bdb, 'p', 't')
+            bdb.execute('ESTIMATE * FROM p').fetchall()
             with pytest.raises(bayeslite.BQLError):
                 bdb.execute('DROP TABLE t')
-            bdb.execute('DROP GENERATOR t_cc')
+            bdb.execute('DROP POPULATION p')
             with pytest.raises(bayeslite.BQLError):
-                bdb.execute('ESTIMATE * FROM t_cc')
+                bdb.execute('ESTIMATE * FROM p')
             bdb.execute('DROP TABLE t')
             with pytest.raises(apsw.SQLError):
                 bdb.execute('SELECT * FROM t')
         finally:
             bdb.execute('COMMIT')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('ESTIMATE * FROM t_cc')
+            bdb.execute('ESTIMATE * FROM p')
         with pytest.raises(apsw.SQLError):
             bdb.execute('SELECT * FROM t')
 
@@ -1596,12 +1737,12 @@ def test_txn():
                 bayeslite.bayesdb_read_csv(bdb, 't', f, header=True,
                     create=True)
             bdb.execute('SELECT * FROM t').fetchall()
-            guess.bayesdb_guess_generator(bdb, 't_cc', 't', 'crosscat')
-            bdb.execute('ESTIMATE * FROM t_cc').fetchall()
+            guess.bayesdb_guess_population(bdb, 'p', 't')
+            bdb.execute('ESTIMATE * FROM p').fetchall()
         finally:
             bdb.execute('COMMIT')
         bdb.execute('SELECT * FROM t').fetchall()
-        bdb.execute('ESTIMATE * FROM t_cc').fetchall()
+        bdb.execute('ESTIMATE * FROM p').fetchall()
 
         # Make sure bdb.transaction works, rolls back on exception,
         # and handles nesting correctly with respect to savepoints.
@@ -1647,20 +1788,22 @@ def test_predprob_null():
         bdb.sql_execute("insert into foo values (11, 2.7182818, 'down')")
         bdb.sql_execute("insert into foo values (12, NULL, 'down')")
         bdb.execute('''
-            create generator foo_cc for foo using crosscat (
-                x numerical,
+            create population pfoo for foo (
+                id ignore;
+                x numerical;
                 y categorical
             )
         ''')
-        bdb.execute('initialize 1 model for foo_cc')
-        bdb.execute('analyze foo_cc for 1 iteration wait')
+        bdb.execute('create generator pfoo_cc for pfoo using crosscat()')
+        bdb.execute('initialize 1 model for pfoo_cc')
+        bdb.execute('analyze pfoo_cc for 1 iteration wait')
         # Null value => null predictive probability.
         assert bdb.execute('estimate predictive probability of x'
-                ' from foo_cc where id = 4;').fetchall() == \
+                ' from pfoo where id = 4;').fetchall() == \
             [(None,)]
         # Nonnull value => nonnull predictive probability.
         x = bdb.execute('estimate predictive probability of x'
-            ' from foo_cc where id = 5').fetchall()
+            ' from pfoo where id = 5').fetchall()
         assert len(x) == 1
         assert len(x[0]) == 1
         assert isinstance(x[0][0], (int, float))
@@ -1669,82 +1812,69 @@ def test_guess_all():
     with test_core.bayesdb() as bdb:
         bdb.sql_execute('create table foo (x numeric, y numeric, z numeric)')
         bdb.sql_execute('insert into foo values (1, 2, 3)')
-        bdb.execute('create generator foo_cc for foo using crosscat(guess(*))')
+        bdb.sql_execute('insert into foo values (4, 5, 6)')
+        # XXX GUESS(*)
+        guess.bayesdb_guess_population(bdb, 'pfoo', 'foo')
 
 def test_misc_errors():
-    with test_core.t1() as (bdb, _generator_id):
-        with pytest.raises(bayeslite.BQLError):
-            # t1_cc already exists as a generator.
-            bdb.execute('create table t1_cc as simulate weight from t1_cc'
-                ' limit 1')
+    with test_core.t1() as (bdb, _population_id, _generator_id):
         with pytest.raises(bayeslite.BQLError):
             # t1 already exists as a table.
-            bdb.execute('create table t1 as simulate weight from t1_cc'
+            bdb.execute('create table t1 as simulate weight from p1'
                 ' limit 1')
         with pytest.raises(bayeslite.BQLError):
-            # t1x does not exist as a generator or table.
+            # t1x does not exist as a population.
             bdb.execute('create table t1_sim as simulate weight from t1x'
                 ' limit 1')
         with pytest.raises(bayeslite.BQLError):
-            # t1_cc does not have a column waught.
-            bdb.execute('create table t1_sim as simulate waught from t1_cc'
+            # p1 does not have a variable waught.
+            bdb.execute('create table t1_sim as simulate waught from p1'
                 ' limit 1')
         with pytest.raises(bayeslite.BQLError):
-            # t1_cc does not have a column agee.
-            bdb.execute('create table t1_sim as simulate weight from t1_cc'
+            # p1 does not have a variable agee.
+            bdb.execute('create table t1_sim as simulate weight from p1'
                 ' given agee = 42 limit 1')
-        with pytest.raises(bayeslite.BQLError):
-            # t2 does not exist as a table.
-            bdb.execute('alter table t2 set default generator to t1_cc')
         with bdb.savepoint():
             bdb.sql_execute('create table t2(x)')
             with pytest.raises(bayeslite.BQLError):
                 # t1 already exists as a table.
                 bdb.execute('alter table t2 rename to t1')
-            with pytest.raises(bayeslite.BQLError):
-                # t1_cc already exists as a generator.
-                bdb.execute('alter table t2 rename to t1_cc')
         with pytest.raises(NotImplementedError):
             # Renaming columns is not yet implemented.
             bdb.execute('alter table t1 rename weight to mass')
         with pytest.raises(bayeslite.BQLError):
-            # t1_xc does not exist as a generator.
-            bdb.execute('alter table t1 set default generator to t1_xc')
-        with pytest.raises(bayeslite.BQLError):
             # xcat does not exist as a metamodel.
-            bdb.execute('create generator t1_xc for t1 using xcat(guess(*))')
+            bdb.execute('create generator p1_xc for p1 using xcat()')
         with pytest.raises(bayeslite.BQLError):
-            # t1 already exists as a table.
-            bdb.execute('create generator t1 for t1 using crosscat(guess(*))')
-        with pytest.raises(bayeslite.BQLError):
-            # t1_cc already exists as a generator.
-            bdb.execute('create generator t1_cc for t1'
-                ' using crosscat(guess(*))')
+            # p1 already exists as a population.
+            bdb.execute('create generator p1_cc for p1'
+                ' using crosscat()')
         with pytest.raises(bayeslite.BQLError):
             # multinomial is not a known statistical type.
-            bdb.execute('create generator t1_xc for t1'
-                ' using crosscat(weight multinomial)')
+            bdb.execute('''
+                create population q1 for t1(
+                    ignore id, label, weight;
+                    weight multinomial
+                )
+            ''')
         with pytest.raises(bayeslite.BQLError):
-            # t1_xc does not exist as a generator.
-            bdb.execute('alter generator t1_xc rename to t1_xcat')
-        with pytest.raises(bayeslite.BQLError):
-            # t1 already exists as a table.
-            bdb.execute('alter generator t1_cc rename to t1')
+            # p1_xc does not exist as a generator.
+            bdb.execute('alter generator p1_xc rename to p1_xcat')
         with bdb.savepoint():
-            bdb.execute('create generator t1_xc for t1'
-                ' using crosscat(guess(*))')
+            bdb.execute('create generator p1_xc for p1'
+                ' using crosscat()')
             with pytest.raises(bayeslite.BQLError):
-                # t1_xc already exists as a generator.
-                bdb.execute('alter generator t1_cc rename to t1_xc')
+                # p1_xc already exists as a generator.
+                bdb.execute('alter generator p1_cc rename to p1_xc')
         with pytest.raises(NotImplementedError):
             # Need WAIT.
-            bdb.execute('analyze t1_cc for 1 iteration')
+            bdb.execute('analyze p1_cc for 1 iteration')
         with bdb.savepoint():
-            bdb.execute('initialize 1 model for t1_cc')
-            bdb.execute('analyze t1_cc for 1 iteration wait')
+            bdb.execute('initialize 1 model for p1_cc')
+            bdb.execute('analyze p1_cc for 1 iteration wait')
             with pytest.raises(apsw.SQLError):
                 bdb.execute('select'
-                    ' nonexistent((simulate age from t1_cc limit 1));')
+                    ' nonexistent((simulate age from p1 limit 1));')
         with pytest.raises(ValueError):
             bdb.execute('select :x', {'y': 42})
         with pytest.raises(ValueError):
@@ -1757,29 +1887,29 @@ def test_misc_errors():
             bdb.execute('select ?', 42)
         with pytest.raises(NotImplementedError):
             bdb.execute('infer explicit predict age confidence ac, *'
-                ' from t1_cc')
+                ' from p1')
         with pytest.raises(NotImplementedError):
             bdb.execute('infer explicit predict age confidence ac,'
-                ' t1.(select age from t1 limit 1) from t1_cc')
+                ' t1.(select age from t1 limit 1) from p1')
         with pytest.raises(bayeslite.BQLError):
             try:
                 bdb.execute('estimate similarity to (rowid=1)'
-                    ' with respect to (agee) from t1_cc')
+                    ' with respect to (agee) from p1')
             except bayeslite.BQLError as e:
-                assert 'No such columns in generator:' in str(e)
+                assert 'No such columns in population:' in str(e)
                 raise
 
 def test_nested_simulate():
-    with test_core.t1() as (bdb, _table_id):
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 1 iteration wait')
-        bdb.execute('select (simulate age from t1_cc limit 1),'
-            ' (simulate weight from t1_cc limit 1)').fetchall()
+    with test_core.t1() as (bdb, _population_id, _generator_id):
+        bdb.execute('initialize 1 model for p1_cc')
+        bdb.execute('analyze p1_cc for 1 iteration wait')
+        bdb.execute('select (simulate age from p1 limit 1),'
+            ' (simulate weight from p1 limit 1)').fetchall()
         assert bdb.temp_table_name() == 'bayesdb_temp_2'
         assert not core.bayesdb_has_table(bdb, 'bayesdb_temp_0')
         assert not core.bayesdb_has_table(bdb, 'bayesdb_temp_1')
-        bdb.execute('simulate weight from t1_cc'
-            ' given age = (simulate age from t1_cc limit 1)'
+        bdb.execute('simulate weight from p1'
+            ' given age = (simulate age from p1 limit 1)'
             ' limit 1').fetchall()
         # Make sure unwinding doesn't raise an exception.  Calling
         # __del__ directly, rather than via del(), has two effects:
@@ -1794,115 +1924,66 @@ def test_nested_simulate():
         # Effect (a) is what we are actually trying to test.  Effect
         # (b) is a harmless consequence as far as pytest is concerned,
         # as long as the test otherwise passes.
-        bdb.execute('simulate weight from t1_cc'
-            ' given age = (simulate age from t1_cc limit 1)'
+        bdb.execute('simulate weight from p1'
+            ' given age = (simulate age from p1 limit 1)'
             ' limit 1').__del__()
 
-def test_using_models():
-    def setup(bdb):
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 1 iteration wait')
-    assert bql2sql('simulate age, weight from t1_cc using model 0'
-            ' limit 1', setup=setup) == \
-        'SELECT * FROM "bayesdb_temp_0";'
-    assert bql2sql('estimate predictive probability of weight from t1_cc'
-            ' using model 42') == \
-        'SELECT bql_row_column_predictive_probability(1, 42, _rowid_, 3)' \
-            ' FROM "t1";'
-    assert bql2sql('estimate *, mutual information with weight as mi'
-            ' from columns of t1_cc using model 42') == \
-        'SELECT c.name AS name,' \
-            ' bql_column_mutual_information(1, 42, 3, c.colno, NULL) AS "mi"' \
-        ' FROM bayesdb_generator AS g,' \
-            ' bayesdb_generator_column AS gc, bayesdb_column AS c' \
-        ' WHERE g.id = 1 AND gc.generator_id = g.id' \
-        ' AND c.tabname = g.tabname AND c.colno = gc.colno;'
-    assert bql2sql('estimate mutual information from pairwise columns of t1_cc'
-            ' using model 42') == \
-        'SELECT 1 AS generator_id, c0.name AS name0, c1.name AS name1,' \
-            ' bql_column_mutual_information(1, 42, c0.colno, c1.colno,' \
-                ' NULL) AS value' \
-        ' FROM bayesdb_generator AS g,' \
-            ' bayesdb_generator_column AS gc0, bayesdb_column AS c0,' \
-            ' bayesdb_generator_column AS gc1, bayesdb_column AS c1' \
-        ' WHERE g.id = 1' \
-            ' AND gc0.generator_id = g.id AND gc1.generator_id = g.id' \
-            ' AND c0.tabname = g.tabname AND c0.colno = gc0.colno' \
-            ' AND c1.tabname = g.tabname AND c1.colno = gc1.colno;'
-    assert bql2sql('estimate similarity from pairwise t1_cc'
-            ' using model 42') == \
-        'SELECT r0._rowid_ AS rowid0, r1._rowid_ AS rowid1,' \
-            ' bql_row_similarity(1, 42, r0._rowid_, r1._rowid_) AS value' \
-        ' FROM "t1" AS r0, "t1" AS r1;'
-    assert bql2sql('infer id, age, weight from t1_cc using model 42') == \
-        'SELECT "id" AS "id",' \
-            ' "IFNULL"("age", bql_predict(1, 42, 2, _rowid_, 0)) AS "age",' \
-            ' "IFNULL"("weight", bql_predict(1, 42, 3, _rowid_, 0))' \
-                ' AS "weight"' \
-        ' FROM "t1";'
-    assert bql2sql('infer explicit id, age,'
-            ' ifnull(weight, predict weight with confidence 0.9)'
-            ' from t1_cc using model 42') == \
-        'SELECT "id", "age",' \
-            ' "ifnull"("weight", bql_predict(1, 42, 3, _rowid_, 0.9))' \
-        ' FROM "t1";'
-
 def test_checkpoint__ci_slow():
-    with test_core.t1() as (bdb, generator_id):
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 10 iterations checkpoint 1 iteration'
+    with test_core.t1() as (bdb, population_id, generator_id):
+        bdb.execute('initialize 1 model for p1_cc')
+        bdb.execute('analyze p1_cc for 10 iterations checkpoint 1 iteration'
             ' wait')
-        bdb.execute('analyze t1_cc for 5 seconds checkpoint 1 second wait')
-        bdb.execute('drop models from t1_cc')
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 5 iterations checkpoint 1 second wait')
+        bdb.execute('analyze p1_cc for 5 seconds checkpoint 1 second wait')
+        bdb.execute('drop models from p1_cc')
+        bdb.execute('initialize 1 model for p1_cc')
+        bdb.execute('analyze p1_cc for 5 iterations checkpoint 1 second wait')
         sql = '''
             select iterations from bayesdb_generator_model
                 where generator_id = ?
         '''
         assert bdb.execute(sql, (generator_id,)).fetchvalue() == 5
-        bdb.execute('drop models from t1_cc')
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 1 iteration checkpoint 2 iterations'
+        bdb.execute('drop models from p1_cc')
+        bdb.execute('initialize 1 model for p1_cc')
+        bdb.execute('analyze p1_cc for 1 iteration checkpoint 2 iterations'
             ' wait')
         sql = '''
             select iterations from bayesdb_generator_model
                 where generator_id = ?
         '''
         assert bdb.execute(sql, (generator_id,)).fetchvalue() == 1
-        bdb.execute('analyze t1_cc for 1 iteration checkpoint 0 seconds wait')
+        bdb.execute('analyze p1_cc for 1 iteration checkpoint 0 seconds wait')
 
 def test_infer_confidence__ci_slow():
-    with test_core.t1() as (bdb, _generator_id):
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 1 iteration wait')
+    with test_core.t1() as (bdb, _population_id, _generator_id):
+        bdb.execute('initialize 1 model for p1_cc')
+        bdb.execute('analyze p1_cc for 1 iteration wait')
         bdb.execute('infer explicit rowid, rowid as another_rowid, 4,'
             ' age, predict age as age_inf confidence age_conf'
-            ' from t1_cc').fetchall()
+            ' from p1').fetchall()
 
 def test_infer_as_estimate():
-    with test_core.t1() as (bdb, _generator_id):
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 1 iteration wait')
+    with test_core.t1() as (bdb, _population_id, _generator_id):
+        bdb.execute('initialize 1 model for p1_cc')
+        bdb.execute('analyze p1_cc for 1 iteration wait')
         bdb.execute('infer explicit predictive probability of age'
-            ' from t1_cc').fetchall()
+            ' from p1').fetchall()
 
 def test_estimate_by():
-    with test_core.t1() as (bdb, _generator_id):
-        bdb.execute('initialize 1 model for t1_cc')
-        bdb.execute('analyze t1_cc for 1 iteration wait')
+    with test_core.t1() as (bdb, _population_id, _generator_id):
+        bdb.execute('initialize 1 model for p1_cc')
+        bdb.execute('analyze p1_cc for 1 iteration wait')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate predictive probability of age'
-                ' by t1_cc')
+                ' by p1')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate similarity to (rowid=1) by t1_cc')
+            bdb.execute('estimate similarity to (rowid=1) by p1')
         def check(x):
             assert len(bdb.execute(x).fetchall()) == 1
-        check('estimate probability of age = 42 by t1_cc')
-        check('estimate dependence probability of age with weight by t1_cc')
-        check('estimate mutual information of age with weight by t1_cc')
-        check('estimate correlation of age with weight by t1_cc')
-        check('estimate correlation pvalue of age with weight by t1_cc')
+        check('estimate probability of age = 42 by p1')
+        check('estimate dependence probability of age with weight by p1')
+        check('estimate mutual information of age with weight by p1')
+        check('estimate correlation of age with weight by p1')
+        check('estimate correlation pvalue of age with weight by p1')
 
 def test_empty_cursor():
     with bayeslite.bayesdb_open() as bdb:
@@ -1913,25 +1994,36 @@ def test_empty_cursor():
         empty(bdb.sql_execute('INSERT INTO t VALUES(1,2,3)'))
         empty(bdb.sql_execute('INSERT INTO t VALUES(4,5,6)'))
         empty(bdb.sql_execute('INSERT INTO t VALUES(7,8,9)'))
-        empty(bdb.execute('''
-            CREATE GENERATOR t_cc FOR t USING crosscat(GUESS(*))
-        '''))
-        empty(bdb.execute('INITIALIZE 1 MODEL FOR t_cc'))
-        empty(bdb.execute('DROP GENERATOR t_cc'))
+        empty(bdb.execute('CREATE POPULATION p FOR t '
+            '(IGNORE z,y; x CATEGORICAL)'))
+        empty(bdb.execute('CREATE GENERATOR p_cc FOR p USING crosscat()'))
+        empty(bdb.execute('INITIALIZE 1 MODEL FOR p_cc'))
+        empty(bdb.execute('DROP GENERATOR p_cc'))
+        empty(bdb.execute('DROP POPULATION p'))
         empty(bdb.execute('DROP TABLE t'))
 
 def test_create_generator_ifnotexists():
     # XXX Test other metamodels too, because they have a role in ensuring that
     # this works. Their create_generator will still be called.
-    for using_clause in ('crosscat(GUESS(*))',):
+    #
+    # [TRC 20160627: The above comment appears to be no longer true --
+    # if it was ever true.]
+    for using_clause in ('crosscat()',):
         with bayeslite.bayesdb_open() as bdb:
             bdb.sql_execute('CREATE TABLE t(x, y, z)')
             bdb.sql_execute('INSERT INTO t VALUES(1,2,3)')
+            bdb.execute('''
+                CREATE POPULATION p FOR t (
+                    x NUMERICAL;
+                    y NUMERICAL;
+                    z CATEGORICAL
+                )
+            ''')
             for _i in (0, 1):
-                bdb.execute('CREATE GENERATOR t_cc IF NOT EXISTS FOR t USING '
+                bdb.execute('CREATE GENERATOR p_cc IF NOT EXISTS FOR p USING '
                             + using_clause)
             try:
-                bdb.execute('CREATE GENERATOR t_cc FOR t USING ' + using_clause)
+                bdb.execute('CREATE GENERATOR p_cc FOR p USING ' + using_clause)
                 assert False  # Should have said it exists.
             except bayeslite.BQLError:
                 pass
@@ -1964,7 +2056,7 @@ class MockTracerOneQuery(bayeslite.IBayesDBTracer):
         self.abandoned_calls += 1
 
 def test_tracing_smoke():
-    with test_core.t1() as (bdb, _generator_id):
+    with test_core.t1() as (bdb, _population_id, _generator_id):
         q = 'SELECT * FROM t1'
         tracer = MockTracerOneQuery(q, 1)
         bdb.trace(tracer)
@@ -2011,7 +2103,7 @@ def test_tracing_smoke():
         assert tracer.abandoned_calls == 1
 
 def test_tracing_error_smoke():
-    with test_core.t1() as (bdb, _generator_id):
+    with test_core.t1() as (bdb, _population_id, _generator_id):
         q = 'SELECT * FROM wrong'
         tracer = MockTracerOneQuery(q, 1)
         bdb.trace(tracer)
@@ -2035,11 +2127,11 @@ class ErroneousMetamodel(troll.TrollMetamodel):
         return 0
 
 def test_tracing_execution_error_smoke():
-    with test_core.t1() as (bdb, _generator_id):
+    with test_core.t1() as (bdb, _population_id, _generator_id):
         bayeslite.bayesdb_register_metamodel(bdb, ErroneousMetamodel())
-        bdb.execute('''
-            CREATE GENERATOR t1_err FOR t1 USING erroneous(age NUMERICAL)''')
-        q = 'ESTIMATE PREDICTIVE PROBABILITY OF age FROM t1_err'
+        bdb.execute('DROP GENERATOR p1_cc')
+        bdb.execute('CREATE GENERATOR p1_err FOR p1 USING erroneous()')
+        q = 'ESTIMATE PREDICTIVE PROBABILITY OF age FROM p1'
         tracer = MockTracerOneQuery(q, 1)
         bdb.trace(tracer)
         cursor = bdb.execute(q)

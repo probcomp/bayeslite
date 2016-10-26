@@ -71,6 +71,9 @@ def bayesdb_read_csv(bdb, table, f, header=False,
             column_names = [unicode(name, 'utf8').strip() for name in row]
             if len(column_names) == 0:
                 raise IOError('No columns in CSV file!')
+            if any(len(c)==0 for c in column_names):
+                raise IOError(
+                    'Missing column names in header: %s' %repr(column_names))
             column_name_map = {}
             duplicates = set([])
             for name in column_names:

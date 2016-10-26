@@ -478,283 +478,269 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         return 'crosscat'
 
     def register(self, bdb):
-        with bdb.savepoint():
-            schema_sql = 'SELECT version FROM bayesdb_metamodel WHERE name = ?'
-            cursor = bdb.sql_execute(schema_sql, (self.name(),))
-            version = None
-            try:
-                row = cursor.next()
-            except StopIteration:
-                version = 0
-            else:
-                version = row[0]
-            assert version is not None
-            if version == 0:
-                # XXX WHATTAKLUDGE!
-                for stmt in crosscat_schema_1.split(';'):
-                    bdb.sql_execute(stmt)
-                version = 1
-            if version == 1:
-                # XXX WHATTAKLUDGE!
-                for stmt in crosscat_schema_1to2.split(';'):
-                    bdb.sql_execute(stmt)
-                # We never recorded diagnostics in the past, so we
-                # can't fill the table in with historical data.  But
-                # we did create stub entries in the theta dicts which
-                # serve no purpose now, so nuke them.
-                sql = '''
-                    SELECT generator_id, modelno, theta_json
-                        FROM bayesdb_crosscat_theta
-                '''
-                update_sql = '''
-                    UPDATE bayesdb_crosscat_theta SET theta_json = :theta_json
-                        WHERE generator_id = :generator_id
-                            AND modelno = :modelno
-                '''
-                for generator_id, modelno, theta_json in bdb.sql_execute(sql):
-                    theta = json.loads(theta_json)
-                    if len(theta['logscore']) != 0 or \
-                       len(theta['num_views']) != 0 or \
-                       len(theta['column_crp_alpha']) != 0:
-                        raise IOError('Non-stub diagnostics!')
-                    del theta['logscore']
-                    del theta['num_views']
-                    del theta['column_crp_alpha']
-                    self._theta_validator.validate(theta)
-                    theta_json = json.dumps(theta)
-                    bdb.sql_execute(update_sql, {
-                        'generator_id': generator_id,
-                        'modelno': modelno,
-                        'theta_json': theta_json,
-                    })
-                version = 2
-            if version == 2:
-                for stmt in crosscat_schema_2to3.split(';'):
-                    bdb.sql_execute(stmt)
-                version = 3
-            if version == 3:
-                cursor = bdb.sql_execute('''
-                    SELECT generator_id FROM bayesdb_crosscat_metadata
-                        WHERE NOT EXISTS
-                                (SELECT * FROM bayesdb_crosscat_subsampled AS s
-                                    WHERE s.generator_id = generator_id)
-                ''')
-                for (generator_id,) in cursor:
-                    bdb.sql_execute('''
-                        INSERT INTO bayesdb_crosscat_subsampled (generator_id)
-                            VALUES (?)
-                    ''', (generator_id,))
-                    table_name = core.bayesdb_generator_table(bdb,
-                        generator_id)
-                    qt = sqlite3_quote_name(table_name)
-                    bdb.sql_execute('''
-                        INSERT INTO bayesdb_crosscat_subsample
-                            (generator_id, sql_rowid, cc_row_id)
-                            SELECT ?, _rowid_, _rowid_ - 1 FROM %s
-                    ''' % (qt,), (generator_id,))
-                for stmt in crosscat_schema_3to4.split(';'):
-                    bdb.sql_execute(stmt)
-                version = 4
-            if version == 4:
-                for stmt in crosscat_schema_4to5.split(';'):
-                    bdb.sql_execute(stmt)
-                version = 5
-            if version == 5:
-                for stmt in crosscat_schema_5to6.split(';'):
-                    bdb.sql_execute(stmt)
-                version = 6
-            if version != 6:
-                raise BQLError(bdb, 'Crosscat already installed'
-                    ' with unknown schema version: %d' % (version,))
+        schema_sql = 'SELECT version FROM bayesdb_metamodel WHERE name = ?'
+        cursor = bdb.sql_execute(schema_sql, (self.name(),))
+        version = None
+        try:
+            row = cursor.next()
+        except StopIteration:
+            version = 0
+        else:
+            version = row[0]
+        assert version is not None
+        if version == 0:
+            # XXX WHATTAKLUDGE!
+            for stmt in crosscat_schema_1.split(';'):
+                bdb.sql_execute(stmt)
+            version = 1
+        if version == 1:
+            # XXX WHATTAKLUDGE!
+            for stmt in crosscat_schema_1to2.split(';'):
+                bdb.sql_execute(stmt)
+            # We never recorded diagnostics in the past, so we
+            # can't fill the table in with historical data.  But
+            # we did create stub entries in the theta dicts which
+            # serve no purpose now, so nuke them.
+            sql = '''
+                SELECT generator_id, modelno, theta_json
+                    FROM bayesdb_crosscat_theta
+            '''
+            update_sql = '''
+                UPDATE bayesdb_crosscat_theta SET theta_json = :theta_json
+                    WHERE generator_id = :generator_id
+                        AND modelno = :modelno
+            '''
+            for generator_id, modelno, theta_json in bdb.sql_execute(sql):
+                theta = json.loads(theta_json)
+                if len(theta['logscore']) != 0 or \
+                   len(theta['num_views']) != 0 or \
+                   len(theta['column_crp_alpha']) != 0:
+                    raise IOError('Non-stub diagnostics!')
+                del theta['logscore']
+                del theta['num_views']
+                del theta['column_crp_alpha']
+                self._theta_validator.validate(theta)
+                theta_json = json.dumps(theta)
+                bdb.sql_execute(update_sql, {
+                    'generator_id': generator_id,
+                    'modelno': modelno,
+                    'theta_json': theta_json,
+                })
+            version = 2
+        if version == 2:
+            for stmt in crosscat_schema_2to3.split(';'):
+                bdb.sql_execute(stmt)
+            version = 3
+        if version == 3:
+            cursor = bdb.sql_execute('''
+                SELECT generator_id FROM bayesdb_crosscat_metadata
+                    WHERE NOT EXISTS
+                            (SELECT * FROM bayesdb_crosscat_subsampled AS s
+                                WHERE s.generator_id = generator_id)
+            ''')
+            for (generator_id,) in cursor:
+                bdb.sql_execute('''
+                    INSERT INTO bayesdb_crosscat_subsampled (generator_id)
+                        VALUES (?)
+                ''', (generator_id,))
+                table_name = core.bayesdb_generator_table(bdb,
+                    generator_id)
+                qt = sqlite3_quote_name(table_name)
+                bdb.sql_execute('''
+                    INSERT INTO bayesdb_crosscat_subsample
+                        (generator_id, sql_rowid, cc_row_id)
+                        SELECT ?, _rowid_, _rowid_ - 1 FROM %s
+                ''' % (qt,), (generator_id,))
+            for stmt in crosscat_schema_3to4.split(';'):
+                bdb.sql_execute(stmt)
+            version = 4
+        if version == 4:
+            for stmt in crosscat_schema_4to5.split(';'):
+                bdb.sql_execute(stmt)
+            version = 5
+        if version == 5:
+            for stmt in crosscat_schema_5to6.split(';'):
+                bdb.sql_execute(stmt)
+            version = 6
+        if version != 6:
+            raise BQLError(bdb, 'Crosscat already installed'
+                ' with unknown schema version: %d' % (version,))
 
-    def create_generator(self, bdb, table, schema, instantiate):
+    def create_generator(self, bdb, generator_id, schema, **kwargs):
         parsed_schema = crosscat_generator_schema.parse(
             schema, subsample_default=self._subsample)
+        column_list = [
+            (colno,
+             core.bayesdb_generator_column_name(bdb, generator_id, colno),
+             core.bayesdb_generator_column_stattype(bdb, generator_id, colno))
+            for colno in core.bayesdb_generator_column_numbers(
+                bdb, generator_id)
+            if 0 <= colno
+        ]
+        table = core.bayesdb_generator_table(bdb, generator_id)
 
-        with bdb.savepoint():
-            # If necessary, guess the column statistical types.
-            #
-            # XXX Allow passing count/ratio cutoffs, and other
-            # parameters.
-            if parsed_schema.guess:
-                column_names = core.bayesdb_table_column_names(bdb, table)
-                qt = sqlite3_quote_name(table)
-                rows = bdb.sql_execute('SELECT * FROM %s' % (qt,)).fetchall()
-                stattypes = guess.bayesdb_guess_stattypes(column_names, rows,
-                    overrides=parsed_schema.columns)
-                columns = zip(column_names, stattypes)
-                columns = [(name, stattype) for name, stattype in columns
-                    if stattype not in ('key', 'ignore')]
-            else:
-                columns = parsed_schema.columns
+        # Install the metadata json blob.
+        M_c = create_metadata(bdb, generator_id, column_list)
+        insert_metadata_sql = '''
+            INSERT INTO bayesdb_crosscat_metadata
+                (generator_id, metadata_json)
+                VALUES (?, ?)
+        '''
+        metadata_json = json.dumps(M_c)
+        bdb.sql_execute(insert_metadata_sql, (generator_id, metadata_json))
 
-            # Create the metamodel-independent records and assign a
-            # generator id.
-            generator_id, column_list = instantiate(columns)
+        # Cache the metadata json blob -- we'll probably use it
+        # soon.
+        cc_cache = self._crosscat_cache(bdb)
+        if cc_cache is not None:
+            assert generator_id not in cc_cache.metadata
+            cc_cache.metadata[generator_id] = M_c
 
-            # Install the metadata json blob.
-            M_c = create_metadata(bdb, generator_id, column_list)
-            insert_metadata_sql = '''
-                INSERT INTO bayesdb_crosscat_metadata
-                    (generator_id, metadata_json)
-                    VALUES (?, ?)
-            '''
-            metadata_json = json.dumps(M_c)
-            bdb.sql_execute(insert_metadata_sql, (generator_id, metadata_json))
-
-            # Cache the metadata json blob -- we'll probably use it
-            # soon.
-            cc_cache = self._crosscat_cache(bdb)
-            if cc_cache is not None:
-                assert generator_id not in cc_cache.metadata
-                cc_cache.metadata[generator_id] = M_c
-
-            # Expose the same information relationally.
-            insert_column_sql = '''
-                INSERT INTO bayesdb_crosscat_column
-                    (generator_id, colno, cc_colno, disttype)
-                    VALUES (:generator_id, :colno, :cc_colno, :disttype)
-            '''
-            insert_codemap_sql = '''
-                INSERT INTO bayesdb_crosscat_column_codemap
-                    (generator_id, cc_colno, code, value)
-                    VALUES (:generator_id, :cc_colno, :code, :value)
-            '''
-            for cc_colno, (colno, name, _stattype) in enumerate(column_list):
-                column_metadata = M_c['column_metadata'][cc_colno]
-                disttype = column_metadata['modeltype']
-                bdb.sql_execute(insert_column_sql, {
+        # Expose the same information relationally.
+        insert_column_sql = '''
+            INSERT INTO bayesdb_crosscat_column
+                (generator_id, colno, cc_colno, disttype)
+                VALUES (:generator_id, :colno, :cc_colno, :disttype)
+        '''
+        insert_codemap_sql = '''
+            INSERT INTO bayesdb_crosscat_column_codemap
+                (generator_id, cc_colno, code, value)
+                VALUES (:generator_id, :cc_colno, :code, :value)
+        '''
+        for cc_colno, (colno, name, _stattype) in enumerate(column_list):
+            column_metadata = M_c['column_metadata'][cc_colno]
+            disttype = column_metadata['modeltype']
+            bdb.sql_execute(insert_column_sql, {
+                'generator_id': generator_id,
+                'colno': colno,
+                'cc_colno': cc_colno,
+                'disttype': disttype,
+            })
+            codemap = column_metadata['value_to_code']
+            for code in codemap:
+                bdb.sql_execute(insert_codemap_sql, {
                     'generator_id': generator_id,
-                    'colno': colno,
                     'cc_colno': cc_colno,
-                    'disttype': disttype,
+                    'code': code,
+                    'value': codemap[code],
                 })
-                codemap = column_metadata['value_to_code']
-                for code in codemap:
-                    bdb.sql_execute(insert_codemap_sql, {
-                        'generator_id': generator_id,
-                        'cc_colno': cc_colno,
-                        'code': code,
-                        'value': codemap[code],
-                    })
 
-            # Choose a subsample (possibly the whole thing).
-            qt = sqlite3_quote_name(table)
-            cursor = None
-            if parsed_schema.subsample:
-                # Sample k of the n rowids without replacement,
-                # choosing from all the k-of-n combinations uniformly
-                # at random.
-                #
-                # XXX Let the user pass in a seed.
-                k = parsed_schema.subsample
-                sql = 'SELECT COUNT(*) FROM %s' % (qt,)
-                n = cursor_value(bdb.sql_execute(sql))
-                sql = 'SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC' % (qt,)
-                cursor = bdb.sql_execute(sql)
-                seed = struct.pack('<QQQQ', 0, 0, k, n)
-                uniform = weakprng.weakprng(seed).weakrandom_uniform
-                # https://en.wikipedia.org/wiki/Reservoir_sampling
-                samples = []
-                for i, row in enumerate(cursor):
-                    if i < k:
-                        samples.append(row)
-                    else:
-                        r = uniform(i + 1)
-                        if r < k:
-                            samples[r] = row
-                cursor = samples
-            else:
-                cursor = bdb.sql_execute('''
-                     SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC
-                ''' % (qt,))
-            insert_subsample_sql = '''
-                INSERT INTO bayesdb_crosscat_subsample
-                    (generator_id, sql_rowid, cc_row_id)
-                    VALUES (?, ?, ?)
-            '''
+        # Choose a subsample (possibly the whole thing).
+        qt = sqlite3_quote_name(table)
+        cursor = None
+        if parsed_schema.subsample:
+            # Sample k of the n rowids without replacement,
+            # choosing from all the k-of-n combinations uniformly
+            # at random.
+            #
+            # XXX Let the user pass in a seed.
+            k = parsed_schema.subsample
+            sql = 'SELECT COUNT(*) FROM %s' % (qt,)
+            n = cursor_value(bdb.sql_execute(sql))
+            sql = 'SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC' % (qt,)
+            cursor = bdb.sql_execute(sql)
+            seed = struct.pack('<QQQQ', 0, 0, k, n)
+            uniform = weakprng.weakprng(seed).weakrandom_uniform
+            # https://en.wikipedia.org/wiki/Reservoir_sampling
+            samples = []
             for i, row in enumerate(cursor):
-                sql_rowid = row[0]
-                cc_row_id = i
-                bdb.sql_execute(insert_subsample_sql,
-                    (generator_id, sql_rowid, cc_row_id))
+                if i < k:
+                    samples.append(row)
+                else:
+                    r = uniform(i + 1)
+                    if r < k:
+                        samples[r] = row
+            cursor = samples
+        else:
+            cursor = bdb.sql_execute('''
+                 SELECT _rowid_ FROM %s ORDER BY _rowid_ ASC
+            ''' % (qt,))
+        insert_subsample_sql = '''
+            INSERT INTO bayesdb_crosscat_subsample
+                (generator_id, sql_rowid, cc_row_id)
+                VALUES (?, ?, ?)
+        '''
+        for i, row in enumerate(cursor):
+            sql_rowid = row[0]
+            cc_row_id = i
+            bdb.sql_execute(insert_subsample_sql,
+                (generator_id, sql_rowid, cc_row_id))
 
-            # Store dependence constraints, if necessary.
-            insert_dep_constraint_sql = '''
-                INSERT INTO bayesdb_crosscat_column_dependency
-                    (generator_id, colno0, colno1, dependent)
-                    VALUES (?, ?, ?, ?)
-            '''
-            for columns, dependent in parsed_schema.dep_constraints:
-                for col1, col2 in itertools.combinations(columns, 2):
-                    col1_id = core.bayesdb_generator_column_number(bdb,
-                        generator_id, col1)
-                    col2_id = core.bayesdb_generator_column_number(bdb,
-                        generator_id, col2)
-                    min_col_id = min(col1_id, col2_id)
-                    max_col_id = max(col1_id, col2_id)
-                    try:
-                        bdb.sql_execute(insert_dep_constraint_sql,
-                            (generator_id, min_col_id, max_col_id, dependent))
-                    except apsw.ConstraintError:
-                        # XXX This is a cop-out -- we should validate
-                        # the relation ourselves (and show a more
-                        # helpful error message).
-                        raise BQLError(bdb, 'Invalid dependency constraints!')
+        # Store dependence constraints, if necessary.
+        insert_dep_constraint_sql = '''
+            INSERT INTO bayesdb_crosscat_column_dependency
+                (generator_id, colno0, colno1, dependent)
+                VALUES (?, ?, ?, ?)
+        '''
+        for columns, dependent in parsed_schema.dep_constraints:
+            for col1, col2 in itertools.combinations(columns, 2):
+                col1_id = core.bayesdb_generator_column_number(bdb,
+                    generator_id, col1)
+                col2_id = core.bayesdb_generator_column_number(bdb,
+                    generator_id, col2)
+                min_col_id = min(col1_id, col2_id)
+                max_col_id = max(col1_id, col2_id)
+                try:
+                    bdb.sql_execute(insert_dep_constraint_sql,
+                        (generator_id, min_col_id, max_col_id, dependent))
+                except apsw.ConstraintError:
+                    # XXX This is a cop-out -- we should validate
+                    # the relation ourselves (and show a more
+                    # helpful error message).
+                    raise BQLError(bdb, 'Invalid dependency constraints!')
 
     def drop_generator(self, bdb, generator_id):
-        with bdb.savepoint():
-            # Remove the metadata from the cache.
-            cc_cache = self._crosscat_cache_nocreate(bdb)
-            if cc_cache is not None:
-                if generator_id in cc_cache.metadata:
-                    del cc_cache.metadata[generator_id]
-                if generator_id in cc_cache.thetas:
-                    del cc_cache.thetas[generator_id]
+        # Remove the metadata from the cache.
+        cc_cache = self._crosscat_cache_nocreate(bdb)
+        if cc_cache is not None:
+            if generator_id in cc_cache.metadata:
+                del cc_cache.metadata[generator_id]
+            if generator_id in cc_cache.thetas:
+                del cc_cache.thetas[generator_id]
 
-            # Delete all the things referring to the generator:
-            # - diagnostics
-            # - column depedencies
-            # - models
-            # - subsample
-            # - codemap
-            # - columns
-            # - metadata
-            delete_diagnostics_sql = '''
-                DELETE FROM bayesdb_crosscat_diagnostics
-                    WHERE generator_id = ?
-            '''
-            bdb.sql_execute(delete_diagnostics_sql, (generator_id,))
-            delete_column_dependency_sql = '''
-                DELETE FROM bayesdb_crosscat_column_dependency
-                    WHERE generator_id = ?
-            '''
-            bdb.sql_execute(delete_column_dependency_sql, (generator_id,))
-            delete_models_sql = '''
-                DELETE FROM bayesdb_crosscat_theta
-                    WHERE generator_id = ?
-            '''
-            bdb.sql_execute(delete_models_sql, (generator_id,))
-            delete_subsample_sql = '''
-                DELETE FROM bayesdb_crosscat_subsample
-                    WHERE generator_id = ?
-            '''
-            bdb.sql_execute(delete_subsample_sql, (generator_id,))
-            delete_codemap_sql = '''
-                DELETE FROM bayesdb_crosscat_column_codemap
-                    WHERE generator_id = ?
-            '''
-            bdb.sql_execute(delete_codemap_sql, (generator_id,))
-            delete_column_sql = '''
-                DELETE FROM bayesdb_crosscat_column
-                    WHERE generator_id = ?
-            '''
-            bdb.sql_execute(delete_column_sql, (generator_id,))
-            delete_metadata_sql = '''
-                DELETE FROM bayesdb_crosscat_metadata
-                    WHERE generator_id = ?
-            '''
-            bdb.sql_execute(delete_metadata_sql, (generator_id,))
+        # Delete all the things referring to the generator:
+        # - diagnostics
+        # - column depedencies
+        # - models
+        # - subsample
+        # - codemap
+        # - columns
+        # - metadata
+        delete_diagnostics_sql = '''
+            DELETE FROM bayesdb_crosscat_diagnostics
+                WHERE generator_id = ?
+        '''
+        bdb.sql_execute(delete_diagnostics_sql, (generator_id,))
+        delete_column_dependency_sql = '''
+            DELETE FROM bayesdb_crosscat_column_dependency
+                WHERE generator_id = ?
+        '''
+        bdb.sql_execute(delete_column_dependency_sql, (generator_id,))
+        delete_models_sql = '''
+            DELETE FROM bayesdb_crosscat_theta
+                WHERE generator_id = ?
+        '''
+        bdb.sql_execute(delete_models_sql, (generator_id,))
+        delete_subsample_sql = '''
+            DELETE FROM bayesdb_crosscat_subsample
+                WHERE generator_id = ?
+        '''
+        bdb.sql_execute(delete_subsample_sql, (generator_id,))
+        delete_codemap_sql = '''
+            DELETE FROM bayesdb_crosscat_column_codemap
+                WHERE generator_id = ?
+        '''
+        bdb.sql_execute(delete_codemap_sql, (generator_id,))
+        delete_column_sql = '''
+            DELETE FROM bayesdb_crosscat_column
+                WHERE generator_id = ?
+        '''
+        bdb.sql_execute(delete_column_sql, (generator_id,))
+        delete_metadata_sql = '''
+            DELETE FROM bayesdb_crosscat_metadata
+                WHERE generator_id = ?
+        '''
+        bdb.sql_execute(delete_metadata_sql, (generator_id,))
 
     def rename_column(self, bdb, generator_id, oldname, newname):
         assert oldname != newname
@@ -781,17 +767,16 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         if cc_cache is not None:
             cc_cache.metadata[generator_id] = M_c
 
-    def initialize_models(self, bdb, generator_id, modelnos, model_config):
+    def initialize_models(self, bdb, generator_id, modelnos):
         cc_cache = self._crosscat_cache(bdb)
         if cc_cache is not None and generator_id in cc_cache.thetas:
             assert not any(modelno in cc_cache.thetas[generator_id]
                 for modelno in modelnos)
-        if model_config is None:
-            model_config = {
-                'kernel_list': [],
-                'initialization': 'from_the_prior',
-                'row_initialization': 'from_the_prior',
-            }
+        model_config = {        # XXX
+            'kernel_list': [],
+            'initialization': 'from_the_prior',
+            'row_initialization': 'from_the_prior',
+        }
         M_c = self._crosscat_metadata(bdb, generator_id)
         X_L_list, X_D_list = self._crosscat.initialize(
             seed=crosscat_seed(bdb),
@@ -879,7 +864,12 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                     del cc_cache.thetas[generator_id]
 
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
-            max_seconds=None, ckpt_iterations=None, ckpt_seconds=None):
+            max_seconds=None, ckpt_iterations=None, ckpt_seconds=None,
+            program=None):
+        if program is not None:
+            # XXX
+            raise NotImplementedError('crosscat analysis programs')
+
         # XXX What about a schema change or insert in the middle of
         # analysis?
         M_c = self._crosscat_metadata(bdb, generator_id)
@@ -1048,7 +1038,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         return float('NaN') if nmodels == 0 else (float(count)/float(nmodels))
 
     def column_mutual_information(self, bdb, generator_id, modelno, colno0,
-            colno1, numsamples=None):
+            colno1, constraints=None, numsamples=None):
         if numsamples is None:
             numsamples = 100
         X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
@@ -1119,8 +1109,17 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         return value, confidence
 
     def simulate_joint(self, bdb, generator_id, targets, constraints,
-            modelno, num_predictions=1):
+            modelno, num_predictions=1, accuracy=None):
         M_c = self._crosscat_metadata(bdb, generator_id)
+        # An invalid constraint value should result in a BQL error.
+        if constraints:
+            for _, colno, value in constraints:
+                try:
+                    crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
+                except KeyError:
+                    # Constraint that has no code
+                    raise BQLError(bdb,
+                        'Unknown constraints: %s' % (repr(constraints)),)
         X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
         X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
         Q, Y, X_L_list, X_D_list = self._crosscat_remap_two(
@@ -1165,83 +1164,6 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             Q=Q,
         )
         return r
-
-    def insertmany(self, bdb, generator_id, rows):
-        with bdb.savepoint():
-            # Insert the data into the table.
-            table_name = core.bayesdb_generator_table(bdb, generator_id)
-            qt = sqlite3_quote_name(table_name)
-            sql_column_names = core.bayesdb_table_column_names(bdb, table_name)
-            qcns = map(sqlite3_quote_name, sql_column_names)
-            sql = '''
-                INSERT INTO %s (%s) VALUES (%s)
-            ''' % (qt, ', '.join(qcns), ', '.join('?' for _qcn in qcns))
-            for row in rows:
-                if len(row) != len(sql_column_names):
-                    raise BQLError(bdb, 'Wrong row length'
-                        ': expected %d, got %d' %
-                        (len(sql_column_names), len(row)))
-                bdb.sql_execute(sql, row)
-
-            # Find the indices of the modelled columns.
-            # XXX Simplify this -- we have the correspondence between
-            # colno and modelled_colno in the database.
-            modelled_column_names = \
-                core.bayesdb_generator_column_names(bdb, generator_id)
-            remap = []
-            for i, name in enumerate(sql_column_names):
-                colno = len(remap)
-                if len(modelled_column_names) <= colno:
-                    break
-                if casefold(name) == casefold(modelled_column_names[colno]):
-                    remap.append(i)
-            assert len(remap) == len(modelled_column_names)
-            M_c = self._crosscat_metadata(bdb, generator_id)
-            modelled_rows = [[crosscat_value_to_code(bdb, generator_id, M_c,
-                        colno, row[i])
-                    for colno, i in enumerate(remap)]
-                for row in rows]
-
-            # Update the models.
-            T = self._crosscat_data(bdb, generator_id, M_c)
-            models_sql = '''
-                SELECT m.modelno, ct.theta_json
-                    FROM bayesdb_generator_model AS m,
-                        bayesdb_crosscat_theta AS ct
-                    WHERE m.generator_id = ?
-                        AND m.generator_id = ct.generator_id
-                        AND m.modelno = ct.modelno
-                    ORDER BY m.modelno
-            '''
-            models = bdb.sql_execute(models_sql, (generator_id,)).fetchall()
-            modelnos = [modelno for modelno, _theta_json in models]
-            thetas = [json.loads(theta_json)
-                for _modelno, theta_json in models]
-            X_L_list, X_D_list, T = self._crosscat.insert(
-                M_c=M_c,
-                T=T,
-                X_L_list=[theta['X_L'] for theta in thetas],
-                X_D_list=[theta['X_D'] for theta in thetas],
-                new_rows=modelled_rows,
-            )
-            assert T == self._crosscat_data(bdb, generator_id, M_c) \
-                + modelled_rows
-            update_theta_sql = '''
-                UPDATE bayesdb_crosscat_theta SET theta_json = :theta_json
-                    WHERE generator_id = :generator_id AND modelno = :modelno
-            '''
-            for modelno, theta, X_L, X_D \
-                    in zip(modelnos, thetas, X_L_list, X_D_list):
-                theta['X_L'] = X_L
-                theta['X_D'] = X_D
-                total_changes = bdb._sqlite3.totalchanges()
-                self._theta_validator.validate(theta)
-                bdb.sql_execute(update_theta_sql, {
-                    'generator_id': generator_id,
-                    'modelno': modelno,
-                    'theta_json': json.dumps(theta),
-                })
-                assert bdb._sqlite3.totalchanges() - total_changes == 1
 
 class CrosscatCache(object):
     def __init__(self):
@@ -1294,14 +1216,19 @@ def create_metadata_categorical(bdb, generator_id, colno):
     }
 
 metadata_creators = {
+    'nominal': create_metadata_categorical,
     'categorical': create_metadata_categorical,
     'cyclic': create_metadata_cyclic,
     'numerical': create_metadata_numerical,
 }
 
+def is_categorical(stattype):
+    return casefold(stattype) in ['categorical', 'nominal']
+
+
 def crosscat_value_to_code(bdb, generator_id, M_c, colno, value):
     stattype = core.bayesdb_generator_column_stattype(bdb, generator_id, colno)
-    if stattype == 'categorical':
+    if is_categorical(stattype):
         # For hysterical raisins, code_to_value and value_to_code are
         # backwards.
         #
@@ -1328,7 +1255,7 @@ def crosscat_value_to_code(bdb, generator_id, M_c, colno, value):
 
 def crosscat_code_to_value(bdb, generator_id, M_c, colno, code):
     stattype = core.bayesdb_generator_column_stattype(bdb, generator_id, colno)
-    if stattype == 'categorical':
+    if is_categorical(stattype):
         if math.isnan(code):
             return None
         cc_colno = crosscat_cc_colno(bdb, generator_id, colno)

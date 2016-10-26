@@ -12,6 +12,14 @@
 /src/grammar.py
 /src/grammar.sha256
 /src/grammar.sha256.tmp
+/src/metamodels/cgpm_analyze/grammar.out
+/src/metamodels/cgpm_analyze/grammar.py
+/src/metamodels/cgpm_analyze/grammar.sha256
+/src/metamodels/cgpm_analyze/grammar.sha256.tmp
+/src/metamodels/cgpm_schema/grammar.out
+/src/metamodels/cgpm_schema/grammar.py
+/src/metamodels/cgpm_schema/grammar.sha256
+/src/metamodels/cgpm_schema/grammar.sha256.tmp
 /src/version.py
 __pycache__/
 .eggs

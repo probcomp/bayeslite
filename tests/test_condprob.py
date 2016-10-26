@@ -26,24 +26,24 @@ def test_conditional_probability_pathologies():
         for row in data:
             bdb.sql_execute('insert into t values (?, ?)', row)
         bdb.execute('''
-            create generator t_cc for t using crosscat(
-                foo categorical,
-                bar categorical
+            create population p for t (
+                model foo, bar as categorical
             )
         ''')
-        bdb.execute('initialize 1 models for t_cc')
-        bdb.execute('analyze t_cc for 1 iterations wait')
+        bdb.execute('create generator p_cc for p using crosscat()')
+        bdb.execute('initialize 1 models for p_cc')
+        bdb.execute('analyze p_cc for 1 iterations wait')
         assert bdb.execute('''
-            estimate probability of foo = 'x' by t_cc
+            estimate probability of foo = 'x' by p
         ''').fetchvalue() < 1
         assert bdb.execute('''
-            estimate probability of foo = 'x' given (foo = 'x') by t_cc
+            estimate probability of foo = 'x' given (foo = 'x') by p
         ''').fetchvalue() == 1
         assert bdb.execute('''
             estimate probability of value 'x' given (foo = 'x')
-                from columns of t_cc
+                from columns of p
                 where c.name = 'foo'
         ''').fetchvalue() == 1
         assert bdb.execute('''
-            estimate probability of foo = 'x' given (foo = 'y') by t_cc
+            estimate probability of foo = 'x' given (foo = 'y') by p
         ''').fetchvalue() == 0
