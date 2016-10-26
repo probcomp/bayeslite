@@ -236,7 +236,7 @@ def logged_query(query_string=None, bindings=(), name=None, logger=None):
   if query_string is None:
     query_string = ""
   if logger is None:
-    logger = CallHomeStatusLogger()
+    logger = SilentLogger()
 
   if name is None or name is False:
     yield  # Do no logging without a name to log by.
