@@ -3,6 +3,7 @@ MAINTAINER      MIT Probabilistic Computing Project
 
 RUN             apt-get update -qq
 RUN             apt-get upgrade -qq
+
 RUN             apt-get install -qq git
 RUN             apt-get install -qq python-jsonschema
 RUN             apt-get install -qq python-numpy
