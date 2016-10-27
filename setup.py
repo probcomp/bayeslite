@@ -200,6 +200,7 @@ setup(
     license='Apache License, Version 2.0',
     install_requires=[
         'bayeslite-apsw>=3.8.0',
+        'cgpm',
         'crosscat>=0.1.55',
         'jsonschema',
         'numpy',
