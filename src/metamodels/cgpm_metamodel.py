@@ -394,18 +394,59 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         if not numsamples:
             numsamples = 2
         assert numsamples > 0
+
         def _impute_categorical(sample):
             counts = Counter(s[0] for s in sample)
             mode_count = max(counts[v] for v in counts)
             pred = iter(v for v in counts if counts[v] == mode_count).next()
             conf = float(mode_count) / numsamples
             return pred, conf
+
         def _impute_numerical(sample):
             pred = sum(s[0] for s in sample) / float(len(sample))
             conf = 0 # XXX Punt confidence for now
             return pred, conf
+
+        constraints = []
+        # If rowid is a hypothetical cell for cgpm (did not exist at the time
+        # of INITIALIZE), but exists in the base table (by INSERT INTO), then
+        # retrieve all values for rowid as the constraints.
+        exists = rowid < core.bayesdb_generator_fresh_row_id(bdb, generator_id)
+        max_cgpm_rowid = bdb.sql_execute('''
+            SELECT MAX(table_rowid) FROM bayesdb_cgpm_individual
+            WHERE generator_id = ?
+        ''', (generator_id,)).fetchall()[0][0]
+        hypothetical = rowid > max_cgpm_rowid
+        if exists and hypothetical:
+            population_id = core.bayesdb_generator_population(bdb, generator_id)
+            # Retrieve all other variables except colno, and ignore latents in
+            # generator_id, and place them in the constraints.
+            pop_names = core.bayesdb_variable_names(bdb, population_id, None)
+            avoid_name = core.bayesdb_variable_name(bdb, population_id, colno)
+            constraints_names = [n for n in pop_names if n != avoid_name]
+            # Obtain the row.
+            qt_names = str.join(',', map(sqlite3_quote_name, constraints_names))
+            qt_table = sqlite3_quote_name(
+                core.bayesdb_population_table(bdb, population_id))
+            data = bdb.sql_execute('''
+                SELECT %s FROM %s WHERE oid = ?
+            ''' % (qt_names, qt_table,), (rowid,)).fetchall()[0]
+            # Build the constraints.
+            pop_nos = core.bayesdb_variable_numbers(bdb, population_id, None)
+            constraints_nos = [n for n in pop_nos if n != colno]
+            # import ipdb; ipdb.set_trace()
+            assert len(data) == len(constraints_nos)
+            constraints = [
+                (rowid, c, v) for c, v in zip(constraints_nos, data)
+                if (v is not None) and v
+            ]
+
+        # Retrieve the samples.
         sample = self.simulate_joint(
-            bdb, generator_id, [(rowid, colno)], [], modelno, numsamples)
+            bdb, generator_id, [(rowid, colno)], constraints,
+            modelno, numsamples)
+
+        # Determine the imputation strategy (mode or mean).
         stattype = core.bayesdb_variable_stattype(
             bdb, core.bayesdb_generator_population(bdb, generator_id), colno)
         if _is_categorical(stattype):
@@ -680,7 +721,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             ''', (generator_id, colno, value))
             integer = cursor_value(cursor, nullok=True)
             if integer is None:
-                raise BQLError('Invalid category: %r' % (value,))
+                return float('NaN')
+                # raise BQLError('Invalid category: %r' % (value,))
             return integer
         else:
             return value
