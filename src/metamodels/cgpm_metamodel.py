@@ -721,7 +721,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             ''', (generator_id, colno, value))
             integer = cursor_value(cursor, nullok=True)
             if integer is None:
-                raise BQLError('Invalid category: %r' % (value,))
+                return float('NaN')
+                # raise BQLError('Invalid category: %r' % (value,))
             return integer
         else:
             return value
