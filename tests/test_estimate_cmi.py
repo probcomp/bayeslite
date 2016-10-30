@@ -21,6 +21,10 @@ import pytest
 from bayeslite import bayesdb_open
 from bayeslite.exception import BQLError
 
+'''This test suite should be retired as it does not perform any meaningful
+quality test, other than ensure CMI queries can be expressed in BQL and results
+are returned.'''
+
 
 @contextlib.contextmanager
 def smoke_bdb():
