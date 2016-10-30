@@ -434,7 +434,6 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             # Build the constraints.
             pop_nos = core.bayesdb_variable_numbers(bdb, population_id, None)
             constraints_nos = [n for n in pop_nos if n != colno]
-            # import ipdb; ipdb.set_trace()
             assert len(data) == len(constraints_nos)
             constraints = [
                 (rowid, c, v) for c, v in zip(constraints_nos, data)
