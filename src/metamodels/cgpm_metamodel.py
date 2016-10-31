@@ -68,7 +68,7 @@ CREATE TABLE bayesdb_cgpm_category (
 class CGPM_Metamodel(IBayesDBMetamodel):
     def __init__(self, cgpm_registry, multiprocess=None):
         self._cgpm_registry = cgpm_registry
-        self._ncpu = multiprocess
+        self._multiprocess = multiprocess
 
     def name(self):
         return 'cgpm'
@@ -87,6 +87,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 # Unrecognized version.
                 raise BQLError(bdb, 'CGPM already installed'
                     ' with unknown schema version: %d' % (version,))
+
+    def set_multiprocess(self, switch):
+        self._multiprocess = switch
 
     def create_generator(self, bdb, generator_id, schema_tokens, **kwargs):
         schema_ast = cgpm_schema.parse.parse(schema_tokens)
@@ -196,7 +199,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         for cgpm_ext in schema['cgpm_composition']:
             cgpms = [self._initialize_cgpm(bdb, generator_id, cgpm_ext)
                 for _ in xrange(n)]
-            engine.compose_cgpm(cgpms, multiprocess=self._ncpu)
+            engine.compose_cgpm(cgpms, multiprocess=self._multiprocess)
 
         # Store the newly initialized engine.
         engine_json = json_dumps(engine.to_metadata())
@@ -320,11 +323,11 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         engine = self._engine(bdb, generator_id)
         if optimized:
             engine.transition_lovecat(
-                N=iterations, S=max_seconds, multiprocess=self._ncpu)
+                N=iterations, S=max_seconds, multiprocess=self._multiprocess)
         else:
             engine.transition(
                 N=iterations, S=max_seconds, cols=varnos,
-                multiprocess=self._ncpu)
+                multiprocess=self._multiprocess)
 
         # Serialize the engine.
         engine_json = json_dumps(engine.to_metadata())
@@ -349,7 +352,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Engine gives us a list of dependence probabilities which it is our
         # responsibility to integrate over.
         depprob_list = engine.dependence_probability(
-            colno0, colno1, multiprocess=self._ncpu)
+            colno0, colno1, multiprocess=self._multiprocess)
 
         return arithmetic_mean(depprob_list)
 
@@ -367,7 +370,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # responsibility to integrate over.
         mi_list = engine.mutual_information(
             colno0, colno1, evidence=constraints, N=numsamples,
-            multiprocess=self._ncpu)
+            multiprocess=self._multiprocess)
 
         # XXX Is this integral correct?  Should it be weighted?
         return arithmetic_mean(mi_list)
@@ -385,7 +388,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Engine gives us a list of similarities which it is our
         # responsibility to integrate over.
         similarity_list = engine.row_similarity(
-            cgpm_rowid, cgpm_target_rowid, colnos, multiprocess=self._ncpu)
+            cgpm_rowid, cgpm_target_rowid, colnos,
+            multiprocess=self._multiprocess)
 
         return arithmetic_mean(similarity_list)
 
@@ -469,9 +473,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         engine = self._engine(bdb, generator_id)
         samples = engine.simulate(
             cgpm_rowid, cgpm_query, cgpm_evidence, N=num_predictions,
-            accuracy=accuracy, multiprocess=self._ncpu)
+            accuracy=accuracy, multiprocess=self._multiprocess)
         weighted_samples = engine._likelihood_weighted_resample(
-            samples, cgpm_rowid, cgpm_evidence, multiprocess=self._ncpu)
+            samples, cgpm_rowid, cgpm_evidence, multiprocess=self._multiprocess)
         def map_value(colno, value):
             return self._from_numeric(bdb, generator_id, colno, value)
         return [
@@ -494,9 +498,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         engine = self._engine(bdb, generator_id)
         logpdfs = engine.logpdf(
             cgpm_rowid, cgpm_query, cgpm_evidence, accuracy=None,
-            multiprocess=self._ncpu)
+            multiprocess=self._multiprocess)
         return engine._likelihood_weighted_integrate(
-            logpdfs, cgpm_rowid, cgpm_evidence, multiprocess=self._ncpu)
+            logpdfs, cgpm_rowid, cgpm_evidence, multiprocess=self._multiprocess)
 
     def _unique_rowid(self, rowids):
         if len(set(rowids)) != 1:
@@ -576,8 +580,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                     'columns have all null values: %s' % repr(nulls))
 
         return Engine(
-            gpmcc_data, num_states=n, rng=bdb.np_prng, multiprocess=self._ncpu,
-            outputs=outputs, cctypes=cctypes, distargs=distargs)
+            gpmcc_data, num_states=n, rng=bdb.np_prng,
+            multiprocess=self._multiprocess, outputs=outputs, cctypes=cctypes,
+            distargs=distargs)
 
     def _initialize_cgpm(self, bdb, generator_id, cgpm_ext):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
@@ -687,7 +692,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Deserialize the engine.
         engine = Engine.from_metadata(
-            json.loads(engine_json), rng=bdb.np_prng, multiprocess=self._ncpu)
+            json.loads(engine_json), rng=bdb.np_prng,
+            multiprocess=self._multiprocess)
 
         # Cache it, if we can.
         if cache is not None:
