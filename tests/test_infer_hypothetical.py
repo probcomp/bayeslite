@@ -44,8 +44,8 @@ def bdb():
     # Create the population and metamodel on the existing rows.
     bdb.execute('CREATE POPULATION p FOR t (MODEL a, b AS NOMINAL)')
     bdb.execute('CREATE METAMODEL m FOR p;')
-    bdb.execute('INITIALIZE 4 MODELS FOR m;')
-    bdb.execute('ANALYZE m FOR 100 ITERATION WAIT;')
+    bdb.execute('INITIALIZE 1 MODELS FOR m;')
+    bdb.execute('ANALYZE m FOR 100 ITERATION WAIT (OPTIMIZED);')
 
     # Add new 'hypothetical' rows into the base table to serve as out-of-
     # sample probe points; only zeros, only ones, and nothing.
@@ -68,52 +68,60 @@ def bdb():
     ''', (generator_id,))
     assert cursor_value(cursor) == 40
 
+    # Turn off multiprocessing for sequence of queries.
+    bdb.metamodels['cgpm'].set_multiprocess(False)
     return bdb
 
 
-def test_infer_ones__ci_slow(bdb):
+def test_infer_ones(bdb):
     # All the b's should be one (check 90%).
     b_ones = bdb.execute('''
-        INFER EXPLICIT a, PREDICT b USING 10 SAMPLES
+        INFER EXPLICIT
+            a,
+            PREDICT b CONFIDENCE conf USING 20 SAMPLES
         FROM p WHERE oid BETWEEN 41 AND 50
     ''').fetchall()
     assert all(r[0] == '0' for r in b_ones)
-    assert len([r for r in b_ones if r[1] == '1']) >= 9
+    assert len([r for r in b_ones if r[1] == '1' and r[2] > 0.8]) >= 9
 
 
-def test_infer_zeros__ci_slow(bdb):
+def test_infer_zeros(bdb):
     # All the a's should be zero (check 90%).
     a_zeros = bdb.execute('''
-        INFER EXPLICIT PREDICT a USING 10 SAMPLES, b
+        INFER EXPLICIT
+            PREDICT a CONFIDENCE conf USING 20 SAMPLES,
+            b
         FROM p WHERE oid BETWEEN 51 AND 60
     ''').fetchall()
-    assert all(r[1] == '1' for r in a_zeros)
-    assert len([r for r in a_zeros if r[0] == '0']) >= 9
+    assert all(r[2] == '1' for r in a_zeros)
+    assert len([r for r in a_zeros if r[0] == '0' and r[1] > 0.8]) >= 9
 
 
-def test_infer_uniform_marginal__ci_slow(bdb):
+def test_infer_uniform_marginal(bdb):
     # None of these queries should illustrate a dominant pattern of 0s or 1s. We
     # test heuristically not statistically.
 
     uniform_a = bdb.execute('''
-        INFER EXPLICIT PREDICT a USING 10 SAMPLES
+        INFER EXPLICIT PREDICT a CONFIDENCE conf USING 20 SAMPLES
         FROM p WHERE oid BETWEEN 61 AND 80
     ''').fetchall()
-    assert len([r for r in uniform_a if r[0] == '1']) < 15
-    assert len([r for r in uniform_a if r[0] == '0']) < 15
+    assert len([r for r in uniform_a if r[0] == '1' and r[1] > 0.55]) < 15
+    assert len([r for r in uniform_a if r[0] == '0' and r[1] > 0.55]) < 15
 
     uniform_b = bdb.execute('''
-        INFER EXPLICIT PREDICT b USING 10 SAMPLES
+        INFER EXPLICIT PREDICT b CONFIDENCE conf USING 20 SAMPLES
         FROM p WHERE oid BETWEEN 61 AND 80
     ''').fetchall()
-    assert len([r for r in uniform_b if r[0] == '1']) < 15
-    assert len([r for r in uniform_b if r[0] == '0']) < 15
+    assert len([r for r in uniform_a if r[0] == '1' and r[1] > 0.55]) < 15
+    assert len([r for r in uniform_a if r[0] == '0' and r[1] > 0.55]) < 15
 
 
-def test_infer_uniform_joint__ci_slow(bdb):
+def test_infer_uniform_joint(bdb):
     # Should be roughly independent.
     uniform_ab = bdb.execute('''
-        INFER EXPLICIT PREDICT a USING 10 SAMPLES, PREDICT b USING 10 SAMPLES
+        INFER EXPLICIT
+            PREDICT a CONFIDENCE confa USING 10 SAMPLES,
+            PREDICT b CONFIDENCE confb USING 10 SAMPLES
         FROM p WHERE oid BETWEEN 61 AND 80
     ''').fetchall()
     a0b0 = [r for r in uniform_ab if r[0] == '0' and r[1] == '0']
@@ -122,4 +130,4 @@ def test_infer_uniform_joint__ci_slow(bdb):
     a1b1 = [r for r in uniform_ab if r[0] == '1' and r[1] == '1']
 
     # None of these should comprise more than 50% of the samples.
-    assert all(len(s) < 10 for s in [a0b0, a0b1, a1b0, a1b1])
+    assert all([len(s) < 10 for s in [a0b0, a0b1, a1b0, a1b1]])
