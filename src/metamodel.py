@@ -106,6 +106,15 @@ class IBayesDBMetamodel(object):
         """
         raise NotImplementedError
 
+    def set_multiprocess(self, switch):
+        """Switch between multiprocessing and single processing.
+
+        The boolean variable `switch` toggles between single (`False`) and multi
+        (`True`) processing, if the choice is available, and otherwise ignores
+        the request.
+        """
+        raise NotImplementedError
+
     def create_generator(self, bdb, table, schema, **kwargs):
         """Create a generator for a table with the given schema.
 

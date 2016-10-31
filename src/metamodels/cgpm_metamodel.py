@@ -88,6 +88,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 raise BQLError(bdb, 'CGPM already installed'
                     ' with unknown schema version: %d' % (version,))
 
+    def set_multiprocess(self, switch):
+        self._multiprocess = switch
+
     def create_generator(self, bdb, generator_id, schema_tokens, **kwargs):
         schema_ast = cgpm_schema.parse.parse(schema_tokens)
         schema = _create_schema(bdb, generator_id, schema_ast, **kwargs)
