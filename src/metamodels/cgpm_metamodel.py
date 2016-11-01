@@ -441,7 +441,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             assert len(data) == len(constraints_nos)
             constraints = [
                 (rowid, c, v) for c, v in zip(constraints_nos, data)
-                if (v is not None) and v
+                # Relies on user having appropriately nullified the nan tokens.
+                if v is not None
             ]
 
         # Retrieve the samples.
@@ -466,10 +467,13 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             [r for r, _c in targets] + [r for r, _c, _v in constraints])
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
         cgpm_query = [colno for _r, colno in targets]
-        cgpm_evidence = {
-            colno: self._to_numeric(bdb, generator_id, colno, value)
-            for _r, colno, value in constraints
-        }
+        # Build the evidence, ignoring nan values.
+        cgpm_evidence = {}
+        for _r, colno, value in constraints:
+            value_numeric = self._to_numeric(bdb, generator_id, colno, value)
+            if not math.isnan(value_numeric):
+                cgpm_evidence.update({colno: value_numeric})
+        # Retrieve the engine.
         engine = self._engine(bdb, generator_id)
         samples = engine.simulate(
             cgpm_rowid, cgpm_query, cgpm_evidence, N=num_predictions,
@@ -487,14 +491,18 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         rowid = self._unique_rowid(
             [r for r, _c, _v in targets + constraints])
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
+        # TODO: Handle nan values in the logpdf query.
         cgpm_query = {
             colno: self._to_numeric(bdb, generator_id, colno, value)
             for _r, colno, value in targets
         }
-        cgpm_evidence = {
-            colno: self._to_numeric(bdb, generator_id, colno, value)
-            for _r, colno, value in constraints
-        }
+        # Build the evidence, ignoring nan values.
+        cgpm_evidence = {}
+        for _r, colno, value in constraints:
+            value_numeric = self._to_numeric(bdb, generator_id, colno, value)
+            if not math.isnan(value_numeric):
+                cgpm_evidence.update({colno: value_numeric})
+        # Retrieve the engine.
         engine = self._engine(bdb, generator_id)
         logpdfs = engine.logpdf(
             cgpm_rowid, cgpm_query, cgpm_evidence, accuracy=None,
