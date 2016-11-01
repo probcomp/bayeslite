@@ -45,7 +45,7 @@ def bdb():
     bdb.execute('CREATE POPULATION p FOR t (MODEL a, b AS NOMINAL)')
     bdb.execute('CREATE METAMODEL m FOR p;')
     bdb.execute('INITIALIZE 1 MODELS FOR m;')
-    bdb.execute('ANALYZE m FOR 100 ITERATION WAIT (OPTIMIZED);')
+    bdb.execute('ANALYZE m FOR 1000 ITERATION WAIT (OPTIMIZED);')
 
     # Add new 'hypothetical' rows into the base table to serve as out-of-
     # sample probe points; only zeros, only ones, and nothing.
