@@ -372,8 +372,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             colno0, colno1, evidence=constraints, N=numsamples,
             multiprocess=self._multiprocess)
 
-        # XXX Is this integral correct?  Should it be weighted?
-        return arithmetic_mean(mi_list)
+        # Pass through the distribution of CMI to BayesDB without aggregation.
+        return mi_list
 
     def row_similarity(
             self, bdb, generator_id, modelno, rowid, target_rowid, colnos):

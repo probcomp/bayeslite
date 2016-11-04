@@ -295,18 +295,31 @@ def bql_column_dependence_probability(bdb, population_id, generator_id, colno0,
 def bql_column_mutual_information(
         bdb, population_id, generator_id, colno0, colno1,
         numsamples, *constraint_args):
+    mutinfs = _bql_column_mutual_information(
+        bdb, population_id, generator_id, colno0, colno1, numsamples,
+        *constraint_args)
+    # XXX This integral of the CMI returned by each model of all generators in
+    # in the population is wrong! At least, it does not directly correspond to
+    # any meaningful probabilistic quantity, other than literally the mean CMI
+    # averaged over all population models.
+    return stats.arithmetic_mean([stats.arithmetic_mean(m) for m in mutinfs])
+
+def _bql_column_mutual_information(
+        bdb, population_id, generator_id, colno0, colno1,
+        numsamples, *constraint_args):
     if len(constraint_args) % 2 == 1:
         raise ValueError('Odd constraint arguments: %s.' % (constraint_args))
     constraints = dict(zip(constraint_args[::2], constraint_args[1::2])) \
         if constraint_args else None
     def generator_mutinf(generator_id):
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-        return metamodel.column_mutual_information(bdb, generator_id, None,
+        return metamodel.column_mutual_information(
+            bdb, generator_id, None,
             colno0, colno1, constraints=constraints, numsamples=numsamples)
     generator_ids = [generator_id] if generator_id is not None else \
         core.bayesdb_population_generators(bdb, population_id)
     mutinfs = map(generator_mutinf, generator_ids)
-    return stats.arithmetic_mean(mutinfs)
+    return mutinfs
 
 # One-column function:  PROBABILITY OF <col>=<value> GIVEN <constraints>
 def bql_column_value_probability(bdb, population_id, generator_id, colno,
