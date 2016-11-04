@@ -309,7 +309,7 @@ def _bql_column_mutual_information(
         numsamples, *constraint_args):
     if len(constraint_args) % 2 == 1:
         raise ValueError('Odd constraint arguments: %s.' % (constraint_args))
-    constraints = dict(zip(constraint_args[::2], constraint_args[1::2])) \
+    constraints = zip(constraint_args[::2], constraint_args[1::2]) \
         if constraint_args else None
     def generator_mutinf(generator_id):
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
