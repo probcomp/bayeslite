@@ -47,6 +47,13 @@ CreateTabSim = namedtuple('CreateTabSim', [
     'name',                     # XXX name
     'simulation',               # Simulate
 ])
+CreateTabSimModels = namedtuple('CreateTabSimModels', [
+    # XXX Database name, &c.
+    'temp',                     # boolean
+    'ifnotexists',              # boolean
+    'name',                     # XXX name
+    'simulation',               # Simulate
+])
 CreateTabCsv = namedtuple('CreateTabCsv', [
     # XXX Database name, &c.
     'temp',                     # boolean
@@ -154,12 +161,18 @@ DropModels = namedtuple('DropModels', [
 ])
 
 Simulate = namedtuple('Simulate', [
-    'columns',                  # [XXX name]
-    'population',               # XXX name
-    'generator',                # XXX name
+    'columns',
+    'population',
+    'generator',
     'constraints',              # [(XXX name, Exp*)]
     'nsamples',                 # Exp* or None
     'accuracy',                 # int or None
+])
+
+SimulateModels = namedtuple('SimulateModels', [
+    'columns',
+    'population',
+    'generator',
 ])
 
 def is_query(phrase):

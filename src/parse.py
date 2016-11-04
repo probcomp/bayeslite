@@ -160,6 +160,8 @@ class BQLSemantics(object):
     def p_command_createtab_as(self, temp, ifnotexists, name, query):
         if isinstance(query, ast.Simulate):
             return ast.CreateTabSim(temp, ifnotexists, name, query)
+        elif isinstance(query, ast.SimulateModels):
+            return ast.CreateTabSimModels(temp, ifnotexists, name, query)
         else:
             return ast.CreateTabAs(temp, ifnotexists, name, query)
     def p_command_createtab_csv(self, temp, ifnotexists, name, csv):
@@ -330,9 +332,12 @@ class BQLSemantics(object):
         return ast.Simulate(
             [c.col.column for c in cols], population, generator,
             constraints, 0, None)
-    def p_simulate_models(self, cols, population, generator, constraints):
-        # XXX FILL ME
-        pass
+    def p_simulate_models(self, cols, population, generator):
+        if any(isinstance(c.col, ast.ExpCol) for c in cols):
+            self.errors.append(
+                'simulate models does not accept population variables.')
+            return None
+        return ast.SimulateModels(cols, population, generator)
 
     def p_simulate_columns_one(self, col):
         return [col]
