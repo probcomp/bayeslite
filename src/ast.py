@@ -39,14 +39,6 @@ CreateTabAs = namedtuple('CreateTabAs', [
     'name',                     # XXX name
     'query',                    # query
 ])
-# XXX CreateTabSim is not necessary.  Eliminate it.
-CreateTabSim = namedtuple('CreateTabSim', [
-    # XXX Database name, &c.
-    'temp',                     # boolean
-    'ifnotexists',              # boolean
-    'name',                     # XXX name
-    'simulation',               # Simulate
-])
 CreateTabCsv = namedtuple('CreateTabCsv', [
     # XXX Database name, &c.
     'temp',                     # boolean
