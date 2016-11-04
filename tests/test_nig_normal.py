@@ -135,6 +135,12 @@ def test_nig_normal_latent_smoke():
                 'simulate x, xe from p modelled by g0 limit 1').fetchall()
         bdb.execute('simulate x, xe from p modelled by g1 limit 1').fetchall()
 
+        # CREATE TABLE AS SIMULATE x
+        bdb.execute('create table f as simulate x from p limit 20;')
+        cursor = bdb.execute('select * from f limit 15;').fetchall()
+        assert all(len(c) == 1 for c in cursor)
+        assert len(cursor) == 15
+
         assert 100 == len(bdb.execute('''
             estimate similarity from pairwise p limit 100
         ''').fetchall())
