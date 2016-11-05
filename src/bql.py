@@ -197,6 +197,33 @@ def execute_phrase(bdb, phrase, bindings=()):
                 bdb.sql_execute(insert_sql, row)
         return empty_cursor(bdb)
 
+    if isinstance(phrase, ast.CreateTabSimModels):
+        assert isinstance(phrase.simulation, ast.SimulateModels)
+        with bdb.savepoint():
+            # XXX Manual implementation of IF NOT EXISTS, skips computing query.
+            if phrase.ifnotexists and core.bayesdb_has_table(bdb, phrase.name):
+                return empty_cursor(bdb)
+            # Set up schema and create the new table.
+            qn = sqlite3_quote_name(phrase.name)
+            qcns = map(sqlite3_quote_name, [
+                simcol.name if simcol.name is not None else str(simcol.col)
+                for simcol in phrase.simulation.columns
+            ])
+            temp = '' if phrase.temp is None else 'TEMP'
+            bdb.sql_execute('''
+                CREATE %s TABLE %s (%s)
+            ''' % (temp, qn, str.join(',', qcns)))
+            # Retrieve the rows.
+            rows = simulate_models_rows(bdb, phrase.simulation)
+            # Insert the rows into the table.
+            insert_sql = '''
+                INSERT INTO %s (%s) VALUES (%s)
+            ''' % (qn, ','.join(qcns), ','.join('?' for qcn in qcns))
+            for row in rows:
+                bdb.sql_execute(insert_sql, row)
+            return empty_cursor(bdb)
+
+
     if isinstance(phrase, ast.DropTab):
         with bdb.savepoint():
             sql = 'SELECT COUNT(*) FROM bayesdb_population WHERE tabname = ?'
@@ -781,6 +808,69 @@ def rename_table(bdb, old, new):
         UPDATE bayesdb_population SET tabname = ? WHERE tabname = ?
     '''
     bdb.sql_execute(update_populations_sql, (new, old))
+
+
+def simulate_models_rows(bdb, simulation):
+    assert all(isinstance(c, ast.SimCol) for c in simulation.columns)
+    population_id = core.bayesdb_get_population(
+        bdb, simulation.population)
+    generator_id = None
+    if simulation.generator is not None:
+        if not core.bayesdb_has_generator(
+                bdb, population_id, simulation.generator):
+            raise BQLError(bdb, 'No such generator: %r' %
+                (simulation.generator,))
+        generator_id = core.bayesdb_get_generator(
+            bdb, population_id, simulation.generator)
+    def retrieve_literal(expression):
+        assert isinstance(expression, ast.ExpLit)
+        lit = expression.value
+        if isinstance(lit, ast.LitNull):
+            return None
+        elif isinstance(lit, ast.LitInt):
+            return lit.value
+        elif isinstance(lit, ast.LitFloat):
+            return lit.value
+        elif isinstance(lit, ast.LitString):
+            return lit.value
+        else:
+            assert False
+    def retrieve_variable(var):
+        if not core.bayesdb_has_variable(bdb, population_id, generator_id, var):
+            raise BQLError(bdb, 'No such population variable: %s' % (var,))
+        return core.bayesdb_variable_number(
+            bdb, population_id, generator_id, var)
+    def simulate_column(phrase):
+        if isinstance(phrase, ast.ExpBQLDepProb):
+            raise BQLError(bdb,
+                'DEPENDENCE PROBABILITY simulation still unsupported.')
+        elif isinstance(phrase, ast.ExpBQLProb):
+            raise BQLError(bdb,
+                'PROBABILITY OF simulation still unsupported.')
+        elif isinstance(phrase, ast.ExpBQLMutInf):
+            colno0 = retrieve_variable(phrase.column0)
+            colno1 = retrieve_variable(phrase.column1)
+            constraint_args = ()
+            if phrase.constraints is not None:
+                constraint_args = tuple(itertools.chain.from_iterable([
+                    [retrieve_variable(colname), retrieve_literal(expr)]
+                    for colname, expr in phrase.constraints
+                ]))
+            nsamples = phrase.nsamples and retrieve_literal(phrase.nsamples)
+            # One mi_list per generator of the population.
+            mi_lists = bqlfn._bql_column_mutual_information(
+                bdb, population_id, generator_id, colno0, colno1, nsamples,
+                *constraint_args)
+            return list(itertools.chain.from_iterable(mi_lists))
+        else:
+            raise BQLError(bdb,
+                'Only constants can be simulated: %s.' % (simulation,))
+    columns = [simulate_column(c.col) for c in simulation.columns]
+    # All queries must return the same number of rows, equal to the number of
+    # models of all generators implied by the query.
+    assert all(len(c) == len(columns[0]) for c in columns)
+    # Convert the columns into rows.
+    return zip(*columns)
 
 def empty_cursor(bdb):
     return None
