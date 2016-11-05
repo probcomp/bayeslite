@@ -194,6 +194,8 @@ def is_query(phrase):
         return True
     if isinstance(phrase, Simulate):
         return True
+    if isinstance(phrase, SimulateModels):
+        return True
     return False
 
 Select = namedtuple('Select', [
