@@ -366,10 +366,19 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Get the engine.
         engine = self._engine(bdb, generator_id)
 
+        # Build the evidence, ignoring nan values and converting categoricals.
+        evidence = constraints and {
+            colno: (self._to_numeric(bdb, generator_id, colno, value)
+                if value is not None else None)
+            for colno, value in constraints
+        }
+
+        print constraints
+        print evidence
         # Engine gives us a list of samples which it is our
         # responsibility to integrate over.
         mi_list = engine.mutual_information(
-            colno0, colno1, evidence=constraints, N=numsamples,
+            colno0, colno1, evidence=evidence, N=numsamples,
             multiprocess=self._multiprocess)
 
         # Pass through the distribution of CMI to BayesDB without aggregation.

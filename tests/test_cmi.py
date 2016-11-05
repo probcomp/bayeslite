@@ -32,7 +32,7 @@ def smoke_bdb():
     with bayesdb_open(':memory:') as bdb:
         bdb.sql_execute('CREATE TABLE t (a, b, c, d, e)')
 
-        for a, b, c, d, e in itertools.product(*([range(2)]*5)):
+        for a, b, c, d, e in itertools.product(*([range(2)]*4+[['x','y']])):
             # XXX Insert synthetic data generator here.
             bdb.sql_execute('''
                 INSERT INTO t (a, b, c, d, e) VALUES (?, ?, ?, ?, ?)
@@ -40,7 +40,8 @@ def smoke_bdb():
 
         bdb.execute('''
             CREATE POPULATION p FOR t WITH SCHEMA (
-                MODEL a, b, c, d, e AS NUMERICAL
+                MODEL a, b, c, d AS NUMERICAL;
+                MODEL e AS NOMINAL
             )
         ''')
 
@@ -77,7 +78,8 @@ def test_estimate_cmi_equality_condition():
     with smoke_bdb() as bdb:
         bql = '''
             ESTIMATE
-                MUTUAL INFORMATION OF a WITH b GIVEN (c = 1) USING 10 SAMPLES
+                MUTUAL INFORMATION OF a WITH b GIVEN
+                    (c = 1, e = 'x') USING 10 SAMPLES
             BY p;
         '''
         result = bdb.execute(bql).fetchall()
