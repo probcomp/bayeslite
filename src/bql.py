@@ -200,9 +200,12 @@ def execute_phrase(bdb, phrase, bindings=()):
     if isinstance(phrase, ast.CreateTabSimModels):
         assert isinstance(phrase.simulation, ast.SimulateModels)
         with bdb.savepoint():
-            # XXX Manual implementation of IF NOT EXISTS, skips computing query.
-            if phrase.ifnotexists and core.bayesdb_has_table(bdb, phrase.name):
-                return empty_cursor(bdb)
+            # Check if table exists.
+            if core.bayesdb_has_table(bdb, phrase.name):
+                if phrase.ifnotexists:
+                    return empty_cursor(bdb)
+                raise BQLError(bdb,
+                    'Name already defined as table: %s' % (phrase.name),)
             # Set up schema and create the new table.
             qn = sqlite3_quote_name(phrase.name)
             qcns = map(sqlite3_quote_name, [
@@ -222,7 +225,6 @@ def execute_phrase(bdb, phrase, bindings=()):
             for row in rows:
                 bdb.sql_execute(insert_sql, row)
             return empty_cursor(bdb)
-
 
     if isinstance(phrase, ast.DropTab):
         with bdb.savepoint():
@@ -868,7 +870,7 @@ def simulate_models_rows(bdb, simulation):
     columns = [simulate_column(c.col) for c in simulation.columns]
     # All queries must return the same number of rows, equal to the number of
     # models of all generators implied by the query.
-    assert all(len(c) == len(columns[0]) for c in columns)
+    assert all(len(column) == len(columns[0]) for column in columns)
     # Convert the columns into rows.
     return zip(*columns)
 
