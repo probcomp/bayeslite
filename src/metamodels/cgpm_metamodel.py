@@ -373,8 +373,6 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             for colno, value in constraints
         }
 
-        print constraints
-        print evidence
         # Engine gives us a list of samples which it is our
         # responsibility to integrate over.
         mi_list = engine.mutual_information(
