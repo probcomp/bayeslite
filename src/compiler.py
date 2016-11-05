@@ -223,6 +223,9 @@ def compile_query(bdb, query, out):
         compile_infer_auto(bdb, query, out)
     elif isinstance(query, ast.Simulate):
         compile_simulate(bdb, query, out)
+    # XXX Disable SimulateModels without CreateTab
+    elif isinstance(query, ast.SimulateModels):
+        raise BQLError(bdb, 'SIMULATE FROM MODELS needs CREATE TABLE.')
     elif isinstance(query, ast.EstCols):
         compile_estcols(bdb, query, out)
     elif isinstance(query, ast.EstPairCols):

@@ -359,7 +359,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
     def column_mutual_information(self, bdb, generator_id, modelno, colno0,
             colno1, constraints, numsamples):
         # XXX Fix me!
-        return 0
+        return [0]
 
     def row_similarity(self, bdb, generator_id, modelno, rowid, target_rowid,
             colnos):

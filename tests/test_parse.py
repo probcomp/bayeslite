@@ -14,6 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import itertools
 import contextlib
 import pytest
 
@@ -846,6 +847,99 @@ def test_simulate():
                 ast.ExpLit(ast.LitInt(10)),
                 19)
         )]
+    # Specifying a quantity other than a variable should raise.
+    with pytest.raises(parse.BQLParseError):
+        parse_bql_string(
+            'simulate a, dependence probability of a with b from t limit 10;')
+    with pytest.raises(parse.BQLParseError):
+        parse_bql_string(
+            'create table f as simulate a, dependence probability of a with b '
+            'from t limit 10;')
+
+def test_simulate_models():
+    assert parse_bql_string(
+        'simulate dependence probability of a with b from models of t;') == [
+            ast.SimulateModels(
+                [
+                    ast.SimCol(ast.ExpBQLDepProb('a', 'b'), None),
+                ],
+                't', None
+            )
+    ]
+    assert parse_bql_string(
+        'simulate dependence probability of a with b AS q, '
+        'mutual information of c with d given (e, r=2.7) '
+            'using 100 samples as g '
+        'from models of p modeled by z') == [
+            ast.SimulateModels(
+                [
+                    ast.SimCol(
+                        ast.ExpBQLDepProb('a', 'b'), 'q'),
+                    ast.SimCol(
+                        ast.ExpBQLMutInf(
+                            'c', 'd',
+                            [
+                                ('e', ast.ExpLit(ast.LitNull(0))),
+                                ('r', ast.ExpLit(ast.LitFloat(2.7)))
+                            ],
+                            ast.ExpLit(ast.LitInt(100))),
+                        'g'
+                    ),
+                ],
+                'p', 'z'
+            )
+    ]
+    assert parse_bql_string(
+        'simulate probability of (a=2, c=1.1) given (b=0.5) '
+        'from models of p') == [
+            ast.SimulateModels(
+                [
+                    ast.SimCol(
+                        ast.ExpBQLProb(
+                            [
+                                ('a', ast.ExpLit(ast.LitInt(2))),
+                                ('c', ast.ExpLit(ast.LitFloat(1.1)))
+                            ],
+                            [('b', ast.ExpLit(ast.LitFloat(0.5)))]),
+                        None
+                    ),
+                ],
+                'p', None
+            )
+    ]
+    for temp, ifnotexists in itertools.product(
+            ('temp', ''), ('if not exists', '')):
+        assert parse_bql_string(
+            'create %s table %s f as '
+            'simulate dependence probability of a with b AS q, '
+            'mutual information of c with d '
+                'given (e, r=2.7) using 100 samples as g '
+            'from models of p modeled by z' % (temp, ifnotexists)) == [
+                ast.CreateTabSimModels(
+                    bool(temp),
+                    bool(ifnotexists),
+                    'f',
+                    ast.SimulateModels(
+                        [
+                            ast.SimCol(
+                                ast.ExpBQLDepProb('a', 'b'),
+                                'q'
+                            ),
+                            ast.SimCol(
+                                ast.ExpBQLMutInf(
+                                    'c', 'd',
+                                    [
+                                        ('e', ast.ExpLit(ast.LitNull(0))),
+                                        ('r', ast.ExpLit(ast.LitFloat(2.7)))
+                                    ],
+                                    ast.ExpLit(ast.LitInt(100))),
+                                'g'
+                            ),
+                        ],
+                        'p', 'z'
+                    )
+            )
+        ]
 
 def test_is_bql():
     assert ast.is_bql(ast.ExpLit(ast.LitInt(0))) == False

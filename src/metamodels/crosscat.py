@@ -1057,9 +1057,8 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         r0 = r[0]
         # r0 is (mi, linfoot), and we want mi.
         mi = r0[0]
-        # mi is [result for model 0, result for model 1, ...], and we want
-        # the mean.
-        return arithmetic_mean(mi)
+         # Pass through the distribution of MI to BayesDB without aggregation.
+        return mi
 
     def row_similarity(self, bdb, generator_id, modelno, rowid, target_rowid,
             colnos):

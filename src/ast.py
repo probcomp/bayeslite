@@ -47,6 +47,13 @@ CreateTabSim = namedtuple('CreateTabSim', [
     'name',                     # XXX name
     'simulation',               # Simulate
 ])
+CreateTabSimModels = namedtuple('CreateTabSimModels', [
+    # XXX Database name, &c.
+    'temp',                     # boolean
+    'ifnotexists',              # boolean
+    'name',                     # XXX name
+    'simulation',               # Simulate
+])
 CreateTabCsv = namedtuple('CreateTabCsv', [
     # XXX Database name, &c.
     'temp',                     # boolean
@@ -154,12 +161,18 @@ DropModels = namedtuple('DropModels', [
 ])
 
 Simulate = namedtuple('Simulate', [
-    'columns',                  # [XXX name]
-    'population',               # XXX name
-    'generator',                # XXX name
+    'columns',
+    'population',
+    'generator',
     'constraints',              # [(XXX name, Exp*)]
     'nsamples',                 # Exp* or None
     'accuracy',                 # int or None
+])
+
+SimulateModels = namedtuple('SimulateModels', [
+    'columns',
+    'population',
+    'generator',
 ])
 
 def is_query(phrase):
@@ -180,6 +193,8 @@ def is_query(phrase):
     if isinstance(phrase, InferExplicit):
         return True
     if isinstance(phrase, Simulate):
+        return True
+    if isinstance(phrase, SimulateModels):
         return True
     return False
 
@@ -236,6 +251,11 @@ PredCol = namedtuple('PredCol', [
 SelTab = namedtuple('SelTab', [
     'table',                    # XXX subquery or XXX name
     'name',                     # XXX name
+])
+
+SimCol = namedtuple('SimCol', [
+    'col',
+    'name',
 ])
 
 InferAuto = namedtuple('InferAuto', [
