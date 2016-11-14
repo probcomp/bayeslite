@@ -224,7 +224,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             del cache.engine[generator_id]
 
     def analyze_models(
-            self, bdb, generator_id, modelnos=None, iterations=1,
+            self, bdb, generator_id, modelnos=None, iterations=None,
             max_seconds=None, ckpt_iterations=None, ckpt_seconds=None,
             program=None):
         assert modelnos is None
