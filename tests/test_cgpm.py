@@ -587,13 +587,46 @@ def test_output_stattypes():
         bdb.execute('''
             CREATE METAMODEL satellites_g2 FOR satellites USING cgpm(
                 LATENT pc_3 NUMERICAL;
+                LATENT pc_4 NUMERICAL;
 
-                OVERRIDE MODEL FOR apogee, launch_mass, pc_3
-                USING factor_analysis(L=1)
+                OVERRIDE MODEL FOR apogee, launch_mass, pc_3, pc_4
+                USING factor_analysis(L=2)
             )
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR satellites_g2')
         bdb.execute('ANALYZE satellites_g2 FOR 2 ITERATION WAIT;')
+        # Cannot transitioned baseline and foreign using timed analyis.
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                ANALYZE satellites_g2 FOR 2 SECONDS WAIT (
+                    VARIABLES country_of_operator, apogee, launch_mass, pc_3);
+            ''')
+        bdb.execute('''
+            ANALYZE satellites_g2 FOR 1 ITERATION WAIT (
+                VARIABLES apogee, launch_mass);
+        ''')
+        # Dependence probability of manifest with latent.
+        cursor = bdb.execute('''
+            ESTIMATE DEPENDENCE PROBABILITY OF apogee WITH pc_3
+            BY satellites MODELED BY satellites_g2;
+        ''').fetchall()
+        assert cursor[0][0] == 1.
+        # Dependence probability of latent with latent.
+        cursor = bdb.execute('''
+            ESTIMATE DEPENDENCE PROBABILITY OF pc_3 WITH pc_4
+            BY satellites MODELED BY satellites_g2;
+        ''').fetchall()
+        assert cursor[0][0] == 1.
+        # Mutual information of latent with manifest.
+        cursor = bdb.execute('''
+            ESTIMATE MUTUAL INFORMATION OF apogee WITH pc_4 USING 1 SAMPLES
+            BY satellites MODELED BY satellites_g2;
+        ''').fetchall()
+        # Mutual information of latent with latent.
+        cursor = bdb.execute('''
+            ESTIMATE MUTUAL INFORMATION OF pc_3 WITH pc_4 USING 1 SAMPLES
+            BY satellites MODELED BY satellites_g2;
+        ''').fetchall()
 
 def test_initialize_with_all_nulls():
     # This test ensures that trying to initialize a CGPM metamodel with any
