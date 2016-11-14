@@ -227,28 +227,68 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             self, bdb, generator_id, modelnos=None, iterations=None,
             max_seconds=None, ckpt_iterations=None, ckpt_seconds=None,
             program=None):
-        assert modelnos is None
+        # Not sure why model-based analysis is useful.
+        if modelnos:
+            raise NotImplementedError('CGpm analysis by models not supported.')
 
+        # XXX https://github.com/probcomp/cgpm/issues/167
         if ckpt_iterations is not None or ckpt_seconds is not None:
-            # XXX
             raise NotImplementedError('CGpm analysis checkpoint not supported.')
 
         if program is None:
             program = []
 
-        # Retrieve target variables and whether optimized.
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
+
+        # XXX Retrieve the engine. We will use the JSON metadata to determine
+        # the baseline and foreign variables. This information should really
+        # be stored directly as a table in the bdb, rather than in the engine.
+        engine = self._engine(bdb, generator_id)
+
+        # Retrieve user-specified target variables to transition.
         analyze_ast = cgpm_analyze.parse.parse(program)
-        varnos, optimized = _retrieve_analyze_variables(
+        vars_user, optimized = _retrieve_analyze_variables(
             bdb, generator_id, analyze_ast)
 
-        engine = self._engine(bdb, generator_id)
+        # Transitions all baseline variables only using lovecat.
         if optimized:
             engine.transition_lovecat(
                 N=iterations, S=max_seconds, multiprocess=self._multiprocess)
+
+        # More complex possibilities if using cgpm.
         else:
-            engine.transition(
-                N=iterations, S=max_seconds, cols=varnos,
-                multiprocess=self._multiprocess)
+            # Retrieve all, baseline, and foreign variable indices.
+            vars_all = core.bayesdb_variable_numbers(
+                bdb, population_id, generator_id)
+            vars_baseline = engine.states[0].outputs
+            vars_foreign = [v for v in vars_all if v not in vars_baseline]
+
+            # Partition user-specified variables into baseline and foreign.
+            if vars_user:
+                vars_target_baseline = [v for v in vars_user
+                    if v in vars_baseline]
+                vars_target_foreign = [v for v in vars_user
+                    if v in vars_foreign]
+            else:
+                vars_target_baseline = vars_baseline
+                vars_target_foreign = None
+
+            # Error checking.
+            assert vars_target_baseline or vars_target_foreign
+            # Timed analysis is incompatible with mixed baseline and foreign.
+            if max_seconds and (vars_target_baseline and vars_target_foreign):
+                raise BQLError(bdb,
+                    'Timed analysis accepts foreign xor baseline variables.')
+
+            if vars_target_baseline:
+                engine.transition(
+                    N=iterations, S=max_seconds, cols=vars_target_baseline,
+                    multiprocess=self._multiprocess)
+
+            if vars_target_foreign:
+                engine.transition_foreign(
+                    N=iterations, S=max_seconds, cols=vars_target_foreign,
+                    multiprocess=self._multiprocess)
 
         # Serialize the engine.
         engine_json = json_dumps(engine.to_metadata())
@@ -1106,32 +1146,17 @@ def _retrieve_analyze_variables(bdb, generator_id, ast):
         else:
             raise BQLError(bdb, 'Unknown clause in ANALYZE: %s.' % (ast,))
 
-    if variables is None:
-        variables = core.bayesdb_variable_names(
-            bdb, population_id, generator_id)
+    # OPTIMIZED is incompatible with any other clause.
+    if seen_optimized:
+        if seen_variables or seen_skip:
+            raise BQLError(bdb, 'OPTIMIZED incompatible with other clauses.')
 
-    varnos = [
+    variable_numbers = [
         core.bayesdb_variable_number(bdb, population_id, generator_id, v)
         for v in variables
-    ]
+    ] if variables else None
 
-    # TODO Perform error checking if the OPTIMIZED clause is used.
-    # In particular, the variables in OPTIMIZED must correspond
-    # EXACTLY to the variables that are modeled by the CrossCat
-    # baseline. Avoided this check for now since the nature of a
-    # variable is not stored in the bdb. For now, just check the
-    # user did not include a VARIABLES clause.
-    if seen_optimized:
-        if seen_variables:
-            raise BQLError(bdb, 'OPTIMIZED incompatible with VARIABLES')
-        # TODO Check if varnos are exactly the CrossCat variables.
-        # raise BQLError(bdb,
-        #     'The OPTIMIZED phrase in ANALYZE must target all the '
-        #     'variables modeled by the baseline, only. '
-        #     'Use SKIP to explicitly ignore analysis of overriden '
-        #     'variables')
-
-    return varnos, seen_optimized
+    return (variable_numbers, seen_optimized)
 
 
 def _default_categorical(bdb, generator_id, var):
