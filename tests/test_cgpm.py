@@ -341,7 +341,28 @@ def test_cgpm_kepler():
         assert n_ - n == 20
         bdb.execute('INITIALIZE 1 MODEL IF NOT EXISTS FOR g1')
         bdb.execute('ANALYZE g0 FOR 1 ITERATION WAIT')
+        bdb.execute('ANALYZE g0 FOR 1 ITERATION WAIT (VARIABLES period)')
         bdb.execute('ANALYZE g1 FOR 1 ITERATION WAIT')
+        bdb.execute('ANALYZE g1 FOR 1 ITERATION WAIT (VARIABLES period)')
+        # Cannot use OPTMIIZED with other clauses.
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                ANALYZE g1 FOR 1 ITERATION WAIT (OPTIMIZED; VARIABLES period)
+            ''')
+        # Cannot use timed analysis with mixed variables.
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                ANALYZE g1 FOR 5 SECONDS WAIT (VARIABLES period, apogee)
+            ''')
+        # Cannot use timed analysis with mixed variables (period by SKIP).
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                ANALYZE g1 FOR 5 SECONDS WAIT (SKIP apogee)
+            ''')
+        # OK to use iteration analysis with mixed values.
+        bdb.execute('''
+                ANALYZE g1 FOR 1 ITERATION WAIT (VARIABLES period, apogee)
+            ''')
         bdb.execute('''
             ESTIMATE DEPENDENCE PROBABILITY
                 FROM PAIRWISE VARIABLES OF satellites
