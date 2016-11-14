@@ -1218,6 +1218,7 @@ def test_parametrized():
                 'simulate age, RANK, division '
                 'from p given gender = \'F\' limit 4') == [
             'PRAGMA table_info("sim")',
+            'PRAGMA table_info("bayesdb_temp_0")',
             'SELECT COUNT(*) FROM bayesdb_population WHERE name = ?',
             'SELECT id FROM bayesdb_population WHERE name = ?',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
@@ -1243,8 +1244,6 @@ def test_parametrized():
                 'WHERE population_id = ? '
                 'AND (generator_id IS NULL OR generator_id = ?) '
                 'AND name = ?',
-            'CREATE TEMP TABLE IF NOT EXISTS "sim" '
-                '("age" NUMERIC,"RANK" NUMERIC,"division" NUMERIC)',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'SELECT MAX(_rowid_) FROM "t"',
             'SELECT token FROM bayesdb_rowid_tokens',
@@ -1341,16 +1340,26 @@ def test_parametrized():
                 'WHERE generator_id = ? AND colno = ?',
             'SELECT cc_colno FROM bayesdb_crosscat_column '
                 'WHERE generator_id = ? AND colno = ?',
-            'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
-            'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
-            'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
-            'INSERT INTO "sim" ("age","RANK","division") VALUES (?,?,?)',
+            'CREATE TEMP TABLE "bayesdb_temp_0" '
+                '("age" NUMERIC,"RANK" NUMERIC,"division" NUMERIC)',
+            'INSERT INTO "bayesdb_temp_0" ("age","RANK","division") '
+                'VALUES (?,?,?)',
+            'INSERT INTO "bayesdb_temp_0" ("age","RANK","division") '
+                'VALUES (?,?,?)',
+            'INSERT INTO "bayesdb_temp_0" ("age","RANK","division") '
+                'VALUES (?,?,?)',
+            'INSERT INTO "bayesdb_temp_0" ("age","RANK","division") '
+                'VALUES (?,?,?)',
+            'CREATE TEMP TABLE IF NOT EXISTS "sim" '
+                'AS SELECT * FROM "bayesdb_temp_0"',
+            'DROP TABLE "bayesdb_temp_0"'
         ]
 
         assert sqltraced_execute(
                 'select * from (simulate age from p '
                 'given gender = \'F\' limit 4)') == [
-            'PRAGMA table_info("bayesdb_temp_0")',
+            'PRAGMA table_info("bayesdb_temp_1")',
+            'SELECT COUNT(*) FROM bayesdb_population WHERE name = ?',
             'SELECT id FROM bayesdb_population WHERE name = ?',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'PRAGMA table_info("t")',
@@ -1427,13 +1436,13 @@ def test_parametrized():
                 'WHERE generator_id = ? AND colno = ?',
             'SELECT cc_colno FROM bayesdb_crosscat_column '
                 'WHERE generator_id = ? AND colno = ?',
-            'CREATE TEMP TABLE "bayesdb_temp_0" ("age" NUMERIC)',
-            'INSERT INTO "bayesdb_temp_0" ("age") VALUES (?)',
-            'INSERT INTO "bayesdb_temp_0" ("age") VALUES (?)',
-            'INSERT INTO "bayesdb_temp_0" ("age") VALUES (?)',
-            'INSERT INTO "bayesdb_temp_0" ("age") VALUES (?)',
-            'SELECT * FROM (SELECT * FROM "bayesdb_temp_0")',
-            'DROP TABLE "bayesdb_temp_0"',
+            'CREATE TEMP TABLE "bayesdb_temp_1" ("age" NUMERIC)',
+            'INSERT INTO "bayesdb_temp_1" ("age") VALUES (?)',
+            'INSERT INTO "bayesdb_temp_1" ("age") VALUES (?)',
+            'INSERT INTO "bayesdb_temp_1" ("age") VALUES (?)',
+            'INSERT INTO "bayesdb_temp_1" ("age") VALUES (?)',
+            'SELECT * FROM (SELECT * FROM "bayesdb_temp_1")',
+            'DROP TABLE "bayesdb_temp_1"',
         ]
         bdb.execute('''
             create population q for t (
@@ -1615,7 +1624,7 @@ def test_createtab():
             (36, 'F', 96000, 70, 'management', 2),
             (30, 'F', 81000, 73, 'engineering', 3),
         ]
-        with pytest.raises(apsw.SQLError):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute("create table u as select * from t where gender = 'F'")
         bdb.execute('drop table u')
         with pytest.raises(apsw.SQLError):
@@ -1818,6 +1827,10 @@ def test_guess_all():
 
 def test_misc_errors():
     with test_core.t1() as (bdb, _population_id, _generator_id):
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('create table t1 as SELECT 1 FROM t1'
+            # t1 already exists as a table.
+                ' limit 1')
         with pytest.raises(bayeslite.BQLError):
             # t1 already exists as a table.
             bdb.execute('create table t1 as simulate weight from p1'

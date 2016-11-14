@@ -81,6 +81,13 @@ def execute_phrase(bdb, phrase, bindings=()):
     if isinstance(phrase, ast.CreateTabAs):
         assert ast.is_query(phrase.query)
         with bdb.savepoint():
+            if core.bayesdb_has_table(bdb, phrase.name):
+                if phrase.ifnotexists:
+                    return empty_cursor(bdb)
+                else:
+                    raise BQLError(bdb,
+                        'Name already defined as table: %s' %
+                        (repr(phrase.name),))
             out = compiler.Output(n_numpar, nampar_map, bindings)
             qt = sqlite3_quote_name(phrase.name)
             temp = 'TEMP ' if phrase.temp else ''
@@ -103,98 +110,6 @@ def execute_phrase(bdb, phrase, bindings=()):
                         (repr(phrase.name),))
             bayesdb_read_csv_file(
                 bdb, phrase.name, phrase.csv, header=True, create=True)
-        return empty_cursor(bdb)
-
-    if isinstance(phrase, ast.CreateTabSim):
-        assert isinstance(phrase.simulation, ast.Simulate)
-        with bdb.savepoint():
-            if core.bayesdb_has_table(bdb, phrase.name):
-                if phrase.ifnotexists:
-                    return empty_cursor(bdb)
-                else:
-                    raise BQLError(bdb, 'Name already defined as table: %s' %
-                        (repr(phrase.name),))
-            if not core.bayesdb_has_population(
-                    bdb, phrase.simulation.population):
-                raise BQLError(bdb, 'No such population: %s' %
-                    (phrase.simulation.population,))
-            population_id = core.bayesdb_get_population(
-                bdb, phrase.simulation.population)
-            generator_id = None
-            if phrase.simulation.generator is not None:
-                if not core.bayesdb_has_generator(
-                        bdb, population_id, phrase.simulation.generator):
-                    raise BQLError(bdb, 'No such generator: %r' %
-                        (phrase.simulation.generator,))
-                generator_id = core.bayesdb_get_generator(
-                    bdb, population_id, phrase.simulation.generator)
-            table = core.bayesdb_population_table(bdb, population_id)
-            qn = sqlite3_quote_name(phrase.name)
-            qt = sqlite3_quote_name(table)
-            column_names = phrase.simulation.columns
-            qcns = map(sqlite3_quote_name, column_names)
-            cursor = bdb.sql_execute('PRAGMA table_info(%s)' % (qt,))
-            column_sqltypes = {}
-            for _colno, name, sqltype, _nonnull, _default, _primary in cursor:
-                assert casefold(name) not in column_sqltypes
-                column_sqltypes[casefold(name)] = sqltype
-            assert 0 < len(column_sqltypes)
-            for column_name in column_names:
-                if casefold(column_name) not in column_sqltypes:
-                    raise BQLError(bdb, 'No such variable'
-                        ' in population %r: %s' %
-                        (phrase.simulation.population, column_name))
-            for column_name, _expression in phrase.simulation.constraints:
-                cn = casefold(column_name)
-                if (cn not in column_sqltypes and
-                        cn not in core.bayesdb_rowid_tokens(bdb)):
-                    raise BQLError(bdb,
-                        'No such variable in population %s: %s' %
-                        (phrase.simulation.population, column_name))
-            # XXX Move to compiler.py.
-            # XXX Copypasta of this in compile_simulate!
-            out = compiler.Output(n_numpar, nampar_map, bindings)
-            out.write('SELECT ')
-            with compiler.compiling_paren(bdb, out, 'CAST(', ' AS INTEGER)'):
-                compiler.compile_nobql_expression(bdb,
-                    phrase.simulation.nsamples, out)
-            for _column_name, expression in phrase.simulation.constraints:
-                out.write(', ')
-                compiler.compile_nobql_expression(bdb, expression, out)
-            winders, unwinders = out.getwindings()
-            with compiler.bayesdb_wind(bdb, winders, unwinders):
-                cursor = bdb.sql_execute(out.getvalue(),
-                    out.getbindings()).fetchall()
-            assert len(cursor) == 1
-            nsamples = cursor[0][0]
-            assert isinstance(nsamples, int)
-            def map_var(var):
-                if casefold(var) not in core.bayesdb_rowid_tokens(bdb):
-                    return core.bayesdb_variable_number(
-                        bdb, population_id, generator_id, var)
-                else:
-                    return casefold(var)
-            def map_constraint(((var, _expression), value)):
-                return (map_var(var), value)
-            constraints = map(map_constraint,
-                zip(phrase.simulation.constraints, cursor[0][1:]))
-            colnos = map(map_var, column_names)
-            schema = ','.join('%s %s' %
-                    (qcn, column_sqltypes[casefold(column_name)])
-                for qcn, column_name in zip(qcns, column_names))
-            bdb.sql_execute('CREATE %sTABLE %s%s (%s)' %
-                ('TEMP ' if phrase.temp else '',
-                 'IF NOT EXISTS ' if phrase.ifnotexists else '',
-                 qn,
-                 schema))
-            insert_sql = '''
-                INSERT INTO %s (%s) VALUES (%s)
-            ''' % (qn, ','.join(qcns), ','.join('?' for qcn in qcns))
-            for row in bqlfn.bayesdb_simulate(bdb, population_id, constraints,
-                    colnos, generator_id=generator_id,
-                    numpredictions=nsamples,
-                    accuracy=phrase.simulation.accuracy):
-                bdb.sql_execute(insert_sql, row)
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.CreateTabSimModels):

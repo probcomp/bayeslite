@@ -592,17 +592,19 @@ def compile_select_table(bdb, table, out):
         assert False, 'Invalid select table: %s' % (repr(table),)
 
 def compile_simulate(bdb, simulate, out):
-    # XXX Reduce copypasta with case for CreateTabSim in bql.py.
     with bdb.savepoint():
         temptable = bdb.temp_table_name()
         assert not core.bayesdb_has_table(bdb, temptable)
+        if not core.bayesdb_has_population(bdb, simulate.population):
+            raise BQLError(bdb,
+                'No such population: %s' % (simulate.population,))
         population_id = core.bayesdb_get_population(bdb, simulate.population)
         generator_id = None
         if simulate.generator is not None:
             if not core.bayesdb_has_generator(
                     bdb, population_id, simulate.generator):
-                raise BQLError(bdb, 'No such generator: %r' %
-                    (simulate.generator,))
+                raise BQLError(bdb,
+                    'No such generator: %r' %(simulate.generator,))
             generator_id = core.bayesdb_get_generator(
                 bdb, population_id, simulate.generator)
         table = core.bayesdb_population_table(bdb, population_id)
@@ -627,13 +629,15 @@ def compile_simulate(bdb, simulate, out):
         assert 0 < len(column_sqltypes)
         for column_name in column_names:
             if casefold(column_name) not in column_sqltypes:
-                raise BQLError(bdb, 'No such variable in population %r: %r' %
+                raise BQLError(bdb,
+                    'No such variable in population %r: %r' %
                     (simulate.population, column_name))
         for column_name, _expression in simulate.constraints:
             cn = casefold(column_name)
             if (cn not in column_sqltypes and
                     cn not in core.bayesdb_rowid_tokens(bdb)):
-                raise BQLError(bdb, 'No such variable in population %r: %r' %
+                raise BQLError(bdb,
+                    'No such variable in population %r: %r' %
                     (simulate.population, column_name))
         # XXX Move to compiler.py.
         subout = out.subquery()
