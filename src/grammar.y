@@ -194,7 +194,8 @@ modelset(many)      ::= modelset(m) T_COMMA modelrange(r).
 modelrange(single)  ::= L_INTEGER(modelno).
 modelrange(multi)   ::= L_INTEGER(minno) T_MINUS L_INTEGER(maxno).
 
-anlimit(l)      ::= K_FOR anduration(duration).
+anlimit(one)      ::= K_FOR anduration(duration).
+anlimit(two)      ::= K_FOR anduration(duration0) K_OR anduration(duration1).
 
 anckpt_opt(none)    ::= .
 anckpt_opt(some)    ::= K_CHECKPOINT anduration(duration).

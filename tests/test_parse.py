@@ -587,8 +587,22 @@ def test_trivial_commands():
         [ast.InitModels(False, 't', 2)]
     assert parse_bql_string('initialize 2 models if not exists for t;') == \
         [ast.InitModels(True, 't', 2)]
+    assert parse_bql_string('create temporary table tx as'
+            ' infer explicit x, predict x as xi confidence xc from t_cc') == \
+        [ast.CreateTabAs(True, False, 'tx',
+            ast.InferExplicit(
+                [
+                    ast.SelColExp(ast.ExpCol(None, 'x'), None),
+                    ast.PredCol('x', 'xi', 'xc', None),
+                ],
+                't_cc', None, None, None, None, None,
+            ))]
+
+def test_analyze():
     assert parse_bql_string('analyze t for 1 iteration;') == \
         [ast.AnalyzeModels('t', None, 1, None, None, None, False, None)]
+    assert parse_bql_string('analyze t for 7 seconds or 1 iteration;') == \
+        [ast.AnalyzeModels('t', None, 1, 7, None, None, False, None)]
     assert parse_bql_string('analyze t for 1 iteration wait;') == \
         [ast.AnalyzeModels('t', None, 1, None, None, None, True, None)]
     assert parse_bql_string('analyze t for 1 minute;') == \
@@ -597,6 +611,8 @@ def test_trivial_commands():
         [ast.AnalyzeModels('t', None, None, 60, None, None, True, None)]
     assert parse_bql_string('analyze t for 2 minutes;') == \
         [ast.AnalyzeModels('t', None, None, 120, None, None, False, None)]
+    assert parse_bql_string('analyze t for 100 iterations or 2 minutes;') == \
+        [ast.AnalyzeModels('t', None, 100, 120, None, None, False, None)]
     assert parse_bql_string('analyze t for 2 minutes wait;') == \
         [ast.AnalyzeModels('t', None, None, 120, None, None, True, None)]
     assert parse_bql_string('analyze t for 1 second;') == \
@@ -624,16 +640,12 @@ def test_trivial_commands():
     assert parse_bql_string('analyze t for 10 seconds'
             ' checkpoint 3 seconds') == \
         [ast.AnalyzeModels('t', None, None, 10, None, 3, False, None)]
-    assert parse_bql_string('create temporary table tx as'
-            ' infer explicit x, predict x as xi confidence xc from t_cc') == \
-        [ast.CreateTabAs(True, False, 'tx',
-            ast.InferExplicit(
-                [
-                    ast.SelColExp(ast.ExpCol(None, 'x'), None),
-                    ast.PredCol('x', 'xi', 'xc', None),
-                ],
-                't_cc', None, None, None, None, None,
-            ))]
+    assert parse_bql_string('analyze t for 1 minute or 10 minutes'
+            ' checkpoint 3 seconds') == \
+        [ast.AnalyzeModels('t', None, None, 60, None, 3, False, None)]
+    assert parse_bql_string('analyze t for 100 iterations or 10 iterations'
+            ' checkpoint 3 seconds') == \
+        [ast.AnalyzeModels('t', None, 10, None, None, 3, False, None)]
 
 def test_infer_trivial():
     assert parse_bql_string('infer x from p') == \
