@@ -18,6 +18,8 @@ from __future__ import division
 
 import contextlib
 import math
+import time
+
 import numpy as np
 import pytest
 
@@ -245,6 +247,42 @@ def test_cgpm_smoke():
         for var in ['output_', 'cat_', 'midput', 'excat']:
             with pytest.raises(BQLError):
                 cgpm_smoke_tests(bdb, None, [var])
+
+def test_cgpm_analysis_iteration_timed__ci_slow():
+    # Test that the minimum of iterations and wall clock are used for ANALYZE.
+    # The point of these tests is not for fine-grained timing control (those
+    # tests exists in the python interface, there is additional bayesdb bql
+    # which makes the time less predictable), but ensuring that clealry
+    # extreme amounts of analysis are quickly short-circuited.
+    with cgpm_smoke_bdb() as bdb:
+
+        bdb.execute('CREATE METAMODEL g2 FOR p USING cgpm')
+        bdb.execute('INITIALIZE 2 MODELS FOR g2')
+
+        start0 = time.time()
+        bdb.execute('''
+            ANALYZE g2 FOR 10000 ITERATION OR 5 SECONDS WAIT;
+        ''')
+        assert 5 < time.time() - start0 < 15
+
+        start1 = time.time()
+        bdb.execute('''
+            ANALYZE g2 FOR 10000 ITERATION OR 5 SECONDS WAIT (OPTIMIZED)
+        ''')
+        assert 5 < time.time() - start1 < 15
+
+        start2 = time.time()
+        bdb.execute('''
+            ANALYZE g2 FOR 1 ITERATION OR 100 MINUTES WAIT;
+        ''')
+        assert 0 < time.time() - start2 < 15
+
+        start3 = time.time()
+        bdb.execute('''
+            ANALYZE g2 FOR 1 ITERATION OR 100 SECONDS WAIT (OPTIMIZED)
+        ''')
+        assert 0 < time.time() - start3 < 15
+
 
 # Use dummy, quick version of Kepler's laws.  Allow an extra
 # distribution argument to make sure it gets passed through.
