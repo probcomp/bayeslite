@@ -1049,12 +1049,15 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
 def _retrieve_analyze_variables(bdb, generator_id, ast):
 
     population_id = core.bayesdb_generator_population(bdb, generator_id)
-    # Transition all variables by default.
+
+    # Transitions all variables by default.
     variables = None
 
     # Exactly 1 VARIABLES or SKIP clause supported for simplicity.
     seen_variables, seen_skip, seen_optimized = False, False, False
+
     for clause in ast:
+
         # Transition user specified variables only.
         if isinstance(clause, cgpm_analyze.parse.Variables):
             if seen_variables or seen_skip:
@@ -1073,6 +1076,7 @@ def _retrieve_analyze_variables(bdb, generator_id, ast):
                     'Unknown variables in ANALYZE: %r'
                     % (sorted(unknown),))
             variables = sorted(included)
+
         # Transition all variables except user specified skip.
         elif isinstance(clause, cgpm_analyze.parse.Skip):
             if seen_variables or seen_skip:
@@ -1093,8 +1097,11 @@ def _retrieve_analyze_variables(bdb, generator_id, ast):
             all_vars = core.bayesdb_variable_names(
                 bdb, population_id, generator_id)
             variables = sorted(set(all_vars) - excluded)
+
+        # OPTIMIZED is incompatible with any other clause.
         elif isinstance(clause, cgpm_analyze.parse.Optimized):
             seen_optimized = True
+
         # Unknown/impossible clause.
         else:
             raise ValueError('Unknown clause in ANALYZE: %s.' % ast)
