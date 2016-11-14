@@ -1104,7 +1104,7 @@ def _retrieve_analyze_variables(bdb, generator_id, ast):
 
         # Unknown/impossible clause.
         else:
-            raise ValueError('Unknown clause in ANALYZE: %s.' % ast)
+            raise BQLError(bdb, 'Unknown clause in ANALYZE: %s.' % (ast,))
 
     if variables is None:
         variables = core.bayesdb_variable_names(
