@@ -501,7 +501,7 @@ def bayesdb_simulate(bdb, population_id, constraints, colnos,
     def simulate(generator_id, metamodel, n):
         return metamodel.simulate_joint(
             bdb, generator_id, targets,
-            constraints, None, num_predictions=n, accuracy=accuracy)
+            constraints, None, num_samples=n, accuracy=accuracy)
     generator_ids = [generator_id] if generator_id is not None else \
         core.bayesdb_population_generators(bdb, population_id)
     metamodels = [core.bayesdb_generator_metamodel(bdb, generator_id)

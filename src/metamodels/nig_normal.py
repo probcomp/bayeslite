@@ -259,7 +259,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
 
     def simulate_joint(
             self, bdb, generator_id, targets, _constraints, modelno=None,
-            num_predictions=1, accuracy=None):
+            num_samples=1, accuracy=None):
         # Note: The constraints are irrelevant because columns are
         # independent in the true distribution (except in the case of
         # shared, unknown hyperparameters), and cells in a column are
@@ -274,7 +274,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             (mus, sigmas) = self._model_mus_sigmas(bdb, generator_id, modelno)
             return [[self._simulate_1(bdb, generator_id, mus, sigmas, colno)
                      for (_, colno) in targets]
-                    for _ in range(num_predictions)]
+                    for _ in range(num_samples)]
 
     def _simulate_1(self, bdb, generator_id, mus, sigmas, colno):
         if colno < 0:

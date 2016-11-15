@@ -428,9 +428,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
     def simulate_joint(
             self, bdb, generator_id, targets, constraints, modelno,
-            num_predictions=None, accuracy=None):
-        if num_predictions is None:
-            num_predictions = 1
+            num_samples=None, accuracy=None):
+        if num_samples is None:
+            num_samples = 1
         rowid = self._unique_rowid(
             [r for r, _c in targets] + [r for r, _c, _v in constraints])
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
@@ -444,7 +444,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Retrieve the engine.
         engine = self._engine(bdb, generator_id)
         samples = engine.simulate(
-            cgpm_rowid, cgpm_query, cgpm_evidence, N=num_predictions,
+            cgpm_rowid, cgpm_query, cgpm_evidence, N=num_samples,
             accuracy=accuracy, multiprocess=self._multiprocess)
         weighted_samples = engine._likelihood_weighted_resample(
             samples, cgpm_rowid, cgpm_evidence, multiprocess=self._multiprocess)
