@@ -1108,7 +1108,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         return value, confidence
 
     def simulate_joint(self, bdb, generator_id, targets, constraints,
-            modelno, num_predictions=1, accuracy=None):
+            modelno, num_samples=1, accuracy=None):
         M_c = self._crosscat_metadata(bdb, generator_id)
         # An invalid constraint value should result in a BQL error.
         if constraints:
@@ -1130,7 +1130,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             X_D=X_D_list,
             Y=Y,
             Q=Q,
-            n=num_predictions
+            n=num_samples
         )
         return [[crosscat_code_to_value(bdb, generator_id, M_c, colno, code)
                 for ((_, colno), code) in zip(targets, raw_output)]

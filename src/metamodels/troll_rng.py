@@ -49,8 +49,8 @@ class TrollMetamodel(metamodel.IBayesDBMetamodel):
     def drop_models(self, *args, **kwargs): pass
     def analyze_models(self, *args, **kwargs): pass
     def simulate_joint(self, _bdb, _generator_id, targets, _constraints,
-            modelno=None, num_predictions=1):
-        return [[9 for _ in targets]] * num_predictions
+            modelno=None, num_samples=1):
+        return [[9 for _ in targets]] * num_samples
     def logpdf_joint(self, _bdb, _generator_id, targets, constraints,
             modelno=None):
         for (_, _, value) in constraints:

@@ -211,7 +211,7 @@ class IBayesDBMetamodel(object):
         raise NotImplementedError
 
     def simulate_joint(self, bdb, generator_id, targets, constraints, modelno,
-            num_predictions=1, accuracy=None):
+            num_samples=1, accuracy=None):
         """Simulate `targets` from a generator, subject to `constraints`.
 
         Returns a list of lists of values for the specified targets.
@@ -222,7 +222,7 @@ class IBayesDBMetamodel(object):
 
         `constraints` is a list of ``(rowid, colno, value)`` triples.
 
-        `num_predictions` is the number of results to return.
+        `num_samples` is the number of results to return.
 
         `accuracy` is a generic parameter (usually int) which specifies the
         desired accuracy, compute time, etc if the simulations are approximately
