@@ -230,19 +230,13 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Not sure why model-based analysis is useful.
         if modelnos:
             raise NotImplementedError('CGpm analysis by models not supported.')
-
         # XXX https://github.com/probcomp/cgpm/issues/167
         if ckpt_iterations is not None or ckpt_seconds is not None:
             raise NotImplementedError('CGpm analysis checkpoint not supported.')
-
         if program is None:
             program = []
 
-        population_id = core.bayesdb_generator_population(bdb, generator_id)
-
-        # XXX Retrieve the engine. We will use the JSON metadata to determine
-        # the baseline and foreign variables. This information should really
-        # be stored directly as a table in the bdb, rather than in the engine.
+        # Retrieve the engine.
         engine = self._engine(bdb, generator_id)
 
         # Retrieve user-specified target variables to transition.
@@ -257,34 +251,37 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # More complex possibilities if using cgpm.
         else:
-            # Retrieve all, baseline, and foreign variable indices.
-            vars_all = core.bayesdb_variable_numbers(
-                bdb, population_id, generator_id)
-            vars_baseline = engine.states[0].outputs
-            vars_foreign = [v for v in vars_all if v not in vars_baseline]
+            # XXX Retrieve all, baseline, and foreign variable indices.
+            state = engine.states[0]
+            vars_baseline = state.outputs
+            vars_foreign = list(itertools.chain.from_iterable([
+                cgpm.outputs for cgpm in state.hooked_cgpms.itervalues()
+            ]))
+
+            # By default transition all baseline variables only.
+            vars_target_baseline = vars_baseline
+            vars_target_foreign = None
 
             # Partition user-specified variables into baseline and foreign.
             if vars_user:
-                vars_target_baseline = [v for v in vars_user
-                    if v in vars_baseline]
-                vars_target_foreign = [v for v in vars_user
-                    if v in vars_foreign]
-            else:
-                vars_target_baseline = vars_baseline
-                vars_target_foreign = None
+                intersection = lambda a,b: [x for x in a if x in b]
+                vars_target_baseline = intersection(vars_user, vars_baseline)
+                vars_target_foreign = intersection(vars_user, vars_foreign)
 
-            # Error checking.
             assert vars_target_baseline or vars_target_foreign
+
             # Timed analysis is incompatible with mixed baseline and foreign.
             if max_seconds and (vars_target_baseline and vars_target_foreign):
                 raise BQLError(bdb,
                     'Timed analysis accepts foreign xor baseline variables.')
 
+            # Run transitions on baseline variables.
             if vars_target_baseline:
                 engine.transition(
                     N=iterations, S=max_seconds, cols=vars_target_baseline,
                     multiprocess=self._multiprocess)
 
+            # Run transitions on foreign variables.
             if vars_target_foreign:
                 engine.transition_foreign(
                     N=iterations, S=max_seconds, cols=vars_target_foreign,
