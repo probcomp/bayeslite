@@ -587,10 +587,11 @@ def test_output_stattypes():
         bdb.execute('''
             CREATE METAMODEL satellites_g2 FOR satellites USING cgpm(
                 LATENT pc_3 NUMERICAL;
-                LATENT pc_4 NUMERICAL;
 
                 OVERRIDE MODEL FOR apogee, launch_mass, pc_3, pc_4
-                USING factor_analysis(L=2)
+                USING factor_analysis(L=2);
+
+                LATENT pc_4 NUMERICAL
             )
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR satellites_g2')
