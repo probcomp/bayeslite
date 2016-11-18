@@ -475,6 +475,56 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         return engine._likelihood_weighted_integrate(
             logpdfs, cgpm_rowid, cgpm_evidence, multiprocess=self._multiprocess)
 
+    def insert_many(self, bdb, generator_id, num=None):
+        # Get the table name, quoted for constructing SQL.
+        table_name = core.bayesdb_generator_table(bdb, generator_id)
+        qt = sqlite3_quote_name(table_name)
+
+        # Retrieve rowids from the base table yet to be incorporated.
+        cursor = bdb.sql_execute('''
+            SELECT oid FROM %s
+                WHERE oid NOT IN (
+                    SELECT table_rowid FROM bayesdb_cgpm_individual
+                    WHERE generator_id = ?
+                )
+        ''' % (qt,), (generator_id,))
+        rowids_unincorporated = [row[0] for row in cursor]
+
+        # By default, incorporate all the unincorporated rowids.
+        if num is None:
+            num = len(rowids_unincorporated)
+
+        if num > 0:
+            # Resample unincorporated rowids from the base table
+            rowids_resampled = bdb.np_prng.choice(
+                rowids_unincorporated,
+                size=max(num, len(rowids_unincorporated)),
+                replace=False)
+
+            # Update the bayesdb_cgpm_individual with the new row mapping.
+            for table_rowid in rowids_resampled:
+                self._insert_one(bdb, generator_id, table_rowid)
+
+    def _insert_one(self, bdb, generator_id, rowid):
+        # Incorporates num_rows from the base table.
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        varnames = core.bayesdb_variable_names(bdb, population_id, None)
+
+        bdb.sql_execute('''
+            INSERT INTO bayesdb_cgpm_individual
+                (generator_id, rowid, cgpm_rowid)
+                VALUES (?, ?,
+                    (SELECT MAX(cgpm_rowid) + 1 FROM bayesdb_cgpm_individual))
+        ''', (generator_id, rowid))
+
+        data = self._data(bdb, generator_id, varnames, rowids=[rowid])
+        row = data[0]
+
+        # TODO: Partition into baseline and foreign.
+        # Incorporate into baseline.
+        # Incorporate into foreign.
+
+
     def _unique_rowid(self, rowids):
         if len(set(rowids)) != 1:
             raise ValueError('Multiple-row query: %r' % (list(set(rowids)),))
