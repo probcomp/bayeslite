@@ -647,6 +647,21 @@ def test_analyze():
             ' checkpoint 3 seconds') == \
         [ast.AnalyzeModels('t', None, 10, None, None, 3, False, None)]
 
+def test_create_tab_csv():
+    assert parse_bql_string('create temp table if not exists f '
+            'from \'foo.csv\'') == \
+        [ast.CreateTabCsv(True, True, 'f', 'foo.csv')]
+    assert parse_bql_string('create table if not exists f '
+            'from \'foo.csv\'') == \
+        [ast.CreateTabCsv(False, True, 'f', 'foo.csv')]
+    assert parse_bql_string('create table f '
+            'from \'foo.csv\'') == \
+        [ast.CreateTabCsv(False, False, 'f', 'foo.csv')]
+    # Using double quotes for csv pathname should raise.
+    with pytest.raises(parse.BQLParseError):
+        parse_bql_string('create temp table if not exists f '
+            'from "foo.csv"')
+
 def test_infer_trivial():
     assert parse_bql_string('infer x from p') == \
         [ast.InferAuto([ast.InfColOne('x', None)], ast.ExpLit(ast.LitInt(0)),
