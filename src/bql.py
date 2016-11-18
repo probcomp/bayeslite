@@ -307,6 +307,23 @@ def execute_phrase(bdb, phrase, bindings=()):
                     bdb.sql_execute(
                         update_stattype_sql,
                         (casefold(cmd.stattype), population_id,))
+                elif isinstance(cmd, ast.AlterPopResample):
+                    # For now, disable user-specified table other than the
+                    # base table.
+                    if cmd.table and casefold(cmd.table) != \
+                            core.bayesdb_population_table(bdb, population_id):
+                        raise BQLError(bdb,
+                            'RESAMPLE accepts population base table only.'
+                            % (cmd.table))
+                    # Insert the rows into each generator for the population.
+                    generator_ids = core.bayesdb_population_generators(
+                            bdb, population_id)
+                    metamodels = [
+                        core.bayesdb_generator_metamodel(bdb, g)
+                        for g in generator_ids
+                    ]
+                    for g, m in zip(generator_ids, metamodels):
+                        m.insert_many(bdb, g)
                 else:
                     assert False, 'Invalid ALTER POPULATION command: %s' % \
                         (repr(cmd),)
