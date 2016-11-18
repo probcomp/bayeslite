@@ -662,6 +662,23 @@ def test_create_tab_csv():
         parse_bql_string('create temp table if not exists f '
             'from "foo.csv"')
 
+def test_alterpop_stattype():
+    assert parse_bql_string('alter population p '
+            'set stattypes for a to normal') == \
+        [ast.AlterPop('p',
+            [ast.AlterPopStatType(['a'], 'normal')]
+        )]
+    assert parse_bql_string('alter population g '
+            'set stattypes for a, b to BETA') == \
+        [ast.AlterPop('g', [ast.AlterPopStatType(['a', 'b'], 'BETA')])]
+    assert parse_bql_string('alter population p '
+            'set stattypes for a, b to beta, '
+            'set stattypes for c to nominal') == \
+        [ast.AlterPop('p', [
+            ast.AlterPopStatType(['a', 'b'], 'beta'),
+            ast.AlterPopStatType(['c'], 'nominal'),]
+        )]
+
 def test_infer_trivial():
     assert parse_bql_string('infer x from p') == \
         [ast.InferAuto([ast.InfColOne('x', None)], ast.ExpLit(ast.LitInt(0)),
