@@ -191,8 +191,16 @@ class BQLSemantics(object):
 
     def p_alterpop_cmds_one(self, cmd):         return [cmd]
     def p_alterpop_cmds_many(self, cmds, cmd):  cmds.append(cmd); return cmds
+
     def p_alterpop_cmd_stattype(self, cols, stattype):
         return ast.AlterPopStatType(cols, stattype)
+
+    def p_alterpop_cmd_resample(self, num, table):
+        return ast.AlterPopResample(num, table)
+    def p_resample_table_opt_none(self):        return None
+    def p_resample_table_opt_one(self, table):  return table
+    def p_resample_num_opt_none(self):          return None
+    def p_resample_num_opt_one(self, num):      return num
 
     def p_pop_schema_one(self, cl):             return [cl]
     def p_pop_schema_many(self, schema, cl):    schema.append(cl); return schema

@@ -679,6 +679,16 @@ def test_alterpop_stattype():
             ast.AlterPopStatType(['c'], 'nominal'),]
         )]
 
+def test_alterpop_resample():
+    assert parse_bql_string('alter population p resample') == \
+        [ast.AlterPop('p', [ast.AlterPopResample(None, None)])]
+    assert parse_bql_string('alter population p resample from x') == \
+        [ast.AlterPop('p', [ast.AlterPopResample(None, 'x')])]
+    assert parse_bql_string('alter population p resample(10) from x') == \
+        [ast.AlterPop('p', [ast.AlterPopResample(ast.LitInt(10), 'x')])]
+    with pytest.raises(parse.BQLParseError):
+        assert parse_bql_string('alter population p resample() from x')
+
 def test_infer_trivial():
     assert parse_bql_string('infer x from p') == \
         [ast.InferAuto([ast.InfColOne('x', None)], ast.ExpLit(ast.LitInt(0)),

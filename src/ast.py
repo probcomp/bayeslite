@@ -109,6 +109,10 @@ AlterPopStatType = namedtuple('AlterGenRenameGen', [
     'names',
     'stattype',
 ])
+AlterPopResample = namedtuple('AlterPopResample', [
+    'num',
+    'table',
+])
 
 CreateGen = namedtuple('CreateGen', [
     'name',                     # XXX name

@@ -109,6 +109,7 @@ keywords = {
     "pvalue": grammar.K_PVALUE,
     "regexp": grammar.K_REGEXP,
     "rename": grammar.K_RENAME,
+    "resample": grammar.K_RESAMPLE,
     "respect": grammar.K_RESPECT,
     "rollback": grammar.K_ROLLBACK,
     "row": grammar.K_ROW,

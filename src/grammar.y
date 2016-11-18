@@ -91,6 +91,15 @@ alterpop_cmds(many) ::= alterpop_cmds(cmds) T_COMMA alterpop_cmd(cmd).
 alterpop_cmd(stattype) ::= K_SET K_STATTYPES|K_STATTYPE
                 K_FOR|K_OF pop_columns(cols) K_TO stattype(stattype).
 
+alterpop_cmd(resample) ::=
+                K_RESAMPLE resample_num_opt(num) resample_table_opt(table).
+
+resample_table_opt(none)    ::= .
+resample_table_opt(one)     ::= K_FROM table_name(table).
+
+resample_num_opt(none)      ::= .
+resample_num_opt(one)       ::= T_LROUND literal(num) T_RROUND.
+
 pop_schema(one)     ::= pop_clause(cl).
 pop_schema(many)    ::= pop_schema(schema) T_SEMI pop_clause(cl).
 
@@ -747,6 +756,7 @@ typearg(negative)   ::= T_MINUS L_INTEGER(i).
     K_PVALUE
     K_REGEXP
     K_RENAME
+    K_RESAMPLE
     K_RESPECT
     K_ROLLBACK
     K_ROW
