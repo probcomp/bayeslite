@@ -480,7 +480,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             raise ValueError('Multiple-row query: %r' % (list(set(rowids)),))
         return rowids[0]
 
-    def _data(self, bdb, generator_id, vars):
+    def _data(self, bdb, generator_id, vars, rowids=None):
         # Get the column numbers and statistical types.
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         colnos = [
@@ -507,13 +507,20 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             return 'CAST(t.%s AS %s)' % (qv, qa)
         qexpressions = ','.join(map(cast, vars, colnos, stattypes))
 
+        # Did the user specify rowids?
+        where_rowid = ''
+        if rowids is not None:
+            rowids_list = str.join(',', map(str, rowids))
+            where_rowid = 'AND t._rowid_ IN (%s)' % (rowids_list)
+
         # Get a cursor.
         cursor = bdb.sql_execute('''
             SELECT %s FROM %s AS t, bayesdb_cgpm_individual AS ci
                 WHERE ci.generator_id = ?
                     AND ci.table_rowid = t._rowid_
+                    %s
             ORDER BY t._rowid_ ASC
-        ''' % (qexpressions, qt), (generator_id,))
+        ''' % (qexpressions, qt, where_rowid), (generator_id,))
 
         # Map values to codes.
         def map_value(colno, value):
