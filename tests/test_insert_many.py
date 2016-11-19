@@ -53,7 +53,7 @@ for row in data_multivariate[:4]:
 bdb.execute('''
     CREATE POPULATION p FOR t WITH SCHEMA (
         MODEL y, z, w AS NUMERICAL;
-        IGNORE x
+        MODEL x AS NOMINAL
     )
 ''')
 
@@ -64,5 +64,9 @@ bdb.execute('ANALYZE m0 FOR 20 ITERATION WAIT ( OPTIMIZED )')
 bdb.execute('CREATE METAMODEL m1 FOR p;')
 bdb.execute('INITIALIZE 2 MODELS FOR m1')
 bdb.execute('ANALYZE m1 FOR 20 ITERATION WAIT ( OPTIMIZED )')
+
+for row in data_multivariate[4:]:
+    bdb.sql_execute(
+        'INSERT INTO t (x, y, z, w) VALUES (?, ?, ?, ?)', row)
 
 bdb.execute('ALTER POPULATION p RESAMPLE(100);')

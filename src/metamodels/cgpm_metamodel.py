@@ -494,36 +494,49 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         if num is None:
             num = len(rowids_unincorporated)
 
-        if num > 0:
-            # Resample unincorporated rowids from the base table
-            rowids_resampled = bdb.np_prng.choice(
-                rowids_unincorporated,
-                size=max(num, len(rowids_unincorporated)),
-                replace=False)
+        # Exit early if there are no new rows to incorporate.
+        if num == 0:
+            return
 
-            # Update the bayesdb_cgpm_individual with the new row mapping.
-            for table_rowid in rowids_resampled:
-                self._insert_one(bdb, generator_id, table_rowid)
+        # Resample unincorporated rowids from the base table.
+        num_resample = max(num, len(rowids_unincorporated))
+        rowids_resampled = bdb.np_prng.choice(
+            rowids_unincorporated, size=num_resample, replace=False)
 
-    def _insert_one(self, bdb, generator_id, rowid):
-        # Incorporates num_rows from the base table.
+        # Find the cgpm_rowids.
+        cursor = bdb.sql_execute('''
+            SELECT MAX(cgpm_rowid) + 1 FROM bayesdb_cgpm_individual
+            WHERE generator_id = ?
+        ''', (generator_id,))
+        next_cgpm_rowid = cursor_value(cursor)
+        cgpm_rowids = range(next_cgpm_rowid, next_cgpm_rowid + num_resample)
+
+        # Zip the new table cgpm rowids.
+        new_rowid_pairs = zip(rowids_resampled, cgpm_rowids)
+
+        # Update the bayesdb_cgpm_individual new rowids.
+        bdb.sql_execute('''
+            INSERT INTO bayesdb_cgpm_individual
+            (generator_id, table_rowid, cgpm_rowid)
+            VALUES %s
+        ''' % (','.join(
+            (str((generator_id, t, c)) for t, c in new_rowid_pairs))))
+
+        # Retrieve population and variable names.
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         varnames = core.bayesdb_variable_names(bdb, population_id, None)
 
-        bdb.sql_execute('''
-            INSERT INTO bayesdb_cgpm_individual
-                (generator_id, rowid, cgpm_rowid)
-                VALUES (?, ?,
-                    (SELECT MAX(cgpm_rowid) + 1 FROM bayesdb_cgpm_individual))
-        ''', (generator_id, rowid))
+        # Incorporate each row into the cgpms.
+        for table_rowid, cgpm_rowid in new_rowid_pairs:
+            # Retrieve the data.
+            data = self._data(bdb, generator_id, varnames, rowids=[table_rowid])
+            row = data[0]
 
-        data = self._data(bdb, generator_id, varnames, rowids=[rowid])
-        row = data[0]
+            print table_rowid, cgpm_rowid, row
 
         # TODO: Partition into baseline and foreign.
         # Incorporate into baseline.
         # Incorporate into foreign.
-
 
     def _unique_rowid(self, rowids):
         if len(set(rowids)) != 1:
