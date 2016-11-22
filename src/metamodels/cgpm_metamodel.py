@@ -372,17 +372,23 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             conf = 0 # XXX Punt confidence for now
             return pred, conf
 
+        # If rowid is a hypothetical cell for cgpm (does not exist in
+        # bayesdb_cgpm_individual.table_rowid) but exists in the base table
+        # (by INSERT INTO or SUBSAMPLE), then retrieve all values for rowid
+        # as the constraints.
         constraints = []
-        # If rowid is a hypothetical cell for cgpm (did not exist at the time
-        # of INITIALIZE), but exists in the base table (by INSERT INTO), then
-        # retrieve all values for rowid as the constraints.
+
+        # Does the rowid exist in the base table?
         exists = rowid < core.bayesdb_generator_fresh_row_id(bdb, generator_id)
-        max_cgpm_rowid = bdb.sql_execute('''
-            SELECT MAX(table_rowid) FROM bayesdb_cgpm_individual
-            WHERE generator_id = ?
-        ''', (generator_id,)).fetchall()[0][0]
-        hypothetical = rowid > max_cgpm_rowid
-        if exists and hypothetical:
+
+        # Is the rowid incorporated into the cgpm?
+        incorporated = bdb.sql_execute('''
+            SELECT 1 FROM bayesdb_cgpm_individual
+            WHERE generator_id = ? AND table_rowid = ?
+            LIMIT 1
+        ''', (generator_id, rowid,)).fetchall()
+
+        if exists and (not incorporated):
             population_id = core.bayesdb_generator_population(bdb, generator_id)
             # Retrieve all other variables except colno, and ignore latents in
             # generator_id, and place them in the constraints.
