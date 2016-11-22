@@ -251,12 +251,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # More complex possibilities if using cgpm.
         else:
-            # XXX Retrieve all, baseline, and foreign variable indices.
-            state = engine.states[0]
-            vars_baseline = state.outputs
-            vars_foreign = list(itertools.chain.from_iterable([
-                cgpm.outputs for cgpm in state.hooked_cgpms.itervalues()
-            ]))
+            vars_baseline = self._retrieve_baseline_variables(bdb, generator_id)
+            vars_foreign = self._retrieve_foreign_variables(bdb, generator_id)
 
             # By default transition all baseline variables only.
             vars_target_baseline = vars_baseline
@@ -727,6 +723,19 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             return text
         else:
             return value
+
+    def _retrieve_baseline_variables(self, bdb, generator_id):
+        # XXX Store this data in the bdb.
+        engine = self._engine(bdb, generator_id)
+        return engine.states[0].outputs
+
+    def _retrieve_foreign_variables(self, bdb, generator_id):
+        # XXX Store this data in the bdb.
+        engine = self._engine(bdb, generator_id)
+        return list(itertools.chain.from_iterable([
+            cgpm.outputs for cgpm in engine.states[0].hooked_cgpms.itervalues()
+        ]))
+
 
 class CGPM_Cache(object):
     def __init__(self):
