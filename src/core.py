@@ -597,6 +597,32 @@ def bayesdb_generator_cell_value(bdb, generator_id, rowid, colno):
         value = row[0]
     return value
 
+def bayesdb_population_row_values(bdb, population_id, rowid):
+    table_name = bayesdb_population_table(bdb, population_id)
+    column_names = bayesdb_variable_names(bdb, population_id, None)
+    qt = sqlite3_quote_name(table_name)
+    qcns = ','.join(map(sqlite3_quote_name, column_names))
+    select_sql = ('SELECT %s FROM %s WHERE oid = ?' % (qcns, qt))
+    cursor = bdb.sql_execute(select_sql, (rowid,))
+    row = None
+    try:
+        row = cursor.next()
+    except StopIteration:
+        population = bayesdb_population_table(bdb, population_id)
+        raise BQLError(bdb,
+            'No such row in table %s for population %d: %d' %
+            (repr(table_name), repr(population), repr(rowid)))
+    try:
+        cursor.next()
+    except StopIteration:
+        pass
+    else:
+        population = bayesdb_population_table(bdb, population_id)
+        raise BQLError(bdb,
+            'More than one such row in table %s for population %s: %d' %
+            (repr(table_name), repr(population), repr(rowid)))
+    return row
+
 def bayesdb_generator_row_values(bdb, generator_id, rowid):
     table_name = bayesdb_generator_table(bdb, generator_id)
     column_names = bayesdb_generator_column_names(bdb, generator_id)

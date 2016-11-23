@@ -392,24 +392,15 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             population_id = core.bayesdb_generator_population(bdb, generator_id)
             # Retrieve all other variables except colno, and ignore latents in
             # generator_id, and place them in the constraints.
-            pop_names = core.bayesdb_variable_names(bdb, population_id, None)
-            avoid_name = core.bayesdb_variable_name(bdb, population_id, colno)
-            constraints_names = [n for n in pop_names if n != avoid_name]
-            # Obtain the row.
-            qt_names = str.join(',', map(sqlite3_quote_name, constraints_names))
-            qt_table = sqlite3_quote_name(
-                core.bayesdb_population_table(bdb, population_id))
-            data = bdb.sql_execute('''
-                SELECT %s FROM %s WHERE oid = ?
-            ''' % (qt_names, qt_table,), (rowid,)).fetchall()[0]
-            # Build the constraints.
-            pop_nos = core.bayesdb_variable_numbers(bdb, population_id, None)
-            constraints_nos = [n for n in pop_nos if n != colno]
-            assert len(data) == len(constraints_nos)
+            row_values = core.bayesdb_population_row_values(
+                bdb, population_id, rowid)
+            variable_numbers = core.bayesdb_variable_numbers(
+                bdb, population_id, None)
+            # Relies on user appropriately nullifying nan tokens.
             constraints = [
-                (rowid, c, v) for c, v in zip(constraints_nos, data)
-                # Relies on user having appropriately nullified the nan tokens.
-                if v is not None
+                (rowid, col, value)
+                for (col, value) in zip(variable_numbers, row_values)
+                if (value is not None) and (col != colno)
             ]
 
         # Retrieve the samples.
