@@ -367,14 +367,9 @@ def test_cgpm_kepler():
             ESTIMATE DEPENDENCE PROBABILITY
                 FROM PAIRWISE VARIABLES OF satellites
         ''').fetchall()
-        # XXX This query returns an AssertionError because the LinearRegression
-        # cgpm does not accept logpdf of an observed cell. The cgpm_metamodel
-        # implementation should rather retrieve all other values in the row
-        # and provide the cgpm runtime with a fresh rowid.
-        with pytest.raises(AssertionError):
-            bdb.execute('''
-                ESTIMATE PREDICTIVE PROBABILITY OF period FROM satellites
-            ''').fetchall()
+        bdb.execute('''
+            ESTIMATE PREDICTIVE PROBABILITY OF period FROM satellites
+        ''').fetchall()
         bdb.execute('''
             ESTIMATE PROBABILITY OF period = 42
                     GIVEN (apogee = 8 AND perigee = 7)
