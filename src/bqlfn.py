@@ -419,14 +419,23 @@ def bql_row_similarity(bdb, population_id, generator_id, rowid, target_rowid,
 # Row function:  PREDICTIVE PROBABILITY OF <column>
 def bql_row_column_predictive_probability(bdb, population_id, generator_id,
         rowid, colno):
-    value = core.bayesdb_population_cell_value(
-        bdb, population_id, rowid, colno)
+    value = core.bayesdb_population_cell_value(bdb, population_id, rowid, colno)
     if value is None:
         return None
+    # Retrieve all other values in the row.
+    row_values = core.bayesdb_population_row_values(bdb, population_id, rowid)
+    variable_numbers = core.bayesdb_variable_numbers(bdb, population_id, None)
+    # Build the constraints and query from rowid, using a fresh rowid.
+    fresh_rowid = core.bayesdb_population_fresh_row_id(bdb, population_id)
+    query = [(fresh_rowid, colno, value)]
+    constraints = [
+        (fresh_rowid, col, value)
+        for (col, value) in zip(variable_numbers, row_values)
+        if (value is not None) and (col != colno)
+    ]
     def generator_predprob(generator_id):
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-        return metamodel.logpdf_joint(
-            bdb, generator_id, [(rowid, colno, value)], [], None)
+        return metamodel.logpdf_joint(bdb, generator_id, query, constraints, None)
     generator_ids = [generator_id] if generator_id is not None else \
         core.bayesdb_population_generators(bdb, population_id)
     predprobs = map(generator_predprob, generator_ids)
