@@ -25,7 +25,7 @@ import pytest
 
 from cgpm.cgpm import CGpm
 from cgpm.dummy.barebones import BareBonesCGpm
-from cgpm.dummy.fourway import FourWay
+from cgpm.dummy.trollnormal import TrollNormal
 from cgpm.dummy.piecewise import PieceWise
 from cgpm.utils import general as gu
 
@@ -286,7 +286,7 @@ def test_cgpm_analysis_iteration_timed__ci_slow():
 
 # Use dummy, quick version of Kepler's laws.  Allow an extra
 # distribution argument to make sure it gets passed through.
-class Kepler(FourWay):
+class Kepler(TrollNormal):
     def __init__(self, outputs, inputs, quagga=None, *args, **kwargs):
         assert quagga == 'eland'
         return super(Kepler, self).__init__(outputs, inputs, *args, **kwargs)
