@@ -127,7 +127,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                 simcol.name if simcol.name is not None else str(simcol.col)
                 for simcol in phrase.simulation.columns
             ])
-            temp = '' if phrase.temp is None else 'TEMP'
+            temp = 'TEMP' if phrase.temp else ''
             bdb.sql_execute('''
                 CREATE %s TABLE %s (%s)
             ''' % (temp, qn, str.join(',', qcns)))
