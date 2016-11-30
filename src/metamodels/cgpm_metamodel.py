@@ -536,7 +536,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             gpmcc_data = self._data(bdb, generator_id, gpmcc_vars)
             # If gpmcc_data has any column which is all null, then crash early
             # and notify the user of all offending column names.
-            n_rows = len(gpmcc_data[0])
+            n_rows = len(gpmcc_data)
             nulls = [
                 v for i, v in enumerate(gpmcc_vars)
                 if all(math.isnan(gpmcc_data[r][i]) for r in xrange(n_rows))

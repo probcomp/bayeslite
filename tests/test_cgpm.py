@@ -644,9 +644,12 @@ def test_initialize_with_all_nulls():
         bdb.sql_execute('''
             CREATE TABLE t (a REAL, b REAL, c REAL);
         ''')
-        bdb.sql_execute('INSERT INTO t VALUES (?,?,?)', (None,2,3))
-        bdb.sql_execute('INSERT INTO t VALUES (?,?,?)', (None,3,1))
-        bdb.sql_execute('INSERT INTO t VALUES (?,?,?)', (None,-1,1))
+        bdb.sql_execute('INSERT INTO t VALUES (?,?,?)', (None, None, 3))
+        bdb.sql_execute('INSERT INTO t VALUES (?,?,?)', (None, None, 1))
+        bdb.sql_execute('INSERT INTO t VALUES (?,?,?)', (None, None, 1))
+        bdb.sql_execute('INSERT INTO t VALUES (?,?,?)', (None, -2, 1))
+        bdb.sql_execute('INSERT INTO t VALUES (?,?,?)', (None, -5, 1))
+        bdb.sql_execute('INSERT INTO t VALUES (?,?,?)', (None, 2, 3))
 
         # Fail when a is numerical and modeled by crosscat.
         bdb.execute('''
