@@ -227,12 +227,15 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             self, bdb, generator_id, modelnos=None, iterations=None,
             max_seconds=None, ckpt_iterations=None, ckpt_seconds=None,
             program=None):
+
         # Not sure why model-based analysis is useful.
         if modelnos:
             raise NotImplementedError('CGpm analysis by models not supported.')
-        # XXX https://github.com/probcomp/cgpm/issues/167
-        if ckpt_iterations is not None or ckpt_seconds is not None:
-            raise NotImplementedError('CGpm analysis checkpoint not supported.')
+
+        # Checkpoint by seconds disabled.
+        if ckpt_seconds:
+            raise NotImplementedError('Checkpoint by seconds in CGPM analyze.')
+
         if program is None:
             program = []
 
@@ -247,7 +250,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Transitions all baseline variables only using lovecat.
         if optimized:
             engine.transition_lovecat(
-                N=iterations, S=max_seconds, multiprocess=self._multiprocess)
+                N=iterations, S=max_seconds, checkpoint=ckpt_iterations,
+                multiprocess=self._multiprocess)
 
         # More complex possibilities if using cgpm.
         else:
@@ -275,7 +279,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             if vars_target_baseline:
                 engine.transition(
                     N=iterations, S=max_seconds, cols=vars_target_baseline,
-                    multiprocess=self._multiprocess)
+                    checkpoint=ckpt_iterations, multiprocess=self._multiprocess)
 
             # Run transitions on foreign variables.
             if vars_target_foreign:
