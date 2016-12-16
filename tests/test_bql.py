@@ -987,7 +987,28 @@ def test_trivial_commands():
         bdb.execute('select * from T0').fetchall()
         bdb.execute('estimate * from p').fetchall()
         bdb.execute('estimate * from P').fetchall()
-        bdb.execute('estimate similarity from pairwise p').fetchall()
+        # SIMIARITY WITH RESPECT TO requires exactly 1 variable.
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('estimate similarity from pairwise p').fetchall()
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('estimate similarity with respect to * '
+                'from pairwise p').fetchall()
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('estimate similarity with respect to (*) '
+                'from pairwise p').fetchall()
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('estimate similarity with respect to (*, age) '
+                'from pairwise p').fetchall()
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('estimate similarity with respect to (age, gender) '
+                'from pairwise p').fetchall()
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('estimate similarity to (rowid=10) with respect to '
+                '(age, gender) from p').fetchall()
+        bdb.execute('estimate similarity with respect to (age) '
+            'from pairwise p').fetchall()
+        bdb.execute('estimate similarity to (rowid=1) with respect to rank '
+            'from p').fetchall()
         bdb.execute('select value from'
             ' (estimate correlation from pairwise columns of p)').fetchall()
         bdb.execute('infer explicit predict age with confidence 0.9'

@@ -51,18 +51,30 @@ def test_subsample():
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR hosp_sub_cc')
         bdb.execute('ANALYZE hosp_sub_cc FOR 1 ITERATION WAIT')
-        bdb.execute('ESTIMATE SIMILARITY TO (_rowid_=2) FROM hospitals_sub'
-            ' WHERE _rowid_ = 1 OR _rowid_ = 101').fetchall()
-        bdb.execute('ESTIMATE SIMILARITY TO (_rowid_=102) FROM hospitals_sub'
-            ' WHERE _rowid_ = 1 OR _rowid_ = 101').fetchall()
-        bdb.execute('ESTIMATE PREDICTIVE PROBABILITY OF mdcr_spnd_amblnc'
-            ' FROM hospitals_sub'
-            ' WHERE _rowid_ = 1 OR _rowid_ = 101').fetchall()
-        bdb.execute('ESTIMATE SIMILARITY FROM PAIRWISE hospitals_sub'
-            ' WHERE (r0._rowid_ = 1 OR r0._rowid_ = 101) AND'
-                ' (r1._rowid_ = 1 OR r1._rowid_ = 101)').fetchall()
-        bdb.execute('INFER mdcr_spnd_amblnc FROM hospitals_sub'
-            ' WHERE _rowid_ = 1 OR _rowid_ = 101').fetchall()
+        bdb.execute('''
+            ESTIMATE SIMILARITY TO (_rowid_=2) WITH RESPECT TO (PNEUM_SCORE)
+            FROM hospitals_sub WHERE _rowid_ = 1 OR _rowid_ = 101
+        ''').fetchall()
+        bdb.execute('''
+            ESTIMATE SIMILARITY TO (_rowid_=102) WITH RESPECT TO
+            (N_DEATH_ILL) FROM hospitals_sub
+            WHERE _rowid_ = 1 OR _rowid_ = 101
+        ''').fetchall()
+        bdb.execute('''
+            ESTIMATE PREDICTIVE PROBABILITY OF mdcr_spnd_amblnc
+            FROM hospitals_sub
+            WHERE _rowid_ = 1 OR _rowid_ = 101
+        ''').fetchall()
+        bdb.execute('''
+            ESTIMATE SIMILARITY WITH RESPECT TO (PNEUM_SCORE)
+            FROM PAIRWISE hospitals_sub
+            WHERE (r0._rowid_ = 1 OR r0._rowid_ = 101) AND
+            (r1._rowid_ = 1 OR r1._rowid_ = 101)
+        ''').fetchall()
+        bdb.execute('''
+            INFER mdcr_spnd_amblnc FROM hospitals_sub
+            WHERE _rowid_ = 1 OR _rowid_ = 101
+        ''').fetchall()
         sql = '''
             SELECT sql_rowid FROM bayesdb_crosscat_subsample
                 WHERE generator_id = ?
