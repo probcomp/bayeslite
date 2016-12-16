@@ -407,6 +407,8 @@ def bql_row_similarity(bdb, population_id, generator_id, rowid, target_rowid,
     if len(colnos) == 0:
         colnos = core.bayesdb_variable_numbers(bdb, population_id,
             generator_id)
+    if len(colnos) != 1:
+        raise BQLError(bdb, 'Multiple with respect to columns: %s.' % (colnos,))
     def generator_similarity(generator_id):
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
         return metamodel.row_similarity(bdb, generator_id, None, rowid,
