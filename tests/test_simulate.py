@@ -83,7 +83,7 @@ def test_simulate_given_rowid():
         bdb.execute('''
             CREATE POPULATION t_p FOR t WITH SCHEMA {
                 IGNORE x;
-                MODEL y AS NUMERICAL
+                MODEL y AS NUMERICAL;
             }
         ''')
         bdb.execute('''

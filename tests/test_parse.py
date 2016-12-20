@@ -535,6 +535,20 @@ def test_trivial_commands():
             ast.PopModelVars(['perigee'], 'numerical'),
             ast.PopModelVars(['apogee', 'period'], 'numerical'),
         ])]
+    assert parse_bql_string('''
+        create population satellites for satellites_ucs (
+            MODEL country_of_operator, orbit_type AS categorical;;
+            MODEL apogee, period AS numerical;;
+        )
+    ''') == \
+        [ast.CreatePop(False, 'satellites', 'satellites_ucs', [
+            ast.PopModelVars(
+                ['country_of_operator', 'orbit_type'], 'categorical'),
+            None,
+            ast.PopModelVars(['apogee', 'period'], 'numerical'),
+            None,
+            None,
+        ])]
     assert parse_bql_string('drop population satellites') == \
         [ast.DropPop(False, 'satellites')]
     assert parse_bql_string('create generator t_cc for t using crosscat'

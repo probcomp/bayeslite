@@ -94,6 +94,7 @@ alterpop_cmd(stattype) ::= K_SET K_STATTYPES|K_STATTYPE
 pop_schema(one)     ::= pop_clause(cl).
 pop_schema(many)    ::= pop_schema(schema) T_SEMI pop_clause(cl).
 
+pop_clause(empty)   ::= .
 pop_clause(column)  ::= column_name(col) stattype(st).
 pop_clause(model)   ::= K_MODEL pop_columns(cols) K_AS stattype(st).
 pop_clause(ignore)  ::= K_IGNORE pop_columns(cols).
