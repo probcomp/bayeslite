@@ -195,7 +195,10 @@ class BQLSemantics(object):
         return ast.AlterPopStatType(cols, stattype)
 
     def p_pop_schema_one(self, cl):             return [cl]
-    def p_pop_schema_many(self, schema, cl):    schema.append(cl); return schema
+    def p_pop_schema_many(self, schema, cl):
+        if cl:
+            schema.append(cl);
+        return schema
 
     def p_pop_clause_empty(self):            return None
     def p_pop_clause_column(self, col, st):  return ast.PopModelVars([col], st)
