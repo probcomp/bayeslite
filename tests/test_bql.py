@@ -2002,6 +2002,15 @@ def test_infer_as_estimate():
         bdb.execute('infer explicit predictive probability of age'
             ' from p1').fetchall()
 
+def test_infer_error():
+    with test_core.t1() as (bdb, _population_id, _generator_id):
+        bdb.execute('initialize 1 model for p1_cc')
+        bdb.execute('infer explicit predict age confidence age_conf'
+            ' from p1').fetchall()
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('infer explicit predict agee confidence age_conf'
+                ' from p1').fetchall()
+
 def test_estimate_by():
     with test_core.t1() as (bdb, _population_id, _generator_id):
         bdb.execute('initialize 1 model for p1_cc')

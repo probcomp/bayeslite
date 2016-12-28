@@ -113,10 +113,10 @@ def test_nig_normal_latent_smoke():
         # INFER/PREDICT
         bdb.execute(
             'INFER EXPLICIT PREDICT x CONFIDENCE x_c FROM p').fetchall()
-        with pytest.raises(ValueError):
+        with pytest.raises(BQLError):
             bdb.execute(
                 'INFER EXPLICIT PREDICT xe CONFIDENCE xe_c FROM p').fetchall()
-        with pytest.raises(ValueError):
+        with pytest.raises(BQLError):
             bdb.execute('''
                 INFER EXPLICIT PREDICT xe CONFIDENCE xe_c FROM p
                     MODELLED BY g0

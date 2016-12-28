@@ -1018,6 +1018,11 @@ class BQLCompiler_1Row_Infer(BQLCompiler_1Row):
             out.write(')')
         elif isinstance(bql, ast.ExpBQLPredictConf):
             assert bql.column is not None
+            if not core.bayesdb_has_variable(bdb, population_id, generator_id,
+                    bql.column):
+                population = core.bayesdb_population_name(bdb, population_id)
+                raise BQLError(bdb, 'No such variable in population %s: %s' %
+                    (population, bql.column))
             colno = core.bayesdb_variable_number(bdb, population_id,
                 generator_id, bql.column)
             out.write('bql_predict_confidence(%d, %s' %
