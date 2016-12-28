@@ -98,10 +98,10 @@ def test_nig_normal_latent_smoke():
 
         # PREDICTIVE PROBABILITY OF x
         bdb.execute('estimate predictive probability of x from p').fetchall()
-        with pytest.raises(ValueError):
+        with pytest.raises(BQLError):
             bdb.execute(
                 'estimate predictive probability of xe from p').fetchall()
-        with pytest.raises(ValueError):
+        with pytest.raises(BQLError):
             bdb.execute('''
                 estimate predictive probability of xe from p modelled by g0
             ''').fetchall()
