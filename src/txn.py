@@ -52,37 +52,37 @@ def bayesdb_savepoint_rollback(bdb):
 
 @contextlib.contextmanager
 def bayesdb_transaction(bdb):
-    if bdb.txn_depth != 0:
+    if bdb._txn_depth != 0:
         raise BayesDBTxnError(bdb, 'Already in a transaction!')
     bayesdb_txn_init(bdb)
-    bdb.txn_depth = 1
+    bdb._txn_depth = 1
     try:
         with sqlite3_transaction(bdb._sqlite3):
             yield
     finally:
-        assert bdb.txn_depth == 1
-        bdb.txn_depth = 0
+        assert bdb._txn_depth == 1
+        bdb._txn_depth = 0
         bayesdb_txn_fini(bdb)
 
 def bayesdb_begin_transaction(bdb):
-    if bdb.txn_depth != 0:
+    if bdb._txn_depth != 0:
         raise BayesDBTxnError(bdb, 'Already in a transaction!')
     bayesdb_txn_init(bdb)
-    bdb.txn_depth = 1
+    bdb._txn_depth = 1
     bdb.sql_execute("BEGIN")
 
 def bayesdb_rollback_transaction(bdb):
-    if bdb.txn_depth == 0:
+    if bdb._txn_depth == 0:
         raise BayesDBTxnError(bdb, 'Not in a transaction!')
     bdb.sql_execute("ROLLBACK")
-    bdb.txn_depth = 0
+    bdb._txn_depth = 0
     bayesdb_txn_fini(bdb)
 
 def bayesdb_commit_transaction(bdb):
-    if bdb.txn_depth == 0:
+    if bdb._txn_depth == 0:
         raise BayesDBTxnError(bdb, 'Not in a transaction!')
     bdb.sql_execute("COMMIT")
-    bdb.txn_depth = 0
+    bdb._txn_depth = 0
     bayesdb_txn_fini(bdb)
 
 # XXX Maintaining a stack of savepoints in BQL is a little more
@@ -92,28 +92,28 @@ def bayesdb_commit_transaction(bdb):
 # We'll implement that later.
 
 def bayesdb_txn_push(bdb):
-    if bdb.txn_depth == 0:
+    if bdb._txn_depth == 0:
         bayesdb_txn_init(bdb)
     else:
-        assert bdb.cache is not None
-    bdb.txn_depth += 1
+        assert bdb._cache is not None
+    bdb._txn_depth += 1
 
 def bayesdb_txn_pop(bdb):
-    bdb.txn_depth -= 1
-    if bdb.txn_depth == 0:
+    bdb._txn_depth -= 1
+    if bdb._txn_depth == 0:
         bayesdb_txn_fini(bdb)
     else:
-        assert bdb.cache is not None
+        assert bdb._cache is not None
 
 def bayesdb_txn_init(bdb):
-    assert bdb.txn_depth == 0
-    assert bdb.cache is None
-    bdb.cache = {}
+    assert bdb._txn_depth == 0
+    assert bdb._cache is None
+    bdb._cache = {}
 
 def bayesdb_txn_fini(bdb):
-    assert bdb.txn_depth == 0
-    assert bdb.cache is not None
-    bdb.cache = None
+    assert bdb._txn_depth == 0
+    assert bdb._cache is not None
+    bdb._cache = None
 
 class BayesDBTxnError(BayesDBException):
     """Transaction errors in a BayesDB."""

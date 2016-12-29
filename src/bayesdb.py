@@ -78,11 +78,11 @@ class BayesDB(object):
             pathname = ":memory:"
         self.pathname = pathname
         self._sqlite3 = apsw.Connection(pathname)
-        self.txn_depth = 0
+        self._txn_depth = 0     # managed in txn.py
+        self._cache = None      # managed in txn.py
         self.metamodels = {}
         self.tracer = None
         self.sql_tracer = None
-        self.cache = None
         self.temptable = 0
         self.qid = 0
         if seed is None:
@@ -108,7 +108,7 @@ class BayesDB(object):
 
     def close(self):
         """Close the database.  Further use is not allowed."""
-        assert self.txn_depth == 0, "pending BayesDB transactions"
+        assert self._txn_depth == 0, "pending BayesDB transactions"
         self._sqlite3.close()
         self._sqlite3 = None
 
@@ -131,6 +131,10 @@ class BayesDB(object):
         Use it to conserve reproducibility of results.
         """
         return self._np_prng
+
+    @property
+    def cache(self):
+        return self._cache
 
     def trace(self, tracer):
         """Trace execution of BQL queries.
@@ -348,7 +352,7 @@ class BayesDB(object):
         if self.pathname == ":memory:":
             raise ValueError("""Cannot meaningfully reconnect to an in-memory
                 database. All prior transactions would be lost.""")
-        assert self.txn_depth == 0, "pending BayesDB transactions"
+        assert self._txn_depth == 0, "pending BayesDB transactions"
         self._sqlite3.close()
         self._sqlite3 = apsw.Connection(self.pathname)
 
