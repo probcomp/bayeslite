@@ -244,14 +244,17 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Retrieve user-specified target variables to transition.
         analyze_ast = cgpm_analyze.parse.parse(program)
-        vars_user, optimized = _retrieve_analyze_variables(
+        vars_user, optimized, quiet = _retrieve_analyze_variables(
             bdb, generator_id, analyze_ast)
+
+        # Explicitly supress prograss bar if quiet, otherwise use default.
+        progress = False if quiet else None
 
         # Transitions all baseline variables only using lovecat.
         if optimized:
             engine.transition_lovecat(
-                N=iterations, S=max_seconds, checkpoint=ckpt_iterations,
-                multiprocess=self._multiprocess)
+                N=iterations, S=max_seconds, progress=progress,
+                checkpoint=ckpt_iterations, multiprocess=self._multiprocess)
 
         # More complex possibilities if using cgpm.
         else:
@@ -279,13 +282,14 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             if vars_target_baseline:
                 engine.transition(
                     N=iterations, S=max_seconds, cols=vars_target_baseline,
-                    checkpoint=ckpt_iterations, multiprocess=self._multiprocess)
+                    progress=progress, checkpoint=ckpt_iterations,
+                    multiprocess=self._multiprocess)
 
             # Run transitions on foreign variables.
             if vars_target_foreign:
                 engine.transition_foreign(
                     N=iterations, S=max_seconds, cols=vars_target_foreign,
-                    multiprocess=self._multiprocess)
+                    progress=progress, multiprocess=self._multiprocess)
 
         # Serialize the engine.
         engine_json = json_dumps(engine.to_metadata())
@@ -1101,7 +1105,10 @@ def _retrieve_analyze_variables(bdb, generator_id, ast):
     variables = None
 
     # Exactly 1 VARIABLES or SKIP clause supported for simplicity.
-    seen_variables, seen_skip, seen_optimized = False, False, False
+    seen_variables = False
+    seen_skip = False
+    seen_optimized = False
+    seen_quiet = False
 
     for clause in ast:
 
@@ -1149,6 +1156,10 @@ def _retrieve_analyze_variables(bdb, generator_id, ast):
         elif isinstance(clause, cgpm_analyze.parse.Optimized):
             seen_optimized = True
 
+        # QUIET supresses the progress bar.
+        elif isinstance(clause, cgpm_analyze.parse.Quiet):
+            seen_quiet = True
+
         # Unknown/impossible clause.
         else:
             raise BQLError(bdb, 'Unknown clause in ANALYZE: %s.' % (ast,))
@@ -1163,7 +1174,7 @@ def _retrieve_analyze_variables(bdb, generator_id, ast):
         for v in variables
     ] if variables else None
 
-    return (variable_numbers, seen_optimized)
+    return (variable_numbers, seen_optimized, seen_quiet)
 
 
 def _default_categorical(bdb, generator_id, var):

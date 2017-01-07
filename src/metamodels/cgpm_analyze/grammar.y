@@ -31,6 +31,7 @@ phrase(none)        ::= .
 phrase(variables)   ::= K_VARIABLES column_list(cols).
 phrase(skip)        ::= K_SKIP column_list(cols).
 phrase(optimized)   ::= K_OPTIMIZED.
+phrase(quiet)       ::= K_QUIET.
 
 column_list(one)    ::= column_name(col).
 column_list(many)   ::= column_list(cols) T_COMMA column_name(col).

@@ -262,13 +262,14 @@ def test_cgpm_analysis_iteration_timed__ci_slow():
         start0 = time.time()
         bdb.execute('''
             ANALYZE g2 FOR 10000 ITERATION OR 5 SECONDS
-            CHECKPOINT 1 ITERATION WAIT;
+                CHECKPOINT 1 ITERATION WAIT (QUIET);
         ''')
         assert 5 < time.time() - start0 < 15
 
         start1 = time.time()
         bdb.execute('''
-            ANALYZE g2 FOR 10000 ITERATION OR 5 SECONDS WAIT (OPTIMIZED)
+            ANALYZE g2 FOR 10000 ITERATION OR 5 SECONDS WAIT
+                (OPTIMIZED; QUIET)
         ''')
         assert 5 < time.time() - start1 < 15
 
