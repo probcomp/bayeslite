@@ -30,6 +30,7 @@ phrases(many)       ::= phrases(ps) T_SEMI phrase(p).
 phrase(none)        ::= .
 phrase(variables)   ::= K_VARIABLES column_list(cols).
 phrase(skip)        ::= K_SKIP column_list(cols).
+phrase(loom)        ::= K_LOOM.
 phrase(optimized)   ::= K_OPTIMIZED.
 phrase(quiet)       ::= K_QUIET.
 
