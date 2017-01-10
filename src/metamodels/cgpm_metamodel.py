@@ -250,11 +250,19 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Explicitly supress prograss bar if quiet, otherwise use default.
         progress = False if quiet else None
 
-        # Transitions all baseline variables only using lovecat.
+        # Transitions all baseline variables only using lovecat or loomcat.
         if optimized:
-            engine.transition_lovecat(
-                N=iterations, S=max_seconds, progress=progress,
-                checkpoint=ckpt_iterations, multiprocess=self._multiprocess)
+            if optimized.backend == 'lovecat':
+                engine.transition_lovecat(
+                    N=iterations, S=max_seconds, progress=progress,
+                    checkpoint=ckpt_iterations, multiprocess=self._multiprocess)
+            elif optimized.backend == 'loom':
+                engine.transition_loom(N=iterations, S=max_seconds,
+                    progress=progress, checkpoint=ckpt_iterations,
+                    multiprocess=self._multiprocess)
+            else:
+                raise BQLError(bdb,
+                    'Unknown backend in OPTIMIZED: ' % optimized.backend)
 
         # More complex possibilities if using cgpm.
         else:
@@ -1154,7 +1162,7 @@ def _retrieve_analyze_variables(bdb, generator_id, ast):
 
         # OPTIMIZED is incompatible with any other clause.
         elif isinstance(clause, cgpm_analyze.parse.Optimized):
-            seen_optimized = True
+            seen_optimized = clause
 
         # QUIET supresses the progress bar.
         elif isinstance(clause, cgpm_analyze.parse.Quiet):

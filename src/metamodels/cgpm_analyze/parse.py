@@ -30,6 +30,7 @@ grep -o 'K_[A-Z][A-Z0-9_]*' < grammar.y | sort -u | awk '
 '''
 
 KEYWORDS = {
+    'loom': grammar.K_LOOM,
     'optimized': grammar.K_OPTIMIZED,
     'quiet': grammar.K_QUIET,
     'skip': grammar.K_SKIP,
@@ -102,7 +103,8 @@ class CGpmAnalyzeSemantics(object):
     def p_phrase_none(self,):                   return None
     def p_phrase_variables(self, cols):         return Variables(cols)
     def p_phrase_skip(self, cols):              return Skip(cols)
-    def p_phrase_optimized(self):               return Optimized(True)
+    def p_phrase_loom(self):                    return Optimized('loom')
+    def p_phrase_optimized(self):               return Optimized('lovecat')
     def p_phrase_quiet(self):                   return Quiet(True)
 
     def p_column_list_one(self, col):           return [col]
@@ -119,7 +121,7 @@ Skip = namedtuple('Skip', [
 ])
 
 Optimized = namedtuple('Optimized', [
-    'flag',
+    'backend',
 ])
 
 Quiet = namedtuple('Quiet', [
