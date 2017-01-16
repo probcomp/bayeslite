@@ -14,11 +14,14 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-
-
+import os
 import pytest
 
 from bayeslite import bayesdb_open
+
+root = os.path.dirname(os.path.abspath(__file__))
+dha_csv = os.path.join(root, 'dha.csv')
+satellites_csv = os.path.join(root, 'satellites.csv')
 
 '''
 Integration test for using `ANALYZE <metamodel> FOR <k> ITERATION WAIT(loom);`
@@ -60,7 +63,7 @@ def loom_analyze(csv_filename):
         bdb.execute('ANALYZE m FOR 2 ITERATION WAIT (optimized);')
 
 def test_loom_dha__ci_slow():
-    loom_analyze('dha.csv')
+    loom_analyze(dha_csv)
 
 def test_loom_satellites__ci_slow():
-    loom_analyze('satellites.csv')
+    loom_analyze(satellites_csv)
