@@ -105,6 +105,10 @@ AlterPop = namedtuple('AlterPop', [
     'population',                # XXX name
     'commands',                 # AlterGen*
 ])
+AlterPopAddVar = namedtuple('AlterPopAddVar', [
+    'name',
+    'stattype',
+])
 AlterPopStatType = namedtuple('AlterGenRenameGen', [
     'names',
     'stattype',

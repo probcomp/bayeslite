@@ -92,6 +92,8 @@ alterpop_cmd(stattype)  ::= K_SET K_STATTYPES|K_STATTYPE
                                 K_FOR|K_OF pop_columns(cols)
                                 K_TO stattype(stattype).
 
+alterpop_cmd(addvar)    ::= K_ADD K_VARIABLE column_name(col) stattype_opt(st).
+
 pop_schema(one)         ::= pop_clause(cl).
 pop_schema(many)        ::= pop_schema(schema) T_SEMI pop_clause(cl).
 
@@ -100,6 +102,9 @@ pop_clause(column)      ::= column_name(col) stattype(st).
 pop_clause(model)       ::= K_MODEL pop_columns(cols) K_AS stattype(st).
 pop_clause(ignore)      ::= K_IGNORE pop_columns(cols).
 pop_clause(guess)       ::= K_GUESS stattypes_for_opt pop_columns_guess(cols).
+
+stattype_opt(none)      ::= .
+stattype_opt(one)       ::= stattype(st).
 
 stattype(st)            ::= L_NAME(name).
 

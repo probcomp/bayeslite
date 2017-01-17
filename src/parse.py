@@ -193,6 +193,8 @@ class BQLSemantics(object):
     def p_alterpop_cmds_many(self, cmds, cmd):  cmds.append(cmd); return cmds
     def p_alterpop_cmd_stattype(self, cols, stattype):
         return ast.AlterPopStatType(cols, stattype)
+    def p_alterpop_cmd_addvar(self, col, st):
+        return ast.AlterPopAddVar(col, st)
 
     def p_pop_schema_one(self, cl):             return [cl]
     def p_pop_schema_many(self, schema, cl):
@@ -210,6 +212,9 @@ class BQLSemantics(object):
     def p_model_opt_one(self):               return None
     def p_as_opt_none(self):                 return None
     def p_as_opt_one(self):                  return None
+
+    def p_stattype_opt_none(self):           return None
+    def p_stattype_opt_one(self, st):        return st
     def p_stattype_st(self, name):           return name
 
     def p_pop_columns_one(self, c):          return [c]
