@@ -684,12 +684,15 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
  *      grep -o 'K_[A-Z_]*' | awk '{ printf("\t%s\n", $1) }' | sort -u
  */
 %fallback L_NAME
+        K_ACCURACY
+        K_ADD
         K_ALL
         K_ALTER
         K_ANALYZE
         K_AND
         K_AS
         K_ASC
+        K_BASELINE
         K_BEGIN
         K_BETWEEN
         K_BTABLE
@@ -722,6 +725,7 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_GIVEN
         K_GLOB
         K_GROUP
+        K_GUESS
         K_HAVING
         K_IF
         K_IGNORE
@@ -741,6 +745,8 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_MINUTE
         K_MINUTES
         K_MODEL
+        K_MODELED
+        K_MODELLED
         K_MODELS
         K_MUTUAL
         K_NOT
@@ -751,6 +757,7 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_OR
         K_ORDER
         K_PAIRWISE
+        K_POPULATION
         K_PREDICT
         K_PREDICTIVE
         K_PROBABILITY
@@ -761,12 +768,15 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_ROLLBACK
         K_ROW
         K_SAMPLES
+        K_SCHEMA
         K_SECOND
         K_SECONDS
         K_SELECT
         K_SET
         K_SIMILARITY
         K_SIMULATE
+        K_STATTYPE
+        K_STATTYPES
         K_TABLE
         K_TEMP
         K_TEMPORARY
@@ -775,6 +785,7 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_UNSET
         K_USING
         K_VALUE
+        K_VARIABLE
         K_VARIABLES
         K_WAIT
         /* K_WHEN */
