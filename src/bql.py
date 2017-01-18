@@ -322,18 +322,33 @@ def execute_phrase(bdb, phrase, bindings=()):
                             'Invalid stattype: %s' % (cmd.stattype))
                     else:
                         stattype = cmd.stattype
-                    # Add the variable to the population.
-                    core.bayesdb_add_variable(
-                        bdb, population_id, cmd.name, stattype)
-                    colno = core.bayesdb_variable_number(
-                        bdb, population_id, None, cmd.name)
-                    # Add the variable to each metamodel.
-                    generator_ids = core.bayesdb_population_generators(
-                        bdb, population_id)
-                    for generator_id in generator_ids:
-                        metamodel = core.bayesdb_generator_metamodel(
-                            bdb, generator_id)
-                        metamodel.add_column(bdb, generator_id, colno)
+                    with bdb.savepoint():
+                        # Add the variable to the population.
+                        core.bayesdb_add_variable(
+                            bdb, population_id, cmd.name, stattype)
+                        colno = core.bayesdb_variable_number(
+                            bdb, population_id, None, cmd.name)
+                        # Add the variable to each (initialized) metamodel in
+                        # the population.
+                        generator_ids = filter(
+                            lambda g: core.bayesdb_generator_modelnos(bdb, g),
+                            core.bayesdb_population_generators(
+                                bdb, population_id),
+                        )
+                        for generator_id in generator_ids:
+                            # XXX Omit needless bayesdb_generator_column table
+                            # Github issue #441.
+                            bdb.sql_execute('''
+                                INSERT INTO bayesdb_generator_column
+                                    VALUES (:generator_id, :colno, :stattype)
+                            ''', {
+                                'generator_id': generator_id,
+                                'colno': colno,
+                                'stattype': stattype,
+                            })
+                            metamodel = core.bayesdb_generator_metamodel(
+                                bdb, generator_id)
+                            metamodel.add_column(bdb, generator_id, colno)
                 elif isinstance(cmd, ast.AlterPopStatType):
                     # Check the no metamodels are defined for this population.
                     generators = core.bayesdb_population_generators(
