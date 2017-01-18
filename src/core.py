@@ -208,6 +208,16 @@ def bayesdb_population_generators(bdb, population_id):
     ''', (population_id,))
     return [generator_id for (generator_id,) in cursor]
 
+def bayesdb_add_variable(bdb, population_id, name, stattype):
+    """Adds a variable to the population, with colno from the base table."""
+    table_name = bayesdb_population_table(bdb, population_id)
+    colno = bayesdb_table_column_number(bdb, table_name, name)
+    bdb.sql_execute('''
+        INSERT INTO bayesdb_variable
+            (population_id, name, colno, stattype)
+            VALUES (?, ?, ?, ?)
+    ''', (population_id, name, colno, stattype))
+
 def bayesdb_has_variable(bdb, population_id, generator_id, name):
     """True if the population has a given variable.
 

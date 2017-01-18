@@ -625,3 +625,41 @@ def test_bayesdb_population_fresh_row_id():
         t1_data(bdb)
         assert core.bayesdb_population_fresh_row_id(bdb, population_id) == \
             len(t1_rows) + 1
+
+def test_bayesdb_population_add_variable():
+    with bayesdb() as bdb:
+        bdb.sql_execute('create table t (a real, b ignore, c real)')
+        bdb.execute('''
+            create population p for t with schema(
+                model a, c as numerical;
+                b ignore;
+            );
+        ''')
+        population_id = core.bayesdb_get_population(bdb, 'p')
+        # Checks column a.
+        assert core.bayesdb_has_variable(bdb, population_id, None, 'a')
+        assert core.bayesdb_table_column_number(bdb, 't', 'a') == 0
+        assert core.bayesdb_variable_number(bdb, population_id, None, 'a') == 0
+        # Checks column b, which is not in the population yet.
+        assert not core.bayesdb_has_variable(bdb, population_id, None, 'b')
+        assert core.bayesdb_table_column_number(bdb, 't', 'b') == 1
+        # Checks column c.
+        assert core.bayesdb_has_variable(bdb, population_id, None, 'c')
+        assert core.bayesdb_table_column_number(bdb, 't', 'c') == 2
+        assert core.bayesdb_variable_number(bdb, population_id, None, 'c') == 2
+        # Cannot add variable 'c', already exists.
+        with pytest.raises(apsw.ConstraintError):
+            core.bayesdb_add_variable(bdb, population_id, 'c', 'nominal')
+        # Cannot add variable 'b' with a bad stattype.
+        with pytest.raises(apsw.ConstraintError):
+            core.bayesdb_add_variable(bdb, population_id, 'b', 'quzz')
+        # Now add column b to the population.
+        core.bayesdb_add_variable(bdb, population_id, 'b', 'nominal')
+        assert core.bayesdb_variable_number(bdb, population_id, None, 'b') == 1
+        # Add a new column q to table t, then add it to population p.
+        bdb.sql_execute('alter table t add column q real;')
+        assert core.bayesdb_table_column_number(bdb, 't', 'q') == 3
+        assert not core.bayesdb_has_variable(bdb, population_id, None, 'q')
+        core.bayesdb_add_variable(bdb, population_id, 'q', 'numerical')
+        assert core.bayesdb_has_variable(bdb, population_id, None, 'q')
+        assert core.bayesdb_variable_number(bdb, population_id, None, 'q') == 3
