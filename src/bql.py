@@ -637,44 +637,31 @@ def _create_population(bdb, phrase):
             bdb, 'Cannot determine a modeling policy for variables: %r'
             % (not_found, ))
 
-    # Get a map from variable name to colno.  Check
+    # Check
     # - for duplicates,
     # - for nonexistent columns,
     # - for invalid statistical types.
-    variable_map = {}
+    seen_variables = set()
     duplicates = set()
     missing = set()
     invalid = set()
-    colno_sql = '''
-        SELECT colno FROM bayesdb_column
-            WHERE tabname = :table AND name = :column_name
-    '''
     stattype_sql = '''
         SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype
     '''
     for nm, st in pop_all_vars:
         name = casefold(nm)
         stattype = casefold(st)
-        if name in variable_map:
+        if name in seen_variables:
             duplicates.add(name)
             continue
-        cursor = bdb.sql_execute(colno_sql, {
-            'table': phrase.table,
-            'column_name': name,
-        })
-        try:
-            row = cursor.next()
-        except StopIteration:
+        if not core.bayesdb_table_has_column(bdb, phrase.table, nm):
             missing.add(name)
             continue
-        else:
-            colno = row[0]
-            assert isinstance(colno, int)
-            cursor = bdb.sql_execute(stattype_sql, {'stattype': stattype})
-            if cursor_value(cursor) == 0 and stattype != 'ignore':
-                invalid.add(stattype)
-                continue
-            variable_map[name] = colno
+        cursor = bdb.sql_execute(stattype_sql, {'stattype': stattype})
+        if cursor_value(cursor) == 0 and stattype != 'ignore':
+            invalid.add(stattype)
+            continue
+        seen_variables.add(nm)
     # XXX Would be nice to report these simultaneously.
     if missing:
         raise BQLError(bdb, 'No such columns in table %r: %r' %
@@ -687,15 +674,10 @@ def _create_population(bdb, phrase):
     # Insert variable records.
     for nm, st in pop_all_vars:
         name = casefold(nm)
-        colno = variable_map[name]
         stattype = casefold(st)
         if stattype == 'ignore':
             continue
-        bdb.sql_execute('''
-            INSERT INTO bayesdb_variable
-                (population_id, name, colno, stattype)
-                VALUES (?, ?, ?, ?)
-        ''', (population_id, name, colno, stattype))
+        core.bayesdb_add_variable(bdb, population_id, name, stattype)
 
 def rename_table(bdb, old, new):
     assert core.bayesdb_has_table(bdb, old)
