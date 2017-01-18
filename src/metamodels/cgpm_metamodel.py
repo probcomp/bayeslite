@@ -182,6 +182,58 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             DELETE FROM bayesdb_cgpm_generator WHERE generator_id = ?
         ''', (generator_id,))
 
+    def add_column(self, bdb, generator_id, colno):
+
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        varname = core.bayesdb_variable_name(bdb, population_id, colno)
+
+        # Ensure variable exists in population.
+        if not core.bayesdb_has_variable(bdb, population_id, None, varname):
+            raise BQLError(bdb, 'No such column in population: %d' % (varname,))
+
+        # Retrieve the stattype and default distribution.
+        stattype = core.bayesdb_variable_stattype(bdb, population_id, colno)
+        if stattype not in _DEFAULT_DIST:
+            raise BQLError(bdb, 'No distribution for stattype: %s' % (stattype))
+        dist, params = _DEFAULT_DIST[stattype](bdb, generator_id, varname)
+
+        # Update variable value mapping if categorical.
+        if _is_categorical(stattype):
+            table_name = core.bayesdb_population_table(bdb, population_id)
+            qt = sqlite3_quote_name(table_name)
+            qv = sqlite3_quote_name(varname)
+            cursor = bdb.sql_execute('''
+                SELECT DISTINCT %s FROM %s WHERE %s IS NOT NULL
+            ''' % (qv, qt, qv))
+            for code, (value,) in enumerate(cursor):
+                bdb.sql_execute('''
+                    INSERT INTO bayesdb_cgpm_category
+                        (generator_id, colno, value, code)
+                        VALUES (?, ?, ?, ?)
+                ''', (generator_id, colno, value, code))
+
+        # Retrieve the rows from the table.
+        rows = list(itertools.chain.from_iterable(
+            self._data(bdb, generator_id, [varname])))
+
+        # Retrieve the engine.
+        engine = self._engine(bdb, generator_id)
+
+        # Go!
+        engine.incorporate_dim(
+            rows, [colno], cctype=dist, distargs=params,
+            multiprocess=self._multiprocess)
+
+        # Serialize the engine.
+        engine_json = json_dumps(engine.to_metadata())
+
+        # Update the engine.
+        bdb.sql_execute('''
+            UPDATE bayesdb_cgpm_generator
+                SET engine_json = :engine_json
+                WHERE generator_id = :generator_id
+        ''', {'generator_id': generator_id, 'engine_json': engine_json})
+
     def initialize_models(self, bdb, generator_id, modelnos):
         # Caller should guarantee a nondegenerate request.
         n = len(modelnos)

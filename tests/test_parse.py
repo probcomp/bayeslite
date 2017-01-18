@@ -690,6 +690,31 @@ def test_alterpop_stattype():
             ast.AlterPopStatType(['c'], 'nominal'),]
         )]
 
+
+def test_alterpop_addvar():
+    assert parse_bql_string('alter population p '
+            'add variable r') == \
+        [ast.AlterPop('p',
+            [ast.AlterPopAddVar('r', None)]
+        )]
+    assert parse_bql_string('alter population g '
+            'add variable r nominal') == \
+        [ast.AlterPop('g',
+            [ast.AlterPopAddVar('r', 'nominal')]
+        )]
+    assert parse_bql_string('alter population p '
+            'add variable a, '
+            'set stattypes for a to nominal, '
+            'add variable b numerical') == \
+        [ast.AlterPop('p', [
+            ast.AlterPopAddVar('a', None),
+            ast.AlterPopStatType(['a'], 'nominal'),
+            ast.AlterPopAddVar('b', 'numerical'),]
+        )]
+    with pytest.raises(bayeslite.BQLParseError):
+        parse_bql_string('alter population v add variable;')
+
+
 def test_infer_trivial():
     assert parse_bql_string('infer x from p') == \
         [ast.InferAuto([ast.InfColOne('x', None)], ast.ExpLit(ast.LitInt(0)),

@@ -16,6 +16,7 @@
 
 from __future__ import division
 
+import StringIO
 import contextlib
 import math
 import time
@@ -25,15 +26,18 @@ import pytest
 
 from cgpm.cgpm import CGpm
 from cgpm.dummy.barebones import BareBonesCGpm
-from cgpm.dummy.trollnormal import TrollNormal
 from cgpm.dummy.piecewise import PieceWise
+from cgpm.dummy.trollnormal import TrollNormal
 from cgpm.utils import general as gu
 
 from bayeslite import bayesdb_open
+from bayeslite import bayesdb_read_csv
 from bayeslite import bayesdb_register_metamodel
 from bayeslite.exception import BQLError
 from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
 from bayeslite.util import cursor_value
+
+import test_csv
 
 @contextlib.contextmanager
 def cgpm_smoke_bdb():
@@ -698,3 +702,69 @@ def test_initialize_with_all_nulls():
         ''')
         bdb.execute('INITIALIZE 2 MODELS FOR m4;')
         bdb.execute('ANALYZE m4 FOR 1 ITERATION WAIT;')
+
+def test_add_variable():
+    with bayesdb_open() as bdb:
+        bayesdb_read_csv(
+            bdb, 't', StringIO.StringIO(test_csv.csv_data),
+            header=True, create=True)
+        bdb.execute('''
+            CREATE POPULATION p FOR t WITH SCHEMA(
+                age         numerical;
+                gender      nominal;
+                salary      numerical;
+                height      ignore;
+                division    ignore;
+                rank        ignore;
+            )
+        ''')
+        bdb.metamodels['cgpm'].set_multiprocess(False)
+        bdb.execute('CREATE METAMODEL m0 FOR p WITH BASELINE crosscat;')
+        bdb.execute('INITIALIZE 1 MODELS FOR m0;')
+        bdb.execute('ANALYZE m0 FOR 5 ITERATION WAIT;')
+        # Run some queries on the new variable in a metamodel or aggregated.
+        def run_queries(target, m):
+            extra = 'MODELED BY %s' % (m,) if m is not None else ''
+            bdb.execute('''
+                ESTIMATE PROBABILITY OF %s = 1 BY p %s
+            ''' % (target, extra,)).fetchall()
+            for other in ['age', 'gender', 'salary']:
+                cursor = bdb.execute('''
+                    ESTIMATE DEPENDENCE PROBABILITY OF %s WITH %s
+                    BY p %s
+                ''' % (target, other, extra))
+                assert cursor_value(cursor) >= 0
+            bdb.execute('''
+                ESTIMATE SIMILARITY WITH RESPECT TO %s
+                FROM PAIRWISE p %s;
+            ''' % (target, extra,)).fetchall()
+        # Fail to run quieres on height, does not exist yet.
+        with pytest.raises(BQLError):
+            run_queries('height', 'm0')
+        # Add the height variable
+        bdb.execute('ALTER POPULATION p ADD VARIABLE height numerical;')
+        # Run targeted analysis on the newly included height variable.
+        bdb.execute('ANALYZE m0 FOR 5 ITERATION WAIT;')
+        bdb.execute('ANALYZE m0 FOR 5 ITERATION WAIT (VARIABLES height);')
+        # Queries should now be successful.
+        run_queries('height', 'm0')
+        # Create a new metamodel, and create a custom cateogry model for
+        # the new variable `height`.
+        bdb.execute('''
+            CREATE METAMODEL m1 FOR p WITH BASELINE crosscat(
+                SET CATEGORY MODEL FOR age TO exponential;
+                SET CATEGORY MODEL FOR height TO lognormal;
+            )
+        ''')
+        bdb.execute('INITIALIZE 2 MODELS FOR m1')
+        bdb.execute('ANALYZE m1 FOR 2 ITERATION WAIT;')
+        # Run height queries on m1.
+        run_queries('height', 'm1')
+        # Run height queries on population, aggregating m0 and m1.
+        run_queries('height', None)
+        # Add a third variable.
+        bdb.execute('ALTER POPULATION p ADD VARIABLE rank numerical;')
+        # Run queries on the new variable.
+        run_queries('rank', 'm0')
+        run_queries('rank', 'm1')
+        run_queries('rank', None)

@@ -276,7 +276,80 @@ def execute_phrase(bdb, phrase, bindings=()):
                     (repr(population),))
             population_id = core.bayesdb_get_population(bdb, population)
             for cmd in phrase.commands:
-                if isinstance(cmd, ast.AlterPopStatType):
+                if isinstance(cmd, ast.AlterPopAddVar):
+                    # Ensure column exists in base table.
+                    table = core.bayesdb_population_table(bdb, population_id)
+                    if not core.bayesdb_table_has_column(
+                            bdb, table, cmd.name):
+                        raise BQLError(bdb,
+                            'No such variable in base table: %s'
+                            % (cmd.name))
+                    # Ensure variable not already in population.
+                    if core.bayesdb_has_variable(
+                            bdb, population_id, None, cmd.name):
+                        raise BQLError(bdb,
+                            'Variable already in population: %s'
+                            % (cmd.name))
+                    # Ensure there is at least observation in the column.
+                    qt = sqlite3_quote_name(table)
+                    qc = sqlite3_quote_name(cmd.name)
+                    cursor = bdb.sql_execute(
+                        'SELECT COUNT(*) FROM %s WHERE %s IS NOT NULL' %
+                        (qt, qc))
+                    if cursor_value(cursor) == 0:
+                        raise BQLError(bdb,
+                            'Cannot add variable without any values: %s'
+                            % (cmd.name))
+                    # If stattype is None, guess.
+                    if cmd.stattype is None:
+                        cursor = bdb.sql_execute(
+                            'SELECT %s FROM %s' % (qc, qt))
+                        rows = cursor.fetchall()
+                        stattype = bayesdb_guess_stattypes([cmd.name], rows)[0]
+                        # Fail if trying to model a key.
+                        if stattype == 'key':
+                            raise BQLError(bdb,
+                                'Values in column %s appear to be keys.'
+                                % (cmd.name,))
+                        # Fail if cannot determine a stattype.
+                        elif stattype == 'ignore':
+                            raise BQLError(bdb,
+                                'Failed to determine a stattype for %s, '
+                                'please specify one manually.' % (cmd.name,))
+                    # If user specified stattype, ensure it exists.
+                    elif not core.bayesdb_has_stattype(bdb, cmd.stattype):
+                        raise BQLError(bdb,
+                            'Invalid stattype: %s' % (cmd.stattype))
+                    else:
+                        stattype = cmd.stattype
+                    with bdb.savepoint():
+                        # Add the variable to the population.
+                        core.bayesdb_add_variable(
+                            bdb, population_id, cmd.name, stattype)
+                        colno = core.bayesdb_variable_number(
+                            bdb, population_id, None, cmd.name)
+                        # Add the variable to each (initialized) metamodel in
+                        # the population.
+                        generator_ids = filter(
+                            lambda g: core.bayesdb_generator_modelnos(bdb, g),
+                            core.bayesdb_population_generators(
+                                bdb, population_id),
+                        )
+                        for generator_id in generator_ids:
+                            # XXX Omit needless bayesdb_generator_column table
+                            # Github issue #441.
+                            bdb.sql_execute('''
+                                INSERT INTO bayesdb_generator_column
+                                    VALUES (:generator_id, :colno, :stattype)
+                            ''', {
+                                'generator_id': generator_id,
+                                'colno': colno,
+                                'stattype': stattype,
+                            })
+                            metamodel = core.bayesdb_generator_metamodel(
+                                bdb, generator_id)
+                            metamodel.add_column(bdb, generator_id, colno)
+                elif isinstance(cmd, ast.AlterPopStatType):
                     # Check the no metamodels are defined for this population.
                     generators = core.bayesdb_population_generators(
                         bdb, population_id)
@@ -642,44 +715,31 @@ def _create_population(bdb, phrase):
             bdb, 'Cannot determine a modeling policy for variables: %r'
             % (not_found, ))
 
-    # Get a map from variable name to colno.  Check
+    # Check
     # - for duplicates,
     # - for nonexistent columns,
     # - for invalid statistical types.
-    variable_map = {}
+    seen_variables = set()
     duplicates = set()
     missing = set()
     invalid = set()
-    colno_sql = '''
-        SELECT colno FROM bayesdb_column
-            WHERE tabname = :table AND name = :column_name
-    '''
     stattype_sql = '''
         SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype
     '''
     for nm, st in pop_all_vars:
         name = casefold(nm)
         stattype = casefold(st)
-        if name in variable_map:
+        if name in seen_variables:
             duplicates.add(name)
             continue
-        cursor = bdb.sql_execute(colno_sql, {
-            'table': phrase.table,
-            'column_name': name,
-        })
-        try:
-            row = cursor.next()
-        except StopIteration:
+        if not core.bayesdb_table_has_column(bdb, phrase.table, nm):
             missing.add(name)
             continue
-        else:
-            colno = row[0]
-            assert isinstance(colno, int)
-            cursor = bdb.sql_execute(stattype_sql, {'stattype': stattype})
-            if cursor_value(cursor) == 0 and stattype != 'ignore':
-                invalid.add(stattype)
-                continue
-            variable_map[name] = colno
+        cursor = bdb.sql_execute(stattype_sql, {'stattype': stattype})
+        if cursor_value(cursor) == 0 and stattype != 'ignore':
+            invalid.add(stattype)
+            continue
+        seen_variables.add(nm)
     # XXX Would be nice to report these simultaneously.
     if missing:
         raise BQLError(bdb, 'No such columns in table %r: %r' %
@@ -692,15 +752,10 @@ def _create_population(bdb, phrase):
     # Insert variable records.
     for nm, st in pop_all_vars:
         name = casefold(nm)
-        colno = variable_map[name]
         stattype = casefold(st)
         if stattype == 'ignore':
             continue
-        bdb.sql_execute('''
-            INSERT INTO bayesdb_variable
-                (population_id, name, colno, stattype)
-                VALUES (?, ?, ?, ?)
-        ''', (population_id, name, colno, stattype))
+        core.bayesdb_add_variable(bdb, population_id, name, stattype)
 
 def rename_table(bdb, old, new):
     assert core.bayesdb_has_table(bdb, old)
