@@ -1677,13 +1677,13 @@ def test_alterpop_addvar():
         ''')
         population_id = core.bayesdb_get_population(bdb, 'p')
         bdb.execute('create metamodel m for p with baseline crosscat;')
-        # Variable does not exist in base table.
+        # Fail when variable does not exist in base table.
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('alter population p add variable quux;')
-        # Variable already in population.
+        # Fail when variable already in population.
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('alter population p add variable age numerical;')
-        # Invalid statistical type.
+        # Fail when given invalid statistical type.
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('alter population p add variable heigh numr;')
         # Alter pop with stattype.
@@ -1703,7 +1703,7 @@ def test_alterpop_addvar():
         assert core.bayesdb_has_variable(bdb, population_id, None, 'division')
         # Add a new column weight to the base table.
         bdb.sql_execute('alter table t add column weight real;')
-        # No values in new column weight.
+        # Fail when no values in new column.
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('alter population p add variable weight numerical;')
         assert not core.bayesdb_has_variable(bdb, population_id, None, 'weight')
