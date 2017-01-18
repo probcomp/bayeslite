@@ -182,6 +182,11 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             DELETE FROM bayesdb_cgpm_generator WHERE generator_id = ?
         ''', (generator_id,))
 
+    def add_column(self, bdb, generator_id, colno):
+        # TODO: Implement me!
+        print 'Added column!'
+        return
+
     def initialize_models(self, bdb, generator_id, modelnos):
         # Caller should guarantee a nondegenerate request.
         n = len(modelnos)

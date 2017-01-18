@@ -152,6 +152,15 @@ class IBayesDBMetamodel(object):
         """
         raise NotImplementedError
 
+    def add_column(self, bdb, generator_id, colno):
+        """Add `colno` from the population as a variable in the metamodel.
+
+        Used by the MML::
+
+            ALTER POPULATION <population> ADD VARIABLE <variable> <stattype>
+        """
+        raise NotImplementedError
+
     def initialize_models(self, bdb, generator_id, modelnos):
         """Initialize the specified model numbers for a generator."""
         raise NotImplementedError

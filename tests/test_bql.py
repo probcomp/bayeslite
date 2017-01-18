@@ -1660,6 +1660,58 @@ def test_createtab():
         # XXX Test to make sure TEMP is passed through, and the table
         # doesn't persist on disk.
 
+def test_alterpop_addvar():
+    with bayeslite.bayesdb_open() as bdb:
+        bayeslite.bayesdb_read_csv(
+            bdb, 't', StringIO.StringIO(test_csv.csv_data),
+            header=True, create=True)
+        bdb.execute('''
+            create population p for t with schema(
+                age         numerical;
+                gender      nominal;
+                salary      numerical;
+                height      ignore;
+                division    ignore;
+                rank        ignore;
+            )
+        ''')
+        population_id = core.bayesdb_get_population(bdb, 'p')
+        bdb.execute('create metamodel m for p with baseline crosscat;')
+        # Variable does not exist in base table.
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('alter population p add variable quux;')
+        # Variable already in population.
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('alter population p add variable age numerical;')
+        # Invalid statistical type.
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('alter population p add variable heigh numr;')
+        # Alter pop with stattype.
+        assert not core.bayesdb_has_variable(bdb, population_id, None, 'height')
+        bdb.execute('alter population p add variable height numerical;')
+        assert core.bayesdb_has_variable(bdb, population_id, None, 'height')
+        # Alter pop multiple without stattype.
+        assert not core.bayesdb_has_variable(bdb, population_id, None, 'rank')
+        assert not core.bayesdb_has_variable(
+            bdb, population_id, None, 'division')
+        bdb.execute('''
+            alter population p
+                add variable rank,
+                add variable division;
+        ''')
+        assert core.bayesdb_has_variable(bdb, population_id, None, 'rank')
+        assert core.bayesdb_has_variable(bdb, population_id, None, 'division')
+        # Add a new column weight to the base table.
+        bdb.sql_execute('alter table t add column weight real;')
+        # No values in new column weight.
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('alter population p add variable weight numerical;')
+        assert not core.bayesdb_has_variable(bdb, population_id, None, 'weight')
+        # Update a single value and update the population.
+        bdb.sql_execute('update t set weight = 1 where oid = 1;')
+        bdb.execute('alter population p add variable weight numerical;')
+        assert core.bayesdb_has_variable(bdb, population_id, None, 'weight')
+
 def test_txn():
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
         # Make sure rollback and commit fail outside a transaction.
