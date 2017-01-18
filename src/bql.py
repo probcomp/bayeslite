@@ -281,19 +281,24 @@ def execute_phrase(bdb, phrase, bindings=()):
                     generators = core.bayesdb_population_generators(
                         bdb, population_id)
                     if generators:
-                        raise BQLError(bdb, 'Cannot update statistical types '
-                            'for population %s, it has metamodels: %s'
+                        raise BQLError(bdb,
+                            'Cannot update statistical types for population '
+                            '%s, it has metamodels: %s'
                             % (repr(population), repr(generators),))
                     # Check all the variables are in the population.
-                    unknown = [c for c in cmd.names if not
-                        core.bayesdb_has_variable(bdb, population_id, None, c)]
+                    unknown = [
+                        c for c in cmd.names if not
+                        core.bayesdb_has_variable(bdb, population_id, None, c)
+                    ]
                     if unknown:
-                        raise BQLError(bdb, 'No such variables in population'
-                            ': %s' % (repr(unknown)))
+                        raise BQLError(bdb,
+                            'No such variables in population: %s'
+                            % (repr(unknown)))
                     # Check the statistical type is valid.
                     if not core.bayesdb_has_stattype(bdb, cmd.stattype):
-                        raise BQLError(bdb, 'Invalid statistical type'
-                            ': %r' % (repr(cmd.stattype),))
+                        raise BQLError(bdb,
+                            'Invalid statistical type: %r'
+                            % (repr(cmd.stattype),))
                     # Perform the stattype update.
                     colnos = [
                         core.bayesdb_variable_number(
