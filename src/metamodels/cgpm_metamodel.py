@@ -465,6 +465,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             variable_numbers = core.bayesdb_variable_numbers(
                 bdb, population_id, None)
             # Relies on user appropriately nullifying nan tokens.
+            rowid = -1
             constraints = [
                 (rowid, col, value)
                 for (col, value) in zip(variable_numbers, row_values)
@@ -489,10 +490,39 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             num_samples=None, accuracy=None):
         if num_samples is None:
             num_samples = 1
+        # Build the cgpm query.
+        cgpm_query = [colno for _r, colno in targets]
+        # ------------------------- #
+        # Handle rowid nightmare.
         rowid = self._unique_rowid(
             [r for r, _c in targets] + [r for r, _c, _v in constraints])
+        # Does the rowid exist in the base table?
+        exists = 0 < rowid < core.bayesdb_generator_fresh_row_id(bdb, generator_id)
+        # Is the rowid incorporated into the cgpm?
+        incorporated = bdb.sql_execute('''
+            SELECT 1 FROM bayesdb_cgpm_individual
+            WHERE generator_id = ? AND table_rowid = ?
+            LIMIT 1
+        ''', (generator_id, rowid,)).fetchall()
+        # If yes, retrieve evidence.
+        if exists and (not incorporated):
+            population_id = core.bayesdb_generator_population(bdb, generator_id)
+            # Retrieve all other variables except colno, and ignore latents in
+            # generator_id, and place them in the constraints.
+            row_values = core.bayesdb_population_row_values(
+                bdb, population_id, rowid)
+            variable_numbers = core.bayesdb_variable_numbers(
+                bdb, population_id, None)
+            avoid = set(cgpm_query + [c for _r, c, _v in constraints])
+            constraints2 = [
+                (rowid, col, value)
+                for (col, value) in zip(variable_numbers, row_values)
+                if (value is not None) and col not in avoid
+            ]
+            constraints.extend(constraints2)
+        # Retrieve the cgpm_rowid.
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
-        cgpm_query = [colno for _r, colno in targets]
+        # ------------------------- #
         # Build the evidence, ignoring nan values.
         cgpm_evidence = {}
         for _r, colno, value in constraints:
@@ -505,7 +535,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             cgpm_rowid, cgpm_query, cgpm_evidence, N=num_samples,
             accuracy=accuracy, multiprocess=self._multiprocess)
         weighted_samples = engine._likelihood_weighted_resample(
-            samples, cgpm_rowid, cgpm_evidence, multiprocess=self._multiprocess)
+            samples, cgpm_rowid, evidence=None, multiprocess=self._multiprocess)
         def map_value(colno, value):
             return self._from_numeric(bdb, generator_id, colno, value)
         return [
