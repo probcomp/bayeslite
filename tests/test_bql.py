@@ -22,6 +22,7 @@ import bayeslite
 import bayeslite.ast as ast
 import bayeslite.compiler as compiler
 import bayeslite.core as core
+from bayeslite.exception import BQLError
 import bayeslite.guess as guess
 import bayeslite.parse as parse
 import bayeslite.metamodels.troll_rng as troll
@@ -107,7 +108,51 @@ def test_trivial_population():
                 age numerical
             )
         ''')
-        bdb.execute('drop population p')
+        bdb.execute('drop population if exists p')
+
+def test_population_invalid_numerical():
+    with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
+        with open(fname, 'rU') as f:
+            bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                create population p for t (
+                    guess stattypes for (*);
+                    gender numerical
+                )
+            ''')
+
+def test_population_invalid_numerical_alterpop_addvar():
+    with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
+        with open(fname, 'rU') as f:
+            bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
+        bdb.execute('''
+            create population p for t (
+                guess stattypes for (*);
+                ignore gender
+            )
+        ''')
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                alter population p add variable gender numerical
+            ''')
+        bdb.execute('drop population if exists p')
+
+def test_population_invalid_numerical_alterpop_stattype():
+    with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
+        with open(fname, 'rU') as f:
+            bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
+        bdb.execute('''
+                create population p for t (
+                    guess stattypes for (*);
+                    gender nominal
+                )
+            ''')
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                alter population p set stattypes for gender to numerical
+            ''')
+        bdb.execute('drop population if exists p')
 
 @stochastic(max_runs=2, min_passes=1)
 def test_conditional_probability(seed):

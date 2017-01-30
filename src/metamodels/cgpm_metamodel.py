@@ -121,8 +121,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             if _is_categorical(stattype):
                 qn = sqlite3_quote_name(name)
                 cursor = bdb.sql_execute('''
-                    SELECT DISTINCT %s FROM %s WHERE %s IS NOT NULL
-                ''' % (qn, qt, qn))
+                    SELECT DISTINCT %s FROM %s WHERE %s IS NOT NULL AND %s NOT
+                    IN ('', "''")
+                ''' % (qn, qt, qn, qn))
                 for code, (value,) in enumerate(cursor):
                     bdb.sql_execute('''
                         INSERT INTO bayesdb_cgpm_category

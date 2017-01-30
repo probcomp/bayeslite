@@ -105,6 +105,27 @@ def cgpm_dummy_satellites_bdb():
                     ''', (country, mass, l, x, y, f(x, y)))
         yield bdb
 
+def test_cgpm_no_empty_categories():
+    with cgpm_smoke_bdb() as bdb:
+        bdb.sql_execute('CREATE TABLE f (a, b, c);')
+        rows = [['', "''", 'nan'], [1.1, 3, '']]
+        for row in rows:
+            bdb.sql_execute('INSERT INTO f (a, b, c) VALUES (?,?,?)', row)
+        bdb.execute('''
+            CREATE POPULATION q FOR f WITH SCHEMA (
+                MODEL a, b, c AS NOMINAL
+            );
+        ''')
+        bdb.execute('''
+            CREATE METAMODEL h IF NOT EXISTS FOR q USING cgpm
+        ''')
+        bdb.execute('INITIALIZE 1 MODEL FOR h')
+        category_rows = bdb.sql_execute(
+                'SELECT * FROM bayesdb_cgpm_category;').fetchall()
+        # Assert that none of the categories are empty strings or NULL.
+        for row in category_rows:
+            assert row[2] not in ['', "''", None]
+
 def cgpm_smoke_tests(bdb, gen, vars):
     modelledby = 'MODELLED BY %s' % (gen,) if gen else ''
     for var in vars:

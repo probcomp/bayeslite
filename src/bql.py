@@ -337,6 +337,15 @@ def execute_phrase(bdb, phrase, bindings=()):
                             'Invalid stattype: %s' % (cmd.stattype))
                     else:
                         stattype = cmd.stattype
+                    # Check that strings are not being modeled as numerical.
+                    if stattype == 'numerical':
+                        cursor = bdb.sql_execute(
+                                'SELECT %s FROM %s' % (qc, qt))
+                        rows = cursor.fetchall()
+                        if any(isinstance(r[0], (unicode, str)) for r in rows):
+                            raise BQLError(
+                                bdb, 'Column(s) with string values modeled as '
+                                'numerical: %r'% (qc, ))
                     with bdb.savepoint():
                         # Add the variable to the population.
                         core.bayesdb_add_variable(
@@ -387,6 +396,21 @@ def execute_phrase(bdb, phrase, bindings=()):
                         raise BQLError(bdb,
                             'Invalid statistical type: %r'
                             % (repr(cmd.stattype),))
+                    # Check that strings are not being modeled as numerical.
+                    if cmd.stattype == 'numerical':
+                        numerical_string_vars = []
+                        qt = core.bayesdb_population_table(bdb, population_id)
+                        for name in cmd.names:
+                            cursor = bdb.sql_execute(
+                                    'SELECT %s FROM %s' % (name, qt))
+                            rows = cursor.fetchall()
+                            if any(
+                                isinstance(r[0], (unicode, str)) for r in rows):
+                                numerical_string_vars.append(name)
+                        if len(numerical_string_vars) > 0:
+                            raise BQLError(
+                                bdb, 'Column(s) with string values modeled as '
+                                'numerical: %r'% (numerical_string_vars, ))
                     # Perform the stattype update.
                     colnos = [
                         core.bayesdb_variable_number(
@@ -717,6 +741,20 @@ def _create_population(bdb, phrase):
             pop_ignore_vars.append((col, 'ignore'))
     else:
         pop_guess_vars = []
+
+    # Ensure no string-valued variables are being modeled as numerical.
+    numerical_string_vars = []
+    for var, stattype in pop_model_vars:
+        if stattype == 'numerical':
+            qt = sqlite3_quote_name(phrase.table)
+            cursor = bdb.sql_execute('SELECT %s FROM %s' % (var, qt))
+            rows = cursor.fetchall()
+            if any(isinstance(r[0], (unicode, str)) for r in rows):
+                numerical_string_vars.append(var)
+    if len(numerical_string_vars) > 0:
+        raise BQLError(
+            bdb, 'Column(s) with string values modeled as numerical: %r'
+            % (numerical_string_vars, ))
 
     # Pool all the variables and statistical types together.
     pop_all_vars = pop_model_vars + pop_ignore_vars + pop_guess_vars
