@@ -105,7 +105,8 @@ def test_guess_stattypes():
     assert bayesdb_guess_stattypes(n, rows) == ['numerical', 'numerical']
     rows = [[c + 0.5, float(c)] for c in a_z]
     assert bayesdb_guess_stattypes(n, rows) == ['numerical', 'key']
-    # Columns with unique ints and non-integer-valued floats cannot be keys.
+    # A column with a mix of ints and non-integer-valued floats should be
+    # numerical.
     rows = [[c + 0.5, float(c + 0.5) if c % 2 == 0 else int(c)] for c in a_z]
     assert bayesdb_guess_stattypes(n, rows) == ['numerical', 'numerical']
 
