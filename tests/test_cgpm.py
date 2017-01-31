@@ -351,10 +351,16 @@ def test_cgpm_kepler():
         bdb.execute('ANALYZE g0 FOR 1 ITERATION WAIT (VARIABLES period)')
         bdb.execute('ANALYZE g1 FOR 1 ITERATION WAIT')
         bdb.execute('ANALYZE g1 FOR 1 ITERATION WAIT (VARIABLES period)')
-        # Cannot use OPTMIIZED with other clauses.
-        with pytest.raises(BQLError):
+        # OPTIMIZED is ignored because period is a foreign variable.
+        bdb.execute('''
+            ANALYZE g1 FOR 1 ITERATION WAIT (OPTIMIZED; VARIABLES period)
+        ''')
+        # This should fail since we have a SET CATEGORY MODEL which is not
+        # compatible with lovecat. The ValueError is from cgpm not bayeslite.
+        with pytest.raises(ValueError):
             bdb.execute('''
-                ANALYZE g1 FOR 1 ITERATION WAIT (OPTIMIZED; VARIABLES period)
+                ANALYZE g1 FOR 1 ITERATION WAIT
+                    (OPTIMIZED; VARIABLES launch_mass)
             ''')
         # Cannot use timed analysis with mixed variables.
         with pytest.raises(BQLError):
@@ -762,8 +768,23 @@ def test_add_variable():
         run_queries('height', 'm1')
         # Run height queries on population, aggregating m0 and m1.
         run_queries('height', None)
-        # Add a third variable.
+        # Add a third variable rank.
         bdb.execute('ALTER POPULATION p ADD VARIABLE rank numerical;')
+        # Analyze rank on m0.
+        bdb.execute('''
+            ANALYZE m0 FOR 2 ITERATION WAIT (OPTIMIZED; VARIABLES rank);
+        ''')
+        # Analyze all except rank on m0.
+        bdb.execute('''
+            ANALYZE m0 FOR 2 ITERATION WAIT (OPTIMIZED; SKIP rank);
+        ''')
+        # Fail on m1 with OPTIMIZED, since non-standard category models.
+        with pytest.raises(ValueError):
+            bdb.execute('''
+                ANALYZE m1 FOR 2 ITERATION WAIT (OPTIMIZED; VARIABLES rank);
+            ''')
+        # Succeed analysis on non-optimized analysis.
+        bdb.execute('ANALYZE m1 FOR 2 ITERATION WAIT;')
         # Run queries on the new variable.
         run_queries('rank', 'm0')
         run_queries('rank', 'm1')
