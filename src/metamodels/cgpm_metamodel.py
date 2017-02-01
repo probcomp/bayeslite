@@ -65,6 +65,8 @@ CREATE TABLE bayesdb_cgpm_category (
 );
 '''
 
+QUOTES = ['', '\'\'', '""', '\'"', '"\'']
+
 class CGPM_Metamodel(IBayesDBMetamodel):
     def __init__(self, cgpm_registry, multiprocess=None):
         self._cgpm_registry = cgpm_registry
@@ -117,14 +119,13 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             SELECT colno, name, stattype FROM bayesdb_variable
                 WHERE population_id = ? AND 0 <= colno
         ''', (population_id,))
-        unbalanced_quotes = ['\'"', '"\'']
         for colno, name, stattype in vars_cursor:
             if _is_categorical(stattype):
                 qn = sqlite3_quote_name(name)
                 cursor = bdb.sql_execute('''
                     SELECT DISTINCT %s FROM %s WHERE %s IS NOT NULL AND %s NOT
-                    IN ('', "''", '""', ?, ?)
-                ''' % (qn, qt, qn, qn), unbalanced_quotes)
+                    IN (?, ?, ?, ?, ?)
+                ''' % (qn, qt, qn, qn), QUOTES)
                 for code, (value,) in enumerate(cursor):
                     bdb.sql_execute('''
                         INSERT INTO bayesdb_cgpm_category
