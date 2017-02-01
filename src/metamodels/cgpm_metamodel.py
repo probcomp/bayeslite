@@ -302,8 +302,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Explicitly supress prograss bar if quiet, otherwise use default.
         progress = False if quiet else None
 
-        vars_baseline = self._retrieve_baseline_variables(bdb, generator_id)
-        vars_foreign = self._retrieve_foreign_variables(bdb, generator_id)
+        vars_baseline = engine.states[0].outputs
+        vars_foreign = list(itertools.chain.from_iterable([
+            cgpm.outputs for cgpm in engine.states[0].hooked_cgpms.itervalues()
+        ]))
 
         # By default transition all baseline variables only.
         vars_target_baseline = vars_baseline
