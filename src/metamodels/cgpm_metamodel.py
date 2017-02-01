@@ -302,54 +302,66 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Explicitly supress prograss bar if quiet, otherwise use default.
         progress = False if quiet else None
 
-        # Transitions all baseline variables only using lovecat or loomcat.
-        if optimized:
-            if optimized.backend == 'lovecat':
+        vars_baseline = engine.states[0].outputs
+        vars_foreign = list(itertools.chain.from_iterable([
+            cgpm.outputs for cgpm in engine.states[0].hooked_cgpms.itervalues()
+        ]))
+
+        # By default transition all baseline variables only.
+        vars_target_baseline = vars_baseline
+        vars_target_foreign = None
+
+        # Partition user-specified variables into baseline and foreign.
+        if vars_user:
+            intersection = lambda a,b: [x for x in a if x in b]
+            vars_target_baseline = intersection(vars_user, vars_baseline)
+            vars_target_foreign = intersection(vars_user, vars_foreign)
+
+        assert vars_target_baseline or vars_target_foreign
+
+        # Timed analysis is incompatible with mixed baseline and foreign.
+        if max_seconds and (vars_target_baseline and vars_target_foreign):
+            raise BQLError(bdb,
+                'Timed analysis accepts foreign xor baseline variables.')
+
+        # Run transitions on baseline variables.
+        if vars_target_baseline:
+            if optimized and optimized.backend == 'loom':
+                engine.transition_loom(
+                    N=iterations,
+                    S=max_seconds,
+                    progress=progress,
+                    checkpoint=ckpt_iterations,
+                    multiprocess=self._multiprocess,
+                )
+            elif optimized and optimized.backend == 'lovecat':
                 engine.transition_lovecat(
-                    N=iterations, S=max_seconds, progress=progress,
-                    checkpoint=ckpt_iterations, multiprocess=self._multiprocess)
-            elif optimized.backend == 'loom':
-                engine.transition_loom(N=iterations, S=max_seconds,
-                    progress=progress, checkpoint=ckpt_iterations,
-                    multiprocess=self._multiprocess)
+                    N=iterations,
+                    S=max_seconds,
+                    cols=vars_target_baseline,
+                    progress=progress,
+                    checkpoint=ckpt_iterations,
+                    multiprocess=self._multiprocess,
+                )
             else:
-                raise BQLError(bdb,
-                    'Unknown backend in OPTIMIZED: ' % optimized.backend)
-
-        # More complex possibilities if using cgpm.
-        else:
-            vars_baseline = self._retrieve_baseline_variables(bdb, generator_id)
-            vars_foreign = self._retrieve_foreign_variables(bdb, generator_id)
-
-            # By default transition all baseline variables only.
-            vars_target_baseline = vars_baseline
-            vars_target_foreign = None
-
-            # Partition user-specified variables into baseline and foreign.
-            if vars_user:
-                intersection = lambda a,b: [x for x in a if x in b]
-                vars_target_baseline = intersection(vars_user, vars_baseline)
-                vars_target_foreign = intersection(vars_user, vars_foreign)
-
-            assert vars_target_baseline or vars_target_foreign
-
-            # Timed analysis is incompatible with mixed baseline and foreign.
-            if max_seconds and (vars_target_baseline and vars_target_foreign):
-                raise BQLError(bdb,
-                    'Timed analysis accepts foreign xor baseline variables.')
-
-            # Run transitions on baseline variables.
-            if vars_target_baseline:
                 engine.transition(
-                    N=iterations, S=max_seconds, cols=vars_target_baseline,
-                    progress=progress, checkpoint=ckpt_iterations,
-                    multiprocess=self._multiprocess)
+                    N=iterations,
+                    S=max_seconds,
+                    cols=vars_target_baseline,
+                    progress=progress,
+                    checkpoint=ckpt_iterations,
+                    multiprocess=self._multiprocess,
+                )
 
-            # Run transitions on foreign variables.
-            if vars_target_foreign:
-                engine.transition_foreign(
-                    N=iterations, S=max_seconds, cols=vars_target_foreign,
-                    progress=progress, multiprocess=self._multiprocess)
+        # Run transitions on foreign variables.
+        if vars_target_foreign:
+            engine.transition_foreign(
+                N=iterations,
+                S=max_seconds,
+                cols=vars_target_foreign,
+                progress=progress,
+                multiprocess=self._multiprocess,
+            )
 
         # Serialize the engine.
         engine_json = json_dumps(engine.to_metadata())
@@ -1195,7 +1207,7 @@ def _retrieve_analyze_variables(bdb, generator_id, ast):
         elif isinstance(clause, cgpm_analyze.parse.Skip):
             if seen_variables or seen_skip:
                 raise BQLError(bdb,
-                    'Only 1 VARIABLES or SKIP clause allowed in ANALYZE')
+                    'Either VARIABLES or SKIP clause allowed in ANALYZE')
             seen_skip = True
             excluded = set()
             unknown = set()
@@ -1214,6 +1226,9 @@ def _retrieve_analyze_variables(bdb, generator_id, ast):
 
         # OPTIMIZED is incompatible with any other clause.
         elif isinstance(clause, cgpm_analyze.parse.Optimized):
+            if clause.backend not in ['loom', 'lovecat']:
+                raise BQLError(bdb,
+                    'Unknown OPTIMIZED backend: %s' % (clause.backend))
             seen_optimized = clause
 
         # QUIET supresses the progress bar.
@@ -1224,10 +1239,11 @@ def _retrieve_analyze_variables(bdb, generator_id, ast):
         else:
             raise BQLError(bdb, 'Unknown clause in ANALYZE: %s.' % (ast,))
 
-    # OPTIMIZED is incompatible with any other clause.
-    if seen_optimized:
-        if seen_variables or seen_skip:
-            raise BQLError(bdb, 'OPTIMIZED incompatible with other clauses.')
+    # Targeted analysis with the LOOM backend is not supported.
+    if seen_optimized and seen_optimized.backend == 'loom':
+        if seen_skip or seen_variables:
+            raise BQLError(bdb,
+                'LOOM analysis does not targeted analysis on variables.')
 
     variable_numbers = [
         core.bayesdb_variable_number(bdb, population_id, generator_id, v)

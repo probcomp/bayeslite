@@ -18,6 +18,7 @@ import os
 import pytest
 
 from bayeslite import bayesdb_open
+from bayeslite.exception import BQLError
 
 root = os.path.dirname(os.path.abspath(__file__))
 dha_csv = os.path.join(root, 'dha.csv')
@@ -45,12 +46,17 @@ def loom_analyze(csv_filename):
         bdb.execute('CREATE METAMODEL m FOR p WITH BASELINE crosscat;')
         bdb.execute('INITIALIZE 10 MODELS FOR m')
         bdb.execute('ANALYZE m FOR 20 ITERATION WAIT (loom);')
-        # progress for Loom not supported.
+        # targeted analysis for Loom not supported.
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                ANALYZE m FOR 1 ITERATION WAIT (loom; variables TTL_MDCR_SPND);
+            ''')
+        # progress for Loom not supported (error from cgpm).
         with pytest.raises(ValueError):
             bdb.execute('''
                 ANALYZE m FOR 1 ITERATION WAIT (loom; quiet);
             ''')
-        # timing for Loom not supported.
+        # timing for Loom not supported  (error from cgpm).
         with pytest.raises(ValueError):
             bdb.execute('''
                 ANALYZE m FOR 1 SECONDS WAIT (loom);
