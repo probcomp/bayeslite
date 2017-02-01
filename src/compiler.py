@@ -656,6 +656,12 @@ def compile_simulate(bdb, simulate, out):
         assert isinstance(nsamples, int)
         def map_var(var):
             if casefold(var) not in core.bayesdb_rowid_tokens(bdb):
+                if not core.bayesdb_has_variable(bdb, population_id,
+                        generator_id, var):
+                    population = core.bayesdb_population_name(bdb,
+                        population_id)
+                    raise BQLError(bdb, 'No such variable in population %s'
+                        ': %s' % (population, var))
                 return core.bayesdb_variable_number(
                     bdb, population_id, generator_id, var)
             else:

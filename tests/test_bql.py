@@ -1246,21 +1246,37 @@ def test_parametrized():
             'PRAGMA table_info("t")',
             'SELECT CAST(4 AS INTEGER), \'F\'',
             'SELECT token FROM bayesdb_rowid_tokens',
+            'SELECT COUNT(*) FROM bayesdb_variable'
+                ' WHERE population_id = ?'
+                ' AND (generator_id IS NULL OR generator_id = ?)'
+                ' AND name = ?',
             'SELECT colno FROM bayesdb_variable '
                 'WHERE population_id = ? '
                 'AND (generator_id IS NULL OR generator_id = ?) '
                 'AND name = ?',
             'SELECT token FROM bayesdb_rowid_tokens',
+            'SELECT COUNT(*) FROM bayesdb_variable'
+                ' WHERE population_id = ?'
+                ' AND (generator_id IS NULL OR generator_id = ?)'
+                ' AND name = ?',
             'SELECT colno FROM bayesdb_variable '
                 'WHERE population_id = ? '
                 'AND (generator_id IS NULL OR generator_id = ?) '
                 'AND name = ?',
             'SELECT token FROM bayesdb_rowid_tokens',
+            'SELECT COUNT(*) FROM bayesdb_variable'
+                ' WHERE population_id = ?'
+                ' AND (generator_id IS NULL OR generator_id = ?)'
+                ' AND name = ?',
             'SELECT colno FROM bayesdb_variable '
                 'WHERE population_id = ? '
                 'AND (generator_id IS NULL OR generator_id = ?) '
                 'AND name = ?',
             'SELECT token FROM bayesdb_rowid_tokens',
+            'SELECT COUNT(*) FROM bayesdb_variable'
+                ' WHERE population_id = ?'
+                ' AND (generator_id IS NULL OR generator_id = ?)'
+                ' AND name = ?',
             'SELECT colno FROM bayesdb_variable '
                 'WHERE population_id = ? '
                 'AND (generator_id IS NULL OR generator_id = ?) '
@@ -1386,11 +1402,19 @@ def test_parametrized():
             'PRAGMA table_info("t")',
             'SELECT CAST(4 AS INTEGER), \'F\'',
             'SELECT token FROM bayesdb_rowid_tokens',
+            'SELECT COUNT(*) FROM bayesdb_variable'
+                ' WHERE population_id = ?'
+                ' AND (generator_id IS NULL OR generator_id = ?)'
+                ' AND name = ?',
             'SELECT colno FROM bayesdb_variable '
                 'WHERE population_id = ? '
                 'AND (generator_id IS NULL OR generator_id = ?) '
                 'AND name = ?',
             'SELECT token FROM bayesdb_rowid_tokens',
+            'SELECT COUNT(*) FROM bayesdb_variable'
+                ' WHERE population_id = ?'
+                ' AND (generator_id IS NULL OR generator_id = ?)'
+                ' AND name = ?',
             'SELECT colno FROM bayesdb_variable '
                 'WHERE population_id = ? '
                 'AND (generator_id IS NULL OR generator_id = ?) '
