@@ -274,10 +274,13 @@ def keyable_p(column):
     if any(v is None or (isinstance(v, float) and math.isnan(v))
            for v in column):
         return False
-    if all(isinstance(v, float) for v in column) and all(float(v).is_integer() \
-        for v in column):
-        return False
-    return len(column) == len(unique(column))
+    try:
+        column_floats = [float(v) for v in column]
+        if not all(v.is_integer() for v in column_floats):
+            return False
+        return len(column) == len(unique(column))
+    except ValueError:
+        return len(column) == len(unique(column))
 
 def numerical_p(column, count_cutoff, ratio_cutoff):
     nu = len(unique([v for v in column if not math.isnan(v)]))

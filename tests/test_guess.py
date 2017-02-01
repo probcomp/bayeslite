@@ -99,7 +99,16 @@ def test_guess_stattypes():
     # Nullify 3 because it holds so many of the values.
     # Ignore because <2 remaining.
     assert bayesdb_guess_stattypes(n, rows) == ['ignore', 'key']
-
+    # Ensure columns of unique floats are only taken to be keys when they are
+    # integer-valued, not otherwise.
+    rows = [[math.sqrt(c), c + 0.5] for c in a_z]
+    assert bayesdb_guess_stattypes(n, rows) == ['numerical', 'numerical']
+    rows = [[c + 0.5, float(c)] for c in a_z]
+    assert bayesdb_guess_stattypes(n, rows) == ['numerical', 'key']
+    # A column with a mix of ints and non-integer-valued floats should be
+    # numerical.
+    rows = [[c + 0.5, float(c + 0.5) if c % 2 == 0 else int(c)] for c in a_z]
+    assert bayesdb_guess_stattypes(n, rows) == ['numerical', 'numerical']
 
 def test_guess_population():
     bdb = bayeslite.bayesdb_open(builtin_metamodels=False)
