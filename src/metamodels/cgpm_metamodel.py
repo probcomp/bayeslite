@@ -410,8 +410,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Engine gives us a list of samples which it is our
         # responsibility to integrate over.
         mi_list = engine.mutual_information(
-            colno0, colno1, evidence=evidence, N=numsamples,
-            multiprocess=self._multiprocess)
+            [colno0], [colno1], evidence=evidence, N=numsamples,
+            progress=True, multiprocess=self._multiprocess)
 
         # Pass through the distribution of CMI to BayesDB without aggregation.
         return mi_list
