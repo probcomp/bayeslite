@@ -235,12 +235,23 @@ def execute_phrase(bdb, phrase, bindings=()):
     if isinstance(phrase, ast.GuessSchema):
         if not core.bayesdb_has_table(bdb, phrase.table):
             raise BQLError(bdb, 'No such table : %s' % phrase.table)
-        schema = guess.guess_to_schema(
-            guess.bayesdb_guess_stattypes,
-            bdb, phrase.table)
-        # Print schema to console, so user can edit it and/or copy/paste it into
-        # the schema definition when creating a population.
-        print schema
+        with bdb.savepoint():
+            qt = sqlite3_quote_name(phrase.table)
+            bdb.sql_execute('DROP TABLE IF EXISTS guessed_stattypes_%s'
+                %(phrase.table,))
+            bdb.sql_execute('''
+                CREATE TABLE guessed_stattypes_%s
+                (column TEXT, stattype TEXT, reason TEXT)
+            ''' %(phrase.table,))
+            cursor = bdb.sql_execute('SELECT * FROM %s' % (qt,))
+            column_names = [d[0] for d in cursor.description]
+            rows = cursor.fetchall()
+            stattypes = bayesdb_guess_stattypes(column_names, rows)
+            for cn, st in zip(column_names, stattypes):
+                bdb.sql_execute('''
+                    INSERT INTO guessed_stattypes_%s (column, stattype, reason)
+                    VALUES (?, ?, ?)
+                    ''' %(phrase.table,), (cn, st[0], st[1]))
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.CreatePop):
@@ -305,7 +316,8 @@ def execute_phrase(bdb, phrase, bindings=()):
                         cursor = bdb.sql_execute(
                             'SELECT %s FROM %s' % (qc, qt))
                         rows = cursor.fetchall()
-                        stattype = bayesdb_guess_stattypes([cmd.name], rows)[0]
+                        [stattype, reason] = bayesdb_guess_stattypes(
+                            [cmd.name], rows)[0]
                         # Fail if trying to model a key.
                         if stattype == 'key':
                             raise BQLError(bdb,
@@ -695,10 +707,10 @@ def _create_population(bdb, phrase):
         # XXX This function returns a stattype called `key`, which we will add
         # to the pop_ignore_vars.
         pop_guess_stattypes = bayesdb_guess_stattypes(pop_guess, rows)
-        pop_guess_vars = zip(pop_guess, pop_guess_stattypes)
+        pop_guess_vars = zip(pop_guess, [st[0] for st in pop_guess_stattypes])
         migrate = [(col, st) for col, st in pop_guess_vars if st=='key']
         for col, st in migrate:
-            pop_guess_vars.remove((col,st))
+            pop_guess_vars.remove((col, st))
             pop_ignore_vars.append((col, 'ignore'))
     else:
         pop_guess_vars = []
