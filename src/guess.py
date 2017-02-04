@@ -60,8 +60,7 @@ def bayesdb_guess_population(bdb, population, table,
             if ifnotexists:
                 return
             else:
-                raise ValueError('Population already exists: %r' % \
-                    (population,))
+                raise ValueError('Population exists: %r' % (population,))
         qt = sqlite3_quote_name(table)
         cursor = bdb.sql_execute('SELECT * FROM %s' % (qt,))
         column_names = [d[0] for d in cursor.description]
@@ -75,8 +74,9 @@ def bayesdb_guess_population(bdb, population, table,
                 column_names, stattypes)
         ])
         if len([s for s in stattypes if s != 'ignore']) == 0:
-            raise ValueError('Table has no modelled columns: %s' %
-                (repr(table),))
+            raise ValueError(
+                'Table has no modelled columns: %s'
+                % (repr(table),))
         qp = sqlite3_quote_name(population)
         qcns = map(sqlite3_quote_name, column_names)
         qsts = map(sqlite3_quote_name, stattypes)
@@ -96,7 +96,7 @@ def bayesdb_guess_stattypes(column_names, rows, null_values=None,
         nullify_ratio=None, overrides=None):
     """Heuristically guess statistical types for the data in `rows`.
 
-    Return a list of statistical types corresponding to the columns
+    Return a list of (statistical type, reason) corresponding to the columns
     named in the list `column_names`.
 
     :param set null_values: values to nullify.
@@ -141,8 +141,9 @@ def bayesdb_guess_stattypes(column_names, rows, null_values=None,
             duplicates.add(name)
         column_name_set.add(casefold(name))
     if 0 < len(duplicates):
-        raise ValueError('Duplicate column names: %s' %
-            (repr(list(duplicates),)))
+        raise ValueError(
+            'Duplicate column names: %s'
+            % (repr(list(duplicates),)))
 
     # Build a map for the overrides.
     #
@@ -160,22 +161,26 @@ def bayesdb_guess_stattypes(column_names, rows, null_values=None,
             continue
         override_map[casefold(name)] = casefold(stattype)
     if 0 < len(unknown):
-        raise ValueError('Unknown columns overridden: %s' %
-            (repr(list(unknown)),))
+        raise ValueError(
+            'Unknown columns overridden: %s'
+            % (repr(list(unknown)),))
     if 0 < len(duplicates):
-        raise ValueError('Duplicate columns overridden: %s' %
-            (repr(list(duplicates)),))
+        raise ValueError(
+            'Duplicate columns overridden: %s'
+            % (repr(list(duplicates)),))
 
     # Sanity-check the inputs.
     ncols = len(column_names)
     assert ncols == len(unique(map(casefold, column_names)))
     for ri, row in enumerate(rows):
         if len(row) < ncols:
-            raise ValueError('Row %d: Too few columns: %d < %d' %
-                (ri, len(row), ncols))
+            raise ValueError(
+                'Row %d: Too few columns: %d < %d'
+                % (ri, len(row), ncols))
         if len(row) > ncols:
-            raise ValueError('Row %d: Too many columns: %d > %d' %
-                (ri, len(row), ncols))
+            raise ValueError(
+                'Row %d: Too many columns: %d > %d'
+                % (ri, len(row), ncols))
 
     # Find a key first, if it has been specified as an override.
     key = None
@@ -191,15 +196,16 @@ def bayesdb_guess_stattypes(column_names, rows, null_values=None,
                 if ints:
                    column = ints
                 if not keyable_p(column):
-                    raise ValueError('Column non-unique but specified as key'
-                        ': %s' % (repr(column_name),))
+                    raise ValueError(
+                        'Column non-unique but specified as key: %s'
+                        % (repr(column_name),))
                 key = column_name
     if 0 < len(duplicate_keys):
-        raise ValueError('Multiple columns overridden as keys: %s' %
-            (repr(list(duplicate_keys)),))
+        raise ValueError(
+            'Multiple columns overridden as keys: %s'
+            % (repr(list(duplicate_keys)),))
 
-    # Now go through and guess the other column stattypes or use the
-    # override.
+    # Now go through and guess the other column stattypes or use the override.
     stattypes = []
     for ci, column_name in enumerate(column_names):
         if casefold(column_name) in override_map:
@@ -207,12 +213,14 @@ def bayesdb_guess_stattypes(column_names, rows, null_values=None,
             reason = 'User override.'
         else:
             column = nullify(null_values, rows, ci)
-            [stattype, reason] = guess_column_stattype(column,
-                                             distinct_ratio=distinct_ratio,
-                                             nullify_ratio=nullify_ratio,
-                                             numcat_count=numcat_count,
-                                             numcat_ratio=numcat_ratio,
-                                             have_key=(key is not None))
+            [stattype, reason] = guess_column_stattype(
+                column,
+                distinct_ratio=distinct_ratio,
+                nullify_ratio=nullify_ratio,
+                numcat_count=numcat_count,
+                numcat_ratio=numcat_ratio,
+                have_key=(key is not None)
+            )
             if stattype == 'key':
                 key = column_name
         stattypes.append([stattype, reason])
@@ -223,15 +231,21 @@ def guess_column_stattype(column, reason='', **kwargs):
     if None in counts:
         del counts[None]
     if len(counts) < 2:
-        return ['ignore', '%s There is only one unique value.' %(reason,)]
+        return [
+            'ignore',
+            '%s There is only one unique value.' % (reason,)
+        ]
     (most_numerous_key, most_numerous_count) = sorted(
         counts.items(), key=lambda item: item[1], reverse=True)[0]
     if most_numerous_count / float(len(column)) > kwargs['nullify_ratio']:
-        column = [ None if v == most_numerous_key else v for v in column ]
-        return guess_column_stattype(column, '%s More than %d percent of the '
-            'values are the same, so the statistical type was guessed based on '
-            'the remainder of the values.' %(reason,
-                int(100 * kwargs['nullify_ratio']),), **kwargs)
+        column = [None if v == most_numerous_key else v for v in column]
+        return guess_column_stattype(
+            column,
+            '%s More than %d percent of the values are the same, so the '
+                'statistical type was guessed based on the remainder of the '
+                'values.' % (reason, int(100 * kwargs['nullify_ratio']),),
+            **kwargs
+        )
     numericable = True
     ints = integerify(column)
     if ints:
@@ -243,32 +257,50 @@ def guess_column_stattype(column, reason='', **kwargs):
         else:
             numericable = False
     if not kwargs['have_key'] and keyable_p(column):
-        return ['key', '%s This was the first column in the table with all '
-            'distinct integers or strings.' %(reason,)]
+        return [
+            'key',
+            '%s This was the first column in the table with all distinct '
+            'integers or strings.' % (reason,)
+        ]
     elif numericable and \
         numerical_p(column, kwargs['numcat_count'], kwargs['numcat_ratio']):
-        return ['numerical', '%s There are at least %d unique numerical values,'
-            ' and they account for at least %d percent of all values in the '
-            'column.' %(reason, kwargs['numcat_count'],
-                int(100 * kwargs['numcat_ratio']),)]
+        return [
+            'numerical',
+            '%s There are at least %d unique numerical values, '
+                'and they account for at least %d percent of all '
+                'values in the column.'
+                % (reason, kwargs['numcat_count'],
+                    int(100 * kwargs['numcat_ratio']))
+        ]
     elif (len(counts) > kwargs['numcat_count'] and
         len(counts) / float(len(column)) > kwargs['distinct_ratio']):
-        return ['ignore', '%s There are more than %d distinct values and they '
-        'account for more than %d percent of the values in the column, so the '
-        'column is ignored as a pseudo-key.' %(reason, kwargs['numcat_count'],
-            int(100 * kwargs['distinct_ratio']))]
+        return [
+            'ignore',
+            '%s There are more than %d distinct values and they account '
+                'for more than %d percent of the values in the column, so the '
+                'column is ignored as a pseudo-key.'
+                % (reason, kwargs['numcat_count'],
+                    int(100 * kwargs['distinct_ratio']))
+        ]
     else:
         if numericable:
-            return ['nominal', '%s There are fewer than %d distinct numerical '
-                'values, or the ratio of distinct values to total values is '
-                'less than %d percent.' %(reason, kwargs['numcat_count'],
-                    int(100 * kwargs['numcat_ratio']),)]
+            return [
+                'nominal',
+                '%s There are fewer than %d distinct numerical '
+                    'values, or the ratio of distinct values to total values '
+                    'is less than %d percent.'
+                    % (reason, kwargs['numcat_count'],
+                        int(100 * kwargs['numcat_ratio']),)
+            ]
         else:
-            return ['nominal', '%s The values are nonnumerical.' %(reason,)]
+            return [
+                'nominal',
+                '%s The values are nonnumerical.' % (reason,)
+            ]
 
 
 def nullify(null_values, rows, ci):
-    return [ row[ci] if row[ci] not in null_values else None for row in rows ]
+    return [row[ci] if row[ci] not in null_values else None for row in rows]
 
 def integerify(column):
     result = []
@@ -283,7 +315,7 @@ def integerify(column):
 def floatify(column):
     result = []
     try:
-        result = [ float(v) if v is not None else float('NaN') for v in column ]
+        result = [float(v) if v is not None else float('NaN') for v in column]
     except (ValueError, TypeError):
         return None
     return result
