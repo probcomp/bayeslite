@@ -235,24 +235,27 @@ def execute_phrase(bdb, phrase, bindings=()):
     if isinstance(phrase, ast.GuessSchema):
         if not core.bayesdb_has_table(bdb, phrase.table):
             raise BQLError(bdb, 'No such table : %s' % phrase.table)
+        out = compiler.Output(0, {}, {})
         with bdb.savepoint():
             qt = sqlite3_quote_name(phrase.table)
-            bdb.sql_execute('DROP TABLE IF EXISTS guessed_stattypes_%s'
-                %(phrase.table,))
-            bdb.sql_execute('''
-                CREATE TABLE guessed_stattypes_%s
-                (column TEXT, stattype TEXT, reason TEXT)
-            ''' %(phrase.table,))
+            temptable = bdb.temp_table_name()
+            qtt = sqlite3_quote_name(temptable)
             cursor = bdb.sql_execute('SELECT * FROM %s' % (qt,))
             column_names = [d[0] for d in cursor.description]
             rows = cursor.fetchall()
             stattypes = bayesdb_guess_stattypes(column_names, rows)
+            out.winder('''
+                CREATE TEMP TABLE %s (column TEXT, stattype TEXT, reason TEXT)
+            ''' % (qtt), ())
             for cn, st in zip(column_names, stattypes):
-                bdb.sql_execute('''
-                    INSERT INTO guessed_stattypes_%s (column, stattype, reason)
-                    VALUES (?, ?, ?)
-                    ''' %(phrase.table,), (cn, st[0], st[1]))
-        return empty_cursor(bdb)
+                out.winder('''
+                    INSERT INTO %s VALUES (?, ?, ?)
+                ''' % (qtt), (cn, st[0], st[1]))
+            out.write('SELECT * FROM %s' % (qtt,))
+            out.unwinder('DROP TABLE %s' % (qtt,), ())
+        winders, unwinders = out.getwindings()
+        return execute_wound(
+            bdb, winders, unwinders, out.getvalue(), out.getbindings())
 
     if isinstance(phrase, ast.CreatePop):
         with bdb.savepoint():
