@@ -108,7 +108,7 @@ def test_trivial_population():
                 age numerical
             )
         ''')
-        bdb.execute('drop population if exists p')
+        bdb.execute('drop population p')
 
 def test_population_invalid_numerical():
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
@@ -133,10 +133,8 @@ def test_population_invalid_numerical_alterpop_addvar():
             )
         ''')
         with pytest.raises(BQLError):
-            bdb.execute('''
-                alter population p add variable gender numerical
-            ''')
-        bdb.execute('drop population if exists p')
+            bdb.execute('alter population p add variable gender numerical')
+        bdb.execute('drop population p')
 
 def test_population_invalid_numerical_alterpop_stattype():
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
@@ -152,7 +150,7 @@ def test_population_invalid_numerical_alterpop_stattype():
             bdb.execute('''
                 alter population p set stattypes for gender to numerical
             ''')
-        bdb.execute('drop population if exists p')
+        bdb.execute('drop population p')
 
 @stochastic(max_runs=2, min_passes=1)
 def test_conditional_probability(seed):
