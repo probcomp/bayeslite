@@ -978,8 +978,11 @@ class BQLCompiler_1Row(BQLCompiler_Const):
                 (population_id, nullor(generator_id)))
             out.write(', %s, %s)' % (rowid_col, colno))
         elif isinstance(bql, ast.ExpBQLSim):
-            if bql.condition is None:
+            if bql.tocondition is None:
                 raise BQLError(bdb, 'Similarity as 1-row function needs row.')
+            if bql.ofcondition is not None:
+                raise BQLError(bdb, 'Similarity as 1-row function needs one '
+                    'row not two rows.')
             out.write('bql_row_similarity(%d, %s' %
                 (population_id, nullor(generator_id)))
             out.write(', _rowid_, ')
@@ -987,7 +990,7 @@ class BQLCompiler_1Row(BQLCompiler_Const):
                 table_name = core.bayesdb_population_table(bdb, population_id)
                 qt = sqlite3_quote_name(table_name)
                 out.write('SELECT _rowid_ FROM %s WHERE ' % (qt,))
-                compile_expression(bdb, bql.condition, self, out)
+                compile_expression(bdb, bql.tocondition, self, out)
             if len(bql.column_lists) == 1 and \
                isinstance(bql.column_lists[0], ast.ColListAll):
                 # We'll likely run up against SQLite's limit on the
@@ -1072,7 +1075,7 @@ class BQLCompiler_2Row(object):
             raise BQLError(bdb, 'Predictive probability is 1-row function,'
                 ' not 2-row function.')
         elif isinstance(bql, ast.ExpBQLSim):
-            if bql.condition is not None:
+            if bql.ofcondition is not None or bql.tocondition is not None:
                 raise BQLError(bdb, 'Similarity needs no row'
                     ' in 2-row context.')
             out.write('bql_row_similarity(%d, %s' %

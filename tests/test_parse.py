@@ -304,12 +304,13 @@ def test_select_bql():
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select similarity from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLSim(None, [ast.ColListAll()]), None)],
+            [ast.SelColExp(ast.ExpBQLSim(None, None, [ast.ColListAll()]), None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select similarity to (rowid=8) from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
                 ast.ExpBQLSim(
+                    None,
                     ast.ExpOp(ast.OP_EQ, (
                         ast.ExpCol(None, 'rowid'),
                         ast.ExpLit(ast.LitInt(8))
@@ -319,7 +320,7 @@ def test_select_bql():
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select similarity with respect to c from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLSim(None, [ast.ColListLit(['c'])]),
+            [ast.SelColExp(ast.ExpBQLSim(None, None, [ast.ColListLit(['c'])]),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string(
@@ -327,6 +328,7 @@ def test_select_bql():
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
                 ast.ExpBQLSim(
+                    None,
                     ast.ExpOp(ast.OP_EQ, (
                         ast.ExpCol(None, 'rowid'),
                         ast.ExpLit(ast.LitInt(8)),
@@ -339,6 +341,7 @@ def test_select_bql():
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
                 ast.ExpBQLSim(
+                    None,
                     ast.ExpOp(ast.OP_EQ, (
                         ast.ExpCol(None, 'rowid'),
                         ast.ExpLit(ast.LitInt(5)),
@@ -352,6 +355,7 @@ def test_select_bql():
             [
                 ast.SelColExp(
                     ast.ExpBQLSim(
+                        None,
                         ast.ExpOp(ast.OP_EQ, (
                             ast.ExpCol(None, 'rowid'),
                             ast.ExpLit(ast.LitInt(8)),
@@ -366,6 +370,7 @@ def test_select_bql():
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
                 ast.ExpBQLSim(
+                    None,
                     ast.ExpOp(ast.OP_EQ, (
                         ast.ExpCol(None, 'rowid'),
                         ast.ExpLit(ast.LitInt(8)),
@@ -380,6 +385,7 @@ def test_select_bql():
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
                 ast.ExpBQLSim(
+                    None,
                     ast.ExpOp(ast.OP_EQ, (
                         ast.ExpCol(None, 'rowid'),
                         ast.ExpLit(ast.LitInt(8)),
@@ -1030,7 +1036,7 @@ def test_is_bql():
     assert ast.is_bql(ast.ExpBQLPredProb('c'))
     assert ast.is_bql(ast.ExpBQLProb([('c', ast.ExpLit(ast.LitInt(0)))], []))
     assert ast.is_bql(ast.ExpBQLProbFn(ast.ExpLit(ast.LitInt(0)), []))
-    assert ast.is_bql(ast.ExpBQLSim(ast.ExpLit(ast.LitInt(0)), []))
+    assert ast.is_bql(ast.ExpBQLSim(None, ast.ExpLit(ast.LitInt(0)), []))
     assert ast.is_bql(ast.ExpBQLDepProb('c0', 'c1'))
     assert ast.is_bql(ast.ExpBQLMutInf('c0', 'c1', None, 100))
     assert ast.is_bql(ast.ExpBQLCorrel('c0', 'c1'))

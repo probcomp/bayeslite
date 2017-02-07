@@ -618,8 +618,10 @@ class BQLSemantics(object):
     def p_bqlfn_condprob_1col(self, e, constraints):
                                                 return ast.ExpBQLProbFn(e,
                                                     constraints)
-    def p_bqlfn_sim_1row(self, cond, cols):     return ast.ExpBQLSim(cond,cols)
-    def p_bqlfn_sim_2row(self, cols):           return ast.ExpBQLSim(None,cols)
+    def p_bqlfn_sim_1row(self, cond, cols):
+        return ast.ExpBQLSim(None, cond, cols)
+    def p_bqlfn_sim_2row(self, cols):
+        return ast.ExpBQLSim(None, None, cols)
     def p_bqlfn_depprob(self, cols):            return ast.ExpBQLDepProb(*cols)
 
     def p_bqlfn_mutinf(self, cols, nsamp):
