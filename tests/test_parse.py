@@ -305,7 +305,9 @@ def test_select_bql():
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select similarity from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLSim(None, None, [ast.ColListAll()]), None)],
+            [ast.SelColExp(
+                ast.ExpBQLSim(None, None, [ast.ColListAll()]),
+                None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select similarity to (rowid=8) from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
