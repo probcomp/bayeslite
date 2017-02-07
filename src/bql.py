@@ -873,7 +873,7 @@ def simulate_models_rows(bdb, simulation):
                 'DEPENDENCE PROBABILITY simulation still unsupported.')
         elif isinstance(phrase, ast.ExpBQLProb):
             raise BQLError(bdb,
-                'PROBABILITY OF simulation still unsupported.')
+                'PROBABILITY DENSITY OF simulation still unsupported.')
         elif isinstance(phrase, ast.ExpBQLMutInf):
             colno0 = retrieve_variable(phrase.column0)
             colno1 = retrieve_variable(phrase.column1)

@@ -224,10 +224,10 @@ subquery instead:
    the row's value for the column named *column*, given all the other
    data in the row.
 
-.. index:: ``PROBABILITY OF``
+.. index:: ``PROBABILITY DENSITY OF``
 
-``PROBABILITY OF <column> = <value> [GIVEN (<constraints>)]``
-``PROBABILITY OF (<targets>) [GIVEN (<constraints>)]``
+``PROBABILITY DENSITY OF <column> = <value> [GIVEN (<constraints>)]``
+``PROBABILITY DENSITY OF (<targets>) [GIVEN (<constraints>)]``
 
    Constant.  Returns the probability density of the value of the BQL
    expression *value* for the column *column*.  If *targets* is
@@ -244,7 +244,7 @@ subquery instead:
    constant that is common to the column but may vary between columns.
    So it may take on values above 1.
 
-``PROBABILITY OF VALUE <value> [GIVEN (<constraints>)]``
+``PROBABILITY DENSITY OF VALUE <value> [GIVEN (<constraints>)]``
 
    Function of one implied column.  Returns the probability density of
    the value of the BQL expression *value* for the implied column.  If

@@ -55,6 +55,7 @@ keywords = {
     "correlation": grammar.K_CORRELATION,
     "create": grammar.K_CREATE,
     "default": grammar.K_DEFAULT,
+    "density": grammar.K_DENSITY,
     "dependence": grammar.K_DEPENDENCE,
     "desc": grammar.K_DESC,
     "distinct": grammar.K_DISTINCT,

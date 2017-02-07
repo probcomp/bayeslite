@@ -603,7 +603,8 @@ def test_crosscat_constraints():
         assert crosscat_cc_colno(bdb, gid, 3) == 2
         bdb.execute('INITIALIZE 1 MODEL FOR p1_cc')
         bdb.execute('ANALYZE p1_cc FOR 1 ITERATION WAIT')
-        bdb.execute('ESTIMATE PROBABILITY OF age = 8 GIVEN (weight = 16)'
+        bdb.execute('ESTIMATE PROBABILITY DENSITY OF age = 8'
+            ' GIVEN (weight = 16)'
             ' BY p1').next()
         assert engine._last_Y == [(28, 2, 16)]
         bdb.execute("SELECT age FROM t1 WHERE label = 'baz'").next()

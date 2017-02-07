@@ -296,7 +296,8 @@ def test_select_bql():
                 ast.SelColExp(ast.ExpCol(None, 'd'), None),
             ],
             [ast.SelTab('t', None)], None, None, None, None)]
-    assert parse_bql_string('select probability of c = 42 from t;') == \
+    assert parse_bql_string('select probability density of c = 42'
+            ' from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(ast.ExpBQLProb([('c', ast.ExpLit(ast.LitInt(42)))],
                     []),
@@ -375,7 +376,7 @@ def test_select_bql():
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select similarity to (rowid=8) with respect to' +
             ' (estimate * from columns of t order by ' +
-            '  probability of value 4 limit 1)' +
+            '  probability density of value 4 limit 1)' +
             ' from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
@@ -468,13 +469,13 @@ def test_select_bql():
     # covered the AssertionError that this turned into.
     #
     # with pytest.raises(parse.BQLParseError):
-    #     parse_bql_string('select probability of x = 1 -' +
-    #         ' probability of y = 0 from t;')
+    #     parse_bql_string('select probability density of x = 1 -' +
+    #         ' probability density of y = 0 from t;')
     #     # XXX Should really be this test, but getting the grammar to
     #     # admit this unambiguously is too much of a pain at the
     #     # moment.
-    #     assert parse_bql_string('select probability of x = 1 -' +
-    #             ' probability of y = 0 from t;') == \
+    #     assert parse_bql_string('select probability density of x = 1 -' +
+    #             ' probability density of y = 0 from t;') == \
     #         [ast.Select(ast.SELQUANT_ALL,
     #             [ast.SelColExp(ast.ExpBQLProb([('x',
     #                         ast.ExpOp(ast.OP_SUB, (
@@ -486,7 +487,8 @@ def test_select_bql():
     #                     []),
     #                 None)],
     #             [ast.SelTab('t', None)], None, None, None, None)]
-    assert parse_bql_string('select probability of c1 = f(c2) from t;') == \
+    assert parse_bql_string('select probability density of c1 = f(c2)'
+            ' from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(ast.ExpBQLProb([('c1',
                         ast.ExpApp(False, 'f', [ast.ExpCol(None, 'c2')]))],
@@ -970,7 +972,7 @@ def test_simulate_models():
             )
     ]
     assert parse_bql_string(
-        'simulate probability of (a=2, c=1.1) given (b=0.5) '
+        'simulate probability density of (a=2, c=1.1) given (b=0.5) '
         'from models of p') == [
             ast.SimulateModels(
                 [

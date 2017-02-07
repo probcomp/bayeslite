@@ -141,7 +141,7 @@ def cgpm_smoke_tests(bdb, gen, vars):
     modelledby = 'MODELLED BY %s' % (gen,) if gen else ''
     for var in vars:
         bdb.execute('''
-            ESTIMATE PROBABILITY OF %s = 1 WITHIN p %s
+            ESTIMATE PROBABILITY DENSITY OF %s = 1 WITHIN p %s
         ''' % (var, modelledby)).fetchall()
         bdb.execute('''
             SIMULATE %s FROM p %s LIMIT 1
@@ -416,7 +416,7 @@ def test_cgpm_kepler():
             ESTIMATE PREDICTIVE PROBABILITY OF period FROM satellites
         ''').fetchall()
         bdb.execute('''
-            ESTIMATE PROBABILITY OF period = 42
+            ESTIMATE PROBABILITY DENSITY OF period = 42
                     GIVEN (apogee = 8 AND perigee = 7)
                 BY satellites
         ''').fetchall()
@@ -764,7 +764,7 @@ def test_add_variable():
         def run_queries(target, m):
             extra = 'MODELED BY %s' % (m,) if m is not None else ''
             bdb.execute('''
-                ESTIMATE PROBABILITY OF %s = 1 BY p %s
+                ESTIMATE PROBABILITY DENSITY OF %s = 1 BY p %s
             ''' % (target, extra,)).fetchall()
             for other in ['age', 'gender', 'salary']:
                 cursor = bdb.execute('''

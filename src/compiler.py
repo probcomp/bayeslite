@@ -931,8 +931,8 @@ class BQLCompiler_Const(object):
             compile_pdf_joint(bdb, population_id, generator_id, bql.targets,
                 bql.constraints, self, out)
         elif isinstance(bql, ast.ExpBQLProbFn):
-            raise BQLError(bdb, 'Probability of value at row is 1-column'
-                ' function, not a constant.')
+            raise BQLError(bdb, 'Probability density of value at row'
+                ' is 1-column function, not a constant.')
         elif isinstance(bql, ast.ExpBQLSim):
             raise BQLError(bdb, 'Row similarity is 1- or 2-row function,'
                 ' not a constant.')
@@ -1066,8 +1066,8 @@ class BQLCompiler_2Row(object):
             compile_pdf_joint(bdb, population_id, generator_id, bql.targets,
                 bql.constraints, self, out)
         elif isinstance(bql, ast.ExpBQLProbFn):
-            raise BQLError(bdb, 'Probability of value is 1-column function,'
-                ' not 2-row function.')
+            raise BQLError(bdb, 'Probability density of value'
+                ' is 1-column function, not 2-row function.')
         elif isinstance(bql, ast.ExpBQLPredProb):
             raise BQLError(bdb, 'Predictive probability is 1-row function,'
                 ' not 2-row function.')
@@ -1176,7 +1176,8 @@ class BQLCompiler_2Col(object):
             compile_pdf_joint(bdb, population_id, generator_id, bql.targets,
                 bql.constraints, self, out)
         elif isinstance(bql, ast.ExpBQLProbFn):
-            raise BQLError(bdb, 'Probability of value is 1-column function.')
+            raise BQLError(bdb, 'Probability density of value'
+                ' is 1-column function.')
         elif isinstance(bql, ast.ExpBQLPredProb):
             raise BQLError(bdb, 'Predictive probability'
                 ' is one-column function.')

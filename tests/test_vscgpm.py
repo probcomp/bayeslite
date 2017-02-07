@@ -282,7 +282,7 @@ def test_cgpm_extravaganza__ci_slow():
                 FROM satellites MODELLED BY g0 LIMIT 1;
         ''').fetchall()
         bdb.execute('''
-            ESTIMATE PROBABILITY OF period = 42
+            ESTIMATE PROBABILITY DENSITY OF period = 42
                     GIVEN (apogee = 8 AND perigee = 7)
                 BY satellites
         ''').fetchall()

@@ -535,45 +535,47 @@ unary(bql)              ::= bqlfn(b).
  *
  * XXX It would be nice if
  *
- *      SELECT PROBABILITY OF X = 1 - PROBABILITY OF Y = 0 FROM T;
+ *      SELECT PROBABILITY DENSITY OF X = 1 - PROBABILITY DENSITY OF Y = 0
+ *          FROM T;
  *
  * worked to mean
  *
- *      SELECT PROBABILITY OF X = (1 - PROBABILITY OF Y = 0) FROM T;
+ *      SELECT PROBABILITY DENSITY OF X = (1 - PROBABILITY DENSITY OF Y = 0)
+ *          FROM T;
  *
  * so that you could also write, e.g.,
  *
- *      SELECT PROBABILITY OF X = A + B FROM T;
+ *      SELECT PROBABILITY DENSITY OF X = A + B FROM T;
  *
  * with A + B meaning the right-hand side of the equation.
  *
  * However, changing primary(e) to expression(e) on the right-hand
  * side of the bqlfn(prob) rule makes the grammar ambiguous, and the
  * surgery necessary to resolve the ambiguity is too much trouble.  So
- * instead we'll reject unparenthesized PROBABILITY OF X = V with
- * other operators altogether and require explicit parentheses until
- * someone wants to do that surgery.
+ * instead we'll reject unparenthesized PROBABILITY DENSITY OF X = V
+ * with other operators altogether and require explicit parentheses
+ * until someone wants to do that surgery.
  *
  * XXX Oops -- some restructing of the grammar caused us to cease
- * rejecting unparenthesized PROBABILITY OF X = V with other
+ * rejecting unparenthesized PROBABILITY DENSITY OF X = V with other
  * operators.
  */
 bqlfn(predprob_row)     ::= K_PREDICTIVE K_PROBABILITY K_OF column_name(col).
-bqlfn(prob_const)       ::= K_PROBABILITY K_OF column_name(col)
+bqlfn(prob_const)       ::= K_PROBABILITY K_DENSITY K_OF column_name(col)
                                 T_EQ unary(e).
-bqlfn(jprob_const)      ::= K_PROBABILITY K_OF
+bqlfn(jprob_const)      ::= K_PROBABILITY K_DENSITY K_OF
                                 T_LROUND constraints_opt(targets) T_RROUND.
-bqlfn(condprob_const)   ::= K_PROBABILITY K_OF column_name(col)
+bqlfn(condprob_const)   ::= K_PROBABILITY K_DENSITY K_OF column_name(col)
                                 T_EQ primary(e)
                                 K_GIVEN T_LROUND constraints_opt(constraints)
                                         T_RROUND.
-bqlfn(condjprob_const)  ::= K_PROBABILITY K_OF
+bqlfn(condjprob_const)  ::= K_PROBABILITY K_DENSITY K_OF
                                 T_LROUND constraints_opt(targets) T_RROUND
                                 K_GIVEN T_LROUND constraints_opt(constraints)
                                         T_RROUND.
-/* XXX Givens for PROBABILITY OF VALUE function of columns?      */
-bqlfn(prob_1col)        ::= K_PROBABILITY K_OF K_VALUE unary(e).
-bqlfn(condprob_1col)    ::= K_PROBABILITY K_OF K_VALUE primary(e)
+/* XXX Givens for PROBABILITY DENSITY OF VALUE function of columns?      */
+bqlfn(prob_1col)        ::= K_PROBABILITY K_DENSITY K_OF K_VALUE unary(e).
+bqlfn(condprob_1col)    ::= K_PROBABILITY K_DENSITY K_OF K_VALUE primary(e)
                                 K_GIVEN T_LROUND constraints_opt(constraints)
                                         T_RROUND.
 bqlfn(sim_1row)         ::= K_SIMILARITY K_TO
@@ -709,6 +711,7 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_CORRELATION
         K_CREATE
         K_DEFAULT
+        K_DENSITY
         K_DEPENDENCE
         K_DESC
         K_DISTINCT

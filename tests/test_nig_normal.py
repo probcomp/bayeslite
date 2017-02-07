@@ -33,7 +33,7 @@ def test_nig_normal_smoke():
         bdb.execute('create generator g for p using nig_normal')
         bdb.execute('initialize 1 model for g')
         bdb.execute('analyze g for 1 iteration wait')
-        bdb.execute('estimate probability of x = 50 from p').fetchall()
+        bdb.execute('estimate probability density of x = 50 from p').fetchall()
         bdb.execute('simulate x from p limit 1').fetchall()
         bdb.execute('drop models from g')
         bdb.execute('drop generator g')
@@ -84,16 +84,18 @@ def test_nig_normal_latent_smoke():
         bdb.execute('initialize 1 model for g1')
         bdb.execute('analyze g1 for 1 iteration wait')
 
-        # PROBABILITY OF x = v
-        bdb.execute('estimate probability of x = 50 within p').fetchall()
+        # PROBABILITY DENSITY OF x = v
+        bdb.execute('estimate probability density of x = 50 within p') \
+            .fetchall()
         with pytest.raises(BQLError):
-            bdb.execute('estimate probability of xe = 1 within p').fetchall()
+            bdb.execute('estimate probability density of xe = 1 within p') \
+                .fetchall()
         with pytest.raises(BQLError):
             bdb.execute('''
-                estimate probability of xe = 1 within p modelled by g0
+                estimate probability density of xe = 1 within p modelled by g0
             ''').fetchall()
         bdb.execute('''
-            estimate probability of xe = 1 within p modelled by g1
+            estimate probability density of xe = 1 within p modelled by g1
         ''').fetchall()
 
         # PREDICTIVE PROBABILITY OF x
@@ -192,44 +194,44 @@ def test_nig_normal_latent_conditional_smoke():
 
         # observed given observed
         bdb.execute('''
-            estimate probability of x = 50 given (x = 50) within p
+            estimate probability density of x = 50 given (x = 50) within p
         ''').fetchall()
         bdb.execute('''
-            estimate probability of x = 50 given (x = 50) within p
+            estimate probability density of x = 50 given (x = 50) within p
                 modelled by g0
         ''').fetchall()
         bdb.execute('''
-            estimate probability of x = 50 given (x = 50) within p
+            estimate probability density of x = 50 given (x = 50) within p
                 modelled by g1
         ''').fetchall()
 
         # observed given latent
         with pytest.raises(BQLError):
             bdb.execute('''
-                estimate probability of x = 50 given (xe = 50) within p
+                estimate probability density of x = 50 given (xe = 50) within p
             ''').fetchall()
         with pytest.raises(BQLError):
             bdb.execute('''
-                estimate probability of x = 50 given (xe = 50) within p
+                estimate probability density of x = 50 given (xe = 50) within p
                     modelled by g0
             ''').fetchall()
         bdb.execute('''
-            estimate probability of x = 50 given (xe = 50) within p
+            estimate probability density of x = 50 given (xe = 50) within p
                 modelled by g1
         ''').fetchall()
 
         # latent given observed
         with pytest.raises(BQLError):
             bdb.execute('''
-                estimate probability of xe = 50 given (x = 50) within p
+                estimate probability density of xe = 50 given (x = 50) within p
             ''').fetchall()
         with pytest.raises(BQLError):
             bdb.execute('''
-                estimate probability of xe = 50 given (x = 50) within p
+                estimate probability density of xe = 50 given (x = 50) within p
                     modelled by g0
             ''').fetchall()
         bdb.execute('''
-            estimate probability of xe = 50 given (x = 50) within p
+            estimate probability density of xe = 50 given (x = 50) within p
                 modelled by g1
         ''').fetchall()
 
@@ -344,14 +346,14 @@ def test_nig_normal_latent_2var_conditional_smoke():
 
         # observed given other observed
         bdb.execute('''
-            estimate probability of x = 50 given (y = 49) within p
+            estimate probability density of x = 50 given (y = 49) within p
         ''').fetchall()
         bdb.execute('''
-            estimate probability of x = 50 given (y = 49) within p
+            estimate probability density of x = 50 given (y = 49) within p
                 modelled by g0
         ''').fetchall()
         bdb.execute('''
-            estimate probability of x = 50 given (y = 49) within p
+            estimate probability density of x = 50 given (y = 49) within p
                 modelled by g1
         ''').fetchall()
         bdb.execute('simulate x from p given y = 49 limit 1').fetchall()
@@ -365,15 +367,15 @@ def test_nig_normal_latent_2var_conditional_smoke():
         # observed given related latent
         with pytest.raises(BQLError):
             bdb.execute('''
-                estimate probability of x = 50 given (xe = 1) within p
+                estimate probability density of x = 50 given (xe = 1) within p
             ''').fetchall()
         with pytest.raises(BQLError):
             bdb.execute('''
-                estimate probability of x = 50 given (xe = 1) within p
+                estimate probability density of x = 50 given (xe = 1) within p
                     modelled by g0
             ''').fetchall()
         bdb.execute('''
-            estimate probability of x = 50 given (xe = 1) within p
+            estimate probability density of x = 50 given (xe = 1) within p
                 modelled by g1
         ''').fetchall()
         with pytest.raises(BQLError):
@@ -389,15 +391,15 @@ def test_nig_normal_latent_2var_conditional_smoke():
         # observed given unrelated latent
         with pytest.raises(BQLError):
             bdb.execute('''
-                estimate probability of y = 50 given (xe = 1) within p
+                estimate probability density of y = 50 given (xe = 1) within p
             ''').fetchall()
         with pytest.raises(BQLError):
             bdb.execute('''
-                estimate probability of y = 50 given (xe = 1) within p
+                estimate probability density of y = 50 given (xe = 1) within p
                     modelled by g0
             ''').fetchall()
         bdb.execute('''
-            estimate probability of y = 50 given (xe = 1) within p
+            estimate probability density of y = 50 given (xe = 1) within p
                 modelled by g1
         ''').fetchall()
         with pytest.raises(BQLError):
@@ -413,15 +415,15 @@ def test_nig_normal_latent_2var_conditional_smoke():
         # latent given related observed
         with pytest.raises(BQLError):
             bdb.execute('''
-                estimate probability of xe = 1 given (x = 50) within p
+                estimate probability density of xe = 1 given (x = 50) within p
             ''').fetchall()
         with pytest.raises(BQLError):
             bdb.execute('''
-                estimate probability of xe = 1 given (x = 50) within p
+                estimate probability density of xe = 1 given (x = 50) within p
                     modelled by g0
             ''').fetchall()
         bdb.execute('''
-            estimate probability of xe = 1 given (x = 50) within p
+            estimate probability density of xe = 1 given (x = 50) within p
                 modelled by g1
         ''').fetchall()
         with pytest.raises(BQLError):
@@ -437,15 +439,15 @@ def test_nig_normal_latent_2var_conditional_smoke():
         # latent given unrelated observed
         with pytest.raises(BQLError):
             bdb.execute('''
-                estimate probability of xe = 1 given (y = 50) within p
+                estimate probability density of xe = 1 given (y = 50) within p
             ''').fetchall()
         with pytest.raises(BQLError):
             bdb.execute('''
-                estimate probability of xe = 1 given (y = 50) within p
+                estimate probability density of xe = 1 given (y = 50) within p
                     modelled by g0
             ''').fetchall()
         bdb.execute('''
-            estimate probability of xe = 1 given (y = 50) within p
+            estimate probability density of xe = 1 given (y = 50) within p
                 modelled by g1
         ''').fetchall()
         with pytest.raises(BQLError):
@@ -488,15 +490,15 @@ def test_nig_normal_latent_2var2lat_conditional_smoke():
         # latent given latent
         with pytest.raises(BQLError):
             bdb.execute('''
-                estimate probability of xe = 1 given (ye = -1) within p
+                estimate probability density of xe = 1 given (ye = -1) within p
             ''').fetchall()
         with pytest.raises(BQLError):
             bdb.execute('''
-                estimate probability of xe = 1 given (ye = -1) within p
+                estimate probability density of xe = 1 given (ye = -1) within p
                      modelled by g0
             ''').fetchall()
         bdb.execute('''
-            estimate probability of xe = 1 given (ye = -1) within p
+            estimate probability density of xe = 1 given (ye = -1) within p
                  modelled by g1
         ''').fetchall()
 

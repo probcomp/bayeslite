@@ -321,7 +321,7 @@ def _bql_column_mutual_information(
     mutinfs = map(generator_mutinf, generator_ids)
     return mutinfs
 
-# One-column function:  PROBABILITY OF <col>=<value> GIVEN <constraints>
+# One-column function: PROBABILITY DENSITY OF <col>=<value> GIVEN <constraints>
 def bql_column_value_probability(bdb, population_id, generator_id, colno,
         value, *constraint_args):
     # A nonexistent (`unobserved') row id.
