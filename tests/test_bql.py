@@ -152,6 +152,18 @@ def test_population_invalid_numerical_alterpop_stattype():
             ''')
         bdb.execute('drop population p')
 
+def test_similarity_identity():
+    with test_core.t1() as (bdb, population_id, _generator_id):
+        bdb.execute('initialize 6 models for p1_cc;')
+        rowids = bdb.sql_execute('select rowid from t1')
+        for rowid in rowids:
+            c = bdb.execute('''
+                estimate similarity of (rowid=?) to (rowid=?)
+                with respect to (age) by p1
+            ''', (rowid[0], rowid[0])).fetchall()
+            assert len(c) == 1
+            assert c[0][0] == 1
+
 @stochastic(max_runs=2, min_passes=1)
 def test_conditional_probability(seed):
     with test_core.t1(seed=seed) as (bdb, _population_id, _generator_id):
@@ -383,6 +395,11 @@ def test_estimate_bql():
     assert bql2sql('estimate similarity to (rowid = 5) from p1;') == \
         'SELECT bql_row_similarity(1, NULL, _rowid_,' \
         ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5))) FROM "t1";'
+    assert bql2sql(
+            'estimate similarity of (rowid = 12) to (rowid = 5) from p1;') == \
+        'SELECT bql_row_similarity(1, NULL,' \
+        ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 12)),' \
+        ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5))) FROM "t1";'
     assert bql2sql('estimate similarity to (rowid = 5) with respect to age'
             ' from p1') == \
         'SELECT bql_row_similarity(1, NULL, _rowid_,' \
@@ -391,6 +408,13 @@ def test_estimate_bql():
             ' with respect to (age, weight) from p1;') == \
         'SELECT bql_row_similarity(1, NULL, _rowid_,' \
         ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)), 2, 3) FROM "t1";'
+    assert bql2sql(
+        'estimate similarity of (rowid = 5) to (height = 7 and age < 10)'
+            ' with respect to (age, weight) from p1;') == \
+        'SELECT bql_row_similarity(1, NULL,' \
+        ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)),' \
+        ' (SELECT _rowid_ FROM "t1" WHERE (("height" = 7) AND ("age" < 10))),' \
+        ' 2, 3) FROM "t1";'
     assert bql2sql('estimate similarity to (rowid = 5) with respect to (*)'
             ' from p1;') == \
         'SELECT bql_row_similarity(1, NULL, _rowid_,' \
@@ -402,6 +426,12 @@ def test_estimate_bql():
     assert bql2sql('estimate dependence probability of age with weight' +
         ' from p1;') == \
         'SELECT bql_column_dependence_probability(1, NULL, 2, 3) FROM "t1";'
+    with pytest.raises(bayeslite.BQLError):
+        # Need both rows fixed.
+        bql2sql('estimate similarity to (rowid=2) by p1')
+    with pytest.raises(bayeslite.BQLError):
+        # Need both rows fixed.
+        bql2sql('estimate similarity within p1')
     with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
         bql2sql('estimate dependence probability with age from p1;')
@@ -2139,13 +2169,18 @@ def test_estimate_by():
                 ' by p1')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate similarity to (rowid=1) by p1')
-        def check(x):
-            assert len(bdb.execute(x).fetchall()) == 1
+        def check(x, bindings=None):
+            assert len(bdb.execute(x, bindings=bindings).fetchall()) == 1
         check('estimate probability of age = 42 by p1')
         check('estimate dependence probability of age with weight by p1')
         check('estimate mutual information of age with weight by p1')
         check('estimate correlation of age with weight by p1')
         check('estimate correlation pvalue of age with weight by p1')
+        rowid = bdb.execute('select min(rowid) from t1').fetchall()[0][0]
+        check('''
+            estimate similarity of (rowid=?) to (rowid=?) with respect
+            to (weight) by p1
+        ''', (rowid, rowid,))
 
 def test_empty_cursor():
     with bayeslite.bayesdb_open() as bdb:

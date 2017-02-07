@@ -934,8 +934,8 @@ class BQLCompiler_Const(object):
             raise BQLError(bdb, 'Probability of value at row is 1-column'
                 ' function, not a constant.')
         elif isinstance(bql, ast.ExpBQLSim):
-            raise BQLError(bdb, 'Row similarity is 1- or 2-row function,'
-                ' not a constant.')
+            compile_similarity(bdb, population_id, generator_id,
+                bql.ofcondition, bql.tocondition, bql.column_lists, self, out)
         elif isinstance(bql, ast.ExpBQLDepProb):
             compile_bql_2col_2(bdb, population_id, generator_id,
                 'bql_column_dependence_probability',
@@ -977,9 +977,10 @@ class BQLCompiler_1Row(BQLCompiler_Const):
             out.write('bql_row_column_predictive_probability(%d, %s' %
                 (population_id, nullor(generator_id)))
             out.write(', %s, %s)' % (rowid_col, colno))
-        elif isinstance(bql, ast.ExpBQLSim):
-            if bql.condition is None:
-                raise BQLError(bdb, 'Similarity as 1-row function needs row.')
+        elif isinstance(bql, ast.ExpBQLSim) and bql.ofcondition is None:
+            if bql.ofcondition is not None:
+                raise BQLError(bdb, 'Similarity as 1-row function needs one '
+                    'row not two rows.')
             out.write('bql_row_similarity(%d, %s' %
                 (population_id, nullor(generator_id)))
             out.write(', _rowid_, ')
@@ -987,7 +988,7 @@ class BQLCompiler_1Row(BQLCompiler_Const):
                 table_name = core.bayesdb_population_table(bdb, population_id)
                 qt = sqlite3_quote_name(table_name)
                 out.write('SELECT _rowid_ FROM %s WHERE ' % (qt,))
-                compile_expression(bdb, bql.condition, self, out)
+                compile_expression(bdb, bql.tocondition, self, out)
             if len(bql.column_lists) == 1 and \
                isinstance(bql.column_lists[0], ast.ColListAll):
                 # We'll likely run up against SQLite's limit on the
@@ -1072,7 +1073,7 @@ class BQLCompiler_2Row(object):
             raise BQLError(bdb, 'Predictive probability is 1-row function,'
                 ' not 2-row function.')
         elif isinstance(bql, ast.ExpBQLSim):
-            if bql.condition is not None:
+            if bql.ofcondition is not None or bql.tocondition is not None:
                 raise BQLError(bdb, 'Similarity needs no row'
                     ' in 2-row context.')
             out.write('bql_row_similarity(%d, %s' %
@@ -1229,6 +1230,33 @@ def compile_pdf_joint(bdb, population_id, generator_id, targets, constraints,
         out.write(', NULL')
         compile_constraints(bdb, population_id, generator_id, constraints,
             bql_compiler, out)
+    out.write(')')
+
+def compile_similarity(bdb, population_id, generator_id, ofcondition,
+        tocondition, column_lists, bql_compiler, out):
+    if ofcondition is None or tocondition is None:
+        raise BQLError(bdb, 'Similarity as constant needs exactly 2 rows.')
+    out.write(
+        'bql_row_similarity(%d, %s, ' % (population_id, nullor(generator_id)))
+    table_name = core.bayesdb_population_table(bdb, population_id)
+    qt = sqlite3_quote_name(table_name)
+    with compiling_paren(bdb, out, '(', ')'):
+        out.write('SELECT _rowid_ FROM %s WHERE ' % (qt,))
+        compile_expression(bdb, ofcondition, bql_compiler, out)
+    out.write(', ')
+    with compiling_paren(bdb, out, '(', ')'):
+        out.write('SELECT _rowid_ FROM %s WHERE ' % (qt,))
+        compile_expression(bdb, tocondition, bql_compiler, out)
+    if len(column_lists) == 1 and \
+       isinstance(column_lists[0], ast.ColListAll):
+        # We'll likely run up against SQLite's limit on the
+        # number of arguments in this case.  Instead, let
+        # bql_row_similarity find the columns.
+        pass
+    else:
+        out.write(', ')
+        compile_column_lists(
+            bdb, population_id, generator_id, column_lists, bql_compiler, out)
     out.write(')')
 
 def compile_constraints(bdb, population_id, generator_id, constraints,
