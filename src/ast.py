@@ -390,7 +390,9 @@ OP_PLUSID = 'PLUSID'
 ExpBQLPredProb = namedtuple('ExpBQLPredProb', ['column'])
 ExpBQLProb = namedtuple('ExpBQLProb', ['targets', 'constraints'])
 ExpBQLProbFn = namedtuple('ExpBQLProbFn', ['value', 'constraints'])
-ExpBQLSim = namedtuple('ExpBQLSim', ['condition', 'column_lists'])
+ExpBQLSim = namedtuple('ExpBQLSim', [
+    'ofcondition', 'tocondition', 'column_lists'
+])
 ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
 ExpBQLMutInf = namedtuple('ExpBQLMutInf', [
     'column0', 'column1', 'constraints', 'nsamples'

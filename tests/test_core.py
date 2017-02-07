@@ -520,6 +520,7 @@ def test_row_similarity(exname, source, target, colnos):
             as (bdb, population_id, generator_id):
         popcols = core.bayesdb_variable_numbers(
             bdb, population_id, generator_id)
+        # Forbid multiple columns specified in WITH RESPECT TO.
         def test_row_similarity_one(f):
             try:
                 f()

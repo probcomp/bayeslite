@@ -578,6 +578,10 @@ bqlfn(prob_1col)        ::= K_PROBABILITY K_DENSITY K_OF K_VALUE unary(e).
 bqlfn(condprob_1col)    ::= K_PROBABILITY K_DENSITY K_OF K_VALUE primary(e)
                                 K_GIVEN T_LROUND constraints_opt(constraints)
                                         T_RROUND.
+bqlfn(sim_const)         ::= K_SIMILARITY
+                                K_OF T_LROUND expression(cond0) T_RROUND
+                                K_TO T_LROUND expression(cond1) T_RROUND
+                                wrt(cols).
 bqlfn(sim_1row)         ::= K_SIMILARITY K_TO
                                 T_LROUND expression(cond) T_RROUND
                                 wrt(cols).
