@@ -219,17 +219,19 @@ class IBayesDBMetamodel(object):
         """Predict a value for a column and return confidence."""
         raise NotImplementedError
 
-    def simulate_joint(self, bdb, generator_id, targets, constraints, modelno,
-            num_samples=1, accuracy=None):
+    def simulate_joint(self, bdb, generator_id, rowid, targets, constraints,
+            modelno, num_samples=1, accuracy=None):
         """Simulate `targets` from a generator, subject to `constraints`.
 
         Returns a list of lists of values for the specified targets.
 
+        `rowid` is an integer.
+
         `modelno` may be `None`, meaning "all models"
 
-        `targets` is a list of ``(rowid, colno)`` pairs.
+        `targets` is a list of ``(colno)``.
 
-        `constraints` is a list of ``(rowid, colno, value)`` triples.
+        `constraints` is a list of ``(colno, value)`` pairs.
 
         `num_samples` is the number of results to return.
 
@@ -243,15 +245,17 @@ class IBayesDBMetamodel(object):
         """
         raise NotImplementedError
 
-    def logpdf_joint(self, bdb, generator_id, targets, constraints,
+    def logpdf_joint(self, bdb, generator_id, rowid, targets, constraints,
             modelno=None):
         """Evalute the joint probability of `targets` subject to `constraints`.
 
         Returns the probability density of the targets (in log domain).
 
-        `targets` is a list of ``(rowid, colno, value)`` triples.
+        `rowid` is an integer.
 
-        `constraints` is a list of ``(rowid, colno, value)`` triples.
+        `targets` is a list of ``(colno, value)`` pairs.
+
+        `constraints` is a list of ``(colno, value)`` pairs.
 
         `modelno` is a model number or `None`, meaning all models.
         """

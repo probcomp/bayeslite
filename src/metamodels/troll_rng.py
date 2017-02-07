@@ -48,15 +48,15 @@ class TrollMetamodel(metamodel.IBayesDBMetamodel):
     def initialize_models(self, *args, **kwargs): pass
     def drop_models(self, *args, **kwargs): pass
     def analyze_models(self, *args, **kwargs): pass
-    def simulate_joint(self, _bdb, _generator_id, targets, _constraints,
+    def simulate_joint(self, _bdb, _generator_id, rowid, targets, _constraints,
             modelno=None, num_samples=1):
         return [[9 for _ in targets]] * num_samples
-    def logpdf_joint(self, _bdb, _generator_id, targets, constraints,
+    def logpdf_joint(self, _bdb, _generator_id, rowid, targets, constraints,
             modelno=None):
-        for (_, _, value) in constraints:
+        for (_, value) in constraints:
             if not value == 9:
                 return float("nan")
-        for (_, _, value) in targets:
+        for (_, value) in targets:
             if not value == 9:
                 return float("-inf")
         # TODO This is only correct wrt counting measure.  What's the
