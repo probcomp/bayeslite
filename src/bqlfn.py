@@ -289,8 +289,7 @@ def bql_column_dependence_probability(
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
         return metamodel.column_dependence_probability(
             bdb, generator_id, None, colno0, colno1)
-    generator_ids = [generator_id] if generator_id is not None else \
-        core.bayesdb_population_generators(bdb, population_id)
+    generator_ids = _retrieve_generator_ids(bdb, population_id, generator_id)
     depprobs = map(generator_depprob, generator_ids)
     return stats.arithmetic_mean(depprobs)
 
@@ -319,8 +318,7 @@ def _bql_column_mutual_information(
         return metamodel.column_mutual_information(
             bdb, generator_id, None,
             colno0, colno1, constraints=constraints, numsamples=numsamples)
-    generator_ids = [generator_id] if generator_id is not None else \
-        core.bayesdb_population_generators(bdb, population_id)
+    generator_ids = _retrieve_generator_ids(bdb, population_id, generator_id)
     mutinfs = map(generator_mutinf, generator_ids)
     return mutinfs
 
@@ -391,8 +389,7 @@ def _bql_logpdf(bdb, population_id, generator_id, targets, constraints):
             return 0
         return metamodel.logpdf_joint(
             bdb, generator_id, rowid, constraints, [], None)
-    generator_ids = [generator_id] if generator_id is not None else \
-        core.bayesdb_population_generators(bdb, population_id)
+    generator_ids = _retrieve_generator_ids(bdb, population_id, generator_id)
     metamodels = [
         core.bayesdb_generator_metamodel(bdb, g)
         for g in generator_ids
@@ -418,8 +415,7 @@ def bql_row_similarity(
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
         return metamodel.row_similarity(
             bdb, generator_id, None, rowid, target_rowid, colnos)
-    generator_ids = [generator_id] if generator_id is not None else \
-        core.bayesdb_population_generators(bdb, population_id)
+    generator_ids = _retrieve_generator_ids(bdb, population_id, generator_id)
     similarities = map(generator_similarity, generator_ids)
     return stats.arithmetic_mean(similarities)
 
@@ -444,12 +440,11 @@ def bql_row_column_predictive_probability(
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
         return metamodel.logpdf_joint(
             bdb, generator_id, fresh_rowid, query, constraints, None)
-    generator_ids = [generator_id] if generator_id is not None else \
-        core.bayesdb_population_generators(bdb, population_id)
+    generator_ids = _retrieve_generator_ids(bdb, population_id, generator_id)
     predprobs = map(generator_predprob, generator_ids)
     r = logmeanexp(predprobs)
     return ieee_exp(r)
-
+
 ### Predict and simulate
 
 def bql_predict(
@@ -507,8 +502,7 @@ def bayesdb_simulate(
         return metamodel.simulate_joint(
             bdb, generator_id, rowid, colnos, constraints, None,
             num_samples=n, accuracy=accuracy)
-    generator_ids = [generator_id] if generator_id is not None else \
-        core.bayesdb_population_generators(bdb, population_id)
+    generator_ids = _retrieve_generator_ids(bdb, population_id, generator_id)
     metamodels = [
         core.bayesdb_generator_metamodel(bdb, generator_id)
         for generator_id in generator_ids
@@ -534,6 +528,8 @@ def bayesdb_simulate(
     assert all(isinstance(row, (tuple, list)) for row in all_rows)
     return all_rows
 
+### Helper functions functions
+
 def _retrieve_rowid_constraints(bdb, population_id, constraints):
     rowid = core.bayesdb_population_fresh_row_id(bdb, population_id)
     if constraints:
@@ -550,3 +546,8 @@ def _retrieve_rowid_constraints(bdb, population_id, constraints):
             if c not in core.bayesdb_rowid_tokens(bdb)
         ]
     return rowid, constraints
+
+def _retrieve_generator_ids(bdb, population_id, generator_id):
+    if generator_id is None:
+        return core.bayesdb_population_generators(bdb, population_id)
+    return [generator_id]
