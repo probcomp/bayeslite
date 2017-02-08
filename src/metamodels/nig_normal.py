@@ -366,7 +366,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # XXX Fix me!
         return 0
 
-    def predict_confidence(self, bdb, generator_id, modelno, colno, rowid,
+    def predict_confidence(self, bdb, generator_id, modelno, rowid, colno,
             numsamples=None):
         if colno < 0:
             return (0, 1)       # deviation of mode from mean is zero

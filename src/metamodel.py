@@ -205,16 +205,16 @@ class IBayesDBMetamodel(object):
         """Compute ``SIMILARITY TO <target_row>`` for given `rowid`."""
         raise NotImplementedError
 
-    def predict(self, bdb, generator_id, modelno, colno, rowid, threshold,
+    def predict(self, bdb, generator_id, modelno, rowid, colno, threshold,
             numsamples=None):
         """Predict a value for a column, if confidence is high enough."""
         value, confidence = self.predict_confidence(bdb, generator_id, modelno,
-            colno, rowid, numsamples=numsamples)
+            rowid, colno, numsamples=numsamples)
         if confidence < threshold:
             return None
         return value
 
-    def predict_confidence(self, bdb, generator_id, modelno, colno, rowid,
+    def predict_confidence(self, bdb, generator_id, modelno, rowid, colno,
             numsamples=None):
         """Predict a value for a column and return confidence."""
         raise NotImplementedError

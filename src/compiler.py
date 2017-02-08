@@ -1020,7 +1020,7 @@ class BQLCompiler_1Row_Infer(BQLCompiler_1Row):
                 generator_id, bql.column)
             out.write('bql_predict(%d, %s' %
                 (population_id, nullor(generator_id)))
-            out.write(', %d, %s, ' % (colno, rowid_col))
+            out.write(', %s, %d, ' % (rowid_col, colno))
             compile_expression(bdb, bql.confidence, self, out)
             out.write(', ')
             if bql.nsamples is None:
@@ -1039,7 +1039,7 @@ class BQLCompiler_1Row_Infer(BQLCompiler_1Row):
                 generator_id, bql.column)
             out.write('bql_predict_confidence(%d, %s' %
                 (population_id, nullor(generator_id)))
-            out.write(', %d, %s, ' % (colno, rowid_col))
+            out.write(', %s, %d, ' % (rowid_col, colno))
             if bql.nsamples is None:
                 out.write('NULL')
             else:
