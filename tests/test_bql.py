@@ -475,13 +475,13 @@ def test_predict_outside_infer():
 def test_infer_explicit_predict_confidence():
     assert bql2sql('infer explicit predict age with confidence 0.9'
             ' from p1;') == \
-        'SELECT bql_predict(1, NULL, 2, _rowid_, 0.9, NULL) FROM "t1";'
+        'SELECT bql_predict(1, NULL, _rowid_, 2, 0.9, NULL) FROM "t1";'
 
 def test_infer_explicit_predict_confidence_nsamples():
     assert bql2sql('infer explicit'
             ' predict age with confidence 0.9 using 42 samples'
             ' from p1;') == \
-        'SELECT bql_predict(1, NULL, 2, _rowid_, 0.9, 42) FROM "t1";'
+        'SELECT bql_predict(1, NULL, _rowid_, 2, 0.9, 42) FROM "t1";'
 
 def test_infer_explicit_verbatim_and_predict_confidence():
     assert bql2sql('infer explicit rowid, age,'
@@ -490,7 +490,7 @@ def test_infer_explicit_verbatim_and_predict_confidence():
             ' bql_json_get(c2, \'value\') AS "age",' \
             ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
-                ' bql_predict_confidence(1, NULL, 2, _rowid_, NULL) AS c2' \
+                ' bql_predict_confidence(1, NULL, _rowid_, 2, NULL) AS c2' \
                 ' FROM "t1");'
 
 def test_infer_explicit_verbatim_and_predict_noconfidence():
@@ -499,7 +499,7 @@ def test_infer_explicit_verbatim_and_predict_noconfidence():
         'SELECT c0 AS "rowid", c1 AS "age",' \
             ' bql_json_get(c2, \'value\') AS "age"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
-                ' bql_predict_confidence(1, NULL, 2, _rowid_, NULL) AS c2' \
+                ' bql_predict_confidence(1, NULL, _rowid_, 2, NULL) AS c2' \
                 ' FROM "t1");'
 
 def test_infer_explicit_verbatim_and_predict_confidence_nsamples():
@@ -509,7 +509,7 @@ def test_infer_explicit_verbatim_and_predict_confidence_nsamples():
             ' bql_json_get(c2, \'value\') AS "age",' \
             ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
-                ' bql_predict_confidence(1, NULL, 2, _rowid_, 42) AS c2' \
+                ' bql_predict_confidence(1, NULL, _rowid_, 2, 42) AS c2' \
                 ' FROM "t1");'
 
 def test_infer_explicit_verbatim_and_predict_noconfidence_nsamples():
@@ -518,7 +518,7 @@ def test_infer_explicit_verbatim_and_predict_noconfidence_nsamples():
         'SELECT c0 AS "rowid", c1 AS "age",' \
             ' bql_json_get(c2, \'value\') AS "age"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
-                ' bql_predict_confidence(1, NULL, 2, _rowid_, 42) AS c2' \
+                ' bql_predict_confidence(1, NULL, _rowid_, 2, 42) AS c2' \
                 ' FROM "t1");'
 
 def test_infer_explicit_verbatim_and_predict_confidence_as():
@@ -528,7 +528,7 @@ def test_infer_explicit_verbatim_and_predict_confidence_as():
             ' bql_json_get(c2, \'value\') AS "age_inf",' \
             ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
-                ' bql_predict_confidence(1, NULL, 2, _rowid_, NULL) AS c2' \
+                ' bql_predict_confidence(1, NULL, _rowid_, 2, NULL) AS c2' \
                 ' FROM "t1");'
 
 def test_infer_explicit_verbatim_and_predict_noconfidence_as():
@@ -537,7 +537,7 @@ def test_infer_explicit_verbatim_and_predict_noconfidence_as():
         'SELECT c0 AS "rowid", c1 AS "age",' \
             ' bql_json_get(c2, \'value\') AS "age_inf"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
-                ' bql_predict_confidence(1, NULL, 2, _rowid_, NULL) AS c2' \
+                ' bql_predict_confidence(1, NULL, _rowid_, 2, NULL) AS c2' \
                 ' FROM "t1");'
 
 def test_infer_explicit_verbatim_and_predict_confidence_as_nsamples():
@@ -548,7 +548,7 @@ def test_infer_explicit_verbatim_and_predict_confidence_as_nsamples():
             ' bql_json_get(c2, \'value\') AS "age_inf",' \
             ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
-                ' bql_predict_confidence(1, NULL, 2, _rowid_, 87) AS c2' \
+                ' bql_predict_confidence(1, NULL, _rowid_, 2, 87) AS c2' \
                 ' FROM "t1");'
 
 def test_infer_explicit_verbatim_and_predict_noconfidence_as_nsamples():
@@ -558,16 +558,16 @@ def test_infer_explicit_verbatim_and_predict_noconfidence_as_nsamples():
         'SELECT c0 AS "rowid", c1 AS "age",' \
             ' bql_json_get(c2, \'value\') AS "age_inf"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
-                ' bql_predict_confidence(1, NULL, 2, _rowid_, 87) AS c2' \
+                ' bql_predict_confidence(1, NULL, _rowid_, 2, 87) AS c2' \
                 ' FROM "t1");'
 
 def test_infer_auto():
     assert bql2sql('infer rowid, age, weight from p1') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0, NULL))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, _rowid_, 2, 0, NULL))' \
             ' AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0, NULL))' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, _rowid_, 3, 0, NULL))' \
             ' AS "weight"' \
         ' FROM "t1";'
 
@@ -575,9 +575,9 @@ def test_infer_auto_nsamples():
     assert bql2sql('infer rowid, age, weight using (1+2) samples from p1') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0, (1 + 2)))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, _rowid_, 2, 0, (1 + 2)))' \
             ' AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0, (1 + 2)))' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, _rowid_, 3, 0, (1 + 2)))' \
             ' AS "weight"' \
         ' FROM "t1";'
 
@@ -585,9 +585,9 @@ def test_infer_auto_with_confidence():
     assert bql2sql('infer rowid, age, weight with confidence 0.9 from p1') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9, NULL))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, _rowid_, 2, 0.9, NULL))' \
             ' AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9, NULL))' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, _rowid_, 3, 0.9, NULL))' \
             ' AS "weight"' \
         ' FROM "t1";'
 
@@ -597,9 +597,9 @@ def test_infer_auto_with_confidence_nsamples():
             ' from p1') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9, "sqrt"(2)))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, _rowid_, 2, 0.9, "sqrt"(2)))' \
             ' AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9,' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, _rowid_, 3, 0.9,' \
                 ' "sqrt"(2)))' \
             ' AS "weight"' \
         ' FROM "t1";'
@@ -609,9 +609,9 @@ def test_infer_auto_with_confidence_where():
             ' where label = \'foo\'') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9, NULL))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, _rowid_, 2, 0.9, NULL))' \
             ' AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9, NULL))' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, _rowid_, 3, 0.9, NULL))' \
             ' AS "weight"' \
         ' FROM "t1"' \
         ' WHERE ("label" = \'foo\');'
@@ -623,9 +623,9 @@ def test_infer_auto_with_confidence_nsamples_where():
             ' where label = \'foo\'') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9, 42))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, _rowid_, 2, 0.9, 42))' \
             ' AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9, 42))' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, _rowid_, 3, 0.9, 42))' \
             ' AS "weight"' \
         ' FROM "t1"' \
         ' WHERE ("label" = \'foo\');'
@@ -636,13 +636,13 @@ def test_infer_auto_with_confidence_nsamples_where_predict():
                 ' = \'foo\'') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9, NULL))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, _rowid_, 2, 0.9, NULL))' \
             ' AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9, NULL))' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, _rowid_, 3, 0.9, NULL))' \
             ' AS "weight"' \
         ' FROM "t1"' \
         ' WHERE ("ifnull"("label",' \
-                ' bql_predict(1, NULL, 1, _rowid_, 0.7, NULL))' \
+                ' bql_predict(1, NULL, _rowid_, 1, 0.7, NULL))' \
             ' = \'foo\');'
 
 def test_infer_auto_with_confidence_nsamples_where_predict_nsamples():
@@ -654,34 +654,34 @@ def test_infer_auto_with_confidence_nsamples_where_predict_nsamples():
                 ' = \'foo\'') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0.9, 42))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, _rowid_, 2, 0.9, 42))' \
             ' AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0.9, 42))' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, _rowid_, 3, 0.9, 42))' \
             ' AS "weight"' \
         ' FROM "t1"' \
         ' WHERE ("ifnull"("label",' \
-                ' bql_predict(1, NULL, 1, _rowid_, 0.7, 73))' \
+                ' bql_predict(1, NULL, _rowid_, 1, 0.7, 73))' \
             ' = \'foo\');'
 
 def test_infer_auto_star():
     assert bql2sql('infer rowid, * from p1') == \
         'SELECT "rowid" AS "rowid", "id" AS "id",' \
-        ' "IFNULL"("label", bql_predict(1, NULL, 1, _rowid_, 0, NULL))' \
+        ' "IFNULL"("label", bql_predict(1, NULL, _rowid_, 1, 0, NULL))' \
             ' AS "label",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0, NULL))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, _rowid_, 2, 0, NULL))' \
             ' AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0, NULL))' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, _rowid_, 3, 0, NULL))' \
             ' AS "weight"' \
         ' FROM "t1";'
 
 def test_infer_auto_star_nsamples():
     assert bql2sql('infer rowid, * using 1 samples from p1') == \
         'SELECT "rowid" AS "rowid", "id" AS "id",' \
-        ' "IFNULL"("label", bql_predict(1, NULL, 1, _rowid_, 0, 1))' \
+        ' "IFNULL"("label", bql_predict(1, NULL, _rowid_, 1, 0, 1))' \
             ' AS "label",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, 2, _rowid_, 0, 1))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, _rowid_, 2, 0, 1))' \
             ' AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, 3, _rowid_, 0, 1))' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, _rowid_, 3, 0, 1))' \
             ' AS "weight"' \
         ' FROM "t1";'
 

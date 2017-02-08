@@ -1077,7 +1077,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 for colno in colnos],
         )
 
-    def predict_confidence(self, bdb, generator_id, modelno, colno, rowid,
+    def predict_confidence(self, bdb, generator_id, modelno, rowid, colno,
             numsamples=None):
         if numsamples is None:
             numsamples = 100    # XXXWARGHWTF

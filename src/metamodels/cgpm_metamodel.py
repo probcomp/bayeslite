@@ -441,7 +441,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         return arithmetic_mean(similarity_list)
 
     def predict_confidence(
-            self, bdb, generator_id, modelno, colno, rowid, numsamples=None):
+            self, bdb, generator_id, modelno, rowid, colno, numsamples=None):
         if not numsamples:
             numsamples = 2
         assert numsamples > 0
