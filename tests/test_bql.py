@@ -440,10 +440,12 @@ def test_estimate_bql():
         bql2sql('estimate dependence probability from p1;')
     assert bql2sql('estimate mutual information of age with weight' +
         ' from p1;') == \
-        'SELECT bql_column_mutual_information(1, NULL, 2, 3, NULL) FROM "t1";'
+        'SELECT bql_column_mutual_information(1, NULL, \'[2]\', \'[3]\', NULL)'\
+        ' FROM "t1";'
     assert bql2sql('estimate mutual information of age with weight' +
         ' using 42 samples from p1;') == \
-        'SELECT bql_column_mutual_information(1, NULL, 2, 3, 42) FROM "t1";'
+        'SELECT bql_column_mutual_information(1, NULL, \'[2]\', \'[3]\', 42) '\
+        'FROM "t1";'
     with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
         bql2sql('estimate mutual information with age from p1;')
@@ -735,11 +737,19 @@ def test_estimate_columns_trivial():
     assert bql2sql('estimate * from columns of p1 order by' +
             ' mutual information with age;') == \
         prefix + \
-        ' ORDER BY bql_column_mutual_information(1, NULL, 2, c.colno, NULL);'
+        ' ORDER BY bql_column_mutual_information(1, NULL, \'[2]\','\
+        ' \'[\' || c.colno || \']\', NULL);'
     assert bql2sql('estimate * from columns of p1 order by' +
-            ' mutual information with age using 42 samples;') == \
+            ' mutual information with (age, label) using 42 samples;') == \
         prefix + \
-        ' ORDER BY bql_column_mutual_information(1, NULL, 2, c.colno, 42);'
+        ' ORDER BY bql_column_mutual_information(1, NULL, \'[2, 1]\','\
+        ' \'[\' || c.colno || \']\', 42);'
+    assert bql2sql('estimate * from columns of p1 order by' +
+            ' mutual information with (age, label)'
+            ' given (weight=12) using 42 samples;') == \
+        prefix + \
+        ' ORDER BY bql_column_mutual_information(1, NULL, \'[2, 1]\','\
+        ' \'[\' || c.colno || \']\', 42, 3, 12);'
     with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
         bql2sql('estimate * from columns of p1 order by' +
@@ -778,9 +788,22 @@ def test_estimate_columns_trivial():
         prefix0 + \
         ', bql_column_dependence_probability(1, NULL, 3, c.colno)' \
             ' AS "depprob"' \
-        ', bql_column_mutual_information(1, NULL, 3, c.colno, NULL)' \
-            ' AS "mutinf"' + \
-        prefix1 + \
+        ', bql_column_mutual_information(1, NULL, \'[3]\',' \
+        ' \'[\' || c.colno || \']\', NULL) AS "mutinf"' \
+        + prefix1 + \
+        ' AND ("depprob" > 0.5)' \
+        ' ORDER BY "mutinf" DESC;'
+    assert bql2sql('estimate'
+            ' *, dependence probability with weight as depprob,'
+            ' mutual information with (age, weight) as mutinf'
+            ' from columns of p1'
+            ' where depprob > 0.5 order by mutinf desc') == \
+        prefix0 + \
+        ', bql_column_dependence_probability(1, NULL, 3, c.colno)' \
+            ' AS "depprob"' \
+        ', bql_column_mutual_information(1, NULL, \'[2, 3]\',' \
+        ' \'[\' || c.colno || \']\', NULL) AS "mutinf"' \
+        + prefix1 + \
         ' AND ("depprob" > 0.5)' \
         ' ORDER BY "mutinf" DESC;'
 
@@ -804,7 +827,17 @@ def test_estimate_pairwise_trivial():
             ' from pairwise columns of p1 where'
             ' (probability of age = 0) > 0.5;') == \
         prefix + \
-        'bql_column_mutual_information(1, NULL, v0.colno, v1.colno, NULL)' + \
+        'bql_column_mutual_information(1, NULL, '\
+        '\'[\' || v0.colno || \']\', \'[\' || v1.colno || \']\', NULL)' + \
+        infix + \
+        ' AND (bql_pdf_joint(1, NULL, 2, 0) > 0.5);'
+    assert bql2sql('estimate mutual information given (label=\'go\', weight)'
+            ' from pairwise columns of p1 where'
+            ' (probability of age = 0) > 0.5;') == \
+        prefix + \
+        'bql_column_mutual_information(1, NULL,'\
+        ' \'[\' || v0.colno || \']\', \'[\' || v1.colno || \']\', NULL,'\
+        ' 1, \'go\', 3, NULL)' + \
         infix + \
         ' AND (bql_pdf_joint(1, NULL, 2, 0) > 0.5);'
     with pytest.raises(bayeslite.BQLError):
@@ -860,14 +893,14 @@ def test_estimate_pairwise_trivial():
             ' where mutual information > 0.5;') == \
         prefix + 'bql_column_correlation(1, NULL, v0.colno, v1.colno)' + \
         infix + ' AND' + \
-        ' (bql_column_mutual_information(1, NULL, v0.colno, v1.colno, NULL)' \
-            ' > 0.5);'
+        ' (bql_column_mutual_information(1, NULL,'\
+        ' \'[\' || v0.colno || \']\', \'[\' || v1.colno || \']\', NULL) > 0.5);'
     assert bql2sql('estimate correlation from pairwise columns of p1' +
             ' where mutual information using 42 samples > 0.5;') == \
         prefix + 'bql_column_correlation(1, NULL, v0.colno, v1.colno)' + \
         infix + ' AND' + \
-        ' (bql_column_mutual_information(1, NULL, v0.colno, v1.colno, 42)' \
-            ' > 0.5);'
+        ' (bql_column_mutual_information(1, NULL,'\
+        ' \'[\' || v0.colno || \']\', \'[\' || v1.colno || \']\', 42) > 0.5);'
     with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
         bql2sql('estimate dependence probability'
@@ -899,9 +932,10 @@ def test_estimate_pairwise_trivial():
         prefix + \
         'bql_column_dependence_probability(1, NULL, v0.colno, v1.colno)' \
         ' AS "depprob",' \
-        ' bql_column_mutual_information(1, NULL, v0.colno, v1.colno, NULL)' \
-        ' AS "mutinf"' + \
-        infix0 + \
+        ' bql_column_mutual_information(1, NULL,'\
+        ' \'[\' || v0.colno || \']\', \'[\' || v1.colno || \']\', NULL)'\
+        ' AS "mutinf"' \
+        + infix0 + \
         ' AND ("depprob" > 0.5)' \
         ' ORDER BY "mutinf" DESC;'
 

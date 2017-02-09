@@ -460,19 +460,36 @@ def test_select_bql():
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select mutual information with c from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLMutInf('c', None, None, None), None)],
+            [ast.SelColExp(ast.ExpBQLMutInf(['c'], None, None, None), None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select mutual information with (c) from t;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpBQLMutInf(['c'], None, None, None), None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string(
-            'select mutual information of c with d from t;') == \
+            'select mutual information of c with (d) from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLMutInf('c', 'd', None, None), None)],
+            [ast.SelColExp(ast.ExpBQLMutInf(['c'], ['d'], None, None),
+            None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string(
+            'select mutual information of (a, b, q) with (d, r) '
+            'given (f, z=2, w) from t;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpBQLMutInf(
+                ['a', 'b', 'q'], ['d', 'r'],
+                [('f', ast.ExpLit(ast.LitNull(0))),
+                    ('z',ast.ExpLit(ast.LitInt(2))),
+                    ('w', ast.ExpLit(ast.LitNull(0)))],
+                None),
+            None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select mutual information of c with d' +
             ' using (1+2) samples from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
                 ast.ExpBQLMutInf(
-                    'c', 'd', None,
+                    ['c'], ['d'], None,
                     ast.op(
                         ast.OP_ADD, ast.ExpLit(ast.LitInt(1)),
                         ast.ExpLit(ast.LitInt(2)))),
@@ -485,7 +502,22 @@ def test_select_bql():
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
                 ast.ExpBQLMutInf(
-                    'c', None,
+                    ['c'], None,
+                    [('d', ast.ExpLit(ast.LitNull(0))),
+                        ('a',ast.ExpLit(ast.LitInt(1)))],
+                    ast.ExpLit(ast.LitInt(10))
+                ),
+            None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('''
+            select mutual information with (c, f) given (d, a=1) using
+            10 samples from t;
+            ''') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(
+                ast.ExpBQLMutInf(
+                    ['c', 'f'],
+                    None,
                     [('d', ast.ExpLit(ast.LitNull(0))),
                         ('a',ast.ExpLit(ast.LitInt(1)))],
                     ast.ExpLit(ast.LitInt(10))
@@ -498,7 +530,8 @@ def test_select_bql():
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
                 ast.ExpBQLMutInf(
-                    'b', 'c',
+                    ['b'],
+                    ['c'],
                     [
                         ('d', ast.ExpLit(ast.LitNull(0))),
                         ('a',ast.ExpLit(ast.LitInt(1))),
@@ -1012,7 +1045,32 @@ def test_simulate_models():
                         ast.ExpBQLDepProb('a', 'b'), 'q'),
                     ast.SimCol(
                         ast.ExpBQLMutInf(
-                            'c', 'd',
+                            ['c'],
+                            ['d'],
+                            [
+                                ('e', ast.ExpLit(ast.LitNull(0))),
+                                ('r', ast.ExpLit(ast.LitFloat(2.7)))
+                            ],
+                            ast.ExpLit(ast.LitInt(100))),
+                        'g'
+                    ),
+                ],
+                'p', 'z'
+            )
+    ]
+    assert parse_bql_string(
+        'simulate dependence probability of a with b AS q, '
+        'mutual information of (c) with (d, r) given (e, r=2.7) '
+            'using 100 samples as g '
+        'from models of p modeled by z') == [
+            ast.SimulateModels(
+                [
+                    ast.SimCol(
+                        ast.ExpBQLDepProb('a', 'b'), 'q'),
+                    ast.SimCol(
+                        ast.ExpBQLMutInf(
+                            ['c'],
+                            ['d', 'r'],
                             [
                                 ('e', ast.ExpLit(ast.LitNull(0))),
                                 ('r', ast.ExpLit(ast.LitFloat(2.7)))
@@ -1047,7 +1105,7 @@ def test_simulate_models():
         assert parse_bql_string(
             'create %s table %s f as '
             'simulate dependence probability of a with b AS q, '
-            'mutual information of c with d '
+            'mutual information of "bad-col" with d '
                 'given (e, r=2.7) using 100 samples as g '
             'from models of p modeled by z' % (temp, ifnotexists)) == [
                 ast.CreateTabSimModels(
@@ -1062,7 +1120,8 @@ def test_simulate_models():
                             ),
                             ast.SimCol(
                                 ast.ExpBQLMutInf(
-                                    'c', 'd',
+                                    ['bad-col'],
+                                    ['d'],
                                     [
                                         ('e', ast.ExpLit(ast.LitNull(0))),
                                         ('r', ast.ExpLit(ast.LitFloat(2.7)))

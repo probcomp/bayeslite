@@ -1037,10 +1037,17 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             count += 1
         return float('NaN') if nmodels == 0 else (float(count)/float(nmodels))
 
-    def column_mutual_information(self, bdb, generator_id, modelno, colno0,
-            colno1, constraints=None, numsamples=None):
+    def column_mutual_information(self, bdb, generator_id, modelno, colnos0,
+            colnos1, constraints=None, numsamples=None):
         if numsamples is None:
             numsamples = 100
+        # XXX Raise error about ignored constraints.
+        if len(colnos0) != 1 or len(colnos1) != 1:
+            raise BQLError(bdb,
+                'CrossCat does not support multivariate '
+                'mutual information: %s, %s' % (colnos0, colnos1))
+        colno0 = colnos0[0]
+        colno1 = colnos1[0]
         X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
         X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
         cc_colno0 = crosscat_cc_colno(bdb, generator_id, colno0)
