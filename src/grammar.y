@@ -593,11 +593,10 @@ bqlfn(cmutinf)          ::= K_MUTUAL K_INFORMATION ofwith(cols)
                                         T_RROUND
                                 nsamples_opt(nsamp).
 
-mi_constraint(e)        ::= column_name(col) T_EQ expression(value).
-mi_constraint(m)        ::= column_name(col).
+mi_constraint(equality) ::= column_name(col) T_EQ expression(value).
+mi_constraint(marginal) ::= column_name(col).
 mi_constraints(one)     ::= mi_constraint(c).
 mi_constraints(many)    ::= mi_constraints(cs) T_COMMA mi_constraint(c).
-
 
 bqlfn(correl)           ::= K_CORRELATION ofwith(cols).
 bqlfn(correl_pval)      ::= K_CORRELATION K_PVALUE ofwith(cols).

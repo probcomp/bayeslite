@@ -631,8 +631,10 @@ class BQLSemantics(object):
     def p_bqlfn_cmutinf(self, cols, constraints, nsamp):
         return ast.ExpBQLMutInf(cols[0], cols[1], constraints, nsamp)
 
-    def p_mi_constraint_e(self, col, value):    return (col, value)
-    def p_mi_constraint_m(self, col): return (col, ast.ExpLit(ast.LitNull(0)))
+    def p_mi_constraint_equality(self, col, value):
+        return (col, value)
+    def p_mi_constraint_marginal(self, col):
+        return (col, ast.ExpLit(ast.LitNull(0)))
     def p_mi_constraints_one(self, c):          return [c]
     def p_mi_constraints_many(self, cs, c):     cs.append(c); return cs
 
