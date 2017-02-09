@@ -17,6 +17,7 @@
 import apsw
 import contextlib
 import itertools
+import json
 import pytest
 import tempfile
 
@@ -466,21 +467,23 @@ def test_twocolumn(exname, colno0, colno1):
         bdb.sql_execute('select'
             ' bql_column_dependence_probability(?, NULL, ?, ?)',
             (population_id, colno0, colno1)).fetchall()
+        colno0_json = json.dumps([colno0])
+        colno1_json = json.dumps([colno1])
         bqlfn.bql_column_mutual_information(
-            bdb, population_id, None, colno0, colno1, None)
+            bdb, population_id, None, colno0_json, colno1_json, None)
         bqlfn.bql_column_mutual_information(
-            bdb, population_id, None, colno0, colno1, None)
+            bdb, population_id, None, colno0_json, colno1_json, None)
         bqlfn.bql_column_mutual_information(
-            bdb, population_id, None, colno0, colno1, 1)
+            bdb, population_id, None, colno0_json, colno1_json, 1)
         bdb.sql_execute('select'
             ' bql_column_mutual_information(?, NULL, ?, ?, NULL)',
-            (population_id, colno0, colno1)).fetchall()
+            (population_id, colno0_json, colno1_json)).fetchall()
         bdb.sql_execute('select'
             ' bql_column_mutual_information(?, NULL, ?, ?, 1)',
-            (population_id, colno0, colno1)).fetchall()
+            (population_id, colno0_json, colno1_json)).fetchall()
         bdb.sql_execute('select'
             ' bql_column_mutual_information(?, NULL, ?, ?, 100)',
-            (population_id, colno0, colno1)).fetchall()
+            (population_id, colno0_json, colno1_json)).fetchall()
 
 @pytest.mark.parametrize('colno,rowid',
     [(colno, rowid)
