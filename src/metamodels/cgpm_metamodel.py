@@ -441,7 +441,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         return arithmetic_mean(similarity_list)
 
     def predict_confidence(
-            self, bdb, generator_id, modelno, colno, rowid, numsamples=None):
+            self, bdb, generator_id, modelno, rowid, colno, numsamples=None):
         if not numsamples:
             numsamples = 2
         assert numsamples > 0
@@ -484,15 +484,14 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 bdb, population_id, None)
             # Relies on user appropriately nullifying nan tokens.
             constraints = [
-                (rowid, col, value)
+                (col, value)
                 for (col, value) in zip(variable_numbers, row_values)
                 if (value is not None) and (col != colno)
             ]
 
         # Retrieve the samples.
         sample = self.simulate_joint(
-            bdb, generator_id, [(rowid, colno)], constraints,
-            modelno, numsamples)
+            bdb, generator_id, rowid, [colno], constraints, modelno, numsamples)
 
         # Determine the imputation strategy (mode or mean).
         stattype = core.bayesdb_variable_stattype(
@@ -503,17 +502,15 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             return _impute_numerical(sample)
 
     def simulate_joint(
-            self, bdb, generator_id, targets, constraints, modelno,
+            self, bdb, generator_id, rowid, targets, constraints, modelno,
             num_samples=None, accuracy=None):
         if num_samples is None:
             num_samples = 1
-        rowid = self._unique_rowid(
-            [r for r, _c in targets] + [r for r, _c, _v in constraints])
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
-        cgpm_query = [colno for _r, colno in targets]
+        cgpm_query = targets
         # Build the evidence, ignoring nan values.
         cgpm_evidence = {}
-        for _r, colno, value in constraints:
+        for colno, value in constraints:
             value_numeric = self._to_numeric(bdb, generator_id, colno, value)
             if not math.isnan(value_numeric):
                 cgpm_evidence.update({colno: value_numeric})
@@ -531,18 +528,17 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             for row in weighted_samples
         ]
 
-    def logpdf_joint(self, bdb, generator_id, targets, constraints, modelno):
-        rowid = self._unique_rowid(
-            [r for r, _c, _v in targets + constraints])
+    def logpdf_joint(
+            self, bdb, generator_id, rowid, targets, constraints, modelno):
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
         # TODO: Handle nan values in the logpdf query.
         cgpm_query = {
             colno: self._to_numeric(bdb, generator_id, colno, value)
-            for _r, colno, value in targets
+            for colno, value in targets
         }
         # Build the evidence, ignoring nan values.
         cgpm_evidence = {}
-        for _r, colno, value in constraints:
+        for colno, value in constraints:
             value_numeric = self._to_numeric(bdb, generator_id, colno, value)
             if not math.isnan(value_numeric):
                 cgpm_evidence.update({colno: value_numeric})

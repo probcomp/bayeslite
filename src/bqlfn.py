@@ -46,7 +46,7 @@ def bayesdb_install_bql(db, cookie):
     function("bql_predict_confidence", 5, bql_predict_confidence)
     function("bql_json_get", 2, bql_json_get)
     function("bql_pdf_joint", -1, bql_pdf_joint)
-
+
 ### BayesDB column functions
 
 def bql_variable_stattypes_and_data(bdb, population_id, colno0, colno1):
@@ -69,32 +69,36 @@ def bql_variable_stattypes_and_data(bdb, population_id, colno0, colno1):
 # Two-column function:  CORRELATION [OF <col0> WITH <col1>]
 def bql_column_correlation(bdb, population_id, _generator_id, colno0, colno1):
     if colno0 < 0:
-        raise BQLError(bdb, 'No correlation for latent variable: %r' %
+        raise BQLError(bdb,
+            'No correlation for latent variable: %r' %
             (core.bayesdb_variable_name(bdb, population_id, colno0),))
     if colno1 < 0:
-        raise BQLError(bdb, 'No correlation for latent variable: %r' %
+        raise BQLError(bdb,
+            'No correlation for latent variable: %r' %
             (core.bayesdb_variable_name(bdb, population_id, colno1),))
     (st0, st1, data0, data1) = bql_variable_stattypes_and_data(bdb,
         population_id, colno0, colno1)
     if (st0, st1) not in correlation_methods:
-        raise NotImplementedError('No correlation method for %s/%s.' %
-            (st0, st1))
+        raise NotImplementedError(
+            'No correlation method for %s/%s.' % (st0, st1))
     return correlation_methods[st0, st1](data0, data1)
 
 # Two-column function:  CORRELATION PVALUE [OF <col0> WITH <col1>]
-def bql_column_correlation_pvalue(bdb, population_id, _generator_id, colno0,
-        colno1):
+def bql_column_correlation_pvalue(
+        bdb, population_id, _generator_id, colno0, colno1):
     if colno0 < 0:
-        raise BQLError(bdb, 'No correlation p-value for latent variable: %r' %
+        raise BQLError(bdb,
+            'No correlation p-value for latent variable: %r' %
             (core.bayesdb_variable_name(bdb, population_id, colno0),))
     if colno1 < 0:
-        raise BQLError(bdb, 'No correlation p-value for latent variable: %r' %
+        raise BQLError(bdb,
+            'No correlation p-value for latent variable: %r' %
             (core.bayesdb_variable_name(bdb, population_id, colno1),))
     (st0, st1, data0, data1) = bql_variable_stattypes_and_data(bdb,
         population_id, colno0, colno1)
     if (st0, st1) not in correlation_p_methods:
-        raise NotImplementedError('No correlation pvalue method for %s/%s.' %
-            (st0, st1))
+        raise NotImplementedError(
+            'No correlation pvalue method for %s/%s.' % (st0, st1))
     return correlation_p_methods[st0, st1](data0, data1)
 
 def correlation_pearsonr2(data0, data1):
@@ -262,7 +266,6 @@ define_correlation_p('cyclic', 'cyclic', correlation_p_pearsonr2)
 define_correlation_p('cyclic', 'numerical', correlation_p_pearsonr2)
 define_correlation_p('numerical', 'cyclic', correlation_p_pearsonr2)
 
-
 # XXX Duplicated definitions for `nominal` and `categorical`.
 define_correlation('nominal', 'nominal', correlation_cramerphi)
 define_correlation('nominal', 'numerical', correlation_anovar2_dc)
@@ -280,14 +283,13 @@ define_correlation('categorical', 'nominal', correlation_cramerphi)
 
 
 # Two-column function:  DEPENDENCE PROBABILITY [OF <col0> WITH <col1>]
-def bql_column_dependence_probability(bdb, population_id, generator_id, colno0,
-        colno1):
+def bql_column_dependence_probability(
+        bdb, population_id, generator_id, colno0, colno1):
     def generator_depprob(generator_id):
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-        return metamodel.column_dependence_probability(bdb, generator_id, None,
-            colno0, colno1)
-    generator_ids = [generator_id] if generator_id is not None else \
-        core.bayesdb_population_generators(bdb, population_id)
+        return metamodel.column_dependence_probability(
+            bdb, generator_id, None, colno0, colno1)
+    generator_ids = _retrieve_generator_ids(bdb, population_id, generator_id)
     depprobs = map(generator_depprob, generator_ids)
     return stats.arithmetic_mean(depprobs)
 
@@ -305,8 +307,8 @@ def bql_column_mutual_information(
     return stats.arithmetic_mean([stats.arithmetic_mean(m) for m in mutinfs])
 
 def _bql_column_mutual_information(
-        bdb, population_id, generator_id, colno0, colno1,
-        numsamples, *constraint_args):
+        bdb, population_id, generator_id, colno0, colno1, numsamples,
+        *constraint_args):
     if len(constraint_args) % 2 == 1:
         raise ValueError('Odd constraint arguments: %s.' % (constraint_args))
     constraints = zip(constraint_args[::2], constraint_args[1::2]) \
@@ -316,27 +318,24 @@ def _bql_column_mutual_information(
         return metamodel.column_mutual_information(
             bdb, generator_id, None,
             colno0, colno1, constraints=constraints, numsamples=numsamples)
-    generator_ids = [generator_id] if generator_id is not None else \
-        core.bayesdb_population_generators(bdb, population_id)
+    generator_ids = _retrieve_generator_ids(bdb, population_id, generator_id)
     mutinfs = map(generator_mutinf, generator_ids)
     return mutinfs
 
 # One-column function: PROBABILITY DENSITY OF <col>=<value> GIVEN <constraints>
 def bql_column_value_probability(bdb, population_id, generator_id, colno,
         value, *constraint_args):
-    # A nonexistent (`unobserved') row id.
-    fake_row_id = core.bayesdb_population_fresh_row_id(bdb, population_id)
     constraints = []
     i = 0
     while i < len(constraint_args):
         if i + 1 == len(constraint_args):
-            raise ValueError('Odd constraint arguments: %s' %
-                (constraint_args,))
+            raise ValueError(
+                'Odd constraint arguments: %s' % (constraint_args,))
         constraint_colno = constraint_args[i]
         constraint_value = constraint_args[i + 1]
-        constraints.append((fake_row_id, constraint_colno, constraint_value))
+        constraints.append((constraint_colno, constraint_value))
         i += 2
-    targets = [(fake_row_id, colno, value)]
+    targets = [(colno, value)]
     logp = _bql_logpdf(bdb, population_id, generator_id, targets, constraints)
     return ieee_exp(logp)
 
@@ -344,8 +343,6 @@ def bql_column_value_probability(bdb, population_id, generator_id, colno,
 # This is Github issue #360:
 # https://github.com/probcomp/bayeslite/issues/360
 def bql_pdf_joint(bdb, population_id, generator_id, *args):
-    # A nonexistent (`unobserved') row id.
-    fake_row_id = core.bayesdb_population_fresh_row_id(bdb, population_id)
     i = 0
     targets = []
     while i < len(args):
@@ -356,7 +353,7 @@ def bql_pdf_joint(bdb, population_id, generator_id, *args):
             raise ValueError('Missing logpdf target value: %r' % (args[i],))
         t_colno = args[i]
         t_value = args[i + 1]
-        targets.append((fake_row_id, t_colno, t_value))
+        targets.append((t_colno, t_value))
         i += 2
     constraints = []
     while i < len(args):
@@ -365,7 +362,7 @@ def bql_pdf_joint(bdb, population_id, generator_id, *args):
                 (args[i],))
         c_colno = args[i]
         c_value = args[i + 1]
-        constraints.append((fake_row_id, c_colno, c_value))
+        constraints.append((c_colno, c_value))
         i += 2
     logp = _bql_logpdf(bdb, population_id, generator_id, targets, constraints)
     return ieee_exp(logp)
@@ -382,45 +379,49 @@ def _bql_logpdf(bdb, population_id, generator_id, targets, constraints):
     # generator uniformly; eventually, we ought to allow the user to
     # specify a prior weight (XXX and update some kind of posterior
     # weight?).
+    rowid, constraints = _retrieve_rowid_constraints(
+        bdb, population_id, constraints)
     def logpdf(generator_id, metamodel):
         return metamodel.logpdf_joint(
-            bdb, generator_id, targets, constraints, None)
+            bdb, generator_id, rowid, targets, constraints, None)
     def loglikelihood(generator_id, metamodel):
         if not constraints:
             return 0
-        return metamodel.logpdf_joint(bdb, generator_id, constraints, [], None)
-    generator_ids = [generator_id] if generator_id is not None else \
-        core.bayesdb_population_generators(bdb, population_id)
-    metamodels = \
-        [core.bayesdb_generator_metamodel(bdb, g) for g in generator_ids]
+        return metamodel.logpdf_joint(
+            bdb, generator_id, rowid, constraints, [], None)
+    generator_ids = _retrieve_generator_ids(bdb, population_id, generator_id)
+    metamodels = [
+        core.bayesdb_generator_metamodel(bdb, g)
+        for g in generator_ids
+    ]
     loglikelihoods = map(loglikelihood, generator_ids, metamodels)
     logpdfs = map(logpdf, generator_ids, metamodels)
     return logavgexp_weighted(loglikelihoods, logpdfs)
-
+
 ### BayesDB row functions
 
 # Row function:  SIMILARITY TO <target_row> [WITH RESPECT TO <columns>]
-def bql_row_similarity(bdb, population_id, generator_id, rowid, target_rowid,
-        *colnos):
+def bql_row_similarity(
+        bdb, population_id, generator_id, rowid, target_rowid, *colnos):
     if target_rowid is None:
         raise BQLError(bdb, 'No such target row for SIMILARITY')
     if len(colnos) == 0:
         colnos = core.bayesdb_variable_numbers(bdb, population_id,
             generator_id)
     if len(colnos) != 1:
-        raise BQLError(bdb, 'Multiple with respect to columns: %s.' % (colnos,))
+        raise BQLError(bdb,
+            'Multiple with respect to columns: %s.' % (colnos,))
     def generator_similarity(generator_id):
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-        return metamodel.row_similarity(bdb, generator_id, None, rowid,
-            target_rowid, colnos)
-    generator_ids = [generator_id] if generator_id is not None else \
-        core.bayesdb_population_generators(bdb, population_id)
+        return metamodel.row_similarity(
+            bdb, generator_id, None, rowid, target_rowid, colnos)
+    generator_ids = _retrieve_generator_ids(bdb, population_id, generator_id)
     similarities = map(generator_similarity, generator_ids)
     return stats.arithmetic_mean(similarities)
 
 # Row function:  PREDICTIVE PROBABILITY OF <column>
-def bql_row_column_predictive_probability(bdb, population_id, generator_id,
-        rowid, colno):
+def bql_row_column_predictive_probability(
+        bdb, population_id, generator_id, rowid, colno):
     value = core.bayesdb_population_cell_value(bdb, population_id, rowid, colno)
     if value is None:
         return None
@@ -429,25 +430,25 @@ def bql_row_column_predictive_probability(bdb, population_id, generator_id,
     variable_numbers = core.bayesdb_variable_numbers(bdb, population_id, None)
     # Build the constraints and query from rowid, using a fresh rowid.
     fresh_rowid = core.bayesdb_population_fresh_row_id(bdb, population_id)
-    query = [(fresh_rowid, colno, value)]
+    query = [(colno, value)]
     constraints = [
-        (fresh_rowid, col, value)
+        (col, value)
         for (col, value) in zip(variable_numbers, row_values)
         if (value is not None) and (col != colno)
     ]
     def generator_predprob(generator_id):
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-        return metamodel.logpdf_joint(bdb, generator_id, query, constraints, None)
-    generator_ids = [generator_id] if generator_id is not None else \
-        core.bayesdb_population_generators(bdb, population_id)
+        return metamodel.logpdf_joint(
+            bdb, generator_id, fresh_rowid, query, constraints, None)
+    generator_ids = _retrieve_generator_ids(bdb, population_id, generator_id)
     predprobs = map(generator_predprob, generator_ids)
     r = logmeanexp(predprobs)
     return ieee_exp(r)
-
+
 ### Predict and simulate
 
-def bql_predict(bdb, population_id, generator_id, colno, rowid, threshold,
-        numsamples):
+def bql_predict(
+        bdb, population_id, generator_id, rowid, colno, threshold, numsamples):
     # XXX Randomly sample 1 generator from the population, until we figure out
     # how to aggregate imputations across different hypotheses.
     if generator_id is None:
@@ -455,11 +456,11 @@ def bql_predict(bdb, population_id, generator_id, colno, rowid, threshold,
         index = bdb.np_prng.randint(0, high=len(generator_ids))
         generator_id = generator_ids[index]
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    return metamodel.predict(bdb, generator_id, None, colno, rowid,
-        threshold, numsamples=numsamples)
+    return metamodel.predict(
+        bdb, generator_id, None, rowid, colno, threshold, numsamples=numsamples)
 
-def bql_predict_confidence(bdb, population_id, generator_id, colno, rowid,
-        numsamples):
+def bql_predict_confidence(
+        bdb, population_id, generator_id, rowid, colno, numsamples):
     # XXX Do real imputation here!
     # XXX Randomly sample 1 generator from the population, until we figure out
     # how to aggregate imputations across different hypotheses.
@@ -468,8 +469,8 @@ def bql_predict_confidence(bdb, population_id, generator_id, colno, rowid,
         index = bdb.np_prng.randint(0, high=len(generator_ids))
         generator_id = generator_ids[index]
     metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-    value, confidence = metamodel.predict_confidence(bdb, generator_id,
-        None, colno, rowid, numsamples=numsamples)
+    value, confidence = metamodel.predict_confidence(
+        bdb, generator_id, None, rowid, colno, numsamples=numsamples)
     # XXX Whattakludge!
     return json.dumps({'value': value, 'confidence': confidence})
 
@@ -477,8 +478,9 @@ def bql_predict_confidence(bdb, population_id, generator_id, colno, rowid,
 def bql_json_get(bdb, blob, key):
     return json.loads(blob)[key]
 
-def bayesdb_simulate(bdb, population_id, constraints, colnos,
-        generator_id=None, numpredictions=1, accuracy=None):
+def bayesdb_simulate(
+        bdb, population_id, constraints, colnos, generator_id=None,
+        numpredictions=1, accuracy=None):
     """Simulate rows from a generative model, subject to constraints.
 
     Returns a list of `numpredictions` tuples, with a value for each
@@ -489,34 +491,22 @@ def bayesdb_simulate(bdb, population_id, constraints, colnos,
     The results are simulated from the predictive distribution on
     fresh rows.
     """
-    rowid = core.bayesdb_population_fresh_row_id(bdb, population_id)
-    if constraints is not None:
-        user_rowid = [
-            v for c, v in constraints
-            if c in core.bayesdb_rowid_tokens(bdb)
-        ]
-        if len(user_rowid) == 1:
-            rowid = user_rowid[0]
-        elif len(user_rowid) > 1:
-            raise BQLError(bdb, 'Multiple rowids given: %s.' % (constraints,))
-        constraints = [
-            (rowid, c, v) for c, v in constraints
-            if c not in core.bayesdb_rowid_tokens(bdb)
-        ]
-    targets = [(rowid, colno) for colno in colnos]
+    rowid, constraints = _retrieve_rowid_constraints(
+        bdb, population_id, constraints)
     def loglikelihood(generator_id, metamodel):
         if not constraints:
             return 0
         return metamodel.logpdf_joint(
-            bdb, generator_id, constraints, [], None)
+            bdb, generator_id, rowid, constraints, [], None)
     def simulate(generator_id, metamodel, n):
         return metamodel.simulate_joint(
-            bdb, generator_id, targets,
-            constraints, None, num_samples=n, accuracy=accuracy)
-    generator_ids = [generator_id] if generator_id is not None else \
-        core.bayesdb_population_generators(bdb, population_id)
-    metamodels = [core.bayesdb_generator_metamodel(bdb, generator_id)
-        for generator_id in generator_ids]
+            bdb, generator_id, rowid, colnos, constraints, None,
+            num_samples=n, accuracy=accuracy)
+    generator_ids = _retrieve_generator_ids(bdb, population_id, generator_id)
+    metamodels = [
+        core.bayesdb_generator_metamodel(bdb, generator_id)
+        for generator_id in generator_ids
+    ]
     if len(generator_ids) > 1:
         loglikelihoods = map(loglikelihood, generator_ids, metamodels)
         likelihoods = map(math.exp, loglikelihoods)
@@ -524,8 +514,10 @@ def bayesdb_simulate(bdb, population_id, constraints, colnos,
         if total_likelihood == 0:
             # XXX Show the constraints with symbolic names.
             raise BQLError(bdb, 'Impossible constraints: %r' % (constraints,))
-        probabilities = [likelihood/total_likelihood
-            for likelihood in likelihoods]
+        probabilities = [
+            likelihood / total_likelihood
+            for likelihood in likelihoods
+        ]
         countses = bdb.np_prng.multinomial(
             numpredictions, probabilities, size=1)
         counts = countses[0]
@@ -535,3 +527,27 @@ def bayesdb_simulate(bdb, population_id, constraints, colnos,
     all_rows = [row for rows in rowses for row in rows]
     assert all(isinstance(row, (tuple, list)) for row in all_rows)
     return all_rows
+
+### Helper functions functions
+
+def _retrieve_rowid_constraints(bdb, population_id, constraints):
+    rowid = core.bayesdb_population_fresh_row_id(bdb, population_id)
+    if constraints:
+        user_rowid = [
+            v for c, v in constraints
+            if c in core.bayesdb_rowid_tokens(bdb)
+        ]
+        if len(user_rowid) == 1:
+            rowid = user_rowid[0]
+        elif len(user_rowid) > 1:
+            raise BQLError(bdb, 'Multiple rowids given: %s.' % (constraints,))
+        constraints = [
+            (c, v) for c, v in constraints
+            if c not in core.bayesdb_rowid_tokens(bdb)
+        ]
+    return rowid, constraints
+
+def _retrieve_generator_ids(bdb, population_id, generator_id):
+    if generator_id is None:
+        return core.bayesdb_population_generators(bdb, population_id)
+    return [generator_id]

@@ -1077,7 +1077,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 for colno in colnos],
         )
 
-    def predict_confidence(self, bdb, generator_id, modelno, colno, rowid,
+    def predict_confidence(self, bdb, generator_id, modelno, rowid, colno,
             numsamples=None):
         if numsamples is None:
             numsamples = 100    # XXXWARGHWTF
@@ -1107,12 +1107,14 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         value = crosscat_code_to_value(bdb, generator_id, M_c, colno, code)
         return value, confidence
 
-    def simulate_joint(self, bdb, generator_id, targets, constraints,
+    def simulate_joint(self, bdb, generator_id, rowid, targets, constraints,
             modelno, num_samples=1, accuracy=None):
         M_c = self._crosscat_metadata(bdb, generator_id)
         # An invalid constraint value should result in a BQL error.
-        if constraints:
-            for _, colno, value in constraints:
+        if constraints is None:
+            constraints = []
+        else:
+            for colno, value in constraints:
                 try:
                     crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
                 except KeyError:
@@ -1122,7 +1124,10 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
         X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
         Q, Y, X_L_list, X_D_list = self._crosscat_remap_two(
-            bdb, generator_id, X_L_list, X_D_list, targets, constraints)
+            bdb, generator_id, X_L_list, X_D_list,
+            [(rowid, t) for t in targets],
+            [(rowid, c, v) for (c, v) in constraints],
+        )
         raw_outputs = self._crosscat.simple_predictive_sample(
             seed=crosscat_seed(bdb),
             M_c=M_c,
@@ -1133,20 +1138,20 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             n=num_samples
         )
         return [[crosscat_code_to_value(bdb, generator_id, M_c, colno, code)
-                for ((_, colno), code) in zip(targets, raw_output)]
+                for (colno, code) in zip(targets, raw_output)]
             for raw_output in raw_outputs]
 
-    def logpdf_joint(self, bdb, generator_id, targets, constraints,
+    def logpdf_joint(self, bdb, generator_id, rowid, targets, constraints,
             modelno=None):
         M_c = self._crosscat_metadata(bdb, generator_id)
         try:
-            for _, colno, value in constraints:
+            for colno, value in constraints:
                 crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
         except KeyError:
             # Probability with constraint that has no code
             return float('nan')
         try:
-            for _, colno, value in targets:
+            for colno, value in targets:
                 crosscat_value_to_code(bdb, generator_id, M_c, colno, value)
         except KeyError:
             # Probability of value that has no code
@@ -1154,7 +1159,10 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
         X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
         Q, Y, X_L_list, X_D_list = self._crosscat_remap_two(
-            bdb, generator_id, X_L_list, X_D_list, targets, constraints)
+            bdb, generator_id, X_L_list, X_D_list,
+            [(rowid, c, v) for (c, v) in targets],
+            [(rowid, c, v) for (c, v) in constraints],
+        )
         r = self._crosscat.predictive_probability_multistate(
             M_c=M_c,
             X_L_list=X_L_list,

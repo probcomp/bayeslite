@@ -258,7 +258,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                 (generator_id,))]
 
     def simulate_joint(
-            self, bdb, generator_id, targets, _constraints, modelno=None,
+            self, bdb, generator_id, rowid, targets, _constraints, modelno=None,
             num_samples=1, accuracy=None):
         # Note: The constraints are irrelevant because columns are
         # independent in the true distribution (except in the case of
@@ -273,7 +273,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                 modelno = self.prng.choice(modelnos)
             (mus, sigmas) = self._model_mus_sigmas(bdb, generator_id, modelno)
             return [[self._simulate_1(bdb, generator_id, mus, sigmas, colno)
-                     for (_, colno) in targets]
+                     for colno in targets]
                     for _ in range(num_samples)]
 
     def _simulate_1(self, bdb, generator_id, mus, sigmas, colno):
@@ -305,7 +305,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             sigmas[colno] = sigma
         return (mus, sigmas)
 
-    def logpdf_joint(self, bdb, generator_id, targets, _constraints,
+    def logpdf_joint(self, bdb, generator_id, rowid, targets, _constraints,
             modelno=None):
         # Note: The constraints are irrelevant for the same reason as
         # in simulate_joint.
@@ -313,7 +313,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         def model_log_pdf(modelno):
             mus = all_mus[modelno]
             sigmas = all_sigmas[modelno]
-            def logpdf_1((_, colno, x)):
+            def logpdf_1((colno, x)):
                 return self._logpdf_1(bdb, generator_id, mus, sigmas, colno, x)
             return sum(map(logpdf_1, targets))
         modelwise = [model_log_pdf(m) for m in sorted(all_mus.keys())]
@@ -366,7 +366,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # XXX Fix me!
         return 0
 
-    def predict_confidence(self, bdb, generator_id, modelno, colno, rowid,
+    def predict_confidence(self, bdb, generator_id, modelno, rowid, colno,
             numsamples=None):
         if colno < 0:
             return (0, 1)       # deviation of mode from mean is zero
