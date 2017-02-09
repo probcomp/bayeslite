@@ -47,26 +47,26 @@ class Output(object):
     """
 
     def __init__(self, n_numpar, nampar_map, bindings):
-        self.stringio = StringIO.StringIO()
+        self._stringio = StringIO.StringIO()
         # Below, `number' means 1-based, and `index' means 0-based.  n
         # is a source language number; m, an output sqlite3 number; i,
         # an input index passed by the caller, and j, an output index
         # of the tuple we pass to sqlite3.
-        self.n_numpar = n_numpar        # number of numbered parameters
-        self.nampar_map = nampar_map    # map of param name -> param number
-        self.bindings = bindings        # map of input index -> value
-        self.renumber = {}              # map of input number -> output number
-        self.select = []                # map of output index -> input index
-        self.winders = []               # list of pre-query (sql, bindings)
-        self.unwinders = []             # list of post-query (sql, bindings)
+        self._n_numpar = n_numpar       # number of numbered parameters
+        self._nampar_map = nampar_map   # map of param name -> param number
+        self._bindings = bindings       # map of input index -> value
+        self._renumber = {}             # map of input number -> output number
+        self._select = []               # map of output index -> input index
+        self._winders = []              # list of pre-query (sql, bindings)
+        self._unwinders = []            # list of post-query (sql, bindings)
 
     def subquery(self):
         """Return an output accumulator for a subquery."""
-        return Output(self.n_numpar, self.nampar_map, self.bindings)
+        return Output(self._n_numpar, self._nampar_map, self._bindings)
 
     def getvalue(self):
         """Return the accumulated output."""
-        return self.stringio.getvalue()
+        return self._stringio.getvalue()
 
     def getbindings(self):
         """Return a selection of bindings fit for the accumulated output.
@@ -74,31 +74,31 @@ class Output(object):
         If there were subqueries, or if this is accumulating output
         for a subquery, this may not use all bindings.
         """
-        if isinstance(self.bindings, dict):
+        if isinstance(self._bindings, dict):
             # User supplied named bindings.
             # - Grow a set of parameters we don't expect (unknown).
             # - Shrink a set of parameters we do expect (missing).
             # - Fill a list for the n_numpar parameters positionally.
             unknown = set([])
-            missing = set(self.nampar_map)
-            bindings_list = [None] * self.n_numpar
+            missing = set(self._nampar_map)
+            bindings_list = [None] * self._n_numpar
 
             # For each binding, either add it to the unknown set or
             # (a) remove it from the missing set, (b) use nampar_map
             # to find its user-supplied input position, and (c) use
             # renumber to find its output position for passage to
             # sqlite3.
-            for name in self.bindings:
+            for name in self._bindings:
                 name_folded = casefold(name)
-                if name_folded not in self.nampar_map:
+                if name_folded not in self._nampar_map:
                     unknown.add(name)
                     continue
                 missing.remove(name_folded)
-                n = self.nampar_map[name_folded]
-                m = self.renumber[n]
+                n = self._nampar_map[name_folded]
+                m = self._renumber[n]
                 j = m - 1
                 assert bindings_list[j] is None
-                bindings_list[j] = self.bindings[name]
+                bindings_list[j] = self._bindings[name]
 
             # Make sure we saw all parameters we expected and none we
             # didn't expect.
@@ -110,76 +110,76 @@ class Output(object):
             # If the query contained any numbered parameters, which
             # will manifest as higher values of n_numpar without more
             # entries in nampar_map, we can't execute the query.
-            if len(self.bindings) < self.n_numpar:
-                missing_numbers = set(range(1, self.n_numpar + 1))
-                for name in self.bindings:
-                    missing_numbers.remove(self.nampar_map[casefold(name)])
+            if len(self._bindings) < self._n_numpar:
+                missing_numbers = set(range(1, self._n_numpar + 1))
+                for name in self._bindings:
+                    missing_numbers.remove(self._nampar_map[casefold(name)])
                 raise ValueError('Missing parameter numbers: %s' %
                     (missing_numbers,))
 
             # All set.
             return bindings_list
 
-        elif isinstance(self.bindings, tuple) or \
-             isinstance(self.bindings, list):
+        elif isinstance(self._bindings, tuple) or \
+             isinstance(self._bindings, list):
             # User supplied numbered bindings.  Make sure there aren't
             # too few or too many, and then select a list of the ones
             # we want.
-            if len(self.bindings) < self.n_numpar:
+            if len(self._bindings) < self._n_numpar:
                 raise ValueError('Too few parameter bindings: %d < %d' %
-                    (len(self.bindings), self.n_numpar))
-            if len(self.bindings) > self.n_numpar:
+                    (len(self._bindings), self._n_numpar))
+            if len(self._bindings) > self._n_numpar:
                 raise ValueError('Too many parameter bindings: %d > %d' %
-                    (len(self.bindings), self.n_numpar))
-            assert len(self.select) <= self.n_numpar
-            return [self.bindings[j] for j in self.select]
+                    (len(self._bindings), self._n_numpar))
+            assert len(self._select) <= self._n_numpar
+            return [self._bindings[j] for j in self._select]
 
         else:
             # User supplied bindings we didn't understand.
-            raise TypeError('Invalid query bindings: %s' % (self.bindings,))
+            raise TypeError('Invalid query bindings: %s' % (self._bindings,))
 
     def getwindings(self):
-        return self.winders, self.unwinders
+        return self._winders, self._unwinders
 
     def write(self, text):
         """Accumulate `text` in the output of :meth:`getvalue`."""
-        self.stringio.write(text)
+        self._stringio.write(text)
 
     def write_numpar(self, n):
         """Accumulate a reference to the parameter numbered `n`."""
         assert 0 < n
-        assert n <= self.n_numpar
+        assert n <= self._n_numpar
         # The input index i is the input number n minus one.
         i = n - 1
         # Has this parameter already been used?
         m = None
-        if n in self.renumber:
+        if n in self._renumber:
             # Yes: its output number is renumber[n].
-            m = self.renumber[n]
+            m = self._renumber[n]
         else:
             # No: its output index is the number of bindings we've
             # selected so far; append its input index to the list of
             # selected indices and remember its output number in
             # renumber.
-            j = len(self.select)
+            j = len(self._select)
             m = j + 1
-            self.select.append(i)
-            self.renumber[n] = m
+            self._select.append(i)
+            self._renumber[n] = m
         self.write('?%d' % (m,))
 
     def write_nampar(self, name, n):
         """Accumulate a reference to the parameter `name` numbered `n`."""
         assert 0 < n
-        assert n <= self.n_numpar
+        assert n <= self._n_numpar
         # Just treat it as if it were a numbered parameter; it is the
         # parser's job to map between numbered and named parameters.
-        assert self.nampar_map[name] == n
+        assert self._nampar_map[name] == n
         self.write_numpar(n)
 
     def winder(self, sql, bindings):
-        self.winders.append((sql, bindings))
+        self._winders.append((sql, bindings))
     def unwinder(self, sql, bindings):
-        self.unwinders.append((sql, bindings))
+        self._unwinders.append((sql, bindings))
 
 @contextlib.contextmanager
 def bayesdb_wind(bdb, winders, unwinders):
