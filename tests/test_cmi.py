@@ -24,7 +24,8 @@ from bayeslite.exception import BQLParseError
 
 
 '''This test provides coverage for ESTIMATE and SIMULATE of conditional mutual
-information queries.'''
+information queries for univariate and multivariate targets and conditioning
+statements.'''
 
 
 @contextlib.contextmanager
@@ -66,8 +67,16 @@ def test_estimate_cmi_basic__ci_slow():
 
 def test_estimate_cmi_no_condition():
     with smoke_bdb() as bdb:
+        # Univariate targets.
         bql = '''
             ESTIMATE MUTUAL INFORMATION OF a WITH b USING 10 SAMPLES
+            BY p
+        '''
+        result = bdb.execute(bql).fetchall()
+        assert len(result) == 1
+        # Multivariate targets.
+        bql = '''
+            ESTIMATE MUTUAL INFORMATION OF (a, e) WITH b USING 10 SAMPLES
             BY p
         '''
         result = bdb.execute(bql).fetchall()
@@ -76,9 +85,19 @@ def test_estimate_cmi_no_condition():
 
 def test_estimate_cmi_equality_condition():
     with smoke_bdb() as bdb:
+        # Univariate targets.
         bql = '''
             ESTIMATE
                 MUTUAL INFORMATION OF a WITH b GIVEN
+                    (c = 1, e = 'x') USING 10 SAMPLES
+            BY p;
+        '''
+        result = bdb.execute(bql).fetchall()
+        assert len(result) == 1
+        # Multivariate targets.
+        bql = '''
+            ESTIMATE
+                MUTUAL INFORMATION OF (a, d) WITH b GIVEN
                     (c = 1, e = 'x') USING 10 SAMPLES
             BY p;
         '''
@@ -88,9 +107,19 @@ def test_estimate_cmi_equality_condition():
 
 def test_estiamte_cmi_marginal_condition__ci_slow():
     with smoke_bdb() as bdb:
+        # Univariate targets.
         bql = '''
             ESTIMATE
                 MUTUAL INFORMATION OF a WITH b GIVEN (d) USING 10 SAMPLES
+            BY p;
+        '''
+        result = bdb.execute(bql).fetchall()
+        assert len(result) == 1
+        # Multivariate targets.
+        bql = '''
+            ESTIMATE
+                MUTUAL INFORMATION OF (a, b) WITH (c) GIVEN (d=1, e)
+                USING 10 SAMPLES
             BY p;
         '''
         result = bdb.execute(bql).fetchall()
@@ -99,9 +128,19 @@ def test_estiamte_cmi_marginal_condition__ci_slow():
 
 def test_estiamte_cmi_equality_marginal_condition__ci_slow():
     with smoke_bdb() as bdb:
+        # Univariate targets.
         bql = '''
             ESTIMATE
                 MUTUAL INFORMATION OF a WITH b
+                    GIVEN (d, c = 1) USING 10 SAMPLES
+            BY p;
+        '''
+        result = bdb.execute(bql).fetchall()
+        assert len(result) == 1
+        # Multivariate targets.
+        bql = '''
+            ESTIMATE
+                MUTUAL INFORMATION OF a WITH (e, b)
                     GIVEN (d, c = 1) USING 10 SAMPLES
             BY p;
         '''
@@ -112,6 +151,7 @@ def test_estiamte_cmi_equality_marginal_condition__ci_slow():
 def test_simulate_cmi__ci_slow():
     with smoke_bdb() as bdb:
 
+        # Univariate targets.
         bdb.execute('''
             CREATE TABLE f1 AS
                 SIMULATE
@@ -125,18 +165,19 @@ def test_simulate_cmi__ci_slow():
         assert len(results) == 20
         assert all(len(r) == 1 for r in results)
 
+        # Univariate and multivariate targets.
         bdb.execute('''
             CREATE TABLE IF NOT EXISTS f2 AS
                 SIMULATE
                     MUTUAL INFORMATION OF a WITH b USING 10 SAMPLES
                         AS "mutinf2(a,b)",
-                    MUTUAL INFORMATION OF a WITH b GIVEN (c=1, d)
-                        USING 2 SAMPLES AS "mutinf2(a,b|c=1,d)"
+                    MUTUAL INFORMATION OF a WITH (e, b) GIVEN (c=1, d)
+                        USING 2 SAMPLES AS "mutinf2(a,bf|c=1,d)"
                 FROM MODELS OF p MODELED BY m1
         ''')
         cursor = bdb.execute('SELECT * FROM f2;')
         assert cursor.description[0][0] == 'mutinf2(a,b)'
-        assert cursor.description[1][0] == 'mutinf2(a,b|c=1,d)'
+        assert cursor.description[1][0] == 'mutinf2(a,bf|c=1,d)'
         # m1 has 10 models, so expect 10 results.
         results = cursor.fetchall()
         assert len(results) == 10
@@ -153,7 +194,8 @@ def test_simulate_cmi__ci_slow():
             ''')
 
         # f1 already exists, so this query should not be run. If it was
-        # run then the cursor would have 10 results instead of 20.
+        # run then the cursor would have 10 results instead of 20 from the
+        # previous invocation.
         bdb.execute('''
             CREATE TABLE IF NOT EXISTS f1 AS
                 SIMULATE
@@ -172,13 +214,13 @@ def test_simulate_cmi_missing_table():
     # either virtual tables or implementation of winding/unwinding business
     # in compiler.py
     with smoke_bdb() as bdb:
-
+        # No modeled by.
         with pytest.raises(BQLError):
             bdb.execute('''
                 SIMULATE MUTUAL INFORMATION OF a WITH b USING 10 SAMPLES
                 FROM MODELS OF p;
             ''')
-
+        # With modeled by.
         with pytest.raises(BQLError):
             bdb.execute('''
                 SIMULATE MUTUAL INFORMATION OF a WITH b USING 10 SAMPLES
