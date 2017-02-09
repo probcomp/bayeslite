@@ -626,18 +626,32 @@ class BQLSemantics(object):
         return ast.ExpBQLSim(None, None, cols)
     def p_bqlfn_depprob(self, cols):            return ast.ExpBQLDepProb(*cols)
 
-    def p_bqlfn_mutinf(self, cols, nsamp):
-        return ast.ExpBQLMutInf(cols[0], cols[1], None, nsamp)
-    def p_bqlfn_cmutinf(self, cols, constraints, nsamp):
+    def p_bqlfn_mutinf(self, cols, constraints, nsamp):
         return ast.ExpBQLMutInf(cols[0], cols[1], constraints, nsamp)
+
+    def p_ofwithmulti_bql_2col(self):                   return (None, None)
+    def p_ofwithmulti_bql_1col(self, cols):             return (cols, None)
+    def p_ofwithmulti_bql_const(self, cols0, cols1):    return (cols0, cols1)
+
+    def p_mi_columns_one(self, col):                return [col]
+    def p_mi_columns_many(self, cols):              return cols
+
+    def p_mi_column_list_one(self, col):            return [col]
+    def p_mi_column_list_many(self, cols, col):
+        cols.append(col)
+        return cols
+
+    def p_mi_given_opt_none(self):                  return None
+    def p_mi_given_opt_some(self, constraints):     return constraints
 
     def p_mi_constraint_equality(self, col, value):
         return (col, value)
     def p_mi_constraint_marginal(self, col):
         return (col, ast.ExpLit(ast.LitNull(0)))
-    def p_mi_constraints_one(self, c):          return [c]
-    def p_mi_constraints_many(self, cs, c):     cs.append(c); return cs
-
+    def p_mi_constraints_one(self, c):
+        return [c]
+    def p_mi_constraints_many(self, cs, c):
+        cs.append(c); return cs
 
     def p_bqlfn_correl(self, cols):             return ast.ExpBQLCorrel(*cols)
     def p_bqlfn_correl_pval(self, cols):
