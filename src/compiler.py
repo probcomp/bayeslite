@@ -1287,6 +1287,18 @@ def compile_mutinf_2col_0(
         bdb, population_id, generator_id, bql, bql_compiler, out)
     out.write(')')
 
+def compile_mutinf_extra(
+        bdb, population_id, generator_id, bql, bql_compiler, out):
+    out.write(', ')
+    if bql.nsamples:
+        compile_expression(bdb, bql.nsamples, bql_compiler, out)
+    else:
+        out.write('NULL')
+    if bql.constraints:
+        compile_constraints(
+            bdb, population_id, generator_id, bql.constraints,
+            bql_compiler, out)
+
 def compile_similarity(bdb, population_id, generator_id, ofcondition,
         tocondition, column_lists, bql_compiler, out):
     if ofcondition is None or tocondition is None:
@@ -1431,19 +1443,6 @@ def compile_bql_2col_0(bdb, population_id, generator_id, bqlfn, desc, extra,
     if extra:
         extra(bdb, population_id, generator_id, bql, bql_compiler, out)
     out.write(')')
-
-def compile_mutinf_extra(bdb, population_id, generator_id, bql, bql_compiler, out):
-    out.write(', ')
-
-    if bql.nsamples:
-        compile_expression(bdb, bql.nsamples, bql_compiler, out)
-    else:
-        out.write('NULL')
-
-    if bql.constraints:
-        compile_constraints(
-            bdb, population_id, generator_id, bql.constraints,
-            bql_compiler, out)
 
 def compile_nobql_expression(bdb, exp, out):
     bql_compiler = BQLCompiler_None()
