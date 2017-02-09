@@ -397,7 +397,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         return arithmetic_mean(depprob_list)
 
     def column_mutual_information(
-            self, bdb, generator_id, modelno, colno0, colno1,
+            self, bdb, generator_id, modelno, colnos0, colnos1,
             constraints=None, numsamples=None):
         # XXX Default number of samples drawn from my arse.
         if numsamples is None:
@@ -416,7 +416,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Engine gives us a list of samples which it is our
         # responsibility to integrate over.
         mi_list = engine.mutual_information(
-            [colno0], [colno1], evidence=evidence, N=numsamples,
+            colnos0, colnos1, evidence=evidence, N=numsamples,
             progress=True, multiprocess=self._multiprocess)
 
         # Pass through the distribution of CMI to BayesDB without aggregation.
