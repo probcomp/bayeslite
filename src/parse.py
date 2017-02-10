@@ -343,11 +343,7 @@ class BQLSemantics(object):
             [c.col.column for c in cols], population, generator,
             constraints, 0, None)
     def p_simulate_models(self, cols, population, generator):
-        if any(isinstance(c.col, ast.ExpCol) for c in cols):
-            self.errors.append(
-                'simulate models does not accept population variables.')
-            return None
-        return ast.SimulateModels(cols, population, generator)
+        return ast.SimulateModelsExp(cols, population, generator)
 
     def p_simulate_columns_one(self, col):
         return [col]

@@ -178,6 +178,11 @@ def test_simulate_cmi_missing_table():
             FROM MODELS OF p
             MODELED BY m1;
         ''')
+        bdb.execute('''
+            SIMULATE 1 + MUTUAL INFORMATION OF a WITH b USING 10 SAMPLES
+            FROM MODELS OF p
+            MODELED BY m1;
+        ''')
 
 def test_simulate_cmi_missing_models_of():
     # SIMULATE of MUTUAL INFORMATION requires FROM MODELS OF, so specifying

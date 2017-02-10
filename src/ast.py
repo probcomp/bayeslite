@@ -166,9 +166,17 @@ Simulate = namedtuple('Simulate', [
 ])
 
 SimulateModels = namedtuple('SimulateModels', [
-    'columns',
-    'population',
-    'generator',
+    'columns',                  # [SimCol]
+    'population',               # XXX name
+    'generator',                # XXX name or None
+])
+
+# Same as SimulateModels, but with compound expressions, not limited
+# to BQL functions.
+SimulateModelsExp = namedtuple('SimulateModelsExp', [
+    'columns',                  # [SimCol]
+    'population',               # XXX name
+    'generator',                # XXX name or None
 ])
 
 def is_query(phrase):
@@ -191,6 +199,8 @@ def is_query(phrase):
     if isinstance(phrase, Simulate):
         return True
     if isinstance(phrase, SimulateModels):
+        return True
+    if isinstance(phrase, SimulateModelsExp):
         return True
     return False
 
@@ -250,8 +260,8 @@ SelTab = namedtuple('SelTab', [
 ])
 
 SimCol = namedtuple('SimCol', [
-    'col',
-    'name',
+    'col',                      # Exp*
+    'name',                     # XXX name or None
 ])
 
 InferAuto = namedtuple('InferAuto', [

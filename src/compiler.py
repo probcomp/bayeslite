@@ -34,6 +34,7 @@ import contextlib
 import bayeslite.ast as ast
 import bayeslite.bqlfn as bqlfn
 import bayeslite.core as core
+import bayeslite.macro as macro
 import bayeslite.simulate as simulate
 
 from bayeslite.exception import BQLError
@@ -208,6 +209,8 @@ def compile_query(bdb, query, out):
     :param query: abstract syntax tree of a query
     :param Output out: output accumulator
     """
+    if isinstance(query, ast.SimulateModelsExp):
+        query = macro.expand_simulate_models(query)
     if isinstance(query, ast.Select):
         compile_select(bdb, query, out)
     elif isinstance(query, ast.Estimate):
