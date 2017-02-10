@@ -23,6 +23,17 @@ BQL macro expansion mechanism.
 import bayeslite.ast as ast
 
 
+def expand_probability_estimate(probest, population, generator):
+    simmodels = ast.SimulateModelsExp([ast.SimCol(probest.expression, 'x')],
+        population, generator)
+    select = ast.Select(ast.SELQUANT_ALL,
+        [ast.SelColExp(ast.ExpApp(False, 'AVG', [ast.ExpCol(None, 'x')]),
+            None)],
+        [ast.SelTab(simmodels, None)],
+        None, None, None, None)
+    return ast.ExpSub(select)
+
+
 def expand_simulate_models(sim):
     assert isinstance(sim, ast.SimulateModelsExp)
     if all(isinstance(c.col, ast.ExpCol) or ast.is_bql(c.col)

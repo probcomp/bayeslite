@@ -977,13 +977,12 @@ class BQLCompiler_Const(object):
             raise BQLError(bdb, 'PREDICT is not allowed outside INFER.')
         elif isinstance(bql, ast.ExpBQLProbEst):
             # XXX Invent expression-level macro expansion.
-            query = ast.SimulateModelsExp(
-                [ast.SimCol(bql.expression, 'x')],
-                core.bayesdb_population_name(bdb, self.population_id),
-                (None if self.generator_id is None else
-                    core.bayesdb_generator_name(bdb, self.generator_id)))
-            with compiling_paren(bdb, out, '(SELECT AVG(x) FROM (', '))'):
-                compile_query(bdb, query, out)
+            population = core.bayesdb_population_name(bdb, self.population_id)
+            generator = None if self.generator_id is None else \
+                core.bayesdb_generator_name(bdb, self.generator_id)
+            bql1 = macro.expand_probability_estimate(
+                bql, population, generator)
+            compile_expression(bdb, bql1, self, out)
         else:
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
 
