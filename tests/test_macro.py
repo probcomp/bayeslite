@@ -48,7 +48,20 @@ def test_simulate_models_trivial():
     assert macro.expand_simulate_models(simmodels) == \
         ast.SimulateModels([ast.SimCol(e, 'x')], 'p', 'g')
 
+
 def test_simulate_models_nontrivial():
+    # XXX test descent into ExpLit
+    # XXX test descent into ExpNumpar
+    # XXX test descent into ExpNampar
+    # XXX test descent into ExpCol
+    # XXX test descent into ExpSub
+    # XXX test descent into ExpCollate
+    # XXX test descent into ExpIn
+    # XXX test descent into ExpCast
+    # XXX test descent into ExpExists
+    # XXX test descent into ExpApp
+    # XXX test descent into ExpAppStar
+    # XXX test descent into ExpCase
     mutinf0 = ast.ExpBQLMutInf(['c0'], ['c1', 'c2'],
         [('c3', ast.ExpLit(ast.LitInt(3)))],
         None)
