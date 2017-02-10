@@ -299,7 +299,8 @@ def test_select_bql():
     assert parse_bql_string('select probability density of c = 42'
             ' from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLProb([('c', ast.ExpLit(ast.LitInt(42)))],
+            [ast.SelColExp(
+                ast.ExpBQLProbDensity([('c', ast.ExpLit(ast.LitInt(42)))],
                     []),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
@@ -398,7 +399,7 @@ def test_select_bql():
                     )),
                     [ast.ColListSub(
                         ast.EstCols([ast.SelColAll(None)], 't', None, None,
-                            [ast.Ord(ast.ExpBQLProbFn(
+                            [ast.Ord(ast.ExpBQLProbDensityFn(
                                     ast.ExpLit(ast.LitInt(4)),
                                     []),
                                 ast.ORD_ASC)],
@@ -444,7 +445,7 @@ def test_select_bql():
                     )),
                     [ast.ColListSub(
                         ast.EstCols([ast.SelColAll(None)], 't', None, None,
-                            [ast.Ord(ast.ExpBQLProbFn(
+                            [ast.Ord(ast.ExpBQLProbDensityFn(
                                     ast.ExpLit(ast.LitInt(4)),
                                     []),
                                 ast.ORD_ASC)],
@@ -567,10 +568,10 @@ def test_select_bql():
     #     assert parse_bql_string('select probability density of x = 1 -' +
     #             ' probability density of y = 0 from t;') == \
     #         [ast.Select(ast.SELQUANT_ALL,
-    #             [ast.SelColExp(ast.ExpBQLProb([('x',
+    #             [ast.SelColExp(ast.ExpBQLProbDensity([('x',
     #                         ast.ExpOp(ast.OP_SUB, (
     #                             ast.ExpLit(ast.LitInt(1)),
-    #                             ast.ExpBQLProb([('y',
+    #                             ast.ExpBQLProbDensity([('y',
     #                                     ast.ExpLit(ast.LitInt(0)))],
     #                                 []),
     #                         )))],
@@ -580,7 +581,7 @@ def test_select_bql():
     assert parse_bql_string('select probability density of c1 = f(c2)'
             ' from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLProb([('c1',
+            [ast.SelColExp(ast.ExpBQLProbDensity([('c1',
                         ast.ExpApp(False, 'f', [ast.ExpCol(None, 'c2')]))],
                     []),
                 None)],
@@ -1092,7 +1093,7 @@ def test_simulate_models():
             ast.SimulateModels(
                 [
                     ast.SimCol(
-                        ast.ExpBQLProb(
+                        ast.ExpBQLProbDensity(
                             [
                                 ('a', ast.ExpLit(ast.LitInt(2))),
                                 ('c', ast.ExpLit(ast.LitFloat(1.1)))
@@ -1146,8 +1147,9 @@ def test_is_bql():
     assert ast.is_bql(ast.ExpCol('t', 'c')) == False
     # ...
     assert ast.is_bql(ast.ExpBQLPredProb('c'))
-    assert ast.is_bql(ast.ExpBQLProb([('c', ast.ExpLit(ast.LitInt(0)))], []))
-    assert ast.is_bql(ast.ExpBQLProbFn(ast.ExpLit(ast.LitInt(0)), []))
+    assert ast.is_bql(
+        ast.ExpBQLProbDensity([('c', ast.ExpLit(ast.LitInt(0)))], []))
+    assert ast.is_bql(ast.ExpBQLProbDensityFn(ast.ExpLit(ast.LitInt(0)), []))
     assert ast.is_bql(ast.ExpBQLSim(None, ast.ExpLit(ast.LitInt(0)), []))
     assert ast.is_bql(ast.ExpBQLDepProb('c0', 'c1'))
     assert ast.is_bql(ast.ExpBQLMutInf('c0', 'c1', None, 100))

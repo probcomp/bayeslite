@@ -57,7 +57,7 @@ def simulate_models_rows(bdb, simulation):
         if isinstance(phrase, ast.ExpBQLDepProb):
             raise BQLError(bdb,
                 'DEPENDENCE PROBABILITY simulation still unsupported.')
-        elif isinstance(phrase, ast.ExpBQLProb):
+        elif isinstance(phrase, ast.ExpBQLProbDensity):
             raise BQLError(bdb,
                 'PROBABILITY DENSITY OF simulation still unsupported.')
         elif isinstance(phrase, ast.ExpBQLMutInf):

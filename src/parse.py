@@ -600,20 +600,21 @@ class BQLSemantics(object):
     def p_unary_bql(self, b):           return b
 
     def p_bqlfn_predprob_row(self, col):        return ast.ExpBQLPredProb(col)
-    def p_bqlfn_prob_const(self, col, e):       return ast.ExpBQLProb(
+    def p_bqlfn_prob_const(self, col, e):       return ast.ExpBQLProbDensity(
                                                     [(col, e)], [])
-    def p_bqlfn_jprob_const(self, targets):     return ast.ExpBQLProb(targets,
-                                                    [])
+    def p_bqlfn_jprob_const(self, targets):     return ast.ExpBQLProbDensity(
+                                                    targets, [])
     def p_bqlfn_condprob_const(self, col, e, constraints):
-                                                return ast.ExpBQLProb(
+                                                return ast.ExpBQLProbDensity(
                                                     [(col, e)], constraints)
     def p_bqlfn_condjprob_const(self, targets, constraints):
-                                                return ast.ExpBQLProb(targets,
-                                                    constraints)
-    def p_bqlfn_prob_1col(self, e):             return ast.ExpBQLProbFn(e, [])
+                                                return ast.ExpBQLProbDensity(
+                                                    targets, constraints)
+    def p_bqlfn_prob_1col(self, e):             return ast.ExpBQLProbDensityFn(
+                                                    e, [])
     def p_bqlfn_condprob_1col(self, e, constraints):
-                                                return ast.ExpBQLProbFn(e,
-                                                    constraints)
+                                                return ast.ExpBQLProbDensityFn(
+                                                    e, constraints)
     def p_bqlfn_sim_const(self, cond0, cond1, cols):
         return ast.ExpBQLSim(cond0, cond1, cols)
     def p_bqlfn_sim_1row(self, cond, cols):

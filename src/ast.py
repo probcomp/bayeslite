@@ -398,8 +398,10 @@ OP_NEGATE = 'NEGATE'
 OP_PLUSID = 'PLUSID'
 
 ExpBQLPredProb = namedtuple('ExpBQLPredProb', ['column'])
-ExpBQLProb = namedtuple('ExpBQLProb', ['targets', 'constraints'])
-ExpBQLProbFn = namedtuple('ExpBQLProbFn', ['value', 'constraints'])
+ExpBQLProbDensity = namedtuple('ExpBQLProbDensity', ['targets', 'constraints'])
+ExpBQLProbDensityFn = namedtuple('ExpBQLProbDensityFn', [
+    'value', 'constraints'
+])
 ExpBQLSim = namedtuple('ExpBQLSim', [
     'ofcondition', 'tocondition', 'column_lists'
 ])
@@ -417,9 +419,9 @@ ExpBQLPredictConf = namedtuple('ExpBQLPredictConf', ['column', 'nsamples'])
 def is_bql(exp):
     if isinstance(exp, ExpBQLPredProb):
         return True
-    if isinstance(exp, ExpBQLProb):
+    if isinstance(exp, ExpBQLProbDensity):
         return True
-    if isinstance(exp, ExpBQLProbFn):
+    if isinstance(exp, ExpBQLProbDensityFn):
         return True
     if isinstance(exp, ExpBQLSim):
         return True

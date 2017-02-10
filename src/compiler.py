@@ -949,10 +949,10 @@ class BQLCompiler_Const(object):
         if isinstance(bql, ast.ExpBQLPredProb):
             raise BQLError(bdb, 'Predictive probability is 1-row function,'
                 ' not a constant.')
-        elif isinstance(bql, ast.ExpBQLProb):
+        elif isinstance(bql, ast.ExpBQLProbDensity):
             compile_pdf_joint(bdb, population_id, generator_id, bql.targets,
                 bql.constraints, self, out)
-        elif isinstance(bql, ast.ExpBQLProbFn):
+        elif isinstance(bql, ast.ExpBQLProbDensityFn):
             raise BQLError(bdb, 'Probability density of value at row'
                 ' is 1-column function, not a constant.')
         elif isinstance(bql, ast.ExpBQLSim):
@@ -1084,10 +1084,10 @@ class BQLCompiler_2Row(object):
         assert ast.is_bql(bql)
         population_id = self.population_id
         generator_id = self.generator_id
-        if isinstance(bql, ast.ExpBQLProb):
+        if isinstance(bql, ast.ExpBQLProbDensity):
             compile_pdf_joint(bdb, population_id, generator_id, bql.targets,
                 bql.constraints, self, out)
-        elif isinstance(bql, ast.ExpBQLProbFn):
+        elif isinstance(bql, ast.ExpBQLProbDensityFn):
             raise BQLError(bdb, 'Probability density of value'
                 ' is 1-column function, not 2-row function.')
         elif isinstance(bql, ast.ExpBQLPredProb):
@@ -1139,10 +1139,10 @@ class BQLCompiler_1Col(object):
         assert ast.is_bql(bql)
         population_id = self.population_id
         generator_id = self.generator_id
-        if isinstance(bql, ast.ExpBQLProb):
+        if isinstance(bql, ast.ExpBQLProbDensity):
             compile_pdf_joint(bdb, population_id, generator_id, bql.targets,
                 bql.constraints, self, out)
-        elif isinstance(bql, ast.ExpBQLProbFn):
+        elif isinstance(bql, ast.ExpBQLProbDensityFn):
             out.write('bql_column_value_probability(%d, %s' %
                 (population_id, nullor(generator_id)))
             out.write(', %s, ' % (self.colno_exp,))
@@ -1193,10 +1193,10 @@ class BQLCompiler_2Col(object):
         assert ast.is_bql(bql)
         population_id = self.population_id
         generator_id = self.generator_id
-        if isinstance(bql, ast.ExpBQLProb):
+        if isinstance(bql, ast.ExpBQLProbDensity):
             compile_pdf_joint(bdb, population_id, generator_id, bql.targets,
                 bql.constraints, self, out)
-        elif isinstance(bql, ast.ExpBQLProbFn):
+        elif isinstance(bql, ast.ExpBQLProbDensityFn):
             raise BQLError(bdb, 'Probability density of value'
                 ' is 1-column function.')
         elif isinstance(bql, ast.ExpBQLPredProb):
