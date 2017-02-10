@@ -34,6 +34,7 @@ import contextlib
 import bayeslite.ast as ast
 import bayeslite.bqlfn as bqlfn
 import bayeslite.core as core
+import bayeslite.simulate as simulate
 
 from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
@@ -223,9 +224,8 @@ def compile_query(bdb, query, out):
         compile_infer_auto(bdb, query, out)
     elif isinstance(query, ast.Simulate):
         compile_simulate(bdb, query, out)
-    # XXX Disable SimulateModels without CreateTab
     elif isinstance(query, ast.SimulateModels):
-        raise BQLError(bdb, 'SIMULATE FROM MODELS needs CREATE TABLE.')
+        compile_simulate_models(bdb, query, out)
     elif isinstance(query, ast.EstCols):
         compile_estcols(bdb, query, out)
     elif isinstance(query, ast.EstPairCols):
@@ -685,6 +685,24 @@ def compile_simulate(bdb, simulate, out):
             out.winder(insert_sql, row)
         out.unwinder('DROP TABLE %s' % (qtt,), ())
         out.write('SELECT * FROM %s' % (qtt,))
+
+def compile_simulate_models(bdb, simmodels, out):
+    temptable = bdb.temp_table_name()
+    # XXX Give meaningful names.
+    variables = ['v%d' % (i,) for i, _ in enumerate(simmodels.columns)]
+    qvs = ','.join(map(sqlite3_quote_name, variables))
+    schema = ','.join(
+        '%s NUMERIC' % (sqlite3_quote_name(v),) for v in variables)
+    qtt = sqlite3_quote_name(temptable)
+    out.winder('CREATE TEMP TABLE %s (%s)' % (qtt, schema), ())
+    out.unwinder('DROP TABLE %s' % (qtt,), ())
+    # XXX Kinda silly way to store this in intermediate memory.
+    insert_sql = '''
+        INSERT INTO %s (%s) VALUES (%s)
+    ''' % (qtt, qvs, ','.join('?' for _ in variables))
+    for row in simulate.simulate_models_rows(bdb, simmodels):
+        out.winder(insert_sql, row)
+    out.write('SELECT * FROM %s' % (qtt,))
 
 # XXX Use context to determine whether to yield column names or
 # numbers, so that top-level queries yield names, but, e.g.,
