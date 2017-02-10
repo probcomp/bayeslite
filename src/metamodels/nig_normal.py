@@ -356,8 +356,8 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # XXX Fix me!
         return 0
 
-    def column_mutual_information(self, bdb, generator_id, modelno, colno0,
-            colno1, constraints, numsamples):
+    def column_mutual_information(self, bdb, generator_id, modelno, colnos0,
+            colnos1, constraints, numsamples):
         # XXX Fix me!
         return [0]
 

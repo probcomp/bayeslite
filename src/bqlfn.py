@@ -295,10 +295,12 @@ def bql_column_dependence_probability(
 
 # Two-column function:  MUTUAL INFORMATION [OF <col0> WITH <col1>]
 def bql_column_mutual_information(
-        bdb, population_id, generator_id, colno0, colno1,
+        bdb, population_id, generator_id, colnos0, colnos1,
         numsamples, *constraint_args):
+    colnos0 = json.loads(colnos0)
+    colnos1 = json.loads(colnos1)
     mutinfs = _bql_column_mutual_information(
-        bdb, population_id, generator_id, colno0, colno1, numsamples,
+        bdb, population_id, generator_id, colnos0, colnos1, numsamples,
         *constraint_args)
     # XXX This integral of the CMI returned by each model of all generators in
     # in the population is wrong! At least, it does not directly correspond to
@@ -307,7 +309,7 @@ def bql_column_mutual_information(
     return stats.arithmetic_mean([stats.arithmetic_mean(m) for m in mutinfs])
 
 def _bql_column_mutual_information(
-        bdb, population_id, generator_id, colno0, colno1, numsamples,
+        bdb, population_id, generator_id, colnos0, colnos1, numsamples,
         *constraint_args):
     if len(constraint_args) % 2 == 1:
         raise ValueError('Odd constraint arguments: %s.' % (constraint_args))
@@ -316,8 +318,8 @@ def _bql_column_mutual_information(
     def generator_mutinf(generator_id):
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
         return metamodel.column_mutual_information(
-            bdb, generator_id, None,
-            colno0, colno1, constraints=constraints, numsamples=numsamples)
+            bdb, generator_id, None, colnos0, colnos1,
+            constraints=constraints, numsamples=numsamples)
     generator_ids = _retrieve_generator_ids(bdb, population_id, generator_id)
     mutinfs = map(generator_mutinf, generator_ids)
     return mutinfs

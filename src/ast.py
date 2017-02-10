@@ -405,7 +405,7 @@ ExpBQLSim = namedtuple('ExpBQLSim', [
 ])
 ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
 ExpBQLMutInf = namedtuple('ExpBQLMutInf', [
-    'column0', 'column1', 'constraints', 'nsamples'
+    'columns0', 'columns1', 'constraints', 'nsamples'
 ])
 ExpBQLCorrel = namedtuple('ExpBQLCorrel', ['column0', 'column1'])
 ExpBQLCorrelPval = namedtuple('ExpBQLCorrelPval', ['column0', 'column1'])

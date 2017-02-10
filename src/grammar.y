@@ -588,18 +588,27 @@ bqlfn(sim_1row)         ::= K_SIMILARITY K_TO
 bqlfn(sim_2row)         ::= K_SIMILARITY wrt(cols).
 bqlfn(depprob)          ::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
 
-bqlfn(mutinf)           ::= K_MUTUAL K_INFORMATION ofwith(cols)
-                                nsamples_opt(nsamp).
-bqlfn(cmutinf)          ::= K_MUTUAL K_INFORMATION ofwith(cols)
-                                K_GIVEN T_LROUND mi_constraints(constraints)
-                                        T_RROUND
-                                nsamples_opt(nsamp).
+bqlfn(mutinf)           ::= K_MUTUAL K_INFORMATION ofwithmulti(cols)
+                                mi_given_opt(constraints) nsamples_opt(nsamp).
 
-mi_constraint(e)        ::= column_name(col) T_EQ expression(value).
-mi_constraint(m)        ::= column_name(col).
+ofwithmulti(bql_2col)   ::= .
+ofwithmulti(bql_1col)   ::= K_WITH mi_columns(cols).
+ofwithmulti(bql_const)  ::= K_OF mi_columns(cols0) K_WITH mi_columns(cols1).
+
+mi_columns(one)         ::= column_name(col).
+mi_columns(many)        ::= T_LROUND mi_column_list(cols) T_RROUND.
+
+mi_column_list(one)     ::= column_name(col).
+mi_column_list(many)    ::= mi_column_list(cols) T_COMMA column_name(col).
+
+mi_given_opt(none)      ::= .
+mi_given_opt(some)      ::= K_GIVEN T_LROUND mi_constraints(constraints) T_RROUND.
+
 mi_constraints(one)     ::= mi_constraint(c).
 mi_constraints(many)    ::= mi_constraints(cs) T_COMMA mi_constraint(c).
 
+mi_constraint(equality) ::= column_name(col) T_EQ expression(value).
+mi_constraint(marginal) ::= column_name(col).
 
 bqlfn(correl)           ::= K_CORRELATION ofwith(cols).
 bqlfn(correl_pval)      ::= K_CORRELATION K_PVALUE ofwith(cols).

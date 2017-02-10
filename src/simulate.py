@@ -61,8 +61,8 @@ def simulate_models_rows(bdb, simulation):
             raise BQLError(bdb,
                 'PROBABILITY DENSITY OF simulation still unsupported.')
         elif isinstance(phrase, ast.ExpBQLMutInf):
-            colno0 = retrieve_variable(phrase.column0)
-            colno1 = retrieve_variable(phrase.column1)
+            colnos0 = [retrieve_variable(c) for c in phrase.columns0]
+            colnos1 = [retrieve_variable(c) for c in phrase.columns1]
             constraint_args = ()
             if phrase.constraints is not None:
                 constraint_args = tuple(itertools.chain.from_iterable([
@@ -72,7 +72,7 @@ def simulate_models_rows(bdb, simulation):
             nsamples = phrase.nsamples and retrieve_literal(phrase.nsamples)
             # One mi_list per generator of the population.
             mi_lists = bqlfn._bql_column_mutual_information(
-                bdb, population_id, generator_id, colno0, colno1, nsamples,
+                bdb, population_id, generator_id, colnos0, colnos1, nsamples,
                 *constraint_args)
             return list(itertools.chain.from_iterable(mi_lists))
         else:

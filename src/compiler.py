@@ -30,6 +30,7 @@ To compile a parsed BQL query:
 
 import StringIO
 import contextlib
+import json
 
 import bayeslite.ast as ast
 import bayeslite.bqlfn as bqlfn
@@ -962,9 +963,8 @@ class BQLCompiler_Const(object):
                 'bql_column_dependence_probability',
                 'Dependence probability', None, bql, self, out)
         elif isinstance(bql, ast.ExpBQLMutInf):
-            compile_bql_2col_2(bdb, population_id, generator_id,
-                'bql_column_mutual_information',
-                'Mutual information', compile_mutinf_extra, bql, self, out)
+            compile_mutinf_2col_2(
+                bdb, population_id, generator_id, bql, self, out)
         elif isinstance(bql, ast.ExpBQLCorrel):
             compile_bql_2col_2(bdb, population_id, None,
                 'bql_column_correlation',
@@ -1160,10 +1160,9 @@ class BQLCompiler_1Col(object):
                 'bql_column_dependence_probability',
                 'Dependence probability', None, bql, self.colno_exp, self, out)
         elif isinstance(bql, ast.ExpBQLMutInf):
-            compile_bql_2col_1(bdb, population_id, generator_id,
-                'bql_column_mutual_information',
-                'Mutual information',
-                compile_mutinf_extra, bql, self.colno_exp, self, out)
+            compile_mutinf_2col_1(
+                bdb, population_id, generator_id, bql, self.colno_exp,
+                self, out)
         elif isinstance(bql, ast.ExpBQLCorrel):
             compile_bql_2col_1(bdb, population_id, None,
                 'bql_column_correlation',
@@ -1212,11 +1211,9 @@ class BQLCompiler_2Col(object):
                 None,
                 bql, self.colno0_exp, self.colno1_exp, self, out)
         elif isinstance(bql, ast.ExpBQLMutInf):
-            compile_bql_2col_0(bdb, population_id, generator_id,
-                'bql_column_mutual_information',
-                'Mutual Information',
-                compile_mutinf_extra,
-                bql, self.colno0_exp, self.colno1_exp, self, out)
+            compile_mutinf_2col_0(
+                bdb, population_id, generator_id, bql, self.colno0_exp,
+                self.colno1_exp, self, out)
         elif isinstance(bql, ast.ExpBQLCorrel):
             compile_bql_2col_0(bdb, population_id, None,
                 'bql_column_correlation',
@@ -1253,6 +1250,76 @@ def compile_pdf_joint(bdb, population_id, generator_id, targets, constraints,
         compile_constraints(bdb, population_id, generator_id, constraints,
             bql_compiler, out)
     out.write(')')
+
+def compile_mutinf_2col_2(
+        bdb, population_id, generator_id, bql, bql_compiler, out):
+    if bql.columns0 is None:
+        raise BQLError(bdb, 'Mutual information needs exactly two columns.')
+    if bql.columns1 is None:
+        raise BQLError(bdb, 'Mutual information needs exactly two columns.')
+    unknown = [
+        var for var in bql.columns0 + bql.columns1
+        if not core.bayesdb_has_variable(
+            bdb, population_id, generator_id, var)
+    ]
+    if unknown:
+        population = core.bayesdb_population_name(bdb, population_id)
+        raise BQLError(bdb,
+            'No such variables in population %r: %r' % (population, unknown))
+    colnos0 = [core.bayesdb_variable_number(bdb, population_id, generator_id, c)
+        for c in bql.columns0]
+    colnos1 = [core.bayesdb_variable_number(bdb, population_id, generator_id, c)
+        for c in bql.columns1]
+    out.write('bql_column_mutual_information(%d, %s, ' %
+        (population_id, nullor(generator_id)))
+    out.write('\'%s\', \'%s\'' %
+        (json.dumps(colnos0), json.dumps(colnos1)))
+    compile_mutinf_extra(
+        bdb, population_id, generator_id, bql, bql_compiler, out)
+    out.write(')')
+
+def compile_mutinf_2col_1(
+        bdb, population_id, generator_id, bql, colno1_exp, bql_compiler, out):
+    if bql.columns0 is None:
+        raise BQLError(bdb, 'Mutual information needs at least one column.')
+    if bql.columns1 is not None:
+        raise BQLError(bdb, 'Mutual information needs at most one column.')
+    colnos0 = [core.bayesdb_variable_number(bdb, population_id, generator_id, c)
+        for c in bql.columns0]
+    out.write('bql_column_mutual_information(%d, %s, '
+        % (population_id, nullor(generator_id)))
+    out.write('\'%s\', %s'
+        % (json.dumps(colnos0), sql_json_singleton(colno1_exp)))
+    compile_mutinf_extra(
+        bdb, population_id, generator_id, bql, bql_compiler, out)
+    out.write(')')
+
+def compile_mutinf_2col_0(
+        bdb, population_id, generator_id, bql, colno0_exp, colno1_exp,
+        bql_compiler, out):
+    if bql.columns0 is not None:
+        raise BQLError(bdb, 'Mutual information needs no columns.')
+    if bql.columns1 is not None:
+        raise BQLError(bdb, 'Mutual information needs no columns.')
+    out.write('bql_column_mutual_information(%d, %s, '
+        % (population_id, nullor(generator_id)))
+    out.write('%s, %s'
+        % (sql_json_singleton(colno0_exp), sql_json_singleton(colno1_exp)))
+    compile_mutinf_extra(
+        bdb, population_id, generator_id, bql, bql_compiler, out)
+    out.write(')')
+
+def compile_mutinf_extra(
+        bdb, population_id, generator_id, bql, bql_compiler, out):
+    out.write(', ')
+    if bql.nsamples:
+        compile_expression(bdb, bql.nsamples, bql_compiler, out)
+    else:
+        out.write('NULL')
+    if bql.constraints:
+        compile_constraints(
+            bdb, population_id, generator_id, bql.constraints,
+            bql_compiler, out)
 
 def compile_similarity(bdb, population_id, generator_id, ofcondition,
         tocondition, column_lists, bql_compiler, out):
@@ -1398,19 +1465,6 @@ def compile_bql_2col_0(bdb, population_id, generator_id, bqlfn, desc, extra,
     if extra:
         extra(bdb, population_id, generator_id, bql, bql_compiler, out)
     out.write(')')
-
-def compile_mutinf_extra(bdb, population_id, generator_id, bql, bql_compiler, out):
-    out.write(', ')
-
-    if bql.nsamples:
-        compile_expression(bdb, bql.nsamples, bql_compiler, out)
-    else:
-        out.write('NULL')
-
-    if bql.constraints:
-        compile_constraints(
-            bdb, population_id, generator_id, bql.constraints,
-            bql_compiler, out)
 
 def compile_nobql_expression(bdb, exp, out):
     bql_compiler = BQLCompiler_None()
@@ -1617,3 +1671,6 @@ def compiling_paren(bdb, out, start, end):
 
 def nullor(x):
     return 'NULL' if x is None else str(x)
+
+def sql_json_singleton(x):
+    return '\'[\' || %s || \']\'' % (x,)
