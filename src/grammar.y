@@ -590,6 +590,7 @@ bqlfn(depprob)          ::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
 
 bqlfn(mutinf)           ::= K_MUTUAL K_INFORMATION ofwithmulti(cols)
                                 mi_given_opt(constraints) nsamples_opt(nsamp).
+bqlfn(prob_est)         ::= K_PROBABILITY K_OF T_LROUND expression(e) T_RROUND.
 
 ofwithmulti(bql_2col)   ::= .
 ofwithmulti(bql_1col)   ::= K_WITH mi_columns(cols).

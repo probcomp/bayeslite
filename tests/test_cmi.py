@@ -226,6 +226,14 @@ def test_simulate_cmi_missing_table():
             MODELED BY m1;
         ''')
 
+def test_estimate_cmi_bound():
+    with smoke_bdb() as bdb:
+        bdb.execute('''
+            ESTIMATE PROBABILITY OF
+                    (MUTUAL INFORMATION OF a WITH b USING 10 SAMPLES > 0.5)
+                WITHIN p
+        ''')
+
 def test_simulate_cmi_missing_models_of():
     # SIMULATE of MUTUAL INFORMATION requires FROM MODELS OF, so specifying
     # a non population quantity should raise.

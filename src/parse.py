@@ -625,6 +625,7 @@ class BQLSemantics(object):
 
     def p_bqlfn_mutinf(self, cols, constraints, nsamp):
         return ast.ExpBQLMutInf(cols[0], cols[1], constraints, nsamp)
+    def p_bqlfn_prob_est(self, e):              return ast.ExpBQLProbEst(e)
 
     def p_ofwithmulti_bql_2col(self):                   return (None, None)
     def p_ofwithmulti_bql_1col(self, cols):             return (cols, None)

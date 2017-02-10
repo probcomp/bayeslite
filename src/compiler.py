@@ -975,6 +975,15 @@ class BQLCompiler_Const(object):
                 'Column correlation pvalue', None, bql, self, out)
         elif isinstance(bql, (ast.ExpBQLPredict, ast.ExpBQLPredictConf)):
             raise BQLError(bdb, 'PREDICT is not allowed outside INFER.')
+        elif isinstance(bql, ast.ExpBQLProbEst):
+            # XXX Invent expression-level macro expansion.
+            query = ast.SimulateModelsExp(
+                [ast.SimCol(bql.expression, 'x')],
+                core.bayesdb_population_name(bdb, self.population_id),
+                (None if self.generator_id is None else
+                    core.bayesdb_generator_name(bdb, self.generator_id)))
+            with compiling_paren(bdb, out, '(SELECT AVG(x) FROM (', '))'):
+                compile_query(bdb, query, out)
         else:
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
 

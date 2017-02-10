@@ -415,6 +415,7 @@ ExpBQLPredict = namedtuple('ExpBQLPredict', [
     'column', 'confidence', 'nsamples',
 ])
 ExpBQLPredictConf = namedtuple('ExpBQLPredictConf', ['column', 'nsamples'])
+ExpBQLProbEst = namedtuple('ExpBQLProbEst', ['expression'])
 
 def is_bql(exp):
     if isinstance(exp, ExpBQLPredProb):
@@ -436,6 +437,8 @@ def is_bql(exp):
     if isinstance(exp, ExpBQLPredict):
         return True
     if isinstance(exp, ExpBQLPredictConf):
+        return True
+    if isinstance(exp, ExpBQLProbEst):
         return True
     return False
 
