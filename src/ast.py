@@ -157,9 +157,9 @@ DropModels = namedtuple('DropModels', [
 ])
 
 Simulate = namedtuple('Simulate', [
-    'columns',
-    'population',
-    'generator',
+    'columns',                  # [XXX name]
+    'population',               # XXX name
+    'generator',                # XXX name
     'constraints',              # [(XXX name, Exp*)]
     'nsamples',                 # Exp* or None
     'accuracy',                 # int or None
