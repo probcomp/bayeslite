@@ -236,7 +236,7 @@ simulate_columns(one)   ::= simulate_column(col).
 simulate_columns(many)  ::= simulate_columns(cols) T_COMMA
                                 simulate_column(col).
 
-simulate_column(c)      ::= expression(col) as(name).
+simulate_column(c)      ::= expression(exp) as(name).
 
 given_opt(none)         ::= .
 given_opt(some)         ::= K_GIVEN constraints(constraints).

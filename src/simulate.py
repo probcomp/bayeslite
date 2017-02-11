@@ -24,7 +24,7 @@ from bayeslite.exception import BQLError
 
 
 def simulate_models_rows(bdb, simulation):
-    assert all(isinstance(c, ast.SimCol) for c in simulation.columns)
+    assert all(isinstance(c, ast.SelColExp) for c in simulation.columns)
     population_id = core.bayesdb_get_population(
         bdb, simulation.population)
     generator_id = None
@@ -78,7 +78,7 @@ def simulate_models_rows(bdb, simulation):
         else:
             raise BQLError(bdb,
                 'Only constants can be simulated: %s.' % (simulation,))
-    columns = [simulate_column(c.col) for c in simulation.columns]
+    columns = [simulate_column(c.expression) for c in simulation.columns]
     # All queries must return the same number of rows, equal to the number of
     # models of all generators implied by the query.
     assert all(len(column) == len(columns[0]) for column in columns)

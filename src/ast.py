@@ -166,7 +166,7 @@ Simulate = namedtuple('Simulate', [
 ])
 
 SimulateModels = namedtuple('SimulateModels', [
-    'columns',                  # [SimCol]
+    'columns',                  # [SelCol*]
     'population',               # XXX name
     'generator',                # XXX name or None
 ])
@@ -174,7 +174,7 @@ SimulateModels = namedtuple('SimulateModels', [
 # Same as SimulateModels, but with compound expressions, not limited
 # to BQL functions.
 SimulateModelsExp = namedtuple('SimulateModelsExp', [
-    'columns',                  # [SimCol]
+    'columns',                  # [SelCol*]
     'population',               # XXX name
     'generator',                # XXX name or None
 ])
@@ -257,11 +257,6 @@ PredCol = namedtuple('PredCol', [
 SelTab = namedtuple('SelTab', [
     'table',                    # XXX subquery or XXX name
     'name',                     # XXX name
-])
-
-SimCol = namedtuple('SimCol', [
-    'col',                      # Exp*
-    'name',                     # XXX name or None
 ])
 
 InferAuto = namedtuple('InferAuto', [

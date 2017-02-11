@@ -1034,7 +1034,7 @@ def test_simulate_models():
         'simulate dependence probability of a with b from models of t;') == [
             ast.SimulateModels(
                 [
-                    ast.SimCol(ast.ExpBQLDepProb('a', 'b'), None),
+                    ast.SelColExp(ast.ExpBQLDepProb('a', 'b'), None),
                 ],
                 't', None
             )
@@ -1046,9 +1046,9 @@ def test_simulate_models():
         'from models of p modeled by z') == [
             ast.SimulateModels(
                 [
-                    ast.SimCol(
+                    ast.SelColExp(
                         ast.ExpBQLDepProb('a', 'b'), 'q'),
-                    ast.SimCol(
+                    ast.SelColExp(
                         ast.ExpBQLMutInf(
                             ['c'],
                             ['d'],
@@ -1070,9 +1070,9 @@ def test_simulate_models():
         'from models of p modeled by z') == [
             ast.SimulateModels(
                 [
-                    ast.SimCol(
+                    ast.SelColExp(
                         ast.ExpBQLDepProb('a', 'b'), 'q'),
-                    ast.SimCol(
+                    ast.SelColExp(
                         ast.ExpBQLMutInf(
                             ['c'],
                             ['d', 'r'],
@@ -1092,7 +1092,7 @@ def test_simulate_models():
         'from models of p') == [
             ast.SimulateModels(
                 [
-                    ast.SimCol(
+                    ast.SelColExp(
                         ast.ExpBQLProbDensity(
                             [
                                 ('a', ast.ExpLit(ast.LitInt(2))),
@@ -1119,11 +1119,11 @@ def test_simulate_models():
                     'f',
                     ast.SimulateModels(
                         [
-                            ast.SimCol(
+                            ast.SelColExp(
                                 ast.ExpBQLDepProb('a', 'b'),
                                 'q'
                             ),
-                            ast.SimCol(
+                            ast.SelColExp(
                                 ast.ExpBQLMutInf(
                                     ['bad-col'],
                                     ['d'],

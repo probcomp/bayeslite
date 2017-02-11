@@ -24,7 +24,7 @@ import bayeslite.ast as ast
 
 
 def expand_probability_estimate(probest, population, generator):
-    simmodels = ast.SimulateModelsExp([ast.SimCol(probest.expression, 'x')],
+    simmodels = ast.SimulateModelsExp([ast.SelColExp(probest.expression, 'x')],
         population, generator)
     select = ast.Select(ast.SELQUANT_ALL,
         [ast.SelColExp(ast.ExpApp(False, 'AVG', [ast.ExpCol(None, 'x')]),
@@ -36,7 +36,9 @@ def expand_probability_estimate(probest, population, generator):
 
 def expand_simulate_models(sim):
     assert isinstance(sim, ast.SimulateModelsExp)
-    if all(isinstance(c.col, ast.ExpCol) or ast.is_bql(c.col)
+    if all(isinstance(c, ast.SelColExp) and
+               (isinstance(c.expression, ast.ExpCol) or
+                   ast.is_bql(c.expression))
            for c in sim.columns):
         return ast.SimulateModels(sim.columns, sim.population, sim.generator)
     simcols = []
@@ -46,15 +48,22 @@ def expand_simulate_models(sim):
     return ast.Select(
         ast.SELQUANT_ALL, selcols, [seltab], None, None, None, None)
 
-def _expand_simmodel_column(c, simcols):
-    exp = _expand_simmodel_exp(c.col, simcols)
-    name = c.name
-    return ast.SelColExp(exp, name)
+def _expand_simmodel_column(selcol, simcols):
+    if isinstance(selcol, ast.SelColExp):
+        exp = _expand_simmodel_exp(selcol.expression, simcols)
+        name = selcol.name
+        return ast.SelColExp(exp, name)
+    elif isinstance(selcol, ast.SelColAll):
+        raise NotImplementedError('Wildcard variable lists.')
+    elif isinstance(selcol, ast.SelColSub):
+        raise NotImplementedError('Computed variable lists.')
+    else:
+        assert False, 'Invalid select column: %r' % (selcol,)
 
 def _expand_simmodel_exp(exp, simcols):
     if isinstance(exp, ast.ExpCol) or ast.is_bql(exp):
         tmpname = 'v%d' % (len(simcols),)
-        simcols.append(ast.SimCol(exp, tmpname))
+        simcols.append(ast.SelColExp(exp, tmpname))
         return ast.ExpCol(None, tmpname)
     elif isinstance(exp, ast.ExpLit) or \
          isinstance(exp, ast.ExpNumpar) or \

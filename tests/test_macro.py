@@ -35,7 +35,7 @@ def test_expand_probability_estimate():
                     ast.ExpApp(False, 'AVG', [ast.ExpCol(None, 'x')]),
                     None)],
                 [ast.SelTab(
-                    ast.SimulateModelsExp([ast.SimCol(expression, 'x')],
+                    ast.SimulateModelsExp([ast.SelColExp(expression, 'x')],
                         'p', 'g'),
                     None)],
                 None, None, None, None))
@@ -44,9 +44,9 @@ def test_simulate_models_trivial():
     e = ast.ExpBQLMutInf(['c0'], ['c1', 'c2'],
         [('c3', ast.ExpLit(ast.LitInt(3)))],
         None)
-    simmodels = ast.SimulateModelsExp([ast.SimCol(e, 'x')], 'p', 'g')
+    simmodels = ast.SimulateModelsExp([ast.SelColExp(e, 'x')], 'p', 'g')
     assert macro.expand_simulate_models(simmodels) == \
-        ast.SimulateModels([ast.SimCol(e, 'x')], 'p', 'g')
+        ast.SimulateModels([ast.SelColExp(e, 'x')], 'p', 'g')
 
 
 def test_simulate_models_nontrivial():
@@ -79,8 +79,8 @@ def test_simulate_models_nontrivial():
     expression1 = probdensity
     simmodels = ast.SimulateModelsExp(
         [
-            ast.SimCol(expression0, 'quagga'),
-            ast.SimCol(expression1, 'eland'),
+            ast.SelColExp(expression0, 'quagga'),
+            ast.SelColExp(expression1, 'eland'),
         ], 'p', 'g')
     assert macro.expand_simulate_models(simmodels) == \
         ast.Select(ast.SELQUANT_ALL,
@@ -99,9 +99,9 @@ def test_simulate_models_nontrivial():
             [ast.SelTab(
                 ast.SimulateModels(
                     [
-                        ast.SimCol(mutinf0, 'v0'),
-                        ast.SimCol(mutinf1, 'v1'),
-                        ast.SimCol(probdensity, 'v2'),
+                        ast.SelColExp(mutinf0, 'v0'),
+                        ast.SelColExp(mutinf1, 'v1'),
+                        ast.SelColExp(probdensity, 'v2'),
                     ], 'p', 'g'),
                 None)],
             None, None, None, None)

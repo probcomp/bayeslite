@@ -124,10 +124,23 @@ def execute_phrase(bdb, phrase, bindings=()):
                     'Name already defined as table: %s' % (phrase.name),)
             # Set up schema and create the new table.
             qn = sqlite3_quote_name(phrase.name)
-            qcns = map(sqlite3_quote_name, [
-                simcol.name if simcol.name is not None else str(simcol.col)
-                for simcol in phrase.simulation.columns
-            ])
+            def map_name(selcol):
+                if not isinstance(selcol, ast.SelColExp):
+                    raise NotImplementedError(
+                        'Computed or wildcard variable lists')
+                if not isinstance(selcol.expression, ast.ExpCol):
+                    # XXX Do this by compiling this rather than
+                    # executing it directly.
+                    raise NotImplementedError(
+                        'Functions of simulations in CREATE TABLE AS.')
+                if selcol.expression.table is not None:
+                    # XXX Accept at least the name of the population
+                    # in question.
+                    raise NotImplementedError(
+                        'Explicit tables in SIMULATE.')
+                return selcol.name if selcol.name is not None else \
+                    selcol.expression.column
+            qcns = map(map_name, phrase.simulation.columns)
             temp = 'TEMP' if phrase.temp else ''
             bdb.sql_execute('''
                 CREATE %s TABLE %s (%s)
