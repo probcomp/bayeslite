@@ -76,6 +76,7 @@ def test_simulate_given_rowid():
     # should produce values that are significantly different from simulated
     # values of the variable for another row.
     with bayeslite.bayesdb_open() as bdb:
+        bdb.metamodels['cgpm'].set_multiprocess(False)
         bdb.sql_execute('CREATE TABLE t(x TEXT, y NUMERIC)')
         for row in data:
             bdb.sql_execute('INSERT INTO t (x, y) VALUES (?, ?)', row)
@@ -139,6 +140,7 @@ def test_simulate_given_rowid_multivariate():
     # Test that GIVEN statement can accept a multivariate constraint clause in
     # which one of the constraints is on _rowid_.
     with bayeslite.bayesdb_open() as bdb:
+        bdb.metamodels['cgpm'].set_multiprocess(False)
         bdb.sql_execute(
             'CREATE TABLE t(x TEXT, y NUMERIC, z NUMERIC, w NUMERIC)')
         for row in data_multivariate:
