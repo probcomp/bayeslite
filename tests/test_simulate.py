@@ -42,9 +42,8 @@ def test_simulate_drawconstraint():
             read_csv.bayesdb_read_csv(bdb, 'dha', f, header=True, create=True)
         bayesdb_guess_population(
             bdb, 'hospital', 'dha', overrides=[('name', 'key')])
-        bdb.execute('''
-            CREATE GENERATOR hospital_cc FOR hospital USING crosscat()
-        ''')
+        bdb.execute(
+            'CREATE METAMODEL hospital_cc FOR hospital USING crosscat()')
         bdb.execute('INITIALIZE 1 MODEL FOR hospital_cc')
         bdb.execute('ANALYZE hospital_cc FOR 1 ITERATION WAIT')
         samples = bdb.execute('''
@@ -77,6 +76,7 @@ def test_simulate_given_rowid():
     # should produce values that are significantly different from simulated
     # values of the variable for another row.
     with bayeslite.bayesdb_open() as bdb:
+        bdb.metamodels['cgpm'].set_multiprocess(False)
         bdb.sql_execute('CREATE TABLE t(x TEXT, y NUMERIC)')
         for row in data:
             bdb.sql_execute('INSERT INTO t (x, y) VALUES (?, ?)', row)
@@ -87,18 +87,20 @@ def test_simulate_given_rowid():
             }
         ''')
         bdb.execute('''
-            CREATE GENERATOR t_g FOR t_p;
+            CREATE METAMODEL t_g FOR t_p;
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR t_g')
         bdb.execute('ANALYZE t_g FOR 3 ITERATION WAIT')
-        bdb.execute('''CREATE TABLE row1 AS
-            SIMULATE y FROM t_p
-            GIVEN _rowid_ = 1
+        bdb.execute('''
+            CREATE TABLE row1 AS
+                SIMULATE y FROM t_p
+                GIVEN _rowid_ = 1
             LIMIT 100
         ''')
-        bdb.execute('''CREATE TABLE row5 AS
-            SIMULATE y FROM t_p
-            GIVEN oid = 5
+        bdb.execute('''
+            CREATE TABLE row5 AS
+                SIMULATE y FROM t_p
+                GIVEN oid = 5
             LIMIT 100
         ''')
         row1_avg = bdb.execute('SELECT AVG(y) FROM row1').fetchall()[0][0]
@@ -120,17 +122,18 @@ def test_simulate_given_rowid():
 
 
 data_multivariate = [
-    ('foo', 6, 7, None),
-    ('bar', 1, 1, 2),
-    ('baz', 100, 100, 200),
-    ('quux', 1000, 2000, 3000),
-    ('zot', 0, 2, 2),
-    ('mumble', 20, 10, 30),
-    ('frotz', 4, 13, 17),
-    ('gargle', 34, 2, 36),
-    ('mumph', 78, 4, 82),
-    ('hunf', 90, 1, 91),
-    ('blort', 80, 80, 160)
+    ('foo',     6,      7,      None),      # rowid = 1
+    ('bar',     1,      1,      2),         # rowid = 2
+    ('baz',     100,    100,    200),       # rowid = 3
+    ('quux',    1000,   2000,   3000),      # rowid = 4
+    ('zot',     0,      2,      2),         # rowid = 5
+    ('mumble',  20,     10,     30),        # rowid = 6
+    ('frotz',   4,      13,     17),        # rowid = 7
+    ('gargle',  34,     2,      36),        # rowid = 8
+    ('mumph',   78,     4,      82),        # rowid = 9
+    ('hunf',    90,     1,      91),        # rowid = 10
+    ('blort',   80,     80,     160),       # rowid = 11
+    ('wip',     None,   9,      5),         # rowid = 12
 ]
 
 
@@ -138,6 +141,7 @@ def test_simulate_given_rowid_multivariate():
     # Test that GIVEN statement can accept a multivariate constraint clause in
     # which one of the constraints is on _rowid_.
     with bayeslite.bayesdb_open() as bdb:
+        bdb.metamodels['cgpm'].set_multiprocess(False)
         bdb.sql_execute(
             'CREATE TABLE t(x TEXT, y NUMERIC, z NUMERIC, w NUMERIC)')
         for row in data_multivariate:
@@ -149,19 +153,19 @@ def test_simulate_given_rowid_multivariate():
                 IGNORE x
             }
         ''')
-        bdb.execute('''
-            CREATE GENERATOR t_g FOR t_p;
-        ''')
+        bdb.execute('CREATE METAMODEL t_g FOR t_p;')
         bdb.execute('INITIALIZE 1 MODEL FOR t_g')
-        bdb.execute('ANALYZE t_g FOR 20 ITERATION WAIT ( OPTIMIZED )')
-        bdb.execute('''CREATE TABLE row1_1 AS
-            SIMULATE y FROM t_p
-            GIVEN _rowid_ = 1, w = 3000
+        bdb.execute('ANALYZE t_g FOR 20 ITERATION WAIT (OPTIMIZED)')
+        bdb.execute('''
+            CREATE TABLE row1_1 AS
+                SIMULATE y FROM t_p
+                GIVEN _rowid_ = 1, w = 3000
             LIMIT 100
         ''')
-        bdb.execute('''CREATE TABLE row1_2 AS
-            SIMULATE y FROM t_p
-            GIVEN ROWID = 1, w = 1
+        bdb.execute('''
+            CREATE TABLE row1_2 AS
+                SIMULATE y FROM t_p
+                GIVEN ROWID = 1, w = 1
             LIMIT 100
         ''')
         row1_1_avg = bdb.execute('SELECT AVG(y) FROM row1_1').fetchall()[0][0]
@@ -172,9 +176,53 @@ def test_simulate_given_rowid_multivariate():
         # effect.
         assert abs(row1_1_avg - row1_2_avg) < 2
 
-        # A call to SIMULATE without CREATE TABLE.
+        # A call to SIMULATE without CREATE TABLE. Since oid 1 has w = None, the
+        # constraint specification w = 3 is legal.
         result = bdb.execute('''
             SIMULATE y FROM t_p
-            GIVEN oid = 1, w = 3 LIMIT 10;
+            GIVEN oid = 1, w = 3
+            LIMIT 10;
         ''').fetchall()
         assert len(result) == 10
+
+
+def test_simulate_given_rowid_unincorporated():
+    '''Ensure specifying rowid loads constraints for unincorporated rows'''
+    with bayeslite.bayesdb_open() as bdb:
+        bdb.metamodels['cgpm'].set_multiprocess(False)
+        bdb.sql_execute(
+            'CREATE TABLE t(x TEXT, y NUMERIC, z NUMERIC, w NUMERIC)')
+        for row in data_multivariate[:-5]:
+            bdb.sql_execute(
+                'INSERT INTO t (x, y, z, w) VALUES (?, ?, ?, ?)', row)
+        bdb.execute('''
+            CREATE POPULATION t_p FOR t WITH SCHEMA {
+                MODEL y, z, w AS NUMERICAL;
+                IGNORE x
+            }
+        ''')
+        bdb.execute('CREATE METAMODEL t_g FOR t_p;')
+        bdb.execute('INITIALIZE 1 MODEL FOR t_g')
+        bdb.execute('ANALYZE t_g FOR 20 ITERATION WAIT (OPTIMIZED)')
+
+        # User cannot override values in incorporated rowids. A ValueError is
+        # captured because checking for observed rowids is performed by cgpm.
+        with pytest.raises(ValueError):
+            bdb.execute('''
+                SIMULATE y FROM t_p
+                GIVEN rowid = 3, z = 99
+                LIMIT 10
+            ''')
+
+        # Insert remaining five rows into base table without incorporating
+        # the data into the metamodel.
+        for row in data_multivariate[-5:]:
+            bdb.sql_execute(
+                'INSERT INTO t (x, y, z, w) VALUES (?, ?, ?, ?)', row)
+
+        # Since rowid = 12 has y = None, the override to y = 1 is legal.
+        bdb.execute('''
+            SIMULATE z FROM t_p
+            GIVEN rowid = 12, y = 1
+            LIMIT 10
+        ''').fetchall()
