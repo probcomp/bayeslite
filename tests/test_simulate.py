@@ -133,6 +133,7 @@ data_multivariate = [
     ('mumph',   78,     4,      82),        # rowid = 9
     ('hunf',    90,     1,      91),        # rowid = 10
     ('blort',   80,     80,     160),       # rowid = 11
+    ('wip',     None,   9,      5),         # rowid = 12
 ]
 
 
@@ -175,9 +176,53 @@ def test_simulate_given_rowid_multivariate():
         # effect.
         assert abs(row1_1_avg - row1_2_avg) < 2
 
-        # A call to SIMULATE without CREATE TABLE.
+        # A call to SIMULATE without CREATE TABLE. Since oid 1 has w = None, the
+        # constraint specification w = 3 is legal.
         result = bdb.execute('''
             SIMULATE y FROM t_p
-            GIVEN oid = 1, w = 3 LIMIT 10;
+            GIVEN oid = 1, w = 3
+            LIMIT 10;
         ''').fetchall()
         assert len(result) == 10
+
+
+def test_simulate_given_rowid_unincorporated():
+    '''Ensure specifying rowid loads constraints for unincorporated rows'''
+    with bayeslite.bayesdb_open() as bdb:
+        bdb.metamodels['cgpm'].set_multiprocess(False)
+        bdb.sql_execute(
+            'CREATE TABLE t(x TEXT, y NUMERIC, z NUMERIC, w NUMERIC)')
+        for row in data_multivariate[:-5]:
+            bdb.sql_execute(
+                'INSERT INTO t (x, y, z, w) VALUES (?, ?, ?, ?)', row)
+        bdb.execute('''
+            CREATE POPULATION t_p FOR t WITH SCHEMA {
+                MODEL y, z, w AS NUMERICAL;
+                IGNORE x
+            }
+        ''')
+        bdb.execute('CREATE METAMODEL t_g FOR t_p;')
+        bdb.execute('INITIALIZE 1 MODEL FOR t_g')
+        bdb.execute('ANALYZE t_g FOR 20 ITERATION WAIT (OPTIMIZED)')
+
+        # User cannot override values in incorporated rowids. A ValueError is
+        # captured because checking for observed rowids is performed by cgpm.
+        with pytest.raises(ValueError):
+            bdb.execute('''
+                SIMULATE y FROM t_p
+                GIVEN rowid = 3, z = 99
+                LIMIT 10
+            ''')
+
+        # Insert remaining five rows into base table without incorporating
+        # the data into the metamodel.
+        for row in data_multivariate[-5:]:
+            bdb.sql_execute(
+                'INSERT INTO t (x, y, z, w) VALUES (?, ?, ?, ?)', row)
+
+        # Since rowid = 12 has y = None, the override to y = 1 is legal.
+        bdb.execute('''
+            SIMULATE z FROM t_p
+            GIVEN rowid = 12, y = 1
+            LIMIT 10
+        ''').fetchall()
