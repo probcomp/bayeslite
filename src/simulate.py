@@ -49,7 +49,8 @@ def simulate_models_rows(bdb, simulation):
         else:
             assert False
     def retrieve_variable(var):
-        if not core.bayesdb_has_variable(bdb, population_id, generator_id, var):
+        if not core.bayesdb_has_variable(
+                bdb, population_id, generator_id, var):
             raise BQLError(bdb, 'No such population variable: %s' % (var,))
         return core.bayesdb_variable_number(
             bdb, population_id, generator_id, var)
