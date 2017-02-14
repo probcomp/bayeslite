@@ -54,23 +54,23 @@ def simulate_models_rows(bdb, simulation):
             raise BQLError(bdb, 'No such population variable: %s' % (var,))
         return core.bayesdb_variable_number(
             bdb, population_id, generator_id, var)
-    def simulate_column(phrase):
-        if isinstance(phrase, ast.ExpBQLDepProb):
+    def simulate_column(exp):
+        if isinstance(exp, ast.ExpBQLDepProb):
             raise BQLError(bdb,
                 'DEPENDENCE PROBABILITY simulation still unsupported.')
-        elif isinstance(phrase, ast.ExpBQLProbDensity):
+        elif isinstance(exp, ast.ExpBQLProbDensity):
             raise BQLError(bdb,
                 'PROBABILITY DENSITY OF simulation still unsupported.')
-        elif isinstance(phrase, ast.ExpBQLMutInf):
-            colnos0 = [retrieve_variable(c) for c in phrase.columns0]
-            colnos1 = [retrieve_variable(c) for c in phrase.columns1]
+        elif isinstance(exp, ast.ExpBQLMutInf):
+            colnos0 = [retrieve_variable(c) for c in exp.columns0]
+            colnos1 = [retrieve_variable(c) for c in exp.columns1]
             constraint_args = ()
-            if phrase.constraints is not None:
+            if exp.constraints is not None:
                 constraint_args = tuple(itertools.chain.from_iterable([
                     [retrieve_variable(colname), retrieve_literal(expr)]
-                    for colname, expr in phrase.constraints
+                    for colname, expr in exp.constraints
                 ]))
-            nsamples = phrase.nsamples and retrieve_literal(phrase.nsamples)
+            nsamples = exp.nsamples and retrieve_literal(exp.nsamples)
             # One mi_list per generator of the population.
             mi_lists = bqlfn._bql_column_mutual_information(
                 bdb, population_id, generator_id, colnos0, colnos1, nsamples,
