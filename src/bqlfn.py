@@ -523,8 +523,10 @@ def bayesdb_simulate(
         countses = bdb.np_prng.multinomial(
             numpredictions, probabilities, size=1)
         counts = countses[0]
-    else:
+    elif len(generator_ids) == 1:
         counts = [numpredictions]
+    else:
+        counts = []
     rowses = map(simulate, generator_ids, metamodels, counts)
     all_rows = [row for rows in rowses for row in rows]
     assert all(isinstance(row, (tuple, list)) for row in all_rows)
