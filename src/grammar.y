@@ -221,22 +221,16 @@ analysis_program(nonempty)      ::= analysis_program(p) analysis_token(t).
 analysis_token(compound)        ::= T_LROUND analysis_program(p) T_RROUND.
 analysis_token(primitive)       ::= ANY(t).
 
-simulate(s)             ::= K_SIMULATE simulate_columns(cols)
+simulate(s)             ::= K_SIMULATE select_columns(cols)
                                 K_FROM population_name(population)
                                 modelledby_opt(generator)
                                 given_opt(constraints)
                                 limit(lim)
                                 accuracy_opt(acc).
-simulate(nolimit)       ::= K_SIMULATE simulate_columns(cols)
+simulate(nolimit)       ::= K_SIMULATE select_columns(cols)
                                 K_FROM population_name(population)
                                 modelledby_opt(generator)
                                 given_opt(constraints).
-
-simulate_columns(one)   ::= simulate_column(col).
-simulate_columns(many)  ::= simulate_columns(cols) T_COMMA
-                                simulate_column(col).
-
-simulate_column(c)      ::= expression(exp) as(name).
 
 given_opt(none)         ::= .
 given_opt(some)         ::= K_GIVEN constraints(constraints).
@@ -246,7 +240,7 @@ constraint(c)           ::= column_name(col) T_EQ expression(value).
 constraints_opt(none)   ::= .
 constraints_opt(some)   ::= constraints(cs).
 
-simulate(models)        ::= K_SIMULATE simulate_columns(cols)
+simulate(models)        ::= K_SIMULATE select_columns(cols)
                                 K_FROM K_MODELS K_OF
                                         population_name(population)
                                 modelledby_opt(generator).

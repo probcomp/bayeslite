@@ -42,7 +42,9 @@ def expand_simulate_models(sim):
            for c in sim.columns):
         return ast.SimulateModels(sim.columns, sim.population, sim.generator)
     simcols = []
-    selcols = [_expand_simmodel_column(c, simcols) for c in sim.columns]
+    selcols = [
+        c_ for c in sim.columns for c_ in _expand_simmodel_column(c, simcols)
+    ]
     subsim = ast.SimulateModels(simcols, sim.population, sim.generator)
     seltab = ast.SelTab(subsim, None)
     return ast.Select(
@@ -52,11 +54,16 @@ def _expand_simmodel_column(selcol, simcols):
     if isinstance(selcol, ast.SelColExp):
         exp = _expand_simmodel_exp(selcol.expression, simcols)
         name = selcol.name
-        return ast.SelColExp(exp, name)
+        # XXX Unify determination of column names.
+        if name is None and \
+           isinstance(selcol.expression, ast.ExpCol):
+            name = selcol.expression.column
+        return [ast.SelColExp(exp, name)]
     elif isinstance(selcol, ast.SelColAll):
-        raise NotImplementedError('Wildcard variable lists.')
+        return selcol
     elif isinstance(selcol, ast.SelColSub):
-        raise NotImplementedError('Computed variable lists.')
+        assert False, \
+            'Subquery-determined columns should have been expanded already!'
     else:
         assert False, 'Invalid select column: %r' % (selcol,)
 

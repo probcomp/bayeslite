@@ -327,7 +327,8 @@ class BQLSemantics(object):
     def p_analysis_token_primitive(self, t):    return [t]
 
     def p_simulate_s(self, cols, population, generator, constraints, lim, acc):
-        if any(not isinstance(c.expression, ast.ExpCol) for c in cols):
+        if any(not isinstance(c, ast.SelColExp) for c in cols) or \
+           any(not isinstance(c.expression, ast.ExpCol) for c in cols):
             self.errors.append('simulate only accepts population variables.')
             return None
         return ast.Simulate(
@@ -336,7 +337,8 @@ class BQLSemantics(object):
     def p_simulate_nolimit(self, cols, population, generator, constraints):
         # XXX Report source location.
         self.errors.append('simulate missing limit')
-        if any(not isinstance(c.expression, ast.ExpCol) for c in cols):
+        if any(not isinstance(c, ast.SelColExp) for c in cols) or \
+           any(not isinstance(c.expression, ast.ExpCol) for c in cols):
             self.errors.append('simulate only accepts population variables.')
             return None
         return ast.Simulate(
@@ -344,15 +346,6 @@ class BQLSemantics(object):
             constraints, 0, None)
     def p_simulate_models(self, cols, population, generator):
         return ast.SimulateModelsExp(cols, population, generator)
-
-    def p_simulate_columns_one(self, col):
-        return [col]
-    def p_simulate_columns_many(self, cols, col):
-        cols.append(col)
-        return cols
-
-    def p_simulate_column_c(self, exp, name):
-        return ast.SelColExp(exp, name)
 
     def p_given_opt_none(self):                 return []
     def p_given_opt_some(self, constraints):    return constraints

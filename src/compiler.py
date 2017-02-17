@@ -211,6 +211,29 @@ def compile_query(bdb, query, out):
     :param Output out: output accumulator
     """
     if isinstance(query, ast.SimulateModelsExp):
+        # First expand any subquery columns.
+        if any(isinstance(selcol, ast.SelColSub) for selcol in query.columns):
+            selcols = []
+            for selcol in query.columns:
+                if isinstance(selcol, ast.SelColAll):
+                    raise NotImplementedError('Wildcard simulate variables')
+                elif isinstance(selcol, ast.SelColSub):
+                    with subquery_columns(bdb, selcol.query, out) as cursor:
+                        for row in cursor:
+                            assert len(row) == 1
+                            assert isinstance(row[0], unicode)
+                            assert str(row[0])
+                            n = row[0]
+                            selcols.append(
+                                ast.SelColExp(ast.ExpCol(None, n), None))
+                elif isinstance(selcol, ast.SelColExp):
+                    selcols.append(selcol)
+                else:
+                    assert False, 'Invalid select column: %r' % (selcol,)
+            query = ast.SimulateModelsExp(
+                selcols, query.population, query.generator)
+        # Next, expand SIMULATE of compound expressions into SELECT of
+        # compound expressions on SIMULATE of simple expressions.
         query = macro.expand_simulate_models(query)
     if isinstance(query, ast.Select):
         compile_select(bdb, query, out)
@@ -709,9 +732,20 @@ def compile_simulate(bdb, simulate, out):
         out.write('SELECT * FROM %s' % (qtt,))
 
 def compile_simulate_models(bdb, simmodels, out):
+    assert not any(isinstance(selcol, ast.SelColSub)
+            for selcol in simmodels.columns), \
+        '%r' % (simmodels,)
     temptable = bdb.temp_table_name()
-    # XXX Give meaningful names.
-    variables = ['v%d' % (i,) for i, _ in enumerate(simmodels.columns)]
+    # XXX Unify determination of column names.
+    def map_var((i, c)):
+        if c.name is not None:
+            return c.name
+        if isinstance(c.expression, ast.ExpCol) and \
+           c.expression.column is not None:
+            return c.expression.column
+        else:
+            return 't%d' % (i,)
+    variables = map(map_var, enumerate(simmodels.columns))
     qvs = ','.join(map(sqlite3_quote_name, variables))
     schema = ','.join(
         '%s NUMERIC' % (sqlite3_quote_name(v),) for v in variables)
