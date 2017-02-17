@@ -55,7 +55,29 @@ def simulate_models_rows(bdb, simulation):
         return core.bayesdb_variable_number(
             bdb, population_id, generator_id, var)
     def simulate_column(exp):
-        if isinstance(exp, ast.ExpBQLDepProb):
+        if isinstance(exp, ast.ExpCol):
+            # XXX This is wrong -- it returns independent samples from
+            # the marginals of each variable, not one sample from the
+            # joint on all variables.
+            if False:
+                raise BQLError(bdb,
+                    'SIMULATE FROM MODELS OF can\'t sample conditional')
+                # XXX Gotta weight each model by probability of
+                # constraints.
+                constraints = [
+                    (retrieve_variable(v), retrieve_literal(e))
+                    for c, e in simulation.constraints
+                ]
+            else:
+                constraints = []
+            colnos = [retrieve_variable(exp.column)]
+            accuracy = 1        # XXX Allow nontrivial accuracy?
+            samples = bqlfn.bayesdb_simulate(
+                bdb, population_id, constraints, colnos,
+                generator_id=generator_id, numpredictions=1,
+                accuracy=accuracy)
+            return [sample[0] for sample in samples]
+        elif isinstance(exp, ast.ExpBQLDepProb):
             raise BQLError(bdb,
                 'DEPENDENCE PROBABILITY simulation still unsupported.')
         elif isinstance(exp, ast.ExpBQLProbDensity):
