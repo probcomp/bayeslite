@@ -1190,13 +1190,12 @@ class BQLCompiler_2Row(object):
         else:
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
 
-class BQLCompiler_1Col(object):
+class BQLCompiler_1Col(BQLCompiler_Const):
     def __init__(self, population_id, generator_id, colno_exp):
         assert isinstance(population_id, int)
         assert generator_id is None or isinstance(generator_id, int)
         assert isinstance(colno_exp, str)
-        self.population_id = population_id
-        self.generator_id = generator_id
+        super(BQLCompiler_1Col, self).__init__(population_id, generator_id)
         self.colno_exp = colno_exp
 
     def compile_bql(self, bdb, bql, out):
@@ -1235,21 +1234,16 @@ class BQLCompiler_1Col(object):
             compile_bql_2col_1(bdb, population_id, None,
                 'bql_column_correlation_pvalue',
                 'Column correlation pvalue', None, bql, self.colno_exp, self, out)
-        elif isinstance(bql, ast.ExpBQLPredict):
-            raise BQLError(bdb, 'Predict is a 1-row function.')
-        elif isinstance(bql, ast.ExpBQLPredictConf):
-            raise BQLError(bdb, 'Predict is a 1-row function.')
         else:
-            assert False, 'Invalid BQL function: %s' % (repr(bql),)
+            super(BQLCompiler_1Col, self).compile_bql(bdb, bql, out)
 
-class BQLCompiler_2Col(object):
+class BQLCompiler_2Col(BQLCompiler_Const):
     def __init__(self, population_id, generator_id, colno0_exp, colno1_exp):
         assert isinstance(population_id, int)
         assert generator_id is None or isinstance(generator_id, int)
         assert isinstance(colno0_exp, str)
         assert isinstance(colno1_exp, str)
-        self.population_id = population_id
-        self.generator_id = generator_id
+        super(BQLCompiler_2Col, self).__init__(population_id, generator_id)
         self.colno0_exp = colno0_exp
         self.colno1_exp = colno1_exp
 
@@ -1260,14 +1254,6 @@ class BQLCompiler_2Col(object):
         if isinstance(bql, ast.ExpBQLProbDensity):
             compile_pdf_joint(bdb, population_id, generator_id, bql.targets,
                 bql.constraints, self, out)
-        elif isinstance(bql, ast.ExpBQLProbDensityFn):
-            raise BQLError(bdb, 'Probability density of value'
-                ' is 1-column function.')
-        elif isinstance(bql, ast.ExpBQLPredProb):
-            raise BQLError(bdb, 'Predictive probability'
-                ' is one-column function.')
-        elif isinstance(bql, ast.ExpBQLSim):
-            raise BQLError(bdb, 'Similarity to row makes sense only at row.')
         elif isinstance(bql, ast.ExpBQLDepProb):
             compile_bql_2col_0(bdb, population_id, generator_id,
                 'bql_column_dependence_probability',
@@ -1290,12 +1276,8 @@ class BQLCompiler_2Col(object):
                 'Correlation pvalue',
                 None,
                 bql, self.colno0_exp, self.colno1_exp, self, out)
-        elif isinstance(bql, ast.ExpBQLPredict):
-            raise BQLError(bdb, 'Predict is a 1-row function.')
-        elif isinstance(bql, ast.ExpBQLPredictConf):
-            raise BQLError(bdb, 'Predict is a 1-row function.')
         else:
-            assert False, 'Invalid BQL function: %s' % (repr(bql),)
+            super(BQLCompiler_2Col, self).compile_bql(bdb, bql, out)
 
 def compile_pdf_joint(bdb, population_id, generator_id, targets, constraints,
         bql_compiler, out):
