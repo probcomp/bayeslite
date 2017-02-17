@@ -213,23 +213,10 @@ def compile_query(bdb, query, out):
     if isinstance(query, ast.SimulateModelsExp):
         # First expand any subquery columns.
         if any(isinstance(selcol, ast.SelColSub) for selcol in query.columns):
-            selcols = []
-            for selcol in query.columns:
-                if isinstance(selcol, ast.SelColAll):
-                    raise NotImplementedError('Wildcard simulate variables')
-                elif isinstance(selcol, ast.SelColSub):
-                    with subquery_columns(bdb, selcol.query, out) as cursor:
-                        for row in cursor:
-                            assert len(row) == 1
-                            assert isinstance(row[0], unicode)
-                            assert str(row[0])
-                            n = row[0]
-                            selcols.append(
-                                ast.SelColExp(ast.ExpCol(None, n), None))
-                elif isinstance(selcol, ast.SelColExp):
-                    selcols.append(selcol)
-                else:
-                    assert False, 'Invalid select column: %r' % (selcol,)
+            named = True
+            bql_compiler = BQLCompiler_None()
+            selcols = expand_select_columns(
+                bdb, query.columns, named, bql_compiler, out)
             query = ast.SimulateModelsExp(
                 selcols, query.population, query.generator)
         # Next, expand SIMULATE of compound expressions into SELECT of
