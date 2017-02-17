@@ -993,7 +993,7 @@ def test_select_columns_subquery():
             ' order by name asc limit 2) from t1') == \
         'SELECT "id", "t1"."age", "t1"."label" FROM "t1";'
 
-def test_simulate_columns_subquery():
+def test_simulate_models_columns_subquery():
     assert bql2sql('simulate weight, t1.(estimate * from columns of p1'
             ' order by name asc limit 2) from models of p1') == \
         'SELECT * FROM "bayesdb_temp_0";'
@@ -1011,10 +1011,20 @@ def test_simulate_columns_subquery():
         'SELECT ("v0" + 1) AS "wp1", "v1" AS "age", "v2" AS "label" FROM' \
         ' (SELECT * FROM "bayesdb_temp_0");'
 
-def test_simulate_columns_subquery_nyi():
+def test_simulate_columns_subquery():
+    # XXX This test is a little unsatisfactory -- we do not get to see
+    # what the variables in the result are named...
+    assert bql2sql('simulate weight, t1.(estimate * from columns of p1'
+            ' order by name asc limit 2) from p1 limit 10') == \
+        'SELECT * FROM "bayesdb_temp_0";'
     with pytest.raises(parse.BQLParseError):
-        bql2sql('simulate weight, t1.(estimate * from columns of p1'
+        # Compound columns not yet implemented for SIMULATE.
+        bql2sql('simulate weight + 1, t1.(estimate * from columns of p1'
             ' order by name asc limit 2) from p1 limit 10')
+
+def test_simulate_columns_all():
+    with pytest.raises(parse.BQLParseError):
+        bql2sql('simulate * from p1')
 
 def test_trivial_commands():
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):

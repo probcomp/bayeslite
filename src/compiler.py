@@ -210,6 +210,7 @@ def compile_query(bdb, query, out):
     :param query: abstract syntax tree of a query
     :param Output out: output accumulator
     """
+
     if isinstance(query, ast.SimulateModelsExp):
         # First expand any subquery columns.
         if any(isinstance(selcol, ast.SelColSub) for selcol in query.columns):
@@ -222,6 +223,18 @@ def compile_query(bdb, query, out):
         # Next, expand SIMULATE of compound expressions into SELECT of
         # compound expressions on SIMULATE of simple expressions.
         query = macro.expand_simulate_models(query)
+
+    if isinstance(query, ast.Simulate):
+        # First expand any subquery columns.
+        if any(isinstance(selcol, ast.SelColSub) for selcol in query.columns):
+            named = True
+            bql_compiler = BQLCompiler_None()
+            selcols = expand_select_columns(
+                bdb, query.columns, named, bql_compiler, out)
+            query = ast.Simulate(
+                selcols, query.population, query.generator, query.constraints,
+                query.nsamples, query.accuracy)
+
     if isinstance(query, ast.Select):
         compile_select(bdb, query, out)
     elif isinstance(query, ast.Estimate):

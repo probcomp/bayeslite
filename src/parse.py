@@ -328,6 +328,8 @@ class BQLSemantics(object):
 
     def p_simulate_s(self, cols, population, generator, constraints, lim, acc):
         for c in cols:
+            if isinstance(c, ast.SelColSub):
+                continue
             if isinstance(c, ast.SelColExp) and \
                isinstance(c.expression, ast.ExpCol):
                 continue
@@ -339,6 +341,8 @@ class BQLSemantics(object):
         # XXX Report source location.
         self.errors.append('simulate missing limit')
         for c in cols:
+            if isinstance(c, ast.SelColSub):
+                continue
             if isinstance(c, ast.SelColExp) and \
                isinstance(c.expression, ast.ExpCol):
                 continue
