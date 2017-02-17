@@ -624,6 +624,8 @@ def compile_select_table(bdb, table, out):
         assert False, 'Invalid select table: %s' % (repr(table),)
 
 def compile_simulate(bdb, simulate, out):
+    assert all(isinstance(c, ast.SelColExp) for c in simulate.columns)
+    assert all(isinstance(c.expression, ast.ExpCol) for c in simulate.columns)
     with bdb.savepoint():
         temptable = bdb.temp_table_name()
         assert not core.bayesdb_has_table(bdb, temptable)
@@ -642,7 +644,7 @@ def compile_simulate(bdb, simulate, out):
         table = core.bayesdb_population_table(bdb, population_id)
         qtt = sqlite3_quote_name(temptable)
         qt = sqlite3_quote_name(table)
-        column_names = simulate.columns
+        column_names = [c.expression.column for c in simulate.columns]
         qcns = map(sqlite3_quote_name, column_names)
         cursor = bdb.sql_execute('PRAGMA table_info(%s)' % (qt,))
         column_sqltypes = {}

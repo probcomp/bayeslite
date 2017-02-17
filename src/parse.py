@@ -327,23 +327,25 @@ class BQLSemantics(object):
     def p_analysis_token_primitive(self, t):    return [t]
 
     def p_simulate_s(self, cols, population, generator, constraints, lim, acc):
-        if any(not isinstance(c, ast.SelColExp) for c in cols) or \
-           any(not isinstance(c.expression, ast.ExpCol) for c in cols):
+        for c in cols:
+            if isinstance(c, ast.SelColExp) and \
+               isinstance(c.expression, ast.ExpCol):
+                continue
             self.errors.append('simulate only accepts population variables.')
             return None
         return ast.Simulate(
-            [c.expression.column for c in cols], population, generator,
-            constraints, lim.limit, acc)
+            cols, population, generator, constraints, lim.limit, acc)
     def p_simulate_nolimit(self, cols, population, generator, constraints):
         # XXX Report source location.
         self.errors.append('simulate missing limit')
-        if any(not isinstance(c, ast.SelColExp) for c in cols) or \
-           any(not isinstance(c.expression, ast.ExpCol) for c in cols):
+        for c in cols:
+            if isinstance(c, ast.SelColExp) and \
+               isinstance(c.expression, ast.ExpCol):
+                continue
             self.errors.append('simulate only accepts population variables.')
             return None
         return ast.Simulate(
-            [c.expression.column for c in cols], population, generator,
-            constraints, 0, None)
+            cols, population, generator, constraints, 0, None)
     def p_simulate_models(self, cols, population, generator):
         return ast.SimulateModelsExp(cols, population, generator)
 

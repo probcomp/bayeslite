@@ -983,7 +983,9 @@ def test_simulate():
             ' simulate x from t limit 10') == \
         [ast.CreateTabAs(False, False, 's',
             ast.Simulate(
-                ['x'], 't', None,
+                [ast.SelColExp(ast.ExpCol(None, 'x'), None)],
+                't',
+                None,
                 [],
                 ast.ExpLit(ast.LitInt(10)),
                 None)
@@ -992,7 +994,12 @@ def test_simulate():
             ' simulate x, y from t given z = 0 limit 10 accuracy 2') == \
         [ast.CreateTabAs(False, True, 's',
             ast.Simulate(
-                ['x', 'y'], 't', None,
+                [
+                    ast.SelColExp(ast.ExpCol(None, 'x'), None),
+                    ast.SelColExp(ast.ExpCol(None, 'y'), None),
+                ],
+                't',
+                None,
                 [('z', ast.ExpLit(ast.LitInt(0)))],
                 ast.ExpLit(ast.LitInt(10)),
                 2)
@@ -1001,7 +1008,12 @@ def test_simulate():
             ' simulate x, y from t given z = 0 limit 10') == \
         [ast.CreateTabAs(True, False, 's',
             ast.Simulate(
-                ['x', 'y'], 't', None,
+                [
+                    ast.SelColExp(ast.ExpCol(None, 'x'), None),
+                    ast.SelColExp(ast.ExpCol(None, 'y'), None),
+                ],
+                't',
+                None,
                 [('z', ast.ExpLit(ast.LitInt(0)))],
                 ast.ExpLit(ast.LitInt(10)),
                 None),
@@ -1012,7 +1024,12 @@ def test_simulate():
             ' limit 10 accuracy 19') == \
         [ast.CreateTabAs(True, True, 's',
             ast.Simulate(
-                ['x', 'y'], 't', None,
+                [
+                    ast.SelColExp(ast.ExpCol(None, 'x'), None),
+                    ast.SelColExp(ast.ExpCol(None, 'y'), None),
+                ],
+                't',
+                None,
                 [
                     ('z', ast.ExpLit(ast.LitInt(0))),
                     ('w', ast.ExpLit(ast.LitInt(1))),
