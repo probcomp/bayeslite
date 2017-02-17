@@ -253,7 +253,10 @@ def compile_select(bdb, select, out):
     else:
         assert select.quantifier == ast.SELQUANT_ALL
     named = True
-    compile_select_columns(bdb, select.columns, named, BQLCompiler_None(), out)
+    bql_compiler = BQLCompiler_None()
+    columns = expand_select_columns(
+        bdb, select.columns, named, bql_compiler, out)
+    compile_select_columns(bdb, columns, named, bql_compiler, out)
     if select.tables is not None:
         assert 0 < len(select.tables)
         compile_select_tables(bdb, select, out)
@@ -350,7 +353,9 @@ def compile_infer_explicit(bdb, infer, named, out):
         generator_id = core.bayesdb_get_generator(
             bdb, population_id, infer.generator)
     bql_compiler = BQLCompiler_1Row_Infer(population_id, generator_id)
-    compile_select_columns(bdb, infer.columns, named, bql_compiler, out)
+    columns = expand_select_columns(
+        bdb, infer.columns, named, bql_compiler, out)
+    compile_select_columns(bdb, columns, named, bql_compiler, out)
     table_name = core.bayesdb_population_table(bdb, population_id)
     qt = sqlite3_quote_name(table_name)
     out.write(' FROM %s' % (qt,))
@@ -449,7 +454,9 @@ def compile_estimate(bdb, estimate, out):
             bdb, population_id, estimate.generator)
     bql_compiler = BQLCompiler_1Row(population_id, generator_id)
     named = True
-    compile_select_columns(bdb, estimate.columns, named, bql_compiler, out)
+    columns = expand_select_columns(
+        bdb, estimate.columns, named, bql_compiler, out)
+    compile_select_columns(bdb, columns, named, bql_compiler, out)
     table_name = core.bayesdb_population_table(bdb, population_id)
     qt = sqlite3_quote_name(table_name)
     out.write(' FROM %s' % (qt,))
@@ -512,7 +519,28 @@ def compile_estimate_by(bdb, estby, out):
             bdb, population_id, estby.generator)
     bql_compiler = BQLCompiler_Const(population_id, generator_id)
     named = True
-    compile_select_columns(bdb, estby.columns, named, bql_compiler, out)
+    columns = expand_select_columns(
+        bdb, estby.columns, named, bql_compiler, out)
+    compile_select_columns(bdb, columns, named, bql_compiler, out)
+
+def expand_select_columns(bdb, columns, named, bql_compiler, out):
+    if not any(isinstance(selcol, ast.SelColSub) for selcol in columns):
+        return columns
+    if not named:
+        raise NotImplementedError("Don't mix <tab>.(<query>) with PREDICT!")
+    columns_ = []
+    for selcol in columns:
+        if not isinstance(selcol, ast.SelColSub):
+            columns_.append(selcol)
+            continue
+        with subquery_columns(bdb, selcol.query, out) as cursor:
+            for row in cursor:
+                assert len(row) == 1
+                assert isinstance(row[0], unicode)
+                assert str(row[0])
+                selcol_ = ast.SelColExp(ast.ExpCol(selcol.table, row[0]), None)
+                columns_.append(selcol_)
+    return columns_
 
 def compile_select_columns(bdb, columns, named, bql_compiler, out):
     first = True
@@ -533,32 +561,7 @@ def compile_select_column(bdb, selcol, i, named, bql_compiler, out):
             out.write('.')
         out.write('*')
     elif isinstance(selcol, ast.SelColSub):
-        if not named:
-            raise NotImplementedError('Don\'t mix <tab>.(<query>)'
-                ' with PREDICT!')
-        # XXX We need some kind of type checking to guarantee that
-        # what we get out of this will be a list of columns in the
-        # named table.
-        subout = out.subquery()
-        with compiling_paren(bdb, subout,
-                'SELECT CAST(name AS TEXT) FROM (', ')'):
-            compile_query(bdb, selcol.query, subout)
-        subquery = subout.getvalue()
-        subbindings = subout.getbindings()
-        subwinders, subunwinders = subout.getwindings()
-        with bayesdb_wind(bdb, subwinders, subunwinders):
-            qt = sqlite3_quote_name(selcol.table)
-            subfirst = True
-            for row in bdb.sql_execute(subquery, subbindings):
-                assert len(row) == 1
-                assert isinstance(row[0], unicode)
-                assert str(row[0])
-                if subfirst:
-                    subfirst = False
-                else:
-                    out.write(', ')
-                qc = sqlite3_quote_name(str(row[0]))
-                out.write('%s.%s' % (qt, qc))
+        assert False, 'Someone forgot to expand_select_columns!'
     elif isinstance(selcol, ast.SelColExp):
         compile_expression(bdb, selcol.expression, bql_compiler, out)
         if not named:
@@ -572,6 +575,21 @@ def compile_select_column(bdb, selcol, i, named, bql_compiler, out):
         out.write(' AS c%u' % (i,))
     else:
         assert False, 'Invalid select column: %s' % (repr(selcol),)
+
+@contextlib.contextmanager
+def subquery_columns(bdb, subquery, out):
+    # XXX We need some kind of type checking to guarantee that
+    # what we get out of this will be a list of columns in the
+    # named table.
+    subout = out.subquery()
+    with compiling_paren(bdb, subout,
+            'SELECT CAST(name AS TEXT) FROM (', ')'):
+        compile_query(bdb, subquery, subout)
+    subquery = subout.getvalue()
+    subbindings = subout.getbindings()
+    subwinders, subunwinders = subout.getwindings()
+    with bayesdb_wind(bdb, subwinders, subunwinders):
+        yield bdb.sql_execute(subquery, subbindings)
 
 def compile_select_tables(bdb, select, out):
     first = True
@@ -899,7 +917,9 @@ def compile_estpairrow(bdb, estpairrow, out):
         rowid0_exp, rowid1_exp)
     out.write('SELECT %s AS rowid0, %s AS rowid1,' % (rowid0_exp, rowid1_exp))
     named = True
-    compile_select_columns(bdb, estpairrow.columns, named, bql_compiler, out)
+    columns = expand_select_columns(
+        bdb, estpairrow.columns, named, bql_compiler, out)
+    compile_select_columns(bdb, columns, named, bql_compiler, out)
     out.write(' AS value')
     table_name = core.bayesdb_population_table(bdb, population_id)
     qt = sqlite3_quote_name(table_name)
