@@ -1018,6 +1018,10 @@ def test_simulate_columns_subquery():
             ' order by name asc limit 2) from p1 limit 10') == \
         'SELECT * FROM "bayesdb_temp_0";'
     assert bql2sql('simulate weight, t1.(estimate * from columns of p1'
+            ' where probability of (mutual information with age < 1) > 0.8)'
+            ' from p1 limit 10') == \
+        'SELECT * FROM "bayesdb_temp_0";'
+    assert bql2sql('simulate weight, t1.(estimate * from columns of p1'
             ' order by probability of (mutual information with age < 1))'
             ' from p1 limit 10') == \
         'SELECT * FROM "bayesdb_temp_0";'
