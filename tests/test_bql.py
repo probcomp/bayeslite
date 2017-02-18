@@ -1017,6 +1017,10 @@ def test_simulate_columns_subquery():
     assert bql2sql('simulate weight, t1.(estimate * from columns of p1'
             ' order by name asc limit 2) from p1 limit 10') == \
         'SELECT * FROM "bayesdb_temp_0";'
+    assert bql2sql('simulate weight, t1.(estimate * from columns of p1'
+            ' order by probability of (mutual information with age < 1))'
+            ' from p1 limit 10') == \
+        'SELECT * FROM "bayesdb_temp_0";'
     with pytest.raises(parse.BQLParseError):
         # Compound columns not yet implemented for SIMULATE.
         bql2sql('simulate weight + 1, t1.(estimate * from columns of p1'
