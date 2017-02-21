@@ -239,6 +239,9 @@ constraints(many)       ::= constraints(cs) T_COMMA constraint(c).
 constraint(c)           ::= column_name(col) T_EQ expression(value).
 constraints_opt(none)   ::= .
 constraints_opt(some)   ::= constraints(cs).
+constraints_list(one)   ::= T_LROUND constraints(cs) T_RROUND.
+constraints_list(some)  ::= constraints_list(css) T_COMMA
+                                T_LROUND constraints(cs) T_RROUND.
 
 simulate(models)        ::= K_SIMULATE select_columns(cols)
                                 K_FROM K_MODELS K_OF
@@ -580,11 +583,29 @@ bqlfn(sim_1row)         ::= K_SIMILARITY K_TO
                                 T_LROUND expression(cond) T_RROUND
                                 wrt(cols).
 bqlfn(sim_2row)         ::= K_SIMILARITY wrt(cols).
+
+bqlfn(gensim)           ::= K_GENERATIVE K_SIMILARITY
+                                gensim_of_opt(cond0)
+                                existing_opt(cond1)
+                                hypothetical_opt(constraints)
+                                wrt(cols).
+
 bqlfn(depprob)          ::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
 
 bqlfn(mutinf)           ::= K_MUTUAL K_INFORMATION ofwithmulti(cols)
                                 mi_given_opt(constraints) nsamples_opt(nsamp).
 bqlfn(prob_est)         ::= K_PROBABILITY K_OF T_LROUND expression(e) T_RROUND.
+
+gensim_of_opt(none)     ::= .
+gensim_of_opt(one)      ::= K_OF T_LROUND expression(cond0) T_RROUND.
+
+existing_opt(none)      ::= .
+existing_opt(one)       ::= K_TO K_EXISTING K_ROWS
+                                T_LROUND expression(cond) T_RROUND.
+
+hypothetical_opt(none)  ::= .
+hypothetical_opt(one)   ::= K_HYPOTHETICAL K_ROWS
+                                T_LROUND constraints_list(cs) T_RROUND.
 
 ofwithmulti(bql_2col)   ::= .
 ofwithmulti(bql_1col)   ::= K_WITH mi_columns(cols).
@@ -729,15 +750,18 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_ESCAPE
         K_ESTIMATE
         K_EXISTS
+        K_EXISTING
         K_EXPLICIT
         K_FOR
         K_FROM
+        K_GENERATIVE
         K_GENERATOR
         K_GIVEN
         K_GLOB
         K_GROUP
         K_GUESS
         K_HAVING
+        K_HYPOTHETICAL
         K_IF
         K_IGNORE
         K_IN
@@ -778,6 +802,7 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_RESPECT
         K_ROLLBACK
         K_ROW
+        K_ROWS
         K_SAMPLES
         K_SCHEMA
         K_SECOND

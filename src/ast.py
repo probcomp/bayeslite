@@ -400,6 +400,9 @@ ExpBQLProbDensityFn = namedtuple('ExpBQLProbDensityFn', [
 ExpBQLSim = namedtuple('ExpBQLSim', [
     'ofcondition', 'tocondition', 'column_lists'
 ])
+ExpBQLGenSim = namedtuple('ExpBQLGenSim', [
+    'ofcondition', 'tocondition', 'hypotheticals', 'column_lists'
+])
 ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
 ExpBQLMutInf = namedtuple('ExpBQLMutInf', [
     'columns0', 'columns1', 'constraints', 'nsamples'
@@ -420,6 +423,8 @@ def is_bql(exp):
     if isinstance(exp, ExpBQLProbDensityFn):
         return True
     if isinstance(exp, ExpBQLSim):
+        return True
+    if isinstance(exp, ExpBQLGenSim):
         return True
     if isinstance(exp, ExpBQLDepProb):
         return True

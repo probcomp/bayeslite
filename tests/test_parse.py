@@ -601,6 +601,133 @@ def test_select_bql():
             [ast.Ord(ast.ExpCol(None, 'key'), ast.ORD_ASC)],
             None)]
 
+def test_generative_similarity():
+    # We can parse this bql query, but since the user did not specify either
+    # hypothetical rows or existing rows, the compiler will later complain.
+    assert parse_bql_string('select generative similarity from t;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(
+                ast.ExpBQLGenSim(
+                    ofcondition=None,
+                    tocondition=None,
+                    hypotheticals=None,
+                    column_lists=[ast.ColListAll()]),
+                None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
+    # We can parse this bql query, but since the user did not specify either
+    # hypothetical rows or existing rows, the compiler will later complain.
+    assert parse_bql_string(
+        'select generative similarity of (rowid=8) from t') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(
+                ast.ExpBQLGenSim(
+                    ofcondition=ast.ExpOp(ast.OP_EQ, (
+                        ast.ExpCol(None, 'rowid'),
+                        ast.ExpLit(ast.LitInt(8))
+                    )),
+                    tocondition=None,
+                    hypotheticals=None,
+                    column_lists=[ast.ColListAll()]),
+                None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string(
+        'select generative similarity to existing rows (rowid=8 AND age < 10) '
+        'from t;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(
+                ast.ExpBQLGenSim(
+                    ofcondition=None,
+                    tocondition=ast.ExpOp(ast.OP_BOOLAND, (
+                        ast.ExpOp(ast.OP_EQ, (
+                            ast.ExpCol(None, 'rowid'),
+                            ast.ExpLit(ast.LitInt(8))
+                        )),
+                        ast.ExpOp(ast.OP_LT, (
+                            ast.ExpCol(None, 'age'),
+                            ast.ExpLit(ast.LitInt(10))
+                        )),
+                    )),
+                    hypotheticals=None,
+                    column_lists=[ast.ColListAll()]),
+                None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('''
+        select generative similarity
+            of (
+                name = 'Uganda'
+            )
+            hypothetical rows (
+                ("gdp_per_capita" = 82, "mortality" = 14),
+                ("gdp_per_capita" = 74, continent = 'Europe', "mortality" = 7)
+            )
+            with respect to (
+              "gdp_per_capita"
+            )
+        from t
+        ''') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(
+                ast.ExpBQLGenSim(
+                    ofcondition=ast.ExpOp(ast.OP_EQ, (
+                        ast.ExpCol(None, 'name'),
+                        ast.ExpLit(ast.LitString('Uganda'))
+                    )),
+                    tocondition=None,
+                    hypotheticals=[[
+                        ('gdp_per_capita',ast.ExpLit(ast.LitInt(82))),
+                        ('mortality',ast.ExpLit(ast.LitInt(14)))
+                    ],
+                    [
+                        ('gdp_per_capita',ast.ExpLit(ast.LitInt(74))),
+                        ('continent',ast.ExpLit(ast.LitString('Europe'))),
+                        ('mortality',ast.ExpLit(ast.LitInt(7))),
+                    ]],
+                    column_lists=[ast.ColListLit(['gdp_per_capita'])],
+                ),
+                None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('''
+        select generative similarity
+            of (
+                name = 'Uganda'
+            )
+            to existing rows (
+                rowid between 1 AND 100
+            )
+            hypothetical rows (
+                ("gdp_per_capita" = 82, "mortality" = 14),
+                ("gdp_per_capita" = 74, continent = 'Europe', "mortality" = 7)
+            )
+            with respect to (
+              "gdp_per_capita"
+            )
+        from t
+        ''') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(
+                ast.ExpBQLGenSim(
+                    ofcondition=ast.ExpOp(ast.OP_EQ, (
+                        ast.ExpCol(None, 'name'),
+                        ast.ExpLit(ast.LitString('Uganda'))
+                    )),
+                    tocondition=ast.ExpOp(ast.OP_BETWEEN,
+                        (ast.ExpCol(None, 'rowid'),
+                            ast.ExpLit(ast.LitInt(1)),
+                            ast.ExpLit(ast.LitInt(100)))),
+                    hypotheticals=[[
+                        ('gdp_per_capita',ast.ExpLit(ast.LitInt(82))),
+                        ('mortality',ast.ExpLit(ast.LitInt(14)))
+                    ],
+                    [
+                        ('gdp_per_capita',ast.ExpLit(ast.LitInt(74))),
+                        ('continent',ast.ExpLit(ast.LitString('Europe'))),
+                        ('mortality',ast.ExpLit(ast.LitInt(7))),
+                    ]],
+                    column_lists=[ast.ColListLit(['gdp_per_capita'])],
+                ),
+                None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
+
 def test_trivial_scan_error():
     with pytest.raises(parse.BQLParseError):
         parse_bql_string('select 0c;')

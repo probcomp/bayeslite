@@ -360,6 +360,8 @@ class BQLSemantics(object):
     def p_constraint_c(self, col, value):       return (col, value)
     def p_constraints_opt_none(self):           return []
     def p_constraints_opt_some(self, cs):       return cs
+    def p_constraints_list_one(self, cs):       return [cs]
+    def p_constraints_list_some(self, css, cs): css.append(cs); return css
 
     def p_query_select(self, q):                return q
     def p_query_estimate(self, q):              return q
@@ -619,11 +621,24 @@ class BQLSemantics(object):
         return ast.ExpBQLSim(None, cond, cols)
     def p_bqlfn_sim_2row(self, cols):
         return ast.ExpBQLSim(None, None, cols)
+
+    def p_bqlfn_gensim(self, cond0, cond1, constraints, cols):
+        return ast.ExpBQLGenSim(cond0, cond1, constraints, cols)
+
     def p_bqlfn_depprob(self, cols):            return ast.ExpBQLDepProb(*cols)
 
     def p_bqlfn_mutinf(self, cols, constraints, nsamp):
         return ast.ExpBQLMutInf(cols[0], cols[1], constraints, nsamp)
     def p_bqlfn_prob_est(self, e):              return ast.ExpBQLProbEst(e)
+
+    def p_gensim_of_opt_none(self):             return None
+    def p_gensim_of_opt_one(self, cond0):       return cond0
+
+    def p_existing_opt_none(self):              return None
+    def p_existing_opt_one(self, cond):         return cond
+
+    def p_hypothetical_opt_none(self):          return None
+    def p_hypothetical_opt_one(self, cs):       return cs
 
     def p_ofwithmulti_bql_2col(self):                   return (None, None)
     def p_ofwithmulti_bql_1col(self, cols):             return (cols, None)
