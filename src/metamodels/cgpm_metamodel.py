@@ -458,40 +458,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             conf = 0 # XXX Punt confidence for now
             return pred, conf
 
-        # If rowid is a hypothetical cell for cgpm (does not exist in
-        # bayesdb_cgpm_individual.table_rowid) but exists in the base table
-        # (by INSERT INTO or SUBSAMPLE), then retrieve all values for rowid
-        # as the constraints.
-        constraints = []
-
-        # Does the rowid exist in the base table?
-        exists = rowid < core.bayesdb_generator_fresh_row_id(bdb, generator_id)
-
-        # Is the rowid incorporated into the cgpm?
-        incorporated = bdb.sql_execute('''
-            SELECT 1 FROM bayesdb_cgpm_individual
-            WHERE generator_id = ? AND table_rowid = ?
-            LIMIT 1
-        ''', (generator_id, rowid,)).fetchall()
-
-        if exists and (not incorporated):
-            population_id = core.bayesdb_generator_population(bdb, generator_id)
-            # Retrieve all other variables except colno, and ignore latents in
-            # generator_id, and place them in the constraints.
-            row_values = core.bayesdb_population_row_values(
-                bdb, population_id, rowid)
-            variable_numbers = core.bayesdb_variable_numbers(
-                bdb, population_id, None)
-            # Relies on user appropriately nullifying nan tokens.
-            constraints = [
-                (col, value)
-                for (col, value) in zip(variable_numbers, row_values)
-                if (value is not None) and (col != colno)
-            ]
-
-        # Retrieve the samples.
+        # Retrieve the samples. Specifying `rowid` ensures that relevant
+        # constraints are retrieved by `simulate`, so provide empty constraints.
         sample = self.simulate_joint(
-            bdb, generator_id, rowid, [colno], constraints, modelno, numsamples)
+            bdb, generator_id, rowid, [colno], [], modelno, numsamples)
 
         # Determine the imputation strategy (mode or mean).
         stattype = core.bayesdb_variable_stattype(
@@ -506,11 +476,13 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             num_samples=None, accuracy=None):
         if num_samples is None:
             num_samples = 1
+        full_constraints = self._merge_user_table_constraints(
+            bdb, generator_id, rowid, targets, constraints)
+        # Perpare the rowid, query, and evidence for cgpm.
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
         cgpm_query = targets
-        # Build the evidence, ignoring nan values.
         cgpm_evidence = {}
-        for colno, value in constraints:
+        for colno, value in full_constraints:
             value_numeric = self._to_numeric(bdb, generator_id, colno, value)
             if not math.isnan(value_numeric):
                 cgpm_evidence.update({colno: value_numeric})
@@ -815,6 +787,68 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             cgpm.outputs for cgpm in engine.states[0].hooked_cgpms.itervalues()
         ]))
 
+    def _merge_user_table_constraints(
+            self, bdb, generator_id, rowid, targets, constraints):
+        """Returns user specified constraints combined with values from table.
+
+        Variables in `targets` will not be in the returned constraints, even
+        if they exist in the base table. Howeer, any `targets` which eixst in
+        the user specified `constraints` will remain there, and probably result
+        in an error by cgpm.
+        """
+        # Retrieve table constraints.
+        table_constraints = self._retrieve_table_constraints(
+            bdb, generator_id, rowid)
+        # Verify user constraints do not intersect table constraints.
+        if table_constraints and constraints:
+            user_cols = set(c[0] for c in constraints)
+            table_cols = set(c[0] for c in table_constraints)
+            intersection = set.intersection(user_cols, table_cols)
+            if intersection:
+                names = [
+                    (core.bayesdb_variable_name(bdb, generator_id, c[0]), c[1])
+                    for c in constraints if c[0] in intersection
+                ]
+                raise BQLError(bdb,
+                    'Cannot override existing values in table: %s'
+                    % (names,))
+        # Ignore table_constraints if they are in the targets.
+        table_constraints = [c for c in table_constraints if c[0] not in targets]
+        return constraints + table_constraints
+
+    def _retrieve_table_constraints(self, bdb, generator_id, rowid):
+        """If `rowid` exists in table but is unincorporated, load the data."""
+        # If rowid is a hypothetical cell for cgpm (does not exist in
+        # bayesdb_cgpm_individual.table_rowid) but exists in the base table (by
+        # INSERT INTO or SUBSAMPLE), then retrieve all values for rowid as the
+        # constraints. Note that we do not need to populate constraints if the
+        # rowid is already observed, which is done by cgpm.
+        table = core.bayesdb_generator_table(bdb, generator_id)
+        qt = sqlite3_quote_name(table)
+        # Does the rowid exist in the base table?
+        exists = bdb.sql_execute('''
+            SELECT 1 FROM %s WHERE oid = ?
+        ''' % (qt,), (rowid,)).fetchall()
+        # Is the rowid incorporated into the cgpm?
+        incorporated = bdb.sql_execute('''
+            SELECT 1 FROM bayesdb_cgpm_individual
+            WHERE generator_id = ? AND table_rowid = ?
+            LIMIT 1
+        ''', (generator_id, rowid,)).fetchall()
+        # Populate values if necessary.
+        table_constraints = []
+        if exists and (not incorporated):
+            population_id = core.bayesdb_generator_population(bdb, generator_id)
+            row_values = core.bayesdb_population_row_values(
+                bdb, population_id, rowid)
+            variable_numbers = core.bayesdb_variable_numbers(
+                bdb, population_id, None)
+            table_constraints = [
+                (varno, val)
+                for varno, val in zip(variable_numbers, row_values)
+                if val is not None
+            ]
+        return table_constraints
 
 class CGPM_Cache(object):
     def __init__(self):
