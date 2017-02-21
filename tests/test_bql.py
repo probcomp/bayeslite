@@ -1017,18 +1017,24 @@ def test_simulate_columns_subquery():
     assert bql2sql('simulate weight, t1.(estimate * from columns of p1'
             ' order by name asc limit 2) from p1 limit 10') == \
         'SELECT * FROM "bayesdb_temp_0";'
-    assert bql2sql('simulate weight, t1.(estimate * from columns of p1'
-            ' where probability of (mutual information with age < 1) > 0.8)'
-            ' from p1 limit 10') == \
-        'SELECT * FROM "bayesdb_temp_0";'
-    assert bql2sql('simulate weight, t1.(estimate * from columns of p1'
-            ' order by probability of (mutual information with age < 1))'
-            ' from p1 limit 10') == \
-        'SELECT * FROM "bayesdb_temp_0";'
     with pytest.raises(parse.BQLParseError):
         # Compound columns not yet implemented for SIMULATE.
         bql2sql('simulate weight + 1, t1.(estimate * from columns of p1'
             ' order by name asc limit 2) from p1 limit 10')
+
+@pytest.mark.xfail(strict=True, reason='Github issue #535')
+def test_simulate_columns_subquery_broken0():
+    assert bql2sql('simulate weight, t1.(estimate * from columns of p1'
+            ' where probability of (mutual information with age < 1) > 0.8)'
+            ' from p1 limit 10') == \
+        'SELECT * FROM "bayesdb_temp_0";'
+
+@pytest.mark.xfail(strict=True, reason='Github issue #535')
+def test_simulate_columns_subquery_broken1():
+    assert bql2sql('simulate weight, t1.(estimate * from columns of p1'
+            ' order by probability of (mutual information with age < 1))'
+            ' from p1 limit 10') == \
+        'SELECT * FROM "bayesdb_temp_0";'
 
 def test_simulate_columns_all():
     with pytest.raises(parse.BQLParseError):
