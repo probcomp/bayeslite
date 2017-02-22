@@ -604,7 +604,7 @@ existing_opt(one)       ::= K_TO K_EXISTING K_ROWS
                                 T_LROUND expression(cond) T_RROUND.
 
 hypothetical_opt(none)  ::= .
-hypothetical_opt(one)   ::= K_HYPOTHETICAL K_ROWS
+hypothetical_opt(one)   ::= K_HYPOTHETICAL K_ROWS K_WITH K_VALUES
                                 T_LROUND constraints_list(cs) T_RROUND.
 
 ofwithmulti(bql_2col)   ::= .
@@ -821,6 +821,7 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_UNSET
         K_USING
         K_VALUE
+        K_VALUES
         K_VARIABLE
         K_VARIABLES
         K_WAIT

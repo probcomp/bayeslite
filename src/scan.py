@@ -136,6 +136,7 @@ keywords = {
     "unset": grammar.K_UNSET,
     "using": grammar.K_USING,
     "value": grammar.K_VALUE,
+    "values": grammar.K_VALUES,
     "variable": grammar.K_VARIABLE,
     "variables": grammar.K_VARIABLES,
     "wait": grammar.K_WAIT,

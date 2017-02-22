@@ -656,13 +656,12 @@ def test_generative_similarity():
             of (
                 name = 'Uganda'
             )
-            hypothetical rows (
+            hypothetical rows with values(
                 ("gdp_per_capita" = 82, "mortality" = 14),
                 ("gdp_per_capita" = 74, continent = 'Europe', "mortality" = 7)
             )
-            with respect to (
+            with respect to
               "gdp_per_capita"
-            )
         from t
         ''') == \
         [ast.Select(ast.SELQUANT_ALL,
@@ -694,13 +693,12 @@ def test_generative_similarity():
             to existing rows (
                 rowid between 1 AND 100
             )
-            hypothetical rows (
+            hypothetical rows with values(
                 ("gdp_per_capita" = 82, "mortality" = 14),
                 ("gdp_per_capita" = 74, continent = 'Europe', "mortality" = 7)
             )
-            with respect to (
+            with respect to
               "gdp_per_capita"
-            )
         from t
         ''') == \
         [ast.Select(ast.SELQUANT_ALL,
