@@ -773,7 +773,7 @@ def test_add_variable():
                 ''' % (target, other, extra))
                 assert cursor_value(cursor) >= 0
             bdb.execute('''
-                ESTIMATE SIMILARITY WITH RESPECT TO %s
+                ESTIMATE SIMILARITY IN THE CONTEXT OF %s
                 FROM PAIRWISE p %s;
             ''' % (target, extra,)).fetchall()
         # Fail to run quieres on height, does not exist yet.

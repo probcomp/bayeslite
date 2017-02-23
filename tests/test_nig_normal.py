@@ -138,36 +138,23 @@ def test_nig_normal_latent_smoke():
         bdb.execute('simulate x, xe from p modelled by g1 limit 1').fetchall()
 
         assert 100 == len(bdb.execute('''
-            estimate similarity with respect to x from pairwise p limit 100
+            estimate similarity in the context of x from pairwise p limit 100
         ''').fetchall())
         assert 1 == len(bdb.execute('''
-            estimate similarity from pairwise p modelled by g0 limit 1
-        ''').fetchall())
-        assert 1 == len(bdb.execute('''
-            estimate similarity with respect to (x)
-                from pairwise p modelled by g0 limit 1
+            estimate similarity in the context of x
+            from pairwise p modelled by g0 limit 1
         ''').fetchall())
                 # No such column xe in g0.
         with pytest.raises(BQLError):
             assert 1 == len(bdb.execute('''
-                estimate similarity with respect to (xe)
+                estimate similarity in the context of xe
                     from pairwise p modelled by g0 limit 1
             ''').fetchall())
         # Column xe exists in g1.
         assert 1 == len(bdb.execute('''
-            estimate similarity with respect to xe
+            estimate similarity in the context of xe
                 from pairwise p modelled by g1 limit 1
         ''').fetchall())
-        assert 1 == len(bdb.execute('''
-            estimate similarity with respect to (xe)
-                from pairwise p modelled by g1 limit 1
-        ''').fetchall())
-        # Similarity with respect to multiple columns.
-        with pytest.raises(BQLError):
-            assert 1 == len(bdb.execute('''
-                estimate similarity with respect to (x, xe)
-                    from pairwise p modelled by g1 limit 1
-            ''').fetchall())
 
         bdb.execute('drop models from g0')
         bdb.execute('drop generator g0')

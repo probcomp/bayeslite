@@ -764,7 +764,7 @@ def compile_simulate_models(bdb, simmodels, out):
 
 # XXX Use context to determine whether to yield column names or
 # numbers, so that top-level queries yield names, but, e.g.,
-# subqueries in SIMILARITY TO 0 WITH RESPECT TO (...) yield numbers
+# subqueries in SIMILARITY TO 0 IN THE CONTEXT OF (...) yield numbers
 # since that's what bql_row_similarity wants.
 #
 # XXX Use query parameters, not quotation.
@@ -1013,7 +1013,7 @@ class BQLCompiler_Const(object):
                 ' is 1-column function, not a constant.')
         elif isinstance(bql, ast.ExpBQLSim):
             compile_similarity(bdb, population_id, generator_id,
-                bql.ofcondition, bql.tocondition, bql.column_lists, self, out)
+                bql.ofcondition, bql.tocondition, bql.column, self, out)
         elif isinstance(bql, ast.ExpBQLDepProb):
             compile_bql_2col_2(bdb, population_id, generator_id,
                 'bql_column_dependence_probability',
@@ -1074,16 +1074,12 @@ class BQLCompiler_1Row(BQLCompiler_Const):
                 qt = sqlite3_quote_name(table_name)
                 out.write('SELECT _rowid_ FROM %s WHERE ' % (qt,))
                 compile_expression(bdb, bql.tocondition, self, out)
-            if len(bql.column_lists) == 1 and \
-               isinstance(bql.column_lists[0], ast.ColListAll):
-                # We'll likely run up against SQLite's limit on the
-                # number of arguments in this case.  Instead, let
-                # bql_row_similarity find the columns.
-                pass
-            else:
-                out.write(', ')
-                compile_column_lists(bdb, population_id, generator_id,
-                    bql.column_lists, self, out)
+            assert len(bql.column) == 1
+            if isinstance(bql.column[0], ast.ColListAll):
+                raise BQLError(bdb, 'Cannot use all variables for CONTEXT.')
+            out.write(', ')
+            compile_column_lists(
+                bdb, population_id, generator_id, bql.column, self, out)
             out.write(')')
         else:
             super(BQLCompiler_1Row, self).compile_bql(bdb, bql, out)
@@ -1164,16 +1160,12 @@ class BQLCompiler_2Row(object):
             out.write('bql_row_similarity(%d, %s' %
                 (population_id, nullor(generator_id)))
             out.write(', %s, %s' % (self.rowid0_exp, self.rowid1_exp))
-            if len(bql.column_lists) == 1 and \
-               isinstance(bql.column_lists[0], ast.ColListAll):
-                # We'll likely run up against SQLite's limit on the
-                # number of arguments in this case.  Instead, let
-                # bql_row_similarity find the columns.
-                pass
-            else:
-                out.write(', ')
-                compile_column_lists(bdb, population_id, generator_id,
-                    bql.column_lists, self, out)
+            assert len(bql.column) == 1
+            if isinstance(bql.column[0], ast.ColListAll):
+                raise BQLError(bdb, 'Cannot use all variables for CONTEXT.')
+            out.write(', ')
+            compile_column_lists(bdb, population_id, generator_id,
+                bql.column, self, out)
             out.write(')')
         elif isinstance(bql, ast.ExpBQLDepProb):
             raise BQLError(bdb, 'Dependence probability is 0-row function.')
@@ -1368,7 +1360,7 @@ def compile_mutinf_extra(
             bql_compiler, out)
 
 def compile_similarity(bdb, population_id, generator_id, ofcondition,
-        tocondition, column_lists, bql_compiler, out):
+        tocondition, column, bql_compiler, out):
     if ofcondition is None or tocondition is None:
         raise BQLError(bdb, 'Similarity as constant needs exactly 2 rows.')
     out.write(
@@ -1382,16 +1374,12 @@ def compile_similarity(bdb, population_id, generator_id, ofcondition,
     with compiling_paren(bdb, out, '(', ')'):
         out.write('SELECT _rowid_ FROM %s WHERE ' % (qt,))
         compile_expression(bdb, tocondition, bql_compiler, out)
-    if len(column_lists) == 1 and \
-       isinstance(column_lists[0], ast.ColListAll):
-        # We'll likely run up against SQLite's limit on the
-        # number of arguments in this case.  Instead, let
-        # bql_row_similarity find the columns.
-        pass
-    else:
-        out.write(', ')
-        compile_column_lists(
-            bdb, population_id, generator_id, column_lists, bql_compiler, out)
+    assert len(column) == 1
+    if isinstance(column[0], ast.ColListAll):
+        raise BQLError(bdb, 'Cannot use all variables for CONTEXT.')
+    out.write(', ')
+    compile_column_lists(
+        bdb, population_id, generator_id, column, bql_compiler, out)
     out.write(')')
 
 def compile_constraints(bdb, population_id, generator_id, constraints,

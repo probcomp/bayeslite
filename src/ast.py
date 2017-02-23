@@ -398,7 +398,7 @@ ExpBQLProbDensityFn = namedtuple('ExpBQLProbDensityFn', [
     'value', 'constraints'
 ])
 ExpBQLSim = namedtuple('ExpBQLSim', [
-    'ofcondition', 'tocondition', 'column_lists'
+    'ofcondition', 'tocondition', 'column'
 ])
 ExpBQLGenSim = namedtuple('ExpBQLGenSim', [
     'ofcondition', 'tocondition', 'hypotheticals', 'column_lists'

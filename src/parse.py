@@ -615,12 +615,12 @@ class BQLSemantics(object):
     def p_bqlfn_condprob_1col(self, e, constraints):
                                                 return ast.ExpBQLProbDensityFn(
                                                     e, constraints)
-    def p_bqlfn_sim_const(self, cond0, cond1, cols):
-        return ast.ExpBQLSim(cond0, cond1, cols)
-    def p_bqlfn_sim_1row(self, cond, cols):
-        return ast.ExpBQLSim(None, cond, cols)
-    def p_bqlfn_sim_2row(self, cols):
-        return ast.ExpBQLSim(None, None, cols)
+    def p_bqlfn_sim_const(self, cond0, cond1, col):
+        return ast.ExpBQLSim(cond0, cond1, col)
+    def p_bqlfn_sim_1row(self, cond, col):
+        return ast.ExpBQLSim(None, cond, col)
+    def p_bqlfn_sim_2row(self, col):
+        return ast.ExpBQLSim(None, None, col)
 
     def p_bqlfn_gensim(self, cond0, cond1, constraints, cols):
         return ast.ExpBQLGenSim(cond0, cond1, constraints, cols)
@@ -671,9 +671,7 @@ class BQLSemantics(object):
         return ast.ExpBQLPredict(col, conf, nsamp)
     def p_bqlfn_primary(self, p):               return p
 
-    def p_wrt_none(self):                       return [ast.ColListAll()]
-    def p_wrt_one(self, collist):               return [collist]
-    def p_wrt_some(self, collists):             return collists
+    def p_wrt_one(self, col):                   return [col]
 
     def p_ofwith_bql_2col(self):                return (None, None)
     def p_ofwith_bql_1col(self, col):           return (col, None)

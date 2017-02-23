@@ -39,7 +39,7 @@ def bayesdb_install_bql(db, cookie):
         bql_column_dependence_probability)
     function("bql_column_mutual_information", -1, bql_column_mutual_information)
     function("bql_column_value_probability", -1, bql_column_value_probability)
-    function("bql_row_similarity", -1, bql_row_similarity)
+    function("bql_row_similarity", 5, bql_row_similarity)
     function("bql_row_column_predictive_probability", 4,
         bql_row_column_predictive_probability)
     function("bql_predict", 6, bql_predict)
@@ -402,21 +402,16 @@ def _bql_logpdf(bdb, population_id, generator_id, targets, constraints):
 
 ### BayesDB row functions
 
-# Row function:  SIMILARITY TO <target_row> [WITH RESPECT TO <columns>]
+# Row function:  SIMILARITY TO <target_row> IN THE CONTEXT OF <column>
 def bql_row_similarity(
-        bdb, population_id, generator_id, rowid, target_rowid, *colnos):
+        bdb, population_id, generator_id, rowid, target_rowid, colno):
     if target_rowid is None:
         raise BQLError(bdb, 'No such target row for SIMILARITY')
-    if len(colnos) == 0:
-        colnos = core.bayesdb_variable_numbers(bdb, population_id,
-            generator_id)
-    if len(colnos) != 1:
-        raise BQLError(bdb,
-            'Multiple with respect to columns: %s.' % (colnos,))
     def generator_similarity(generator_id):
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
+        # XXX Change [colno] to colno by updating IBayesDBMetamodel.
         return metamodel.row_similarity(
-            bdb, generator_id, None, rowid, target_rowid, colnos)
+            bdb, generator_id, None, rowid, target_rowid, [colno])
     generator_ids = _retrieve_generator_ids(bdb, population_id, generator_id)
     similarities = map(generator_similarity, generator_ids)
     return stats.arithmetic_mean(similarities)

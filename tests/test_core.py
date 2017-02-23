@@ -508,40 +508,6 @@ def test_t1_column_value_probability(colno, rowid):
         ''' % (qv, qt)
         bdb.sql_execute(sql, (population_id, colno, rowid)).fetchall()
 
-@pytest.mark.parametrize('exname,source,target,colnos',
-    [(exname, source, target, list(colnos))
-        for exname in examples.keys()
-        for source in range(1,3)
-        for target in range(2,4)
-        for colnos in powerset(range(1,3))])
-def test_row_similarity(exname, source, target, colnos):
-    if exname == 't0' and any(colno > 0 for colno in colnos):
-        pytest.skip('Not enough columns in t0.')
-    if exname.startswith('t1_sub') and any(colno > 1 for colno in colnos):
-        pytest.skip('Not enough columns in %s.' % (exname,))
-    with analyzed_bayesdb_population(examples[exname](), 1, 1) \
-            as (bdb, population_id, generator_id):
-        popcols = core.bayesdb_variable_numbers(
-            bdb, population_id, generator_id)
-        # Forbid multiple columns specified in WITH RESPECT TO.
-        def test_row_similarity_one(f):
-            try:
-                f()
-                if len(colnos) != 1 and len(popcols) != 1:
-                    pytest.fail('No exception on similarity with respect to.')
-            except bayeslite.BQLError:
-                if len(colnos) == 1:
-                    pytest.fail('Bad exception on similarity with respect to.')
-        def f_api():
-            bqlfn.bql_row_similarity(
-                bdb, population_id, None, source, target, *colnos)
-        def f_sql():
-            sql = 'select bql_row_similarity(?, NULL, ?, ?%s%s)' % \
-                ('' if 0 == len(colnos) else ', ', ', '.join(map(str, colnos)))
-            bdb.sql_execute(sql, (population_id, source, target)).fetchall()
-        test_row_similarity_one(f_sql)
-        test_row_similarity_one(f_api)
-
 @pytest.mark.parametrize('exname,rowid,colno',
     [(exname, rowid, colno)
         for exname in examples.keys()

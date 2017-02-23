@@ -159,7 +159,7 @@ def test_similarity_identity():
         for rowid in rowids:
             c = bdb.execute('''
                 estimate similarity of (rowid=?) to (rowid=?)
-                with respect to (age) by p1
+                in the context of age by p1
             ''', (rowid[0], rowid[0])).fetchall()
             assert len(c) == 1
             assert c[0][0] == 1
@@ -398,46 +398,44 @@ def test_estimate_bql():
     assert bql2sql('estimate probability density of weight = f(c)'
             ' from p1;') == \
         'SELECT bql_pdf_joint(1, NULL, 3, "f"("c")) FROM "t1";'
-    assert bql2sql('estimate similarity to (rowid = 5) from p1;') == \
+    assert bql2sql('estimate similarity to (rowid = 5) '
+            'in the context of weight from p1;') == \
         'SELECT bql_row_similarity(1, NULL, _rowid_,' \
-        ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5))) FROM "t1";'
+        ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)), 3) FROM "t1";'
     assert bql2sql(
-            'estimate similarity of (rowid = 12) to (rowid = 5) from p1;') == \
+            'estimate similarity of (rowid = 12) to (rowid = 5) '
+            'in the context of weight from p1;') == \
         'SELECT bql_row_similarity(1, NULL,' \
         ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 12)),' \
-        ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5))) FROM "t1";'
-    assert bql2sql('estimate similarity to (rowid = 5) with respect to age'
+        ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)), 3) FROM "t1";'
+    assert bql2sql('estimate similarity to (rowid = 5) in the context of age'
             ' from p1') == \
         'SELECT bql_row_similarity(1, NULL, _rowid_,' \
         ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)), 2) FROM "t1";'
-    assert bql2sql('estimate similarity to (rowid = 5)'
-            ' with respect to (age, weight) from p1;') == \
-        'SELECT bql_row_similarity(1, NULL, _rowid_,' \
-        ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)), 2, 3) FROM "t1";'
     assert bql2sql(
         'estimate similarity of (rowid = 5) to (height = 7 and age < 10)'
-            ' with respect to (age, weight) from p1;') == \
+            ' in the context of weight from p1;') == \
         'SELECT bql_row_similarity(1, NULL,' \
         ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)),' \
         ' (SELECT _rowid_ FROM "t1" WHERE (("height" = 7) AND ("age" < 10))),' \
-        ' 2, 3) FROM "t1";'
-    assert bql2sql('estimate similarity to (rowid = 5) with respect to (*)'
-            ' from p1;') == \
-        'SELECT bql_row_similarity(1, NULL, _rowid_,' \
-        ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5))) FROM "t1";'
+        ' 3) FROM "t1";'
+    with pytest.raises(bayeslite.BQLError):
+        # Cannot use all variables for similarity.
+        bql2sql(
+            'estimate similarity to (rowid = 5) in the context of * from p1;')
     assert bql2sql('estimate similarity to (rowid = 5)'
-            ' with respect to (age, weight) from p1;') == \
+            ' in the context of age from p1;') == \
         'SELECT bql_row_similarity(1, NULL, _rowid_,' \
-        ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)), 2, 3) FROM "t1";'
+        ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)), 2) FROM "t1";'
     assert bql2sql('estimate dependence probability of age with weight'
             ' from p1;') == \
         'SELECT bql_column_dependence_probability(1, NULL, 2, 3) FROM "t1";'
     with pytest.raises(bayeslite.BQLError):
         # Need both rows fixed.
-        bql2sql('estimate similarity to (rowid=2) by p1')
+        bql2sql('estimate similarity to (rowid=2) in the context of r by p1')
     with pytest.raises(bayeslite.BQLError):
         # Need both rows fixed.
-        bql2sql('estimate similarity within p1')
+        bql2sql('estimate similarity in the context of r within p1')
     with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
         bql2sql('estimate dependence probability with age from p1;')
@@ -728,7 +726,7 @@ def test_estimate_columns_trivial():
     with pytest.raises(bayeslite.BQLError):
         # SIMILARITY makes no sense without row.
         bql2sql('estimate * from columns of p1 where' +
-            ' similarity to (rowid = x) with respect to c > 0;')
+            ' similarity to (rowid = x) in the context of c > 0;')
     assert bql2sql('estimate * from columns of p1 where' +
             ' dependence probability with age > 0.5;') == \
         prefix + \
@@ -949,10 +947,7 @@ def test_estimate_pairwise_trivial():
 def test_estimate_pairwise_row():
     prefix = 'SELECT r0._rowid_ AS rowid0, r1._rowid_ AS rowid1'
     infix = ' AS value FROM "t1" AS r0, "t1" AS r1'
-    assert bql2sql('estimate similarity from pairwise p1;') == \
-        prefix + ', bql_row_similarity(1, NULL, r0._rowid_, r1._rowid_)' + \
-        infix + ';'
-    assert bql2sql('estimate similarity with respect to age' +
+    assert bql2sql('estimate similarity in the context of age' +
             ' from pairwise p1;') == \
         prefix + ', bql_row_similarity(1, NULL, r0._rowid_, r1._rowid_, 2)' + \
         infix + ';'
@@ -1144,27 +1139,13 @@ def test_trivial_commands():
         bdb.execute('select * from T0').fetchall()
         bdb.execute('estimate * from p').fetchall()
         bdb.execute('estimate * from P').fetchall()
-        # SIMIARITY WITH RESPECT TO requires exactly 1 variable.
+        # SIMIARITY IN THE CONTEXT OF requires exactly 1 variable.
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate similarity from pairwise p').fetchall()
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate similarity with respect to * '
+            bdb.execute('estimate similarity in the context of * '
                 'from pairwise p').fetchall()
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate similarity with respect to (*) '
-                'from pairwise p').fetchall()
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate similarity with respect to (*, age) '
-                'from pairwise p').fetchall()
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate similarity with respect to (age, gender) '
-                'from pairwise p').fetchall()
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate similarity to (rowid=10) with respect to '
-                '(age, gender) from p').fetchall()
-        bdb.execute('estimate similarity with respect to (age) '
+        bdb.execute('estimate similarity in the context of age '
             'from pairwise p').fetchall()
-        bdb.execute('estimate similarity to (rowid=1) with respect to rank '
+        bdb.execute('estimate similarity to (rowid=1) in the context of rank '
             'from p').fetchall()
         bdb.execute('select value from'
             ' (estimate correlation from pairwise columns of p)').fetchall()
@@ -1203,7 +1184,8 @@ def test_trivial_commands():
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate correlation from pairwise columns of t')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate similarity from pairwise t')
+            bdb.execute('estimate similarity in the context of age '
+                'from pairwise t')
         bdb.execute('initialize 6 models if not exists for p_cc')
         bdb.execute('analyze p_cc for 1 iteration wait')
 
@@ -1295,14 +1277,14 @@ def test_parametrized():
         assert iters0 != iters1
         assert thetas0 != thetas1
         assert traced_execute('estimate similarity to (rowid = 1)'
-                ' with respect to (estimate * from columns of p limit 1)'
+                ' in the context of (estimate * from columns of p limit 1)'
                 ' from p;') == [
             'estimate similarity to (rowid = 1)' \
-                ' with respect to (estimate * from columns of p limit 1)' \
+                ' in the context of (estimate * from columns of p limit 1)' \
                 ' from p;',
         ]
         assert sqltraced_execute('estimate similarity to (rowid = 1)'
-                ' with respect to (estimate * from columns of p limit 1)'
+                ' in the context of (estimate * from columns of p limit 1)'
                 ' from p;') == [
             'SELECT COUNT(*) FROM bayesdb_population'
                 ' WHERE name = ?',
@@ -1346,7 +1328,7 @@ def test_parametrized():
                 ' WHERE generator_id = ? AND colno = ?',
         ]
         assert sqltraced_execute('estimate similarity to (rowid = 1)'
-                ' with respect to (estimate * from columns of p limit ?)'
+                ' in the context of (estimate * from columns of p limit ?)'
                 ' from p;',
                 (1,)) == [
             'SELECT COUNT(*) FROM bayesdb_population'
@@ -2008,7 +1990,7 @@ def test_txn():
         bdb.execute('ESTIMATE * FROM p').fetchall()
 
         # Make sure bdb.transaction works, rolls back on exception,
-        # and handles nesting correctly with respect to savepoints.
+        # and handles nesting correctly in the context of savepoints.
         try:
             with bdb.transaction():
                 bdb.sql_execute('create table quagga(x)')
@@ -2161,7 +2143,7 @@ def test_misc_errors():
         with pytest.raises(bayeslite.BQLError):
             try:
                 bdb.execute('estimate similarity to (rowid=1)'
-                    ' with respect to (agee) from p1')
+                    ' in the context of agee from p1')
             except bayeslite.BQLError as e:
                 assert 'No such columns in population:' in str(e)
                 raise
@@ -2252,7 +2234,8 @@ def test_estimate_by():
             bdb.execute('estimate predictive probability of age'
                 ' by p1')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate similarity to (rowid=1) by p1')
+            bdb.execute('estimate similarity to (rowid=1) '
+                'in the context of age by p1')
         def check(x, bindings=None):
             assert len(bdb.execute(x, bindings=bindings).fetchall()) == 1
         check('estimate probability density of age = 42 by p1')
@@ -2262,8 +2245,8 @@ def test_estimate_by():
         check('estimate correlation pvalue of age with weight by p1')
         rowid = bdb.execute('select min(rowid) from t1').fetchall()[0][0]
         check('''
-            estimate similarity of (rowid=?) to (rowid=?) with respect
-            to (weight) by p1
+            estimate similarity of (rowid=?) to (rowid=?)
+            in the context of weight by p1
         ''', (rowid, rowid,))
 
 def test_empty_cursor():

@@ -493,8 +493,8 @@ unary(bql)              ::= bqlfn(b).
  *
  * (1) Functions of two columns: DEPENDENCE PROBABILITY.
  * (2) Functions of one column: DEPENDENCE PROBABILITY WITH C.
- * (3) Functions of two rows: SIMILARITY WITH RESPECT TO C.
- * (4) Functions of one row: SIMILARITY TO 5 WITH RESPECT TO C.
+ * (3) Functions of two rows: SIMILARITY IN THE CONTEXT OF C.
+ * (4) Functions of one row: SIMILARITY TO 5 IN THE CONTEXT OF C.
  * (5) Constants: DEPENDENCE PROBABILITY OF C WITH D.
  *
  * Although constants can appear in any context (subject to the
@@ -504,7 +504,7 @@ unary(bql)              ::= bqlfn(b).
  *
  * (1) ESTIMATE DEPENDENCE PROBABILITY PAIRWISE COLUMNS OF FROM T;
  * (2) ESTIMATE * FROM COLUMNS OF T ORDER BY DEPENDENCE PROBABILITY WITH C;
- * (3) SELECT SIMILARITY TO 5 WITH RESPECT TO C FROM T;
+ * (3) SELECT SIMILARITY TO 5 IN THE CONTEXT OF C FROM T;
  *
  * It makes no sense to say
  *
@@ -515,9 +515,9 @@ unary(bql)              ::= bqlfn(b).
  * to say
  *
  *      ESTIMATE * FROM COLUMNS OF T
- *              WHERE SIMILARITY TO 5 WITH RESPECT TO C > 5,
+ *              WHERE SIMILARITY TO 5 IN THE CONTEXT OF C > 5,
  *
- * because SIMILARITY TO 5 WITH RESPECT TO C is a function of a row,
+ * because SIMILARITY TO 5 IN THE CONTEXT OF C is a function of a row,
  * not a function of a column.
  *
  * We could invent four different expression nonterminals alike in
@@ -578,17 +578,17 @@ bqlfn(condprob_1col)    ::= K_PROBABILITY K_DENSITY K_OF K_VALUE primary(e)
 bqlfn(sim_const)         ::= K_SIMILARITY
                                 K_OF T_LROUND expression(cond0) T_RROUND
                                 K_TO T_LROUND expression(cond1) T_RROUND
-                                wrt(cols).
+                                wrt(col).
 bqlfn(sim_1row)         ::= K_SIMILARITY K_TO
                                 T_LROUND expression(cond) T_RROUND
-                                wrt(cols).
-bqlfn(sim_2row)         ::= K_SIMILARITY wrt(cols).
+                                wrt(col).
+bqlfn(sim_2row)         ::= K_SIMILARITY wrt(col).
 
 bqlfn(gensim)           ::= K_GENERATIVE K_SIMILARITY
                                 gensim_of_opt(cond0)
                                 existing_opt(cond1)
                                 hypothetical_opt(constraints)
-                                wrt(cols).
+                                wrt(col).
 
 bqlfn(depprob)          ::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
 
@@ -637,10 +637,7 @@ bqlfn(primary)          ::= primary(p).
  * necessary to avoid ambiguity at the comma: is it another select
  * column, or is it another wrt column?
  */
-wrt(none)               ::= .
-wrt(one)                ::= K_WITH K_RESPECT K_TO column_list(collist).
-wrt(some)               ::= K_WITH K_RESPECT K_TO
-                                T_LROUND column_lists(collists) T_RROUND.
+wrt(one)                ::= K_IN K_THE K_CONTEXT K_OF column_list(col).
 
 ofwith(bql_2col)        ::= .
 ofwith(bql_1col)        ::= K_WITH column_name(col).
@@ -737,6 +734,7 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_COMMIT
         K_CONF
         K_CONFIDENCE
+        K_CONTEXT
         K_CORRELATION
         K_CREATE
         K_DEFAULT
@@ -799,7 +797,6 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_PVALUE
         K_REGEXP
         K_RENAME
-        K_RESPECT
         K_ROLLBACK
         K_ROW
         K_ROWS
@@ -816,6 +813,7 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_TABLE
         K_TEMP
         K_TEMPORARY
+        K_THE
         K_THEN
         K_TO
         K_UNSET
