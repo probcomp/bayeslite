@@ -619,9 +619,7 @@ def test_generative_similarity():
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('''
         select generative similarity
-            of (
-                name = 'Uganda'
-            )
+            of (name = 'Uganda')
             to hypothetical rows with values (
                 ("gdp_per_capita" = 82, "mortality" = 14),
                 ("gdp_per_capita" = 74, continent = 'Europe', "mortality" = 7)
@@ -653,12 +651,8 @@ def test_generative_similarity():
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('''
         select generative similarity
-            of (
-                name = 'Uganda'
-            )
-            to existing rows (
-                rowid between 1 AND 100
-            )
+            of (name = 'Uganda')
+            to existing rows (rowid between 1 AND 100)
             and hypothetical rows with values (
                 ("gdp_per_capita" = 82, "mortality" = 14),
                 ("gdp_per_capita" = 74, continent = 'Europe', "mortality" = 7)
