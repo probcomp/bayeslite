@@ -587,36 +587,15 @@ def test_select_bql():
             None)]
 
 def test_generative_similarity():
-    # We can parse this bql query, but since the user did not specify either
-    # hypothetical rows or existing rows, the compiler will later complain.
-    assert parse_bql_string('select generative similarity '
-            'in the context of f from t;') == \
-        [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(
-                ast.ExpBQLGenSim(
-                    ofcondition=None,
-                    tocondition=None,
-                    hypotheticals=None,
-                    column=[ast.ColListLit(['f'])]),
-                None)],
-            [ast.SelTab('t', None)], None, None, None, None)]
-    # We can parse this bql query, but since the user did not specify either
-    # hypothetical rows or existing rows, the compiler will later complain.
-    assert parse_bql_string(
-        'select generative similarity of (rowid=8) '
-            'in the context of q from t') == \
-        [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(
-                ast.ExpBQLGenSim(
-                    ofcondition=ast.ExpOp(ast.OP_EQ, (
-                        ast.ExpCol(None, 'rowid'),
-                        ast.ExpLit(ast.LitInt(8))
-                    )),
-                    tocondition=None,
-                    hypotheticals=None,
-                    column=[ast.ColListLit(['q'])]),
-                None)],
-            [ast.SelTab('t', None)], None, None, None, None)]
+    with pytest.raises(parse.BQLParseError):
+        # No ofcondition, tocondition, or constraints.
+        parse_bql_string(
+            'select generative similarity in the context of f from t;')
+    with pytest.raises(parse.BQLParseError):
+        # No tocondition, or constraints.
+        parse_bql_string(
+            'select generative similarity of (rowid=8) '
+            'in the context of q from t')
     assert parse_bql_string(
         'select generative similarity to existing rows (rowid=8 AND age < 10) '
         'in the context of "s" from t;') == \
@@ -643,7 +622,7 @@ def test_generative_similarity():
             of (
                 name = 'Uganda'
             )
-            hypothetical rows with values (
+            to hypothetical rows with values (
                 ("gdp_per_capita" = 82, "mortality" = 14),
                 ("gdp_per_capita" = 74, continent = 'Europe', "mortality" = 7)
             )
@@ -680,7 +659,7 @@ def test_generative_similarity():
             to existing rows (
                 rowid between 1 AND 100
             )
-            hypothetical rows with values(
+            and hypothetical rows with values (
                 ("gdp_per_capita" = 82, "mortality" = 14),
                 ("gdp_per_capita" = 74, continent = 'Europe', "mortality" = 7)
             )

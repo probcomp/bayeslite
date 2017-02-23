@@ -584,11 +584,21 @@ bqlfn(sim_1row)         ::= K_SIMILARITY K_TO
                                 wrt(col).
 bqlfn(sim_2row)         ::= K_SIMILARITY wrt(col).
 
-bqlfn(gensim)           ::= K_GENERATIVE K_SIMILARITY
-                                gensim_of_opt(cond0)
-                                existing_opt(cond1)
-                                hypothetical_opt(constraints)
-                                wrt(col).
+bqlfn(gensim_existing)          ::= K_GENERATIVE K_SIMILARITY
+                                        gensim_of_opt(cond0)
+                                        K_TO existing_rows(cond1)
+                                        wrt(col).
+
+bqlfn(gensim_hypothetical)      ::= K_GENERATIVE K_SIMILARITY
+                                        gensim_of_opt(cond0)
+                                        K_TO hypothetical_rows(constraints)
+                                        wrt(col).
+
+bqlfn(gensim_both)              ::= K_GENERATIVE K_SIMILARITY
+                                        gensim_of_opt(cond0)
+                                        K_TO existing_rows(cond1)
+                                        K_AND hypothetical_rows(constraints)
+                                        wrt(col).
 
 bqlfn(depprob)          ::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
 
@@ -599,12 +609,10 @@ bqlfn(prob_est)         ::= K_PROBABILITY K_OF T_LROUND expression(e) T_RROUND.
 gensim_of_opt(none)     ::= .
 gensim_of_opt(one)      ::= K_OF T_LROUND expression(cond0) T_RROUND.
 
-existing_opt(none)      ::= .
-existing_opt(one)       ::= K_TO K_EXISTING K_ROWS
+existing_rows(one)       ::= K_EXISTING K_ROWS
                                 T_LROUND expression(cond) T_RROUND.
 
-hypothetical_opt(none)  ::= .
-hypothetical_opt(one)   ::= K_HYPOTHETICAL K_ROWS K_WITH K_VALUES
+hypothetical_rows(one)   ::= K_HYPOTHETICAL K_ROWS K_WITH K_VALUES
                                 T_LROUND constraints_list(cs) T_RROUND.
 
 ofwithmulti(bql_2col)   ::= .
