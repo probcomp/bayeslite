@@ -589,20 +589,22 @@ def test_select_bql():
 def test_generative_similarity():
     # We can parse this bql query, but since the user did not specify either
     # hypothetical rows or existing rows, the compiler will later complain.
-    assert parse_bql_string('select generative similarity from t;') == \
+    assert parse_bql_string('select generative similarity '
+            'in the context of f from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
                 ast.ExpBQLGenSim(
                     ofcondition=None,
                     tocondition=None,
                     hypotheticals=None,
-                    column_lists=[ast.ColListAll()]),
+                    column=[ast.ColListLit(['f'])]),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     # We can parse this bql query, but since the user did not specify either
     # hypothetical rows or existing rows, the compiler will later complain.
     assert parse_bql_string(
-        'select generative similarity of (rowid=8) from t') == \
+        'select generative similarity of (rowid=8) '
+            'in the context of q from t') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
                 ast.ExpBQLGenSim(
@@ -612,12 +614,12 @@ def test_generative_similarity():
                     )),
                     tocondition=None,
                     hypotheticals=None,
-                    column_lists=[ast.ColListAll()]),
+                    column=[ast.ColListLit(['q'])]),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string(
         'select generative similarity to existing rows (rowid=8 AND age < 10) '
-        'from t;') == \
+        'in the context of "s" from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
                 ast.ExpBQLGenSim(
@@ -633,7 +635,7 @@ def test_generative_similarity():
                         )),
                     )),
                     hypotheticals=None,
-                    column_lists=[ast.ColListAll()]),
+                    column=[ast.ColListLit(['s'])]),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('''
@@ -641,11 +643,11 @@ def test_generative_similarity():
             of (
                 name = 'Uganda'
             )
-            hypothetical rows with values(
+            hypothetical rows with values (
                 ("gdp_per_capita" = 82, "mortality" = 14),
                 ("gdp_per_capita" = 74, continent = 'Europe', "mortality" = 7)
             )
-            with respect to
+            in the context of
               "gdp_per_capita"
         from t
         ''') == \
@@ -666,7 +668,7 @@ def test_generative_similarity():
                         ('continent',ast.ExpLit(ast.LitString('Europe'))),
                         ('mortality',ast.ExpLit(ast.LitInt(7))),
                     ]],
-                    column_lists=[ast.ColListLit(['gdp_per_capita'])],
+                    column=[ast.ColListLit(['gdp_per_capita'])],
                 ),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
@@ -682,7 +684,7 @@ def test_generative_similarity():
                 ("gdp_per_capita" = 82, "mortality" = 14),
                 ("gdp_per_capita" = 74, continent = 'Europe', "mortality" = 7)
             )
-            with respect to
+            in the context of
               "gdp_per_capita"
         from t
         ''') == \
@@ -706,7 +708,7 @@ def test_generative_similarity():
                         ('continent',ast.ExpLit(ast.LitString('Europe'))),
                         ('mortality',ast.ExpLit(ast.LitInt(7))),
                     ]],
-                    column_lists=[ast.ColListLit(['gdp_per_capita'])],
+                    column=[ast.ColListLit(['gdp_per_capita'])],
                 ),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
@@ -720,7 +722,7 @@ def test_trivial_scan_error():
 def test_trivial_precedence_error():
     with pytest.raises(parse.BQLParseError):
         parse_bql_string('select similarity to similarity to 0' +
-            ' with respect to c from t;')
+            ' in the context of c from t;')
 
 def test_trivial_commands():
     assert parse_bql_string('''

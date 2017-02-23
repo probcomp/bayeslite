@@ -622,8 +622,8 @@ class BQLSemantics(object):
     def p_bqlfn_sim_2row(self, col):
         return ast.ExpBQLSim(None, None, col)
 
-    def p_bqlfn_gensim(self, cond0, cond1, constraints, cols):
-        return ast.ExpBQLGenSim(cond0, cond1, constraints, cols)
+    def p_bqlfn_gensim(self, cond0, cond1, constraints, col):
+        return ast.ExpBQLGenSim(cond0, cond1, constraints, col)
 
     def p_bqlfn_depprob(self, cols):            return ast.ExpBQLDepProb(*cols)
 

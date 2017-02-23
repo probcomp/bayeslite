@@ -401,7 +401,7 @@ ExpBQLSim = namedtuple('ExpBQLSim', [
     'ofcondition', 'tocondition', 'column'
 ])
 ExpBQLGenSim = namedtuple('ExpBQLGenSim', [
-    'ofcondition', 'tocondition', 'hypotheticals', 'column_lists'
+    'ofcondition', 'tocondition', 'hypotheticals', 'column'
 ])
 ExpBQLDepProb = namedtuple('ExpBQLDepProb', ['column0', 'column1'])
 ExpBQLMutInf = namedtuple('ExpBQLMutInf', [
