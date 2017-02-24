@@ -1130,7 +1130,7 @@ def test_simulate_models():
             'mutual information of "bad-col" with d '
                 'given (e, r=2.7) using 100 samples as g '
             'from models of p modeled by z' % (temp, ifnotexists)) == [
-                ast.CreateTabSimModels(
+                ast.CreateTabAs(
                     bool(temp),
                     bool(ifnotexists),
                     'f',
