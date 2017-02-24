@@ -631,7 +631,8 @@ def compile_select_table(bdb, table, out):
     if ast.is_query(table):
         bql_compiler = None     # XXX
         compile_subquery(bdb, table, bql_compiler, out)
-    elif isinstance(table, str): # XXX name
+    # XXX FIXME Github issue: https://github.com/probcomp/bayeslite/issues/484
+    elif isinstance(table, (str, unicode)): # XXX name
         compile_table_name(bdb, table, out)
     else:
         assert False, 'Invalid select table: %s' % (repr(table),)
