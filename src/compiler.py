@@ -41,6 +41,7 @@ import bayeslite.simulate as simulate
 from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
+from bayeslite.util import json_dumps
 
 class Output(object):
     """Compiled SQL output accumulator.
@@ -737,30 +738,60 @@ def compile_simulate_models(bdb, simmodels, out):
     assert not any(isinstance(selcol, ast.SelColSub)
             for selcol in simmodels.columns), \
         '%r' % (simmodels,)
-    temptable = bdb.temp_table_name()
-    # XXX Unify determination of column names.
-    def map_var((i, c)):
-        if c.name is not None:
-            return c.name
-        if isinstance(c.expression, ast.ExpCol) and \
-           c.expression.column is not None:
-            return c.expression.column
-        else:
-            return 't%d' % (i,)
-    variables = map(map_var, enumerate(simmodels.columns))
-    qvs = ','.join(map(sqlite3_quote_name, variables))
-    schema = ','.join(
-        '%s NUMERIC' % (sqlite3_quote_name(v),) for v in variables)
-    qtt = sqlite3_quote_name(temptable)
-    out.winder('CREATE TEMP TABLE %s (%s)' % (qtt, schema), ())
-    out.unwinder('DROP TABLE %s' % (qtt,), ())
-    # XXX Kinda silly way to store this in intermediate memory.
-    insert_sql = '''
-        INSERT INTO %s (%s) VALUES (%s)
-    ''' % (qtt, qvs, ','.join('?' for _ in variables))
-    for row in simulate.simulate_models_rows(bdb, simmodels):
-        out.winder(insert_sql, row)
-    out.write('SELECT * FROM %s' % (qtt,))
+    if not core.bayesdb_has_population(bdb, simmodels.population):
+        raise BQLError(bdb, 'No such population: %s' % (simmodels.population,))
+    population_id = core.bayesdb_get_population(bdb, simmodels.population)
+    generator_id = None
+    assert len(simmodels.columns) == 1
+    selcol = simmodels.columns[0]
+    assert isinstance(selcol, ast.SelColExp)
+    assert isinstance(selcol.expression, ast.ExpBQLMutInf)
+    exp = selcol.expression
+    def map_var(var):
+        if not core.bayesdb_has_variable(
+                bdb, population_id, generator_id, var):
+            raise BQLError(bdb, 'No such variable in population %r: %r' %
+                (simmodels.population, var))
+        return core.bayesdb_variable_number(
+            bdb, population_id, generator_id, var)
+    target_vars = map(map_var, exp.columns0)
+    reference_vars = map(map_var, exp.columns1)
+    out.write('SELECT mi')
+    if selcol.name:
+        out.write(' AS %s' % (sqlite3_quote_name(selcol.name),))
+    out.write(' FROM bql_mutinf')
+    out.write(' WHERE population_id = %d' % (population_id,))
+    out.write(' AND target_vars = ')
+    compile_string(bdb, json_dumps(target_vars), out)
+    out.write(' AND reference_vars = ')
+    compile_string(bdb, json_dumps(reference_vars), out)
+    if exp.constraints is not None:
+        out.write(' AND conditions = ')
+        compile_simulate_constraints(
+            bdb, exp.constraints, population_id, generator_id, out)
+    if exp.nsamples is not None:
+        out.write(' AND nsamples = ')
+        bql_compiler = BQLCompiler_None()
+        compile_expression(bdb, exp.nsamples, bql_compiler, out)
+
+def compile_simulate_constraints(
+        bdb, constraints, population_id, generator_id, out):
+    def map_var(var):
+        if not core.bayesdb_has_variable(
+                bdb, population_id, generator_id, var):
+            raise BQLError(bdb, 'No such variable in population %r: %r' %
+                (simmodels.population, var))
+        return core.bayesdb_variable_number(
+            bdb, population_id, generator_id, var)
+    def map_lit(lit):
+        # XXX Kludge!
+        assert isinstance(
+            lit, (ast.LitInt, ast.LitFloat, ast.LitString, ast.LitNull))
+        return lit.value
+    assert all(isinstance(exp, ast.ExpLit) for _var, exp in constraints)
+    mapped = {map_var(var): map_lit(exp.value) for var, exp in constraints}
+    compile_string(bdb, json_dumps(mapped), out)
+
 
 # XXX Use context to determine whether to yield column names or
 # numbers, so that top-level queries yield names, but, e.g.,
