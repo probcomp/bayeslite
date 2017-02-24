@@ -203,8 +203,17 @@ def test_generative_similarity():
         from p1
     ''') == \
         'SELECT "label", bql_row_generative_similarity(1, NULL, _rowid_, '\
-        '\'\', 2, 2, 82, 3, 14, NULL, 2, 74, 1, \'hunf\', 3, 7, NULL), '\
+        '\'[]\', 2, 2, 82, 3, 14, NULL, 2, 74, 1, \'hunf\', 3, 7, NULL), '\
         '("_rowid_" + 1) FROM "t1";'
+    # No matching rows should still compile.
+    assert bql2sql('''
+        estimate label,
+            generative similarity to existing rows (rowid < 0)
+            in the context of "age"
+        from p1
+    ''') == \
+        'SELECT "label", bql_row_generative_similarity(1, NULL, _rowid_, '\
+        '\'[]\', 2) FROM "t1";'
     # When using `BY`, require OF to be specified.
     with pytest.raises(BQLError):
         bql2sql('''
@@ -239,8 +248,8 @@ def test_generative_similarity():
     ''') == \
         'SELECT "label" FROM "t1" WHERE '\
         '(bql_row_generative_similarity(1, NULL, _rowid_, \'[5]\', 3) > 1) '\
-        'ORDER BY bql_row_generative_similarity(1, NULL, _rowid_, \'\', 2, 1, '\
-            '\'zot\', NULL);'
+        'ORDER BY bql_row_generative_similarity(1, NULL, _rowid_, \'[]\', '\
+            '2, 1, \'zot\', NULL);'
 
 
 @stochastic(max_runs=2, min_passes=1)

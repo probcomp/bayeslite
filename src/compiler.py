@@ -1435,7 +1435,7 @@ def compile_generative_similarity_conditions(bdb, population_id, generator_id,
         query_rowids = [c[0] for c in cursor]
         out.write('\'%s\'' % (json.dumps(query_rowids)))
     else:
-        out.write('\'\'')
+        out.write('\'[]\'')
     # Compile the context variable.
     assert len(column) == 1
     if isinstance(column[0], ast.ColListAll):
