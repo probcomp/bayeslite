@@ -1015,6 +1015,10 @@ class BQLCompiler_Const(object):
         elif isinstance(bql, ast.ExpBQLSim):
             compile_similarity(bdb, population_id, generator_id,
                 bql.ofcondition, bql.tocondition, bql.column, self, out)
+        elif isinstance(bql, ast.ExpBQLGenSim):
+            compile_generative_similarity_2row_2(
+                bdb, population_id, generator_id, bql.ofcondition,
+                bql.tocondition, bql.hypotheticals, bql.column, self, out)
         elif isinstance(bql, ast.ExpBQLDepProb):
             compile_bql_2col_2(bdb, population_id, generator_id,
                 'bql_column_dependence_probability',
@@ -1082,6 +1086,10 @@ class BQLCompiler_1Row(BQLCompiler_Const):
             compile_column_lists(
                 bdb, population_id, generator_id, bql.column, self, out)
             out.write(')')
+        elif isinstance(bql, ast.ExpBQLGenSim):
+            compile_generative_similarity_2row_1(
+                bdb, population_id, generator_id, bql.ofcondition,
+                bql.tocondition, bql.hypotheticals, bql.column, self, out)
         else:
             super(BQLCompiler_1Row, self).compile_bql(bdb, bql, out)
 
@@ -1381,6 +1389,67 @@ def compile_similarity(bdb, population_id, generator_id, ofcondition,
     out.write(', ')
     compile_column_lists(
         bdb, population_id, generator_id, column, bql_compiler, out)
+    out.write(')')
+
+def compile_generative_similarity_2row_2(bdb, population_id, generator_id,
+        ofcondition, tocondition, hypotheticals, column, bql_compiler, out):
+    if ofcondition is None:
+        raise BQLError(bdb,
+            'Generative similarity as constant needs OF row condition.')
+    out.write(
+        'bql_row_generative_similarity(%d, %s, '
+        % (population_id, nullor(generator_id)))
+    table_name = core.bayesdb_population_table(bdb, population_id)
+    qt = sqlite3_quote_name(table_name)
+    with compiling_paren(bdb, out, '(', ')'):
+        out.write('SELECT _rowid_ FROM %s WHERE ' % (qt,))
+        compile_expression(bdb, ofcondition, bql_compiler, out)
+    out.write(', ')
+    compile_generative_similarity_conditions(
+        bdb, population_id, generator_id, tocondition, hypotheticals, column,
+        bql_compiler, out)
+
+def compile_generative_similarity_2row_1(bdb, population_id, generator_id,
+        ofcondition, tocondition, hypotheticals, column, bql_compiler, out):
+    if ofcondition is not None:
+        raise BQLError(bdb,
+            'Generative similarity as 1 row function needs no OF condition.')
+    out.write(
+        'bql_row_generative_similarity(%d, %s, _rowid_, '
+        % (population_id, nullor(generator_id)))
+    compile_generative_similarity_conditions(
+        bdb, population_id, generator_id, tocondition, hypotheticals, column,
+        bql_compiler, out)
+
+def compile_generative_similarity_conditions(bdb, population_id, generator_id,
+        tocondition, hypotheticals, column, bql_compiler, out):
+    # Compile the EXISTING ROWS specification by executing the tocondition,
+    # finding the rowids, and writing them as a JSON string.
+    if tocondition is not None:
+        table_name = core.bayesdb_population_table(bdb, population_id)
+        qt = sqlite3_quote_name(table_name)
+        temp_out = Output(0, None, ())
+        compile_expression(bdb, tocondition, bql_compiler, temp_out)
+        cursor = bdb.execute('SELECT _rowid_ FROM %s WHERE %s'
+            % (qt, temp_out.getvalue()))
+        query_rowids = [c[0] for c in cursor]
+        out.write('\'%s\'' % (json.dumps(query_rowids)))
+    else:
+        out.write('\'\'')
+    # Compile the context variable.
+    assert len(column) == 1
+    if isinstance(column[0], ast.ColListAll):
+        raise BQLError(bdb, 'Cannot use all variables for CONTEXT.')
+    out.write(', ')
+    compile_column_lists(
+        bdb, population_id, generator_id, column, bql_compiler, out)
+    # Compile the HYPOTHETICAL specification by executing the tocondition,
+    # by compiling each row as a constraint, separated by NULL.
+    if hypotheticals:
+        for values in hypotheticals:
+            compile_constraints(
+                bdb, population_id, generator_id, values, bql_compiler, out)
+            out.write(', NULL')
     out.write(')')
 
 def compile_constraints(bdb, population_id, generator_id, constraints,

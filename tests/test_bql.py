@@ -164,6 +164,85 @@ def test_similarity_identity():
             assert len(c) == 1
             assert c[0][0] == 1
 
+def test_generative_similarity():
+    # XXX Two spaces after SELECT, due to compiler.compile_select_columns.
+    assert bql2sql('''
+        estimate generative similarity
+            of (label = 'Uganda')
+            to existing rows (rowid < 4)
+            and hypothetical rows with values (
+                ("age" = 82, "weight" = 14),
+                ("age" = 74, label = 'Europe', "weight" = 7)
+            )
+            in the context of "weight"
+        by p1
+    ''') == \
+        'SELECT  bql_row_generative_similarity(1, NULL, '\
+            '(SELECT _rowid_ FROM "t1" WHERE ("label" = \'Uganda\')), '\
+            '\'[1, 2, 3]\', 3, '\
+            '2, 82, 3, 14, NULL, 2, 74, 1, \'Europe\', 3, 7, NULL);'
+    assert bql2sql('''
+        estimate generative similarity
+            of (label = 'mumble')
+            to existing rows (label = 'frotz' or age <= 4)
+            in the context of "label"
+        by p1
+    ''') == \
+        'SELECT  bql_row_generative_similarity(1, NULL, '\
+            '(SELECT _rowid_ FROM "t1" WHERE ("label" = \'mumble\')), '\
+            '\'[5, 8]\', 1);'
+    assert bql2sql('''
+        estimate label,
+            generative similarity
+            to hypothetical rows with values (
+                ("age" = 82, "weight" = 14),
+                ("age" = 74, label = 'hunf', "weight" = 7)
+            )
+            in the context of "age",
+            _rowid_ + 1
+        from p1
+    ''') == \
+        'SELECT "label", bql_row_generative_similarity(1, NULL, _rowid_, '\
+        '\'\', 2, 2, 82, 3, 14, NULL, 2, 74, 1, \'hunf\', 3, 7, NULL), '\
+        '("_rowid_" + 1) FROM "t1";'
+    # When using `BY`, require OF to be specified.
+    with pytest.raises(BQLError):
+        bql2sql('''
+            estimate generative similarity
+                to hypothetical rows with values (
+                    ("age" = 82, "weight" = 14),
+                    ("age" = 74, label = 'Europe', "weight" = 7)
+                )
+                in the context of "age"
+            by p1
+        ''')
+    # When using `FROM`, require OF to be unspecified.
+    with pytest.raises(BQLError):
+        bql2sql('''
+            estimate generative similarity
+                of (name = 'mansour')
+                to hypothetical rows with values (
+                    ("age" = 82, "weight" = 14)
+                )
+                in the context of "age"
+            from p1
+        ''')
+    assert bql2sql('''
+        estimate label from p1
+        where
+            (generative similarity to existing rows (label = 'quux' and age < 5)
+            in the context of "weight") > 1
+        order by
+            generative similarity
+                to hypothetical rows with values ((label='zot'))
+                in the context of "age"
+    ''') == \
+        'SELECT "label" FROM "t1" WHERE '\
+        '(bql_row_generative_similarity(1, NULL, _rowid_, \'[5]\', 3) > 1) '\
+        'ORDER BY bql_row_generative_similarity(1, NULL, _rowid_, \'\', 2, 1, '\
+            '\'zot\', NULL);'
+
+
 @stochastic(max_runs=2, min_passes=1)
 def test_conditional_probability(seed):
     with test_core.t1(seed=seed) as (bdb, _population_id, _generator_id):
