@@ -426,8 +426,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             self, bdb, generator_id, modelno, rowid, target_rowid, colnos):
         # Map the variable and individual indexing.
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
-        cgpm_target_rowid = self._cgpm_rowid(bdb, generator_id,
-            target_rowid)
+        cgpm_target_rowid = self._cgpm_rowid(bdb, generator_id, target_rowid)
 
         # Get the engine.
         engine = self._engine(bdb, generator_id)
