@@ -104,6 +104,9 @@ class MutinfTable(object):
         # arguments to the cursor's Filter function.
         index_info = [None] * len(constraints)
         count = _Count()
+        # XXX Return (i, True) so sqlite3 doesn't bother checking.
+        # Downside: sqlite3 doesn't check our work, so the results
+        # might be silently wrong instead of coming out missing.
         index_info[population_id] = count.next()
         if have & (1 << Mutinf.GENERATOR_ID):
             index_info[generator_id] = count.next()
@@ -114,6 +117,7 @@ class MutinfTable(object):
         if have & (1 << Mutinf.NSAMPLES):
             index_info[nsamples] = count.next()
 
+        # XXX Tell sqlite3 that this is ordered by rowid.
         return (index_info, have)
 
 
