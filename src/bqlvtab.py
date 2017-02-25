@@ -139,11 +139,14 @@ class MutinfCursor(object):
         return not self._rowid < len(self._mi)
 
     def Filter(self, indexnum, indexname, constraintargs):
+        self._rowid = 0
+        if self._population_id is not None:
+            # Already initialized, reset only.
+            return
         assert indexnum & (1 << Mutinf.POPULATION_ID)
         assert indexnum & (1 << Mutinf.TARGET_VARS)
         assert indexnum & (1 << Mutinf.REFERENCE_VARS)
         count = Count()
-        assert self._population_id is None
         self._population_id = constraintargs[count.next()]
         self._target_vars = constraintargs[count.next()]
         self._reference_vars = constraintargs[count.next()]
@@ -155,7 +158,6 @@ class MutinfCursor(object):
             self._nsamples = constraintargs[count.next()]
         else:
             self._nsamples = None
-        self._rowid = 0
         target_vars = json.loads(self._target_vars)
         reference_vars = json.loads(self._reference_vars)
         conditions_strkey = {} if self._conditions is None else \
