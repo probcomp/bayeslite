@@ -1076,6 +1076,7 @@ def test_select_columns_subquery():
             ' order by name asc limit 2) from t1') == \
         'SELECT "id", "t1"."age", "t1"."label" FROM "t1";'
 
+@pytest.mark.xfail(strict=True, reason='no simulate vars from models of')
 def test_simulate_models_columns_subquery():
     assert bql2sql('simulate weight, t1.(estimate * from columns of p1'
             ' order by name asc limit 2) from models of p1') == \
@@ -1104,6 +1105,78 @@ def test_simulate_columns_subquery():
         # Compound columns not yet implemented for SIMULATE.
         bql2sql('simulate weight + 1, t1.(estimate * from columns of p1'
             ' order by name asc limit 2) from p1 limit 10')
+
+def test_simulate_models():
+    # Base case.
+    assert bql2sql('simulate mutual information of age with weight'
+            ' from models of p1') == \
+        'SELECT mi FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[3]';"
+    # Multiple target variables.
+    assert bql2sql('simulate mutual information of (label, age) with weight'
+            ' from models of p1') == \
+        'SELECT mi FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[1, 2]'" \
+                " AND reference_vars = '[3]';"
+    # Multiple reference variables.
+    assert bql2sql('simulate mutual information of age with (label, weight)'
+            ' from models of p1') == \
+        'SELECT mi FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[1, 3]';"
+    # Specified number of samples.
+    assert bql2sql('simulate mutual information of age with weight'
+            ' using 42 samples from models of p1') == \
+        'SELECT mi FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[3]'" \
+                ' AND nsamples = 42;'
+    # Conditional.
+    assert bql2sql('simulate mutual information of age with weight'
+            " given (label = 'foo') from models of p1") == \
+        'SELECT mi FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[3]'" \
+                " AND conditions = '{\"1\": \"foo\"}';"
+    # Modelled by a specific generator.
+    assert bql2sql('simulate mutual information of age with weight'
+                ' from models of p1 modelled by g1',
+            lambda bdb: bdb.execute('create generator g1 for p1')) == \
+        'SELECT mi FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                ' AND generator_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[3]';"
+    # Two mutual informations.
+    assert bql2sql('simulate mutual information of age with weight AS "mi(aw)",'
+            ' mutual information of label with weight AS "mi(lw)"'
+            ' from models of p1') == \
+        'SELECT t0."mi(aw)" AS "mi(aw)", t1."mi(lw)" AS "mi(lw)"' \
+            ' FROM (SELECT _rowid_, mi AS "mi(aw)" FROM bql_mutinf' \
+                    ' WHERE population_id = 1' \
+                        " AND target_vars = '[2]'" \
+                        " AND reference_vars = '[3]') AS t0," \
+                ' (SELECT _rowid_, mi AS "mi(lw)" FROM bql_mutinf' \
+                    ' WHERE population_id = 1' \
+                        " AND target_vars = '[1]'" \
+                        " AND reference_vars = '[3]') AS t1" \
+            ' WHERE t0._rowid_ = t1._rowid_;'
+
+def test_probability_of_mutinf():
+    assert bql2sql('estimate probability of'
+            ' (mutual information of age with weight < 0.1) > 0.5'
+            ' within p1') == \
+        'SELECT  ((SELECT "AVG"("x") FROM (SELECT ("v0" < 0.1) AS "x"' \
+        ' FROM (SELECT mi AS "v0" FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[3]'))) > 0.5);"
 
 @pytest.mark.xfail(strict=True, reason='Github issue #535')
 def test_estimate_variables_estprob_broken0():

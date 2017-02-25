@@ -113,48 +113,6 @@ def execute_phrase(bdb, phrase, bindings=()):
                 bdb, phrase.name, phrase.csv, header=True, create=True)
         return empty_cursor(bdb)
 
-    if isinstance(phrase, ast.CreateTabSimModels):
-        assert isinstance(phrase.simulation, ast.SimulateModels)
-        with bdb.savepoint():
-            # Check if table exists.
-            if core.bayesdb_has_table(bdb, phrase.name):
-                if phrase.ifnotexists:
-                    return empty_cursor(bdb)
-                raise BQLError(bdb,
-                    'Name already defined as table: %s' % (phrase.name),)
-            # Set up schema and create the new table.
-            qn = sqlite3_quote_name(phrase.name)
-            def map_name(selcol):
-                if not isinstance(selcol, ast.SelColExp):
-                    raise NotImplementedError(
-                        'Computed or wildcard variable lists')
-                if not isinstance(selcol.expression, ast.ExpCol):
-                    # XXX Do this by compiling this rather than
-                    # executing it directly.
-                    raise NotImplementedError(
-                        'Functions of simulations in CREATE TABLE AS.')
-                if selcol.expression.table is not None:
-                    # XXX Accept at least the name of the population
-                    # in question.
-                    raise NotImplementedError(
-                        'Explicit tables in SIMULATE.')
-                return selcol.name if selcol.name is not None else \
-                    selcol.expression.column
-            qcns = map(map_name, phrase.simulation.columns)
-            temp = 'TEMP' if phrase.temp else ''
-            bdb.sql_execute('''
-                CREATE %s TABLE %s (%s)
-            ''' % (temp, qn, str.join(',', qcns)))
-            # Retrieve the rows.
-            rows = simulate_models_rows(bdb, phrase.simulation)
-            # Insert the rows into the table.
-            insert_sql = '''
-                INSERT INTO %s (%s) VALUES (%s)
-            ''' % (qn, ','.join(qcns), ','.join('?' for qcn in qcns))
-            for row in rows:
-                bdb.sql_execute(insert_sql, row)
-            return empty_cursor(bdb)
-
     if isinstance(phrase, ast.DropTab):
         with bdb.savepoint():
             sql = 'SELECT COUNT(*) FROM bayesdb_population WHERE tabname = ?'

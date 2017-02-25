@@ -158,10 +158,7 @@ class BQLSemantics(object):
 
     # SQL Data Definition Language subset
     def p_command_createtab_as(self, temp, ifnotexists, name, query):
-        if isinstance(query, ast.SimulateModels):
-            return ast.CreateTabSimModels(temp, ifnotexists, name, query)
-        else:
-            return ast.CreateTabAs(temp, ifnotexists, name, query)
+        return ast.CreateTabAs(temp, ifnotexists, name, query)
     def p_command_createtab_csv(self, temp, ifnotexists, name, csv):
         return ast.CreateTabCsv(temp, ifnotexists, name, csv)
     def p_command_droptab(self, ifexists, name):
