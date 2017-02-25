@@ -742,8 +742,41 @@ def compile_simulate_models(bdb, simmodels, out):
         raise BQLError(bdb, 'No such population: %s' % (simmodels.population,))
     population_id = core.bayesdb_get_population(bdb, simmodels.population)
     generator_id = None
-    assert len(simmodels.columns) == 1
-    selcol = simmodels.columns[0]
+    if len(simmodels.columns) == 1:
+        compile_simulate_models_1(
+            bdb, simmodels.columns[0], population_id, generator_id, False, out)
+    else:
+        # XXX For now, each of these will be independent estimates.
+        # That may be the right thing anyway -- not sure.
+        out.write('SELECT ')
+        first = True
+        for i, selcol in enumerate(simmodels.columns):
+            if first:
+                first = False
+            else:
+                out.write(', ')
+            qname = sqlite3_quote_name(selcol.name or 'mi')
+            out.write('t%d.%s' % (i, qname))
+            if selcol.name is not None:
+                out.write(' AS %s' % (qname,))
+        out.write(' FROM ')
+        first = True
+        for i, selcol in enumerate(simmodels.columns):
+            if first:
+                first = False
+            else:
+                out.write(', ')
+            with compiling_paren(bdb, out, '(', ')'):
+                compile_simulate_models_1(
+                    bdb, selcol, population_id, generator_id, True, out)
+            out.write(' AS t%d' % (i,))
+        out.write(' WHERE ')
+        out.write(' AND '.join(
+            't0._rowid_ = t%d._rowid_' % (i,)
+            for i in xrange(1, len(simmodels.columns))))
+
+def compile_simulate_models_1(
+        bdb, selcol, population_id, generator_id, rowid_p, out):
     assert isinstance(selcol, ast.SelColExp)
     assert isinstance(selcol.expression, ast.ExpBQLMutInf)
     exp = selcol.expression
@@ -756,7 +789,10 @@ def compile_simulate_models(bdb, simmodels, out):
             bdb, population_id, generator_id, var)
     target_vars = map(map_var, exp.columns0)
     reference_vars = map(map_var, exp.columns1)
-    out.write('SELECT mi')
+    out.write('SELECT')
+    if rowid_p:
+        out.write(' _rowid_,')
+    out.write(' mi')
     if selcol.name:
         out.write(' AS %s' % (sqlite3_quote_name(selcol.name),))
     out.write(' FROM bql_mutinf')
