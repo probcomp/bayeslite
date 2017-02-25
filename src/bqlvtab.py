@@ -23,10 +23,11 @@ import bayeslite.bqlfn as bqlfn
 class Mutinf(object):
     MI = 0
     POPULATION_ID = 1
-    TARGET_VARS = 2
-    REFERENCE_VARS = 3
-    CONDITIONS = 4
-    NSAMPLES = 5
+    GENERATOR_ID = 2
+    TARGET_VARS = 3
+    REFERENCE_VARS = 4
+    CONDITIONS = 5
+    NSAMPLES = 6
 
 
 class MutinfModule(object):
@@ -40,6 +41,7 @@ class MutinfModule(object):
             create table t(
                 mi real not null,
                 population_id integer not null,
+                generator_id integer,
                 target_vars text not null,      -- json list
                 reference_vars text not null,   -- json list
                 conditions text,                -- json dict
@@ -68,6 +70,7 @@ class MutinfTable(object):
         need |= 1 << Mutinf.REFERENCE_VARS
         have = 0
         population_id = -1
+        generator_id = -1
         target_vars = -1
         reference_vars = -1
         conditions = -1
@@ -77,6 +80,8 @@ class MutinfTable(object):
                 continue
             if c == Mutinf.POPULATION_ID:
                 population_id = i
+            elif c == Mutinf.GENERATOR_ID:
+                generator_id = i
             elif c == Mutinf.TARGET_VARS:
                 target_vars = i
             elif c == Mutinf.REFERENCE_VARS:
@@ -94,6 +99,8 @@ class MutinfTable(object):
         index_info = [None] * len(constraints)
         count = Count()
         index_info[population_id] = count.next()
+        if have & (1 << Mutinf.GENERATOR_ID):
+            index_info[generator_id] = count.next()
         index_info[target_vars] = count.next()
         index_info[reference_vars] = count.next()
         if have & (1 << Mutinf.CONDITIONS):
@@ -110,6 +117,7 @@ class MutinfCursor(object):
         self._rowid = None
         self._mi = None
         self._population_id = None
+        self._generator_id = None
         self._target_vars = None
         self._reference_vars = None
         self._conditions = None
@@ -123,6 +131,7 @@ class MutinfCursor(object):
             self._rowid,
             self._mi[self._rowid],
             self._population_id,
+            self._generator_id,
             self._target_vars,
             self._reference_vars,
             self._conditions,
@@ -148,6 +157,10 @@ class MutinfCursor(object):
         assert indexnum & (1 << Mutinf.REFERENCE_VARS)
         count = Count()
         self._population_id = constraintargs[count.next()]
+        if indexnum & (1 << Mutinf.GENERATOR_ID):
+            self._generator_id = constraintargs[count.next()]
+        else:
+            self._generator_id = None
         self._target_vars = constraintargs[count.next()]
         self._reference_vars = constraintargs[count.next()]
         if indexnum & (1 << Mutinf.CONDITIONS):
@@ -166,7 +179,7 @@ class MutinfCursor(object):
             {int(k): v for k, v in sorted(conditions_strkey.iteritems())}
         # XXX Expose this API better from bqlfn.
         mis = bqlfn._bql_column_mutual_information(
-            self._bdb, self._population_id, None,
+            self._bdb, self._population_id, self._generator_id,
             target_vars, reference_vars, self._nsamples,
             *_flatten2(conditions.iteritems()))
         self._mi = _flatten2(mis)

@@ -742,6 +742,13 @@ def compile_simulate_models(bdb, simmodels, out):
         raise BQLError(bdb, 'No such population: %s' % (simmodels.population,))
     population_id = core.bayesdb_get_population(bdb, simmodels.population)
     generator_id = None
+    if simmodels.generator is not None:
+        if not core.bayesdb_has_generator(
+                bdb, population_id, simmodels.generator):
+            raise BQLError(bdb, 'No such generator: %s' %
+                (simmodels.generator,))
+        generator_id = core.bayesdb_get_generator(
+            bdb, population_id, simmodels.generator)
     if len(simmodels.columns) == 1:
         compile_simulate_models_1(
             bdb, simmodels.columns[0], population_id, generator_id, False, out)
@@ -797,6 +804,8 @@ def compile_simulate_models_1(
         out.write(' AS %s' % (sqlite3_quote_name(selcol.name),))
     out.write(' FROM bql_mutinf')
     out.write(' WHERE population_id = %d' % (population_id,))
+    if generator_id is not None:
+        out.write(' AND generator_id = %d' % (generator_id,))
     out.write(' AND target_vars = ')
     compile_string(bdb, json_dumps(target_vars), out)
     out.write(' AND reference_vars = ')
