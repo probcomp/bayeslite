@@ -1070,6 +1070,20 @@ def test_simulate_models():
                 ' AND generator_id = 1' \
                 " AND target_vars = '[2]'" \
                 " AND reference_vars = '[3]';"
+    # Two mutual informations.
+    assert bql2sql('simulate mutual information of age with weight AS "mi(aw)",'
+            ' mutual information of label with weight AS "mi(lw)"'
+            ' from models of p1') == \
+        'SELECT t0."mi(aw)" AS "mi(aw)", t1."mi(lw)" AS "mi(lw)"' \
+            ' FROM (SELECT _rowid_, mi AS "mi(aw)" FROM bql_mutinf' \
+                    ' WHERE population_id = 1' \
+                        " AND target_vars = '[2]'" \
+                        " AND reference_vars = '[3]') AS t0," \
+                ' (SELECT _rowid_, mi AS "mi(lw)" FROM bql_mutinf' \
+                    ' WHERE population_id = 1' \
+                        " AND target_vars = '[1]'" \
+                        " AND reference_vars = '[3]') AS t1" \
+            ' WHERE t0._rowid_ = t1._rowid_;'
 
 def test_probability_of_mutinf():
     assert bql2sql('estimate probability of'
