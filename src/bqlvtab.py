@@ -190,7 +190,7 @@ class MutinfCursor(object):
         conditions_strkey = {} if self._conditions is None else \
             json.loads(self._conditions)
         conditions = \
-            {int(k): v for k, v in sorted(conditions_strkey.iteritems())}
+            {int(k): v for k, v in conditions_strkey.iteritems()}
 
         # Compute the mutual information.
         #
@@ -198,7 +198,7 @@ class MutinfCursor(object):
         mis = bqlfn._bql_column_mutual_information(
             self._bdb, self._population_id, self._generator_id,
             target_vars, reference_vars, self._nsamples,
-            *_flatten2(conditions.iteritems()))
+            *_flatten2(sorted(conditions.iteritems())))
         self._mi = _flatten2(mis)
 
 
