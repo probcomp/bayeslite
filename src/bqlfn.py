@@ -40,6 +40,7 @@ def bayesdb_install_bql(db, cookie):
     function("bql_column_mutual_information", -1, bql_column_mutual_information)
     function("bql_column_value_probability", -1, bql_column_value_probability)
     function("bql_row_similarity", 5, bql_row_similarity)
+    function("bql_row_generative_similarity", -1, bql_row_generative_similarity)
     function("bql_row_column_predictive_probability", 4,
         bql_row_column_predictive_probability)
     function("bql_predict", 6, bql_predict)
@@ -415,6 +416,35 @@ def bql_row_similarity(
     generator_ids = _retrieve_generator_ids(bdb, population_id, generator_id)
     similarities = map(generator_similarity, generator_ids)
     return stats.arithmetic_mean(similarities)
+
+# Row function:  GENERATIVE SIMILARITY TO (<target_row>)
+#  [<AND HYPOTHETICAL ROWS WITH VALUES ((...))] IN THE CONTEXT OF <column>
+def bql_row_generative_similarity(
+        bdb, population_id, generator_id, rowid_target, rowid_query, colno,
+        *constraint_args):
+    if rowid_target is None:
+        raise BQLError(bdb, 'No such target row for SIMILARITY')
+    rowid_query = json.loads(rowid_query)
+    # Build the list of hypothetical values.
+    # Each sequence of values is separated by None to demarcate between rows.
+    splits = [-1] + [i for i, x in enumerate(constraint_args) if x is None]
+    assert splits[-1] == len(constraint_args) - 1
+    rows_list = [
+        constraint_args[splits[i]+1:splits[i+1]]
+        for i in range(len(splits)-1)
+    ]
+    assert all(len(row)%2 == 0 for row in rows_list)
+    hypotheticals = [zip(row[::2], row[1::2]) for row in rows_list]
+    if len(rowid_query) == 0 and len(hypotheticals) == 0:
+        raise BQLError(bdb, 'No matching rows for GENERATIVE SIMILARITY.')
+    def generator_similarity(generator_id):
+        metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
+        return metamodel.generative_similarity(
+            bdb, generator_id, None, rowid_target, rowid_query,
+            hypotheticals, colno)
+    generator_ids = _retrieve_generator_ids(bdb, population_id, generator_id)
+    sims = map(generator_similarity, generator_ids)
+    return stats.arithmetic_mean([stats.arithmetic_mean(s) for s in sims])
 
 # Row function:  PREDICTIVE PROBABILITY OF <column>
 def bql_row_column_predictive_probability(

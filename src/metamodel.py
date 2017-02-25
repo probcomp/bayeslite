@@ -205,6 +205,20 @@ class IBayesDBMetamodel(object):
         """Compute ``SIMILARITY TO <target_row>`` for given `rowid`."""
         raise NotImplementedError
 
+    def generative_similarity(self, bdb, generator_id, modelno, rowid_target,
+            rowid_query, hypotheticals, colno):
+        """Compute generative similarity, also known as relevance probability.
+
+        `rowid_target` is an integer.
+
+        `rowid_query` is a list of integers.
+
+        `hypotheticals` is a list of hypothetical observations, where each item
+            is itself a list of ``(colno, value)`` pairs.
+        """
+        raise NotImplementedError
+
+
     def predict(self, bdb, generator_id, modelno, rowid, colno, threshold,
             numsamples=None):
         """Predict a value for a column, if confidence is high enough."""
