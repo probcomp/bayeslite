@@ -1023,6 +1023,54 @@ def test_simulate_columns_subquery():
         bql2sql('simulate weight + 1, t1.(estimate * from columns of p1'
             ' order by name asc limit 2) from p1 limit 10')
 
+def test_simulate_models():
+    # Base case.
+    assert bql2sql('simulate mutual information of age with weight'
+            ' from models of p1') == \
+        'SELECT mi FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[3]';"
+    # Multiple target variables.
+    assert bql2sql('simulate mutual information of (label, age) with weight'
+            ' from models of p1') == \
+        'SELECT mi FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[1, 2]'" \
+                " AND reference_vars = '[3]';"
+    # Multiple reference variables.
+    assert bql2sql('simulate mutual information of age with (label, weight)'
+            ' from models of p1') == \
+        'SELECT mi FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[1, 3]';"
+    # Specified number of samples.
+    assert bql2sql('simulate mutual information of age with weight'
+            ' using 42 samples from models of p1') == \
+        'SELECT mi FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[3]'" \
+                ' AND nsamples = 42;'
+    # Conditional.
+    assert bql2sql('simulate mutual information of age with weight'
+            " given (label = 'foo') from models of p1") == \
+        'SELECT mi FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[3]'" \
+                " AND conditions = '{\"1\": \"foo\"}';"
+    # Modelled by a specific generator.
+    assert bql2sql('simulate mutual information of age with weight'
+                ' from models of p1 modelled by g1',
+            lambda bdb: bdb.execute('create generator g1 for p1')) == \
+        'SELECT mi FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                ' AND generator_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[3]';"
+
 def test_probability_of_mutinf():
     assert bql2sql('estimate probability of'
             ' (mutual information of age with weight < 0.1) > 0.5'
