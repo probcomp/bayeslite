@@ -1425,17 +1425,21 @@ def compile_generative_similarity_conditions(bdb, population_id, generator_id,
         tocondition, hypotheticals, column, bql_compiler, out):
     # Compile the EXISTING ROWS specification by executing the tocondition,
     # finding the rowids, and writing them as a JSON string.
-    if tocondition is not None:
+    if tocondition is None:
+        query_rowids = []
+    else:
         table_name = core.bayesdb_population_table(bdb, population_id)
         qt = sqlite3_quote_name(table_name)
-        temp_out = Output(0, None, ())
-        compile_expression(bdb, tocondition, bql_compiler, temp_out)
-        cursor = bdb.execute('SELECT _rowid_ FROM %s WHERE %s'
-            % (qt, temp_out.getvalue()))
-        query_rowids = [c[0] for c in cursor]
-        out.write('\'%s\'' % (json.dumps(query_rowids)))
-    else:
-        out.write('\'[]\'')
+        subout = out.subquery()
+        compile_expression(bdb, tocondition, bql_compiler, subout)
+        subbindings = subout.getbindings()
+        subwinders, subunwinders = subout.getwindings()
+        with bayesdb_wind(bdb, subwinders, subunwinders):
+            subquery = 'SELECT _rowid_ FROM %s WHERE %s'\
+                % (qt, subout.getvalue())
+            rowids = bdb.execute(subquery, subbindings).fetchall()
+        query_rowids = [rowid[0] for rowid in rowids]
+    out.write('\'%s\'' % (json.dumps(query_rowids)))
     # Compile the context variable.
     assert len(column) == 1
     if isinstance(column[0], ast.ColListAll):
