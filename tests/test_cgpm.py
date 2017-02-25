@@ -845,8 +845,8 @@ def test_generative_similarity():
             print rowid
             cursor = bdb.execute('''
                 ESTIMATE GENERATIVE SIMILARITY
-                TO EXISTING ROWS (rowid = ?)
-                IN THE CONTEXT OF "period"
+                    TO EXISTING ROWS (rowid = ?)
+                    IN THE CONTEXT OF "period"
                 FROM satellites
                 WHERE rowid = ?
             ''', (1, 1,))
@@ -861,8 +861,8 @@ def test_generative_similarity():
                     (perigee=1.0, launch_mass=120),
                     (country_of_operator='Bulgaria', perigee=2.0))
                 IN THE CONTEXT OF "country_of_operator"
-                FROM satellites
-                LIMIT 5
+            FROM satellites
+            LIMIT 5
         ''').fetchall()
         assert len(cursor) == 5
         assert all(0 <= c[0] <= 1 for c in cursor)
@@ -877,7 +877,7 @@ def test_generative_similarity():
                     (country_of_operator='China', perigee=1.0),
                     (country_of_operator='Bulgaria'))
                 IN THE CONTEXT OF "country_of_operator"
-                BY satellites
+            BY satellites
         ''').fetchall()
         assert len(cursor) == 1
         assert all(0 <= c[0] <= 1 for c in cursor)
@@ -889,8 +889,8 @@ def test_generative_similarity():
                 TO HYPOTHETICAL ROWS WITH VALUES (
                     (perigee = ?))
                 IN THE CONTEXT OF "perigee"
-                FROM satellites
-                LIMIT 5
+            FROM satellites
+            LIMIT 5
         ''' , (-10000,)).fetchall()
         assert len(cursor) == 5
         assert all(np.allclose(c[0], 0) for c in cursor)
@@ -899,30 +899,27 @@ def test_generative_similarity():
         with pytest.raises(BQLError):
             bdb.execute('''
                 ESTIMATE GENERATIVE SIMILARITY
-                    OF (rowid < 0)
-                    TO EXISTING ROWS (rowid = 10)
+                    OF (rowid < 0) TO EXISTING ROWS (rowid = 10)
                     IN THE CONTEXT OF "launch_mass"
-                    BY satellites
+                BY satellites
             ''')
 
         # Unknown CONTEXT variable "banana".
         with pytest.raises(BQLError):
             bdb.execute('''
                 ESTIMATE GENERATIVE SIMILARITY
-                    OF (rowid = 1)
-                    TO EXISTING ROWS (rowid = 2)
+                    OF (rowid = 1) TO EXISTING ROWS (rowid = 2)
                     IN THE CONTEXT OF "banana"
-                    BY satellites
+                BY satellites
             ''')
 
         # No matching EXISTING ROW.
         with pytest.raises(BQLError):
             bdb.execute('''
                 ESTIMATE GENERATIVE SIMILARITY
-                    OF (rowid = 10)
-                    TO EXISTING ROWS (rowid < 0)
+                    OF (rowid = 10) TO EXISTING ROWS (rowid < 0)
                     IN THE CONTEXT OF "launch_mass"
-                    BY satellites
+                BY satellites
             ''')
 
         # Unknown categorical values 'Mongolia' in HYPOTHETICAL ROWS.
@@ -934,5 +931,5 @@ def test_generative_similarity():
                         (country_of_operator='Mongolia'),
                         (country_of_operator='Bulgaria', perigee=2.0))
                     IN THE CONTEXT OF "launch_mass"
-                    BY satellites
+                BY satellites
             ''')
