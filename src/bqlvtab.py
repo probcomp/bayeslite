@@ -63,6 +63,9 @@ class MutinfTable(object):
         return MutinfCursor(self._bdb)
 
     def BestIndex(self, constraints, _orderbys):
+        # Parse all the constraints to find where the arguments we
+        # care about are specified.
+        #
         # XXX Tidy this up and generalize this mechanism.
         need = 0
         need |= 1 << Mutinf.POPULATION_ID
@@ -96,8 +99,11 @@ class MutinfTable(object):
         if need & ~have:
             # XXX Report clearer error message with names.
             raise Exception('Missing constraints: %x' % (need & ~have,))
+
+        # Specify which constraints should be passed through as
+        # arguments to the cursor's Filter function.
         index_info = [None] * len(constraints)
-        count = Count()
+        count = _Count()
         index_info[population_id] = count.next()
         if have & (1 << Mutinf.GENERATOR_ID):
             index_info[generator_id] = count.next()
@@ -107,6 +113,7 @@ class MutinfTable(object):
             index_info[conditions] = count.next()
         if have & (1 << Mutinf.NSAMPLES):
             index_info[nsamples] = count.next()
+
         return (index_info, have)
 
 
@@ -152,10 +159,15 @@ class MutinfCursor(object):
         if self._population_id is not None:
             # Already initialized, reset only.
             return
+
+        # MutinfTable.BestIndex should have guaranteed the required
+        # arguments were passed through.
         assert indexnum & (1 << Mutinf.POPULATION_ID)
         assert indexnum & (1 << Mutinf.TARGET_VARS)
         assert indexnum & (1 << Mutinf.REFERENCE_VARS)
-        count = Count()
+
+        # Grab the argument values that are available.
+        count = _Count()
         self._population_id = constraintargs[count.next()]
         if indexnum & (1 << Mutinf.GENERATOR_ID):
             self._generator_id = constraintargs[count.next()]
@@ -171,12 +183,17 @@ class MutinfCursor(object):
             self._nsamples = constraintargs[count.next()]
         else:
             self._nsamples = None
+
+        # Parse the argument values that we need to parse.
         target_vars = json.loads(self._target_vars)
         reference_vars = json.loads(self._reference_vars)
         conditions_strkey = {} if self._conditions is None else \
             json.loads(self._conditions)
         conditions = \
             {int(k): v for k, v in sorted(conditions_strkey.iteritems())}
+
+        # Compute the mutual information.
+        #
         # XXX Expose this API better from bqlfn.
         mis = bqlfn._bql_column_mutual_information(
             self._bdb, self._population_id, self._generator_id,
@@ -188,9 +205,11 @@ class MutinfCursor(object):
 ### Utilities
 
 def _flatten2(xss):
+    """Flatten a list of lists."""
     return [x for xs in xss for x in xs]
 
-class Count(object):
+class _Count(object):
+    """x = 0; f(x++); g(x++); h(x++) idiom from C."""
     def __init__(self):
         self._c = 0
     def next(self):
