@@ -211,12 +211,13 @@ def compile_query(bdb, query, out):
     :param query: abstract syntax tree of a query
     :param Output out: output accumulator
     """
+    _compile_query(bdb, query, BQLCompiler_None(), out)
 
+def _compile_query(bdb, query, bql_compiler, out):
     if isinstance(query, ast.SimulateModelsExp):
         # First expand any subquery columns.
         if any(isinstance(selcol, ast.SelColSub) for selcol in query.columns):
             named = True
-            bql_compiler = BQLCompiler_None()
             selcols = expand_select_columns(
                 bdb, query.columns, named, bql_compiler, out)
             query = ast.SimulateModelsExp(
@@ -229,7 +230,6 @@ def compile_query(bdb, query, out):
         # First expand any subquery columns.
         if any(isinstance(selcol, ast.SelColSub) for selcol in query.columns):
             named = True
-            bql_compiler = BQLCompiler_None()
             selcols = expand_select_columns(
                 bdb, query.columns, named, bql_compiler, out)
             query = ast.Simulate(
@@ -263,11 +263,9 @@ def compile_query(bdb, query, out):
     else:
         assert False, 'Invalid query: %s' % (repr(query),)
 
-def compile_subquery(bdb, query, _bql_compiler, out):
-    # XXX Do something with the BQL compiler so we can refer to
-    # BQL-related quantities in the subquery?
+def compile_subquery(bdb, query, bql_compiler, out):
     with compiling_paren(bdb, out, '(', ')'):
-        compile_query(bdb, query, out)
+        _compile_query(bdb, query, bql_compiler, out)
 
 def compile_select(bdb, select, out):
     assert isinstance(select, ast.Select)
