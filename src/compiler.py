@@ -42,6 +42,7 @@ from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 from bayeslite.util import json_dumps
+from bayeslite.util import override
 
 class Output(object):
     """Compiled SQL output accumulator.
@@ -1060,18 +1061,24 @@ def compile_estpairrow(bdb, estpairrow, out):
             out.write(' OFFSET ')
             compile_expression(bdb, estpairrow.limit.offset, bql_compiler, out)
 
-class BQLCompiler_None(object):
+class IBQLCompiler(object):
+    def compile_bql(self, bdb, bql, out):
+        raise NotImplementedError
+
+class BQLCompiler_None(IBQLCompiler):
+    @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):
         # XXX Report source location.
         raise BQLError(bdb, 'Invalid context for BQL!')
 
-class BQLCompiler_Const(object):
+class BQLCompiler_Const(IBQLCompiler):
     def __init__(self, population_id, generator_id):
         assert isinstance(population_id, int)
         assert generator_id is None or isinstance(generator_id, int)
         self.population_id = population_id
         self.generator_id = generator_id
 
+    @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
         population_id = self.population_id
@@ -1117,6 +1124,7 @@ class BQLCompiler_Const(object):
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
 
 class BQLCompiler_1Row(BQLCompiler_Const):
+    @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
         population_id = self.population_id
@@ -1163,6 +1171,7 @@ class BQLCompiler_1Row(BQLCompiler_Const):
             super(BQLCompiler_1Row, self).compile_bql(bdb, bql, out)
 
 class BQLCompiler_1Row_Infer(BQLCompiler_1Row):
+    @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
         population_id = self.population_id
@@ -1207,7 +1216,7 @@ class BQLCompiler_1Row_Infer(BQLCompiler_1Row):
         else:
             super(BQLCompiler_1Row_Infer, self).compile_bql(bdb, bql, out)
 
-class BQLCompiler_2Row(object):
+class BQLCompiler_2Row(IBQLCompiler):
     def __init__(self, population_id, generator_id, rowid0_exp, rowid1_exp):
         assert isinstance(population_id, int)
         assert generator_id is None or isinstance(generator_id, int)
@@ -1218,6 +1227,7 @@ class BQLCompiler_2Row(object):
         self.rowid0_exp = rowid0_exp
         self.rowid1_exp = rowid1_exp
 
+    @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
         population_id = self.population_id
@@ -1272,6 +1282,7 @@ class BQLCompiler_1Col(BQLCompiler_Const):
         super(BQLCompiler_1Col, self).__init__(population_id, generator_id)
         self.colno_exp = colno_exp
 
+    @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
         population_id = self.population_id
@@ -1321,6 +1332,7 @@ class BQLCompiler_2Col(BQLCompiler_Const):
         self.colno0_exp = colno0_exp
         self.colno1_exp = colno1_exp
 
+    @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
         population_id = self.population_id
