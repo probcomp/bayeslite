@@ -238,7 +238,7 @@ def _compile_query(bdb, query, bql_compiler, out):
                 query.nsamples, query.accuracy)
 
     if isinstance(query, ast.Select):
-        compile_select(bdb, query, out)
+        compile_select(bdb, query, bql_compiler, out)
     elif isinstance(query, ast.Estimate):
         compile_estimate(bdb, query, out)
     elif isinstance(query, ast.EstBy):
@@ -254,7 +254,7 @@ def _compile_query(bdb, query, bql_compiler, out):
     elif isinstance(query, ast.Simulate):
         compile_simulate(bdb, query, out)
     elif isinstance(query, ast.SimulateModels):
-        compile_simulate_models(bdb, query, out)
+        compile_simulate_models(bdb, query, bql_compiler, out)
     elif isinstance(query, ast.EstCols):
         compile_estcols(bdb, query, out)
     elif isinstance(query, ast.EstPairCols):
@@ -268,7 +268,7 @@ def compile_subquery(bdb, query, bql_compiler, out):
     with compiling_paren(bdb, out, '(', ')'):
         _compile_query(bdb, query, bql_compiler, out)
 
-def compile_select(bdb, select, out):
+def compile_select(bdb, select, bql_compiler, out):
     assert isinstance(select, ast.Select)
     out.write('SELECT')
     if select.quantifier == ast.SELQUANT_DISTINCT:
@@ -276,13 +276,12 @@ def compile_select(bdb, select, out):
     else:
         assert select.quantifier == ast.SELQUANT_ALL
     named = True
-    bql_compiler = BQLCompiler_None()
     columns = expand_select_columns(
         bdb, select.columns, named, bql_compiler, out)
     compile_select_columns(bdb, columns, named, bql_compiler, out)
     if select.tables is not None:
         assert 0 < len(select.tables)
-        compile_select_tables(bdb, select, out)
+        compile_select_tables(bdb, select, bql_compiler, out)
     if select.condition is not None:
         out.write(' WHERE ')
         compile_nobql_expression(bdb, select.condition, out)
@@ -614,7 +613,7 @@ def subquery_columns(bdb, subquery, out):
     with bayesdb_wind(bdb, subwinders, subunwinders):
         yield bdb.sql_execute(subquery, subbindings)
 
-def compile_select_tables(bdb, select, out):
+def compile_select_tables(bdb, select, bql_compiler, out):
     first = True
     for seltab in select.tables:
         if first:
@@ -622,14 +621,13 @@ def compile_select_tables(bdb, select, out):
             first = False
         else:
             out.write(', ')
-        compile_select_table(bdb, seltab.table, out)
+        compile_select_table(bdb, seltab.table, bql_compiler, out)
         if seltab.name is not None:
             out.write(' AS ')
             compile_name(bdb, seltab.name, out)
 
-def compile_select_table(bdb, table, out):
+def compile_select_table(bdb, table, bql_compiler, out):
     if ast.is_query(table):
-        bql_compiler = None     # XXX
         compile_subquery(bdb, table, bql_compiler, out)
     elif isinstance(table, str): # XXX name
         compile_table_name(bdb, table, out)
@@ -733,7 +731,7 @@ def compile_simulate(bdb, simulate, out):
         out.unwinder('DROP TABLE %s' % (qtt,), ())
         out.write('SELECT * FROM %s' % (qtt,))
 
-def compile_simulate_models(bdb, simmodels, out):
+def compile_simulate_models(bdb, simmodels, bql_compiler, out):
     assert not any(isinstance(selcol, ast.SelColSub)
             for selcol in simmodels.columns), \
         '%r' % (simmodels,)
@@ -750,7 +748,8 @@ def compile_simulate_models(bdb, simmodels, out):
             bdb, population_id, simmodels.generator)
     if len(simmodels.columns) == 1:
         compile_simulate_models_1(
-            bdb, simmodels.columns[0], population_id, generator_id, False, out)
+            bdb, simmodels.columns[0], population_id, generator_id, False,
+            bql_compiler, out)
     else:
         # XXX For now, each of these will be independent estimates.
         # That may be the right thing anyway -- not sure.
@@ -774,7 +773,8 @@ def compile_simulate_models(bdb, simmodels, out):
                 out.write(', ')
             with compiling_paren(bdb, out, '(', ')'):
                 compile_simulate_models_1(
-                    bdb, selcol, population_id, generator_id, True, out)
+                    bdb, selcol, population_id, generator_id, True,
+                    bql_compiler, out)
             out.write(' AS t%d' % (i,))
         out.write(' WHERE ')
         out.write(' AND '.join(
@@ -782,7 +782,7 @@ def compile_simulate_models(bdb, simmodels, out):
             for i in xrange(1, len(simmodels.columns))))
 
 def compile_simulate_models_1(
-        bdb, selcol, population_id, generator_id, rowid_p, out):
+        bdb, selcol, population_id, generator_id, rowid_p, bql_compiler, out):
     assert isinstance(selcol, ast.SelColExp)
     assert isinstance(selcol.expression, ast.ExpBQLMutInf)
     exp = selcol.expression
@@ -793,8 +793,6 @@ def compile_simulate_models_1(
                 (simmodels.population, var))
         return core.bayesdb_variable_number(
             bdb, population_id, generator_id, var)
-    target_vars = map(map_var, exp.columns0)
-    reference_vars = map(map_var, exp.columns1)
     out.write('SELECT')
     if rowid_p:
         out.write(' _rowid_,')
@@ -806,16 +804,24 @@ def compile_simulate_models_1(
     if generator_id is not None:
         out.write(' AND generator_id = %d' % (generator_id,))
     out.write(' AND target_vars = ')
-    compile_string(bdb, json_dumps(target_vars), out)
+    if exp.columns0 is not None:
+        target_vars = map(map_var, exp.columns0)
+        compile_string(bdb, json_dumps(target_vars), out)
+    else:
+        raise NotImplementedError
     out.write(' AND reference_vars = ')
-    compile_string(bdb, json_dumps(reference_vars), out)
+    if exp.columns1 is not None:
+        reference_vars = map(map_var, exp.columns1)
+        compile_string(bdb, json_dumps(reference_vars), out)
+    else:
+        colno_exp = bql_compiler.implicit_reference_var_colno_exp()
+        out.write(sql_json_singleton(colno_exp))
     if exp.constraints is not None:
         out.write(' AND conditions = ')
         compile_simulate_constraints(
             bdb, exp.constraints, population_id, generator_id, out)
     if exp.nsamples is not None:
         out.write(' AND nsamples = ')
-        bql_compiler = BQLCompiler_None()
         compile_expression(bdb, exp.nsamples, bql_compiler, out)
 
 def compile_simulate_constraints(
@@ -1062,14 +1068,20 @@ def compile_estpairrow(bdb, estpairrow, out):
             compile_expression(bdb, estpairrow.limit.offset, bql_compiler, out)
 
 class IBQLCompiler(object):
+    def implicit_reference_var_colno_exp(self):
+        raise NotImplementedError
     def compile_bql(self, bdb, bql, out):
         raise NotImplementedError
 
 class BQLCompiler_None(IBQLCompiler):
     @override(IBQLCompiler)
+    def implicit_reference_var_colno_exp(self):
+        raise BQLError(bdb, 'No implicit BQL population variable')
+
+    @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):
         # XXX Report source location.
-        raise BQLError(bdb, 'Invalid context for BQL!')
+        raise BQLError(bdb, 'No implicit BQL population')
 
 class BQLCompiler_Const(IBQLCompiler):
     def __init__(self, population_id, generator_id):
@@ -1077,6 +1089,10 @@ class BQLCompiler_Const(IBQLCompiler):
         assert generator_id is None or isinstance(generator_id, int)
         self.population_id = population_id
         self.generator_id = generator_id
+
+    @override(IBQLCompiler)
+    def implicit_reference_var_colno_exp(self):
+        raise BQLError(bdb, 'No implicit BQL population variable')
 
     @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):
@@ -1125,6 +1141,10 @@ class BQLCompiler_Const(IBQLCompiler):
 
 class BQLCompiler_1Row(BQLCompiler_Const):
     @override(IBQLCompiler)
+    def implicit_reference_var_colno_exp(self):
+        raise BQLError(bdb, 'No implicit BQL population variable')
+
+    @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
         population_id = self.population_id
@@ -1171,6 +1191,10 @@ class BQLCompiler_1Row(BQLCompiler_Const):
             super(BQLCompiler_1Row, self).compile_bql(bdb, bql, out)
 
 class BQLCompiler_1Row_Infer(BQLCompiler_1Row):
+    @override(IBQLCompiler)
+    def implicit_reference_var_colno_exp(self):
+        raise BQLError(bdb, 'No implicit BQL population variable')
+
     @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
@@ -1228,6 +1252,10 @@ class BQLCompiler_2Row(IBQLCompiler):
         self.rowid1_exp = rowid1_exp
 
     @override(IBQLCompiler)
+    def implicit_reference_var_colno_exp(self):
+        raise BQLError(bdb, 'No implicit BQL population variable')
+
+    @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
         population_id = self.population_id
@@ -1283,6 +1311,10 @@ class BQLCompiler_1Col(BQLCompiler_Const):
         self.colno_exp = colno_exp
 
     @override(IBQLCompiler)
+    def implicit_reference_var_colno_exp(self):
+        return self.colno_exp
+
+    @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
         population_id = self.population_id
@@ -1331,6 +1363,10 @@ class BQLCompiler_2Col(BQLCompiler_Const):
         super(BQLCompiler_2Col, self).__init__(population_id, generator_id)
         self.colno0_exp = colno0_exp
         self.colno1_exp = colno1_exp
+
+    @override(IBQLCompiler)
+    def implicit_reference_var_colno_exp(self):
+        raise BQLError(bdb, 'Nonunique implicit BQL population variable')
 
     @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):

@@ -813,6 +813,25 @@ def test_estimate_columns_trivial():
         + prefix1 + \
         ' AND ("depprob" > 0.5)' \
         ' ORDER BY "mutinf" DESC;'
+    # XXX This mixes up target and reference variables, which is OK,
+    # because MI is symmetric, but...oops.
+    assert bql2sql('estimate * from variables of p1'
+            ' where probability of (mutual information with age < 0.1)'
+            ' > 0.8') == \
+        prefix + \
+        ' AND ((SELECT "AVG"("x") FROM (SELECT ("v0" < 0.1) AS "x"' \
+            ' FROM (SELECT mi AS "v0" FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[' || c.colno || ']'))) > 0.8);"
+    assert bql2sql('estimate * from variables of p1'
+            ' order by probability of (mutual information with age < 0.1)') ==\
+        prefix + \
+        ' ORDER BY (SELECT "AVG"("x") FROM (SELECT ("v0" < 0.1) AS "x"' \
+            ' FROM (SELECT mi AS "v0" FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[' || c.colno || ']')));"
 
 def test_estimate_pairwise_trivial():
     prefix = 'SELECT 1 AS population_id, v0.name AS name0, v1.name AS name1, '
@@ -1094,16 +1113,6 @@ def test_probability_of_mutinf():
             ' WHERE population_id = 1' \
                 " AND target_vars = '[2]'" \
                 " AND reference_vars = '[3]'))) > 0.5);"
-
-@pytest.mark.xfail(strict=True, reason='Github issue #535')
-def test_estimate_variables_estprob_broken0():
-    bql2sql('estimate * from variables of p1'
-        ' where probability of (mutual information with age < 1) > 0.8')
-
-@pytest.mark.xfail(strict=True, reason='Github issue #535')
-def test_estimate_variables_estprob_broken1():
-    bql2sql('estimate * from variables of p1'
-        ' order by probability of (mutual information with age < 1)')
 
 def test_simulate_columns_all():
     with pytest.raises(parse.BQLParseError):
