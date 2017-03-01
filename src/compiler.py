@@ -524,7 +524,7 @@ def compile_estimate(bdb, estimate, out):
 
 def compile_estimate_by(bdb, estby, out):
     assert isinstance(estby, ast.EstBy)
-    out.write('SELECT ')
+    out.write('SELECT')
     if estby.quantifier == ast.SELQUANT_DISTINCT:
         out.write(' DISTINCT')
     else:

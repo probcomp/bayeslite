@@ -1110,7 +1110,7 @@ def test_probability_of_mutinf():
     assert bql2sql('estimate probability of'
             ' (mutual information of age with weight < 0.1) > 0.5'
             ' within p1') == \
-        'SELECT  ((SELECT "AVG"("x") FROM (SELECT ("v0" < 0.1) AS "x"' \
+        'SELECT ((SELECT "AVG"("x") FROM (SELECT ("v0" < 0.1) AS "x"' \
         ' FROM (SELECT mi AS "v0" FROM bql_mutinf' \
             ' WHERE population_id = 1' \
                 " AND target_vars = '[2]'" \
