@@ -83,10 +83,14 @@ def _expand_simmodel_exp(exp, simcols):
     elif isinstance(exp, ast.ExpCollate):
         subexp = _expand_simmodel_exp(exp.expression, simcols)
         return ast.ExpCollate(subexp, exp.collation)
-    elif isinstance(exp, ast.ExpIn):
+    elif isinstance(exp, ast.ExpInQuery):
         subexp = _expand_simmodel_exp(exp.expression, simcols)
         subquery = exp.subquery         # XXX subquery scoping
         return ast.ExpIn(subexp, exp.positive, subquery)
+    elif isinstance(exp, ast.ExpInExp):
+        subexp = _expand_simmodel_exp(exp.expression, simcols)
+        subexps = [_expand_simmodel_exp(se, simcols) for se in exp.expressions]
+        return ast.ExpIn(subexp, exp.positive, subexps)
     elif isinstance(exp, ast.ExpCast):
         subexp = _expand_simmodel_exp(exp.expression, simcols)
         return ast.ExpCast(subexp, exp.type)

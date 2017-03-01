@@ -1673,13 +1673,27 @@ def compile_expression(bdb, exp, bql_compiler, out):
             compile_expression(bdb, exp.expression, bql_compiler, out)
             out.write(' COLLATE ')
             compile_name(bdb, exp.collation, out)
-    elif isinstance(exp, ast.ExpIn):
+    elif isinstance(exp, ast.ExpInQuery):
         with compiling_paren(bdb, out, '(', ')'):
             compile_expression(bdb, exp.expression, bql_compiler, out)
             if not exp.positive:
                 out.write(' NOT')
             out.write(' IN ')
             compile_subquery(bdb, exp.query, bql_compiler, out)
+    elif isinstance(exp, ast.ExpInExp):
+        with compiling_paren(bdb, out, '(', ')'):
+            compile_expression(bdb, exp.expression, bql_compiler, out)
+            if not exp.positive:
+                out.write(' NOT')
+            out.write(' IN ')
+            with compiling_paren(bdb, out, '(', ')'):
+                first = True
+                for subexp in exp.expressions:
+                    if first:
+                        first = False
+                    else:
+                        out.write(', ')
+                    compile_expression(bdb, subexp, bql_compiler, out)
     elif isinstance(exp, ast.ExpCast):
         with compiling_paren(bdb, out, 'CAST(', ')'):
             compile_expression(bdb, exp.expression, bql_compiler, out)

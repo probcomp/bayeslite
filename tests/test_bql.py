@@ -321,6 +321,8 @@ def test_select_trivial():
         'SELECT (("a" NOT BETWEEN "b" AND "c") IN (SELECT "f"));'
     assert bql2sql('select a in (select b) and c not in (select d);') == \
         'SELECT (("a" IN (SELECT "b")) AND ("c" NOT IN (SELECT "d")));'
+    assert bql2sql("select a in (1 + 2, '3') and b not in (select c);") == \
+        'SELECT (("a" IN ((1 + 2), \'3\')) AND ("b" NOT IN (SELECT "c")));'
     assert bql2sql('select a in (select b) isnull notnull!=c<>d<e<=f>g;') == \
         'SELECT ((((("a" IN (SELECT "b")) ISNULL) NOTNULL) != "c") !=' \
         + ' ((("d" < "e") <= "f") > "g"));'
