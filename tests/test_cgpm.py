@@ -149,6 +149,22 @@ def cgpm_smoke_tests(bdb, gen, vars):
         bdb.execute('''
             INFER %s FROM p %s LIMIT 1
         ''' % (var, modelledby)).fetchall()
+        nvars = len(bdb.execute('''
+            ESTIMATE * FROM VARIABLES OF p %(modelledby)s
+                ORDER BY PROBABILITY OF
+                    (MUTUAL INFORMATION WITH %(var)s USING 1 SAMPLES > 0.1)
+        ''' % {'var': var, 'modelledby': modelledby}).fetchall())
+        if 0 < nvars:
+            c = bdb.execute('''
+                SIMULATE p.(ESTIMATE * FROM VARIABLES OF p %(modelledby)s
+                                ORDER BY PROBABILITY OF
+                                    (MUTUAL INFORMATION WITH %(var)s
+                                        USING 1 SAMPLES > 0.1))
+                    FROM p
+                    LIMIT 1
+            ''' % {'var': var, 'modelledby': modelledby}).fetchall()
+            assert len(c) == 1
+            assert len(c[0]) == nvars
 
 def test_cgpm_smoke():
     with cgpm_smoke_bdb() as bdb:
