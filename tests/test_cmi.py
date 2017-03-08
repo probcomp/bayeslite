@@ -105,7 +105,7 @@ def test_estimate_cmi_equality_condition():
         assert len(result) == 1
 
 
-def test_estiamte_cmi_marginal_condition__ci_slow():
+def test_estimate_cmi_marginal_condition__ci_slow():
     with smoke_bdb() as bdb:
         # Univariate targets.
         bql = '''
@@ -126,7 +126,7 @@ def test_estiamte_cmi_marginal_condition__ci_slow():
         assert len(result) == 1
 
 
-def test_estiamte_cmi_equality_marginal_condition__ci_slow():
+def test_estimate_cmi_equality_marginal_condition__ci_slow():
     with smoke_bdb() as bdb:
         # Univariate targets.
         bql = '''
