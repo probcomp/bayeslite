@@ -219,12 +219,14 @@ setup(
         'bayeslite.metamodels.cgpm_analyze',
         'bayeslite.plex',
         'bayeslite.shell',
+        'bayeslite.tests',
         'bayeslite.weakprng',
     ],
     package_dir={
         'bayeslite': 'src',
         'bayeslite.plex': 'external/plex/dist/Plex',
         'bayeslite.shell': 'shell/src',
+        'bayeslite.tests': 'tests',
         'bayeslite.weakprng': 'external/weakprng/dist',
     },
     # Not in this release, perhaps later.
@@ -237,5 +239,8 @@ setup(
     },
     package_data={
         'bayeslite.metamodels': ['*.schema.json'],
+        'bayeslite.tests': [
+            'dha.csv',
+        ],
     },
 )

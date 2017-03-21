@@ -17,8 +17,7 @@ root=`cd -- "$(dirname -- "$0")" && pwd`
         # By default, when running all tests, skip tests that have
         # been marked for continuous integration by using __ci_ in
         # their names.  (git grep __ci_ to find these.)
-        ./pythenv.sh "$PYTHON" -m pytest -k "not __ci_" \
-                     tests shell/tests
+        ./pythenv.sh "$PYTHON" -m pytest --pyargs bayeslite -k "not __ci_"
     elif [ "docker" = "$1" ]; then
         shift
         echo "WARNING: Possible version skew, because using crosscat from pypi."
