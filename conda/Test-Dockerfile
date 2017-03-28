@@ -3,8 +3,7 @@ FROM alxempirical/conda-crosscat
 # Install bayeslite
 RUN conda install --use-local bayeslite
 
-ENV BAYESDB_DISABLE_VERSION_CHECK=True \
-     BAYESDB_WIZARD_MODE=True
+ENV BAYESDB_DISABLE_VERSION_CHECK=True
 
 WORKDIR /
 RUN git clone https://github.com/probcomp/bayeslite

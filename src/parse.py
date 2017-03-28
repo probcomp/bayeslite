@@ -258,7 +258,6 @@ class BQLSemantics(object):
         return ast.InitModels(ifnotexists, generator, n)
     def p_command_analyze_models(
             self, generator, models, anlimit, anckpt, wait, program):
-        self._ensure_wizard_mode(generator)
         iters = [lim[1] for lim in anlimit if lim and lim[0] == 'iterations']
         secs = [lim[1] for lim in anlimit if lim and lim[0] == 'seconds']
         iterations = min(iters) if iters else None
@@ -715,10 +714,3 @@ class BQLSemantics(object):
     def p_typearg_unsigned(self, i):            return i
     def p_typearg_positive(self, i):            return i
     def p_typearg_negative(self, i):            return -i
-
-    def _ensure_wizard_mode(self, text):
-        import os
-        if "BAYESDB_WIZARD_MODE" not in os.environ:
-            self.errors.append("""\
-If you would like to analyze your own data with BayesDB, please contact
-  bayesdb@mit.edu to participate in our research project.""")

@@ -21,7 +21,6 @@ sed -i .bak 's/def test_joint_probability():/def _ignore_joint_probability():/g'
 
 # Run the tests
 export BAYESDB_DISABLE_VERSION_CHECK=True
-export BAYESDB_WIZARD_MODE=True
 python -m pytest
 
 source deactivate
