@@ -158,10 +158,7 @@ class BQLSemantics(object):
 
     # SQL Data Definition Language subset
     def p_command_createtab_as(self, temp, ifnotexists, name, query):
-        if isinstance(query, ast.SimulateModels):
-            return ast.CreateTabSimModels(temp, ifnotexists, name, query)
-        else:
-            return ast.CreateTabAs(temp, ifnotexists, name, query)
+        return ast.CreateTabAs(temp, ifnotexists, name, query)
     def p_command_createtab_csv(self, temp, ifnotexists, name, csv):
         return ast.CreateTabCsv(temp, ifnotexists, name, csv)
     def p_command_droptab(self, ifexists, name):
@@ -326,37 +323,31 @@ class BQLSemantics(object):
     def p_analysis_token_primitive(self, t):    return [t]
 
     def p_simulate_s(self, cols, population, generator, constraints, lim, acc):
-        if any(not isinstance(c.col, ast.ExpCol) for c in cols):
+        for c in cols:
+            if isinstance(c, ast.SelColSub):
+                continue
+            if isinstance(c, ast.SelColExp) and \
+               isinstance(c.expression, ast.ExpCol):
+                continue
             self.errors.append('simulate only accepts population variables.')
             return None
         return ast.Simulate(
-            [c.col.column for c in cols], population, generator,
-            constraints, lim.limit, acc)
+            cols, population, generator, constraints, lim.limit, acc)
     def p_simulate_nolimit(self, cols, population, generator, constraints):
         # XXX Report source location.
         self.errors.append('simulate missing limit')
-        if any(not isinstance(c.col, ast.ExpCol) for c in cols):
+        for c in cols:
+            if isinstance(c, ast.SelColSub):
+                continue
+            if isinstance(c, ast.SelColExp) and \
+               isinstance(c.expression, ast.ExpCol):
+                continue
             self.errors.append('simulate only accepts population variables.')
             return None
         return ast.Simulate(
-            [c.col.column for c in cols], population, generator,
-            constraints, 0, None)
+            cols, population, generator, constraints, 0, None)
     def p_simulate_models(self, cols, population, generator):
-        if any(isinstance(c.col, ast.ExpCol) for c in cols):
-            self.errors.append(
-                'simulate models does not accept population variables.')
-            return None
-        return ast.SimulateModels(cols, population, generator)
-
-    def p_simulate_columns_one(self, col):
-        return [col]
-    def p_simulate_columns_many(self, cols, col):
-        cols.append(col)
-        return cols
-
-    def p_simulate_column_c(self, col, name):
-        # Just use selcol.
-        return ast.SimCol(col, name)
+        return ast.SimulateModelsExp(cols, population, generator)
 
     def p_given_opt_none(self):                 return []
     def p_given_opt_some(self, constraints):    return constraints
@@ -563,8 +554,10 @@ class BQLSemantics(object):
                                         return ast.op(ast.OP_BETWEEN, m, l, r)
     def p_equality_notbetween(self, m, l, r):
                                         return ast.op(ast.OP_NOTBETWEEN, m,l,r)
-    def p_equality_in(self, e, q):      return ast.ExpIn(e, True, q)
-    def p_equality_notin(self, e, q):   return ast.ExpIn(e, False, q)
+    def p_equality_in_query(self, e, q): return ast.ExpInQuery(e, True, q)
+    def p_equality_notin_query(self, e, q): return ast.ExpInQuery(e, False, q)
+    def p_equality_in_exp(self, e, es): return ast.ExpInExp(e, True, es)
+    def p_equality_notin_exp(self, e, es): return ast.ExpInExp(e, False, es)
     def p_equality_isnull(self, e):     return ast.op(ast.OP_ISNULL, e)
     def p_equality_notnull(self, e):    return ast.op(ast.OP_NOTNULL, e)
     def p_equality_neq(self, l, r):     return ast.op(ast.OP_NEQ, l, r)
@@ -603,20 +596,21 @@ class BQLSemantics(object):
     def p_unary_bql(self, b):           return b
 
     def p_bqlfn_predprob_row(self, col):        return ast.ExpBQLPredProb(col)
-    def p_bqlfn_prob_const(self, col, e):       return ast.ExpBQLProb(
+    def p_bqlfn_prob_const(self, col, e):       return ast.ExpBQLProbDensity(
                                                     [(col, e)], [])
-    def p_bqlfn_jprob_const(self, targets):     return ast.ExpBQLProb(targets,
-                                                    [])
+    def p_bqlfn_jprob_const(self, targets):     return ast.ExpBQLProbDensity(
+                                                    targets, [])
     def p_bqlfn_condprob_const(self, col, e, constraints):
-                                                return ast.ExpBQLProb(
+                                                return ast.ExpBQLProbDensity(
                                                     [(col, e)], constraints)
     def p_bqlfn_condjprob_const(self, targets, constraints):
-                                                return ast.ExpBQLProb(targets,
-                                                    constraints)
-    def p_bqlfn_prob_1col(self, e):             return ast.ExpBQLProbFn(e, [])
+                                                return ast.ExpBQLProbDensity(
+                                                    targets, constraints)
+    def p_bqlfn_prob_1col(self, e):             return ast.ExpBQLProbDensityFn(
+                                                    e, [])
     def p_bqlfn_condprob_1col(self, e, constraints):
-                                                return ast.ExpBQLProbFn(e,
-                                                    constraints)
+                                                return ast.ExpBQLProbDensityFn(
+                                                    e, constraints)
     def p_bqlfn_sim_const(self, cond0, cond1, cols):
         return ast.ExpBQLSim(cond0, cond1, cols)
     def p_bqlfn_sim_1row(self, cond, cols):
@@ -627,6 +621,7 @@ class BQLSemantics(object):
 
     def p_bqlfn_mutinf(self, cols, constraints, nsamp):
         return ast.ExpBQLMutInf(cols[0], cols[1], constraints, nsamp)
+    def p_bqlfn_prob_est(self, e):              return ast.ExpBQLProbEst(e)
 
     def p_ofwithmulti_bql_2col(self):                   return (None, None)
     def p_ofwithmulti_bql_1col(self, cols):             return (cols, None)

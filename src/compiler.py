@@ -35,10 +35,14 @@ import json
 import bayeslite.ast as ast
 import bayeslite.bqlfn as bqlfn
 import bayeslite.core as core
+import bayeslite.macro as macro
+import bayeslite.simulate as simulate
 
 from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
+from bayeslite.util import json_dumps
+from bayeslite.util import override
 
 class Output(object):
     """Compiled SQL output accumulator.
@@ -48,26 +52,26 @@ class Output(object):
     """
 
     def __init__(self, n_numpar, nampar_map, bindings):
-        self.stringio = StringIO.StringIO()
+        self._stringio = StringIO.StringIO()
         # Below, `number' means 1-based, and `index' means 0-based.  n
         # is a source language number; m, an output sqlite3 number; i,
         # an input index passed by the caller, and j, an output index
         # of the tuple we pass to sqlite3.
-        self.n_numpar = n_numpar        # number of numbered parameters
-        self.nampar_map = nampar_map    # map of param name -> param number
-        self.bindings = bindings        # map of input index -> value
-        self.renumber = {}              # map of input number -> output number
-        self.select = []                # map of output index -> input index
-        self.winders = []               # list of pre-query (sql, bindings)
-        self.unwinders = []             # list of post-query (sql, bindings)
+        self._n_numpar = n_numpar       # number of numbered parameters
+        self._nampar_map = nampar_map   # map of param name -> param number
+        self._bindings = bindings       # map of input index -> value
+        self._renumber = {}             # map of input number -> output number
+        self._select = []               # map of output index -> input index
+        self._winders = []              # list of pre-query (sql, bindings)
+        self._unwinders = []            # list of post-query (sql, bindings)
 
     def subquery(self):
         """Return an output accumulator for a subquery."""
-        return Output(self.n_numpar, self.nampar_map, self.bindings)
+        return Output(self._n_numpar, self._nampar_map, self._bindings)
 
     def getvalue(self):
         """Return the accumulated output."""
-        return self.stringio.getvalue()
+        return self._stringio.getvalue()
 
     def getbindings(self):
         """Return a selection of bindings fit for the accumulated output.
@@ -75,31 +79,31 @@ class Output(object):
         If there were subqueries, or if this is accumulating output
         for a subquery, this may not use all bindings.
         """
-        if isinstance(self.bindings, dict):
+        if isinstance(self._bindings, dict):
             # User supplied named bindings.
             # - Grow a set of parameters we don't expect (unknown).
             # - Shrink a set of parameters we do expect (missing).
             # - Fill a list for the n_numpar parameters positionally.
             unknown = set([])
-            missing = set(self.nampar_map)
-            bindings_list = [None] * self.n_numpar
+            missing = set(self._nampar_map)
+            bindings_list = [None] * self._n_numpar
 
             # For each binding, either add it to the unknown set or
             # (a) remove it from the missing set, (b) use nampar_map
             # to find its user-supplied input position, and (c) use
             # renumber to find its output position for passage to
             # sqlite3.
-            for name in self.bindings:
+            for name in self._bindings:
                 name_folded = casefold(name)
-                if name_folded not in self.nampar_map:
+                if name_folded not in self._nampar_map:
                     unknown.add(name)
                     continue
                 missing.remove(name_folded)
-                n = self.nampar_map[name_folded]
-                m = self.renumber[n]
+                n = self._nampar_map[name_folded]
+                m = self._renumber[n]
                 j = m - 1
                 assert bindings_list[j] is None
-                bindings_list[j] = self.bindings[name]
+                bindings_list[j] = self._bindings[name]
 
             # Make sure we saw all parameters we expected and none we
             # didn't expect.
@@ -111,76 +115,76 @@ class Output(object):
             # If the query contained any numbered parameters, which
             # will manifest as higher values of n_numpar without more
             # entries in nampar_map, we can't execute the query.
-            if len(self.bindings) < self.n_numpar:
-                missing_numbers = set(range(1, self.n_numpar + 1))
-                for name in self.bindings:
-                    missing_numbers.remove(self.nampar_map[casefold(name)])
+            if len(self._bindings) < self._n_numpar:
+                missing_numbers = set(range(1, self._n_numpar + 1))
+                for name in self._bindings:
+                    missing_numbers.remove(self._nampar_map[casefold(name)])
                 raise ValueError('Missing parameter numbers: %s' %
                     (missing_numbers,))
 
             # All set.
             return bindings_list
 
-        elif isinstance(self.bindings, tuple) or \
-             isinstance(self.bindings, list):
+        elif isinstance(self._bindings, tuple) or \
+             isinstance(self._bindings, list):
             # User supplied numbered bindings.  Make sure there aren't
             # too few or too many, and then select a list of the ones
             # we want.
-            if len(self.bindings) < self.n_numpar:
+            if len(self._bindings) < self._n_numpar:
                 raise ValueError('Too few parameter bindings: %d < %d' %
-                    (len(self.bindings), self.n_numpar))
-            if len(self.bindings) > self.n_numpar:
+                    (len(self._bindings), self._n_numpar))
+            if len(self._bindings) > self._n_numpar:
                 raise ValueError('Too many parameter bindings: %d > %d' %
-                    (len(self.bindings), self.n_numpar))
-            assert len(self.select) <= self.n_numpar
-            return [self.bindings[j] for j in self.select]
+                    (len(self._bindings), self._n_numpar))
+            assert len(self._select) <= self._n_numpar
+            return [self._bindings[j] for j in self._select]
 
         else:
             # User supplied bindings we didn't understand.
-            raise TypeError('Invalid query bindings: %s' % (self.bindings,))
+            raise TypeError('Invalid query bindings: %s' % (self._bindings,))
 
     def getwindings(self):
-        return self.winders, self.unwinders
+        return self._winders, self._unwinders
 
     def write(self, text):
         """Accumulate `text` in the output of :meth:`getvalue`."""
-        self.stringio.write(text)
+        self._stringio.write(text)
 
     def write_numpar(self, n):
         """Accumulate a reference to the parameter numbered `n`."""
         assert 0 < n
-        assert n <= self.n_numpar
+        assert n <= self._n_numpar
         # The input index i is the input number n minus one.
         i = n - 1
         # Has this parameter already been used?
         m = None
-        if n in self.renumber:
+        if n in self._renumber:
             # Yes: its output number is renumber[n].
-            m = self.renumber[n]
+            m = self._renumber[n]
         else:
             # No: its output index is the number of bindings we've
             # selected so far; append its input index to the list of
             # selected indices and remember its output number in
             # renumber.
-            j = len(self.select)
+            j = len(self._select)
             m = j + 1
-            self.select.append(i)
-            self.renumber[n] = m
+            self._select.append(i)
+            self._renumber[n] = m
         self.write('?%d' % (m,))
 
     def write_nampar(self, name, n):
         """Accumulate a reference to the parameter `name` numbered `n`."""
         assert 0 < n
-        assert n <= self.n_numpar
+        assert n <= self._n_numpar
         # Just treat it as if it were a numbered parameter; it is the
         # parser's job to map between numbered and named parameters.
-        assert self.nampar_map[name] == n
+        assert self._nampar_map[name] == n
         self.write_numpar(n)
 
     def winder(self, sql, bindings):
-        self.winders.append((sql, bindings))
+        self._winders.append((sql, bindings))
     def unwinder(self, sql, bindings):
-        self.unwinders.append((sql, bindings))
+        self._unwinders.append((sql, bindings))
 
 @contextlib.contextmanager
 def bayesdb_wind(bdb, winders, unwinders):
@@ -208,8 +212,33 @@ def compile_query(bdb, query, out):
     :param query: abstract syntax tree of a query
     :param Output out: output accumulator
     """
+    _compile_query(bdb, query, BQLCompiler_None(), out)
+
+def _compile_query(bdb, query, bql_compiler, out):
+    if isinstance(query, ast.SimulateModelsExp):
+        # First expand any subquery columns.
+        if any(isinstance(selcol, ast.SelColSub) for selcol in query.columns):
+            named = True
+            selcols = expand_select_columns(
+                bdb, query.columns, named, bql_compiler, out)
+            query = ast.SimulateModelsExp(
+                selcols, query.population, query.generator)
+        # Next, expand SIMULATE of compound expressions into SELECT of
+        # compound expressions on SIMULATE of simple expressions.
+        query = macro.expand_simulate_models(query)
+
+    if isinstance(query, ast.Simulate):
+        # First expand any subquery columns.
+        if any(isinstance(selcol, ast.SelColSub) for selcol in query.columns):
+            named = True
+            selcols = expand_select_columns(
+                bdb, query.columns, named, bql_compiler, out)
+            query = ast.Simulate(
+                selcols, query.population, query.generator, query.constraints,
+                query.nsamples, query.accuracy)
+
     if isinstance(query, ast.Select):
-        compile_select(bdb, query, out)
+        compile_select(bdb, query, bql_compiler, out)
     elif isinstance(query, ast.Estimate):
         compile_estimate(bdb, query, out)
     elif isinstance(query, ast.EstBy):
@@ -224,9 +253,8 @@ def compile_query(bdb, query, out):
         compile_infer_auto(bdb, query, out)
     elif isinstance(query, ast.Simulate):
         compile_simulate(bdb, query, out)
-    # XXX Disable SimulateModels without CreateTab
     elif isinstance(query, ast.SimulateModels):
-        raise BQLError(bdb, 'SIMULATE FROM MODELS needs CREATE TABLE.')
+        compile_simulate_models(bdb, query, bql_compiler, out)
     elif isinstance(query, ast.EstCols):
         compile_estcols(bdb, query, out)
     elif isinstance(query, ast.EstPairCols):
@@ -236,13 +264,11 @@ def compile_query(bdb, query, out):
     else:
         assert False, 'Invalid query: %s' % (repr(query),)
 
-def compile_subquery(bdb, query, _bql_compiler, out):
-    # XXX Do something with the BQL compiler so we can refer to
-    # BQL-related quantities in the subquery?
+def compile_subquery(bdb, query, bql_compiler, out):
     with compiling_paren(bdb, out, '(', ')'):
-        compile_query(bdb, query, out)
+        _compile_query(bdb, query, bql_compiler, out)
 
-def compile_select(bdb, select, out):
+def compile_select(bdb, select, bql_compiler, out):
     assert isinstance(select, ast.Select)
     out.write('SELECT')
     if select.quantifier == ast.SELQUANT_DISTINCT:
@@ -250,10 +276,12 @@ def compile_select(bdb, select, out):
     else:
         assert select.quantifier == ast.SELQUANT_ALL
     named = True
-    compile_select_columns(bdb, select.columns, named, BQLCompiler_None(), out)
+    columns = expand_select_columns(
+        bdb, select.columns, named, bql_compiler, out)
+    compile_select_columns(bdb, columns, named, bql_compiler, out)
     if select.tables is not None:
         assert 0 < len(select.tables)
-        compile_select_tables(bdb, select, out)
+        compile_select_tables(bdb, select, bql_compiler, out)
     if select.condition is not None:
         out.write(' WHERE ')
         compile_nobql_expression(bdb, select.condition, out)
@@ -347,7 +375,9 @@ def compile_infer_explicit(bdb, infer, named, out):
         generator_id = core.bayesdb_get_generator(
             bdb, population_id, infer.generator)
     bql_compiler = BQLCompiler_1Row_Infer(population_id, generator_id)
-    compile_select_columns(bdb, infer.columns, named, bql_compiler, out)
+    columns = expand_select_columns(
+        bdb, infer.columns, named, bql_compiler, out)
+    compile_select_columns(bdb, columns, named, bql_compiler, out)
     table_name = core.bayesdb_population_table(bdb, population_id)
     qt = sqlite3_quote_name(table_name)
     out.write(' FROM %s' % (qt,))
@@ -446,7 +476,9 @@ def compile_estimate(bdb, estimate, out):
             bdb, population_id, estimate.generator)
     bql_compiler = BQLCompiler_1Row(population_id, generator_id)
     named = True
-    compile_select_columns(bdb, estimate.columns, named, bql_compiler, out)
+    columns = expand_select_columns(
+        bdb, estimate.columns, named, bql_compiler, out)
+    compile_select_columns(bdb, columns, named, bql_compiler, out)
     table_name = core.bayesdb_population_table(bdb, population_id)
     qt = sqlite3_quote_name(table_name)
     out.write(' FROM %s' % (qt,))
@@ -492,7 +524,7 @@ def compile_estimate(bdb, estimate, out):
 
 def compile_estimate_by(bdb, estby, out):
     assert isinstance(estby, ast.EstBy)
-    out.write('SELECT ')
+    out.write('SELECT')
     if estby.quantifier == ast.SELQUANT_DISTINCT:
         out.write(' DISTINCT')
     else:
@@ -509,7 +541,28 @@ def compile_estimate_by(bdb, estby, out):
             bdb, population_id, estby.generator)
     bql_compiler = BQLCompiler_Const(population_id, generator_id)
     named = True
-    compile_select_columns(bdb, estby.columns, named, bql_compiler, out)
+    columns = expand_select_columns(
+        bdb, estby.columns, named, bql_compiler, out)
+    compile_select_columns(bdb, columns, named, bql_compiler, out)
+
+def expand_select_columns(bdb, columns, named, bql_compiler, out):
+    if not any(isinstance(selcol, ast.SelColSub) for selcol in columns):
+        return columns
+    if not named:
+        raise NotImplementedError("Don't mix <tab>.(<query>) with PREDICT!")
+    columns_ = []
+    for selcol in columns:
+        if not isinstance(selcol, ast.SelColSub):
+            columns_.append(selcol)
+            continue
+        with subquery_columns(bdb, selcol.query, out) as cursor:
+            for row in cursor:
+                assert len(row) == 1
+                assert isinstance(row[0], unicode)
+                assert str(row[0])
+                selcol_ = ast.SelColExp(ast.ExpCol(selcol.table, row[0]), None)
+                columns_.append(selcol_)
+    return columns_
 
 def compile_select_columns(bdb, columns, named, bql_compiler, out):
     first = True
@@ -530,32 +583,7 @@ def compile_select_column(bdb, selcol, i, named, bql_compiler, out):
             out.write('.')
         out.write('*')
     elif isinstance(selcol, ast.SelColSub):
-        if not named:
-            raise NotImplementedError('Don\'t mix <tab>.(<query>)'
-                ' with PREDICT!')
-        # XXX We need some kind of type checking to guarantee that
-        # what we get out of this will be a list of columns in the
-        # named table.
-        subout = out.subquery()
-        with compiling_paren(bdb, subout,
-                'SELECT CAST(name AS TEXT) FROM (', ')'):
-            compile_query(bdb, selcol.query, subout)
-        subquery = subout.getvalue()
-        subbindings = subout.getbindings()
-        subwinders, subunwinders = subout.getwindings()
-        with bayesdb_wind(bdb, subwinders, subunwinders):
-            qt = sqlite3_quote_name(selcol.table)
-            subfirst = True
-            for row in bdb.sql_execute(subquery, subbindings):
-                assert len(row) == 1
-                assert isinstance(row[0], unicode)
-                assert str(row[0])
-                if subfirst:
-                    subfirst = False
-                else:
-                    out.write(', ')
-                qc = sqlite3_quote_name(str(row[0]))
-                out.write('%s.%s' % (qt, qc))
+        assert False, 'Someone forgot to expand_select_columns!'
     elif isinstance(selcol, ast.SelColExp):
         compile_expression(bdb, selcol.expression, bql_compiler, out)
         if not named:
@@ -570,7 +598,22 @@ def compile_select_column(bdb, selcol, i, named, bql_compiler, out):
     else:
         assert False, 'Invalid select column: %s' % (repr(selcol),)
 
-def compile_select_tables(bdb, select, out):
+@contextlib.contextmanager
+def subquery_columns(bdb, subquery, out):
+    # XXX We need some kind of type checking to guarantee that
+    # what we get out of this will be a list of columns in the
+    # named table.
+    subout = out.subquery()
+    with compiling_paren(bdb, subout,
+            'SELECT CAST(name AS TEXT) FROM (', ')'):
+        compile_query(bdb, subquery, subout)
+    subquery = subout.getvalue()
+    subbindings = subout.getbindings()
+    subwinders, subunwinders = subout.getwindings()
+    with bayesdb_wind(bdb, subwinders, subunwinders):
+        yield bdb.sql_execute(subquery, subbindings)
+
+def compile_select_tables(bdb, select, bql_compiler, out):
     first = True
     for seltab in select.tables:
         if first:
@@ -578,14 +621,13 @@ def compile_select_tables(bdb, select, out):
             first = False
         else:
             out.write(', ')
-        compile_select_table(bdb, seltab.table, out)
+        compile_select_table(bdb, seltab.table, bql_compiler, out)
         if seltab.name is not None:
             out.write(' AS ')
             compile_name(bdb, seltab.name, out)
 
-def compile_select_table(bdb, table, out):
+def compile_select_table(bdb, table, bql_compiler, out):
     if ast.is_query(table):
-        bql_compiler = None     # XXX
         compile_subquery(bdb, table, bql_compiler, out)
     elif isinstance(table, str): # XXX name
         compile_table_name(bdb, table, out)
@@ -593,6 +635,8 @@ def compile_select_table(bdb, table, out):
         assert False, 'Invalid select table: %s' % (repr(table),)
 
 def compile_simulate(bdb, simulate, out):
+    assert all(isinstance(c, ast.SelColExp) for c in simulate.columns)
+    assert all(isinstance(c.expression, ast.ExpCol) for c in simulate.columns)
     with bdb.savepoint():
         temptable = bdb.temp_table_name()
         assert not core.bayesdb_has_table(bdb, temptable)
@@ -611,7 +655,7 @@ def compile_simulate(bdb, simulate, out):
         table = core.bayesdb_population_table(bdb, population_id)
         qtt = sqlite3_quote_name(temptable)
         qt = sqlite3_quote_name(table)
-        column_names = simulate.columns
+        column_names = [c.expression.column for c in simulate.columns]
         qcns = map(sqlite3_quote_name, column_names)
         cursor = bdb.sql_execute('PRAGMA table_info(%s)' % (qt,))
         column_sqltypes = {}
@@ -686,6 +730,119 @@ def compile_simulate(bdb, simulate, out):
             out.winder(insert_sql, row)
         out.unwinder('DROP TABLE %s' % (qtt,), ())
         out.write('SELECT * FROM %s' % (qtt,))
+
+def compile_simulate_models(bdb, simmodels, bql_compiler, out):
+    assert not any(isinstance(selcol, ast.SelColSub)
+            for selcol in simmodels.columns), \
+        '%r' % (simmodels,)
+    if not core.bayesdb_has_population(bdb, simmodels.population):
+        raise BQLError(bdb, 'No such population: %s' % (simmodels.population,))
+    population_id = core.bayesdb_get_population(bdb, simmodels.population)
+    generator_id = None
+    if simmodels.generator is not None:
+        if not core.bayesdb_has_generator(
+                bdb, population_id, simmodels.generator):
+            raise BQLError(bdb, 'No such generator: %s' %
+                (simmodels.generator,))
+        generator_id = core.bayesdb_get_generator(
+            bdb, population_id, simmodels.generator)
+    if len(simmodels.columns) == 1:
+        compile_simulate_models_1(
+            bdb, simmodels.columns[0], population_id, generator_id, False,
+            bql_compiler, out)
+    else:
+        # XXX For now, each of these will be independent estimates.
+        # That may be the right thing anyway -- not sure.
+        out.write('SELECT ')
+        first = True
+        for i, selcol in enumerate(simmodels.columns):
+            if first:
+                first = False
+            else:
+                out.write(', ')
+            qname = sqlite3_quote_name(selcol.name or 'mi')
+            out.write('t%d.%s' % (i, qname))
+            if selcol.name is not None:
+                out.write(' AS %s' % (qname,))
+        out.write(' FROM ')
+        first = True
+        for i, selcol in enumerate(simmodels.columns):
+            if first:
+                first = False
+            else:
+                out.write(', ')
+            with compiling_paren(bdb, out, '(', ')'):
+                compile_simulate_models_1(
+                    bdb, selcol, population_id, generator_id, True,
+                    bql_compiler, out)
+            out.write(' AS t%d' % (i,))
+        out.write(' WHERE ')
+        out.write(' AND '.join(
+            't0._rowid_ = t%d._rowid_' % (i,)
+            for i in xrange(1, len(simmodels.columns))))
+
+def compile_simulate_models_1(
+        bdb, selcol, population_id, generator_id, rowid_p, bql_compiler, out):
+    assert isinstance(selcol, ast.SelColExp)
+    assert isinstance(selcol.expression, ast.ExpBQLMutInf)
+    exp = selcol.expression
+    def map_var(var):
+        if not core.bayesdb_has_variable(
+                bdb, population_id, generator_id, var):
+            raise BQLError(bdb, 'No such variable in population %r: %r' %
+                (simmodels.population, var))
+        return core.bayesdb_variable_number(
+            bdb, population_id, generator_id, var)
+    out.write('SELECT')
+    if rowid_p:
+        out.write(' _rowid_,')
+    out.write(' mi')
+    if selcol.name:
+        out.write(' AS %s' % (sqlite3_quote_name(selcol.name),))
+    out.write(' FROM bql_mutinf')
+    out.write(' WHERE population_id = %d' % (population_id,))
+    if generator_id is not None:
+        out.write(' AND generator_id = %d' % (generator_id,))
+    out.write(' AND target_vars = ')
+    if exp.columns0 is not None:
+        target_vars = map(map_var, exp.columns0)
+        compile_string(bdb, json_dumps(target_vars), out)
+    else:
+        raise NotImplementedError
+    out.write(' AND reference_vars = ')
+    if exp.columns1 is not None:
+        reference_vars = map(map_var, exp.columns1)
+        compile_string(bdb, json_dumps(reference_vars), out)
+    else:
+        colno_exp = bql_compiler.implicit_reference_var_colno_exp()
+        out.write(sql_json_singleton(colno_exp))
+    if exp.constraints is not None:
+        out.write(' AND conditions = ')
+        compile_simulate_constraints(
+            bdb, exp.constraints, population_id, generator_id, out)
+    if exp.nsamples is not None:
+        out.write(' AND nsamples = ')
+        compile_expression(bdb, exp.nsamples, bql_compiler, out)
+
+def compile_simulate_constraints(
+        bdb, constraints, population_id, generator_id, out):
+    def map_var(var):
+        if not core.bayesdb_has_variable(
+                bdb, population_id, generator_id, var):
+            population = core.bayesdb_population_name(bdb, population_id)
+            raise BQLError(bdb, 'No such variable in population %r: %r' %
+                (population, var))
+        return core.bayesdb_variable_number(
+            bdb, population_id, generator_id, var)
+    def map_lit(lit):
+        # XXX Kludge!
+        assert isinstance(
+            lit, (ast.LitInt, ast.LitFloat, ast.LitString, ast.LitNull))
+        return lit.value
+    assert all(isinstance(exp, ast.ExpLit) for _var, exp in constraints)
+    mapped = {map_var(var): map_lit(exp.value) for var, exp in constraints}
+    compile_string(bdb, json_dumps(mapped), out)
+
 
 # XXX Use context to determine whether to yield column names or
 # numbers, so that top-level queries yield names, but, e.g.,
@@ -878,7 +1035,9 @@ def compile_estpairrow(bdb, estpairrow, out):
         rowid0_exp, rowid1_exp)
     out.write('SELECT %s AS rowid0, %s AS rowid1,' % (rowid0_exp, rowid1_exp))
     named = True
-    compile_select_columns(bdb, estpairrow.columns, named, bql_compiler, out)
+    columns = expand_select_columns(
+        bdb, estpairrow.columns, named, bql_compiler, out)
+    compile_select_columns(bdb, columns, named, bql_compiler, out)
     out.write(' AS value')
     table_name = core.bayesdb_population_table(bdb, population_id)
     qt = sqlite3_quote_name(table_name)
@@ -909,18 +1068,34 @@ def compile_estpairrow(bdb, estpairrow, out):
             out.write(' OFFSET ')
             compile_expression(bdb, estpairrow.limit.offset, bql_compiler, out)
 
-class BQLCompiler_None(object):
+class IBQLCompiler(object):
+    def implicit_reference_var_colno_exp(self):
+        raise NotImplementedError
+    def compile_bql(self, bdb, bql, out):
+        raise NotImplementedError
+
+class BQLCompiler_None(IBQLCompiler):
+    @override(IBQLCompiler)
+    def implicit_reference_var_colno_exp(self):
+        raise BQLError(bdb, 'No implicit BQL population variable')
+
+    @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):
         # XXX Report source location.
-        raise BQLError(bdb, 'Invalid context for BQL!')
+        raise BQLError(bdb, 'No implicit BQL population')
 
-class BQLCompiler_Const(object):
+class BQLCompiler_Const(IBQLCompiler):
     def __init__(self, population_id, generator_id):
         assert isinstance(population_id, int)
         assert generator_id is None or isinstance(generator_id, int)
         self.population_id = population_id
         self.generator_id = generator_id
 
+    @override(IBQLCompiler)
+    def implicit_reference_var_colno_exp(self):
+        raise BQLError(bdb, 'No implicit BQL population variable')
+
+    @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
         population_id = self.population_id
@@ -928,12 +1103,12 @@ class BQLCompiler_Const(object):
         if isinstance(bql, ast.ExpBQLPredProb):
             raise BQLError(bdb, 'Predictive probability is 1-row function,'
                 ' not a constant.')
-        elif isinstance(bql, ast.ExpBQLProb):
+        elif isinstance(bql, ast.ExpBQLProbDensity):
             compile_pdf_joint(bdb, population_id, generator_id, bql.targets,
                 bql.constraints, self, out)
-        elif isinstance(bql, ast.ExpBQLProbFn):
-            raise BQLError(bdb, 'Probability of value at row is 1-column'
-                ' function, not a constant.')
+        elif isinstance(bql, ast.ExpBQLProbDensityFn):
+            raise BQLError(bdb, 'Probability density of value at row'
+                ' is 1-column function, not a constant.')
         elif isinstance(bql, ast.ExpBQLSim):
             compile_similarity(bdb, population_id, generator_id,
                 bql.ofcondition, bql.tocondition, bql.column_lists, self, out)
@@ -954,10 +1129,23 @@ class BQLCompiler_Const(object):
                 'Column correlation pvalue', None, bql, self, out)
         elif isinstance(bql, (ast.ExpBQLPredict, ast.ExpBQLPredictConf)):
             raise BQLError(bdb, 'PREDICT is not allowed outside INFER.')
+        elif isinstance(bql, ast.ExpBQLProbEst):
+            # XXX Invent expression-level macro expansion.
+            population = core.bayesdb_population_name(bdb, self.population_id)
+            generator = None if self.generator_id is None else \
+                core.bayesdb_generator_name(bdb, self.generator_id)
+            bql1 = macro.expand_probability_estimate(
+                bql, population, generator)
+            compile_expression(bdb, bql1, self, out)
         else:
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
 
 class BQLCompiler_1Row(BQLCompiler_Const):
+    @override(IBQLCompiler)
+    def implicit_reference_var_colno_exp(self):
+        raise BQLError(bdb, 'No implicit BQL population variable')
+
+    @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
         population_id = self.population_id
@@ -1004,6 +1192,11 @@ class BQLCompiler_1Row(BQLCompiler_Const):
             super(BQLCompiler_1Row, self).compile_bql(bdb, bql, out)
 
 class BQLCompiler_1Row_Infer(BQLCompiler_1Row):
+    @override(IBQLCompiler)
+    def implicit_reference_var_colno_exp(self):
+        raise BQLError(bdb, 'No implicit BQL population variable')
+
+    @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
         population_id = self.population_id
@@ -1048,7 +1241,7 @@ class BQLCompiler_1Row_Infer(BQLCompiler_1Row):
         else:
             super(BQLCompiler_1Row_Infer, self).compile_bql(bdb, bql, out)
 
-class BQLCompiler_2Row(object):
+class BQLCompiler_2Row(IBQLCompiler):
     def __init__(self, population_id, generator_id, rowid0_exp, rowid1_exp):
         assert isinstance(population_id, int)
         assert generator_id is None or isinstance(generator_id, int)
@@ -1059,16 +1252,21 @@ class BQLCompiler_2Row(object):
         self.rowid0_exp = rowid0_exp
         self.rowid1_exp = rowid1_exp
 
+    @override(IBQLCompiler)
+    def implicit_reference_var_colno_exp(self):
+        raise BQLError(bdb, 'No implicit BQL population variable')
+
+    @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
         population_id = self.population_id
         generator_id = self.generator_id
-        if isinstance(bql, ast.ExpBQLProb):
+        if isinstance(bql, ast.ExpBQLProbDensity):
             compile_pdf_joint(bdb, population_id, generator_id, bql.targets,
                 bql.constraints, self, out)
-        elif isinstance(bql, ast.ExpBQLProbFn):
-            raise BQLError(bdb, 'Probability of value is 1-column function,'
-                ' not 2-row function.')
+        elif isinstance(bql, ast.ExpBQLProbDensityFn):
+            raise BQLError(bdb, 'Probability density of value'
+                ' is 1-column function, not 2-row function.')
         elif isinstance(bql, ast.ExpBQLPredProb):
             raise BQLError(bdb, 'Predictive probability is 1-row function,'
                 ' not 2-row function.')
@@ -1105,23 +1303,27 @@ class BQLCompiler_2Row(object):
         else:
             assert False, 'Invalid BQL function: %s' % (repr(bql),)
 
-class BQLCompiler_1Col(object):
+class BQLCompiler_1Col(BQLCompiler_Const):
     def __init__(self, population_id, generator_id, colno_exp):
         assert isinstance(population_id, int)
         assert generator_id is None or isinstance(generator_id, int)
         assert isinstance(colno_exp, str)
-        self.population_id = population_id
-        self.generator_id = generator_id
+        super(BQLCompiler_1Col, self).__init__(population_id, generator_id)
         self.colno_exp = colno_exp
 
+    @override(IBQLCompiler)
+    def implicit_reference_var_colno_exp(self):
+        return self.colno_exp
+
+    @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
         population_id = self.population_id
         generator_id = self.generator_id
-        if isinstance(bql, ast.ExpBQLProb):
+        if isinstance(bql, ast.ExpBQLProbDensity):
             compile_pdf_joint(bdb, population_id, generator_id, bql.targets,
                 bql.constraints, self, out)
-        elif isinstance(bql, ast.ExpBQLProbFn):
+        elif isinstance(bql, ast.ExpBQLProbDensityFn):
             out.write('bql_column_value_probability(%d, %s' %
                 (population_id, nullor(generator_id)))
             out.write(', %s, ' % (self.colno_exp,))
@@ -1150,38 +1352,31 @@ class BQLCompiler_1Col(object):
             compile_bql_2col_1(bdb, population_id, None,
                 'bql_column_correlation_pvalue',
                 'Column correlation pvalue', None, bql, self.colno_exp, self, out)
-        elif isinstance(bql, ast.ExpBQLPredict):
-            raise BQLError(bdb, 'Predict is a 1-row function.')
-        elif isinstance(bql, ast.ExpBQLPredictConf):
-            raise BQLError(bdb, 'Predict is a 1-row function.')
         else:
-            assert False, 'Invalid BQL function: %s' % (repr(bql),)
+            super(BQLCompiler_1Col, self).compile_bql(bdb, bql, out)
 
-class BQLCompiler_2Col(object):
+class BQLCompiler_2Col(BQLCompiler_Const):
     def __init__(self, population_id, generator_id, colno0_exp, colno1_exp):
         assert isinstance(population_id, int)
         assert generator_id is None or isinstance(generator_id, int)
         assert isinstance(colno0_exp, str)
         assert isinstance(colno1_exp, str)
-        self.population_id = population_id
-        self.generator_id = generator_id
+        super(BQLCompiler_2Col, self).__init__(population_id, generator_id)
         self.colno0_exp = colno0_exp
         self.colno1_exp = colno1_exp
 
+    @override(IBQLCompiler)
+    def implicit_reference_var_colno_exp(self):
+        raise BQLError(bdb, 'Nonunique implicit BQL population variable')
+
+    @override(IBQLCompiler)
     def compile_bql(self, bdb, bql, out):
         assert ast.is_bql(bql)
         population_id = self.population_id
         generator_id = self.generator_id
-        if isinstance(bql, ast.ExpBQLProb):
+        if isinstance(bql, ast.ExpBQLProbDensity):
             compile_pdf_joint(bdb, population_id, generator_id, bql.targets,
                 bql.constraints, self, out)
-        elif isinstance(bql, ast.ExpBQLProbFn):
-            raise BQLError(bdb, 'Probability of value is 1-column function.')
-        elif isinstance(bql, ast.ExpBQLPredProb):
-            raise BQLError(bdb, 'Predictive probability'
-                ' is one-column function.')
-        elif isinstance(bql, ast.ExpBQLSim):
-            raise BQLError(bdb, 'Similarity to row makes sense only at row.')
         elif isinstance(bql, ast.ExpBQLDepProb):
             compile_bql_2col_0(bdb, population_id, generator_id,
                 'bql_column_dependence_probability',
@@ -1204,12 +1399,8 @@ class BQLCompiler_2Col(object):
                 'Correlation pvalue',
                 None,
                 bql, self.colno0_exp, self.colno1_exp, self, out)
-        elif isinstance(bql, ast.ExpBQLPredict):
-            raise BQLError(bdb, 'Predict is a 1-row function.')
-        elif isinstance(bql, ast.ExpBQLPredictConf):
-            raise BQLError(bdb, 'Predict is a 1-row function.')
         else:
-            assert False, 'Invalid BQL function: %s' % (repr(bql),)
+            super(BQLCompiler_2Col, self).compile_bql(bdb, bql, out)
 
 def compile_pdf_joint(bdb, population_id, generator_id, targets, constraints,
         bql_compiler, out):
@@ -1483,13 +1674,27 @@ def compile_expression(bdb, exp, bql_compiler, out):
             compile_expression(bdb, exp.expression, bql_compiler, out)
             out.write(' COLLATE ')
             compile_name(bdb, exp.collation, out)
-    elif isinstance(exp, ast.ExpIn):
+    elif isinstance(exp, ast.ExpInQuery):
         with compiling_paren(bdb, out, '(', ')'):
             compile_expression(bdb, exp.expression, bql_compiler, out)
             if not exp.positive:
                 out.write(' NOT')
             out.write(' IN ')
             compile_subquery(bdb, exp.query, bql_compiler, out)
+    elif isinstance(exp, ast.ExpInExp):
+        with compiling_paren(bdb, out, '(', ')'):
+            compile_expression(bdb, exp.expression, bql_compiler, out)
+            if not exp.positive:
+                out.write(' NOT')
+            out.write(' IN ')
+            with compiling_paren(bdb, out, '(', ')'):
+                first = True
+                for subexp in exp.expressions:
+                    if first:
+                        first = False
+                    else:
+                        out.write(', ')
+                    compile_expression(bdb, subexp, bql_compiler, out)
     elif isinstance(exp, ast.ExpCast):
         with compiling_paren(bdb, out, 'CAST(', ')'):
             compile_expression(bdb, exp.expression, bql_compiler, out)

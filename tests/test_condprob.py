@@ -34,16 +34,16 @@ def test_conditional_probability_pathologies():
         bdb.execute('initialize 1 models for p_cc')
         bdb.execute('analyze p_cc for 1 iterations wait')
         assert bdb.execute('''
-            estimate probability of foo = 'x' by p
+            estimate probability density of foo = 'x' by p
         ''').fetchvalue() < 1
         assert bdb.execute('''
-            estimate probability of foo = 'x' given (foo = 'x') by p
+            estimate probability density of foo = 'x' given (foo = 'x') by p
         ''').fetchvalue() == 1
         assert bdb.execute('''
-            estimate probability of value 'x' given (foo = 'x')
+            estimate probability density of value 'x' given (foo = 'x')
                 from columns of p
                 where c.name = 'foo'
         ''').fetchvalue() == 1
         assert bdb.execute('''
-            estimate probability of foo = 'x' given (foo = 'y') by p
+            estimate probability density of foo = 'x' given (foo = 'y') by p
         ''').fetchvalue() == 0

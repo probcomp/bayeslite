@@ -108,3 +108,9 @@ def cursor_value(cursor, nullok=None):
 def json_dumps(obj):
     """Return a JSON string of obj, compactly and deterministically."""
     return json.dumps(obj, sort_keys=True)
+
+def override(interface):
+    def wrap(method):
+        assert method.__name__ in dir(interface)
+        return method
+    return wrap

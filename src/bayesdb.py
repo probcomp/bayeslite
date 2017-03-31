@@ -22,6 +22,7 @@ import struct
 
 import bayeslite.bql as bql
 import bayeslite.bqlfn as bqlfn
+import bayeslite.bqlvtab as bqlvtab
 import bayeslite.metamodel as metamodel
 import bayeslite.parse as parse
 import bayeslite.schema as schema
@@ -92,9 +93,17 @@ class BayesDB(object):
         self._py_prng = random.Random(pyrseed)
         nprseed = [self._prng.weakrandom32() for _ in range(4)]
         self._np_prng = numpy.random.RandomState(nprseed)
+
+        # Set up or check the permanent schema on disk.
         schema.bayesdb_install_schema(self, version=version,
             compatible=compatible)
+
+        # Set up the in-memory BQL functions and virtual tables that
+        # need not have storage on disk.
         bqlfn.bayesdb_install_bql(self._sqlite3, self)
+        self._sqlite3.createmodule('bql_mutinf', bqlvtab.MutinfModule(self))
+        self._sqlite3.cursor().execute(
+            'create virtual table temp.bql_mutinf using bql_mutinf')
 
         # Cache an empty cursor for convenience.
         empty_cursor = self._sqlite3.cursor()

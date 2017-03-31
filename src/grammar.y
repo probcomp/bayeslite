@@ -221,22 +221,16 @@ analysis_program(nonempty)      ::= analysis_program(p) analysis_token(t).
 analysis_token(compound)        ::= T_LROUND analysis_program(p) T_RROUND.
 analysis_token(primitive)       ::= ANY(t).
 
-simulate(s)             ::= K_SIMULATE simulate_columns(cols)
+simulate(s)             ::= K_SIMULATE select_columns(cols)
                                 K_FROM population_name(population)
                                 modelledby_opt(generator)
                                 given_opt(constraints)
                                 limit(lim)
                                 accuracy_opt(acc).
-simulate(nolimit)       ::= K_SIMULATE simulate_columns(cols)
+simulate(nolimit)       ::= K_SIMULATE select_columns(cols)
                                 K_FROM population_name(population)
                                 modelledby_opt(generator)
                                 given_opt(constraints).
-
-simulate_columns(one)   ::= simulate_column(col).
-simulate_columns(many)  ::= simulate_columns(cols) T_COMMA
-                                simulate_column(col).
-
-simulate_column(c)      ::= bqlfn(col) as(name).
 
 given_opt(none)         ::= .
 given_opt(some)         ::= K_GIVEN constraints(constraints).
@@ -246,10 +240,10 @@ constraint(c)           ::= column_name(col) T_EQ expression(value).
 constraints_opt(none)   ::= .
 constraints_opt(some)   ::= constraints(cs).
 
-simulate(models)  ::=
-        K_SIMULATE simulate_columns(cols)
-        K_FROM K_MODELS K_OF population_name(population)
-        modelledby_opt(generator).
+simulate(models)        ::= K_SIMULATE select_columns(cols)
+                                K_FROM K_MODELS K_OF
+                                        population_name(population)
+                                modelledby_opt(generator).
 
 /*
  * Queries
@@ -451,8 +445,12 @@ equality(between)       ::= equality(m) K_BETWEEN ordering(l)
                                 K_AND ordering(r).
 equality(notbetween)    ::= equality(m) K_NOT K_BETWEEN ordering(l)
                                 K_AND ordering(r).
-equality(in)            ::= equality(e) K_IN T_LROUND query(q) T_RROUND.
-equality(notin)         ::= equality(e) K_NOT K_IN T_LROUND query(q) T_RROUND.
+equality(in_query)      ::= equality(e) K_IN T_LROUND query(q) T_RROUND.
+equality(notin_query)   ::= equality(e) K_NOT K_IN T_LROUND query(q) T_RROUND.
+equality(in_exp)        ::= equality(e) K_IN T_LROUND expressions_opt(es)
+                                T_RROUND.
+equality(notin_exp)     ::= equality(e) K_NOT K_IN T_LROUND expressions_opt(es)
+                                T_RROUND.
 equality(isnull)        ::= equality(e) K_ISNULL.
 equality(notnull)       ::= equality(e) K_NOTNULL.
 equality(neq)           ::= equality(l) T_NEQ ordering(r).
@@ -535,45 +533,47 @@ unary(bql)              ::= bqlfn(b).
  *
  * XXX It would be nice if
  *
- *      SELECT PROBABILITY OF X = 1 - PROBABILITY OF Y = 0 FROM T;
+ *      SELECT PROBABILITY DENSITY OF X = 1 - PROBABILITY DENSITY OF Y = 0
+ *          FROM T;
  *
  * worked to mean
  *
- *      SELECT PROBABILITY OF X = (1 - PROBABILITY OF Y = 0) FROM T;
+ *      SELECT PROBABILITY DENSITY OF X = (1 - PROBABILITY DENSITY OF Y = 0)
+ *          FROM T;
  *
  * so that you could also write, e.g.,
  *
- *      SELECT PROBABILITY OF X = A + B FROM T;
+ *      SELECT PROBABILITY DENSITY OF X = A + B FROM T;
  *
  * with A + B meaning the right-hand side of the equation.
  *
  * However, changing primary(e) to expression(e) on the right-hand
  * side of the bqlfn(prob) rule makes the grammar ambiguous, and the
  * surgery necessary to resolve the ambiguity is too much trouble.  So
- * instead we'll reject unparenthesized PROBABILITY OF X = V with
- * other operators altogether and require explicit parentheses until
- * someone wants to do that surgery.
+ * instead we'll reject unparenthesized PROBABILITY DENSITY OF X = V
+ * with other operators altogether and require explicit parentheses
+ * until someone wants to do that surgery.
  *
  * XXX Oops -- some restructing of the grammar caused us to cease
- * rejecting unparenthesized PROBABILITY OF X = V with other
+ * rejecting unparenthesized PROBABILITY DENSITY OF X = V with other
  * operators.
  */
 bqlfn(predprob_row)     ::= K_PREDICTIVE K_PROBABILITY K_OF column_name(col).
-bqlfn(prob_const)       ::= K_PROBABILITY K_OF column_name(col)
+bqlfn(prob_const)       ::= K_PROBABILITY K_DENSITY K_OF column_name(col)
                                 T_EQ unary(e).
-bqlfn(jprob_const)      ::= K_PROBABILITY K_OF
+bqlfn(jprob_const)      ::= K_PROBABILITY K_DENSITY K_OF
                                 T_LROUND constraints_opt(targets) T_RROUND.
-bqlfn(condprob_const)   ::= K_PROBABILITY K_OF column_name(col)
+bqlfn(condprob_const)   ::= K_PROBABILITY K_DENSITY K_OF column_name(col)
                                 T_EQ primary(e)
                                 K_GIVEN T_LROUND constraints_opt(constraints)
                                         T_RROUND.
-bqlfn(condjprob_const)  ::= K_PROBABILITY K_OF
+bqlfn(condjprob_const)  ::= K_PROBABILITY K_DENSITY K_OF
                                 T_LROUND constraints_opt(targets) T_RROUND
                                 K_GIVEN T_LROUND constraints_opt(constraints)
                                         T_RROUND.
-/* XXX Givens for PROBABILITY OF VALUE function of columns?      */
-bqlfn(prob_1col)        ::= K_PROBABILITY K_OF K_VALUE unary(e).
-bqlfn(condprob_1col)    ::= K_PROBABILITY K_OF K_VALUE primary(e)
+/* XXX Givens for PROBABILITY DENSITY OF VALUE function of columns?      */
+bqlfn(prob_1col)        ::= K_PROBABILITY K_DENSITY K_OF K_VALUE unary(e).
+bqlfn(condprob_1col)    ::= K_PROBABILITY K_DENSITY K_OF K_VALUE primary(e)
                                 K_GIVEN T_LROUND constraints_opt(constraints)
                                         T_RROUND.
 bqlfn(sim_const)         ::= K_SIMILARITY
@@ -588,6 +588,7 @@ bqlfn(depprob)          ::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
 
 bqlfn(mutinf)           ::= K_MUTUAL K_INFORMATION ofwithmulti(cols)
                                 mi_given_opt(constraints) nsamples_opt(nsamp).
+bqlfn(prob_est)         ::= K_PROBABILITY K_OF T_LROUND expression(e) T_RROUND.
 
 ofwithmulti(bql_2col)   ::= .
 ofwithmulti(bql_1col)   ::= K_WITH mi_columns(cols).
@@ -722,6 +723,7 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_CORRELATION
         K_CREATE
         K_DEFAULT
+        K_DENSITY
         K_DEPENDENCE
         K_DESC
         K_DISTINCT

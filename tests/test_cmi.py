@@ -210,23 +210,29 @@ def test_simulate_cmi__ci_slow():
 
 
 def test_simulate_cmi_missing_table():
-    # SIMULATE FROM MODELS without CREATE TABLE currently disabled, pending
-    # either virtual tables or implementation of winding/unwinding business
-    # in compiler.py
     with smoke_bdb() as bdb:
-        # No modeled by.
-        with pytest.raises(BQLError):
-            bdb.execute('''
-                SIMULATE MUTUAL INFORMATION OF a WITH b USING 10 SAMPLES
-                FROM MODELS OF p;
-            ''')
-        # With modeled by.
-        with pytest.raises(BQLError):
-            bdb.execute('''
-                SIMULATE MUTUAL INFORMATION OF a WITH b USING 10 SAMPLES
-                FROM MODELS OF p
-                MODELED BY m1;
-            ''')
+        bdb.execute('''
+            SIMULATE MUTUAL INFORMATION OF a WITH b USING 10 SAMPLES
+            FROM MODELS OF p;
+        ''')
+        bdb.execute('''
+            SIMULATE MUTUAL INFORMATION OF a WITH b USING 10 SAMPLES
+            FROM MODELS OF p
+            MODELED BY m1;
+        ''')
+        bdb.execute('''
+            SIMULATE 1 + MUTUAL INFORMATION OF a WITH b USING 10 SAMPLES
+            FROM MODELS OF p
+            MODELED BY m1;
+        ''')
+
+def test_estimate_cmi_bound():
+    with smoke_bdb() as bdb:
+        bdb.execute('''
+            ESTIMATE PROBABILITY OF
+                    (MUTUAL INFORMATION OF a WITH b USING 10 SAMPLES > 0.5)
+                WITHIN p
+        ''')
 
 def test_simulate_cmi_missing_models_of():
     # SIMULATE of MUTUAL INFORMATION requires FROM MODELS OF, so specifying

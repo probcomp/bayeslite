@@ -296,15 +296,19 @@ def test_select_bql():
                 ast.SelColExp(ast.ExpCol(None, 'd'), None),
             ],
             [ast.SelTab('t', None)], None, None, None, None)]
-    assert parse_bql_string('select probability of c = 42 from t;') == \
+    assert parse_bql_string('select probability density of c = 42'
+            ' from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLProb([('c', ast.ExpLit(ast.LitInt(42)))],
+            [ast.SelColExp(
+                ast.ExpBQLProbDensity([('c', ast.ExpLit(ast.LitInt(42)))],
                     []),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select similarity from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLSim(None, None, [ast.ColListAll()]), None)],
+            [ast.SelColExp(
+                ast.ExpBQLSim(None, None, [ast.ColListAll()]),
+                None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select similarity to (rowid=8) from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
@@ -383,7 +387,7 @@ def test_select_bql():
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select similarity to (rowid=8) with respect to' +
             ' (estimate * from columns of t order by ' +
-            '  probability of value 4 limit 1)' +
+            '  probability density of value 4 limit 1)' +
             ' from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
@@ -395,7 +399,7 @@ def test_select_bql():
                     )),
                     [ast.ColListSub(
                         ast.EstCols([ast.SelColAll(None)], 't', None, None,
-                            [ast.Ord(ast.ExpBQLProbFn(
+                            [ast.Ord(ast.ExpBQLProbDensityFn(
                                     ast.ExpLit(ast.LitInt(4)),
                                     []),
                                 ast.ORD_ASC)],
@@ -426,7 +430,7 @@ def test_select_bql():
     assert parse_bql_string(
             'select similarity of ("name" = \'Bar\') to (rowid=8)' +
             'with respect to (estimate * from columns of t ' +
-                'order by probability of value 4 limit 1)' +
+                'order by probability density of value 4 limit 1)' +
             'from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
@@ -441,7 +445,7 @@ def test_select_bql():
                     )),
                     [ast.ColListSub(
                         ast.EstCols([ast.SelColAll(None)], 't', None, None,
-                            [ast.Ord(ast.ExpBQLProbFn(
+                            [ast.Ord(ast.ExpBQLProbDensityFn(
                                     ast.ExpLit(ast.LitInt(4)),
                                     []),
                                 ast.ORD_ASC)],
@@ -556,27 +560,28 @@ def test_select_bql():
     # covered the AssertionError that this turned into.
     #
     # with pytest.raises(parse.BQLParseError):
-    #     parse_bql_string('select probability of x = 1 -' +
-    #         ' probability of y = 0 from t;')
+    #     parse_bql_string('select probability density of x = 1 -' +
+    #         ' probability density of y = 0 from t;')
     #     # XXX Should really be this test, but getting the grammar to
     #     # admit this unambiguously is too much of a pain at the
     #     # moment.
-    #     assert parse_bql_string('select probability of x = 1 -' +
-    #             ' probability of y = 0 from t;') == \
+    #     assert parse_bql_string('select probability density of x = 1 -' +
+    #             ' probability density of y = 0 from t;') == \
     #         [ast.Select(ast.SELQUANT_ALL,
-    #             [ast.SelColExp(ast.ExpBQLProb([('x',
+    #             [ast.SelColExp(ast.ExpBQLProbDensity([('x',
     #                         ast.ExpOp(ast.OP_SUB, (
     #                             ast.ExpLit(ast.LitInt(1)),
-    #                             ast.ExpBQLProb([('y',
+    #                             ast.ExpBQLProbDensity([('y',
     #                                     ast.ExpLit(ast.LitInt(0)))],
     #                                 []),
     #                         )))],
     #                     []),
     #                 None)],
     #             [ast.SelTab('t', None)], None, None, None, None)]
-    assert parse_bql_string('select probability of c1 = f(c2) from t;') == \
+    assert parse_bql_string('select probability density of c1 = f(c2)'
+            ' from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLProb([('c1',
+            [ast.SelColExp(ast.ExpBQLProbDensity([('c1',
                         ast.ExpApp(False, 'f', [ast.ExpCol(None, 'c2')]))],
                     []),
                 None)],
@@ -978,7 +983,9 @@ def test_simulate():
             ' simulate x from t limit 10') == \
         [ast.CreateTabAs(False, False, 's',
             ast.Simulate(
-                ['x'], 't', None,
+                [ast.SelColExp(ast.ExpCol(None, 'x'), None)],
+                't',
+                None,
                 [],
                 ast.ExpLit(ast.LitInt(10)),
                 None)
@@ -987,7 +994,12 @@ def test_simulate():
             ' simulate x, y from t given z = 0 limit 10 accuracy 2') == \
         [ast.CreateTabAs(False, True, 's',
             ast.Simulate(
-                ['x', 'y'], 't', None,
+                [
+                    ast.SelColExp(ast.ExpCol(None, 'x'), None),
+                    ast.SelColExp(ast.ExpCol(None, 'y'), None),
+                ],
+                't',
+                None,
                 [('z', ast.ExpLit(ast.LitInt(0)))],
                 ast.ExpLit(ast.LitInt(10)),
                 2)
@@ -996,7 +1008,12 @@ def test_simulate():
             ' simulate x, y from t given z = 0 limit 10') == \
         [ast.CreateTabAs(True, False, 's',
             ast.Simulate(
-                ['x', 'y'], 't', None,
+                [
+                    ast.SelColExp(ast.ExpCol(None, 'x'), None),
+                    ast.SelColExp(ast.ExpCol(None, 'y'), None),
+                ],
+                't',
+                None,
                 [('z', ast.ExpLit(ast.LitInt(0)))],
                 ast.ExpLit(ast.LitInt(10)),
                 None),
@@ -1007,7 +1024,12 @@ def test_simulate():
             ' limit 10 accuracy 19') == \
         [ast.CreateTabAs(True, True, 's',
             ast.Simulate(
-                ['x', 'y'], 't', None,
+                [
+                    ast.SelColExp(ast.ExpCol(None, 'x'), None),
+                    ast.SelColExp(ast.ExpCol(None, 'y'), None),
+                ],
+                't',
+                None,
                 [
                     ('z', ast.ExpLit(ast.LitInt(0))),
                     ('w', ast.ExpLit(ast.LitInt(1))),
@@ -1029,7 +1051,7 @@ def test_simulate_models():
         'simulate dependence probability of a with b from models of t;') == [
             ast.SimulateModels(
                 [
-                    ast.SimCol(ast.ExpBQLDepProb('a', 'b'), None),
+                    ast.SelColExp(ast.ExpBQLDepProb('a', 'b'), None),
                 ],
                 't', None
             )
@@ -1041,9 +1063,9 @@ def test_simulate_models():
         'from models of p modeled by z') == [
             ast.SimulateModels(
                 [
-                    ast.SimCol(
+                    ast.SelColExp(
                         ast.ExpBQLDepProb('a', 'b'), 'q'),
-                    ast.SimCol(
+                    ast.SelColExp(
                         ast.ExpBQLMutInf(
                             ['c'],
                             ['d'],
@@ -1065,9 +1087,9 @@ def test_simulate_models():
         'from models of p modeled by z') == [
             ast.SimulateModels(
                 [
-                    ast.SimCol(
+                    ast.SelColExp(
                         ast.ExpBQLDepProb('a', 'b'), 'q'),
-                    ast.SimCol(
+                    ast.SelColExp(
                         ast.ExpBQLMutInf(
                             ['c'],
                             ['d', 'r'],
@@ -1083,12 +1105,12 @@ def test_simulate_models():
             )
     ]
     assert parse_bql_string(
-        'simulate probability of (a=2, c=1.1) given (b=0.5) '
+        'simulate probability density of (a=2, c=1.1) given (b=0.5) '
         'from models of p') == [
             ast.SimulateModels(
                 [
-                    ast.SimCol(
-                        ast.ExpBQLProb(
+                    ast.SelColExp(
+                        ast.ExpBQLProbDensity(
                             [
                                 ('a', ast.ExpLit(ast.LitInt(2))),
                                 ('c', ast.ExpLit(ast.LitFloat(1.1)))
@@ -1108,17 +1130,17 @@ def test_simulate_models():
             'mutual information of "bad-col" with d '
                 'given (e, r=2.7) using 100 samples as g '
             'from models of p modeled by z' % (temp, ifnotexists)) == [
-                ast.CreateTabSimModels(
+                ast.CreateTabAs(
                     bool(temp),
                     bool(ifnotexists),
                     'f',
                     ast.SimulateModels(
                         [
-                            ast.SimCol(
+                            ast.SelColExp(
                                 ast.ExpBQLDepProb('a', 'b'),
                                 'q'
                             ),
-                            ast.SimCol(
+                            ast.SelColExp(
                                 ast.ExpBQLMutInf(
                                     ['bad-col'],
                                     ['d'],
@@ -1142,8 +1164,9 @@ def test_is_bql():
     assert ast.is_bql(ast.ExpCol('t', 'c')) == False
     # ...
     assert ast.is_bql(ast.ExpBQLPredProb('c'))
-    assert ast.is_bql(ast.ExpBQLProb([('c', ast.ExpLit(ast.LitInt(0)))], []))
-    assert ast.is_bql(ast.ExpBQLProbFn(ast.ExpLit(ast.LitInt(0)), []))
+    assert ast.is_bql(
+        ast.ExpBQLProbDensity([('c', ast.ExpLit(ast.LitInt(0)))], []))
+    assert ast.is_bql(ast.ExpBQLProbDensityFn(ast.ExpLit(ast.LitInt(0)), []))
     assert ast.is_bql(ast.ExpBQLSim(None, ast.ExpLit(ast.LitInt(0)), []))
     assert ast.is_bql(ast.ExpBQLDepProb('c0', 'c1'))
     assert ast.is_bql(ast.ExpBQLMutInf('c0', 'c1', None, 100))

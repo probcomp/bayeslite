@@ -183,16 +183,17 @@ def test_conditional_probability(seed):
         ''')
         bdb.execute('initialize 1 model for p1_cond_prob_cc')
         bdb.execute('analyze p1_cond_prob_cc for 1 iteration wait')
-        q0 = 'estimate probability of age = 8 by p1'
-        q1 = 'estimate probability of age = 8 given () by p1'
+        q0 = 'estimate probability density of age = 8 by p1'
+        q1 = 'estimate probability density of age = 8 given () by p1'
         age_is_8 = bdb.execute(q0).fetchvalue()
         assert age_is_8 == bdb.execute(q1).fetchvalue()
-        q2 = 'estimate probability of age = 8 given (weight = 16) by p1'
+        q2 = 'estimate probability density of age = 8 given (weight = 16)' \
+            ' by p1'
         age_is_8_given_weight_is_16 = bdb.execute(q2).fetchvalue()
         assert age_is_8 < age_is_8_given_weight_is_16
 
         probs = bdb.execute(
-            'estimate probability of value 8 given (weight = 16)'
+            'estimate probability density of value 8 given (weight = 16)'
             " from columns of p1").fetchall()
         assert [(age_is_8_given_weight_is_16,), (0.0,)] == probs
 
@@ -201,17 +202,18 @@ def test_joint_probability(seed):
     with test_core.t1(seed=seed) as (bdb, _population_id, _generator_id):
         bdb.execute('initialize 10 models for p1_cc')
         bdb.execute('analyze p1_cc for 10 iterations wait')
-        q0 = 'estimate probability of age = 8 by p1'
-        q1 = 'estimate probability of (age = 8) by p1'
+        q0 = 'estimate probability density of age = 8 by p1'
+        q1 = 'estimate probability density of (age = 8) by p1'
         assert bdb.execute(q0).fetchvalue() == bdb.execute(q1).fetchvalue()
-        q1 = 'estimate probability of (age = 8) given () by p1'
+        q1 = 'estimate probability density of (age = 8) given () by p1'
         assert bdb.execute(q0).fetchvalue() == bdb.execute(q1).fetchvalue()
-        q2 = 'estimate probability of age = 8 given (weight = 16) by p1'
+        q2 = 'estimate probability density of age = 8 given (weight = 16)' \
+            ' by p1'
         assert bdb.execute(q0).fetchvalue() < bdb.execute(q2).fetchvalue()
-        q0 = 'estimate probability of age = 8 by p1'
-        q1 = 'estimate probability of (age = 8, weight = 16) by p1'
+        q0 = 'estimate probability density of age = 8 by p1'
+        q1 = 'estimate probability density of (age = 8, weight = 16) by p1'
         assert bdb.execute(q1).fetchvalue() < bdb.execute(q0).fetchvalue()
-        q2 = 'estimate probability of (age = 8, weight = 16)' \
+        q2 = 'estimate probability density of (age = 8, weight = 16)' \
             " given (label = 'mumble') by p1"
         assert bdb.execute(q1).fetchvalue() < bdb.execute(q2).fetchvalue()
 
@@ -319,6 +321,8 @@ def test_select_trivial():
         'SELECT (("a" NOT BETWEEN "b" AND "c") IN (SELECT "f"));'
     assert bql2sql('select a in (select b) and c not in (select d);') == \
         'SELECT (("a" IN (SELECT "b")) AND ("c" NOT IN (SELECT "d")));'
+    assert bql2sql("select a in (1 + 2, '3') and b not in (select c);") == \
+        'SELECT (("a" IN ((1 + 2), \'3\')) AND ("b" NOT IN (SELECT "c")));'
     assert bql2sql('select a in (select b) isnull notnull!=c<>d<e<=f>g;') == \
         'SELECT ((((("a" IN (SELECT "b")) ISNULL) NOTNULL) != "c") !=' \
         + ' ((("d" < "e") <= "f") > "g"));'
@@ -343,8 +347,7 @@ def test_select_trivial():
         'SELECT CASE "f"("a") WHEN ("b" + "c") THEN "d" ELSE "e" END FROM "t";'
 
 def test_estimate_bql():
-    assert bql2sql('estimate predictive probability of weight'
-            ' from p1;') == \
+    assert bql2sql('estimate predictive probability of weight from p1;') == \
         'SELECT bql_row_column_predictive_probability(1, NULL, _rowid_, 3)' \
             ' FROM "t1";'
     assert bql2sql('estimate label, predictive probability of weight'
@@ -369,28 +372,33 @@ def test_estimate_bql():
         bql2sql('estimate predictive probability of weight;')
     with pytest.raises(parse.BQLParseError):
         # Need at most one generator.
-        bql2sql('estimate predictive probability of weight from p1, p1;')
+        bql2sql('estimate predictive probability of weight'
+            ' from p1, p1;')
     with pytest.raises(parse.BQLParseError):
         # Need a generator name, not a subquery.
-        bql2sql('estimate predictive probability of weight from (select 0);')
+        bql2sql('estimate predictive probability of weight'
+            ' from (select 0);')
     with pytest.raises(parse.BQLParseError):
         # Need a column.
         bql2sql('estimate predictive probability from p1;')
-    assert bql2sql('estimate probability of weight = 20 from p1;') == \
+    assert bql2sql('estimate probability density of weight = 20 from p1;') == \
         'SELECT bql_pdf_joint(1, NULL, 3, 20) FROM "t1";'
-    assert bql2sql('estimate probability of weight = 20 given (age = 8)'
-            'from p1;') == \
+    assert bql2sql('estimate probability density of weight = 20'
+            ' given (age = 8)'
+            ' from p1;') == \
         'SELECT bql_pdf_joint(1, NULL, 3, 20, NULL, 2, 8) FROM "t1";'
-    assert bql2sql('estimate probability of (weight = 20, age = 8)'
+    assert bql2sql('estimate probability density of (weight = 20, age = 8)'
             ' from p1;') == \
         'SELECT bql_pdf_joint(1, NULL, 3, 20, 2, 8) FROM "t1";'
-    assert bql2sql('estimate probability of (weight = 20, age = 8)'
+    assert bql2sql('estimate probability density of (weight = 20, age = 8)'
             " given (label = 'mumble') from p1;") == \
         "SELECT bql_pdf_joint(1, NULL, 3, 20, 2, 8, NULL, 1, 'mumble')" \
             ' FROM "t1";'
-    assert bql2sql('estimate probability of weight = (c + 1) from p1;') == \
+    assert bql2sql('estimate probability density of weight = (c + 1)'
+            ' from p1;') == \
         'SELECT bql_pdf_joint(1, NULL, 3, ("c" + 1)) FROM "t1";'
-    assert bql2sql('estimate probability of weight = f(c) from p1;') == \
+    assert bql2sql('estimate probability density of weight = f(c)'
+            ' from p1;') == \
         'SELECT bql_pdf_joint(1, NULL, 3, "f"("c")) FROM "t1";'
     assert bql2sql('estimate similarity to (rowid = 5) from p1;') == \
         'SELECT bql_row_similarity(1, NULL, _rowid_,' \
@@ -423,8 +431,8 @@ def test_estimate_bql():
             ' with respect to (age, weight) from p1;') == \
         'SELECT bql_row_similarity(1, NULL, _rowid_,' \
         ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)), 2, 3) FROM "t1";'
-    assert bql2sql('estimate dependence probability of age with weight' +
-        ' from p1;') == \
+    assert bql2sql('estimate dependence probability of age with weight'
+            ' from p1;') == \
         'SELECT bql_column_dependence_probability(1, NULL, 2, 3) FROM "t1";'
     with pytest.raises(bayeslite.BQLError):
         # Need both rows fixed.
@@ -698,21 +706,22 @@ def test_estimate_columns_trivial():
     assert bql2sql('estimate * from columns of p1;') == \
         prefix + ';'
     assert bql2sql('estimate * from columns of p1 where' +
-            ' (probability of value 42) > 0.5') == \
+            ' (probability density of value 42) > 0.5') == \
         prefix + \
         ' AND (bql_column_value_probability(1, NULL, c.colno, 42) > 0.5);'
     assert bql2sql('estimate * from columns of p1'
-            ' where (probability of value 8) > (probability of age = 16)') == \
+            ' where (probability density of value 8)'
+            ' > (probability density of age = 16)') == \
         prefix + \
         ' AND (bql_column_value_probability(1, NULL, c.colno, 8) >' \
         ' bql_pdf_joint(1, NULL, 2, 16));'
-    assert bql2sql('estimate *, probability of value 8 given (age = 8)'
+    assert bql2sql('estimate *, probability density of value 8 given (age = 8)'
             ' from columns of p1;') == \
         prefix0 + \
         ', bql_column_value_probability(1, NULL, c.colno, 8, 2, 8)' + \
         prefix1 + ';'
     with pytest.raises(bayeslite.BQLError):
-        bql2sql('estimate probability of value 8 given (agee = 8)'
+        bql2sql('estimate probability density of value 8 given (agee = 8)'
             ' from columns of p1')
     with pytest.raises(bayeslite.BQLError):
         # PREDICTIVE PROBABILITY makes no sense without row.
@@ -806,6 +815,25 @@ def test_estimate_columns_trivial():
         + prefix1 + \
         ' AND ("depprob" > 0.5)' \
         ' ORDER BY "mutinf" DESC;'
+    # XXX This mixes up target and reference variables, which is OK,
+    # because MI is symmetric, but...oops.
+    assert bql2sql('estimate * from variables of p1'
+            ' where probability of (mutual information with age < 0.1)'
+            ' > 0.8') == \
+        prefix + \
+        ' AND ((SELECT "AVG"("x") FROM (SELECT ("v0" < 0.1) AS "x"' \
+            ' FROM (SELECT mi AS "v0" FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[' || c.colno || ']'))) > 0.8);"
+    assert bql2sql('estimate * from variables of p1'
+            ' order by probability of (mutual information with age < 0.1)') ==\
+        prefix + \
+        ' ORDER BY (SELECT "AVG"("x") FROM (SELECT ("v0" < 0.1) AS "x"' \
+            ' FROM (SELECT mi AS "v0" FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[' || c.colno || ']')));"
 
 def test_estimate_pairwise_trivial():
     prefix = 'SELECT 1 AS population_id, v0.name AS name0, v1.name AS name1, '
@@ -825,7 +853,7 @@ def test_estimate_pairwise_trivial():
         infix + ';'
     assert bql2sql('estimate mutual information'
             ' from pairwise columns of p1 where'
-            ' (probability of age = 0) > 0.5;') == \
+            ' (probability density of age = 0) > 0.5;') == \
         prefix + \
         'bql_column_mutual_information(1, NULL, '\
         '\'[\' || v0.colno || \']\', \'[\' || v1.colno || \']\', NULL)' + \
@@ -833,7 +861,7 @@ def test_estimate_pairwise_trivial():
         ' AND (bql_pdf_joint(1, NULL, 2, 0) > 0.5);'
     assert bql2sql('estimate mutual information given (label=\'go\', weight)'
             ' from pairwise columns of p1 where'
-            ' (probability of age = 0) > 0.5;') == \
+            ' (probability density of age = 0) > 0.5;') == \
         prefix + \
         'bql_column_mutual_information(1, NULL,'\
         ' \'[\' || v0.colno || \']\', \'[\' || v1.colno || \']\', NULL,'\
@@ -841,9 +869,9 @@ def test_estimate_pairwise_trivial():
         infix + \
         ' AND (bql_pdf_joint(1, NULL, 2, 0) > 0.5);'
     with pytest.raises(bayeslite.BQLError):
-        # PROBABILITY OF VALUE is 1-column.
+        # PROBABILITY DENSITY OF VALUE is 1-column.
         bql2sql('estimate correlation from pairwise columns of p1 where' +
-            ' (probability of value 0) > 0.5;')
+            ' (probability density of value 0) > 0.5;')
     with pytest.raises(bayeslite.BQLError):
         # PREDICTIVE PROBABILITY OF is a row function.
         bql2sql('estimate dependence probability'
@@ -985,6 +1013,112 @@ def test_select_columns_subquery():
     assert bql2sql('select id, t1.(estimate * from columns of p1'
             ' order by name asc limit 2) from t1') == \
         'SELECT "id", "t1"."age", "t1"."label" FROM "t1";'
+
+@pytest.mark.xfail(strict=True, reason='no simulate vars from models of')
+def test_simulate_models_columns_subquery():
+    assert bql2sql('simulate weight, t1.(estimate * from columns of p1'
+            ' order by name asc limit 2) from models of p1') == \
+        'SELECT * FROM "bayesdb_temp_0";'
+    assert bql2sql('simulate 0, weight, t1.(estimate * from columns of p1'
+            ' order by name asc limit 2) from models of p1') == \
+        'SELECT 0, "v0" AS "weight", "v1" AS "age", "v2" AS "label" FROM' \
+        ' (SELECT * FROM "bayesdb_temp_0");'
+    assert bql2sql('simulate weight + 1, t1.(estimate * from columns of p1'
+            ' order by name asc limit 2) from models of p1') == \
+        'SELECT ("v0" + 1), "v1" AS "age", "v2" AS "label" FROM' \
+        ' (SELECT * FROM "bayesdb_temp_0");'
+    assert bql2sql('simulate weight + 1 AS wp1,'
+            ' t1.(estimate * from columns of p1'
+            ' order by name asc limit 2) from models of p1') == \
+        'SELECT ("v0" + 1) AS "wp1", "v1" AS "age", "v2" AS "label" FROM' \
+        ' (SELECT * FROM "bayesdb_temp_0");'
+
+def test_simulate_columns_subquery():
+    # XXX This test is a little unsatisfactory -- we do not get to see
+    # what the variables in the result are named...
+    assert bql2sql('simulate weight, t1.(estimate * from columns of p1'
+            ' order by name asc limit 2) from p1 limit 10') == \
+        'SELECT * FROM "bayesdb_temp_0";'
+    with pytest.raises(parse.BQLParseError):
+        # Compound columns not yet implemented for SIMULATE.
+        bql2sql('simulate weight + 1, t1.(estimate * from columns of p1'
+            ' order by name asc limit 2) from p1 limit 10')
+
+def test_simulate_models():
+    # Base case.
+    assert bql2sql('simulate mutual information of age with weight'
+            ' from models of p1') == \
+        'SELECT mi FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[3]';"
+    # Multiple target variables.
+    assert bql2sql('simulate mutual information of (label, age) with weight'
+            ' from models of p1') == \
+        'SELECT mi FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[1, 2]'" \
+                " AND reference_vars = '[3]';"
+    # Multiple reference variables.
+    assert bql2sql('simulate mutual information of age with (label, weight)'
+            ' from models of p1') == \
+        'SELECT mi FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[1, 3]';"
+    # Specified number of samples.
+    assert bql2sql('simulate mutual information of age with weight'
+            ' using 42 samples from models of p1') == \
+        'SELECT mi FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[3]'" \
+                ' AND nsamples = 42;'
+    # Conditional.
+    assert bql2sql('simulate mutual information of age with weight'
+            " given (label = 'foo') from models of p1") == \
+        'SELECT mi FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[3]'" \
+                " AND conditions = '{\"1\": \"foo\"}';"
+    # Modelled by a specific generator.
+    assert bql2sql('simulate mutual information of age with weight'
+                ' from models of p1 modelled by g1',
+            lambda bdb: bdb.execute('create generator g1 for p1')) == \
+        'SELECT mi FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                ' AND generator_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[3]';"
+    # Two mutual informations.
+    assert bql2sql('simulate mutual information of age with weight AS "mi(aw)",'
+            ' mutual information of label with weight AS "mi(lw)"'
+            ' from models of p1') == \
+        'SELECT t0."mi(aw)" AS "mi(aw)", t1."mi(lw)" AS "mi(lw)"' \
+            ' FROM (SELECT _rowid_, mi AS "mi(aw)" FROM bql_mutinf' \
+                    ' WHERE population_id = 1' \
+                        " AND target_vars = '[2]'" \
+                        " AND reference_vars = '[3]') AS t0," \
+                ' (SELECT _rowid_, mi AS "mi(lw)" FROM bql_mutinf' \
+                    ' WHERE population_id = 1' \
+                        " AND target_vars = '[1]'" \
+                        " AND reference_vars = '[3]') AS t1" \
+            ' WHERE t0._rowid_ = t1._rowid_;'
+
+def test_probability_of_mutinf():
+    assert bql2sql('estimate probability of'
+            ' (mutual information of age with weight < 0.1) > 0.5'
+            ' within p1') == \
+        'SELECT ((SELECT "AVG"("x") FROM (SELECT ("v0" < 0.1) AS "x"' \
+        ' FROM (SELECT mi AS "v0" FROM bql_mutinf' \
+            ' WHERE population_id = 1' \
+                " AND target_vars = '[2]'" \
+                " AND reference_vars = '[3]'))) > 0.5);"
+
+def test_simulate_columns_all():
+    with pytest.raises(parse.BQLParseError):
+        bql2sql('simulate * from p1')
 
 def test_trivial_commands():
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
@@ -2205,7 +2339,7 @@ def test_estimate_by():
             bdb.execute('estimate similarity to (rowid=1) by p1')
         def check(x, bindings=None):
             assert len(bdb.execute(x, bindings=bindings).fetchall()) == 1
-        check('estimate probability of age = 42 by p1')
+        check('estimate probability density of age = 42 by p1')
         check('estimate dependence probability of age with weight by p1')
         check('estimate mutual information of age with weight by p1')
         check('estimate correlation of age with weight by p1')

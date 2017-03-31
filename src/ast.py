@@ -39,13 +39,6 @@ CreateTabAs = namedtuple('CreateTabAs', [
     'name',                     # XXX name
     'query',                    # query
 ])
-CreateTabSimModels = namedtuple('CreateTabSimModels', [
-    # XXX Database name, &c.
-    'temp',                     # boolean
-    'ifnotexists',              # boolean
-    'name',                     # XXX name
-    'simulation',               # Simulate
-])
 CreateTabCsv = namedtuple('CreateTabCsv', [
     # XXX Database name, &c.
     'temp',                     # boolean
@@ -157,18 +150,26 @@ DropModels = namedtuple('DropModels', [
 ])
 
 Simulate = namedtuple('Simulate', [
-    'columns',
-    'population',
-    'generator',
+    'columns',                  # [SelCol*]
+    'population',               # XXX name
+    'generator',                # XXX name
     'constraints',              # [(XXX name, Exp*)]
     'nsamples',                 # Exp* or None
     'accuracy',                 # int or None
 ])
 
 SimulateModels = namedtuple('SimulateModels', [
-    'columns',
-    'population',
-    'generator',
+    'columns',                  # [SelCol*]
+    'population',               # XXX name
+    'generator',                # XXX name or None
+])
+
+# Same as SimulateModels, but with compound expressions, not limited
+# to BQL functions.
+SimulateModelsExp = namedtuple('SimulateModelsExp', [
+    'columns',                  # [SelCol*]
+    'population',               # XXX name
+    'generator',                # XXX name or None
 ])
 
 def is_query(phrase):
@@ -191,6 +192,8 @@ def is_query(phrase):
     if isinstance(phrase, Simulate):
         return True
     if isinstance(phrase, SimulateModels):
+        return True
+    if isinstance(phrase, SimulateModelsExp):
         return True
     return False
 
@@ -247,11 +250,6 @@ PredCol = namedtuple('PredCol', [
 SelTab = namedtuple('SelTab', [
     'table',                    # XXX subquery or XXX name
     'name',                     # XXX name
-])
-
-SimCol = namedtuple('SimCol', [
-    'col',
-    'name',
 ])
 
 InferAuto = namedtuple('InferAuto', [
@@ -330,7 +328,8 @@ ExpCol = namedtuple('ExpCol', ['table', 'column'])
 # subqueries for column lists from subqueries for table rows.
 ExpSub = namedtuple('ExpSub', ['query'])
 ExpCollate = namedtuple('ExpCollate', ['expression', 'collation'])
-ExpIn = namedtuple('ExpIn', ['expression', 'positive', 'query'])
+ExpInQuery = namedtuple('ExpInQuery', ['expression', 'positive', 'query'])
+ExpInExp = namedtuple('ExpInExp', ['expression', 'positive', 'expressions'])
 ExpCast = namedtuple('ExpCast', ['expression', 'type'])
 ExpExists = namedtuple('ExpExists', ['query'])
 ExpApp = namedtuple('ExpApp', ['distinct', 'operator', 'operands'])
@@ -388,8 +387,10 @@ OP_NEGATE = 'NEGATE'
 OP_PLUSID = 'PLUSID'
 
 ExpBQLPredProb = namedtuple('ExpBQLPredProb', ['column'])
-ExpBQLProb = namedtuple('ExpBQLProb', ['targets', 'constraints'])
-ExpBQLProbFn = namedtuple('ExpBQLProbFn', ['value', 'constraints'])
+ExpBQLProbDensity = namedtuple('ExpBQLProbDensity', ['targets', 'constraints'])
+ExpBQLProbDensityFn = namedtuple('ExpBQLProbDensityFn', [
+    'value', 'constraints'
+])
 ExpBQLSim = namedtuple('ExpBQLSim', [
     'ofcondition', 'tocondition', 'column_lists'
 ])
@@ -403,13 +404,14 @@ ExpBQLPredict = namedtuple('ExpBQLPredict', [
     'column', 'confidence', 'nsamples',
 ])
 ExpBQLPredictConf = namedtuple('ExpBQLPredictConf', ['column', 'nsamples'])
+ExpBQLProbEst = namedtuple('ExpBQLProbEst', ['expression'])
 
 def is_bql(exp):
     if isinstance(exp, ExpBQLPredProb):
         return True
-    if isinstance(exp, ExpBQLProb):
+    if isinstance(exp, ExpBQLProbDensity):
         return True
-    if isinstance(exp, ExpBQLProbFn):
+    if isinstance(exp, ExpBQLProbDensityFn):
         return True
     if isinstance(exp, ExpBQLSim):
         return True
@@ -424,6 +426,8 @@ def is_bql(exp):
     if isinstance(exp, ExpBQLPredict):
         return True
     if isinstance(exp, ExpBQLPredictConf):
+        return True
+    if isinstance(exp, ExpBQLProbEst):
         return True
     return False
 
