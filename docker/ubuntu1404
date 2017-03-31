@@ -10,7 +10,6 @@ RUN             apt-get install -qq python-numpy
 RUN             apt-get install -qq python-pandas
 RUN             apt-get install -qq python-pexpect
 RUN             apt-get install -qq python-pytest
-RUN             apt-get install -qq python-requests
 RUN             apt-get install -qq python-scipy
 RUN             apt-get install -qq python-six
 

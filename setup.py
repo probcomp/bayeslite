@@ -204,7 +204,6 @@ setup(
         'crosscat>=0.1.55',
         'jsonschema',
         'numpy',
-        'requests',
         'setuptools', # For parse_version in src/remote.py
     ],
     tests_require=[
