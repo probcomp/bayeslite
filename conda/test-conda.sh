@@ -20,7 +20,6 @@ sed -i .bak 's/def test_conditional_probability():/def _ignore_conditional_proba
 sed -i .bak 's/def test_joint_probability():/def _ignore_joint_probability():/g' test_bql.py
 
 # Run the tests
-export BAYESDB_DISABLE_VERSION_CHECK=True
 python -m pytest
 
 source deactivate

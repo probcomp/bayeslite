@@ -11,7 +11,6 @@ root=`cd -- "$(dirname -- "$0")" && pwd`
     cd -- "${root}"
     rm -rf build
     "$PYTHON" setup.py build
-    export BAYESDB_DISABLE_VERSION_CHECK=1
     if [ $# -eq 0 ]; then
         # By default, when running all tests, skip tests that have
         # been marked for continuous integration by using __ci_ in

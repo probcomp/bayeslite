@@ -51,19 +51,6 @@ You can also execute normal SQL on a BayesDB handle `bdb` with the
 
 (BQL does not yet support ``CREATE TABLE`` and ``INSERT`` directly, so
 you must use :meth:`~BayesDB.sql_execute` for those.)
-
-When imported, the :mod:`bayeslite` module will notify the MIT
-Probabilistic Computing Project over the internet of the software
-version you are using, and warn if it is out-of-date.  To disable
-this, set the environment variable ``BAYESDB_DISABLE_VERSION_CHECK``
-before import, such as with::
-
-    import os
-    os.environ['BAYESDB_DISABLE_VERSION_CHECK'] = '1'
-    import bayeslite
-
-If you would like to analyze your own data with BayesDB, please
-contact bayesdb@mit.edu to participate in our research project.
 """
 
 from bayeslite.bayesdb import BayesDB
@@ -119,13 +106,3 @@ bayesdb_builtin_metamodel(CrosscatMetamodel(CrosscatLocalEngine(seed=0)))
 # Register cgpm as a builtin metamodel.
 from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
 bayesdb_builtin_metamodel(CGPM_Metamodel({}, multiprocess=True))
-
-import bayeslite.remote
-import os
-if not 'BAYESDB_DISABLE_VERSION_CHECK' in os.environ:
-    bayeslite.remote.version_check()
-
-# Notebooks should contain comment lines documenting this behavior and
-# offering a solution, like so:
-# Please keep BayesDB up to date. To disable remote version checking:
-# import os; os.environ['BAYESDB_DISABLE_VERSION_CHECK'] = '1'
