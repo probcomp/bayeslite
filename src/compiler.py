@@ -829,8 +829,9 @@ def compile_simulate_constraints(
     def map_var(var):
         if not core.bayesdb_has_variable(
                 bdb, population_id, generator_id, var):
+            population = core.bayesdb_population_name(bdb, population_id)
             raise BQLError(bdb, 'No such variable in population %r: %r' %
-                (simmodels.population, var))
+                (population, var))
         return core.bayesdb_variable_number(
             bdb, population_id, generator_id, var)
     def map_lit(lit):
