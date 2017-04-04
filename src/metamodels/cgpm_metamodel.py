@@ -69,6 +69,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
     def __init__(self, cgpm_registry, multiprocess=None):
         self._cgpm_registry = cgpm_registry
         self._multiprocess = multiprocess
+        self._cache_table = dict()
 
     def name(self):
         return 'cgpm'
@@ -383,6 +384,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             self, bdb, generator_id, modelno, colno0, colno1):
         # Optimize special-case vacuous case of self-dependence.
         # XXX Caller should avoid this.
+        print '\r(%s, %s)' % (colno0, colno1),
+        import sys; sys.stdout.flush()
         if colno0 == colno1:
             return 1
 
@@ -424,6 +427,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
     def row_similarity(
             self, bdb, generator_id, modelno, rowid, target_rowid, colnos):
+        print '\r(%s, %s)' % (rowid, target_rowid),
+        import sys; sys.stdout.flush()
         # Map the variable and individual indexing.
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
         cgpm_target_rowid = self._cgpm_rowid(bdb, generator_id, target_rowid)
@@ -441,6 +446,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
     def generative_similarity(self, bdb, generator_id, modelno, rowid_target,
             rowid_query, hypotheticals, colno):
+        print '\r(%s, %s)' % (rowid_target, rowid_query),
+        import sys; sys.stdout.flush()
         # Convert target rowid
         cgpm_rowid_target = self._cgpm_rowid(bdb, generator_id, rowid_target)
 
@@ -680,29 +687,29 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
     def _cache(self, bdb):
         # If there's no BayesDB-wide cache, there's no CGPM cache.
-        if bdb.cache is None:
+        if self._cache_table is None:
             return None
 
         # If there already is a CGPM cache, return it.  Otherwise
         # create a new one and cache it.
-        if 'cgpm' in bdb.cache:
-            return bdb.cache['cgpm']
+        if 'cgpm' in self._cache_table:
+            return self._cache_table['cgpm']
         else:
             cache = CGPM_Cache()
-            bdb.cache['cgpm'] = cache
+            self._cache_table['cgpm'] = cache
             return cache
 
     def _cache_nocreate(self, bdb):
         # If there's no BayesDB-wide cache, there's no CGPM cache.
-        if bdb.cache is None:
+        if self._cache_table is None:
             return None
 
         # If there's no CGPM cache already, tough.
-        if 'cgpm' not in bdb.cache:
+        if 'cgpm' not in self._cache_table:
             return None
 
         # Otherwise, get it.
-        return bdb.cache['cgpm']
+        return self._cache_table['cgpm']
 
     def _schema(self, bdb, generator_id):
         # Probe the cache.
@@ -736,6 +743,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             return cache.engine[generator_id]
 
         # Not cached.  Load the engine from the database.
+        import time; start = time.time()
+        print 'Loading the engine...'
         cursor = bdb.sql_execute('''
             SELECT engine_json FROM bayesdb_cgpm_generator
                 WHERE generator_id = ?
@@ -745,11 +754,15 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             generator = core.bayesdb_generator_name(bdb, generator_id)
             raise BQLError(bdb,
                 'No models initialized for generator: %r' % (generator,))
+        print 'Loaded: %f (sec)' % (time.time() - start,)
 
         # Deserialize the engine.
+        import time; start = time.time()
+        print 'Creating the engine...'
         engine = Engine.from_metadata(
             json.loads(engine_json), rng=bdb.np_prng,
             multiprocess=self._multiprocess)
+        print 'Created: %f (sec)' % (time.time() - start,)
 
         # Cache it, if we can.
         if cache is not None:
