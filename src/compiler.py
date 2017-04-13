@@ -1616,6 +1616,11 @@ def compile_bql_2col_1(bdb, population_id, generator_id, bqlfn, desc, extra,
         raise BQLError(bdb, desc + ' needs at least one column.')
     if bql.column1 is not None:
         raise BQLError(bdb, desc + ' needs at most one column.')
+    if not core.bayesdb_has_variable(bdb, population_id, generator_id,
+            bql.column0):
+        population = core.bayesdb_population_name(bdb, population_id)
+        raise BQLError('No such variable in population %s: %s' %
+            (population, bql.column0))
     colno0 = core.bayesdb_variable_number(bdb, population_id, generator_id,
         bql.column0)
     out.write('%s(%d, %s, ' % (bqlfn, population_id, nullor(generator_id)))

@@ -476,9 +476,6 @@ def test_estimate_bql():
     with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
         bql2sql('estimate correlation from p1;')
-
-@pytest.mark.xfail(strict=True)
-def test_estimate_bql_broken():
     with pytest.raises(BQLError):
         # Variable must exist.
         bql2sql('estimate correlation with agee from variables of p1')
