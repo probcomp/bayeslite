@@ -1,9 +1,26 @@
+# -*- coding: utf-8 -*-
+
+#   Copyright (c) 2010-2016, MIT Probabilistic Computing Project
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from __future__ import division  # For type safety in gaussian_kl_divergence
 
 from functools import partial
 from math import erfc
 
 import numpy as np
+
 from numpy.random import RandomState
 
 import kl
@@ -52,8 +69,8 @@ def compute_kullback_leibler_check_statistic(n=100, prngstate=None):
 
 def kl_test_stat():
     prngstate = RandomState(17)
-    return partial(compute_kullback_leibler_check_statistic,
-                   prngstate=prngstate)
+    return partial(
+        compute_kullback_leibler_check_statistic, prngstate=prngstate)
 
 
 def compute_kl_threshold():
@@ -62,9 +79,11 @@ def compute_kl_threshold():
     >>> threshold.compute_sufficiently_stringent_threshold(
             kl_test_stat(), 6, 1e-20)
     ...
-    TestThreshold(threshold=4.3883148424367044e-13,
-                  failprob=9.724132259513859e-21,
-                  sample_size=252135)
+    TestThreshold(
+        threshold=4.3883148424367044e-13,
+        failprob=9.724132259513859e-21,
+        sample_size=252135
+    )
 
     This means that after generating 252135 check statistics, it was found that
     the least value of six samples will be less than 4.3883148424367044e-13
@@ -79,7 +98,9 @@ def test_kullback_leibler():
     """Check kullback_leibler_check_statistic doesn't give absurdly low
     values."""
     # See compute_kl_threshold for derivation
-    kl_threshold = threshold.TestThreshold(threshold=4.3883148424367044e-13,
-                                           failprob=9.724132259513859e-21,
-                                           sample_size=252135)
+    kl_threshold = threshold.TestThreshold(
+        threshold=4.3883148424367044e-13,
+        failprob=9.724132259513859e-21,
+        sample_size=252135
+    )
     threshold.check_generator(kl_test_stat(), 6, kl_threshold.threshold, 1e-20)
