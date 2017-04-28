@@ -78,7 +78,7 @@ def test_infer_ones(bdb):
     b_ones = bdb.execute('''
         INFER EXPLICIT
             a,
-            PREDICT b CONFIDENCE conf USING 20 SAMPLES
+            PREDICT b CONFIDENCE conf USING 100 SAMPLES
         FROM p WHERE oid BETWEEN 41 AND 50
     ''').fetchall()
     assert all(r[0] == '0' for r in b_ones)
@@ -89,7 +89,7 @@ def test_infer_zeros(bdb):
     # All the a's should be zero (check 90%).
     a_zeros = bdb.execute('''
         INFER EXPLICIT
-            PREDICT a CONFIDENCE conf USING 20 SAMPLES,
+            PREDICT a CONFIDENCE conf USING 100 SAMPLES,
             b
         FROM p WHERE oid BETWEEN 51 AND 60
     ''').fetchall()
@@ -102,14 +102,14 @@ def test_infer_uniform_marginal(bdb):
     # test heuristically not statistically.
 
     uniform_a = bdb.execute('''
-        INFER EXPLICIT PREDICT a CONFIDENCE conf USING 20 SAMPLES
+        INFER EXPLICIT PREDICT a CONFIDENCE conf USING 100 SAMPLES
         FROM p WHERE oid BETWEEN 61 AND 80
     ''').fetchall()
     assert len([r for r in uniform_a if r[0] == '1' and r[1] > 0.55]) < 15
     assert len([r for r in uniform_a if r[0] == '0' and r[1] > 0.55]) < 15
 
     uniform_b = bdb.execute('''
-        INFER EXPLICIT PREDICT b CONFIDENCE conf USING 20 SAMPLES
+        INFER EXPLICIT PREDICT b CONFIDENCE conf USING 100 SAMPLES
         FROM p WHERE oid BETWEEN 61 AND 80
     ''').fetchall()
     assert len([r for r in uniform_a if r[0] == '1' and r[1] > 0.55]) < 15

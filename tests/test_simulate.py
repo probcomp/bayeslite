@@ -155,18 +155,18 @@ def test_simulate_given_rowid_multivariate():
         ''')
         bdb.execute('CREATE METAMODEL t_g FOR t_p;')
         bdb.execute('INITIALIZE 1 MODEL FOR t_g')
-        bdb.execute('ANALYZE t_g FOR 20 ITERATION WAIT (OPTIMIZED)')
+        bdb.execute('ANALYZE t_g FOR 100 ITERATION WAIT(OPTIMIZED)')
         bdb.execute('''
             CREATE TABLE row1_1 AS
                 SIMULATE y FROM t_p
                 GIVEN _rowid_ = 1, w = 3000
-            LIMIT 100
+            LIMIT 1500
         ''')
         bdb.execute('''
             CREATE TABLE row1_2 AS
                 SIMULATE y FROM t_p
                 GIVEN ROWID = 1, w = 1
-            LIMIT 100
+            LIMIT 1500
         ''')
         row1_1_avg = bdb.execute('SELECT AVG(y) FROM row1_1').fetchall()[0][0]
         row1_2_avg = bdb.execute('SELECT AVG(y) FROM row1_2').fetchall()[0][0]
@@ -175,6 +175,24 @@ def test_simulate_given_rowid_multivariate():
         # CrossCat metamodel, so the additional condition on w should have no
         # effect.
         assert abs(row1_1_avg - row1_2_avg) < 2
+
+        bdb.execute('''
+            CREATE TABLE row_w3000 AS
+                SIMULATE y FROM t_p
+                GIVEN w = 3000
+            LIMIT 100
+        ''')
+        bdb.execute('''
+            CREATE TABLE row_w1 AS
+                SIMULATE y FROM t_p
+                GIVEN w = 1
+            LIMIT 100
+        ''')
+        row_w1 = bdb.execute('SELECT AVG(y) FROM row_w1').fetchall()[0][0]
+        row_w3000 = bdb.execute('SELECT AVG(y) FROM row_w3000').fetchall()[0][0]
+        # We expect these values to be far from each other, because the
+        # condition on w should specify very different posteriors for y.
+        assert abs(row_w1 - row_w3000) > 100
 
         # A call to SIMULATE without CREATE TABLE. Since oid 1 has w = None, the
         # constraint specification w = 3 is legal.
