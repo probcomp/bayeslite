@@ -842,7 +842,6 @@ def test_predictive_relevance():
         # Check self-similarites, and also provide coverage of bindings.
         rowids = bdb.execute('SELECT OID from satellites_ucs;').fetchall()
         for rowid in rowids[:4]:
-            print rowid
             cursor = bdb.execute('''
                 ESTIMATE PREDICTIVE RELEVANCE
                     TO EXISTING ROWS (rowid = ?)
