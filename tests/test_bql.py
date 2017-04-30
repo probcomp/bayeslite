@@ -165,7 +165,6 @@ def test_similarity_identity():
             assert c[0][0] == 1
 
 def test_predictive_relevance():
-    # XXX Two spaces after SELECT, due to compiler.compile_select_columns.
     assert bql2sql('''
         estimate predictive relevance
             of (label = 'Uganda')
@@ -177,7 +176,7 @@ def test_predictive_relevance():
             in the context of "weight"
         by p1
     ''') == \
-        'SELECT  bql_row_predictive_relevance(1, NULL, '\
+        'SELECT bql_row_predictive_relevance(1, NULL, '\
             '(SELECT _rowid_ FROM "t1" WHERE ("label" = \'Uganda\')), '\
             '\'[1, 2, 3]\', 3, '\
             '2, 82, 3, 14, NULL, 2, 74, 1, \'Europe\', 3, 7, NULL);'
@@ -188,7 +187,7 @@ def test_predictive_relevance():
             in the context of "label"
         by p1
     ''') == \
-        'SELECT  bql_row_predictive_relevance(1, NULL, '\
+        'SELECT bql_row_predictive_relevance(1, NULL, '\
             '(SELECT _rowid_ FROM "t1" WHERE ("label" = \'mumble\')), '\
             '\'[5, 8]\', 1);'
     assert bql2sql('''
