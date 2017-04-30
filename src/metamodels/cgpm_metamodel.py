@@ -20,6 +20,7 @@ import math
 
 from collections import Counter
 from collections import defaultdict
+from collections import namedtuple
 
 from cgpm.crosscat.engine import Engine
 
@@ -65,10 +66,28 @@ CREATE TABLE bayesdb_cgpm_category (
 );
 '''
 
+CGPM_SCHEMA_2 = '''
+UPDATE bayesdb_metamodel SET version = 2 WHERE name = 'cgpm';
+
+ALTER TABLE bayesdb_cgpm_generator
+    ADD COLUMN engine_stamp
+    INTEGER NOT NULL DEFAULT 0;
+'''
+
+
 class CGPM_Metamodel(IBayesDBMetamodel):
     def __init__(self, cgpm_registry, multiprocess=None):
         self._cgpm_registry = cgpm_registry
         self._multiprocess = multiprocess
+        # The cache is a dictionary whose keys are bayeslite.BayesDB objects,
+        # and whose values are dictionaries (one cache per bdb). We need
+        # self._cache to have separate caches for each bdb because the same
+        # instance of CGPM_Metamodel may be used across multiple bdb instances.
+        # This situation occurs when CGPM_Metamodel is used as a default
+        # metamodel (refer to __init__.py, where the bayeslite module, upon
+        # import, creates a single CGPM_Metamodel object to be used throughout
+        # the python session).
+        self._cache = dict()
 
     def name(self):
         return 'cgpm'
@@ -83,7 +102,11 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 # Instantiate it.
                 bdb.sql_execute(CGPM_SCHEMA_1)
                 version = 1
-            if version != 1:
+            if version == 1:
+                # Install CGPM version 2.
+                bdb.sql_execute(CGPM_SCHEMA_2)
+                version = 2
+            if version != 2:
                 # Unrecognized version.
                 raise BQLError(bdb, 'CGPM already installed'
                     ' with unknown schema version: %d' % (version,))
@@ -165,13 +188,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             ''', (generator_id, table_rowid, cgpm_rowid))
 
     def drop_generator(self, bdb, generator_id):
-        # Flush any cached schema or engines.
-        cache = self._cache_nocreate(bdb)
-        if cache is not None:
-            if generator_id in cache.schema:
-                del cache.schema[generator_id]
-            if generator_id in cache.engine:
-                del cache.engine[generator_id]
+        # Remove the cache for this generator_id.
+        self._del_cache_entry(bdb, generator_id, None)
 
         # Delete categories.
         bdb.sql_execute('''
@@ -231,14 +249,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             multiprocess=self._multiprocess)
 
         # Serialize the engine.
-        engine_json = json_dumps(engine.to_metadata())
-
-        # Update the engine.
-        bdb.sql_execute('''
-            UPDATE bayesdb_cgpm_generator
-                SET engine_json = :engine_json
-                WHERE generator_id = :generator_id
-        ''', {'generator_id': generator_id, 'engine_json': engine_json})
+        self._serialize_engine(bdb, generator_id, engine, True)
 
     def initialize_models(self, bdb, generator_id, modelnos):
         # Caller should guarantee a nondegenerate request.
@@ -259,13 +270,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 for _ in xrange(n)]
             engine.compose_cgpm(cgpms, multiprocess=self._multiprocess)
 
-        # Store the newly initialized engine.
-        engine_json = json_dumps(engine.to_metadata())
-        bdb.sql_execute('''
-            UPDATE bayesdb_cgpm_generator
-                SET engine_json = :engine_json
-                WHERE generator_id = :generator_id
-        ''', {'generator_id': generator_id, 'engine_json': engine_json})
+        self._serialize_engine(bdb, generator_id, engine, False)
 
     def drop_models(self, bdb, generator_id, modelnos=None):
         assert modelnos is None
@@ -276,10 +281,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 WHERE generator_id = ?
         ''', (generator_id,))
 
-        # Delete it from the cache too if necessary.
-        cache = self._cache(bdb)
-        if cache is not None and generator_id in cache.engine:
-            del cache.engine[generator_id]
+        # Delete the engine from the cache too if necessary.
+        self._del_cache_entry(bdb, generator_id, 'engine')
 
     def analyze_models(
             self, bdb, generator_id, modelnos=None, iterations=None,
@@ -370,14 +373,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             )
 
         # Serialize the engine.
-        engine_json = json_dumps(engine.to_metadata())
+        self._serialize_engine(bdb, generator_id, engine, True)
 
-        # Update the engine.
-        bdb.sql_execute('''
-            UPDATE bayesdb_cgpm_generator
-                SET engine_json = :engine_json
-                WHERE generator_id = :generator_id
-        ''', {'generator_id': generator_id, 'engine_json': engine_json})
 
     def column_dependence_probability(
             self, bdb, generator_id, modelno, colno0, colno1):
@@ -642,38 +639,11 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 pass
         return cgpm
 
-    def _cache(self, bdb):
-        # If there's no BayesDB-wide cache, there's no CGPM cache.
-        if bdb.cache is None:
-            return None
-
-        # If there already is a CGPM cache, return it.  Otherwise
-        # create a new one and cache it.
-        if 'cgpm' in bdb.cache:
-            return bdb.cache['cgpm']
-        else:
-            cache = CGPM_Cache()
-            bdb.cache['cgpm'] = cache
-            return cache
-
-    def _cache_nocreate(self, bdb):
-        # If there's no BayesDB-wide cache, there's no CGPM cache.
-        if bdb.cache is None:
-            return None
-
-        # If there's no CGPM cache already, tough.
-        if 'cgpm' not in bdb.cache:
-            return None
-
-        # Otherwise, get it.
-        return bdb.cache['cgpm']
-
     def _schema(self, bdb, generator_id):
         # Probe the cache.
-        cache = self._cache(bdb)
-        if cache is not None:
-            if generator_id in cache.schema:
-                return cache.schema[generator_id]
+        cached_schema = self._get_cache_entry(bdb, generator_id, 'schema')
+        if cached_schema is not None:
+            return cached_schema
 
         # Not cached.  Load the schema from the database.
         cursor = bdb.sql_execute('''
@@ -688,37 +658,116 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Deserialize the schema.
         schema = json.loads(schema_json)
 
-        # Cache it, if we can.
-        if cache is not None:
-            cache.schema[generator_id] = schema
+        # Cache it.
+        self._set_cache_entry(bdb, generator_id, 'schema', schema)
+
         return schema
 
     def _engine(self, bdb, generator_id):
-        # Probe the cache.
-        cache = self._cache(bdb)
-        if cache is not None and generator_id in cache.engine:
-            return cache.engine[generator_id]
+        # Retrieve the cache.
 
-        # Not cached.  Load the engine from the database.
+        # Probe the cache.
+        cached_engine = self._engine_latest(bdb, generator_id)
+        if cached_engine is not None:
+            return cached_engine
+
+        # Not cached or mismatched stamps. Load the engine from the database.
         cursor = bdb.sql_execute('''
-            SELECT engine_json FROM bayesdb_cgpm_generator
+            SELECT engine_json, engine_stamp FROM bayesdb_cgpm_generator
                 WHERE generator_id = ?
-        ''', (generator_id,))
-        engine_json = cursor_value(cursor)
-        if engine_json is None:
+        ''', (generator_id,)).fetchall()
+        if not cursor:
             generator = core.bayesdb_generator_name(bdb, generator_id)
             raise BQLError(bdb,
                 'No models initialized for generator: %r' % (generator,))
+
+        (engine_json, engine_stamp) = cursor[0]
 
         # Deserialize the engine.
         engine = Engine.from_metadata(
             json.loads(engine_json), rng=bdb.np_prng,
             multiprocess=self._multiprocess)
 
-        # Cache it, if we can.
-        if cache is not None:
-            cache.engine[generator_id] = engine
+        # Cache the engine with its stamp.
+        self._set_cache_entry(bdb, generator_id, 'engine', engine)
+        self._set_cache_entry(bdb, generator_id, 'stamp', engine_stamp)
+
         return engine
+
+    def _engine_latest(self, bdb, generator_id):
+        # Check whether there is a cached_engine.
+        cached_engine = self._get_cache_entry(bdb, generator_id, 'engine')
+        if cached_engine is None:
+            return None
+        # Check whether cached_engine is latest version on disk.
+        cached_stamp = self._get_cache_entry(bdb, generator_id, 'stamp')
+        latest_stamp = self._engine_stamp(bdb, generator_id)
+        assert cached_stamp <= latest_stamp
+        # Return the cached_engine if stamps match, else None
+        return cached_engine if cached_stamp == latest_stamp else None
+
+    def _engine_stamp(self, bdb, generator_id):
+        cursor = bdb.sql_execute('''
+            SELECT engine_stamp FROM bayesdb_cgpm_generator
+                WHERE generator_id = ?
+        ''', (generator_id,))
+        return cursor_value(cursor)
+
+    def _serialize_engine(self, bdb, generator_id, engine, cache):
+        # Write the engine to JSON.
+        engine_json = json_dumps(engine.to_metadata())
+
+        # Increment the stamp.
+        engine_stamp_old = self._engine_stamp(bdb, generator_id)
+        engine_stamp_new = engine_stamp_old + 1
+
+        # Update the engine and stamp.
+        bdb.sql_execute('''
+            UPDATE bayesdb_cgpm_generator
+                SET engine_json = :engine_json,
+                    engine_stamp = :engine_stamp
+                WHERE generator_id = :generator_id
+        ''', {
+            'engine_json': engine_json,
+            'engine_stamp': engine_stamp_new,
+            'generator_id': generator_id,
+        })
+
+        # Add it to the cache.
+        if cache:
+            self._set_cache_entry(bdb, generator_id, 'engine', engine)
+            self._set_cache_entry(bdb, generator_id, 'stamp', engine_stamp_new)
+
+
+    def _retrieve_cache(self, bdb,):
+        if bdb in self._cache:
+            return self._cache[bdb]
+        self._cache[bdb] = dict()
+        return self._cache[bdb]
+
+    def _set_cache_entry(self, bdb, generator_id, key, value):
+        cache = self._retrieve_cache(bdb)
+        if generator_id not in cache:
+            cache[generator_id] = dict()
+        cache[generator_id][key] = value
+
+    def _get_cache_entry(self, bdb, generator_id, key):
+        # If generator_id not in the key or Returns None if the generator_id or key do not exist.
+        cache = self._retrieve_cache(bdb)
+        if generator_id not in cache:
+            return None
+        if key not in cache[generator_id]:
+            return None
+        return cache[generator_id][key]
+
+    def _del_cache_entry(self, bdb, generator_id, key):
+        # If key is None, wipes bdb[generator_id] in its entirety.
+        cache = self._retrieve_cache(bdb)
+        if generator_id in cache:
+            if key is None:
+                del cache[generator_id]
+            elif key in cache[generator_id]:
+                del cache[generator_id][key]
 
     def _cgpm_rowid(self, bdb, generator_id, table_rowid):
         cursor = bdb.sql_execute('''
@@ -850,10 +899,6 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             ]
         return table_constraints
 
-class CGPM_Cache(object):
-    def __init__(self):
-        self.schema = {}
-        self.engine = {}
 
 def _create_schema(bdb, generator_id, schema_ast, **kwargs):
     # Get some parameters.
