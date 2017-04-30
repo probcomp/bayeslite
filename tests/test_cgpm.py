@@ -822,7 +822,7 @@ def test_add_variable():
         run_queries('rank', 'm1')
         run_queries('rank', None)
 
-def test_generative_similarity():
+def test_predictive_relevance():
     with cgpm_dummy_satellites_bdb() as bdb:
         bayesdb_register_metamodel(bdb, CGPM_Metamodel(cgpm_registry=dict()))
         bdb.execute('''
@@ -844,7 +844,7 @@ def test_generative_similarity():
         for rowid in rowids[:4]:
             print rowid
             cursor = bdb.execute('''
-                ESTIMATE GENERATIVE SIMILARITY
+                ESTIMATE PREDICTIVE RELEVANCE
                     TO EXISTING ROWS (rowid = ?)
                     IN THE CONTEXT OF "period"
                 FROM satellites
@@ -854,7 +854,7 @@ def test_generative_similarity():
 
         # A full extravaganza query, using FROM (as a 1-row).
         cursor = bdb.execute('''
-            ESTIMATE GENERATIVE SIMILARITY
+            ESTIMATE PREDICTIVE RELEVANCE
                 TO EXISTING ROWS
                     (country_of_operator = 'Russia' AND period < 0)
                 AND HYPOTHETICAL ROWS WITH VALUES (
@@ -869,7 +869,7 @@ def test_generative_similarity():
 
         # A full extravaganza query, using BY (as a constant).
         cursor = bdb.execute('''
-            ESTIMATE GENERATIVE SIMILARITY
+            ESTIMATE PREDICTIVE RELEVANCE
                 OF (rowid = 1)
                 TO EXISTING ROWS
                     (country_of_operator = 'Russia' AND period < 0)
@@ -885,7 +885,7 @@ def test_generative_similarity():
         # Hypothetical satellite with negative perigee should not be similar,
         # and use a binding to just ensure that they work.
         cursor = bdb.execute('''
-            ESTIMATE GENERATIVE SIMILARITY
+            ESTIMATE PREDICTIVE RELEVANCE
                 TO HYPOTHETICAL ROWS WITH VALUES (
                     (perigee = ?))
                 IN THE CONTEXT OF "perigee"
@@ -898,7 +898,7 @@ def test_generative_similarity():
         # No matching target OF row.
         with pytest.raises(BQLError):
             bdb.execute('''
-                ESTIMATE GENERATIVE SIMILARITY
+                ESTIMATE PREDICTIVE RELEVANCE
                     OF (rowid < 0) TO EXISTING ROWS (rowid = 10)
                     IN THE CONTEXT OF "launch_mass"
                 BY satellites
@@ -907,7 +907,7 @@ def test_generative_similarity():
         # Unknown CONTEXT variable "banana".
         with pytest.raises(BQLError):
             bdb.execute('''
-                ESTIMATE GENERATIVE SIMILARITY
+                ESTIMATE PREDICTIVE RELEVANCE
                     OF (rowid = 1) TO EXISTING ROWS (rowid = 2)
                     IN THE CONTEXT OF "banana"
                 BY satellites
@@ -916,7 +916,7 @@ def test_generative_similarity():
         # No matching EXISTING ROW.
         with pytest.raises(BQLError):
             bdb.execute('''
-                ESTIMATE GENERATIVE SIMILARITY
+                ESTIMATE PREDICTIVE RELEVANCE
                     OF (rowid = 10) TO EXISTING ROWS (rowid < 0)
                     IN THE CONTEXT OF "launch_mass"
                 BY satellites
@@ -925,7 +925,7 @@ def test_generative_similarity():
         # Unknown categorical values 'Mongolia' in HYPOTHETICAL ROWS.
         with pytest.raises(BQLError):
             bdb.execute('''
-                ESTIMATE GENERATIVE SIMILARITY
+                ESTIMATE PREDICTIVE RELEVANCE
                     OF (rowid = 10)
                     TO HYPOTHETICAL ROWS WITH VALUES (
                         (country_of_operator='Mongolia'),

@@ -164,10 +164,10 @@ def test_similarity_identity():
             assert len(c) == 1
             assert c[0][0] == 1
 
-def test_generative_similarity():
+def test_predictive_relevance():
     # XXX Two spaces after SELECT, due to compiler.compile_select_columns.
     assert bql2sql('''
-        estimate generative similarity
+        estimate predictive relevance
             of (label = 'Uganda')
             to existing rows (rowid < 4)
             and hypothetical rows with values (
@@ -177,23 +177,23 @@ def test_generative_similarity():
             in the context of "weight"
         by p1
     ''') == \
-        'SELECT  bql_row_generative_similarity(1, NULL, '\
+        'SELECT  bql_row_predictive_relevance(1, NULL, '\
             '(SELECT _rowid_ FROM "t1" WHERE ("label" = \'Uganda\')), '\
             '\'[1, 2, 3]\', 3, '\
             '2, 82, 3, 14, NULL, 2, 74, 1, \'Europe\', 3, 7, NULL);'
     assert bql2sql('''
-        estimate generative similarity
+        estimate predictive relevance
             of (label = 'mumble')
             to existing rows (label = 'frotz' or age <= 4)
             in the context of "label"
         by p1
     ''') == \
-        'SELECT  bql_row_generative_similarity(1, NULL, '\
+        'SELECT  bql_row_predictive_relevance(1, NULL, '\
             '(SELECT _rowid_ FROM "t1" WHERE ("label" = \'mumble\')), '\
             '\'[5, 8]\', 1);'
     assert bql2sql('''
         estimate label,
-            generative similarity
+            predictive relevance
             to hypothetical rows with values (
                 ("age" = 82, "weight" = 14),
                 ("age" = 74, label = 'hunf', "weight" = 7)
@@ -202,22 +202,22 @@ def test_generative_similarity():
             _rowid_ + 1
         from p1
     ''') == \
-        'SELECT "label", bql_row_generative_similarity(1, NULL, _rowid_, '\
+        'SELECT "label", bql_row_predictive_relevance(1, NULL, _rowid_, '\
         '\'[]\', 2, 2, 82, 3, 14, NULL, 2, 74, 1, \'hunf\', 3, 7, NULL), '\
         '("_rowid_" + 1) FROM "t1";'
     # No matching rows should still compile.
     assert bql2sql('''
         estimate label,
-            generative similarity to existing rows (rowid < 0)
+            predictive relevance to existing rows (rowid < 0)
             in the context of "age"
         from p1
     ''') == \
-        'SELECT "label", bql_row_generative_similarity(1, NULL, _rowid_, '\
+        'SELECT "label", bql_row_predictive_relevance(1, NULL, _rowid_, '\
         '\'[]\', 2) FROM "t1";'
     # When using `BY`, require OF to be specified.
     with pytest.raises(BQLError):
         bql2sql('''
-            estimate generative similarity
+            estimate predictive relevance
                 to hypothetical rows with values (
                     ("age" = 82, "weight" = 14),
                     ("age" = 74, label = 'Europe', "weight" = 7)
@@ -228,7 +228,7 @@ def test_generative_similarity():
     # When using `FROM`, require OF to be unspecified.
     with pytest.raises(BQLError):
         bql2sql('''
-            estimate generative similarity
+            estimate predictive relevance
                 of (name = 'mansour')
                 to hypothetical rows with values (
                     ("age" = 82, "weight" = 14)
@@ -239,16 +239,16 @@ def test_generative_similarity():
     assert bql2sql('''
         estimate label from p1
         where
-            (generative similarity to existing rows (label = 'quux' and age < 5)
+            (predictive relevance to existing rows (label = 'quux' and age < 5)
             in the context of "weight") > 1
         order by
-            generative similarity
+            predictive relevance
                 to hypothetical rows with values ((label='zot'))
                 in the context of "age"
     ''') == \
         'SELECT "label" FROM "t1" WHERE '\
-        '(bql_row_generative_similarity(1, NULL, _rowid_, \'[5]\', 3) > 1) '\
-        'ORDER BY bql_row_generative_similarity(1, NULL, _rowid_, \'[]\', '\
+        '(bql_row_predictive_relevance(1, NULL, _rowid_, \'[5]\', 3) > 1) '\
+        'ORDER BY bql_row_predictive_relevance(1, NULL, _rowid_, \'[]\', '\
             '2, 1, \'zot\', NULL);'
 
 

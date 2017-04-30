@@ -40,7 +40,7 @@ def bayesdb_install_bql(db, cookie):
     function("bql_column_mutual_information", -1, bql_column_mutual_information)
     function("bql_column_value_probability", -1, bql_column_value_probability)
     function("bql_row_similarity", 5, bql_row_similarity)
-    function("bql_row_generative_similarity", -1, bql_row_generative_similarity)
+    function("bql_row_predictive_relevance", -1, bql_row_predictive_relevance)
     function("bql_row_column_predictive_probability", 4,
         bql_row_column_predictive_probability)
     function("bql_predict", 6, bql_predict)
@@ -417,9 +417,9 @@ def bql_row_similarity(
     similarities = map(generator_similarity, generator_ids)
     return stats.arithmetic_mean(similarities)
 
-# Row function:  GENERATIVE SIMILARITY TO (<target_row>)
+# Row function:  PREDICTIVE RELEVANCE TO (<target_row>)
 #  [<AND HYPOTHETICAL ROWS WITH VALUES ((...))] IN THE CONTEXT OF <column>
-def bql_row_generative_similarity(
+def bql_row_predictive_relevance(
         bdb, population_id, generator_id, rowid_target, rowid_query, colno,
         *constraint_args):
     if rowid_target is None:
@@ -436,10 +436,10 @@ def bql_row_generative_similarity(
     assert all(len(row)%2 == 0 for row in rows_list)
     hypotheticals = [zip(row[::2], row[1::2]) for row in rows_list]
     if len(rowid_query) == 0 and len(hypotheticals) == 0:
-        raise BQLError(bdb, 'No matching rows for GENERATIVE SIMILARITY.')
+        raise BQLError(bdb, 'No matching rows for PREDICTIVE RELEVANCE.')
     def generator_similarity(generator_id):
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-        return metamodel.generative_similarity(
+        return metamodel.predictive_relevance(
             bdb, generator_id, None, rowid_target, rowid_query,
             hypotheticals, colno)
     generator_ids = _retrieve_generator_ids(bdb, population_id, generator_id)

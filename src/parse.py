@@ -619,12 +619,12 @@ class BQLSemantics(object):
     def p_bqlfn_sim_2row(self, col):
         return ast.ExpBQLSim(None, None, col)
 
-    def p_bqlfn_gensim_existing(self, cond0, cond1, col):
-        return ast.ExpBQLGenSim(cond0, cond1, None, col)
-    def p_bqlfn_gensim_hypothetical(self, cond0, constraints, col):
-        return ast.ExpBQLGenSim(cond0, None, constraints, col)
-    def p_bqlfn_gensim_both(self, cond0, cond1, constraints, col):
-        return ast.ExpBQLGenSim(cond0, cond1, constraints, col)
+    def p_bqlfn_predrel_existing(self, cond0, cond1, col):
+        return ast.ExpBQLPredRel(cond0, cond1, None, col)
+    def p_bqlfn_predrel_hypothetical(self, cond0, constraints, col):
+        return ast.ExpBQLPredRel(cond0, None, constraints, col)
+    def p_bqlfn_predrel_both(self, cond0, cond1, constraints, col):
+        return ast.ExpBQLPredRel(cond0, cond1, constraints, col)
 
     def p_bqlfn_depprob(self, cols):            return ast.ExpBQLDepProb(*cols)
 
@@ -632,8 +632,8 @@ class BQLSemantics(object):
         return ast.ExpBQLMutInf(cols[0], cols[1], constraints, nsamp)
     def p_bqlfn_prob_est(self, e):              return ast.ExpBQLProbEst(e)
 
-    def p_gensim_of_opt_none(self):             return None
-    def p_gensim_of_opt_one(self, cond0):       return cond0
+    def p_predrel_of_opt_none(self):            return None
+    def p_predrel_of_opt_one(self, cond0):      return cond0
 
     def p_existing_rows_one(self, cond):        return cond
     def p_hypothetical_rows_one(self, cs):      return cs

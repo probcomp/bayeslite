@@ -584,18 +584,18 @@ bqlfn(sim_1row)         ::= K_SIMILARITY K_TO
                                 wrt(col).
 bqlfn(sim_2row)         ::= K_SIMILARITY wrt(col).
 
-bqlfn(gensim_existing)          ::= K_GENERATIVE K_SIMILARITY
-                                        gensim_of_opt(cond0)
+bqlfn(predrel_existing)          ::= K_PREDICTIVE K_RELEVANCE
+                                        predrel_of_opt(cond0)
                                         K_TO existing_rows(cond1)
                                         wrt(col).
 
-bqlfn(gensim_hypothetical)      ::= K_GENERATIVE K_SIMILARITY
-                                        gensim_of_opt(cond0)
+bqlfn(predrel_hypothetical)      ::= K_PREDICTIVE K_RELEVANCE
+                                        predrel_of_opt(cond0)
                                         K_TO hypothetical_rows(constraints)
                                         wrt(col).
 
-bqlfn(gensim_both)              ::= K_GENERATIVE K_SIMILARITY
-                                        gensim_of_opt(cond0)
+bqlfn(predrel_both)              ::= K_PREDICTIVE K_RELEVANCE
+                                        predrel_of_opt(cond0)
                                         K_TO existing_rows(cond1)
                                         K_AND hypothetical_rows(constraints)
                                         wrt(col).
@@ -606,13 +606,13 @@ bqlfn(mutinf)           ::= K_MUTUAL K_INFORMATION ofwithmulti(cols)
                                 mi_given_opt(constraints) nsamples_opt(nsamp).
 bqlfn(prob_est)         ::= K_PROBABILITY K_OF T_LROUND expression(e) T_RROUND.
 
-gensim_of_opt(none)     ::= .
-gensim_of_opt(one)      ::= K_OF T_LROUND expression(cond0) T_RROUND.
+predrel_of_opt(none)    ::= .
+predrel_of_opt(one)     ::= K_OF T_LROUND expression(cond0) T_RROUND.
 
-existing_rows(one)       ::= K_EXISTING K_ROWS
+existing_rows(one)      ::= K_EXISTING K_ROWS
                                 T_LROUND expression(cond) T_RROUND.
 
-hypothetical_rows(one)   ::= K_HYPOTHETICAL K_ROWS K_WITH K_VALUES
+hypothetical_rows(one)  ::= K_HYPOTHETICAL K_ROWS K_WITH K_VALUES
                                 T_LROUND constraints_list(cs) T_RROUND.
 
 ofwithmulti(bql_2col)   ::= .
@@ -760,7 +760,6 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_EXPLICIT
         K_FOR
         K_FROM
-        K_GENERATIVE
         K_GENERATOR
         K_GIVEN
         K_GLOB
@@ -804,6 +803,7 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_PROBABILITY
         K_PVALUE
         K_REGEXP
+        K_RELEVANCE
         K_RENAME
         K_ROLLBACK
         K_ROW

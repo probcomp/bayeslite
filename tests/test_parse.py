@@ -586,22 +586,22 @@ def test_select_bql():
             [ast.Ord(ast.ExpCol(None, 'key'), ast.ORD_ASC)],
             None)]
 
-def test_generative_similarity():
+def test_predictive_relevance():
     with pytest.raises(parse.BQLParseError):
         # No ofcondition, tocondition, or constraints.
         parse_bql_string(
-            'select generative similarity in the context of f from t;')
+            'select predictive relevance in the context of f from t;')
     with pytest.raises(parse.BQLParseError):
         # No tocondition, or constraints.
         parse_bql_string(
-            'select generative similarity of (rowid=8) '
+            'select predictive relevance of (rowid=8) '
             'in the context of q from t')
     assert parse_bql_string(
-        'select generative similarity to existing rows (rowid=8 AND age < 10) '
+        'select predictive relevance to existing rows (rowid=8 AND age < 10) '
         'in the context of "s" from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
-                ast.ExpBQLGenSim(
+                ast.ExpBQLPredRel(
                     ofcondition=None,
                     tocondition=ast.ExpOp(ast.OP_BOOLAND, (
                         ast.ExpOp(ast.OP_EQ, (
@@ -618,7 +618,7 @@ def test_generative_similarity():
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('''
-        select generative similarity
+        select predictive relevance
             of (name = 'Uganda')
             to hypothetical rows with values (
                 ("gdp_per_capita" = 82, "mortality" = 14),
@@ -630,7 +630,7 @@ def test_generative_similarity():
         ''') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
-                ast.ExpBQLGenSim(
+                ast.ExpBQLPredRel(
                     ofcondition=ast.ExpOp(ast.OP_EQ, (
                         ast.ExpCol(None, 'name'),
                         ast.ExpLit(ast.LitString('Uganda'))
@@ -650,7 +650,7 @@ def test_generative_similarity():
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('''
-        select generative similarity
+        select predictive relevance
             of (name = 'Uganda')
             to existing rows (rowid between 1 AND 100)
             and hypothetical rows with values (
@@ -663,7 +663,7 @@ def test_generative_similarity():
         ''') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
-                ast.ExpBQLGenSim(
+                ast.ExpBQLPredRel(
                     ofcondition=ast.ExpOp(ast.OP_EQ, (
                         ast.ExpCol(None, 'name'),
                         ast.ExpLit(ast.LitString('Uganda'))

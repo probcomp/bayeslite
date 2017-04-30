@@ -439,7 +439,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         return arithmetic_mean(similarity_list)
 
-    def generative_similarity(self, bdb, generator_id, modelno, rowid_target,
+    def predictive_relevance(self, bdb, generator_id, modelno, rowid_target,
             rowid_query, hypotheticals, colno):
         # Convert target rowid
         cgpm_rowid_target = self._cgpm_rowid(bdb, generator_id, rowid_target)
@@ -463,7 +463,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             for v in d.itervalues())
         if unknown:
             raise BQLError(bdb,
-                'Unknown categorical values in generative similarity: %s'
+                'Unknown categorical values in predictive relevance: %s'
                 % (hypotheticals,))
 
         # Get the engine.

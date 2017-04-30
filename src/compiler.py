@@ -1091,8 +1091,8 @@ class BQLCompiler_Const(object):
         elif isinstance(bql, ast.ExpBQLSim):
             compile_similarity(bdb, population_id, generator_id,
                 bql.ofcondition, bql.tocondition, bql.column, self, out)
-        elif isinstance(bql, ast.ExpBQLGenSim):
-            compile_generative_similarity_2row_2(
+        elif isinstance(bql, ast.ExpBQLPredRel):
+            compile_predictive_relevance_2row_2(
                 bdb, population_id, generator_id, bql.ofcondition,
                 bql.tocondition, bql.hypotheticals, bql.column, self, out)
         elif isinstance(bql, ast.ExpBQLDepProb):
@@ -1162,8 +1162,8 @@ class BQLCompiler_1Row(BQLCompiler_Const):
             compile_column_lists(
                 bdb, population_id, generator_id, bql.column, self, out)
             out.write(')')
-        elif isinstance(bql, ast.ExpBQLGenSim):
-            compile_generative_similarity_2row_1(
+        elif isinstance(bql, ast.ExpBQLPredRel):
+            compile_predictive_relevance_2row_1(
                 bdb, population_id, generator_id, bql.ofcondition,
                 bql.tocondition, bql.hypotheticals, bql.column, self, out)
         else:
@@ -1467,13 +1467,13 @@ def compile_similarity(bdb, population_id, generator_id, ofcondition,
         bdb, population_id, generator_id, column, bql_compiler, out)
     out.write(')')
 
-def compile_generative_similarity_2row_2(bdb, population_id, generator_id,
+def compile_predictive_relevance_2row_2(bdb, population_id, generator_id,
         ofcondition, tocondition, hypotheticals, column, bql_compiler, out):
     if ofcondition is None:
         raise BQLError(bdb,
             'Generative similarity as constant needs OF row condition.')
     out.write(
-        'bql_row_generative_similarity(%d, %s, '
+        'bql_row_predictive_relevance(%d, %s, '
         % (population_id, nullor(generator_id)))
     table_name = core.bayesdb_population_table(bdb, population_id)
     qt = sqlite3_quote_name(table_name)
@@ -1481,23 +1481,23 @@ def compile_generative_similarity_2row_2(bdb, population_id, generator_id,
         out.write('SELECT _rowid_ FROM %s WHERE ' % (qt,))
         compile_expression(bdb, ofcondition, bql_compiler, out)
     out.write(', ')
-    compile_generative_similarity_conditions(
+    compile_predictive_relevance_conditions(
         bdb, population_id, generator_id, tocondition, hypotheticals, column,
         bql_compiler, out)
 
-def compile_generative_similarity_2row_1(bdb, population_id, generator_id,
+def compile_predictive_relevance_2row_1(bdb, population_id, generator_id,
         ofcondition, tocondition, hypotheticals, column, bql_compiler, out):
     if ofcondition is not None:
         raise BQLError(bdb,
             'Generative similarity as 1 row function needs no OF condition.')
     out.write(
-        'bql_row_generative_similarity(%d, %s, _rowid_, '
+        'bql_row_predictive_relevance(%d, %s, _rowid_, '
         % (population_id, nullor(generator_id)))
-    compile_generative_similarity_conditions(
+    compile_predictive_relevance_conditions(
         bdb, population_id, generator_id, tocondition, hypotheticals, column,
         bql_compiler, out)
 
-def compile_generative_similarity_conditions(bdb, population_id, generator_id,
+def compile_predictive_relevance_conditions(bdb, population_id, generator_id,
         tocondition, hypotheticals, column, bql_compiler, out):
     # Compile the EXISTING ROWS specification by executing the tocondition,
     # finding the rowids, and writing them as a JSON string.
