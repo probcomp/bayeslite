@@ -239,6 +239,9 @@ constraints(many)       ::= constraints(cs) T_COMMA constraint(c).
 constraint(c)           ::= column_name(col) T_EQ expression(value).
 constraints_opt(none)   ::= .
 constraints_opt(some)   ::= constraints(cs).
+constraints_list(one)   ::= T_LROUND constraints(cs) T_RROUND.
+constraints_list(some)  ::= constraints_list(css) T_COMMA
+                                T_LROUND constraints(cs) T_RROUND.
 
 simulate(models)        ::= K_SIMULATE select_columns(cols)
                                 K_FROM K_MODELS K_OF
@@ -494,8 +497,8 @@ unary(bql)              ::= bqlfn(b).
  *
  * (1) Functions of two columns: DEPENDENCE PROBABILITY.
  * (2) Functions of one column: DEPENDENCE PROBABILITY WITH C.
- * (3) Functions of two rows: SIMILARITY WITH RESPECT TO C.
- * (4) Functions of one row: SIMILARITY TO 5 WITH RESPECT TO C.
+ * (3) Functions of two rows: SIMILARITY IN THE CONTEXT OF C.
+ * (4) Functions of one row: SIMILARITY TO 5 IN THE CONTEXT OF C.
  * (5) Constants: DEPENDENCE PROBABILITY OF C WITH D.
  *
  * Although constants can appear in any context (subject to the
@@ -505,7 +508,7 @@ unary(bql)              ::= bqlfn(b).
  *
  * (1) ESTIMATE DEPENDENCE PROBABILITY PAIRWISE COLUMNS OF FROM T;
  * (2) ESTIMATE * FROM COLUMNS OF T ORDER BY DEPENDENCE PROBABILITY WITH C;
- * (3) SELECT SIMILARITY TO 5 WITH RESPECT TO C FROM T;
+ * (3) SELECT SIMILARITY TO 5 IN THE CONTEXT OF C FROM T;
  *
  * It makes no sense to say
  *
@@ -516,9 +519,9 @@ unary(bql)              ::= bqlfn(b).
  * to say
  *
  *      ESTIMATE * FROM COLUMNS OF T
- *              WHERE SIMILARITY TO 5 WITH RESPECT TO C > 5,
+ *              WHERE SIMILARITY TO 5 IN THE CONTEXT OF C > 5,
  *
- * because SIMILARITY TO 5 WITH RESPECT TO C is a function of a row,
+ * because SIMILARITY TO 5 IN THE CONTEXT OF C is a function of a row,
  * not a function of a column.
  *
  * We could invent four different expression nonterminals alike in
@@ -579,16 +582,42 @@ bqlfn(condprob_1col)    ::= K_PROBABILITY K_DENSITY K_OF K_VALUE primary(e)
 bqlfn(sim_const)         ::= K_SIMILARITY
                                 K_OF T_LROUND expression(cond0) T_RROUND
                                 K_TO T_LROUND expression(cond1) T_RROUND
-                                wrt(cols).
+                                wrt(col).
 bqlfn(sim_1row)         ::= K_SIMILARITY K_TO
                                 T_LROUND expression(cond) T_RROUND
-                                wrt(cols).
-bqlfn(sim_2row)         ::= K_SIMILARITY wrt(cols).
+                                wrt(col).
+bqlfn(sim_2row)         ::= K_SIMILARITY wrt(col).
+
+bqlfn(predrel_existing)          ::= K_PREDICTIVE K_RELEVANCE
+                                        predrel_of_opt(cond0)
+                                        K_TO existing_rows(cond1)
+                                        wrt(col).
+
+bqlfn(predrel_hypothetical)      ::= K_PREDICTIVE K_RELEVANCE
+                                        predrel_of_opt(cond0)
+                                        K_TO hypothetical_rows(constraints)
+                                        wrt(col).
+
+bqlfn(predrel_both)              ::= K_PREDICTIVE K_RELEVANCE
+                                        predrel_of_opt(cond0)
+                                        K_TO existing_rows(cond1)
+                                        K_AND hypothetical_rows(constraints)
+                                        wrt(col).
+
 bqlfn(depprob)          ::= K_DEPENDENCE K_PROBABILITY ofwith(cols).
 
 bqlfn(mutinf)           ::= K_MUTUAL K_INFORMATION ofwithmulti(cols)
                                 mi_given_opt(constraints) nsamples_opt(nsamp).
 bqlfn(prob_est)         ::= K_PROBABILITY K_OF T_LROUND expression(e) T_RROUND.
+
+predrel_of_opt(none)    ::= .
+predrel_of_opt(one)     ::= K_OF T_LROUND expression(cond0) T_RROUND.
+
+existing_rows(one)      ::= K_EXISTING K_ROWS
+                                T_LROUND expression(cond) T_RROUND.
+
+hypothetical_rows(one)  ::= K_HYPOTHETICAL K_ROWS K_WITH K_VALUES
+                                T_LROUND constraints_list(cs) T_RROUND.
 
 ofwithmulti(bql_2col)   ::= .
 ofwithmulti(bql_1col)   ::= K_WITH mi_columns(cols).
@@ -620,10 +649,7 @@ bqlfn(primary)          ::= primary(p).
  * necessary to avoid ambiguity at the comma: is it another select
  * column, or is it another wrt column?
  */
-wrt(none)               ::= .
-wrt(one)                ::= K_WITH K_RESPECT K_TO column_list(collist).
-wrt(some)               ::= K_WITH K_RESPECT K_TO
-                                T_LROUND column_lists(collists) T_RROUND.
+wrt(one)                ::= K_IN K_THE K_CONTEXT K_OF column_list(col).
 
 ofwith(bql_2col)        ::= .
 ofwith(bql_1col)        ::= K_WITH column_name(col).
@@ -720,6 +746,7 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_COMMIT
         K_CONF
         K_CONFIDENCE
+        K_CONTEXT
         K_CORRELATION
         K_CREATE
         K_DEFAULT
@@ -733,6 +760,7 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_ESCAPE
         K_ESTIMATE
         K_EXISTS
+        K_EXISTING
         K_EXPLICIT
         K_FOR
         K_FROM
@@ -742,6 +770,7 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_GROUP
         K_GUESS
         K_HAVING
+        K_HYPOTHETICAL
         K_IF
         K_IGNORE
         K_IN
@@ -778,10 +807,11 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_PROBABILITY
         K_PVALUE
         K_REGEXP
+        K_RELEVANCE
         K_RENAME
-        K_RESPECT
         K_ROLLBACK
         K_ROW
+        K_ROWS
         K_SAMPLES
         K_SCHEMA
         K_SECOND
@@ -795,11 +825,13 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_TABLE
         K_TEMP
         K_TEMPORARY
+        K_THE
         K_THEN
         K_TO
         K_UNSET
         K_USING
         K_VALUE
+        K_VALUES
         K_VARIABLE
         K_VARIABLES
         K_WAIT

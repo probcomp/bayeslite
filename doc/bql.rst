@@ -125,7 +125,7 @@ BQL Queries
    *generator*, extended with model estimators of two implied rows.
 
    (Currently the only functions of two implied rows are
-   ``SIMILARITY`` and ``SIMILARITY WITH RESPECT TO (...)``.)
+   ``SIMILARITY`` and ``SIMILARITY WITH IN THE CONTEXT OF (...)``.)
 
 .. index:: ``INFER``
 
@@ -254,13 +254,13 @@ subquery instead:
 
 .. index:: ``SIMILARITY``
 
-``SIMILARITY [TO (<expression>)] [WITH RESPECT TO (<columns>)]``
+``SIMILARITY [TO (<expression>)] IN THE CONTEXT OF <column>``
 
    Function of one or two implied rows.  If given ``TO``, returns a
    measure of the similarity of the implied row with the first row
    satisfying <expression>.  Otherwise, returns a measure of the
    similarity of the two implied rows.  The similarity may be
-   considered with respect to a subset of columns.
+   considered with in the context of a column.
 
    *Columns* is a comma-separated list of column names or
    ``ESTIMATE * FROM COLUMNS OF ...`` subqueries.

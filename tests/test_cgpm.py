@@ -789,7 +789,7 @@ def test_add_variable():
                 ''' % (target, other, extra))
                 assert cursor_value(cursor) >= 0
             bdb.execute('''
-                ESTIMATE SIMILARITY WITH RESPECT TO %s
+                ESTIMATE SIMILARITY IN THE CONTEXT OF %s
                 FROM PAIRWISE p %s;
             ''' % (target, extra,)).fetchall()
         # Fail to run quieres on height, does not exist yet.
@@ -837,3 +837,114 @@ def test_add_variable():
         run_queries('rank', 'm0')
         run_queries('rank', 'm1')
         run_queries('rank', None)
+
+def test_predictive_relevance():
+    with cgpm_dummy_satellites_bdb() as bdb:
+        bayesdb_register_metamodel(bdb, CGPM_Metamodel(cgpm_registry=dict()))
+        bdb.execute('''
+            CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA (
+                MODEL apogee AS NUMERICAL;
+                MODEL class_of_orbit AS CATEGORICAL;
+                MODEL country_of_operator AS CATEGORICAL;
+                MODEL launch_mass AS NUMERICAL;
+                MODEL perigee AS NUMERICAL;
+                MODEL period AS NUMERICAL
+            )
+        ''')
+        bdb.execute('CREATE METAMODEL m FOR satellites;')
+        bdb.execute('INITIALIZE 2 MODELS FOR m;')
+        bdb.execute('ANALYZE m FOR 25 ITERATION WAIT (OPTIMIZED);')
+
+        # Check self-similarites, and also provide coverage of bindings.
+        rowids = bdb.execute('SELECT OID from satellites_ucs;').fetchall()
+        for rowid in rowids[:4]:
+            cursor = bdb.execute('''
+                ESTIMATE PREDICTIVE RELEVANCE
+                    TO EXISTING ROWS (rowid = ?)
+                    IN THE CONTEXT OF "period"
+                FROM satellites
+                WHERE rowid = ?
+            ''', (1, 1,))
+            assert next(cursor)[0] == 1.
+
+        # A full extravaganza query, using FROM (as a 1-row).
+        cursor = bdb.execute('''
+            ESTIMATE PREDICTIVE RELEVANCE
+                TO EXISTING ROWS
+                    (country_of_operator = 'Russia' AND period < 0)
+                AND HYPOTHETICAL ROWS WITH VALUES (
+                    (perigee=1.0, launch_mass=120),
+                    (country_of_operator='Bulgaria', perigee=2.0))
+                IN THE CONTEXT OF "country_of_operator"
+            FROM satellites
+            LIMIT 5
+        ''').fetchall()
+        assert len(cursor) == 5
+        assert all(0 <= c[0] <= 1 for c in cursor)
+
+        # A full extravaganza query, using BY (as a constant).
+        cursor = bdb.execute('''
+            ESTIMATE PREDICTIVE RELEVANCE
+                OF (rowid = 1)
+                TO EXISTING ROWS
+                    (country_of_operator = 'Russia' AND period < 0)
+                AND HYPOTHETICAL ROWS WITH VALUES (
+                    (country_of_operator='China', perigee=1.0),
+                    (country_of_operator='Bulgaria'))
+                IN THE CONTEXT OF "country_of_operator"
+            BY satellites
+        ''').fetchall()
+        assert len(cursor) == 1
+        assert all(0 <= c[0] <= 1 for c in cursor)
+
+        # Hypothetical satellite with negative perigee should not be similar,
+        # and use a binding to just ensure that they work.
+        cursor = bdb.execute('''
+            ESTIMATE PREDICTIVE RELEVANCE
+                TO HYPOTHETICAL ROWS WITH VALUES (
+                    (perigee = ?))
+                IN THE CONTEXT OF "perigee"
+            FROM satellites
+            LIMIT 5
+        ''' , (-10000,)).fetchall()
+        assert len(cursor) == 5
+        assert all(np.allclose(c[0], 0) for c in cursor)
+
+        # No matching target OF row.
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                ESTIMATE PREDICTIVE RELEVANCE
+                    OF (rowid < 0) TO EXISTING ROWS (rowid = 10)
+                    IN THE CONTEXT OF "launch_mass"
+                BY satellites
+            ''')
+
+        # Unknown CONTEXT variable "banana".
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                ESTIMATE PREDICTIVE RELEVANCE
+                    OF (rowid = 1) TO EXISTING ROWS (rowid = 2)
+                    IN THE CONTEXT OF "banana"
+                BY satellites
+            ''')
+
+        # No matching EXISTING ROW.
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                ESTIMATE PREDICTIVE RELEVANCE
+                    OF (rowid = 10) TO EXISTING ROWS (rowid < 0)
+                    IN THE CONTEXT OF "launch_mass"
+                BY satellites
+            ''')
+
+        # Unknown categorical values 'Mongolia' in HYPOTHETICAL ROWS.
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                ESTIMATE PREDICTIVE RELEVANCE
+                    OF (rowid = 10)
+                    TO HYPOTHETICAL ROWS WITH VALUES (
+                        (country_of_operator='Mongolia'),
+                        (country_of_operator='Bulgaria', perigee=2.0))
+                    IN THE CONTEXT OF "launch_mass"
+                BY satellites
+            ''')

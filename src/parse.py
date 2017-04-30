@@ -356,6 +356,8 @@ class BQLSemantics(object):
     def p_constraint_c(self, col, value):       return (col, value)
     def p_constraints_opt_none(self):           return []
     def p_constraints_opt_some(self, cs):       return cs
+    def p_constraints_list_one(self, cs):       return [cs]
+    def p_constraints_list_some(self, css, cs): css.append(cs); return css
 
     def p_query_select(self, q):                return q
     def p_query_estimate(self, q):              return q
@@ -611,17 +613,31 @@ class BQLSemantics(object):
     def p_bqlfn_condprob_1col(self, e, constraints):
                                                 return ast.ExpBQLProbDensityFn(
                                                     e, constraints)
-    def p_bqlfn_sim_const(self, cond0, cond1, cols):
-        return ast.ExpBQLSim(cond0, cond1, cols)
-    def p_bqlfn_sim_1row(self, cond, cols):
-        return ast.ExpBQLSim(None, cond, cols)
-    def p_bqlfn_sim_2row(self, cols):
-        return ast.ExpBQLSim(None, None, cols)
+    def p_bqlfn_sim_const(self, cond0, cond1, col):
+        return ast.ExpBQLSim(cond0, cond1, col)
+    def p_bqlfn_sim_1row(self, cond, col):
+        return ast.ExpBQLSim(None, cond, col)
+    def p_bqlfn_sim_2row(self, col):
+        return ast.ExpBQLSim(None, None, col)
+
+    def p_bqlfn_predrel_existing(self, cond0, cond1, col):
+        return ast.ExpBQLPredRel(cond0, cond1, None, col)
+    def p_bqlfn_predrel_hypothetical(self, cond0, constraints, col):
+        return ast.ExpBQLPredRel(cond0, None, constraints, col)
+    def p_bqlfn_predrel_both(self, cond0, cond1, constraints, col):
+        return ast.ExpBQLPredRel(cond0, cond1, constraints, col)
+
     def p_bqlfn_depprob(self, cols):            return ast.ExpBQLDepProb(*cols)
 
     def p_bqlfn_mutinf(self, cols, constraints, nsamp):
         return ast.ExpBQLMutInf(cols[0], cols[1], constraints, nsamp)
     def p_bqlfn_prob_est(self, e):              return ast.ExpBQLProbEst(e)
+
+    def p_predrel_of_opt_none(self):            return None
+    def p_predrel_of_opt_one(self, cond0):      return cond0
+
+    def p_existing_rows_one(self, cond):        return cond
+    def p_hypothetical_rows_one(self, cs):      return cs
 
     def p_ofwithmulti_bql_2col(self):                   return (None, None)
     def p_ofwithmulti_bql_1col(self, cols):             return (cols, None)
@@ -654,9 +670,7 @@ class BQLSemantics(object):
         return ast.ExpBQLPredict(col, conf, nsamp)
     def p_bqlfn_primary(self, p):               return p
 
-    def p_wrt_none(self):                       return [ast.ColListAll()]
-    def p_wrt_one(self, collist):               return [collist]
-    def p_wrt_some(self, collists):             return collists
+    def p_wrt_one(self, col):                   return [col]
 
     def p_ofwith_bql_2col(self):                return (None, None)
     def p_ofwith_bql_1col(self, col):           return (col, None)

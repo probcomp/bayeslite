@@ -304,13 +304,16 @@ def test_select_bql():
                     []),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
-    assert parse_bql_string('select similarity from t;') == \
+    # Using * for context will later cause a crash in the compiler!
+    assert parse_bql_string(
+        'select similarity in the context of * from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
                 ast.ExpBQLSim(None, None, [ast.ColListAll()]),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
-    assert parse_bql_string('select similarity to (rowid=8) from t;') == \
+    assert parse_bql_string(
+        'select similarity to (rowid=8) in the context of s from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
                 ast.ExpBQLSim(
@@ -319,32 +322,21 @@ def test_select_bql():
                         ast.ExpCol(None, 'rowid'),
                         ast.ExpLit(ast.LitInt(8))
                     )),
-                    [ast.ColListAll()]),
+                    [ast.ColListLit(['s'])]),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     with pytest.raises(parse.BQLParseError):
         # Cannot use similarity of without to.
-        parse_bql_string('select similarity of (rowid=8) from t')
-    assert parse_bql_string('select similarity with respect to c from t;') == \
+        parse_bql_string(
+            'select similarity of (rowid=8) in the context of r from t')
+    assert parse_bql_string(
+        'select similarity in the context of c from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(ast.ExpBQLSim(None, None, [ast.ColListLit(['c'])]),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string(
-            'select similarity to (rowid=8) with respect to c from t;') == \
-        [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(
-                ast.ExpBQLSim(
-                    None,
-                    ast.ExpOp(ast.OP_EQ, (
-                        ast.ExpCol(None, 'rowid'),
-                        ast.ExpLit(ast.LitInt(8)),
-                    )),
-                    [ast.ColListLit(['c'])]),
-                None)],
-            [ast.SelTab('t', None)], None, None, None, None)]
-    assert parse_bql_string(
-            'select similarity to (rowid=5) with respect to age from t1;') == \
+            'select similarity to (rowid=5) in the context of age from t1;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
                 ast.ExpBQLSim(
@@ -357,7 +349,7 @@ def test_select_bql():
                 None)],
             [ast.SelTab('t1', None)], None, None, None, None)]
     assert parse_bql_string(
-            'select similarity to (rowid=8) with respect to c, d from t;') == \
+            'select similarity to (rowid=8) in the context of c, d from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [
                 ast.SelColExp(
@@ -372,20 +364,7 @@ def test_select_bql():
                 ast.SelColExp(ast.ExpCol(None, 'd'), None),
             ],
             [ast.SelTab('t', None)], None, None, None, None)]
-    assert parse_bql_string('select similarity to (rowid=8)'
-            ' with respect to (c, d) from t;') == \
-        [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(
-                ast.ExpBQLSim(
-                    None,
-                    ast.ExpOp(ast.OP_EQ, (
-                        ast.ExpCol(None, 'rowid'),
-                        ast.ExpLit(ast.LitInt(8)),
-                    )),
-                    [ast.ColListLit(['c']), ast.ColListLit(['d'])]),
-                None)],
-            [ast.SelTab('t', None)], None, None, None, None)]
-    assert parse_bql_string('select similarity to (rowid=8) with respect to' +
+    assert parse_bql_string('select similarity to (rowid=8) in the context of' +
             ' (estimate * from columns of t order by ' +
             '  probability density of value 4 limit 1)' +
             ' from t;') == \
@@ -407,12 +386,18 @@ def test_select_bql():
                     )]),
                 None)],
             [ast.SelTab('t', None)], None, None, None, None)]
+    # Required TO variable.
     with pytest.raises(parse.BQLParseError):
         parse_bql_string(
             'select similarity of ("name" = \'Bar\') from t;')
+    # Missing context variable.
+    with pytest.raises(bayeslite.BQLParseError):
+        parse_bql_string(
+            'select similarity of ("name" = \'Bar\') to (rowid=8) '
+                'AS "sim_bar_8" from t;')
     assert parse_bql_string(
             'select similarity of ("name" = \'Bar\') to (rowid=8) '
-                'with respect to (c, d) AS "sim_bar_8" from t;') == \
+                'in the context of c AS "sim_bar_8" from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
             [ast.SelColExp(
                 ast.ExpBQLSim(
@@ -424,12 +409,12 @@ def test_select_bql():
                         ast.ExpCol(None, 'rowid'),
                         ast.ExpLit(ast.LitInt(8)),
                     )),
-                    [ast.ColListLit(['c']), ast.ColListLit(['d'])]),
+                    [ast.ColListLit(['c'])]),
                 'sim_bar_8')],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string(
             'select similarity of ("name" = \'Bar\') to (rowid=8)' +
-            'with respect to (estimate * from columns of t ' +
+            'in the context of (estimate * from columns of t ' +
                 'order by probability density of value 4 limit 1)' +
             'from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
@@ -601,6 +586,106 @@ def test_select_bql():
             [ast.Ord(ast.ExpCol(None, 'key'), ast.ORD_ASC)],
             None)]
 
+def test_predictive_relevance():
+    with pytest.raises(parse.BQLParseError):
+        # No ofcondition, tocondition, or constraints.
+        parse_bql_string(
+            'select predictive relevance in the context of f from t;')
+    with pytest.raises(parse.BQLParseError):
+        # No tocondition, or constraints.
+        parse_bql_string(
+            'select predictive relevance of (rowid=8) '
+            'in the context of q from t')
+    assert parse_bql_string(
+        'select predictive relevance to existing rows (rowid=8 AND age < 10) '
+        'in the context of "s" from t;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(
+                ast.ExpBQLPredRel(
+                    ofcondition=None,
+                    tocondition=ast.ExpOp(ast.OP_BOOLAND, (
+                        ast.ExpOp(ast.OP_EQ, (
+                            ast.ExpCol(None, 'rowid'),
+                            ast.ExpLit(ast.LitInt(8))
+                        )),
+                        ast.ExpOp(ast.OP_LT, (
+                            ast.ExpCol(None, 'age'),
+                            ast.ExpLit(ast.LitInt(10))
+                        )),
+                    )),
+                    hypotheticals=None,
+                    column=[ast.ColListLit(['s'])]),
+                None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('''
+        select predictive relevance
+            of (name = 'Uganda')
+            to hypothetical rows with values (
+                ("gdp_per_capita" = 82, "mortality" = 14),
+                ("gdp_per_capita" = 74, continent = 'Europe', "mortality" = 7)
+            )
+            in the context of
+              "gdp_per_capita"
+        from t
+        ''') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(
+                ast.ExpBQLPredRel(
+                    ofcondition=ast.ExpOp(ast.OP_EQ, (
+                        ast.ExpCol(None, 'name'),
+                        ast.ExpLit(ast.LitString('Uganda'))
+                    )),
+                    tocondition=None,
+                    hypotheticals=[[
+                        ('gdp_per_capita',ast.ExpLit(ast.LitInt(82))),
+                        ('mortality',ast.ExpLit(ast.LitInt(14)))
+                    ],
+                    [
+                        ('gdp_per_capita',ast.ExpLit(ast.LitInt(74))),
+                        ('continent',ast.ExpLit(ast.LitString('Europe'))),
+                        ('mortality',ast.ExpLit(ast.LitInt(7))),
+                    ]],
+                    column=[ast.ColListLit(['gdp_per_capita'])],
+                ),
+                None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('''
+        select predictive relevance
+            of (name = 'Uganda')
+            to existing rows (rowid between 1 AND 100)
+            and hypothetical rows with values (
+                ("gdp_per_capita" = 82, "mortality" = 14),
+                ("gdp_per_capita" = 74, continent = 'Europe', "mortality" = 7)
+            )
+            in the context of
+              "gdp_per_capita"
+        from t
+        ''') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(
+                ast.ExpBQLPredRel(
+                    ofcondition=ast.ExpOp(ast.OP_EQ, (
+                        ast.ExpCol(None, 'name'),
+                        ast.ExpLit(ast.LitString('Uganda'))
+                    )),
+                    tocondition=ast.ExpOp(ast.OP_BETWEEN,
+                        (ast.ExpCol(None, 'rowid'),
+                            ast.ExpLit(ast.LitInt(1)),
+                            ast.ExpLit(ast.LitInt(100)))),
+                    hypotheticals=[[
+                        ('gdp_per_capita',ast.ExpLit(ast.LitInt(82))),
+                        ('mortality',ast.ExpLit(ast.LitInt(14)))
+                    ],
+                    [
+                        ('gdp_per_capita',ast.ExpLit(ast.LitInt(74))),
+                        ('continent',ast.ExpLit(ast.LitString('Europe'))),
+                        ('mortality',ast.ExpLit(ast.LitInt(7))),
+                    ]],
+                    column=[ast.ColListLit(['gdp_per_capita'])],
+                ),
+                None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
+
 def test_trivial_scan_error():
     with pytest.raises(parse.BQLParseError):
         parse_bql_string('select 0c;')
@@ -610,7 +695,7 @@ def test_trivial_scan_error():
 def test_trivial_precedence_error():
     with pytest.raises(parse.BQLParseError):
         parse_bql_string('select similarity to similarity to 0' +
-            ' with respect to c from t;')
+            ' in the context of c from t;')
 
 def test_trivial_commands():
     assert parse_bql_string('''

@@ -423,8 +423,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             self, bdb, generator_id, modelno, rowid, target_rowid, colnos):
         # Map the variable and individual indexing.
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
-        cgpm_target_rowid = self._cgpm_rowid(bdb, generator_id,
-            target_rowid)
+        cgpm_target_rowid = self._cgpm_rowid(bdb, generator_id, target_rowid)
 
         # Get the engine.
         engine = self._engine(bdb, generator_id)
@@ -436,6 +435,43 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             multiprocess=self._multiprocess)
 
         return arithmetic_mean(similarity_list)
+
+    def predictive_relevance(self, bdb, generator_id, modelno, rowid_target,
+            rowid_query, hypotheticals, colno):
+        # Convert target rowid
+        cgpm_rowid_target = self._cgpm_rowid(bdb, generator_id, rowid_target)
+
+        # Convert query rowids.
+        # XXX TODO: Move any items of cgpm_query_rowid which are not yet
+        # incorporated into the `hypotheticals` list.
+        cgpm_rowid_query = [
+            self._cgpm_rowid(bdb, generator_id, r) for r in rowid_query
+        ]
+
+        # Build list of hypotheticals dictionaries.
+        hypotheticals_numeric = [
+            {c: self._to_numeric(bdb, generator_id, c, v) for c, v in row}
+            for row in hypotheticals
+        ]
+
+        # Check for invalid user-specified values in the hypothetical rows.
+        # XXX TODO: Report offending values.
+        unknown = any(math.isnan(v) for d in hypotheticals_numeric
+            for v in d.itervalues())
+        if unknown:
+            raise BQLError(bdb,
+                'Unknown categorical values in predictive relevance: %s'
+                % (hypotheticals,))
+
+        # Get the engine.
+        engine = self._engine(bdb, generator_id)
+
+        # Go!
+        similarity_list = engine.relevance_probability(
+            cgpm_rowid_target, cgpm_rowid_query, colno, hypotheticals_numeric,
+            multiprocess=self._multiprocess)
+
+        return similarity_list
 
     def predict_confidence(
             self, bdb, generator_id, modelno, rowid, colno, numsamples=None):

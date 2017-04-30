@@ -52,12 +52,12 @@ def test_subsample():
         bdb.execute('INITIALIZE 1 MODEL FOR hosp_sub_cc')
         bdb.execute('ANALYZE hosp_sub_cc FOR 1 ITERATION WAIT')
         bdb.execute('''
-            ESTIMATE SIMILARITY TO (_rowid_=2) WITH RESPECT TO (PNEUM_SCORE)
+            ESTIMATE SIMILARITY TO (_rowid_=2) IN THE CONTEXT OF PNEUM_SCORE
             FROM hospitals_sub WHERE _rowid_ = 1 OR _rowid_ = 101
         ''').fetchall()
         bdb.execute('''
-            ESTIMATE SIMILARITY TO (_rowid_=102) WITH RESPECT TO
-            (N_DEATH_ILL) FROM hospitals_sub
+            ESTIMATE SIMILARITY TO (_rowid_=102) IN THE CONTEXT OF
+            N_DEATH_ILL FROM hospitals_sub
             WHERE _rowid_ = 1 OR _rowid_ = 101
         ''').fetchall()
         bdb.execute('''
@@ -66,7 +66,7 @@ def test_subsample():
             WHERE _rowid_ = 1 OR _rowid_ = 101
         ''').fetchall()
         bdb.execute('''
-            ESTIMATE SIMILARITY WITH RESPECT TO (PNEUM_SCORE)
+            ESTIMATE SIMILARITY IN THE CONTEXT OF PNEUM_SCORE
             FROM PAIRWISE hospitals_sub
             WHERE (r0._rowid_ = 1 OR r0._rowid_ = 101) AND
             (r1._rowid_ = 1 OR r1._rowid_ = 101)
