@@ -948,3 +948,60 @@ def test_predictive_relevance():
                     IN THE CONTEXT OF "launch_mass"
                 BY satellites
             ''')
+
+        # Create a new row.
+        bdb.sql_execute('''
+            INSERT INTO satellites_ucs
+            (apogee, launch_mass) VALUES (12.128, 12.128)
+        ''')
+
+        # TARGET ROW not yet incorporated should return nan.
+        cursor = bdb.execute('''
+            ESTIMATE PREDICTIVE RELEVANCE
+                OF (apogee = 12.128)
+                TO HYPOTHETICAL ROWS WITH VALUES (
+                    (country_of_operator='China', perigee=1.0))
+                IN THE CONTEXT OF "launch_mass"
+            BY satellites
+        ''')
+        result = cursor_value(cursor)
+        assert result is None
+
+        # EXISTING ROW not yet incorporated should return nan, since there is
+        # no hypothetical.
+        cursor = bdb.execute('''
+            ESTIMATE PREDICTIVE RELEVANCE
+                OF (rowid = 1)
+                TO EXISTING ROWS (apogee = 12.128)
+                IN THE CONTEXT OF "launch_mass"
+            BY satellites
+        ''')
+        result = cursor_value(cursor)
+        assert result is None
+
+        # Although apogee = 12.128 is EXISTING but not incorporated, there are
+        # other EXISTING ROWS with apogee > 0, so we should still get a result.
+        cursor = bdb.execute('''
+            ESTIMATE PREDICTIVE RELEVANCE
+                OF (rowid = 1)
+                TO EXISTING ROWS (apogee = 12.128 OR apogee > 0)
+                IN THE CONTEXT OF "launch_mass"
+            BY satellites
+        ''')
+        result = cursor_value(cursor)
+        assert result is not None
+
+        # Although apogee = 12.128 is EXISTING but not incorporated, there are
+        # other HYPOTHETICAL ROWS, so we should still get a result.
+        cursor = bdb.execute('''
+            ESTIMATE PREDICTIVE RELEVANCE
+                OF (rowid = 1)
+                TO EXISTING ROWS (apogee = 12.128 OR apogee > 0)
+                AND HYPOTHETICAL ROWS WITH VALUES (
+                    (country_of_operator='China', perigee=1.0),
+                    (country_of_operator='Bulgaria'))
+                IN THE CONTEXT OF "launch_mass"
+            BY satellites
+        ''')
+        result = cursor_value(cursor)
+        assert result is not None
