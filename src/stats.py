@@ -132,7 +132,7 @@ def t_cdf(x, df):
 
     MONTE_CARLO_SAMPLES = 1e5
     random = numpy.random.RandomState(seed=0)
-    T = random.standard_t(df, size=MONTE_CARLO_SAMPLES)
+    T = random.standard_t(df, size=int(MONTE_CARLO_SAMPLES))
     return numpy.sum(T < x) / MONTE_CARLO_SAMPLES
 
 def chi2_sf(x, df):
@@ -157,7 +157,7 @@ def f_sf(x, df_num, df_den):
 
     MONTE_CARLO_SAMPLES = 1e5
     random = numpy.random.RandomState(seed=0)
-    F = random.f(df_num, df_den, size=MONTE_CARLO_SAMPLES)
+    F = random.f(df_num, df_den, size=int(MONTE_CARLO_SAMPLES))
     return numpy.sum(F > x) / MONTE_CARLO_SAMPLES
 
 def gauss_suff_stats(data):
