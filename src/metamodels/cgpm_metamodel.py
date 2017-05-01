@@ -425,6 +425,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
         cgpm_target_rowid = self._cgpm_rowid(bdb, generator_id, target_rowid)
 
+        # XXX TODO: If neither rowids are incorporated, return None.
+        if cgpm_rowid == -1 or cgpm_target_rowid == -1:
+            return float('nan')
+
         # Get the engine.
         engine = self._engine(bdb, generator_id)
 
