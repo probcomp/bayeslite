@@ -28,6 +28,7 @@ import bayeslite.parse as parse
 import bayeslite.metamodels.troll_rng as troll
 
 from bayeslite import bayesdb_open
+from bayeslite import bql_quote_name
 
 import test_core
 import test_csv
@@ -2515,3 +2516,10 @@ def test_tracing_execution_error_smoke():
         assert tracer.error_calls == 1
         assert tracer.finished_calls == 0
         assert tracer.abandoned_calls == 0
+
+def test_splice_varname_into_select():
+    pytest.xfail('Unicode wackiness')
+    with test_core.t1() as (bdb, population_id, _generator_id):
+        var = core.bayesdb_variable_names(bdb, population_id, None)[0]
+        qv = bql_quote_name(var)
+        bdb.execute('select %s from t1' % (var,)).fetchall()
