@@ -2518,7 +2518,6 @@ def test_tracing_execution_error_smoke():
         assert tracer.abandoned_calls == 0
 
 def test_splice_varname_into_select():
-    pytest.xfail('Unicode wackiness')
     with test_core.t1() as (bdb, population_id, _generator_id):
         var = core.bayesdb_variable_names(bdb, population_id, None)[0]
         qv = bql_quote_name(var)

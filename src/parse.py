@@ -64,6 +64,9 @@ def parse_bql_string_pos(string):
     `phrase` is the parsed AST.  `pos` is zero-based index of the code
     point at which `phrase` starts.
     """
+    # XXX Stop-gap kludge to cope with Unicode inputs that the rest of
+    # this and sqlite3 are unfit to deal with.
+    string = string.encode('US-ASCII')
     scanner = scan.BQLScanner(StringIO.StringIO(string), '(string)')
     phrases = parse_bql_phrases(scanner)
     # XXX Don't dig out internals of scanner: fix plex to have a
