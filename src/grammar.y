@@ -561,7 +561,20 @@ unary(bql)              ::= bqlfn(b).
  * rejecting unparenthesized PROBABILITY DENSITY OF X = V with other
  * operators.
  */
-bqlfn(predprob_row)     ::= K_PREDICTIVE K_PROBABILITY K_OF column_name(col).
+bqlfn(predprob_row)     ::= K_PREDICTIVE K_PROBABILITY K_OF column_list(target).
+
+bqlfn(jpredprob_row)    ::= K_PREDICTIVE K_PROBABILITY K_OF
+                                T_LROUND column_lists(targets) T_RROUND.
+
+bqlfn(condpredprob_row) ::= K_PREDICTIVE K_PROBABILITY K_OF column_list(target)
+                                K_GIVEN T_LROUND column_lists(constraints)
+                                T_RROUND.
+
+bqlfn(condjpredprob_row) ::= K_PREDICTIVE K_PROBABILITY K_OF
+                                T_LROUND column_lists(targets) T_RROUND
+                                K_GIVEN T_LROUND column_lists(constraints)
+                                T_RROUND.
+
 bqlfn(prob_const)       ::= K_PROBABILITY K_DENSITY K_OF column_name(col)
                                 T_EQ unary(e).
 bqlfn(jprob_const)      ::= K_PROBABILITY K_DENSITY K_OF

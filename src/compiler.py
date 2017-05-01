@@ -1158,16 +1158,17 @@ class BQLCompiler_1Row(BQLCompiler_Const):
         generator_id = self.generator_id
         rowid_col = '_rowid_'   # XXX Don't hard-code this.
         if isinstance(bql, ast.ExpBQLPredProb):
-            if bql.column is None:
+            column = bql.targets[0].columns[0]
+            if column is None:
                 raise BQLError(bdb, 'Predictive probability at row'
                     ' needs column.')
             if not core.bayesdb_has_variable(bdb, population_id, generator_id,
-                    bql.column):
+                    column):
                 population = core.bayesdb_population_name(bdb, population_id)
                 raise BQLError(bdb, 'No such variable in population %s: %s' %
-                    (population, bql.column))
+                    (population, column))
             colno = core.bayesdb_variable_number(bdb, population_id,
-                generator_id, bql.column)
+                generator_id, column)
             out.write('bql_row_column_predictive_probability(%d, %s' %
                 (population_id, nullor(generator_id)))
             out.write(', %s, %s)' % (rowid_col, colno))
