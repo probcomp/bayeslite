@@ -26,6 +26,7 @@ def test_nullify():
             ['nan','foo'],
             ['2','nan'],
             ['2','""'],
+            ['', ''],
         ]:
             bdb.sql_execute('insert into t values(?,?)', row)
         assert bdb.execute('select * from t').fetchall() == [
@@ -33,18 +34,22 @@ def test_nullify():
             ('nan','foo'),
             ('2','nan'),
             ('2','""'),
+            ('', ''),
         ]
-        bayesdb_nullify(bdb, 't', '')
+        assert bayesdb_nullify(bdb, 't', '') == 3
         assert bdb.execute('select * from t').fetchall() == [
             ('1',None),
             ('nan','foo'),
             ('2','nan'),
             ('2','""'),
+            (None, None),
         ]
-        bayesdb_nullify(bdb, 't', 'nan', columns=['x'])
+        assert bayesdb_nullify(bdb, 't', 'nan', columns=['x']) == 1
         assert bdb.execute('select * from t').fetchall() == [
             ('1',None),
             (None,'foo'),
             ('2','nan'),
             ('2','""'),
+            (None, None),
         ]
+        assert bayesdb_nullify(bdb, 't', 'fnord') == 0

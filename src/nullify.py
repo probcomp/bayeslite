@@ -22,7 +22,9 @@ def bayesdb_nullify(bdb, table, value, columns=None):
     if columns is None:
         cursor = bdb.sql_execute('PRAGMA table_info(%s)' % (qt,))
         columns = [row[1] for row in cursor]
+    changes = bdb._sqlite3.totalchanges()
     for column in columns:
         qc = sqlite3_quote_name(column)
         bdb.sql_execute('UPDATE %s SET %s = NULL WHERE %s = ?' % (qt, qc, qc),
             (value,))
+    return bdb._sqlite3.totalchanges() - changes
