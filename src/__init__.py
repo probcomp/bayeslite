@@ -64,21 +64,14 @@ from bayeslite.metamodel import bayesdb_builtin_metamodel
 from bayeslite.metamodel import bayesdb_deregister_metamodel
 from bayeslite.metamodel import bayesdb_register_metamodel
 from bayeslite.parse import BQLParseError
+from bayeslite.quote import bql_quote_name
 from bayeslite.read_csv import bayesdb_read_csv
 from bayeslite.read_csv import bayesdb_read_csv_file
 from bayeslite.schema import bayesdb_upgrade_schema
-from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.txn import BayesDBTxnError
 from bayeslite.version import __version__
 
 # XXX This is not a good place for me.  Find me a better home, please!
-def bql_quote_name(name):
-    """Quote `name` as a BQL identifier, e.g. a table or column name.
-
-    Do NOT use this for strings, e.g. inserting data into a table.
-    Use query parameters instead.
-    """
-    return sqlite3_quote_name(name)
 
 __all__ = [
     'BQLError',
