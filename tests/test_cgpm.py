@@ -31,6 +31,7 @@ from cgpm.dummy.trollnormal import TrollNormal
 from cgpm.utils import general as gu
 
 from bayeslite import bayesdb_open
+from bayeslite import bayesdb_nullify
 from bayeslite import bayesdb_read_csv
 from bayeslite import bayesdb_register_metamodel
 from bayeslite.exception import BQLError
@@ -111,6 +112,9 @@ def test_cgpm_no_empty_categories():
         rows = [['', '\'\'', 'nan'], [1.1, 3, ''], ['""""', 1, 1]]
         for row in rows:
             bdb.sql_execute('INSERT INTO f (a, b, c) VALUES (?,?,?)', row)
+        bayesdb_nullify(bdb, 'f', "''")
+        bayesdb_nullify(bdb, 'f', '""""')
+        bayesdb_nullify(bdb, 'f', '')
         bdb.execute('''
             CREATE POPULATION q FOR f WITH SCHEMA (
                 MODEL a, b, c AS NOMINAL

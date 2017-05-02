@@ -143,15 +143,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         for colno, name, stattype in vars_cursor:
             if _is_categorical(stattype):
                 qn = sqlite3_quote_name(name)
-                # XXX 1 Persist nan tokens into bdb, like oid tokens?
-                # XXX 2 Automatically nullify nan_tokens in create population?
-                nan_tokens = ('', '\'\'', '"\'\'"', '""', '""""')
-                qq = str.join(',', ('?')*len(nan_tokens))
                 cursor = bdb.sql_execute('''
                     SELECT DISTINCT %s
                     FROM %s WHERE %s IS NOT NULL
-                    AND %s NOT IN (%s)
-                ''' % (qn, qt, qn, qn, qq), nan_tokens)
+                ''' % (qn, qt, qn))
                 for code, (value,) in enumerate(cursor):
                     bdb.sql_execute('''
                         INSERT INTO bayesdb_cgpm_category
