@@ -161,6 +161,7 @@ def cgpm_smoke_tests(bdb, gen, vars):
                                     (MUTUAL INFORMATION WITH %(var)s
                                         USING 1 SAMPLES > 0.1))
                     FROM p
+                    %(modelledby)s
                     LIMIT 1
             ''' % {'var': var, 'modelledby': modelledby}).fetchall()
             assert len(c) == 1

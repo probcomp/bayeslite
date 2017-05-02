@@ -42,7 +42,7 @@ def test_conditional_probability_pathologies():
         assert bdb.execute('''
             estimate probability density of value 'x' given (foo = 'x')
                 from columns of p
-                where c.name = 'foo'
+                where v.name = 'foo'
         ''').fetchvalue() == 1
         assert bdb.execute('''
             estimate probability density of foo = 'x' given (foo = 'y') by p

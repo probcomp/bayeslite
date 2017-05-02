@@ -866,7 +866,7 @@ def compile_estcols(bdb, estcols, out):
             raise BQLError(bdb, 'No such generator: %r' % (estcols.generator,))
         generator_id = core.bayesdb_get_generator(
             bdb, population_id, estcols.generator)
-    colno_exp = 'c.colno'       # XXX
+    colno_exp = 'v.colno'       # XXX
     bql_compiler = BQLCompiler_1Col(population_id, generator_id, colno_exp)
     out.write('SELECT')
     first = True
@@ -883,7 +883,7 @@ def compile_estcols(bdb, estcols, out):
             # qualifying all input-column references with `c.', and
             # unqualified `name' is ambiguous in the FROM context
             # given below.
-            out.write('c.name AS name') # XXX Colno?  Population id?  ...?
+            out.write('v.name AS name') # XXX Colno?  Population id?  ...?
         elif isinstance(col, ast.SelColSub):
             raise NotImplementedError('No subqueries for COLUMNS OF columns!')
         elif isinstance(col, ast.SelColExp):
@@ -895,12 +895,8 @@ def compile_estcols(bdb, estcols, out):
             raise NotImplementedError('No PREDICT on column queries!')
         else:
             assert False, 'Invalid ESTIMATE column: %s' % (repr(col),)
-    out.write(' FROM bayesdb_population AS p,'
-        ' bayesdb_variable AS v,'
-        ' bayesdb_column AS c'
-        ' WHERE p.id = %(population_id)d'
-        ' AND v.population_id = p.id'
-        ' AND c.tabname = p.tabname AND c.colno = v.colno' %
+    out.write(' FROM bayesdb_variable AS v'
+        ' WHERE v.population_id = %(population_id)d' %
             {'population_id': population_id})
     if generator_id is None:
         out.write(' AND v.generator_id IS NULL')

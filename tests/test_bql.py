@@ -838,11 +838,9 @@ def test_infer_auto_star_nsamples():
         ' FROM "t1";'
 
 def test_estimate_columns_trivial():
-    prefix0 = 'SELECT c.name AS name'
-    prefix1 = ' FROM bayesdb_population AS p,' \
-        ' bayesdb_variable AS v, bayesdb_column AS c' \
-        ' WHERE p.id = 1 AND v.population_id = p.id' \
-        ' AND c.tabname = p.tabname AND c.colno = v.colno' \
+    prefix0 = 'SELECT v.name AS name'
+    prefix1 = ' FROM bayesdb_variable AS v' \
+        ' WHERE v.population_id = 1' \
         ' AND v.generator_id IS NULL'
     prefix = prefix0 + prefix1
     assert bql2sql('estimate * from columns of p1;') == \
@@ -850,17 +848,17 @@ def test_estimate_columns_trivial():
     assert bql2sql('estimate * from columns of p1 where' +
             ' (probability density of value 42) > 0.5') == \
         prefix + \
-        ' AND (bql_column_value_probability(1, NULL, c.colno, 42) > 0.5);'
+        ' AND (bql_column_value_probability(1, NULL, v.colno, 42) > 0.5);'
     assert bql2sql('estimate * from columns of p1'
             ' where (probability density of value 8)'
             ' > (probability density of age = 16)') == \
         prefix + \
-        ' AND (bql_column_value_probability(1, NULL, c.colno, 8) >' \
+        ' AND (bql_column_value_probability(1, NULL, v.colno, 8) >' \
         ' bql_pdf_joint(1, NULL, 2, 16));'
     assert bql2sql('estimate *, probability density of value 8 given (age = 8)'
             ' from columns of p1;') == \
         prefix0 + \
-        ', bql_column_value_probability(1, NULL, c.colno, 8, 2, 8)' + \
+        ', bql_column_value_probability(1, NULL, v.colno, 8, 2, 8)' + \
         prefix1 + ';'
     with pytest.raises(bayeslite.BQLError):
         bql2sql('estimate probability density of value 8 given (agee = 8)'
@@ -876,7 +874,7 @@ def test_estimate_columns_trivial():
     assert bql2sql('estimate * from columns of p1 where' +
             ' dependence probability with age > 0.5;') == \
         prefix + \
-        ' AND (bql_column_dependence_probability(1, NULL, 2, c.colno) > 0.5);'
+        ' AND (bql_column_dependence_probability(1, NULL, 2, v.colno) > 0.5);'
     with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
         bql2sql('estimate * from columns of p1 where' +
@@ -889,18 +887,18 @@ def test_estimate_columns_trivial():
             ' mutual information with age;') == \
         prefix + \
         ' ORDER BY bql_column_mutual_information(1, NULL, \'[2]\','\
-        ' \'[\' || c.colno || \']\', NULL);'
+        ' \'[\' || v.colno || \']\', NULL);'
     assert bql2sql('estimate * from columns of p1 order by' +
             ' mutual information with (age, label) using 42 samples;') == \
         prefix + \
         ' ORDER BY bql_column_mutual_information(1, NULL, \'[2, 1]\','\
-        ' \'[\' || c.colno || \']\', 42);'
+        ' \'[\' || v.colno || \']\', 42);'
     assert bql2sql('estimate * from columns of p1 order by' +
             ' mutual information with (age, label)'
             ' given (weight=12) using 42 samples;') == \
         prefix + \
         ' ORDER BY bql_column_mutual_information(1, NULL, \'[2, 1]\','\
-        ' \'[\' || c.colno || \']\', 42, 3, 12);'
+        ' \'[\' || v.colno || \']\', 42, 3, 12);'
     with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
         bql2sql('estimate * from columns of p1 order by' +
@@ -919,7 +917,7 @@ def test_estimate_columns_trivial():
             ' mutual information using 42 samples > 0.5;')
     assert bql2sql('estimate * from columns of p1 order by' +
             ' correlation with age desc;') == \
-        prefix + ' ORDER BY bql_column_correlation(1, NULL, 2, c.colno) DESC;'
+        prefix + ' ORDER BY bql_column_correlation(1, NULL, 2, v.colno) DESC;'
     with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
         bql2sql('estimate * from columns of p1 order by' +
@@ -937,10 +935,10 @@ def test_estimate_columns_trivial():
             ' from columns of p1'
             ' where depprob > 0.5 order by mutinf desc') == \
         prefix0 + \
-        ', bql_column_dependence_probability(1, NULL, 3, c.colno)' \
+        ', bql_column_dependence_probability(1, NULL, 3, v.colno)' \
             ' AS "depprob"' \
         ', bql_column_mutual_information(1, NULL, \'[3]\',' \
-        ' \'[\' || c.colno || \']\', NULL) AS "mutinf"' \
+        ' \'[\' || v.colno || \']\', NULL) AS "mutinf"' \
         + prefix1 + \
         ' AND ("depprob" > 0.5)' \
         ' ORDER BY "mutinf" DESC;'
@@ -950,10 +948,10 @@ def test_estimate_columns_trivial():
             ' from columns of p1'
             ' where depprob > 0.5 order by mutinf desc') == \
         prefix0 + \
-        ', bql_column_dependence_probability(1, NULL, 3, c.colno)' \
+        ', bql_column_dependence_probability(1, NULL, 3, v.colno)' \
             ' AS "depprob"' \
         ', bql_column_mutual_information(1, NULL, \'[2, 3]\',' \
-        ' \'[\' || c.colno || \']\', NULL) AS "mutinf"' \
+        ' \'[\' || v.colno || \']\', NULL) AS "mutinf"' \
         + prefix1 + \
         ' AND ("depprob" > 0.5)' \
         ' ORDER BY "mutinf" DESC;'
@@ -967,7 +965,7 @@ def test_estimate_columns_trivial():
             ' FROM (SELECT mi AS "v0" FROM bql_mutinf' \
             ' WHERE population_id = 1' \
                 " AND target_vars = '[2]'" \
-                " AND reference_vars = '[' || c.colno || ']'))) > 0.8);"
+                " AND reference_vars = '[' || v.colno || ']'))) > 0.8);"
     assert bql2sql('estimate * from variables of p1'
             ' order by probability of (mutual information with age < 0.1)') ==\
         prefix + \
@@ -975,7 +973,7 @@ def test_estimate_columns_trivial():
             ' FROM (SELECT mi AS "v0" FROM bql_mutinf' \
             ' WHERE population_id = 1' \
                 " AND target_vars = '[2]'" \
-                " AND reference_vars = '[' || c.colno || ']')));"
+                " AND reference_vars = '[' || v.colno || ']')));"
 
 def test_estimate_pairwise_trivial():
     prefix = 'SELECT 1 AS population_id, v0.name AS name0, v1.name AS name1, '
@@ -1524,12 +1522,9 @@ def test_parametrized():
             'SELECT id FROM bayesdb_population'
                 ' WHERE name = ?',
             # ESTIMATE * FROM COLUMNS OF:
-            'SELECT c.name AS name'
-                ' FROM bayesdb_population AS p,'
-                    ' bayesdb_variable AS v,'
-                    ' bayesdb_column AS c'
-                ' WHERE p.id = 1 AND v.population_id = p.id'
-                    ' AND c.tabname = p.tabname AND c.colno = v.colno'
+            'SELECT v.name AS name'
+                ' FROM bayesdb_variable AS v'
+                ' WHERE v.population_id = 1'
                     ' AND v.generator_id IS NULL'
                 ' LIMIT 1',
             'SELECT colno FROM bayesdb_variable'
@@ -1569,12 +1564,9 @@ def test_parametrized():
             'SELECT id FROM bayesdb_population'
                 ' WHERE name = ?',
             # ESTIMATE * FROM COLUMNS OF:
-            'SELECT c.name AS name'
-                ' FROM bayesdb_population AS p,'
-                    ' bayesdb_variable AS v,'
-                    ' bayesdb_column AS c'
-                ' WHERE p.id = 1 AND v.population_id = p.id'
-                    ' AND c.tabname = p.tabname AND c.colno = v.colno'
+            'SELECT v.name AS name'
+                ' FROM bayesdb_variable AS v'
+                ' WHERE v.population_id = 1'
                     ' AND v.generator_id IS NULL'
                 ' LIMIT ?1',
             'SELECT colno FROM bayesdb_variable'
