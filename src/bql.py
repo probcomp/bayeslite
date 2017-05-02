@@ -216,13 +216,15 @@ def execute_phrase(bdb, phrase, bindings=()):
             column_names = [d[0] for d in cursor.description]
             rows = cursor.fetchall()
             stattypes = bayesdb_guess_stattypes(column_names, rows)
+            distinct_value_counts = [len(set([row[i] for row in rows]))
+                                     for i in range(len(column_names))]
             out.winder('''
-                CREATE TEMP TABLE %s (column TEXT, stattype TEXT, reason TEXT)
+                CREATE TEMP TABLE %s (column TEXT, stattype TEXT, num_distinct INTEGER, reason TEXT)
             ''' % (qtt), ())
-            for cn, st in zip(column_names, stattypes):
+            for cn, st, ct in zip(column_names, stattypes, distinct_value_counts):
                 out.winder('''
-                    INSERT INTO %s VALUES (?, ?, ?)
-                ''' % (qtt), (cn, st[0], st[1]))
+                    INSERT INTO %s VALUES (?, ?, ?, ?)
+                ''' % (qtt), (cn, st[0], ct, st[1]))
             out.write('SELECT * FROM %s' % (qtt,))
             out.unwinder('DROP TABLE %s' % (qtt,), ())
         winders, unwinders = out.getwindings()
