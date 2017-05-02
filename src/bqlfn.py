@@ -454,7 +454,6 @@ def bql_row_column_predictive_probability(
     # Build the constraints and query from rowid, using a fresh rowid.
     fresh_rowid = core.bayesdb_population_fresh_row_id(bdb, population_id)
     def retrieve_values(colnos):
-        # import ipdb; ipdb.set_trace()
         values = [
             core.bayesdb_population_cell_value(bdb, population_id, rowid, colno)
             for colno in colnos
