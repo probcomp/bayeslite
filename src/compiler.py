@@ -1166,11 +1166,26 @@ class BQLCompiler_1Row(BQLCompiler_Const):
                 raise BQLError(bdb,
                     'Duplicate identifiers in targets and constraints: %s.'
                     % (duplicates,))
+            def report_unknown_variables(colnos):
+                """Throws a BQLError if c in colnos is not in the population."""
+                unknown = [
+                    colno for colno in colnos
+                    if not core.bayesdb_has_variable(
+                        bdb, population_id, generator_id, colno)
+                ]
+                if unknown:
+                    population = core.bayesdb_population_name(
+                        bdb, population_id)
+                    raise BQLError(bdb,
+                        'No such variables in population %s: %s' %
+                        (population, unknown))
+            # If * in targets, use all variables except those in constraints.
             if ast.ColListAll() in bql.targets:
                 if len(bql.targets) > 1:
                     raise BQLError(bdb,'Cannot use (*) with other targets.')
                 # Use generator_id as not to retrieve latent variables.
                 constraints = [c.columns[0] for c in bql.constraints]
+                report_unknown_variables(constraints)
                 colnos_all = core.bayesdb_variable_numbers(
                     bdb, population_id, None)
                 colnos_constraints = [
@@ -1182,12 +1197,14 @@ class BQLCompiler_1Row(BQLCompiler_Const):
                     colno for colno in colnos_all
                     if colno not in colnos_constraints
                 ]
+            # If * in constraints, use all variables except those in targets.
             elif ast.ColListAll() in bql.constraints:
                 if len(bql.constraints) > 1:
                     raise BQLError(bdb,'Cannot use (*) with other constraints.')
                 colnos_all = core.bayesdb_variable_numbers(
                     bdb, population_id, None)
                 targets = [c.columns[0] for c in bql.targets]
+                report_unknown_variables(targets)
                 colnos_targets = [
                     core.bayesdb_variable_number(
                         bdb, population_id, generator_id, target)
@@ -1197,9 +1214,12 @@ class BQLCompiler_1Row(BQLCompiler_Const):
                     colno for colno in colnos_all
                     if colno not in colnos_targets
                 ]
+            # If no *, use the variables exactly as specified in the query.
             else:
                 targets = [c.columns[0] for c in bql.targets]
                 constraints = [c.columns[0] for c in bql.constraints]
+                report_unknown_variables(targets)
+                report_unknown_variables(constraints)
                 colnos_targets = [
                     core.bayesdb_variable_number(
                         bdb, population_id, generator_id, target)
