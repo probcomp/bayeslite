@@ -241,9 +241,13 @@ def execute_phrase(bdb, phrase, bindings=()):
                     return empty_cursor(bdb)
                 raise BQLError(bdb, 'No such population: %r' % (phrase.name,))
             population_id = core.bayesdb_get_population(bdb, phrase.name)
-            if core.bayesdb_population_generators(bdb, population_id):
-                raise BQLError(bdb, 'Population still has generators: %r' %
-                    (phrase.name,))
+            generator_ids = core.bayesdb_population_generators(
+                bdb, population_id)
+            if generator_ids:
+                generators = [core.bayesdb_generator_name(bdb, gid)
+                    for gid in generator_ids]
+                raise BQLError(bdb, 'Population %r still has metamodels: %r' %
+                    (phrase.name, generators))
             # XXX helpful error checking if generators still exist
             # XXX check change counts
             bdb.sql_execute('''
