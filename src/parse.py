@@ -597,7 +597,14 @@ class BQLSemantics(object):
     def p_unary_plus(self, u):          return ast.op(ast.OP_PLUSID, u)
     def p_unary_bql(self, b):           return b
 
-    def p_bqlfn_predprob_row(self, col):        return ast.ExpBQLPredProb(col)
+    def p_bqlfn_predprob_row(self, target):
+        return ast.ExpBQLPredProb([target], [])
+    def p_bqlfn_jpredprob_row(self, targets):
+        return ast.ExpBQLPredProb(targets, [])
+    def p_bqlfn_condpredprob_row(self, target, constraints):
+        return ast.ExpBQLPredProb([target], constraints)
+    def p_bqlfn_condjpredprob_row(self, targets, constraints):
+        return ast.ExpBQLPredProb(targets, constraints)
     def p_bqlfn_prob_const(self, col, e):       return ast.ExpBQLProbDensity(
                                                     [(col, e)], [])
     def p_bqlfn_jprob_const(self, targets):     return ast.ExpBQLProbDensity(

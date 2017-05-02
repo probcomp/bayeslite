@@ -386,7 +386,7 @@ OP_BITNOT = 'BITNOT'
 OP_NEGATE = 'NEGATE'
 OP_PLUSID = 'PLUSID'
 
-ExpBQLPredProb = namedtuple('ExpBQLPredProb', ['column'])
+ExpBQLPredProb = namedtuple('ExpBQLPredProb', ['targets', 'constraints'])
 ExpBQLProbDensity = namedtuple('ExpBQLProbDensity', ['targets', 'constraints'])
 ExpBQLProbDensityFn = namedtuple('ExpBQLProbDensityFn', [
     'value', 'constraints'

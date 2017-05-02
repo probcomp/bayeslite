@@ -520,11 +520,17 @@ def test_row_column_predictive_probability(exname, rowid, colno):
         pytest.skip('Not enough columns in %s.' % (exname,))
     with analyzed_bayesdb_population(examples[exname](), 1, 1) \
             as (bdb, population_id, generator_id):
-        if rowid == 0: rowid = bayesdb_maxrowid(bdb, population_id)
-        bqlfn.bql_row_column_predictive_probability(bdb, population_id, None,
-            rowid, colno)
-        sql = 'select bql_row_column_predictive_probability(?, NULL, ?, ?)'
-        bdb.sql_execute(sql, (population_id, rowid, colno)).fetchall()
+        if rowid == 0:
+            rowid = bayesdb_maxrowid(bdb, population_id)
+        targets = json.dumps([colno])
+        constraints = json.dumps([])
+        bqlfn.bql_row_column_predictive_probability(
+            bdb, population_id, None, rowid, targets, constraints)
+        bdb.sql_execute('''
+            select bql_row_column_predictive_probability(
+                ?, NULL, ?, \'%s\', \'%s\')
+            ''' % (targets, constraints), (population_id, rowid)
+        ).fetchall()
 
 def test_crosscat_constraints():
     class FakeEngine(crosscat.LocalEngine.LocalEngine):

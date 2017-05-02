@@ -41,7 +41,7 @@ def bayesdb_install_bql(db, cookie):
     function("bql_column_value_probability", -1, bql_column_value_probability)
     function("bql_row_similarity", 5, bql_row_similarity)
     function("bql_row_predictive_relevance", -1, bql_row_predictive_relevance)
-    function("bql_row_column_predictive_probability", 4,
+    function("bql_row_column_predictive_probability", 5,
         bql_row_column_predictive_probability)
     function("bql_predict", 6, bql_predict)
     function("bql_predict_confidence", 5, bql_predict_confidence)
@@ -446,27 +446,30 @@ def bql_row_predictive_relevance(
     sims = map(generator_similarity, generator_ids)
     return stats.arithmetic_mean([stats.arithmetic_mean(s) for s in sims])
 
-# Row function:  PREDICTIVE PROBABILITY OF <column>
+# Row function:  PREDICTIVE PROBABILITY OF <targets> [GIVEN <constraints>]
 def bql_row_column_predictive_probability(
-        bdb, population_id, generator_id, rowid, colno):
-    value = core.bayesdb_population_cell_value(bdb, population_id, rowid, colno)
-    if value is None:
-        return None
-    # Retrieve all other values in the row.
-    row_values = core.bayesdb_population_row_values(bdb, population_id, rowid)
-    variable_numbers = core.bayesdb_variable_numbers(bdb, population_id, None)
+        bdb, population_id, generator_id, rowid, targets, constraints):
+    targets = json.loads(targets)
+    constraints = json.loads(constraints)
     # Build the constraints and query from rowid, using a fresh rowid.
     fresh_rowid = core.bayesdb_population_fresh_row_id(bdb, population_id)
-    query = [(colno, value)]
-    constraints = [
-        (col, value)
-        for (col, value) in zip(variable_numbers, row_values)
-        if (value is not None) and (col != colno)
-    ]
+    def retrieve_values(colnos):
+        # import ipdb; ipdb.set_trace()
+        values = [
+            core.bayesdb_population_cell_value(bdb, population_id, rowid, colno)
+            for colno in colnos
+        ]
+        return [(c,v) for (c,v) in zip (colnos, values) if v is not None]
+    cgpm_targets = retrieve_values(targets)
+    # If all targets have NULL values, return None.
+    if len(cgpm_targets) == 0:
+        return None
+    cgpm_constraints = retrieve_values(constraints)
     def generator_predprob(generator_id):
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
         return metamodel.logpdf_joint(
-            bdb, generator_id, fresh_rowid, query, constraints, None)
+            bdb, generator_id, fresh_rowid, cgpm_targets,
+            cgpm_constraints, None)
     generator_ids = _retrieve_generator_ids(bdb, population_id, generator_id)
     predprobs = map(generator_predprob, generator_ids)
     r = logmeanexp(predprobs)

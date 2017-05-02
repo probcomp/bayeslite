@@ -270,29 +270,65 @@ def test_select_trivial():
 def test_select_bql():
     assert parse_bql_string('select predictive probability of c from t;') == \
         [ast.Select(ast.SELQUANT_ALL,
-            [ast.SelColExp(ast.ExpBQLPredProb('c'), None)],
+            [ast.SelColExp(ast.ExpBQLPredProb(
+                [ast.ColListLit(['c'])], []), None)],
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string('select predictive probability of (c) from t;') == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [ast.SelColExp(ast.ExpBQLPredProb(
+                [ast.ColListLit(['c'])], []), None)],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select predictive probability of c, * from t;') \
         == \
         [ast.Select(ast.SELQUANT_ALL,
             [
-                ast.SelColExp(ast.ExpBQLPredProb('c'), None),
+                ast.SelColExp(ast.ExpBQLPredProb(
+                    [ast.ColListLit(['c'])], []), None),
                 ast.SelColAll(None),
             ],
             [ast.SelTab('t', None)], None, None, None, None)]
-    assert parse_bql_string('select c, predictive probability of d from t;') \
+    assert parse_bql_string('select predictive probability of (*), * from t;') \
+        == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [
+                ast.SelColExp(
+                    ast.ExpBQLPredProb([ast.ColListAll()], []), None),
+                ast.SelColAll(None),
+            ],
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string(
+        'select c, predictive probability of d given (c, f) from t;') \
         == \
         [ast.Select(ast.SELQUANT_ALL,
             [
                 ast.SelColExp(ast.ExpCol(None, 'c'), None),
-                ast.SelColExp(ast.ExpBQLPredProb('d'), None),
+                ast.SelColExp(ast.ExpBQLPredProb(
+                    [ast.ColListLit(['d'])],
+                    [ast.ColListLit(['c']), ast.ColListLit(['f'])]),
+                    None
+                ),
+            ],
+            [ast.SelTab('t', None)], None, None, None, None)]
+    assert parse_bql_string(
+        'select c, predictive probability of (d, w, *) given (c, *) from t;') \
+        == \
+        [ast.Select(ast.SELQUANT_ALL,
+            [
+                ast.SelColExp(ast.ExpCol(None, 'c'), None),
+                ast.SelColExp(ast.ExpBQLPredProb(
+                    [ast.ColListLit(['d']), ast.ColListLit(['w']),
+                        ast.ColListAll()],
+                    [ast.ColListLit(['c']), ast.ColListAll()]),
+                    None
+                ),
             ],
             [ast.SelTab('t', None)], None, None, None, None)]
     assert parse_bql_string('select predictive probability of c, d from t;') \
         == \
         [ast.Select(ast.SELQUANT_ALL,
             [
-                ast.SelColExp(ast.ExpBQLPredProb('c'), None),
+                ast.SelColExp(ast.ExpBQLPredProb(
+                    [ast.ColListLit(['c'])], []), None),
                 ast.SelColExp(ast.ExpCol(None, 'd'), None),
             ],
             [ast.SelTab('t', None)], None, None, None, None)]
@@ -1248,7 +1284,7 @@ def test_is_bql():
     assert ast.is_bql(ast.ExpNampar(0, 'x')) == False
     assert ast.is_bql(ast.ExpCol('t', 'c')) == False
     # ...
-    assert ast.is_bql(ast.ExpBQLPredProb('c'))
+    assert ast.is_bql(ast.ExpBQLPredProb([ast.ColListLit(['c'])], []))
     assert ast.is_bql(
         ast.ExpBQLProbDensity([('c', ast.ExpLit(ast.LitInt(0)))], []))
     assert ast.is_bql(ast.ExpBQLProbDensityFn(ast.ExpLit(ast.LitInt(0)), []))

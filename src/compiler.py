@@ -1158,19 +1158,85 @@ class BQLCompiler_1Row(BQLCompiler_Const):
         generator_id = self.generator_id
         rowid_col = '_rowid_'   # XXX Don't hard-code this.
         if isinstance(bql, ast.ExpBQLPredProb):
-            if bql.column is None:
+            if not bql.targets:
                 raise BQLError(bdb, 'Predictive probability at row'
-                    ' needs column.')
-            if not core.bayesdb_has_variable(bdb, population_id, generator_id,
-                    bql.column):
-                population = core.bayesdb_population_name(bdb, population_id)
-                raise BQLError(bdb, 'No such variable in population %s: %s' %
-                    (population, bql.column))
-            colno = core.bayesdb_variable_number(bdb, population_id,
-                generator_id, bql.column)
-            out.write('bql_row_column_predictive_probability(%d, %s' %
-                (population_id, nullor(generator_id)))
-            out.write(', %s, %s)' % (rowid_col, colno))
+                    ' needs targets.')
+            duplicates = [t for t in bql.targets if t in bql.constraints]
+            if duplicates:
+                raise BQLError(bdb,
+                    'Duplicate identifiers in targets and constraints: %s.'
+                    % (duplicates,))
+            def report_unknown_variables(colnos):
+                """Throws a BQLError if c in colnos is not in the population."""
+                unknown = [
+                    colno for colno in colnos
+                    if not core.bayesdb_has_variable(
+                        bdb, population_id, generator_id, colno)
+                ]
+                if unknown:
+                    population = core.bayesdb_population_name(
+                        bdb, population_id)
+                    raise BQLError(bdb,
+                        'No such variables in population %s: %s' %
+                        (population, unknown))
+            # If * in targets, use all variables except those in constraints.
+            if ast.ColListAll() in bql.targets:
+                if len(bql.targets) > 1:
+                    raise BQLError(bdb,'Cannot use (*) with other targets.')
+                # Use generator_id as not to retrieve latent variables.
+                constraints = [c.columns[0] for c in bql.constraints]
+                report_unknown_variables(constraints)
+                colnos_all = core.bayesdb_variable_numbers(
+                    bdb, population_id, None)
+                colnos_constraints = [
+                    core.bayesdb_variable_number(
+                        bdb, population_id, generator_id, constraint)
+                    for constraint in constraints
+                ]
+                colnos_targets = [
+                    colno for colno in colnos_all
+                    if colno not in colnos_constraints
+                ]
+            # If * in constraints, use all variables except those in targets.
+            elif ast.ColListAll() in bql.constraints:
+                if len(bql.constraints) > 1:
+                    raise BQLError(bdb,'Cannot use (*) with other constraints.')
+                colnos_all = core.bayesdb_variable_numbers(
+                    bdb, population_id, None)
+                targets = [c.columns[0] for c in bql.targets]
+                report_unknown_variables(targets)
+                colnos_targets = [
+                    core.bayesdb_variable_number(
+                        bdb, population_id, generator_id, target)
+                    for target in targets
+                ]
+                colnos_constraints = [
+                    colno for colno in colnos_all
+                    if colno not in colnos_targets
+                ]
+            # If no *, use the variables exactly as specified in the query.
+            else:
+                targets = [c.columns[0] for c in bql.targets]
+                constraints = [c.columns[0] for c in bql.constraints]
+                report_unknown_variables(targets)
+                report_unknown_variables(constraints)
+                colnos_targets = [
+                    core.bayesdb_variable_number(
+                        bdb, population_id, generator_id, target)
+                    for target in targets
+                ]
+                colnos_constraints = [
+                    core.bayesdb_variable_number(
+                        bdb, population_id, generator_id, constraint)
+                    for constraint in constraints
+                ]
+            out.write('bql_row_column_predictive_probability(%d, %s' %(
+                population_id, nullor(generator_id)))
+            out.write(', %s, \'%s\', \'%s\')' % (
+                rowid_col,
+                json.dumps(colnos_targets),
+                json.dumps(colnos_constraints))
+            )
         elif isinstance(bql, ast.ExpBQLSim) and bql.ofcondition is None:
             if bql.ofcondition is not None:
                 raise BQLError(bdb, 'Similarity as 1-row function needs one '

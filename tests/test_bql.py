@@ -22,10 +22,14 @@ import bayeslite
 import bayeslite.ast as ast
 import bayeslite.compiler as compiler
 import bayeslite.core as core
-from bayeslite.exception import BQLError
 import bayeslite.guess as guess
-import bayeslite.parse as parse
 import bayeslite.metamodels.troll_rng as troll
+import bayeslite.parse as parse
+
+from bayeslite.exception import BQLError
+from bayeslite.math_util import relerr
+from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
+from bayeslite.util import cursor_value
 
 from bayeslite import bayesdb_open
 
@@ -434,26 +438,60 @@ def test_select_trivial():
         'SELECT CASE "f"("a") WHEN ("b" + "c") THEN "d" ELSE "e" END FROM "t";'
 
 def test_estimate_bql():
+    # PREDICTIVE PROBABILITY
     assert bql2sql('estimate predictive probability of weight from p1;') == \
-        'SELECT bql_row_column_predictive_probability(1, NULL, _rowid_, 3)' \
+        'SELECT bql_row_column_predictive_probability(1, NULL, _rowid_, '\
+                '\'[3]\', \'[]\')' \
+            ' FROM "t1";'
+    assert bql2sql('estimate predictive probability of (age, weight) '
+            'from p1;') == \
+        'SELECT bql_row_column_predictive_probability(1, NULL, _rowid_, '\
+                '\'[2, 3]\', \'[]\')' \
+            ' FROM "t1";'
+    assert bql2sql('estimate predictive probability of (age, weight) given '
+            '(label) from p1;') == \
+        'SELECT bql_row_column_predictive_probability(1, NULL, _rowid_, '\
+                '\'[2, 3]\', \'[1]\')' \
+            ' FROM "t1";'
+    assert bql2sql('estimate predictive probability of (*) from p1;') == \
+        'SELECT bql_row_column_predictive_probability(1, NULL, _rowid_, '\
+                '\'[1, 2, 3]\', \'[]\')' \
+            ' FROM "t1";'
+    assert bql2sql('estimate predictive probability of (*) given (age, weight) '
+            'from p1;') == \
+        'SELECT bql_row_column_predictive_probability(1, NULL, _rowid_, '\
+                '\'[1]\', \'[2, 3]\')' \
+            ' FROM "t1";'
+    assert bql2sql('estimate predictive probability of age given (*) '
+            'from p1;') == \
+        'SELECT bql_row_column_predictive_probability(1, NULL, _rowid_, '\
+                '\'[2]\', \'[1, 3]\')' \
             ' FROM "t1";'
     assert bql2sql('estimate label, predictive probability of weight'
             ' from p1;') \
         == \
-        'SELECT "label",' \
-            ' bql_row_column_predictive_probability(1, NULL, _rowid_, 3)' \
+        'SELECT "label", ' \
+            'bql_row_column_predictive_probability(1, NULL, _rowid_, '\
+                '\'[3]\', \'[]\')' \
             ' FROM "t1";'
     assert bql2sql('estimate predictive probability of weight, label'
             ' from p1;') \
         == \
-        'SELECT bql_row_column_predictive_probability(1, NULL, _rowid_, 3),' \
+        'SELECT bql_row_column_predictive_probability(1, NULL, _rowid_, '\
+                '\'[3]\', \'[]\'),' \
             ' "label"' \
             ' FROM "t1";'
     assert bql2sql('estimate predictive probability of weight + 1'
             ' from p1;') == \
-        'SELECT (bql_row_column_predictive_probability(1, NULL, _rowid_, 3)' \
-            ' + 1)' \
+        'SELECT (bql_row_column_predictive_probability(1, NULL, _rowid_, '\
+                '\'[3]\', \'[]\') + 1)' \
             ' FROM "t1";'
+    assert bql2sql('estimate predictive probability of weight given (*) + 1'
+            ' from p1;') == \
+        'SELECT (bql_row_column_predictive_probability(1, NULL, _rowid_, '\
+                '\'[3]\', \'[1, 2]\') + 1)' \
+            ' FROM "t1";'
+    # PREDICTIVE PROBABILITY parse and compilation errors.
     with pytest.raises(parse.BQLParseError):
         # Need a table.
         bql2sql('estimate predictive probability of weight;')
@@ -468,6 +506,22 @@ def test_estimate_bql():
     with pytest.raises(parse.BQLParseError):
         # Need a column.
         bql2sql('estimate predictive probability from p1;')
+    with pytest.raises(bayeslite.BQLError):
+        # Using (*) in both targets and constraints.
+        bql2sql('estimate predictive probability of (*) given (*) from p1;')
+    with pytest.raises(bayeslite.BQLError):
+        # Using (weight, *) in targets.
+        bql2sql('estimate predictive probability of (weight, *) given (age) '
+            'from p1;')
+    with pytest.raises(bayeslite.BQLError):
+        # Using (age, *) in constraints.
+        bql2sql('estimate predictive probability of weight given (*, age) '
+            'from p1;')
+    with pytest.raises(bayeslite.BQLError):
+        # Using duplicate column age.
+        bql2sql('estimate predictive probability of age given (weight, age) '
+            'from p1;')
+    # PROBABILITY DENISTY.
     assert bql2sql('estimate probability density of weight = 20 from p1;') == \
         'SELECT bql_pdf_joint(1, NULL, 3, 20) FROM "t1";'
     assert bql2sql('estimate probability density of weight = 20'
@@ -2185,35 +2239,41 @@ def test_txn():
         # XXX To do: Make sure other effects (e.g., analysis) get
         # rolled back by ROLLBACK.
 
-def test_predprob_null():
-    with test_core.bayesdb() as bdb:
+@pytest.mark.parametrize('metamodel,mml', [
+    (None, 'using crosscat()'),
+    (CGPM_Metamodel({}), 'with baseline crosscat;')
+])
+def test_predprob_null(metamodel, mml):
+    with test_core.bayesdb(metamodel=metamodel) as bdb:
         bdb.sql_execute('''
             create table foo (
                 id integer primary key not null,
                 x numeric,
-                y numeric
+                y numeric,
+                z numeric
             )
         ''')
-        bdb.sql_execute("insert into foo values (1, 1, 'strange')")
-        bdb.sql_execute("insert into foo values (2, 1.2, 'strange')")
-        bdb.sql_execute("insert into foo values (3, 0.8, 'strange')")
-        bdb.sql_execute("insert into foo values (4, NULL, 'strange')")
-        bdb.sql_execute("insert into foo values (5, 73, 'up')")
-        bdb.sql_execute("insert into foo values (6, 80, 'up')")
-        bdb.sql_execute("insert into foo values (7, 60, 'up')")
-        bdb.sql_execute("insert into foo values (8, 67, NULL)")
-        bdb.sql_execute("insert into foo values (9, 3.1415926, 'down')")
-        bdb.sql_execute("insert into foo values (10, 1.4142135, 'down')")
-        bdb.sql_execute("insert into foo values (11, 2.7182818, 'down')")
-        bdb.sql_execute("insert into foo values (12, NULL, 'down')")
+        bdb.sql_execute("insert into foo values (1, 1, 'strange', 3)")
+        bdb.sql_execute("insert into foo values (2, 1.2, 'strange', 1)")
+        bdb.sql_execute("insert into foo values (3, 0.8, 'strange', 3)")
+        bdb.sql_execute("insert into foo values (4, NULL, 'strange', 9)")
+        bdb.sql_execute("insert into foo values (5, 73, 'up', 11)")
+        bdb.sql_execute("insert into foo values (6, 80, 'up', -1)")
+        bdb.sql_execute("insert into foo values (7, 60, 'up', NULL)")
+        bdb.sql_execute("insert into foo values (8, 67, NULL, NULL)")
+        bdb.sql_execute("insert into foo values (9, 3.1415926, 'down', 1)")
+        bdb.sql_execute("insert into foo values (10, 1.4142135, 'down', 0)")
+        bdb.sql_execute("insert into foo values (11, 2.7182818, 'down', -1)")
+        bdb.sql_execute("insert into foo values (12, NULL, 'down', 10)")
         bdb.execute('''
             create population pfoo for foo (
                 id ignore;
                 x numerical;
-                y categorical
+                y categorical;
+                z numerical;
             )
         ''')
-        bdb.execute('create generator pfoo_cc for pfoo using crosscat()')
+        bdb.execute('create metamodel pfoo_cc for pfoo %s;' % (mml,))
         bdb.execute('initialize 1 model for pfoo_cc')
         bdb.execute('analyze pfoo_cc for 1 iteration wait')
         # Null value => null predictive probability.
@@ -2226,6 +2286,25 @@ def test_predprob_null():
         assert len(x) == 1
         assert len(x[0]) == 1
         assert isinstance(x[0][0], (int, float))
+        # All null values => null predictive probability.
+        assert bdb.execute('estimate predictive probability of (y, z)'
+                ' from pfoo where id = 8;').fetchall() == \
+            [(None,)]
+        # Some nonnull values => nonnull predictive probability.
+        x = bdb.execute('estimate predictive probability of (x, z)'
+                ' from pfoo where id = 8;').fetchall()
+        assert len(x) == 1
+        assert len(x[0]) == 1
+        assert isinstance(x[0][0], (int, float))
+        # All NULL constraints => same result regardless of given clause.
+        c0 = bdb.execute('estimate predictive probability of x'
+                ' from pfoo where id = 8;')
+        v0 = cursor_value(c0)
+        assert v0 is not None
+        c1 = bdb.execute('estimate predictive probability of x given (y, z)'
+                ' from pfoo where id = 8;')
+        v1 = cursor_value(c1)
+        assert relerr(v0, v1) < 0.0001
 
 def test_guess_all():
     with test_core.bayesdb() as bdb:
