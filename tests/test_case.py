@@ -21,7 +21,6 @@ import bayeslite.core as core
 
 
 def test_case():
-    pytest.xfail(reason='Github issue #546')
     with bayeslite.bayesdb_open(':memory:') as bdb:
         bdb.sql_execute('create table t(x,Y)')
         bdb.sql_execute('insert into t values(1,2)')
