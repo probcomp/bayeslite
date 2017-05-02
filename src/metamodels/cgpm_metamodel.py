@@ -425,6 +425,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
         cgpm_target_rowid = self._cgpm_rowid(bdb, generator_id, target_rowid)
 
+        # XXX TODO: If neither rowids are incorporated, return None.
+        if cgpm_rowid == -1 or cgpm_target_rowid == -1:
+            return float('nan')
+
         # Get the engine.
         engine = self._engine(bdb, generator_id)
 
@@ -441,12 +445,23 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Convert target rowid
         cgpm_rowid_target = self._cgpm_rowid(bdb, generator_id, rowid_target)
 
-        # Convert query rowids.
+        # If the target rowid is not incorporated, return nan.
+        if cgpm_rowid_target == -1:
+            return [float('nan')]
+
+        # Convert query table rowids to cgpm rowids.
         # XXX TODO: Move any items of cgpm_query_rowid which are not yet
-        # incorporated into the `hypotheticals` list.
-        cgpm_rowid_query = [
-            self._cgpm_rowid(bdb, generator_id, r) for r in rowid_query
-        ]
+        # incorporated into the `hypotheticals` list. For now, we will just
+        # drop any rowids which are not incorporated.
+        cgpm_rowid_query = filter(
+            lambda r: r != -1,
+            [self._cgpm_rowid(bdb, generator_id, r) for r in rowid_query]
+        )
+
+        # If the query rowids are all not incorporated and no hypotheticals,
+        # return nan.
+        if len(cgpm_rowid_query) + len(hypotheticals) == 0:
+            return [float('nan')]
 
         # Build list of hypotheticals dictionaries.
         hypotheticals_numeric = [
