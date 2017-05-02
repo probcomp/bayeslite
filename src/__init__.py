@@ -63,6 +63,7 @@ from bayeslite.metamodel import IBayesDBMetamodel
 from bayeslite.metamodel import bayesdb_builtin_metamodel
 from bayeslite.metamodel import bayesdb_deregister_metamodel
 from bayeslite.metamodel import bayesdb_register_metamodel
+from bayeslite.nullify import bayesdb_nullify
 from bayeslite.parse import BQLParseError
 from bayeslite.quote import bql_quote_name
 from bayeslite.read_csv import bayesdb_read_csv
@@ -81,6 +82,7 @@ __all__ = [
     'BayesDBTxnError',
     'bayesdb_deregister_metamodel',
     'bayesdb_load_codebook_csv_file',
+    'bayesdb_nullify',
     'bayesdb_open',
     'bayesdb_read_csv',
     'bayesdb_read_csv_file',
