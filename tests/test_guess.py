@@ -166,10 +166,11 @@ def test_guess_schema():
     with pytest.raises(BQLError):
         bdb.execute('GUESS SCHEMA FOR non_existant_table')
     guess = bdb.execute('GUESS SCHEMA FOR t')
-    assert len(guess.description) == 3
+    assert len(guess.description) == 4
     assert guess.description[0][0] == u'column'
     assert guess.description[1][0] == u'stattype'
-    assert guess.description[2][0] == u'reason'
+    assert guess.description[2][0] == u'num_distinct'
+    assert guess.description[3][0] == u'reason'
     assert len(guess.fetchall()) == 3
 
 def isqrt(n):
