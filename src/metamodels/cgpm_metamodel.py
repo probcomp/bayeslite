@@ -112,7 +112,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                     ' with unknown schema version: %d' % (version,))
 
     def set_multiprocess(self, switch):
+        old = self._multiprocess
         self._multiprocess = switch
+        return old
 
     def create_generator(self, bdb, generator_id, schema_tokens, **kwargs):
         schema_ast = cgpm_schema.parse.parse(schema_tokens)
