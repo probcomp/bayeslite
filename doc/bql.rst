@@ -275,50 +275,50 @@ BQL Queries
 
 .. index:: ``ESTIMATE BY``
 
-``ESTIMATE <columns> BY <generator>``
+``ESTIMATE <columns> BY <population>``
 
    Like constant ``SELECT``, extended with model estimators of one
    implied row.
 
 .. index:: ``ESTIMATE``
 
-``ESTIMATE [DISTINCT|ALL] <columns> FROM <generator> [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE [DISTINCT|ALL] <columns> FROM <population> [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
-   Like ``SELECT`` on the table associated with *generator*, extended
+   Like ``SELECT`` on the table associated with *population*, extended
    with model estimators of one implied row.
 
 .. index:: ``ESTIMATE FROM COLUMNS OF``
 
-``ESTIMATE <columns> FROM COLUMNS OF <generator> [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <columns> FROM COLUMNS OF <population> [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
-   Like ``SELECT`` on the modelled columns of *generator*, extended
+   Like ``SELECT`` on the modelled columns of *population*, extended
    with model estimators of one implied column.
 
 .. index:: ``ESTIMATE FROM PAIRWISE COLUMNS OF``
 
-``ESTIMATE <columns> FROM PAIRWISE COLUMNS OF <generator> [FOR <subcolumns>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <columns> FROM PAIRWISE COLUMNS OF <population> [FOR <subcolumns>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the modelled columns of
-   *generator*, extended with model estimators of two implied columns.
+   *population*, extended with model estimators of two implied columns.
 
    In addition to a literal list of column names, the list of
    subcolumns may be an ``ESTIMATE * FROM COLUMNS OF`` subquery.
 
 .. index:: ``ESTIMATE, PAIRWISE``
 
-``ESTIMATE <expression> FROM PAIRWISE <generator> [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <expression> FROM PAIRWISE <population> [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the table assocated with
-   *generator*, extended with model estimators of two implied rows.
+   *population*, extended with model estimators of two implied rows.
 
    (Currently the only functions of two implied rows are
    ``SIMILARITY`` and ``SIMILARITY WITH IN THE CONTEXT OF (...)``.)
 
 .. index:: ``INFER``
 
-``INFER <colnames> [WITH CONFIDENCE <conf>] FROM <generator> [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``INFER <colnames> [WITH CONFIDENCE <conf>] FROM <population> [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
-   Select the specified *colnames* from *generator*, filling in
+   Select the specified *colnames* from *population*, filling in
    missing values if they can be filled in with confidence at least
    *conf*, a BQL expression.  Only missing values *colnames* will be
    filled in; missing values in columns named in *condition*,
@@ -334,9 +334,9 @@ BQL Queries
 
 .. index:: ``INFER EXPLICIT``
 
-``INFER EXPLICIT <columns> FROM <generator> [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``INFER EXPLICIT <columns> FROM <population> [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
-   Like ``SELECT`` on the table associated with *generator*, extended
+   Like ``SELECT`` on the table associated with *population*, extended
    with model estimators of one implied row and with model predictions.
 
    In addition to normal ``SELECT`` columns, *columns* may include
@@ -351,9 +351,9 @@ BQL Queries
 
 .. index:: ``SIMULATE``
 
-``SIMULATE <colnames> FROM <generator> [GIVEN <constraints>] [LIMIT <limit>]``
+``SIMULATE <colnames> FROM <population> [GIVEN <constraints>] [LIMIT <limit>]``
 
-   Select the requested *colnames* from rows sampled from *generator*.
+   Select the requested *colnames* from rows sampled from *population*.
    *Constraints* is a comma-separated list of constraints of the form
 
       ``<colname> = <expression>``
