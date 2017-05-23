@@ -419,6 +419,7 @@ subquery instead:
 .. index:: ``PROBABILITY DENSITY OF``
 
 ``PROBABILITY DENSITY OF <column> = <value> [GIVEN (<constraints>)]``
+
 ``PROBABILITY DENSITY OF (<targets>) [GIVEN (<constraints>)]``
 
    Constant.  Returns the probability density of the value of the BQL
@@ -446,16 +447,15 @@ subquery instead:
 
 .. index:: ``SIMILARITY``
 
-``SIMILARITY [TO (<expression>)] IN THE CONTEXT OF <column>``
+``SIMILARITY [OF (<expression0>)] [TO (<expression1>)] IN THE CONTEXT OF <column>``
 
-   Function of one or two implied rows.  If given ``TO``, returns a
-   measure of the similarity of the implied row with the first row
-   satisfying <expression>.  Otherwise, returns a measure of the
-   similarity of the two implied rows.  The similarity may be
-   considered with in the context of a column.
-
-   *Columns* is a comma-separated list of column names or
-   ``ESTIMATE * FROM COLUMNS OF ...`` subqueries.
+   Constant, or function of one or two implied rows. If given both ``OF`` and
+   ``TO``, returns a constant measure of similarity between the first row
+   satisfied by *expression0* and the first row satisfied by *expression1*. If
+   given only  ``TO`` returns a measure of the similarity of the implied row
+   with the first row satisfying *expression1*. Otherwise, returns a measure of
+   the similarity of the two implied rows.  The similarity may be
+   considered within the context of a column.
 
 .. index:: ``CORRELATION``
 
