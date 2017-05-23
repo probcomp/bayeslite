@@ -37,6 +37,86 @@ allows
 
 but not ``DEPENDENCE PROBABILITY OF eland``.
 
+BQL Commands
+------------
+
+BQL commands change the state of the database.
+
+Transactions
+^^^^^^^^^^^^
+
+Transactions are groups of changes to a database that happen all at
+once or not at all.  Transactions do not nest.
+
+FUTURE: BQL will additionally support savepoints (Github issue #36),
+which are like transactions but may be named and nested.
+
+.. index:: ``BEGIN``
+
+``BEGIN``
+
+   Begin a transaction.  Subsequent commands take effect within the
+   transaction, but will not be made permanent until ``COMMIT``, and
+   may be undone with ``ROLLBACK``.
+
+.. index:: ``COMMIT``
+
+``COMMIT``
+
+   End a transaction, and commit to all changes made since the last
+   ``BEGIN``.
+
+.. index:: ``ROLLBACK``
+
+``ROLLBACK``
+
+   End a transaction, and discard all changes made since the last
+   ``BEGIN``.
+
+Data Definition Language
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The BQL DDL is currently limited to creating tables from the results
+of queries, and dropping and renaming tables.
+
+FUTURE: The complete SQL DDL supported by sqlite3 will be supported by
+BQL (Github issue #37).  Until then, one can always fall back to
+executing SQL instead of BQL in Bayeslite.
+
+.. index:: ``CREATE TABLE``
+
+``CREATE [TEMP|TEMPORARY] TABLE [IF NOT EXISTS] <name> AS <query>``
+
+   Create a table named *name* to hold the results of the query
+   *query*.
+
+.. index:: ``DROP TABLE``
+
+``DROP TABLE [IF EXISTS] <name>``
+
+   Drop the table *name* and all its contents.
+
+   May fail if there are foreign key constraints that refer to this
+   table.
+
+.. index:: ``ALTER TABLE``
+
+``ALTER TABLE <name> <alterations>``
+
+   Alter the specified properties of the table *name*.  *Alterations*
+   is a comma-separated list of alterations.  The following
+   alterations are supported:
+
+   .. index:: ``RENAME TO``
+
+   ``RENAME TO <newname>``
+
+      Change the table's name to *newname*.  Foreign key constraints
+      are updated; triggers and views are not, and must be dropped
+      and recreated separately, due to limitations in sqlite3.
+
+   FUTURE: Renaming columns (Github issue #35).
+
 BQL Queries
 -----------
 
@@ -309,82 +389,3 @@ Model Predictions
    returns it if the confidence of the prediction is at least the
    value of the BQL expression *confidence*; otherwise returns null.
 
-BQL Commands
-------------
-
-BQL commands change the state of the database.
-
-Transactions
-^^^^^^^^^^^^
-
-Transactions are groups of changes to a database that happen all at
-once or not at all.  Transactions do not nest.
-
-FUTURE: BQL will additionally support savepoints (Github issue #36),
-which are like transactions but may be named and nested.
-
-.. index:: ``BEGIN``
-
-``BEGIN``
-
-   Begin a transaction.  Subsequent commands take effect within the
-   transaction, but will not be made permanent until ``COMMIT``, and
-   may be undone with ``ROLLBACK``.
-
-.. index:: ``COMMIT``
-
-``COMMIT``
-
-   End a transaction, and commit to all changes made since the last
-   ``BEGIN``.
-
-.. index:: ``ROLLBACK``
-
-``ROLLBACK``
-
-   End a transaction, and discard all changes made since the last
-   ``BEGIN``.
-
-Data Definition Language
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-The BQL DDL is currently limited to creating tables from the results
-of queries, and dropping and renaming tables.
-
-FUTURE: The complete SQL DDL supported by sqlite3 will be supported by
-BQL (Github issue #37).  Until then, one can always fall back to
-executing SQL instead of BQL in Bayeslite.
-
-.. index:: ``CREATE TABLE``
-
-``CREATE [TEMP|TEMPORARY] TABLE [IF NOT EXISTS] <name> AS <query>``
-
-   Create a table named *name* to hold the results of the query
-   *query*.
-
-.. index:: ``DROP TABLE``
-
-``DROP TABLE [IF EXISTS] <name>``
-
-   Drop the table *name* and all its contents.
-
-   May fail if there are foreign key constraints that refer to this
-   table.
-
-.. index:: ``ALTER TABLE``
-
-``ALTER TABLE <name> <alterations>``
-
-   Alter the specified properties of the table *name*.  *Alterations*
-   is a comma-separated list of alterations.  The following
-   alterations are supported:
-
-   .. index:: ``RENAME TO``
-
-   ``RENAME TO <newname>``
-
-      Change the table's name to *newname*.  Foreign key constraints
-      are updated; triggers and views are not, and must be dropped
-      and recreated separately, due to limitations in sqlite3.
-
-   FUTURE: Renaming columns (Github issue #35).
