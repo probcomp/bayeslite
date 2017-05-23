@@ -459,7 +459,7 @@ subquery instead:
    Constant, or function of one or two implied columns.  Returns
    standard measures of correlation between columns:
 
-   * Pearson correlation coefficient for two numerical columns.
+   * Pearson correlation coefficient squared for two numerical columns.
    * Cramer's phi for two categorical columns.
    * ANOVA R^2 for a categorical column and a numerical column.
 
