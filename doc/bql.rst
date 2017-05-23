@@ -206,7 +206,7 @@ variables in a population.
 
    Drop the metamodel *metamodel* and all its contents.
 
-.. index:: ``INITIALIZE MODELS``
+.. index:: ``INITIALIZE``
 
 ``INITIALIZE <num> MODELS FOR <metamodel>``
 
@@ -456,6 +456,20 @@ subquery instead:
    with the first row satisfying *expression1*. Otherwise, returns a measure of
    the similarity of the two implied rows.  The similarity may be
    considered within the context of a column.
+
+.. index:: ``PREDICTIVE RELEVANCE``
+
+``PREDICTIVE RELEVANCE [OF (<expression0>)] TO EXISTING ROWS (<expression1>) IN THE CONTEXT OF <column>``
+
+``PREDICTIVE RELEVANCE [OF (<expression0>)] TO HYPOTHETICAL ROWS (<expression1>) IN THE CONTEXT OF <column>``
+
+``PREDICTIVE RELEVANCE [OF (<expression0>)] TO EXISTING ROWS (<expression1>) AND HYPOTHETICAL ROWS (<expression2>) IN THE CONTEXT OF <column>``
+
+   If given ``OF``, returns a measure of predictive relevance of the first row
+   satisfying *expression0* for the existing and/or hypothetical rows satisfying
+   *expression1* (and *expression2* in the case of both) in the context of
+   *column*. Otherwise, returns a measure of predictive relevance of all rows to
+   the specified existing and/or hypothetical rows.
 
 .. index:: ``CORRELATION``
 
