@@ -149,6 +149,14 @@ DropModels = namedtuple('DropModels', [
     'modelnos',
 ])
 
+Regress = namedtuple('Regress', [
+    'target',
+    'givens',
+    'nsamp',
+    'population',
+    'metamodel',
+])
+
 Simulate = namedtuple('Simulate', [
     'columns',                  # [SelCol*]
     'population',               # XXX name
