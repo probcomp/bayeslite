@@ -652,6 +652,56 @@ def execute_phrase(bdb, phrase, bindings=()):
                     })
         return empty_cursor(bdb)
 
+    if isinstance(phrase, ast.Regress):
+        # Retrieve the metamodel.
+        if not core.bayesdb_has_population(bdb, phrase.population):
+            raise BQLError(bdb, 'No such population: %r' % (phrase.population,))
+        population_id = core.bayesdb_get_population(bdb, phrase.population)
+        # Retrieve the metamodel.
+        generator_id = None
+        if phrase.metamodel:
+            if not core.bayesdb_has_generator(bdb, phrase.metamodel):
+                raise BQLError(bdb,
+                    'No such metamodel: %r' % (phrase.population,))
+            generator_id = core.bayesdb_get_generator(
+                bdb, population_id, phrase.metamodel)
+        # Retrieve the target variable.
+        if not core.bayesdb_has_variable(
+                bdb, population_id, None, phrase.target):
+            raise BQLError(bdb, 'No such variable: %r' % (phrase.target,))
+        colno_target = core.bayesdb_variable_number(
+            bdb, population_id, None, phrase.target)
+        # Build the given variables.
+        if ast.SelColAll in phrase.givens:
+            if len(phrase.givens) > 1:
+                raise BQLError(bdb, 'Cannot use (*) with other givens.')
+            colno_givens = core.bayesdb_variable_numbers(
+                bdb, population_id, None)
+        else:
+            givens = phrase.givens
+            if any(isinstance(selcol, ast.SelColSub) for selcol in givens):
+                out = compiler.Output(n_numpar, nampar_map, bindings)
+                bql_compiler = compiler.BQLCompiler_None()
+                givens = compiler.expand_select_columns(
+                    bdb, phrase.givens, True, bql_compiler, out)
+            colno_givens = [
+                core.bayesdb_variable_number(
+                    bdb, population_id, None, given.expression.column)
+                for given in givens
+            ]
+        colno_givens_unique = set(
+            colno for colno in colno_givens if colno!= colno_target
+        )
+        if len(colno_givens_unique) == 0:
+            raise BQLError(bdb, 'No matching given columns.')
+        constraints = []
+        colnos = [colno_target] + list(colno_givens_unique)
+        nsamp = 100 if phrase.nsamp is None else phrase.nsamp.value.value
+        rows = bqlfn.bayesdb_simulate(
+            bdb, population_id, constraints,
+            colnos, generator_id=generator_id, numpredictions=nsamp)
+        return empty_cursor(bdb)
+
     assert False                # XXX
 
 def _create_population(bdb, phrase):
