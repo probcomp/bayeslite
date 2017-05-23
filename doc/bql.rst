@@ -117,6 +117,74 @@ executing SQL instead of BQL in Bayeslite.
 
    FUTURE: Renaming columns (Github issue #35).
 
+Model Definition Language
+^^^^^^^^^^^^^^^^^^^^^^^^^
++++++++++++
+Populations
++++++++++++
+A population specifies which columns in a table should be modeled or ignored.
+For those that are modeled, it specifies whether they should be modeled as
+numerical or nominal.
+
+``GUESS SCHEMA FOR <name>``
+   Guess a population schema for the table *name*. A schema maps the columns in
+   *name* to heuristically guessed statistical types. Statistical types can be
+   guessed to be NOMINAL or NUMERICAL. Columns can also be guessed to be ignored
+   (IGNORE).
+
+``CREATE POPULATION [IF NOT EXISTS] FOR <table> WITH SCHEMA { [GUESS STATTYPES
+FOR (<column(s)>)] [MODEL <column(s)> AS <stattype>] [IGNORE <column(s)>] }``
+   Create a population for *table* with a schema defined by guessing the
+   statistical types for some or all columns (which can be referred to by \*)
+   and/or explicitly modeling columns using a particular statistical type
+   (NUMERICAL or NOMINAL) or ignoring them. If more than one schema definition
+   is used, they should be separated by semicolons.
+
+``DROP POPULATION [IF EXISTS] <population>``
+   Drop the population *population* and all its contents.
+   Will fail if there are still metamodels associated with this population.
+
+``ALTER POPULATION <population> ADD VARIABLE <variable> [<stattype>]``
+   Add the variable *variable* to the population *population*. Specify that it
+   should be modeled with the statistical type *stattype* (optional), otherwise
+   its statistical type will be heuristically guessed.
+
+``ALTER POPULATION <population> SET STATTYPE OF <variable(s)> TO <stattype>``
+   Change the statistical type of variable(s) *variable(s)* in population
+   *population* to *stattype*.
+
+++++++++++
+Metamodels
+++++++++++
+A metamodel specifies the type of generative model(s) used to model the
+variables in a population.
+
+``CREATE METAMODEL <metamodel> FOR <population> WITH BASELINE <baseline> (
+[OVERRIDE GENERATIVE MODEL FOR <variable> GIVEN <variable(s)> USING <model>] )``
+   Create metamodel *metamodel* for the population *population* with the
+   baseline generative model *baseline*. Possible generative models include
+   crosscat, factor_analysis, random_forest (k=<num_classes>),
+   ordinary_least_squares, linear_regression, multivariate_knn, and
+   multivariate_kde.
+
+``DROP METAMODEL [IF EXISTS] <metamodel>``
+   Drop the metamodel *metamodel* and all its contents.
+
+``INITIALIZE <num> MODELS FOR <metamodel>``
+   Initialize *num* number of models for the metamodel *metamodel*.
+
+``ANALYZE <metamodel> FOR <num> ITERATION(S) WAIT ( [VARIABLES <variable(s)>];
+[OPTIMIZED]; [QUIET] )``
+``ANALYZE <metamodel> FOR <num> MINUTE(S) WAIT ( [VARIABLES <variable(s)>];
+[OPTIMIZED]; [QUIET] )``
+``ANALYZE <metamodel> FOR <num> SECOND(S) WAIT ( [VARIABLES <variable(s)>];
+[OPTIMIZED]; [QUIET] )``
+   Analyze metamodel *metamodel* for *num* number of iterations, minutes, or
+   seconds. Analysis can be run optionally on only those variables specified by
+   *variable(s)*. The optional OPTIMIZED flag speeds up analysis for variables
+   modeled using crosscat only. The optional QUIET flag suppresses the progress
+   bar output.
+
 BQL Queries
 -----------
 
