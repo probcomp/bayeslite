@@ -85,6 +85,11 @@ executing SQL instead of BQL in Bayeslite.
 
 .. index:: ``CREATE TABLE``
 
+``CREATE [TEMP|TEMPORARY] TABLE [IF NOT EXISTS] <name> FROM <pathname>``
+
+   Create a table named *name* from the csv file at *pathname*. *Pathname* should
+   be surrounded by single quotes.
+
 ``CREATE [TEMP|TEMPORARY] TABLE [IF NOT EXISTS] <name> AS <query>``
 
    Create a table named *name* to hold the results of the query
