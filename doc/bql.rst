@@ -122,8 +122,8 @@ executing SQL instead of BQL in Bayeslite.
 
    FUTURE: Renaming columns (Github issue #35).
 
-Model Definition Language
-^^^^^^^^^^^^^^^^^^^^^^^^^
+Metamodeling Language (MML)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 +++++++++++
 Populations
