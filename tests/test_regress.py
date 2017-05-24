@@ -42,30 +42,52 @@ def test_regress_bonanza():
         ''')
         bdb.execute('INITIALIZE 2 MODELS FOR m;')
 
+        def check_regression_variables(results, numericals, nominals):
+            seen = set()
+            for r in results:
+                assert len(r) == 2
+                variable = r[0]
+                assert variable not in seen
+                assert variable in numericals or \
+                    any(variable.startswith('%s_dum_' % (nominal,))
+                        for nominal in nominals)
+                seen.add(variable)
+
         # Regression on 1 numerical variable.
-        bdb.execute('''
+        results = bdb.execute('''
             REGRESS apogee GIVEN (perigee) USING 12 SAMPLES BY satellites;
         ''').fetchall()
+        assert len(results) == 2
+        check_regression_variables(results, ['intercept', 'perigee'], [])
 
         # Regression on 1 nominal variable.
-        bdb.execute('''
+        results = bdb.execute('''
             REGRESS apogee GIVEN (country_of_operator)
             USING 12 SAMPLES BY satellites;
         ''').fetchall()
+        check_regression_variables(
+            results, ['intercept'], ['country_of_operator'])
 
         # Regression on 1 nominal + 1 numerical variable.
         bdb.execute('''
             REGRESS apogee GIVEN (perigee, country_of_operator)
             USING 12 SAMPLES BY satellites;
         ''').fetchall()
+        check_regression_variables(
+            results, ['intercept', 'perigee'], ['country_of_operator'])
 
         # Regression on all variables.
-        bdb.execute('''
+        results = bdb.execute('''
             REGRESS apogee GIVEN (*) USING 12 SAMPLES BY satellites;
         ''', (3,)).fetchall()
+        check_regression_variables(
+            results,
+            ['intercept', 'perigee', 'launch_mass', 'period',],
+            ['country_of_operator', 'class_of_orbit',],
+        )
 
         # Regression on column selector subexpression with a binding.
-        bdb.execute('''
+        results = bdb.execute('''
             REGRESS apogee GIVEN (
                 satellites.(
                     ESTIMATE * FROM VARIABLES OF satellites
@@ -75,6 +97,20 @@ def test_regress_bonanza():
             )
             USING 12 SAMPLES BY satellites;
         ''', (3,)).fetchall()
+
+        cursor = bdb.execute('''
+            ESTIMATE * FROM VARIABLES OF satellites
+                ORDER BY dependence probability with apogee DESC
+                LIMIT ?
+        ''', (3,)).fetchall()
+        top_variables = [c[0] for c in cursor]
+        nominals = [
+            var for var in top_variables
+            if var in ['country_of_operator', 'class_of_orbit',]
+        ]
+        numericals = [var for var in top_variables if var not in nominals]
+        check_regression_variables(
+            results, numericals + ['intercept'], nominals)
 
         # Cannot mix * with other variables.
         with pytest.raises(BQLError):
