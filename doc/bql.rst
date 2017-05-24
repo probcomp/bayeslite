@@ -171,7 +171,7 @@ FOR (<column(s)>)] [MODEL <column(s)> AS <stattype>] [IGNORE <column(s)>] }``
    ``ADD VARIABLE <variable> [<stattype>]``
 
       Add the variable *variable* to the population *population*. Specify that
-      it should be modeled with the statistical type *stattype* (optional),
+      it should be modeled with the statistical type *stattype* (optional);
       otherwise its statistical type will be heuristically guessed.
 
    .. index:: ``SET STATTYPE``
