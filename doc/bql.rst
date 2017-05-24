@@ -398,7 +398,7 @@ estimator may be repeatedly evaluated for each row, even if they are
 being stored in the output of queries.  For example,
 
     ESTIMATE MUTUAL INFORMATION AS mutinf
-        FROM PAIRWISE COLUMNS OF t ORDER BY mutinf
+        FROM PAIRWISE COLUMNS OF p ORDER BY mutinf
 
 has the effect of estimating mutual information twice for each row
 because it is mentioned twice, once in the output and once in the
@@ -411,7 +411,7 @@ subquery instead:
 
     SELECT *
         FROM (ESTIMATE MUTUAL INFORMATION AS mutinf
-                FROM PAIRWISE COLUMNS OF t)
+                FROM PAIRWISE COLUMNS OF p)
         ORDER BY mutinf
 
 .. index:: ``PREDICTIVE PROBABILITY``
