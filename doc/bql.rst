@@ -130,8 +130,7 @@ Populations
 +++++++++++
 
 A population specifies which columns in a table should be modeled or ignored.
-For those that are modeled, it specifies whether they should be modeled as
-numerical or nominal.
+For those that are modeled, it specifies their statistical type.
 
 .. index:: ``GUESS SCHEMA``
 
@@ -139,8 +138,8 @@ numerical or nominal.
 
    Guess a population schema for the table *name*. A schema maps the columns in
    *name* to heuristically guessed statistical types. Statistical types can be
-   guessed to be NOMINAL or NUMERICAL. Columns can also be guessed to be ignored
-   (IGNORE).
+   guessed to be nominal or numerical. Columns can also be guessed to be
+   ignored.
 
 .. index:: ``CREATE POPULATION``
 
@@ -149,9 +148,9 @@ FOR (<column(s)>)] [MODEL <column(s)> AS <stattype>] [IGNORE <column(s)>] }``
 
    Create a population for *name* with a schema defined by guessing the
    statistical types for some or all columns (which can be referred to by \*)
-   and/or explicitly modeling columns using a particular statistical type
-   (NUMERICAL or NOMINAL) or ignoring them. If more than one schema definition
-   is used, they should be separated by semicolons.
+   and/or explicitly modeling columns using a particular statistical type or
+   ignoring them. If more than one schema definition is used, they should be
+   separated by semicolons.
 
 .. index:: ``DROP POPULATION``
 
@@ -192,13 +191,11 @@ variables in a population.
 .. index:: ``CREATE METAMODEL``
 
 ``CREATE METAMODEL <metamodel> FOR <population> WITH BASELINE <baseline> (
-[OVERRIDE GENERATIVE MODEL FOR <variable> GIVEN <variable(s)> USING <model>] )``
+[OVERRIDE GENERATIVE MODEL FOR <target> GIVEN <variable(s)> USING <model>] )``
 
    Create metamodel *metamodel* for the population *population* with the
-   baseline generative model *baseline*. Possible generative models include
-   crosscat, factor_analysis, random_forest (k=<num_classes>),
-   ordinary_least_squares, linear_regression, multivariate_knn, and
-   multivariate_kde.
+   baseline generative model *baseline*. Optionally override *baseline* with
+   *model* for a variable *target* given the inputs *variable(s)*.
 
 .. index:: ``DROP METAMODEL``
 
