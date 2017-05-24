@@ -143,14 +143,23 @@ For those that are modeled, it specifies their statistical type.
 
 .. index:: ``CREATE POPULATION``
 
-``CREATE POPULATION [IF NOT EXISTS] FOR <name> WITH SCHEMA ( [GUESS STATTYPES
-FOR (<column(s)>)] [MODEL <column(s)> AS <stattype>] [IGNORE <column(s)>] )``
+``CREATE POPULATION [IF NOT EXISTS] FOR <name> WITH SCHEMA (*schema*)``
 
-   Create a population for *name* with a schema defined by guessing the
-   statistical types for some or all columns (which can be referred to by \*)
-   and/or explicitly modeling columns using a particular statistical type or
-   ignoring them. If more than one schema definition is used, they should be
-   separated by semicolons.
+   Create a population for *name* with schema *schema*. *Schema* can be defined
+   using any combination of the following statements, separated by semicolons:
+
+      ``GUESS STATTYPES FOR (<column(s)>)``
+
+         Guess the statistical type for the column(s) *column(s)* by
+         heuristically examining the data.
+
+      ``MODEL <column(s)> AS <stattype>``
+
+         Model the column(s) *column(s)* with the statistical type *stattype*.
+
+      ``IGNORE <column(s)>``
+
+         Ignore the column(s) *column(s)*.
 
 .. index:: ``DROP POPULATION``
 
