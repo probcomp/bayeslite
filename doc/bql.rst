@@ -222,20 +222,17 @@ variables in a population.
 
 .. index:: ``ANALYZE METAMODEL``
 
-``ANALYZE <metamodel> FOR <num> ITERATION(S) WAIT ( [VARIABLES <variable(s)>];
-[OPTIMIZED]; [QUIET] )``
+``ANALYZE <metamodel> FOR <duration> [CHECKPOINT <duration>] WAIT ( [VARIABLES
+<variable(s)>]; [OPTIMIZED]; [QUIET] )``
 
-``ANALYZE <metamodel> FOR <num> MINUTE(S) WAIT ( [VARIABLES <variable(s)>];
-[OPTIMIZED]; [QUIET] )``
-
-``ANALYZE <metamodel> FOR <num> SECOND(S) WAIT ( [VARIABLES <variable(s)>];
-[OPTIMIZED]; [QUIET] )``
-
-   Analyze metamodel *metamodel* for *num* number of iterations, minutes, or
-   seconds. Analysis can be run optionally on only those variables specified by
-   *variable(s)*. The optional OPTIMIZED flag speeds up analysis for variables
-   modeled using crosscat only. The optional QUIET flag suppresses the progress
-   bar output.
+   Analyze metamodel *metamodel*. *Duration* can take on values of
+   ``<n> SECOND(S)``, ``<n> MINUTE(S)``, or ``<n> ITERATION[S]``. The ``FOR ``
+   duration specifies how long to perform analysis. The ``CHECKPOINT`` duration
+   specifies how often to commit the intermediate results of analysis to the
+   database on disk. Analysis can be run optionally on only those variables
+   specified by *variable(s)*. The optional ``OPTIMIZED`` flag speeds up
+   analysis for variables modeled using crosscat only. The optional ``QUIET``
+   flag suppresses the progress bar output.
 
 BQL Queries
 -----------
