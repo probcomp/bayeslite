@@ -143,8 +143,8 @@ For those that are modeled, it specifies their statistical type.
 
 .. index:: ``CREATE POPULATION``
 
-``CREATE POPULATION [IF NOT EXISTS] FOR <name> WITH SCHEMA { [GUESS STATTYPES
-FOR (<column(s)>)] [MODEL <column(s)> AS <stattype>] [IGNORE <column(s)>] }``
+``CREATE POPULATION [IF NOT EXISTS] FOR <name> WITH SCHEMA ( [GUESS STATTYPES
+FOR (<column(s)>)] [MODEL <column(s)> AS <stattype>] [IGNORE <column(s)>] )``
 
    Create a population for *name* with a schema defined by guessing the
    statistical types for some or all columns (which can be referred to by \*)
