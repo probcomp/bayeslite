@@ -226,7 +226,7 @@ variables in a population.
 <variable(s)>]; [OPTIMIZED]; [QUIET] )``
 
    Analyze metamodel *metamodel*. *Duration* can take on values of
-   ``<n> SECOND(S)``, ``<n> MINUTE(S)``, or ``<n> ITERATION[S]``. The ``FOR ``
+   ``<n> SECOND(S)``, ``<n> MINUTE(S)``, or ``<n> ITERATION(S)``. The ``FOR ``
    duration specifies how long to perform analysis. The ``CHECKPOINT`` duration
    specifies how often to commit the intermediate results of analysis to the
    database on disk. Analysis can be run optionally on only those variables
