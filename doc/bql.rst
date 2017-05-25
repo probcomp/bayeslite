@@ -143,7 +143,7 @@ For those that are modeled, it specifies their statistical type.
 
 .. index:: ``CREATE POPULATION``
 
-``CREATE POPULATION [IF NOT EXISTS] FOR <name> WITH SCHEMA (*schema*)``
+``CREATE POPULATION [IF NOT EXISTS] FOR <name> WITH SCHEMA (<schema>)``
 
    Create a population for *name* with schema *schema*. *Schema* can be defined
    using any combination of the following statements, separated by semicolons:
