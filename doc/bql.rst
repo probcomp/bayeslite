@@ -297,9 +297,9 @@ BQL Queries
    Like ``SELECT`` on the table associated with *population*, extended
    with model estimators of one implied row.
 
-.. index:: ``ESTIMATE FROM COLUMNS OF``
+.. index:: ``ESTIMATE FROM VARIABLES OF``
 
-``ESTIMATE <columns> FROM COLUMNS OF <population> [MODELED BY <metamodel>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <columns> FROM VARIABLES OF <population> [MODELED BY <metamodel>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the modelled columns of *population*, extended
    with model estimators of one implied column.
@@ -312,7 +312,7 @@ BQL Queries
    *population*, extended with model estimators of two implied columns.
 
    In addition to a literal list of column names, the list of
-   subcolumns may be an ``ESTIMATE * FROM COLUMNS OF`` subquery.
+   subcolumns may be an ``ESTIMATE * FROM VARIABLES OF`` subquery.
 
 .. index:: ``ESTIMATE, PAIRWISE``
 
