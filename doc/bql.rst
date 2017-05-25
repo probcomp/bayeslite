@@ -136,10 +136,10 @@ For those that are modeled, it specifies their statistical type.
 
 ``GUESS SCHEMA FOR <name>``
 
-   Guess a population schema for the table *name*. Returns a temporary table
-   mapping each column in *name* to its heuristically guessed statistical type
-   and the heuristic reason for the guess. Columns can be guessed to be
-   ``NOMINAL`` or ``NUMERICAL`` or to be ignored (``IGNORE``).
+   Guess a population schema for the table *name*. Returns a table mapping
+   each column in *name* to its heuristically guessed statistical type and the
+   heuristic reason for the guess. Columns can be guessed to be ``NOMINAL`` or
+   ``NUMERICAL`` or to be ignored (``IGNORE``).
 
 .. index:: ``CREATE POPULATION``
 
