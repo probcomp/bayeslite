@@ -142,11 +142,11 @@ For those that are modeled, it specifies their statistical type.
    ``NUMERICAL`` or to be ignored (``IGNORE``). The query yields a table created
    as if by the following ``CREATE TABLE``:
 
-      ``CREATE TABLE guessed_stattypes(
-         name TEXT NOT NULL UNIQUE,
-         stattype TEXT NOT NULL,
-         reason TEXT NOT NULL
-      )``
+      ``CREATE TABLE guessed_stattypes(``
+         ``name TEXT NOT NULL UNIQUE,``
+         ``stattype TEXT NOT NULL,``
+         ``reason TEXT NOT NULL``
+      ``)``
 
 .. index:: ``CREATE POPULATION``
 
@@ -233,7 +233,7 @@ variables in a population.
 <variable(s)>]; [OPTIMIZED]; [QUIET] )``
 
    Analyze metamodel *metamodel*. *Duration* can take on values of
-   ``<n> SECOND(S)``, ``<n> MINUTE(S)``, or ``<n> ITERATION(S)``. The ``FOR ``
+   ``<n> SECOND(S)``, ``<n> MINUTE(S)``, or ``<n> ITERATION(S)``. The ``FOR``
    duration specifies how long to perform analysis. The ``CHECKPOINT`` duration
    specifies how often to commit the intermediate results of analysis to the
    database on disk. Analysis can be run optionally on only those variables
@@ -403,8 +403,8 @@ relies on (Github issue #308), repeated references to a model
 estimator may be repeatedly evaluated for each row, even if they are
 being stored in the output of queries.  For example,
 
-    ``ESTIMATE MUTUAL INFORMATION AS mutinf
-         FROM PAIRWISE COLUMNS OF p ORDER BY mutinf``
+    ``ESTIMATE MUTUAL INFORMATION AS mutinf``
+         ``FROM PAIRWISE COLUMNS OF p ORDER BY mutinf``
 
 has the effect of estimating mutual information twice for each row
 because it is mentioned twice, once in the output and once in the
@@ -415,10 +415,10 @@ that is an orthogonal issue.)
 To avoid this double evaluation, you can order the results of a
 subquery instead:
 
-    ``SELECT *
-        FROM (ESTIMATE MUTUAL INFORMATION AS mutinf
-                FROM PAIRWISE COLUMNS OF p)
-        ORDER BY mutinf``
+    ``SELECT *``
+        ``FROM (ESTIMATE MUTUAL INFORMATION AS mutinf``
+                ``FROM PAIRWISE COLUMNS OF p)``
+        ``ORDER BY mutinf``
 
 .. index:: ``PREDICTIVE PROBABILITY``
 
