@@ -37,6 +37,237 @@ allows
 
 but not ``DEPENDENCE PROBABILITY OF eland``.
 
+BQL Commands
+------------
+
+BQL commands change the state of the database.
+
+Transactions
+^^^^^^^^^^^^
+
+Transactions are groups of changes to a database that happen all at
+once or not at all.  Transactions do not nest.
+
+FUTURE: BQL will additionally support savepoints (Github issue #36),
+which are like transactions but may be named and nested.
+
+.. index:: ``BEGIN``
+
+``BEGIN``
+
+   Begin a transaction.  Subsequent commands take effect within the
+   transaction, but will not be made permanent until ``COMMIT``, and
+   may be undone with ``ROLLBACK``.
+
+.. index:: ``COMMIT``
+
+``COMMIT``
+
+   End a transaction, and commit to all changes made since the last
+   ``BEGIN``.
+
+.. index:: ``ROLLBACK``
+
+``ROLLBACK``
+
+   End a transaction, and discard all changes made since the last
+   ``BEGIN``.
+
+Data Definition Language
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The BQL DDL is currently limited to creating tables from the results
+of queries, and dropping and renaming tables.
+
+FUTURE: The complete SQL DDL supported by sqlite3 will be supported by
+BQL (Github issue #37).  Until then, one can always fall back to
+executing SQL instead of BQL in Bayeslite.
+
+.. index:: ``CREATE TABLE``
+
+``CREATE [TEMP|TEMPORARY] TABLE [IF NOT EXISTS] <name> FROM <pathname>``
+
+   Create a table named *name* from the csv file at *pathname*. *Pathname* should
+   be surrounded by single quotes.
+
+``CREATE [TEMP|TEMPORARY] TABLE [IF NOT EXISTS] <name> AS <query>``
+
+   Create a table named *name* to hold the results of the query
+   *query*.
+
+.. index:: ``DROP TABLE``
+
+``DROP TABLE [IF EXISTS] <name>``
+
+   Drop the table *name* and all its contents.
+
+   May fail if there are foreign key constraints that refer to this
+   table.
+
+.. index:: ``ALTER TABLE``
+
+``ALTER TABLE <name> <alterations>``
+
+   Alter the specified properties of the table *name*.  *Alterations*
+   is a comma-separated list of alterations.  The following
+   alterations are supported:
+
+   .. index:: ``RENAME TO``
+
+   ``RENAME TO <newname>``
+
+      Change the table's name to *newname*.  Foreign key constraints
+      are updated; triggers and views are not, and must be dropped
+      and recreated separately, due to limitations in sqlite3.
+
+   FUTURE: Renaming columns (Github issue #35).
+
+Metamodeling Language (MML)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
++++++++++++
+Populations
++++++++++++
+
+A population specifies which columns in a table should be modeled or ignored.
+For those that are modeled, it specifies their statistical type.
+
+.. index:: ``GUESS SCHEMA``
+
+``GUESS SCHEMA FOR <name>``
+
+   Guess a population schema for the table *name*. The schema maps each column
+   in *name* to its heuristically guessed statistical type and the heuristic
+   reason for the guess. Columns can be guessed to be ``NOMINAL`` or
+   ``NUMERICAL`` or to be ignored (``IGNORE``). The query yields a table created
+   as if by the following ``CREATE TABLE``:
+
+   .. code-block:: sql
+
+      CREATE TABLE guessed_stattypes (
+         name TEXT NOT NULL UNIQUE,
+         stattype TEXT NOT NULL,
+         reason TEXT NOT NULL
+      )
+
+.. index:: ``CREATE POPULATION``
+
+``CREATE POPULATION [IF NOT EXISTS] FOR <name> WITH SCHEMA (<schema>)``
+
+   Create a population for *name* with schema *schema*. *Schema* can be defined
+   using any combination of the following statements, separated by semicolons:
+
+      ``GUESS STATTYPES FOR (<column(s)>)``
+
+         Guess the statistical type for the column(s) *column(s)* by
+         heuristically examining the data.
+
+      ``MODEL <column(s)> AS <stattype>``
+
+         Model the column(s) *column(s)* with the statistical type *stattype*.
+
+      ``IGNORE <column(s)>``
+
+         Ignore the column(s) *column(s)*.
+
+.. index:: ``DROP POPULATION``
+
+``DROP POPULATION [IF EXISTS] <population>``
+
+   Drop the population *population* and all its contents.
+   Will fail if there are still metamodels associated with this population.
+
+.. index:: ``ALTER POPULATION``
+
+``ALTER POPULATION <population>``
+
+   Alter the specified properties of the population *population*. The following
+   alterations are supported:
+
+   .. index:: ``ADD VARIABLE``
+
+   ``ADD VARIABLE <variable> [<stattype>]``
+
+      Add the variable *variable* to the population *population*. Specify that
+      it should be modeled with the statistical type *stattype* (optional);
+      otherwise its statistical type will be heuristically guessed.
+
+   .. index:: ``SET STATTYPE``
+
+   ``SET STATTYPE OF <variable(s)> TO <stattype>``
+
+      Change the statistical type of variable(s) *variable(s)* in population
+      *population* to *stattype*.
+
+++++++++++
+Metamodels
+++++++++++
+
+A metamodel specifies the type of generative model(s) used to model the
+variables in a population.
+
+.. index:: ``CREATE METAMODEL``
+
+``CREATE METAMODEL <metamodel> FOR <population> WITH BASELINE <baseline>``
+``CREATE METAMODEL <metamodel> FOR <population> WITH BASELINE <baseline> (<customization>)``
+
+   Create metamodel *metamodel* for the population *population* with
+   the baseline generative model *baseline*.  The *customization* is a
+   comma-separated list of clauses customizing the metamodel:
+
+      ``OVERRIDE GENERATIVE MODEL FOR <target> [GIVEN <variable(s)>] USING <predictor>``
+
+         Specify that the variable *target* is to be predicted by
+         *predictor*, conditional on the input variables
+         *variable(s)*.
+
+      ``SUBSAMPLE(<nrows>)``
+
+         Use a randomly chosen subsample of *nrows* rows to train each
+         model.
+
+.. index:: ``DROP METAMODEL``
+
+``DROP METAMODEL [IF EXISTS] <metamodel>``
+
+   Drop the metamodel *metamodel* and all its contents.
+
+.. index:: ``INITIALIZE``
+
+``INITIALIZE <num> MODELS FOR <metamodel>``
+
+   Initialize *num* number of models for the metamodel *metamodel*.
+
+.. index:: ``ANALYZE METAMODEL``
+
+``ANALYZE <metamodel> FOR <duration> [CHECKPOINT <duration>] WAIT``
+``ANALYZE <metamodel> FOR <duration> [CHECKPOINT <duration>] WAIT (<clauses>)``
+
+   Analyze metamodel *metamodel*. *Duration* can take on values of
+   ``<n> SECOND(S)``, ``<n> MINUTE(S)``, or ``<n> ITERATION(S)``.  The
+   ``FOR`` duration specifies how long to perform analysis.  The
+   ``CHECKPOINT`` duration specifies how often to commit the
+   intermediate results of analysis to the database on disk.  The
+   semicolon-separated *clauses* may further configure the analysis:
+
+      ``OPTIMIZED``
+
+          Use the faster analysis for Crosscat-modelled variables
+          only.
+
+      ``QUIET``
+
+         Suppress progress bar.
+
+      ``SKIP <variables>``
+
+         Analyze only variables *except* the comma-separated list of
+         *variables*.
+
+      ``VARIABLES <variables>``
+
+         Analyze only the comma-separated list of *variables*.
+
 BQL Queries
 -----------
 
@@ -88,50 +319,50 @@ BQL Queries
 
 .. index:: ``ESTIMATE BY``
 
-``ESTIMATE <columns> BY <generator>``
+``ESTIMATE <columns> BY <population>``
 
    Like constant ``SELECT``, extended with model estimators of one
    implied row.
 
 .. index:: ``ESTIMATE``
 
-``ESTIMATE [DISTINCT|ALL] <columns> FROM <generator> [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE [DISTINCT|ALL] <columns> FROM <population> [MODELED BY <metamodel>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
-   Like ``SELECT`` on the table associated with *generator*, extended
+   Like ``SELECT`` on the table associated with *population*, extended
    with model estimators of one implied row.
 
-.. index:: ``ESTIMATE FROM COLUMNS OF``
+.. index:: ``ESTIMATE FROM VARIABLES OF``
 
-``ESTIMATE <columns> FROM COLUMNS OF <generator> [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <columns> FROM VARIABLES OF <population> [MODELED BY <metamodel>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
-   Like ``SELECT`` on the modelled columns of *generator*, extended
+   Like ``SELECT`` on the modelled columns of *population*, extended
    with model estimators of one implied column.
 
 .. index:: ``ESTIMATE FROM PAIRWISE COLUMNS OF``
 
-``ESTIMATE <columns> FROM PAIRWISE COLUMNS OF <generator> [FOR <subcolumns>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <columns> FROM PAIRWISE COLUMNS OF <population> [FOR <subcolumns>] [MODELED BY <metamodel>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the modelled columns of
-   *generator*, extended with model estimators of two implied columns.
+   *population*, extended with model estimators of two implied columns.
 
    In addition to a literal list of column names, the list of
-   subcolumns may be an ``ESTIMATE * FROM COLUMNS OF`` subquery.
+   subcolumns may be an ``ESTIMATE * FROM VARIABLES OF`` subquery.
 
 .. index:: ``ESTIMATE, PAIRWISE``
 
-``ESTIMATE <expression> FROM PAIRWISE <generator> [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <expression> FROM PAIRWISE <population> [MODELED BY <metamodel>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the table assocated with
-   *generator*, extended with model estimators of two implied rows.
+   *population*, extended with model estimators of two implied rows.
 
    (Currently the only functions of two implied rows are
    ``SIMILARITY`` and ``SIMILARITY WITH IN THE CONTEXT OF (...)``.)
 
 .. index:: ``INFER``
 
-``INFER <colnames> [WITH CONFIDENCE <conf>] FROM <generator> [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``INFER <colnames> [WITH CONFIDENCE <conf>] FROM <population> [MODELED BY <metamodel>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
-   Select the specified *colnames* from *generator*, filling in
+   Select the specified *colnames* from *population*, filling in
    missing values if they can be filled in with confidence at least
    *conf*, a BQL expression.  Only missing values *colnames* will be
    filled in; missing values in columns named in *condition*,
@@ -147,9 +378,9 @@ BQL Queries
 
 .. index:: ``INFER EXPLICIT``
 
-``INFER EXPLICIT <columns> FROM <generator> [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``INFER EXPLICIT <columns> FROM <population> [MODELED BY <metamodel>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
-   Like ``SELECT`` on the table associated with *generator*, extended
+   Like ``SELECT`` on the table associated with *population*, extended
    with model estimators of one implied row and with model predictions.
 
    In addition to normal ``SELECT`` columns, *columns* may include
@@ -164,9 +395,9 @@ BQL Queries
 
 .. index:: ``SIMULATE``
 
-``SIMULATE <colnames> FROM <generator> [GIVEN <constraints>] [LIMIT <limit>]``
+``SIMULATE <colnames> FROM <population> [MODELED BY <metamodel>] [GIVEN <constraints>] [LIMIT <limit>]``
 
-   Select the requested *colnames* from rows sampled from *generator*.
+   Select the requested *colnames* from rows sampled from *population*.
    *Constraints* is a comma-separated list of constraints of the form
 
       ``<colname> = <expression>``
@@ -199,8 +430,8 @@ relies on (Github issue #308), repeated references to a model
 estimator may be repeatedly evaluated for each row, even if they are
 being stored in the output of queries.  For example,
 
-    ESTIMATE MUTUAL INFORMATION AS mutinf
-        FROM PAIRWISE COLUMNS OF t ORDER BY mutinf
+    ``ESTIMATE MUTUAL INFORMATION AS mutinf``
+         ``FROM PAIRWISE COLUMNS OF p ORDER BY mutinf``
 
 has the effect of estimating mutual information twice for each row
 because it is mentioned twice, once in the output and once in the
@@ -211,10 +442,10 @@ that is an orthogonal issue.)
 To avoid this double evaluation, you can order the results of a
 subquery instead:
 
-    SELECT *
-        FROM (ESTIMATE MUTUAL INFORMATION AS mutinf
-                FROM PAIRWISE COLUMNS OF t)
-        ORDER BY mutinf
+    ``SELECT *``
+        ``FROM (ESTIMATE MUTUAL INFORMATION AS mutinf``
+                ``FROM PAIRWISE COLUMNS OF p)``
+        ``ORDER BY mutinf``
 
 .. index:: ``PREDICTIVE PROBABILITY``
 
@@ -227,6 +458,7 @@ subquery instead:
 .. index:: ``PROBABILITY DENSITY OF``
 
 ``PROBABILITY DENSITY OF <column> = <value> [GIVEN (<constraints>)]``
+
 ``PROBABILITY DENSITY OF (<targets>) [GIVEN (<constraints>)]``
 
    Constant.  Returns the probability density of the value of the BQL
@@ -239,7 +471,7 @@ subquery instead:
    ``<column> = <value>`` terms, and the result is the conditional
    joint density given the specified constraint column values.
 
-   WARNING: The value this function is not a normalized probability in
+   WARNING: The value this function returns is not a normalized probability in
    [0, 1], but rather a probability density with a normalization
    constant that is common to the column but may vary between columns.
    So it may take on values above 1.
@@ -254,16 +486,29 @@ subquery instead:
 
 .. index:: ``SIMILARITY``
 
-``SIMILARITY [TO (<expression>)] IN THE CONTEXT OF <column>``
+``SIMILARITY [OF (<expression0>)] [TO (<expression1>)] IN THE CONTEXT OF <column>``
 
-   Function of one or two implied rows.  If given ``TO``, returns a
-   measure of the similarity of the implied row with the first row
-   satisfying <expression>.  Otherwise, returns a measure of the
-   similarity of the two implied rows.  The similarity may be
-   considered with in the context of a column.
+   Constant, or function of one or two implied rows. If given both ``OF`` and
+   ``TO``, returns a constant measure of similarity between the first row
+   satisfied by *expression0* and the first row satisfied by *expression1*. If
+   given only  ``TO`` returns a measure of the similarity of the implied row
+   with the first row satisfying *expression1*. Otherwise, returns a measure of
+   the similarity of the two implied rows.  The similarity may be
+   considered within the context of a column.
 
-   *Columns* is a comma-separated list of column names or
-   ``ESTIMATE * FROM COLUMNS OF ...`` subqueries.
+.. index:: ``PREDICTIVE RELEVANCE``
+
+``PREDICTIVE RELEVANCE [OF (<expression0>)] TO EXISTING ROWS (<expression1>) IN THE CONTEXT OF <column>``
+
+``PREDICTIVE RELEVANCE [OF (<expression0>)] TO HYPOTHETICAL ROWS (<expression1>) IN THE CONTEXT OF <column>``
+
+``PREDICTIVE RELEVANCE [OF (<expression0>)] TO EXISTING ROWS (<expression1>) AND HYPOTHETICAL ROWS (<expression2>) IN THE CONTEXT OF <column>``
+
+   If given ``OF``, returns a measure of predictive relevance of the first row
+   satisfying *expression0* for the existing and/or hypothetical rows satisfying
+   *expression1* (and *expression2* in the case of both) in the context of
+   *column*. Otherwise, returns a measure of predictive relevance of all rows to
+   the specified existing and/or hypothetical rows.
 
 .. index:: ``CORRELATION``
 
@@ -272,7 +517,7 @@ subquery instead:
    Constant, or function of one or two implied columns.  Returns
    standard measures of correlation between columns:
 
-   * Pearson correlation coefficient for two numerical columns.
+   * Pearson correlation coefficient squared for two numerical columns.
    * Cramer's phi for two categorical columns.
    * ANOVA R^2 for a categorical column and a numerical column.
 
@@ -309,82 +554,3 @@ Model Predictions
    returns it if the confidence of the prediction is at least the
    value of the BQL expression *confidence*; otherwise returns null.
 
-BQL Commands
-------------
-
-BQL commands change the state of the database.
-
-Transactions
-^^^^^^^^^^^^
-
-Transactions are groups of changes to a database that happen all at
-once or not at all.  Transactions do not nest.
-
-FUTURE: BQL will additionally support savepoints (Github issue #36),
-which are like transactions but may be named and nested.
-
-.. index:: ``BEGIN``
-
-``BEGIN``
-
-   Begin a transaction.  Subsequent commands take effect within the
-   transaction, but will not be made permanent until ``COMMIT``, and
-   may be undone with ``ROLLBACK``.
-
-.. index:: ``COMMIT``
-
-``COMMIT``
-
-   End a transaction, and commit to all changes made since the last
-   ``BEGIN``.
-
-.. index:: ``ROLLBACK``
-
-``ROLLBACK``
-
-   End a transaction, and discard all changes made since the last
-   ``BEGIN``.
-
-Data Definition Language
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-The BQL DDL is currently limited to creating tables from the results
-of queries, and dropping and renaming tables.
-
-FUTURE: The complete SQL DDL supported by sqlite3 will be supported by
-BQL (Github issue #37).  Until then, one can always fall back to
-executing SQL instead of BQL in Bayeslite.
-
-.. index:: ``CREATE TABLE``
-
-``CREATE [TEMP|TEMPORARY] TABLE [IF NOT EXISTS] <name> AS <query>``
-
-   Create a table named *name* to hold the results of the query
-   *query*.
-
-.. index:: ``DROP TABLE``
-
-``DROP TABLE [IF EXISTS] <name>``
-
-   Drop the table *name* and all its contents.
-
-   May fail if there are foreign key constraints that refer to this
-   table.
-
-.. index:: ``ALTER TABLE``
-
-``ALTER TABLE <name> <alterations>``
-
-   Alter the specified properties of the table *name*.  *Alterations*
-   is a comma-separated list of alterations.  The following
-   alterations are supported:
-
-   .. index:: ``RENAME TO``
-
-   ``RENAME TO <newname>``
-
-      Change the table's name to *newname*.  Foreign key constraints
-      are updated; triggers and views are not, and must be dropped
-      and recreated separately, due to limitations in sqlite3.
-
-   FUTURE: Renaming columns (Github issue #35).
