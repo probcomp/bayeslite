@@ -215,7 +215,7 @@ variables in a population.
    the baseline generative model *baseline*.  The *customization* is a
    comma-separated list of clauses customizing the metamodel:
 
-      ``OVERRIDE GENERATIVE MODEL FOR <target> GIVEN <variable(s)> USING <predictor>``
+      ``OVERRIDE GENERATIVE MODEL FOR <target> [GIVEN <variable(s)>] USING <predictor>``
 
          Specify that the variable *target* is to be predicted by
          *predictor*, conditional on the input variables
