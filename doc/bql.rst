@@ -142,11 +142,13 @@ For those that are modeled, it specifies their statistical type.
    ``NUMERICAL`` or to be ignored (``IGNORE``). The query yields a table created
    as if by the following ``CREATE TABLE``:
 
-      ``CREATE TABLE guessed_stattypes(``
-         ``name TEXT NOT NULL UNIQUE,``
-         ``stattype TEXT NOT NULL,``
-         ``reason TEXT NOT NULL``
-      ``)``
+   .. code-block:: sql
+
+      CREATE TABLE guessed_stattypes (
+         name TEXT NOT NULL UNIQUE,
+         stattype TEXT NOT NULL,
+         reason TEXT NOT NULL
+      )
 
 .. index:: ``CREATE POPULATION``
 
