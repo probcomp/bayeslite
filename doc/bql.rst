@@ -208,14 +208,23 @@ variables in a population.
 
 .. index:: ``CREATE METAMODEL``
 
-``CREATE METAMODEL <metamodel> FOR <population> WITH BASELINE <baseline> (
-[OVERRIDE GENERATIVE MODEL FOR <target> GIVEN <variable(s)> USING <model>]
-[SUBSAMPLE(<num_rows>)] )``
+``CREATE METAMODEL <metamodel> FOR <population> WITH BASELINE <baseline>``
+``CREATE METAMODEL <metamodel> FOR <population> WITH BASELINE <baseline> (<customization>)``
 
-   Create metamodel *metamodel* for the population *population* with the
-   baseline generative model *baseline*. Optionally override *baseline* with
-   *model* for a variable *target* given the inputs *variable(s)*. Optionally
-   subsample *num_rows* rows from *population*.
+   Create metamodel *metamodel* for the population *population* with
+   the baseline generative model *baseline*.  The *customization* is a
+   comma-separated list of clauses customizing the metamodel:
+
+      ``OVERRIDE GENERATIVE MODEL FOR <target> GIVEN <variable(s)> USING <predictor>``
+
+         Specify that the variable *target* is to be predicted by
+         *predictor*, conditional on the input variables
+         *variable(s)*.
+
+      ``SUBSAMPLE(<nrows>)``
+
+         Use a randomly chosen subsample of *nrows* rows to train each
+         model.
 
 .. index:: ``DROP METAMODEL``
 
