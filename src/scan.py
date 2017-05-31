@@ -113,6 +113,7 @@ keywords = {
     "probability": grammar.K_PROBABILITY,
     "pvalue": grammar.K_PVALUE,
     "regexp": grammar.K_REGEXP,
+    "regress": grammar.K_REGRESS,
     "relevance": grammar.K_RELEVANCE,
     "rename": grammar.K_RENAME,
     "rollback": grammar.K_ROLLBACK,

@@ -249,6 +249,16 @@ simulate(models)        ::= K_SIMULATE select_columns(cols)
                                 modelledby_opt(generator).
 
 /*
+ * Commands based on ad-hoc capabilities.
+ */
+
+command(regress)        ::= K_REGRESS column_name(target)
+                                K_GIVEN T_LROUND select_columns(givens) T_RROUND
+                                nsamples_opt(nsamp)
+                                K_BY|K_WITHIN population_name(pop)
+                                modelledby_opt(metamodel).
+
+/*
  * Queries
  */
 query(select)           ::= select(q).
@@ -820,6 +830,7 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_PROBABILITY
         K_PVALUE
         K_REGEXP
+        K_REGRESS
         K_RELEVANCE
         K_RENAME
         K_ROLLBACK

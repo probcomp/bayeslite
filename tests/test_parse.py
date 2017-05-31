@@ -1295,6 +1295,93 @@ def test_is_bql():
     assert ast.is_bql(ast.ExpBQLPredict('c', ast.ExpLit(ast.LitInt(.5)), None))
     assert ast.is_bql(ast.ExpBQLPredictConf('c', None))
 
+def test_regress():
+    assert parse_bql_string('''
+        regress t given (y) using 10 samples by pop;
+    ''') == [
+        ast.Regress(
+            target='t',
+            givens=[
+                ast.SelColExp(
+                    expression=ast.ExpCol(table=None, column='y'), name=None),],
+            nsamp=ast.ExpLit(value=ast.LitInt(value=10)),
+            population='pop',
+            metamodel=None
+    )]
+    assert parse_bql_string('''
+        regress t given (y, x) using 10 samples by pop modeled by m;
+        ''') == [
+        ast.Regress(
+            target='t',
+            givens=[
+                ast.SelColExp(
+                    expression=ast.ExpCol(table=None, column='y'), name=None),
+                ast.SelColExp(
+                    expression=ast.ExpCol(table=None, column='x'), name=None)],
+            nsamp=ast.ExpLit(value=ast.LitInt(value=10)),
+            population='pop',
+            metamodel='m',
+    )]
+    assert parse_bql_string('regress t given (*) by pop;') == [
+        ast.Regress(
+            target='t',
+            givens=[ast.SelColAll(None)],
+            nsamp=None,
+            population='pop',
+            metamodel=None,
+    )]
+    # Disallow this query in the compiler, mixing * with u.
+    assert parse_bql_string('''
+        regress t given (*, u) using 10 samples by pop modeled by m;
+    ''') == [
+        ast.Regress(
+            target='t',
+            givens=[
+                ast.SelColAll(None),
+                ast.SelColExp(
+                    expression=ast.ExpCol(table=None, column='u'), name=None)],
+            nsamp=ast.ExpLit(value=ast.LitInt(value=10)),
+            population='pop',
+            metamodel='m',
+    )]
+    # Disallow this query in the compiler, mixing subquery.
+    assert parse_bql_string('''
+        regress t given (
+            pop.(estimate * from variables of pop limit 2),
+            a, y)
+        using 10 samples by pop modeled by f;
+    ''') == [
+        ast.Regress(
+            target='t',
+            givens=[
+                ast.SelColSub(table='pop',
+                    query=ast.EstCols(
+                        columns=[ast.SelColAll(table=None)],
+                        population='pop',
+                        generator=None,
+                        condition=None,
+                        order=None,
+                        limit=ast.Lim(
+                            limit=ast.ExpLit(value=ast.LitInt(value=2)),
+                            offset=None
+                ))),
+                ast.SelColExp(
+                    expression=ast.ExpCol(table=None, column='a'), name=None),
+                ast.SelColExp(
+                    expression=ast.ExpCol(table=None, column='y'), name=None)
+            ],
+            nsamp=ast.ExpLit(value=ast.LitInt(value=10)),
+            population='pop',
+            metamodel='f'
+    )]
+
+    with pytest.raises(bayeslite.BQLParseError):
+        # Missing given.
+        assert parse_bql_string('regress t using 10 samples by pop;')
+    with pytest.raises(bayeslite.BQLParseError):
+        # Missing parenthesis.
+        assert parse_bql_string('regress t given * using 10 samples by pop;')
+
 @contextlib.contextmanager
 def raises_str(klass, string):
     with pytest.raises(klass):

@@ -652,6 +652,96 @@ def execute_phrase(bdb, phrase, bindings=()):
                     })
         return empty_cursor(bdb)
 
+    if isinstance(phrase, ast.Regress):
+        # Retrieve the population.
+        if not core.bayesdb_has_population(bdb, phrase.population):
+            raise BQLError(bdb, 'No such population: %r' % (phrase.population,))
+        population_id = core.bayesdb_get_population(bdb, phrase.population)
+        # Retrieve the metamodel.
+        generator_id = None
+        if phrase.metamodel:
+            if not core.bayesdb_has_generator(bdb, phrase.metamodel):
+                raise BQLError(bdb,
+                    'No such metamodel: %r' % (phrase.population,))
+            generator_id = core.bayesdb_get_generator(
+                bdb, population_id, phrase.metamodel)
+        # Retrieve the target variable.
+        if not core.bayesdb_has_variable(
+                bdb, population_id, None, phrase.target):
+            raise BQLError(bdb, 'No such variable: %r' % (phrase.target,))
+        colno_target = core.bayesdb_variable_number(
+            bdb, population_id, None, phrase.target)
+        if core.bayesdb_variable_stattype(bdb, population_id, colno_target) != \
+                'numerical':
+            raise BQLError(bdb,
+                'Target variable is not numerical: %r' % (phrase.target,))
+        # Build the given variables.
+        if any(isinstance(col, ast.SelColAll) for col in phrase.givens):
+            # Using * is not allowed to be mixed with other variables.
+            if len(phrase.givens) > 1:
+                raise BQLError(bdb, 'Cannot use (*) with other givens.')
+            colno_givens = core.bayesdb_variable_numbers(
+                bdb, population_id, None)
+        else:
+            if any(isinstance(col, ast.SelColSub) for col in phrase.givens):
+                # Subexpression needs special compiling.
+                out = compiler.Output(n_numpar, nampar_map, bindings)
+                bql_compiler = compiler.BQLCompiler_None()
+                givens = compiler.expand_select_columns(
+                    bdb, phrase.givens, True, bql_compiler, out)
+            else:
+                givens = phrase.givens
+            colno_givens = [
+                core.bayesdb_variable_number(
+                    bdb, population_id, None, given.expression.column)
+                for given in givens
+            ]
+        # Build the arguments to bqlfn.bayesdb_simulate.
+        colno_givens_unique = set(
+            colno for colno in colno_givens if colno!= colno_target
+        )
+        if len(colno_givens_unique) == 0:
+            raise BQLError(bdb, 'No matching given columns.')
+        constraints = []
+        colnos = [colno_target] + list(colno_givens_unique)
+        nsamp = 100 if phrase.nsamp is None else phrase.nsamp.value.value
+        rows = bqlfn.bayesdb_simulate(
+            bdb, population_id, constraints,
+            colnos, generator_id=generator_id, numpredictions=nsamp)
+        # Retrieve the stattypes.
+        stattypes = [
+            core.bayesdb_variable_stattype(bdb, population_id, colno_given)
+            for colno_given in colno_givens_unique
+        ]
+        # Separate the target values from the given values.
+        target_values = [row[0] for row in rows]
+        given_values = [row[1:] for row in rows]
+        given_names = [
+            core.bayesdb_variable_name(bdb, population_id, given)
+            for given in colno_givens_unique
+        ]
+        # Compute the coefficients. The import to regress_ols is here since the
+        # feature depends on pandas + sklearn, so avoid module-wide import.
+        from bayeslite.regress import regress_ols
+        coefficients = regress_ols(
+            target_values, given_values, given_names, stattypes)
+        # Store the results in a winder.
+        temptable = bdb.temp_table_name()
+        qtt = sqlite3_quote_name(temptable)
+        out = compiler.Output(0, {}, {})
+        out.winder('''
+            CREATE TEMP TABLE %s (variable TEXT, coefficient REAL);
+        ''' % (qtt,), ())
+        for variable, coef in coefficients:
+            out.winder('''
+                INSERT INTO %s VALUES (?, ?)
+            ''' % (qtt), (variable, coef,))
+        out.write('SELECT * FROM %s ORDER BY variable' % (qtt,))
+        out.unwinder('DROP TABLE %s' % (qtt,), ())
+        winders, unwinders = out.getwindings()
+        return execute_wound(
+            bdb, winders, unwinders, out.getvalue(), out.getbindings())
+
     assert False                # XXX
 
 def _create_population(bdb, phrase):
