@@ -23,7 +23,7 @@ from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
 from test_cgpm import cgpm_dummy_satellites_bdb
 
 
-def test_regress_bonanza():
+def test_regress_bonanza__ci_integration():
     with cgpm_dummy_satellites_bdb() as bdb:
         bayesdb_register_metamodel(
             bdb, CGPM_Metamodel(dict(), multiprocess=0))
