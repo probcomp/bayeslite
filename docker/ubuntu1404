@@ -19,6 +19,6 @@ RUN \
                 ./docker/deps/bayeslite-apsw/pythenv.sh \
                 ./docker/deps/cgpm/pythenv.sh \
                 ./docker/deps/crosscat/pythenv.sh \
-                ./check.sh tests
+                ./check.sh
 RUN             python setup.py sdist
 RUN             python setup.py bdist
