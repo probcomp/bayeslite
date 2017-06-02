@@ -74,6 +74,27 @@ ALTER TABLE bayesdb_cgpm_generator
     INTEGER NOT NULL DEFAULT 0;
 '''
 
+CGPM_SCHEMA_3 = '''
+UPDATE bayesdb_metamodel SET version = 3 WHERE name = 'cgpm';
+
+CREATE TABLE bayesdb_cgpm_modelno (
+    generator_id        INTEGER NOT NULL,
+    modelno             INTEGER NOT NULL,
+    cgpm_modelno        INTEGER NOT NULL CHECK (0 <= cgpm_modelno),
+
+    FOREIGN KEY (generator_id, modelno)
+        REFERENCES bayesdb_generator_model(generator_id, modelno),
+    UNIQUE(generator_id, modelno, cgpm_modelno)
+);
+
+INSERT INTO bayesdb_cgpm_modelno (generator_id, modelno, cgpm_modelno)
+    SELECT generator_id, modelno, modelno
+    FROM bayesdb_generator_model
+    WHERE generator_id IN (
+        SELECT id FROM bayesdb_generator WHERE metamodel = 'cgpm'
+    );
+'''
+
 
 class CGPM_Metamodel(IBayesDBMetamodel):
     def __init__(self, cgpm_registry, multiprocess=None):
@@ -106,7 +127,11 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 # Install CGPM version 2.
                 bdb.sql_execute(CGPM_SCHEMA_2)
                 version = 2
-            if version != 2:
+            if version == 2:
+                # Install CGPM version 3.
+                bdb.sql_execute(CGPM_SCHEMA_3)
+                version = 3
+            if version != 3:
                 # Unrecognized version.
                 raise BQLError(bdb, 'CGPM already installed'
                     ' with unknown schema version: %d' % (version,))
@@ -198,6 +223,12 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             DELETE FROM bayesdb_cgpm_individual WHERE generator_id = ?
         ''', (generator_id,))
 
+        # Delete modelno mappings.
+        # Delete individual rowid mappings.
+        bdb.sql_execute('''
+            DELETE FROM bayesdb_cgpm_modelno WHERE generator_id = ?
+        ''', (generator_id,))
+
         # Delete generator.
         bdb.sql_execute('''
             DELETE FROM bayesdb_cgpm_generator WHERE generator_id = ?
@@ -252,7 +283,16 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Caller should guarantee a nondegenerate request.
         n = len(modelnos)
         assert 0 < n
-        assert modelnos == range(n)     # XXX incremental model initialization
+
+        # XXX Disable incremental model initialization
+        # https://github.com/probcomp/bayeslite/issues/552
+        cursor = bdb.sql_execute('''
+            SELECT COUNT(*) FROM bayesdb_cgpm_modelno WHERE generator_id = ?
+        ''', (generator_id,))
+        n_existing = cursor_value(cursor)
+        if n_existing > 0:
+            raise BQLError(bdb,
+                'Incremental model initialization not supported.')
 
         # Get the schema.
         schema = self._schema(bdb, generator_id)
@@ -267,19 +307,71 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 for _ in xrange(n)]
             engine.compose_cgpm(cgpms, multiprocess=self._multiprocess)
 
+        # Update bayesdb_cgpm_modelno table.
+        bdb.sql_execute('''
+            INSERT INTO bayesdb_cgpm_modelno (
+                generator_id, modelno, cgpm_modelno
+            )
+            SELECT generator_id, modelno, modelno
+            FROM bayesdb_generator_model
+            WHERE generator_id = ?
+        ''', (generator_id,))
+
         self._serialize_engine(bdb, generator_id, engine, False)
 
     def drop_models(self, bdb, generator_id, modelnos=None):
-        assert modelnos is None
-
-        # Delete the engine.
-        bdb.sql_execute('''
-            UPDATE bayesdb_cgpm_generator SET engine_json = NULL
-                WHERE generator_id = ?
+        # Retrieve currently initialized modelnos.
+        cursor = bdb.sql_execute('''
+            SELECT modelno FROM bayesdb_cgpm_modelno
+            WHERE generator_id = ?
         ''', (generator_id,))
+        modelnos_existing = [m[0] for m in cursor]
 
-        # Delete the engine from the cache too if necessary.
-        self._del_cache_entry(bdb, generator_id, 'engine')
+        # Drop all models?
+        if modelnos is None or sorted(modelnos_existing) == sorted(modelnos):
+            # Set engine JSON to null.
+            bdb.sql_execute('''
+                UPDATE bayesdb_cgpm_generator SET engine_json = NULL
+                WHERE generator_id = ?
+            ''', (generator_id,))
+            # Clear mapping of modelnos.
+            bdb.sql_execute('''
+                DELETE FROM bayesdb_cgpm_modelno
+                WHERE generator_id = ?
+            ''', (generator_id,))
+            # Delete the engine from the cache.
+            self._del_cache_entry(bdb, generator_id, 'engine')
+        # Drop some models.
+        else:
+            engine = self._engine(bdb, generator_id)
+            cursor = bdb.sql_execute('''
+                SELECT cgpm_modelno FROM bayesdb_cgpm_modelno
+                WHERE generator_id = ? AND modelno IN %s
+                ORDER BY cgpm_modelno DESC
+            ''' % (str(tuple(modelnos)),), (generator_id,))
+            modelnos_cgpm = [m[0] for m in cursor]
+            for m in modelnos_cgpm:
+                del engine.states[m]
+                # Delete the modelno entry.
+                bdb.sql_execute('''
+                    DELETE FROM bayesdb_cgpm_modelno
+                    WHERE generator_id = ? AND cgpm_modelno = ?
+                ''', (generator_id, m,))
+                # Decrement all greater cgpm_modelnos by 1.
+                bdb.sql_execute('''
+                    UPDATE bayesdb_cgpm_modelno
+                    SET cgpm_modelno = cgpm_modelno - 1
+                    WHERE generator_id = ? AND cgpm_modelno > ?
+                ''', (generator_id, m,))
+            # Assert that the cgpm_modelnos are sequential.
+            cursor = bdb.sql_execute('''
+                SELECT cgpm_modelno FROM bayesdb_cgpm_modelno
+                WHERE generator_id = ? ORDER BY cgpm_modelno ASC
+            ''', (generator_id,))
+            modelnos_cgpm_new = [m[0] for m in cursor]
+            assert modelnos_cgpm_new == range(engine.num_states())
+            # Serialize the engine.
+            self._serialize_engine(bdb, generator_id, engine, True)
 
     def analyze_models(
             self, bdb, generator_id, modelnos=None, iterations=None,

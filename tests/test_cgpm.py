@@ -30,10 +30,12 @@ from cgpm.dummy.piecewise import PieceWise
 from cgpm.dummy.trollnormal import TrollNormal
 from cgpm.utils import general as gu
 
-from bayeslite import bayesdb_open
 from bayeslite import bayesdb_nullify
+from bayeslite import bayesdb_open
 from bayeslite import bayesdb_read_csv
 from bayeslite import bayesdb_register_metamodel
+from bayeslite.core import bayesdb_get_generator
+from bayeslite.core import bayesdb_get_population
 from bayeslite.exception import BQLError
 from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
 from bayeslite.util import cursor_value
@@ -1010,3 +1012,60 @@ def test_predictive_relevance():
         ''')
         result = cursor_value(cursor)
         assert result is not None
+
+def test_drop_models():
+    with cgpm_dummy_satellites_bdb() as bdb:
+        bayesdb_register_metamodel(
+            bdb, CGPM_Metamodel(dict(), multiprocess=0))
+        bdb.execute('''
+            CREATE POPULATION p FOR satellites_ucs WITH SCHEMA(
+                GUESS STATTYPES FOR (*);
+            )
+        ''')
+        bdb.execute('CREATE METAMODEL m FOR p (SUBSAMPLE 10);')
+        bdb.execute('INITIALIZE 16 MODELS FOR m')
+        # Run some initial analysis.
+        bdb.execute('ANALYZE m FOR 1 ITERATION WAIT (QUIET);')
+        # Retrieve id.
+        population_id = bayesdb_get_population(bdb, 'p')
+        generator_id = bayesdb_get_generator(bdb, population_id, 'm')
+        # Assert a 1-1 mapping between models and modelnos initially.
+        pairs = bdb.sql_execute('''
+            SELECT modelno, cgpm_modelno FROM bayesdb_cgpm_modelno
+            WHERE generator_id = ?
+        ''', (generator_id,))
+        modelno_lookup = {i:i for i in xrange(16)}
+        for pair in pairs:
+            assert modelno_lookup[pair[0]] == pair[1]
+        # Drop some models.
+        bdb.execute('DROP MODELS 1, 8-12, 14 FROM m')
+        # Assert a 1-1 mapping between models and modelnos initially.
+        pairs = bdb.sql_execute('''
+            SELECT modelno, cgpm_modelno FROM bayesdb_cgpm_modelno
+            WHERE generator_id = ?
+        ''', (generator_id,))
+        modelno_lookup = {
+            0: 0,
+            2: 1,
+            3: 2,
+            4: 3,
+            5: 4,
+            6: 5,
+            7: 6,
+            13: 7,
+            15: 8,
+        }
+        for pair in pairs:
+            assert modelno_lookup[pair[0]] == pair[1]
+            del modelno_lookup[pair[0]]
+        assert len(modelno_lookup) == 0
+        # Run some analysis again.
+        bdb.execute('ANALYZE m FOR 1 ITERATION WAIT (OPTIMIZED; QUIET);')
+        # Drop all models.
+        bdb.execute('DROP MODELS FROM m;')
+        # cgpm mapping should be cleared.
+        cursor = bdb.sql_execute('''
+            SELECT COUNT(*) FROM bayesdb_cgpm_modelno
+            WHERE generator_id = ?
+        ''', (generator_id,))
+        assert cursor_value(cursor) == 0
