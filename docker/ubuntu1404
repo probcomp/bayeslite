@@ -1,17 +1,16 @@
 FROM            ubuntu:14.04
 MAINTAINER      MIT Probabilistic Computing Project
 
-RUN             apt-get update -qq
-RUN             apt-get upgrade -qq
-
-RUN             apt-get install -qq git
-RUN             apt-get install -qq python-jsonschema
-RUN             apt-get install -qq python-numpy
-RUN             apt-get install -qq python-pandas
-RUN             apt-get install -qq python-pexpect
-RUN             apt-get install -qq python-pytest
-RUN             apt-get install -qq python-scipy
-RUN             apt-get install -qq python-six
+RUN             apt-get update -qq && apt-get install -qq \
+                        git \
+                        python-jsonschema \
+                        python-numpy \
+                        python-pandas \
+                        python-pexpect \
+                        python-pytest \
+                        python-scipy \
+                        python-six \
+                        ; # end of package list
 
 ADD             . /bayeslite
 WORKDIR         /bayeslite
