@@ -212,14 +212,11 @@ def bayesdb_add_variable(bdb, population_id, name, stattype):
     """Adds a variable to the population, with colno from the base table."""
     table_name = bayesdb_population_table(bdb, population_id)
     colno = bayesdb_table_column_number(bdb, table_name, name)
-    # Use the original case of the variable in the table.
-    name_unfolded = bayesdb_table_column_name(bdb, table_name, colno)
-    assert casefold(name) == casefold(name_unfolded)
     bdb.sql_execute('''
         INSERT INTO bayesdb_variable
             (population_id, name, colno, stattype)
             VALUES (?, ?, ?, ?)
-    ''', (population_id, name_unfolded, colno, stattype))
+    ''', (population_id, name, colno, stattype))
 
 def bayesdb_has_variable(bdb, population_id, generator_id, name):
     """True if the population has a given variable.
