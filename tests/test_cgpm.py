@@ -51,7 +51,7 @@ def cgpm_smoke_bdb():
         bayesdb_register_metamodel(
             bdb, CGPM_Metamodel(registry, multiprocess=0))
 
-        bdb.sql_execute('CREATE TABLE t (output, cat, input)')
+        bdb.sql_execute('CREATE TABLE t (Output, cat, Input)')
         for i in xrange(3):
             for j in xrange(3):
                 for k in xrange(3):
@@ -185,8 +185,8 @@ def test_cgpm_smoke():
         # Custom model for output and cat.
         bdb.execute('''
             CREATE METAMODEL g_manifest FOR p USING cgpm (
-                OVERRIDE MODEL FOR output, cat
-                GIVEN input
+                OVERRIDE MODEL FOR Output, Cat
+                GIVEN Input
                 USING piecewise
             )
         ''')
