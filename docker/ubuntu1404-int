@@ -10,6 +10,7 @@ RUN             apt-get update -qq && apt-get install -qq \
                         python-pytest \
                         python-scipy \
                         python-six \
+                        python-sklearn \
                         ; # end of package list
 
 ADD             . /bayeslite
