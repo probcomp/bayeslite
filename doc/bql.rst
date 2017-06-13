@@ -449,11 +449,11 @@ subquery instead:
 
 .. index:: ``PREDICTIVE PROBABILITY``
 
-``PREDICTIVE PROBABILITY OF <column>``
+``PREDICTIVE PROBABILITY OF <column> [GIVEN (<column(s)>)]``
 
    Function of one implied row.  Returns the predictive probability of
-   the row's value for the column named *column*, given all the other
-   data in the row.
+   the row's value for the column named *column*, optionally given the
+   data in *column(s)* in the row.
 
 .. index:: ``PROBABILITY DENSITY OF``
 
