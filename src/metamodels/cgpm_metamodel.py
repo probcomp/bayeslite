@@ -284,39 +284,60 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         n = len(modelnos)
         assert 0 < n
 
-        # XXX Disable incremental model initialization
-        # https://github.com/probcomp/bayeslite/issues/552
-        cursor = bdb.sql_execute('''
-            SELECT COUNT(*) FROM bayesdb_cgpm_modelno WHERE generator_id = ?
-        ''', (generator_id,))
-        n_existing = cursor_value(cursor)
-        if n_existing > 0:
-            raise BQLError(bdb,
-                'Incremental model initialization not supported.')
+        # Retrieve existing modelnos.
+        existing = bdb.sql_execute('''
+            SELECT modelno FROM bayesdb_cgpm_modelno WHERE generator_id = ?
+        ''', (generator_id,)).fetchall()
 
-        # Get the schema.
-        schema = self._schema(bdb, generator_id)
+        # Initializing an engine for the first time.
+        if not existing:
+            # Get the schema.
+            schema = self._schema(bdb, generator_id)
 
-        # Initialize an engine.
-        variables = schema['variables']
-        engine = self._initialize_engine(bdb, generator_id, n, variables)
+            # Initialize an engine.
+            variables = schema['variables']
+            engine = self._initialize_engine(bdb, generator_id, n, variables)
 
-        # Initialize CGPMs for each state.
-        for cgpm_ext in schema['cgpm_composition']:
-            cgpms = [self._initialize_cgpm(bdb, generator_id, cgpm_ext)
-                for _ in xrange(n)]
-            engine.compose_cgpm(cgpms, multiprocess=self._multiprocess)
+            # Initialize CGPMs for each state.
+            for cgpm_ext in schema['cgpm_composition']:
+                cgpms = [self._initialize_cgpm(bdb, generator_id, cgpm_ext)
+                    for _ in xrange(n)]
+                engine.compose_cgpm(cgpms, multiprocess=self._multiprocess)
 
-        # Update bayesdb_cgpm_modelno table.
-        bdb.sql_execute('''
-            INSERT INTO bayesdb_cgpm_modelno (
-                generator_id, modelno, cgpm_modelno
-            )
-            SELECT generator_id, modelno, modelno
-            FROM bayesdb_generator_model
-            WHERE generator_id = ?
-        ''', (generator_id,))
+            # Update bayesdb_cgpm_modelno table.
+            bdb.sql_execute('''
+                INSERT INTO bayesdb_cgpm_modelno (
+                    generator_id, modelno, cgpm_modelno
+                )
+                SELECT generator_id, modelno, modelno
+                FROM bayesdb_generator_model
+                WHERE generator_id = ?
+            ''', (generator_id,))
+        # Appending models to an existing engine.
+        else:
+            # Retrieve the engine.
+            engine = self._engine(bdb, generator_id)
 
+            # Confirm requested modelnos do not include existing models.
+            intersection = [m for m in existing if m[0] in modelnos]
+            if intersection:
+                raise BQLError(bdb,
+                    'Cannot initialize existing models: %s.' % (intersection,))
+
+            # Add the states.
+            engine.add_state(
+                count=len(modelnos), multiprocess=self._multiprocess)
+
+            # Update bayesdb_cgpm_modelno table.
+            cgpm_modelnos = range(len(existing), len(existing) + len(modelnos))
+            for modelno, cgpm_modelno in zip(modelnos, cgpm_modelnos):
+                bdb.sql_execute('''
+                    INSERT INTO bayesdb_cgpm_modelno
+                        (generator_id, modelno, cgpm_modelno)
+                        VALUES (?, ?, ?)
+                ''', (generator_id, modelno, cgpm_modelno))
+
+        # Serialize the engine without caching.
         self._serialize_engine(bdb, generator_id, engine, False)
 
     def drop_models(self, bdb, generator_id, modelnos=None):
