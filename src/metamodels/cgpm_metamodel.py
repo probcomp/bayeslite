@@ -913,7 +913,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         cache[generator_id][key] = value
 
     def _get_cache_entry(self, bdb, generator_id, key):
-        # If generator_id not in the key or Returns None if the generator_id or key do not exist.
+        # Returns None if the generator_id or key do not exist.
         cache = self._retrieve_cache(bdb)
         if generator_id not in cache:
             return None
