@@ -1013,7 +1013,7 @@ def test_predictive_relevance():
         result = cursor_value(cursor)
         assert result is not None
 
-def test_drop_models():
+def test_add_drop_models():
     with cgpm_dummy_satellites_bdb() as bdb:
         bayesdb_register_metamodel(
             bdb, CGPM_Metamodel(dict(), multiprocess=0))
@@ -1023,28 +1023,33 @@ def test_drop_models():
             )
         ''')
         bdb.execute('CREATE METAMODEL m FOR p (SUBSAMPLE 10);')
-        bdb.execute('INITIALIZE 16 MODELS FOR m')
-        # Run some initial analysis.
-        bdb.execute('ANALYZE m FOR 1 ITERATION WAIT (QUIET);')
-        # Retrieve id.
+
+        # Retrieve id for testing.
         population_id = bayesdb_get_population(bdb, 'p')
         generator_id = bayesdb_get_generator(bdb, population_id, 'm')
-        # Assert a 1-1 mapping between models and modelnos initially.
-        pairs = bdb.sql_execute('''
-            SELECT modelno, cgpm_modelno FROM bayesdb_cgpm_modelno
-            WHERE generator_id = ?
-        ''', (generator_id,))
-        modelno_lookup = {i:i for i in xrange(16)}
-        for pair in pairs:
-            assert modelno_lookup[pair[0]] == pair[1]
+
+        def check_modelno_mapping(lookup):
+            pairs = bdb.sql_execute('''
+                SELECT modelno, cgpm_modelno FROM bayesdb_cgpm_modelno
+                WHERE generator_id = ?
+            ''', (generator_id,))
+            for pair in pairs:
+                assert lookup[pair[0]] == pair[1]
+                del lookup[pair[0]]
+            assert len(lookup) == 0
+
+        # Initialize some models.
+        bdb.execute('INITIALIZE 16 MODELS FOR m')
+        # Assert identity mapping initially.
+        check_modelno_mapping({i:i for i in xrange(16)})
+
+        bdb.execute('ANALYZE m FOR 1 ITERATION WAIT (QUIET);')
+
         # Drop some models.
         bdb.execute('DROP MODELS 1, 8-12, 14 FROM m')
-        # Assert a 1-1 mapping between models and modelnos initially.
-        pairs = bdb.sql_execute('''
-            SELECT modelno, cgpm_modelno FROM bayesdb_cgpm_modelno
-            WHERE generator_id = ?
-        ''', (generator_id,))
-        modelno_lookup = {
+        # Assert cgpm models are contiguous while bayesdb models are not, with
+        # the mapping preserving the strict order.
+        check_modelno_mapping({
             0: 0,
             2: 1,
             3: 2,
@@ -1054,16 +1059,86 @@ def test_drop_models():
             7: 6,
             13: 7,
             15: 8,
-        }
-        for pair in pairs:
-            assert modelno_lookup[pair[0]] == pair[1]
-            del modelno_lookup[pair[0]]
-        assert len(modelno_lookup) == 0
+        })
+
         # Run some analysis again.
         bdb.execute('ANALYZE m FOR 1 ITERATION WAIT (OPTIMIZED; QUIET);')
+
+        # Initialize 14 models if not existing.
+        bdb.execute('INITIALIZE 14 MODELS IF NOT EXISTS FOR m')
+        # Assert cgpm models are 0-14, while bayesdb are 0-15 excluding 14. Note
+        # that INITIALIZE 14 MODELS IF NOT EXISTS does not guarantee that 14
+        # MODELS in total will exist after the query, rather it will initialize
+        # any non-existing modelnos with index 0-13, and any modelnos > 14
+        # (modelno 15 in this test case) are untouched.
+        check_modelno_mapping({
+            0: 0,
+            2: 1,
+            3: 2,
+            4: 3,
+            5: 4,
+            6: 5,
+            7: 6,
+            13: 7,
+            15: 8,
+            # Recreated models.
+            1: 9,
+            8: 10,
+            9: 11,
+            10: 12,
+            11: 13,
+            12: 14,
+        })
+
+        # Drop some more models, add them back with some more, and confirm
+        # arithmetic and ordering remains correct.
+        bdb.execute('DROP MODELS 0-1 FROM m')
+        check_modelno_mapping({
+            2: 0,
+            3: 1,
+            4: 2,
+            5: 3,
+            6: 4,
+            7: 5,
+            13: 6,
+            15: 7,
+            # Recreated models.
+            8: 8,
+            9: 9,
+            10: 10,
+            11: 11,
+            12: 12,
+        })
+        bdb.execute('INITIALIZE 20 MODELS IF NOT EXISTS FOR m;')
+        check_modelno_mapping({
+            2: 0,
+            3: 1,
+            4: 2,
+            5: 3,
+            6: 4,
+            7: 5,
+            13: 6,
+            15: 7,
+            # Recreated models.
+            8: 8,
+            9: 9,
+            10: 10,
+            11: 11,
+            12: 12,
+            # Re-recreated models.
+            0: 13,
+            1: 14,
+            # New models.
+            14: 15,
+            16: 16,
+            17: 17,
+            18: 18,
+            19: 19,
+        })
+
         # Drop all models.
         bdb.execute('DROP MODELS FROM m;')
-        # cgpm mapping should be cleared.
+        # Assert cgpm mapping is cleared.
         cursor = bdb.sql_execute('''
             SELECT COUNT(*) FROM bayesdb_cgpm_modelno
             WHERE generator_id = ?
