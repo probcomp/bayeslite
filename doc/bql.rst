@@ -430,22 +430,31 @@ relies on (Github issue #308), repeated references to a model
 estimator may be repeatedly evaluated for each row, even if they are
 being stored in the output of queries.  For example,
 
-    ``ESTIMATE MUTUAL INFORMATION AS mutinf``
-         ``FROM PAIRWISE COLUMNS OF p ORDER BY mutinf``
+    .. code-block:: sql
 
-has the effect of estimating mutual information twice for each row
-because it is mentioned twice, once in the output and once in the
-ORDER BY, which is twice as slow as it needs to be.  (Actually,
-approximately four times, because mutual information is symmetric, but
-that is an orthogonal issue.)
+        ESTIMATE
+            MUTUAL INFORMATION AS mutinf
+        FROM PAIRWISE COLUMNS OF p
+        ORDER BY mutinf
+
+has the effect of estimating mutual information twice for each row because it is
+mentioned twice, once in the output and once in the ORDER BY, which is twice as
+slow as it needs to be.   (Actually, approximately four times, because mutual
+information is symmetric, but that is an orthogonal issue.)
+
+
 
 To avoid this double evaluation, you can order the results of a
 subquery instead:
 
-    ``SELECT *``
-        ``FROM (ESTIMATE MUTUAL INFORMATION AS mutinf``
-                ``FROM PAIRWISE COLUMNS OF p)``
-        ``ORDER BY mutinf``
+    .. code-block:: sql
+
+        SELECT *
+        FROM (
+            ESTIMATE MUTUAL INFORMATION AS mutinf
+            FROM PAIRWISE COLUMNS OF p
+        )
+        ORDER BY mutinf
 
 .. index:: ``PREDICTIVE PROBABILITY``
 
