@@ -209,6 +209,7 @@ variables in a population.
 .. index:: ``CREATE METAMODEL``
 
 ``CREATE METAMODEL <metamodel> FOR <population> WITH BASELINE <baseline>``
+
 ``CREATE METAMODEL <metamodel> FOR <population> WITH BASELINE <baseline> (<customization>)``
 
    Create metamodel *metamodel* for the population *population* with
