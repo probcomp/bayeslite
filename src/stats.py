@@ -22,6 +22,14 @@ import numpy
 from bayeslite.math_util import gamma_above
 from bayeslite.util import float_sum
 
+
+# XXX Module-wide cache for Monte Carlo samples to estimate tail probabilities.
+MONTE_CARLO_SEED = 0
+MONTE_CARLO_SAMPLE_COUNT = 100000
+MONTE_CARLO_RNG = numpy.random.RandomState(MONTE_CARLO_SEED)
+MONTE_CARLO_SAMPLE_CACHE = {}
+
+
 def arithmetic_mean(array):
     """Arithmetic mean of elements of `array`."""
     return float_sum(array) / len(array)
@@ -130,10 +138,8 @@ def t_cdf(x, df):
     if x == 0:
         return 0.5
 
-    MONTE_CARLO_SAMPLES = 1e5
-    random = numpy.random.RandomState(seed=0)
-    T = random.standard_t(df, size=int(MONTE_CARLO_SAMPLES))
-    return numpy.sum(T < x) / MONTE_CARLO_SAMPLES
+    T = get_monte_carlo_samples('standard_t', (df,))
+    return numpy.sum(T < x) / float(MONTE_CARLO_SAMPLE_COUNT)
 
 def chi2_sf(x, df):
     """Survival function for chi^2 distribution."""
@@ -155,10 +161,8 @@ def f_sf(x, df_num, df_den):
     if x <= 0:
         return 1.0
 
-    MONTE_CARLO_SAMPLES = 1e5
-    random = numpy.random.RandomState(seed=0)
-    F = random.f(df_num, df_den, size=int(MONTE_CARLO_SAMPLES))
-    return numpy.sum(F > x) / MONTE_CARLO_SAMPLES
+    F = get_monte_carlo_samples('f', (df_num, df_den))
+    return numpy.sum(F > x) / float(MONTE_CARLO_SAMPLE_COUNT)
 
 def gauss_suff_stats(data):
     """Summarize an array of data as (count, mean, standard deviation).
@@ -188,3 +192,23 @@ def gauss_suff_stats(data):
         return (n, mean, 0.0)
     else:
         return (n, mean, math.sqrt(M2 / float(n)))
+
+def get_monte_carlo_samples(distribution, args):
+    def generate_sample(distribution, args):
+        if distribution == 'standard_t':
+            samples = MONTE_CARLO_RNG.standard_t(*args,
+                size=MONTE_CARLO_SAMPLE_COUNT)
+        elif distribution == 'f':
+            samples = MONTE_CARLO_RNG.f(*args, size=MONTE_CARLO_SAMPLE_COUNT)
+        else:
+            raise ValueError('Unknown distribution: %s' % (distribution,))
+        return samples
+    samples = None
+    distribution_cache = MONTE_CARLO_SAMPLE_CACHE.get(distribution, None)
+    if distribution_cache is not None:
+        samples = distribution_cache.get(args, None)
+    if samples is None:
+        samples = generate_sample(distribution, args)
+        MONTE_CARLO_SAMPLE_CACHE[distribution] = {}
+        MONTE_CARLO_SAMPLE_CACHE[distribution][args] = samples
+    return samples
