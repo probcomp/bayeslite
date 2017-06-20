@@ -753,8 +753,8 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_ADD
         K_ALL
         K_ALTER
-        K_ANALYSIS
         K_ANALYSES
+        K_ANALYSIS
         K_ANALYZE
         K_AND
         K_AS
