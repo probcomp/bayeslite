@@ -155,7 +155,8 @@ gs_token(prim)                  ::= ANY(t).
  * BQL Model Analysis Language
  */
 /* XXX No way to initialize individual models after DROP.  */
-command(init_models)    ::= K_INITIALIZE L_INTEGER(n) K_MODEL|K_MODELS
+command(init_models)    ::= K_INITIALIZE L_INTEGER(n)
+                                K_MODEL|K_MODELS|K_ANALYSIS|K_ANALYSES
                                 ifnotexists(ifnotexists)
                                 K_FOR generator_name(generator).
 command(analyze_models) ::= K_ANALYZE generator_name(generator)
@@ -163,8 +164,9 @@ command(analyze_models) ::= K_ANALYZE generator_name(generator)
                                 anckpt_opt(anckpt)
                                 wait_opt(wait)
                                 analysis_program_opt(program).
-command(drop_models)    ::= K_DROP K_MODEL|K_MODELS modelset_opt(models)
-                                K_FROM generator_name(generator).
+command(drop_models)    ::= K_DROP K_MODEL|K_MODELS|K_ANALYSIS|K_ANALYSES
+                                modelset_opt(models) K_FROM
+                                generator_name(generator).
 
 temp_opt(none)          ::= .
 temp_opt(some)          ::= K_TEMP|K_TEMPORARY.
@@ -174,7 +176,7 @@ ifnotexists(none)       ::= .
 ifnotexists(some)       ::= K_IF K_NOT K_EXISTS.
 
 anmodelset_opt(none)    ::= .
-anmodelset_opt(some)    ::= K_MODEL|K_MODELS modelset(m).
+anmodelset_opt(some)    ::= K_MODEL|K_MODELS|K_ANALYSIS|K_ANALYSES modelset(m).
 
 /* XXX Hackery for WITH BASELINE  */
 baseline_opt(none)      ::= .
@@ -751,6 +753,8 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_ADD
         K_ALL
         K_ALTER
+        K_ANALYSIS
+        K_ANALYSES
         K_ANALYZE
         K_AND
         K_AS
