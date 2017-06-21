@@ -14,11 +14,14 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import numpy
+
 import crosscat.LocalEngine
 
 import bayeslite
 from bayeslite.metamodels.crosscat import CrosscatMetamodel
 from bayeslite.math_util import relerr
+from bayeslite.math_util import abserr
 
 def test_correlation():
     with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
@@ -142,5 +145,6 @@ def test_correlation():
         assert xpd_name0 == obs_name0
         assert xpd_name1 == obs_name1
         assert xpd_corr == obs_corr or relerr(xpd_corr, obs_corr) < 1e-10
-        assert (xpd_corr_p == obs_corr_p or
-                relerr(xpd_corr_p, obs_corr_p) < 1e-1)
+        assert (xpd_corr == obs_corr
+            or abserr(xpd_corr_p, obs_corr_p) < 1e-10
+            or relerr(xpd_corr_p, obs_corr_p) < 1e-1)
