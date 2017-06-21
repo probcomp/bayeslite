@@ -118,7 +118,7 @@ stattypes_for_opt       ::= .
 stattypes_for_opt       ::= K_STATTYPES K_FOR.
 
 /* XXX Temporary generators?  */
-command(creategen)      ::= K_CREATE K_GENERATOR|K_METAMODEL
+command(creategen)      ::= K_CREATE generator_token
                                 ifnotexists(ifnotexists0)
                                 generator_name(name)
                                 ifnotexists(ifnotexists1)
@@ -126,9 +126,9 @@ command(creategen)      ::= K_CREATE K_GENERATOR|K_METAMODEL
                                 baseline_opt(baseline)
                                 runtime_name_opt(metamodel)
                                 generator_schema_opt(schema).
-command(dropgen)        ::= K_DROP K_GENERATOR|K_METAMODEL ifexists(ifexists)
+command(dropgen)        ::= K_DROP generator_token ifexists(ifexists)
                                 generator_name(name).
-command(altergen)       ::= K_ALTER K_GENERATOR|K_METAMODEL
+command(altergen)       ::= K_ALTER generator_token
                                 generator_name(generator) altergen_cmds(cmds).
 
 altergen_cmds(one)      ::= altergen_cmd(cmd).
@@ -155,7 +155,7 @@ gs_token(prim)                  ::= ANY(t).
  * BQL Model Analysis Language
  */
 /* XXX No way to initialize individual models after DROP.  */
-command(init_models)    ::= K_INITIALIZE L_INTEGER(n) K_MODEL|K_MODELS
+command(init_models)    ::= K_INITIALIZE L_INTEGER(n) model_token
                                 ifnotexists(ifnotexists)
                                 K_FOR generator_name(generator).
 command(analyze_models) ::= K_ANALYZE generator_name(generator)
@@ -163,7 +163,7 @@ command(analyze_models) ::= K_ANALYZE generator_name(generator)
                                 anckpt_opt(anckpt)
                                 wait_opt(wait)
                                 analysis_program_opt(program).
-command(drop_models)    ::= K_DROP K_MODEL|K_MODELS modelset_opt(models)
+command(drop_models)    ::= K_DROP model_token modelset_opt(models)
                                 K_FROM generator_name(generator).
 
 temp_opt(none)          ::= .
@@ -174,7 +174,7 @@ ifnotexists(none)       ::= .
 ifnotexists(some)       ::= K_IF K_NOT K_EXISTS.
 
 anmodelset_opt(none)    ::= .
-anmodelset_opt(some)    ::= K_MODEL|K_MODELS modelset(m).
+anmodelset_opt(some)    ::= model_token modelset(m).
 
 /* XXX Hackery for WITH BASELINE  */
 baseline_opt(none)      ::= .
@@ -384,6 +384,16 @@ generator_name(unqualified) ::= L_NAME(name).
 metamodel_name(mn)      ::= L_NAME(name).
 population_name(pn)     ::= L_NAME(name).
 table_name(unqualified) ::= L_NAME(name).
+
+/* XXX Several tokens for the same concept. */
+generator_token         ::= K_GENERATOR.
+generator_token         ::= K_METAMODEL.
+generator_token         ::= K_ANALYSIS K_SCHEMA.
+
+model_token             ::= K_MODEL.
+model_token             ::= K_MODELS.
+model_token             ::= K_ANALYSIS.
+model_token             ::= K_ANALYSES.
 
 group_by(none)          ::= .
 group_by(some)          ::= K_GROUP K_BY expressions(keys).
@@ -751,6 +761,8 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_ADD
         K_ALL
         K_ALTER
+        K_ANALYSIS
+        K_ANALYSES
         K_ANALYZE
         K_AND
         K_AS
