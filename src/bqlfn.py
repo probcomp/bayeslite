@@ -107,13 +107,15 @@ def correlation_pearsonr2(data0, data1):
     return r**2
 
 def correlation_p_pearsonr2(data0, data1):
+    n = len(data0)
+    assert n == len(data1)
+    if n <= 2:
+        return float('NaN')
     r = stats.pearsonr(data0, data1)
     if math.isnan(r):
         return float('NaN')
-    if r == 1.:
+    if r == 1. or r == -1:
         return 0.
-    n = len(data0)
-    assert n == len(data1)
     # Compute observed t statistic.
     t = r * math.sqrt((n - 2)/(1 - r**2))
     # Compute p-value for two-sided t-test.
@@ -135,7 +137,10 @@ def correlation_p_cramerphi(data0, data1):
     if math.isnan(chi2):
         return float('NaN')
     # Compute p-value for chi^2 test of independence.
-    return stats.chi2_sf(chi2, (n0 - 1)*(n1 - 1))
+    df = (n0 - 1)*(n1 - 1)
+    if df <= 0:
+        return float('NaN')
+    return stats.chi2_sf(chi2, df)
 
 def cramerphi_chi2(data0, data1):
     n = len(data0)
