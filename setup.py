@@ -210,6 +210,7 @@ setup(
         'pandas',
         'pexpect',
         'pytest',
+        'scipy',
     ],
     packages=[
         'bayeslite',

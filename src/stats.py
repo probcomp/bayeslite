@@ -129,11 +129,8 @@ def t_cdf(x, df):
         raise ValueError('Degrees of freedom must be positive.')
     if x == 0:
         return 0.5
-
-    MONTE_CARLO_SAMPLES = 1e5
-    random = numpy.random.RandomState(seed=0)
-    T = random.standard_t(df, size=int(MONTE_CARLO_SAMPLES))
-    return numpy.sum(T < x) / MONTE_CARLO_SAMPLES
+    import scipy.stats
+    return scipy.stats.t.cdf(x, df)
 
 def chi2_sf(x, df):
     """Survival function for chi^2 distribution."""
@@ -154,11 +151,8 @@ def f_sf(x, df_num, df_den):
         raise ValueError('Degrees of freedom must be positive.')
     if x <= 0:
         return 1.0
-
-    MONTE_CARLO_SAMPLES = 1e5
-    random = numpy.random.RandomState(seed=0)
-    F = random.f(df_num, df_den, size=int(MONTE_CARLO_SAMPLES))
-    return numpy.sum(F > x) / MONTE_CARLO_SAMPLES
+    import scipy.stats
+    return scipy.stats.f.sf(x, df_num, df_den)
 
 def gauss_suff_stats(data):
     """Summarize an array of data as (count, mean, standard deviation).
