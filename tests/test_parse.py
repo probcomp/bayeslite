@@ -413,7 +413,8 @@ def test_select_bql():
                         ast.ExpLit(ast.LitInt(8)),
                     )),
                     [ast.ColListSub(
-                        ast.EstCols([ast.SelColAll(None)], 't', None, None,
+                        ast.EstCols(
+                            [ast.SelColAll(None)], 't', None, None, None,
                             [ast.Ord(ast.ExpBQLProbDensityFn(
                                     ast.ExpLit(ast.LitInt(4)),
                                     []),
@@ -465,7 +466,8 @@ def test_select_bql():
                         ast.ExpLit(ast.LitInt(8)),
                     )),
                     [ast.ColListSub(
-                        ast.EstCols([ast.SelColAll(None)], 't', None, None,
+                        ast.EstCols(
+                            [ast.SelColAll(None)], 't', None, None, None,
                             [ast.Ord(ast.ExpBQLProbDensityFn(
                                     ast.ExpLit(ast.LitInt(4)),
                                     []),
@@ -613,7 +615,7 @@ def test_select_bql():
         [ast.Select(ast.SELQUANT_ALL, [
                 ast.SelColExp(ast.ExpCol(None, 'key'), None),
                 ast.SelColSub('t',
-                    ast.EstCols([ast.SelColAll(None)], 't', None, None,
+                    ast.EstCols([ast.SelColAll(None)], 't', None, None, None,
                         [ast.Ord(ast.ExpBQLDepProb('c', None), ast.ORD_DESC)],
                         ast.Lim(ast.ExpLit(ast.LitInt(4)), None)))
             ],
@@ -820,7 +822,7 @@ def test_trivial_commands():
                     ast.SelColExp(ast.ExpCol(None, 'x'), None),
                     ast.PredCol('x', 'xi', 'xc', None),
                 ],
-                't_cc', None, None, None, None, None,
+                't_cc', None, None, None, None, None, None,
             ))]
 
 def test_analyze():
@@ -932,26 +934,26 @@ def test_alterpop_addvar():
 def test_infer_trivial():
     assert parse_bql_string('infer x from p') == \
         [ast.InferAuto([ast.InfColOne('x', None)], ast.ExpLit(ast.LitInt(0)),
-            None, 'p', None, None, None, None, None)]
+            None, 'p', None, None, None, None, None, None)]
 
 def test_infer_conf():
     assert parse_bql_string('infer x with confidence 0.9 from p') == \
         [ast.InferAuto([ast.InfColOne('x', None)],
             ast.ExpLit(ast.LitFloat(0.9)), None, 'p', None, None, None, None,
-            None)]
+            None, None)]
 
 def test_infer_samples():
     assert parse_bql_string('infer x using 42 samples from p') == \
         [ast.InferAuto([ast.InfColOne('x', None)],
-            ast.ExpLit(ast.LitInt(0)), ast.ExpLit(ast.LitInt(42)), 'p', None,
-            None, None, None, None)]
+            ast.ExpLit(ast.LitInt(0)), ast.ExpLit(ast.LitInt(42)), 'p',
+            None, None, None, None, None, None)]
 
 def test_infer_conf_samples():
     assert parse_bql_string('infer x with confidence 0.9 using 42 samples'
             ' from p') == \
         [ast.InferAuto([ast.InfColOne('x', None)],
             ast.ExpLit(ast.LitInt(.9)), ast.ExpLit(ast.LitInt(42)), 'p', None,
-            None, None, None, None)]
+            None, None, None, None, None)]
 
 def test_infer_explicit():
     assert parse_bql_string('infer explicit x, predict y with confidence 0.9,'
@@ -973,7 +975,7 @@ def test_infer_explicit():
                 ast.PredCol('a', 'b', 'c', None),
                 ast.PredCol('h', None, 'k', ast.ExpLit(ast.LitInt(42))),
             ],
-            'p', None, None, None, None, None)]
+            'p', None, None, None, None, None, None)]
 
 def test_infer_explicit_samples():
     assert parse_bql_string('infer explicit x, predict y with confidence 0.9,'
@@ -995,7 +997,7 @@ def test_infer_explicit_samples():
                 ast.PredCol('a', 'b', 'c', None),
                 ast.PredCol('h', None, 'k', ast.ExpLit(ast.LitInt(42))),
             ],
-            'p', None, None, None, None, None)]
+            'p', None, None, None, None, None, None)]
 
 def test_parametrized():
     assert parse_bql_string('select * from t where id = ?;') == \
@@ -1107,6 +1109,7 @@ def test_simulate():
                 [ast.SelColExp(ast.ExpCol(None, 'x'), None)],
                 't',
                 None,
+                None,
                 [],
                 ast.ExpLit(ast.LitInt(10)),
                 None)
@@ -1121,6 +1124,7 @@ def test_simulate():
                 ],
                 't',
                 None,
+                None,
                 [('z', ast.ExpLit(ast.LitInt(0)))],
                 ast.ExpLit(ast.LitInt(10)),
                 2)
@@ -1134,6 +1138,7 @@ def test_simulate():
                     ast.SelColExp(ast.ExpCol(None, 'y'), None),
                 ],
                 't',
+                None,
                 None,
                 [('z', ast.ExpLit(ast.LitInt(0)))],
                 ast.ExpLit(ast.LitInt(10)),
@@ -1150,6 +1155,7 @@ def test_simulate():
                     ast.SelColExp(ast.ExpCol(None, 'y'), None),
                 ],
                 't',
+                None,
                 None,
                 [
                     ('z', ast.ExpLit(ast.LitInt(0))),
@@ -1359,6 +1365,7 @@ def test_regress():
                         columns=[ast.SelColAll(table=None)],
                         population='pop',
                         generator=None,
+                        modelnos=None,
                         condition=None,
                         order=None,
                         limit=ast.Lim(
@@ -1381,6 +1388,104 @@ def test_regress():
     with pytest.raises(bayeslite.BQLParseError):
         # Missing parenthesis.
         assert parse_bql_string('regress t given * using 10 samples by pop;')
+
+def test_using_model():
+    assert parse_bql_string('simulate x from t using model 42'
+            ' limit 10') == [
+        ast.Simulate(
+            columns=[ast.SelColExp(ast.ExpCol(None, 'x'), None)],
+            population='t',
+            generator=None,
+            modelnos=[42],
+            constraints=[],
+            nsamples=ast.ExpLit(ast.LitInt(10)),
+            accuracy=None)
+    ]
+    with pytest.raises(parse.BQLParseError):
+        assert parse_bql_string('simulate x from t'
+                ' using model (87)') == [
+            ast.Simulate(
+                columns=[ast.SelColExp(ast.ExpCol(None, 'x'), None)],
+                population='t',
+                generator=None,
+                modelnos=[87],
+                constraints=[],
+                nsamples=ast.ExpLit(ast.LitInt(10)),
+                accuracy=None)
+        ]
+    assert parse_bql_string('estimate x from t modeled by g '
+            'using models 1, 2') == [
+        ast.Estimate(
+            quantifier=ast.SELQUANT_ALL,
+            columns=[ast.SelColExp(ast.ExpCol(None, 'x'), None)],
+            population='t',
+            generator='g',
+            modelnos=[1,2],
+            condition=None,
+            grouping=None,
+            order=None,
+            limit=None)
+    ]
+    assert parse_bql_string('estimate * from columns of t modeled by z'
+            ' using models 1-3, 5, 12-14') == [
+        ast.EstCols(
+            columns=[ast.SelColAll(None)],
+            population='t',
+            generator='z',
+            modelnos=[1,2,3,5,12,13,14],
+            condition=None,
+            order=None,
+            limit=None)
+    ]
+    assert parse_bql_string('estimate 42 from pairwise columns of t'
+            ' using models 0, 7') == [
+        ast.EstPairCols(
+            columns=[(ast.ExpLit(ast.LitInt(42)), None)],
+            population='t',
+            subcolumns=None,
+            generator=None,
+            modelnos=[0,7],
+            condition=None,
+            order=None,
+            limit=None)
+    ]
+    assert parse_bql_string('estimate similarity in the context of h '
+            'from pairwise t modeled by g using models 8-10') == [
+        ast.EstPairRow(
+            columns=[ast.SelColExp(
+                ast.ExpBQLSim(
+                    None, None, [ast.ColListLit(columns=['h'])]), name=None)],
+            population='t',
+            generator='g',
+            modelnos=[8, 9, 10],
+            condition=None,
+            order=None,
+            limit=None)
+    ]
+    assert parse_bql_string('infer x from t using models 7') == [
+        ast.InferAuto(
+            columns=[ast.InfColOne('x', None)],
+            confidence=ast.ExpLit(ast.LitInt(0)),
+            nsamples=None,
+            population='t',
+            generator=None,
+            modelnos=[7],
+            condition=None,
+            grouping=None,
+            order=None,
+            limit=None)
+    ]
+    assert parse_bql_string('infer explicit x from t using models 7, 14') == [
+        ast.InferExplicit(
+            columns=[ast.SelColExp(ast.ExpCol(None, 'x'), None)],
+            population='t',
+            generator=None,
+            modelnos=[7,14],
+            condition=None,
+            grouping=None,
+            order=None,
+            limit=None)
+    ]
 
 @contextlib.contextmanager
 def raises_str(klass, string):

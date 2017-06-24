@@ -224,12 +224,14 @@ analysis_token(primitive)       ::= ANY(t).
 simulate(s)             ::= K_SIMULATE select_columns(cols)
                                 K_FROM population_name(population)
                                 modelledby_opt(generator)
+                                usingmodel_opt(modelnos)
                                 given_opt(constraints)
                                 limit(lim)
                                 accuracy_opt(acc).
 simulate(nolimit)       ::= K_SIMULATE select_columns(cols)
                                 K_FROM population_name(population)
                                 modelledby_opt(generator)
+                                usingmodel_opt(modelnos)
                                 given_opt(constraints).
 
 given_opt(none)         ::= .
@@ -287,6 +289,7 @@ select(s)               ::= K_SELECT select_quant(quant) select_columns(cols)
 estimate(e)             ::= K_ESTIMATE select_quant(quant) select_columns(cols)
                                 from_est(tabs)
                                 modelledby_opt(generator)
+                                usingmodel_opt(modelnos)
                                 where(cond)
                                 group_by(grouping)
                                 order_by(ord)
@@ -298,18 +301,21 @@ estpaircol(e)           ::= K_ESTIMATE K_PAIRWISE error T_SEMI.
 
 estby(e)                ::= K_ESTIMATE select_quant(quant) select_columns(cols)
                                 K_BY|K_WITHIN population_name(population)
-                                modelledby_opt(generator).
+                                modelledby_opt(generator)
+                                usingmodel_opt(modelnos).
 
 infer(auto)             ::= K_INFER infer_auto_columns(cols)
                                 withconf_opt(conf)
                                 nsamples_opt(nsamp)
                                 K_FROM population_name(population)
                                 modelledby_opt(generator)
+                                usingmodel_opt(modelnos)
                                 where(cond) group_by(grouping) order_by(ord)
                                 limit_opt(lim).
 infer(explicit)         ::= K_INFER K_EXPLICIT infer_exp_columns(cols)
                                 K_FROM population_name(population)
                                 modelledby_opt(generator)
+                                usingmodel_opt(modelnos)
                                 where(cond) group_by(grouping) order_by(ord)
                                 limit_opt(lim).
 
@@ -364,6 +370,13 @@ from_est(paircol)       ::= K_FROM K_PAIRWISE K_COLUMNS|K_VARIABLES K_OF
 
 modelledby_opt(none)    ::= .
 modelledby_opt(some)    ::= K_MODELED|K_MODELLED K_BY generator_name(gen).
+
+/*
+ * XXX This mechanism is completely wrong.  The set of models should
+ * be treated as just another table on which to do relational algebra.
+ */
+usingmodel_opt(none)    ::= .
+usingmodel_opt(some)    ::= K_USING model_token modelset(modelnos).
 
 /* XXX Allow all kinds of joins.  */
 select_tables(one)      ::= select_table(t).

@@ -234,8 +234,8 @@ def _compile_query(bdb, query, bql_compiler, out):
             selcols = expand_select_columns(
                 bdb, query.columns, named, bql_compiler, out)
             query = ast.Simulate(
-                selcols, query.population, query.generator, query.constraints,
-                query.nsamples, query.accuracy)
+                selcols, query.population, query.generator, query.modelnos,
+                query.constraints, query.nsamples, query.accuracy)
 
     if isinstance(query, ast.Select):
         compile_select(bdb, query, bql_compiler, out)
@@ -452,7 +452,8 @@ def compile_infer_auto(bdb, infer, out):
             assert False, 'Invalid INFER column: %s' % (repr(col),)
     columns = [mcol for col in infer.columns for mcol in map_columns(col)]
     infer_exp = ast.InferExplicit(columns, infer.population, infer.generator,
-        infer.condition, infer.grouping, infer.order, infer.limit)
+        infer.modelnos, infer.condition, infer.grouping, infer.order,
+        infer.limit)
     named = True
     return compile_infer_explicit(bdb, infer_exp, named, out)
 
