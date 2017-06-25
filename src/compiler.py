@@ -657,6 +657,7 @@ def compile_simulate(bdb, simulate, out):
                     'No such generator: %r' %(simulate.generator,))
             generator_id = core.bayesdb_get_generator(
                 bdb, population_id, simulate.generator)
+        modelnos = None if simulate.modelnos is None else str(simulate.modelnos)
         table = core.bayesdb_population_table(bdb, population_id)
         qtt = sqlite3_quote_name(temptable)
         qt = sqlite3_quote_name(table)
@@ -729,7 +730,7 @@ def compile_simulate(bdb, simulate, out):
             INSERT INTO %s (%s) VALUES (%s)
         ''' % (qtt, ','.join(qcns), ','.join('?' for qcn in qcns))
         for row in bqlfn.bayesdb_simulate(
-                bdb, population_id, generator_id, simulate.modelnos,
+                bdb, population_id, generator_id, modelnos,
                 constraints, colnos, numpredictions=nsamples,
                 accuracy=simulate.accuracy
             ):
