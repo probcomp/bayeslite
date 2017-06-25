@@ -1269,6 +1269,70 @@ def test_probability_of_mutinf():
                 " AND target_vars = '[2]'" \
                 " AND reference_vars = '[3]'))) > 0.5);"
 
+def test_modelledby_usingmodels_trival():
+    def setup(bdb):
+        bdb.execute('create metamodel m1 for p1 with baseline crosscat;')
+    assert bql2sql('estimate predictive probability of weight + 1'
+            ' from p1 modelled by m1 using models 1-3, 5;', setup=setup) == \
+        'SELECT (bql_row_column_predictive_probability(1, 1, \'[1, 2, 3, 5]\','\
+                ' _rowid_, \'[3]\', \'[]\') + 1)' \
+            ' FROM "t1";'
+    assert bql2sql(
+        'infer rowid, age, weight from p1 modeled by m1 using model 7',
+            setup=setup) == \
+        'SELECT "rowid" AS "rowid",' \
+        ' "IFNULL"("age", bql_predict(1, 1, \'[7]\', _rowid_, 2, 0, NULL))' \
+            ' AS "age",' \
+        ' "IFNULL"("weight", bql_predict(1, 1, \'[7]\', _rowid_, 3, 0, NULL))' \
+            ' AS "weight"' \
+        ' FROM "t1";'
+    assert bql2sql('infer explicit predict age with confidence 0.9'
+            ' from p1 using models 0, 3-5;',
+            setup=setup) == \
+        'SELECT bql_predict(1, NULL, \'[0, 3, 4, 5]\', _rowid_, 2, 0.9, NULL)'\
+        ' FROM "t1";'
+    assert bql2sql('''
+        estimate predictive relevance
+            of (label = 'Uganda')
+            to existing rows (rowid < 4)
+            and hypothetical rows with values (
+                ("age" = 82, "weight" = 14),
+                ("age" = 74, label = 'Europe', "weight" = 7)
+            )
+            in the context of "weight"
+        by p1 modelled by m1 using models 8, 10-12
+    ''', setup=setup) == \
+        'SELECT bql_row_predictive_relevance(1, 1, \'[8, 10, 11, 12]\', ' \
+            '(SELECT _rowid_ FROM "t1" WHERE ("label" = \'Uganda\')), '\
+            '\'[1, 2, 3]\', 3, '\
+            '2, 82, 3, 14, NULL, 2, 74, 1, \'Europe\', 3, 7, NULL);'
+    assert bql2sql('''
+        estimate dependence probability
+        from pairwise columns of p1
+        for label, age
+        modeled by m1
+        using models 1, 4, 12
+    ''', setup=setup) == \
+        'SELECT 1 AS population_id, v0.name AS name0, v1.name AS name1,' \
+        ' bql_column_dependence_probability(1, 1, \'[1, 4, 12]\',' \
+                ' v0.colno, v1.colno)' \
+            ' AS value' \
+        ' FROM bayesdb_population AS p,' \
+        ' bayesdb_variable AS v0,' \
+        ' bayesdb_variable AS v1' \
+        ' WHERE p.id = 1' \
+        ' AND v0.population_id = p.id AND v1.population_id = p.id' \
+        ' AND (v0.generator_id IS NULL OR v0.generator_id = 1)' \
+        ' AND (v1.generator_id IS NULL OR v1.generator_id = 1)' \
+        ' AND v0.colno IN (1, 2) AND v1.colno IN (1, 2);'
+    assert bql2sql('''
+        estimate mutual information of age with weight
+        from p1 modeled by m1 using model 1;
+    ''', setup=setup) == \
+        'SELECT bql_column_mutual_information('\
+            '1, 1, \'[1]\', \'[2]\', \'[3]\', NULL)'\
+        ' FROM "t1";'
+
 def test_simulate_columns_all():
     with pytest.raises(parse.BQLParseError):
         bql2sql('simulate * from p1')
