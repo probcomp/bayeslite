@@ -33,18 +33,18 @@ from bayeslite.util import casefold
 def bayesdb_install_bql(db, cookie):
     def function(name, nargs, fn):
         db.createscalarfunction(name, (lambda *args: fn(cookie, *args)), nargs)
-    function("bql_column_correlation", 4, bql_column_correlation)
-    function("bql_column_correlation_pvalue", 4, bql_column_correlation_pvalue)
-    function("bql_column_dependence_probability", 4,
+    function("bql_column_correlation", 5, bql_column_correlation)
+    function("bql_column_correlation_pvalue", 5, bql_column_correlation_pvalue)
+    function("bql_column_dependence_probability", 5,
         bql_column_dependence_probability)
     function("bql_column_mutual_information", -1, bql_column_mutual_information)
     function("bql_column_value_probability", -1, bql_column_value_probability)
-    function("bql_row_similarity", 5, bql_row_similarity)
+    function("bql_row_similarity", 6, bql_row_similarity)
     function("bql_row_predictive_relevance", -1, bql_row_predictive_relevance)
-    function("bql_row_column_predictive_probability", 5,
+    function("bql_row_column_predictive_probability", 6,
         bql_row_column_predictive_probability)
-    function("bql_predict", 6, bql_predict)
-    function("bql_predict_confidence", 5, bql_predict_confidence)
+    function("bql_predict", 7, bql_predict)
+    function("bql_predict_confidence", 6, bql_predict_confidence)
     function("bql_json_get", 2, bql_json_get)
     function("bql_pdf_joint", -1, bql_pdf_joint)
 
@@ -68,7 +68,8 @@ def bql_variable_stattypes_and_data(bdb, population_id, colno0, colno1):
     return (st0, st1, data0, data1)
 
 # Two-column function:  CORRELATION [OF <col0> WITH <col1>]
-def bql_column_correlation(bdb, population_id, _generator_id, colno0, colno1):
+def bql_column_correlation(bdb, population_id, _generator_id, _modelnos,
+        colno0, colno1):
     if colno0 < 0:
         raise BQLError(bdb,
             'No correlation for latent variable: %r' %
@@ -86,7 +87,7 @@ def bql_column_correlation(bdb, population_id, _generator_id, colno0, colno1):
 
 # Two-column function:  CORRELATION PVALUE [OF <col0> WITH <col1>]
 def bql_column_correlation_pvalue(
-        bdb, population_id, _generator_id, colno0, colno1):
+        bdb, population_id, _generator_id, _modelnos, colno0, colno1):
     if colno0 < 0:
         raise BQLError(bdb,
             'No correlation p-value for latent variable: %r' %
@@ -290,7 +291,7 @@ define_correlation('categorical', 'nominal', correlation_cramerphi)
 
 # Two-column function:  DEPENDENCE PROBABILITY [OF <col0> WITH <col1>]
 def bql_column_dependence_probability(
-        bdb, population_id, generator_id, colno0, colno1):
+        bdb, population_id, generator_id, modelnos, colno0, colno1):
     def generator_depprob(generator_id):
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
         return metamodel.column_dependence_probability(
@@ -301,13 +302,13 @@ def bql_column_dependence_probability(
 
 # Two-column function:  MUTUAL INFORMATION [OF <col0> WITH <col1>]
 def bql_column_mutual_information(
-        bdb, population_id, generator_id, colnos0, colnos1,
+        bdb, population_id, generator_id, modelnos, colnos0, colnos1,
         numsamples, *constraint_args):
     colnos0 = json.loads(colnos0)
     colnos1 = json.loads(colnos1)
     mutinfs = _bql_column_mutual_information(
-        bdb, population_id, generator_id, colnos0, colnos1, numsamples,
-        *constraint_args)
+        bdb, population_id, generator_id, modelnos, colnos0, colnos1,
+        numsamples, *constraint_args)
     # XXX This integral of the CMI returned by each model of all generators in
     # in the population is wrong! At least, it does not directly correspond to
     # any meaningful probabilistic quantity, other than literally the mean CMI
@@ -315,8 +316,8 @@ def bql_column_mutual_information(
     return stats.arithmetic_mean([stats.arithmetic_mean(m) for m in mutinfs])
 
 def _bql_column_mutual_information(
-        bdb, population_id, generator_id, colnos0, colnos1, numsamples,
-        *constraint_args):
+        bdb, population_id, generator_id, modelnos, colnos0, colnos1,
+        numsamples, *constraint_args):
     if len(constraint_args) % 2 == 1:
         raise ValueError('Odd constraint arguments: %s.' % (constraint_args))
     constraints = zip(constraint_args[::2], constraint_args[1::2]) \
@@ -331,8 +332,8 @@ def _bql_column_mutual_information(
     return mutinfs
 
 # One-column function: PROBABILITY DENSITY OF <col>=<value> GIVEN <constraints>
-def bql_column_value_probability(bdb, population_id, generator_id, colno,
-        value, *constraint_args):
+def bql_column_value_probability(bdb, population_id, generator_id, modelnos,
+        colno, value, *constraint_args):
     constraints = []
     i = 0
     while i < len(constraint_args):
@@ -344,13 +345,14 @@ def bql_column_value_probability(bdb, population_id, generator_id, colno,
         constraints.append((constraint_colno, constraint_value))
         i += 2
     targets = [(colno, value)]
-    logp = _bql_logpdf(bdb, population_id, generator_id, targets, constraints)
+    logp = _bql_logpdf(bdb, population_id, generator_id, modelnos, targets,
+        constraints)
     return ieee_exp(logp)
 
 # XXX This is silly.  We should return log densities, not densities.
 # This is Github issue #360:
 # https://github.com/probcomp/bayeslite/issues/360
-def bql_pdf_joint(bdb, population_id, generator_id, *args):
+def bql_pdf_joint(bdb, population_id, generator_id, modelnos, *args):
     i = 0
     targets = []
     while i < len(args):
@@ -372,10 +374,12 @@ def bql_pdf_joint(bdb, population_id, generator_id, *args):
         c_value = args[i + 1]
         constraints.append((c_colno, c_value))
         i += 2
-    logp = _bql_logpdf(bdb, population_id, generator_id, targets, constraints)
+    logp = _bql_logpdf(bdb, population_id, generator_id, modelnos, targets,
+        constraints)
     return ieee_exp(logp)
 
-def _bql_logpdf(bdb, population_id, generator_id, targets, constraints):
+def _bql_logpdf(bdb, population_id, generator_id, modelnos, targets,
+        constraints):
     # P(T | C) = \sum_M P(T, M | C)
     # = \sum_M P(T | C, M) P(M | C)
     # = \sum_M P(T | C, M) P(M) P(C | M) / P(C)
@@ -410,7 +414,7 @@ def _bql_logpdf(bdb, population_id, generator_id, targets, constraints):
 
 # Row function:  SIMILARITY TO <target_row> IN THE CONTEXT OF <column>
 def bql_row_similarity(
-        bdb, population_id, generator_id, rowid, target_rowid, colno):
+        bdb, population_id, generator_id, modelnos, rowid, target_rowid, colno):
     if target_rowid is None:
         raise BQLError(bdb, 'No such target row for SIMILARITY')
     def generator_similarity(generator_id):
@@ -425,8 +429,8 @@ def bql_row_similarity(
 # Row function:  PREDICTIVE RELEVANCE TO (<target_row>)
 #  [<AND HYPOTHETICAL ROWS WITH VALUES ((...))] IN THE CONTEXT OF <column>
 def bql_row_predictive_relevance(
-        bdb, population_id, generator_id, rowid_target, rowid_query, colno,
-        *constraint_args):
+        bdb, population_id, generator_id, modelnos, rowid_target, rowid_query,
+        colno, *constraint_args):
     if rowid_target is None:
         raise BQLError(bdb, 'No such target row for SIMILARITY')
     rowid_query = json.loads(rowid_query)
@@ -453,7 +457,8 @@ def bql_row_predictive_relevance(
 
 # Row function:  PREDICTIVE PROBABILITY OF <targets> [GIVEN <constraints>]
 def bql_row_column_predictive_probability(
-        bdb, population_id, generator_id, rowid, targets, constraints):
+        bdb, population_id, generator_id, modelnos, rowid, targets,
+        constraints):
     targets = json.loads(targets)
     constraints = json.loads(constraints)
     # Build the constraints and query from rowid, using a fresh rowid.
@@ -482,7 +487,8 @@ def bql_row_column_predictive_probability(
 ### Predict and simulate
 
 def bql_predict(
-        bdb, population_id, generator_id, rowid, colno, threshold, numsamples):
+        bdb, population_id, generator_id, modelnos, rowid, colno, threshold,
+        numsamples):
     # XXX Randomly sample 1 generator from the population, until we figure out
     # how to aggregate imputations across different hypotheses.
     if generator_id is None:
@@ -494,7 +500,7 @@ def bql_predict(
         bdb, generator_id, None, rowid, colno, threshold, numsamples=numsamples)
 
 def bql_predict_confidence(
-        bdb, population_id, generator_id, rowid, colno, numsamples):
+        bdb, population_id, generator_id, modelnos, rowid, colno, numsamples):
     # XXX Do real imputation here!
     # XXX Randomly sample 1 generator from the population, until we figure out
     # how to aggregate imputations across different hypotheses.
@@ -514,7 +520,7 @@ def bql_json_get(bdb, blob, key):
 
 def bayesdb_simulate(
         bdb, population_id, constraints, colnos, generator_id=None,
-        numpredictions=1, accuracy=None):
+        modelnos=None, numpredictions=1, accuracy=None):
     """Simulate rows from a generative model, subject to constraints.
 
     Returns a list of `numpredictions` tuples, with a value for each

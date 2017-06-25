@@ -402,7 +402,8 @@ def test_t1_analysis_iter_deadline__ci_slow():
 def test_t1_predict(rowid, colno, confidence):
     with analyzed_bayesdb_population(t1(), 1, 1) as (bdb, pop_id, gen_id):
         if rowid == 0: rowid = bayesdb_maxrowid(bdb, pop_id)
-        bqlfn.bql_predict(bdb, pop_id, None, rowid, colno, confidence, None)
+        bqlfn.bql_predict(
+            bdb, pop_id, None, None, rowid, colno, confidence, None)
 
 @pytest.mark.parametrize('colnos,constraints,numpredictions',
     [(colnos, constraints, numpred)
@@ -443,8 +444,10 @@ def test_onecolumn(exname, colno):
         pytest.skip('Not enough columns in %s.' % (exname,))
     with analyzed_bayesdb_population(examples[exname](), 1, 1) \
             as (bdb, population_id, generator_id):
-        bqlfn.bql_column_value_probability(bdb, population_id, None, colno, 4)
-        bdb.sql_execute('select bql_column_value_probability(?, NULL, ?, 4)',
+        bqlfn.bql_column_value_probability(
+            bdb, population_id, None, None, colno, 4)
+        bdb.sql_execute(
+            'select bql_column_value_probability(?, NULL, NULL, ?, 4)',
             (population_id, colno)).fetchall()
 
 @pytest.mark.parametrize('exname,colno0,colno1',
@@ -459,30 +462,31 @@ def test_twocolumn(exname, colno0, colno1):
         pytest.skip('Not enough columns in %s.' % (exname,))
     with analyzed_bayesdb_population(examples[exname](), 1, 1) \
             as (bdb, population_id, generator_id):
-        bqlfn.bql_column_correlation(bdb, population_id, None, colno0, colno1)
-        bdb.sql_execute('select bql_column_correlation(?, NULL, ?, ?)',
+        bqlfn.bql_column_correlation(
+            bdb, population_id, None, None, colno0, colno1)
+        bdb.sql_execute('select bql_column_correlation(?, NULL, NULL, ?, ?)',
             (population_id, colno0, colno1)).fetchall()
-        bqlfn.bql_column_dependence_probability(bdb, population_id, None,
-            colno0, colno1)
+        bqlfn.bql_column_dependence_probability(
+            bdb, population_id, None, None, colno0, colno1)
         bdb.sql_execute('select'
-            ' bql_column_dependence_probability(?, NULL, ?, ?)',
+            ' bql_column_dependence_probability(?, NULL, NULL, ?, ?)',
             (population_id, colno0, colno1)).fetchall()
         colno0_json = json.dumps([colno0])
         colno1_json = json.dumps([colno1])
         bqlfn.bql_column_mutual_information(
-            bdb, population_id, None, colno0_json, colno1_json, None)
+            bdb, population_id, None, None, colno0_json, colno1_json, None)
         bqlfn.bql_column_mutual_information(
-            bdb, population_id, None, colno0_json, colno1_json, None)
+            bdb, population_id, None, None, colno0_json, colno1_json, None)
         bqlfn.bql_column_mutual_information(
-            bdb, population_id, None, colno0_json, colno1_json, 1)
+            bdb, population_id, None, None, colno0_json, colno1_json, 1)
         bdb.sql_execute('select'
-            ' bql_column_mutual_information(?, NULL, ?, ?, NULL)',
+            ' bql_column_mutual_information(?, NULL, NULL, ?, ?, NULL)',
             (population_id, colno0_json, colno1_json)).fetchall()
         bdb.sql_execute('select'
-            ' bql_column_mutual_information(?, NULL, ?, ?, 1)',
+            ' bql_column_mutual_information(?, NULL, NULL, ?, ?, 1)',
             (population_id, colno0_json, colno1_json)).fetchall()
         bdb.sql_execute('select'
-            ' bql_column_mutual_information(?, NULL, ?, ?, 100)',
+            ' bql_column_mutual_information(?, NULL, NULL, ?, ?, 100)',
             (population_id, colno0_json, colno1_json)).fetchall()
 
 @pytest.mark.parametrize('colno,rowid',
@@ -496,14 +500,14 @@ def test_t1_column_value_probability(colno, rowid):
             rowid = bayesdb_maxrowid(bdb, population_id)
         value = core.bayesdb_population_cell_value(
             bdb, population_id, rowid, colno)
-        bqlfn.bql_column_value_probability(bdb, population_id, None, colno,
-            value)
+        bqlfn.bql_column_value_probability(
+            bdb, population_id, None, None, colno, value)
         table_name = core.bayesdb_population_table(bdb, population_id)
         var = core.bayesdb_variable_name(bdb, population_id, colno)
         qt = bql_quote_name(table_name)
         qv = bql_quote_name(var)
         sql = '''
-            select bql_column_value_probability(?, NULL, ?,
+            select bql_column_value_probability(?, NULL, NULL, ?,
                 (select %s from %s where rowid = ?))
         ''' % (qv, qt)
         bdb.sql_execute(sql, (population_id, colno, rowid)).fetchall()
@@ -525,10 +529,10 @@ def test_row_column_predictive_probability(exname, rowid, colno):
         targets = json.dumps([colno])
         constraints = json.dumps([])
         bqlfn.bql_row_column_predictive_probability(
-            bdb, population_id, None, rowid, targets, constraints)
+            bdb, population_id, None, None, rowid, targets, constraints)
         bdb.sql_execute('''
             select bql_row_column_predictive_probability(
-                ?, NULL, ?, \'%s\', \'%s\')
+                ?, NULL, NULL, ?, \'%s\', \'%s\')
             ''' % (targets, constraints), (population_id, rowid)
         ).fetchall()
 

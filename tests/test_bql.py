@@ -180,7 +180,7 @@ def test_predictive_relevance():
             in the context of "weight"
         by p1
     ''') == \
-        'SELECT bql_row_predictive_relevance(1, NULL, '\
+        'SELECT bql_row_predictive_relevance(1, NULL, NULL, ' \
             '(SELECT _rowid_ FROM "t1" WHERE ("label" = \'Uganda\')), '\
             '\'[1, 2, 3]\', 3, '\
             '2, 82, 3, 14, NULL, 2, 74, 1, \'Europe\', 3, 7, NULL);'
@@ -191,7 +191,7 @@ def test_predictive_relevance():
             in the context of "label"
         by p1
     ''') == \
-        'SELECT bql_row_predictive_relevance(1, NULL, '\
+        'SELECT bql_row_predictive_relevance(1, NULL, NULL, ' \
             '(SELECT _rowid_ FROM "t1" WHERE ("label" = \'mumble\')), '\
             '\'[5, 8]\', 1);'
     assert bql2sql('''
@@ -205,7 +205,7 @@ def test_predictive_relevance():
             _rowid_ + 1
         from p1
     ''') == \
-        'SELECT "label", bql_row_predictive_relevance(1, NULL, _rowid_, '\
+        'SELECT "label", bql_row_predictive_relevance(1, NULL, NULL, _rowid_, '\
         '\'[]\', 2, 2, 82, 3, 14, NULL, 2, 74, 1, \'hunf\', 3, 7, NULL), '\
         '("_rowid_" + 1) FROM "t1";'
     # No matching rows should still compile.
@@ -215,7 +215,7 @@ def test_predictive_relevance():
             in the context of "age"
         from p1
     ''') == \
-        'SELECT "label", bql_row_predictive_relevance(1, NULL, _rowid_, '\
+        'SELECT "label", bql_row_predictive_relevance(1, NULL, NULL, _rowid_, '\
         '\'[]\', 2) FROM "t1";'
     # When using `BY`, require OF to be specified.
     with pytest.raises(BQLError):
@@ -250,9 +250,10 @@ def test_predictive_relevance():
                 in the context of "age"
     ''') == \
         'SELECT "label" FROM "t1" WHERE '\
-        '(bql_row_predictive_relevance(1, NULL, _rowid_, \'[5]\', 3) > 1) '\
-        'ORDER BY bql_row_predictive_relevance(1, NULL, _rowid_, \'[]\', '\
-            '2, 1, \'zot\', NULL);'
+        '(bql_row_predictive_relevance(1, NULL, NULL, '\
+            '_rowid_, \'[5]\', 3) > 1) '\
+        'ORDER BY bql_row_predictive_relevance(1, NULL, NULL, '\
+            '_rowid_, \'[]\', 2, 1, \'zot\', NULL);'
 
 
 @stochastic(max_runs=2, min_passes=1)
@@ -440,56 +441,56 @@ def test_select_trivial():
 def test_estimate_bql():
     # PREDICTIVE PROBABILITY
     assert bql2sql('estimate predictive probability of weight from p1;') == \
-        'SELECT bql_row_column_predictive_probability(1, NULL, _rowid_, '\
+        'SELECT bql_row_column_predictive_probability(1, NULL, NULL, _rowid_, '\
                 '\'[3]\', \'[]\')' \
             ' FROM "t1";'
     assert bql2sql('estimate predictive probability of (age, weight) '
             'from p1;') == \
-        'SELECT bql_row_column_predictive_probability(1, NULL, _rowid_, '\
+        'SELECT bql_row_column_predictive_probability(1, NULL, NULL, _rowid_, '\
                 '\'[2, 3]\', \'[]\')' \
             ' FROM "t1";'
     assert bql2sql('estimate predictive probability of (age, weight) given '
             '(label) from p1;') == \
-        'SELECT bql_row_column_predictive_probability(1, NULL, _rowid_, '\
+        'SELECT bql_row_column_predictive_probability(1, NULL, NULL, _rowid_, '\
                 '\'[2, 3]\', \'[1]\')' \
             ' FROM "t1";'
     assert bql2sql('estimate predictive probability of (*) from p1;') == \
-        'SELECT bql_row_column_predictive_probability(1, NULL, _rowid_, '\
+        'SELECT bql_row_column_predictive_probability(1, NULL, NULL, _rowid_, '\
                 '\'[1, 2, 3]\', \'[]\')' \
             ' FROM "t1";'
     assert bql2sql('estimate predictive probability of (*) given (age, weight) '
             'from p1;') == \
-        'SELECT bql_row_column_predictive_probability(1, NULL, _rowid_, '\
+        'SELECT bql_row_column_predictive_probability(1, NULL, NULL, _rowid_, '\
                 '\'[1]\', \'[2, 3]\')' \
             ' FROM "t1";'
     assert bql2sql('estimate predictive probability of age given (*) '
             'from p1;') == \
-        'SELECT bql_row_column_predictive_probability(1, NULL, _rowid_, '\
+        'SELECT bql_row_column_predictive_probability(1, NULL, NULL, _rowid_, '\
                 '\'[2]\', \'[1, 3]\')' \
             ' FROM "t1";'
     assert bql2sql('estimate label, predictive probability of weight'
             ' from p1;') \
         == \
         'SELECT "label", ' \
-            'bql_row_column_predictive_probability(1, NULL, _rowid_, '\
+            'bql_row_column_predictive_probability(1, NULL, NULL, _rowid_, '\
                 '\'[3]\', \'[]\')' \
             ' FROM "t1";'
     assert bql2sql('estimate predictive probability of weight, label'
             ' from p1;') \
         == \
-        'SELECT bql_row_column_predictive_probability(1, NULL, _rowid_, '\
+        'SELECT bql_row_column_predictive_probability(1, NULL, NULL, _rowid_, '\
                 '\'[3]\', \'[]\'),' \
             ' "label"' \
             ' FROM "t1";'
     assert bql2sql('estimate predictive probability of weight + 1'
             ' from p1;') == \
-        'SELECT (bql_row_column_predictive_probability(1, NULL, _rowid_, '\
-                '\'[3]\', \'[]\') + 1)' \
+        'SELECT (bql_row_column_predictive_probability(1, NULL, NULL, '\
+                '_rowid_, \'[3]\', \'[]\') + 1)' \
             ' FROM "t1";'
     assert bql2sql('estimate predictive probability of weight given (*) + 1'
             ' from p1;') == \
-        'SELECT (bql_row_column_predictive_probability(1, NULL, _rowid_, '\
-                '\'[3]\', \'[1, 2]\') + 1)' \
+        'SELECT (bql_row_column_predictive_probability(1, NULL, NULL, '\
+                '_rowid_, \'[3]\', \'[1, 2]\') + 1)' \
             ' FROM "t1";'
     # PREDICTIVE PROBABILITY parse and compilation errors.
     with pytest.raises(parse.BQLParseError):
@@ -523,42 +524,42 @@ def test_estimate_bql():
             'from p1;')
     # PROBABILITY DENISTY.
     assert bql2sql('estimate probability density of weight = 20 from p1;') == \
-        'SELECT bql_pdf_joint(1, NULL, 3, 20) FROM "t1";'
+        'SELECT bql_pdf_joint(1, NULL, NULL, 3, 20) FROM "t1";'
     assert bql2sql('estimate probability density of weight = 20'
             ' given (age = 8)'
             ' from p1;') == \
-        'SELECT bql_pdf_joint(1, NULL, 3, 20, NULL, 2, 8) FROM "t1";'
+        'SELECT bql_pdf_joint(1, NULL, NULL, 3, 20, NULL, 2, 8) FROM "t1";'
     assert bql2sql('estimate probability density of (weight = 20, age = 8)'
             ' from p1;') == \
-        'SELECT bql_pdf_joint(1, NULL, 3, 20, 2, 8) FROM "t1";'
+        'SELECT bql_pdf_joint(1, NULL, NULL, 3, 20, 2, 8) FROM "t1";'
     assert bql2sql('estimate probability density of (weight = 20, age = 8)'
             " given (label = 'mumble') from p1;") == \
-        "SELECT bql_pdf_joint(1, NULL, 3, 20, 2, 8, NULL, 1, 'mumble')" \
+        "SELECT bql_pdf_joint(1, NULL, NULL, 3, 20, 2, 8, NULL, 1, 'mumble')" \
             ' FROM "t1";'
     assert bql2sql('estimate probability density of weight = (c + 1)'
             ' from p1;') == \
-        'SELECT bql_pdf_joint(1, NULL, 3, ("c" + 1)) FROM "t1";'
+        'SELECT bql_pdf_joint(1, NULL, NULL, 3, ("c" + 1)) FROM "t1";'
     assert bql2sql('estimate probability density of weight = f(c)'
             ' from p1;') == \
-        'SELECT bql_pdf_joint(1, NULL, 3, "f"("c")) FROM "t1";'
+        'SELECT bql_pdf_joint(1, NULL, NULL, 3, "f"("c")) FROM "t1";'
     assert bql2sql('estimate similarity to (rowid = 5) '
             'in the context of weight from p1;') == \
-        'SELECT bql_row_similarity(1, NULL, _rowid_,' \
+        'SELECT bql_row_similarity(1, NULL, NULL, _rowid_,' \
         ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)), 3) FROM "t1";'
     assert bql2sql(
             'estimate similarity of (rowid = 12) to (rowid = 5) '
             'in the context of weight from p1;') == \
-        'SELECT bql_row_similarity(1, NULL,' \
+        'SELECT bql_row_similarity(1, NULL, NULL,' \
         ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 12)),' \
         ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)), 3) FROM "t1";'
     assert bql2sql('estimate similarity to (rowid = 5) in the context of age'
             ' from p1') == \
-        'SELECT bql_row_similarity(1, NULL, _rowid_,' \
+        'SELECT bql_row_similarity(1, NULL, NULL, _rowid_,' \
         ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)), 2) FROM "t1";'
     assert bql2sql(
         'estimate similarity of (rowid = 5) to (height = 7 and age < 10)'
             ' in the context of weight from p1;') == \
-        'SELECT bql_row_similarity(1, NULL,' \
+        'SELECT bql_row_similarity(1, NULL, NULL,' \
         ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)),' \
         ' (SELECT _rowid_ FROM "t1" WHERE (("height" = 7) AND ("age" < 10))),' \
         ' 3) FROM "t1";'
@@ -568,11 +569,12 @@ def test_estimate_bql():
             'estimate similarity to (rowid = 5) in the context of * from p1;')
     assert bql2sql('estimate similarity to (rowid = 5)'
             ' in the context of age from p1;') == \
-        'SELECT bql_row_similarity(1, NULL, _rowid_,' \
+        'SELECT bql_row_similarity(1, NULL, NULL, _rowid_,' \
         ' (SELECT _rowid_ FROM "t1" WHERE ("rowid" = 5)), 2) FROM "t1";'
     assert bql2sql('estimate dependence probability of age with weight'
             ' from p1;') == \
-        'SELECT bql_column_dependence_probability(1, NULL, 2, 3) FROM "t1";'
+        'SELECT bql_column_dependence_probability(1, NULL, NULL, 2, 3) '\
+        'FROM "t1";'
     with pytest.raises(bayeslite.BQLError):
         # Need both rows fixed.
         bql2sql('estimate similarity to (rowid=2) in the context of r by p1')
@@ -587,12 +589,14 @@ def test_estimate_bql():
         bql2sql('estimate dependence probability from p1;')
     assert bql2sql('estimate mutual information of age with weight' +
         ' from p1;') == \
-        'SELECT bql_column_mutual_information(1, NULL, \'[2]\', \'[3]\', NULL)'\
+        'SELECT bql_column_mutual_information('\
+            '1, NULL, NULL, \'[2]\', \'[3]\', NULL)'\
         ' FROM "t1";'
     assert bql2sql('estimate mutual information of age with weight' +
         ' using 42 samples from p1;') == \
-        'SELECT bql_column_mutual_information(1, NULL, \'[2]\', \'[3]\', 42) '\
-        'FROM "t1";'
+        'SELECT bql_column_mutual_information('\
+            '1, NULL, NULL, \'[2]\', \'[3]\', 42)'\
+        ' FROM "t1";'
     with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
         bql2sql('estimate mutual information with age from p1;')
@@ -608,7 +612,7 @@ def test_estimate_bql():
         bql2sql('estimate mutual information using 42 samples from p1;')
     # XXX Should be SELECT, not ESTIMATE, here?
     assert bql2sql('estimate correlation of age with weight from p1;') == \
-        'SELECT bql_column_correlation(1, NULL, 2, 3) FROM "t1";'
+        'SELECT bql_column_correlation(1, NULL, NULL, 2, 3) FROM "t1";'
     with pytest.raises(bayeslite.BQLError):
         # Need both columns fixed.
         bql2sql('estimate correlation with age from p1;')
@@ -627,13 +631,13 @@ def test_predict_outside_infer():
 def test_infer_explicit_predict_confidence():
     assert bql2sql('infer explicit predict age with confidence 0.9'
             ' from p1;') == \
-        'SELECT bql_predict(1, NULL, _rowid_, 2, 0.9, NULL) FROM "t1";'
+        'SELECT bql_predict(1, NULL, NULL, _rowid_, 2, 0.9, NULL) FROM "t1";'
 
 def test_infer_explicit_predict_confidence_nsamples():
     assert bql2sql('infer explicit'
             ' predict age with confidence 0.9 using 42 samples'
             ' from p1;') == \
-        'SELECT bql_predict(1, NULL, _rowid_, 2, 0.9, 42) FROM "t1";'
+        'SELECT bql_predict(1, NULL, NULL, _rowid_, 2, 0.9, 42) FROM "t1";'
 
 def test_infer_explicit_verbatim_and_predict_confidence():
     assert bql2sql('infer explicit rowid, age,'
@@ -642,8 +646,8 @@ def test_infer_explicit_verbatim_and_predict_confidence():
             ' bql_json_get(c2, \'value\') AS "age",' \
             ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
-                ' bql_predict_confidence(1, NULL, _rowid_, 2, NULL) AS c2' \
-                ' FROM "t1");'
+                ' bql_predict_confidence(1, NULL, NULL, _rowid_, 2, NULL)' \
+                ' AS c2 FROM "t1");'
 
 def test_infer_explicit_verbatim_and_predict_noconfidence():
     assert bql2sql('infer explicit rowid, age,'
@@ -651,8 +655,8 @@ def test_infer_explicit_verbatim_and_predict_noconfidence():
         'SELECT c0 AS "rowid", c1 AS "age",' \
             ' bql_json_get(c2, \'value\') AS "age"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
-                ' bql_predict_confidence(1, NULL, _rowid_, 2, NULL) AS c2' \
-                ' FROM "t1");'
+                ' bql_predict_confidence(1, NULL, NULL, _rowid_, 2, NULL)' \
+                ' AS c2 FROM "t1");'
 
 def test_infer_explicit_verbatim_and_predict_confidence_nsamples():
     assert bql2sql('infer explicit rowid, age,'
@@ -661,8 +665,8 @@ def test_infer_explicit_verbatim_and_predict_confidence_nsamples():
             ' bql_json_get(c2, \'value\') AS "age",' \
             ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
-                ' bql_predict_confidence(1, NULL, _rowid_, 2, 42) AS c2' \
-                ' FROM "t1");'
+                ' bql_predict_confidence(1, NULL, NULL, _rowid_, 2, 42)' \
+                ' AS c2 FROM "t1");'
 
 def test_infer_explicit_verbatim_and_predict_noconfidence_nsamples():
     assert bql2sql('infer explicit rowid, age,'
@@ -670,8 +674,8 @@ def test_infer_explicit_verbatim_and_predict_noconfidence_nsamples():
         'SELECT c0 AS "rowid", c1 AS "age",' \
             ' bql_json_get(c2, \'value\') AS "age"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
-                ' bql_predict_confidence(1, NULL, _rowid_, 2, 42) AS c2' \
-                ' FROM "t1");'
+                ' bql_predict_confidence(1, NULL, NULL, _rowid_, 2, 42)' \
+                ' AS c2 FROM "t1");'
 
 def test_infer_explicit_verbatim_and_predict_confidence_as():
     assert bql2sql('infer explicit rowid, age,'
@@ -680,8 +684,8 @@ def test_infer_explicit_verbatim_and_predict_confidence_as():
             ' bql_json_get(c2, \'value\') AS "age_inf",' \
             ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
-                ' bql_predict_confidence(1, NULL, _rowid_, 2, NULL) AS c2' \
-                ' FROM "t1");'
+                ' bql_predict_confidence(1, NULL, NULL, _rowid_, 2, NULL)' \
+                ' AS c2 FROM "t1");'
 
 def test_infer_explicit_verbatim_and_predict_noconfidence_as():
     assert bql2sql('infer explicit rowid, age,'
@@ -689,8 +693,8 @@ def test_infer_explicit_verbatim_and_predict_noconfidence_as():
         'SELECT c0 AS "rowid", c1 AS "age",' \
             ' bql_json_get(c2, \'value\') AS "age_inf"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
-                ' bql_predict_confidence(1, NULL, _rowid_, 2, NULL) AS c2' \
-                ' FROM "t1");'
+                ' bql_predict_confidence(1, NULL, NULL, _rowid_, 2, NULL)' \
+                ' AS c2 FROM "t1");'
 
 def test_infer_explicit_verbatim_and_predict_confidence_as_nsamples():
     assert bql2sql('infer explicit rowid, age,'
@@ -700,8 +704,8 @@ def test_infer_explicit_verbatim_and_predict_confidence_as_nsamples():
             ' bql_json_get(c2, \'value\') AS "age_inf",' \
             ' bql_json_get(c2, \'confidence\') AS "age_conf"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
-                ' bql_predict_confidence(1, NULL, _rowid_, 2, 87) AS c2' \
-                ' FROM "t1");'
+                ' bql_predict_confidence(1, NULL, NULL, _rowid_, 2, 87)' \
+                ' AS c2 FROM "t1");'
 
 def test_infer_explicit_verbatim_and_predict_noconfidence_as_nsamples():
     assert bql2sql('infer explicit rowid, age,'
@@ -710,16 +714,16 @@ def test_infer_explicit_verbatim_and_predict_noconfidence_as_nsamples():
         'SELECT c0 AS "rowid", c1 AS "age",' \
             ' bql_json_get(c2, \'value\') AS "age_inf"' \
             ' FROM (SELECT "rowid" AS c0, "age" AS c1,' \
-                ' bql_predict_confidence(1, NULL, _rowid_, 2, 87) AS c2' \
-                ' FROM "t1");'
+                ' bql_predict_confidence(1, NULL, NULL, _rowid_, 2, 87)' \
+                ' AS c2 FROM "t1");'
 
 def test_infer_auto():
     assert bql2sql('infer rowid, age, weight from p1') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, _rowid_, 2, 0, NULL))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, NULL, _rowid_, 2, 0, NULL))' \
             ' AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, _rowid_, 3, 0, NULL))' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, NULL, _rowid_, 3, 0, NULL))' \
             ' AS "weight"' \
         ' FROM "t1";'
 
@@ -727,9 +731,10 @@ def test_infer_auto_nsamples():
     assert bql2sql('infer rowid, age, weight using (1+2) samples from p1') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, _rowid_, 2, 0, (1 + 2)))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, NULL, _rowid_, 2, 0, (1 + 2)))' \
             ' AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, _rowid_, 3, 0, (1 + 2)))' \
+        ' "IFNULL"("weight",'\
+                ' bql_predict(1, NULL, NULL, _rowid_, 3, 0, (1 + 2)))' \
             ' AS "weight"' \
         ' FROM "t1";'
 
@@ -737,9 +742,10 @@ def test_infer_auto_with_confidence():
     assert bql2sql('infer rowid, age, weight with confidence 0.9 from p1') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, _rowid_, 2, 0.9, NULL))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, NULL, _rowid_, 2, 0.9, NULL))' \
             ' AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, _rowid_, 3, 0.9, NULL))' \
+        ' "IFNULL"("weight",'\
+                ' bql_predict(1, NULL, NULL, _rowid_, 3, 0.9, NULL))' \
             ' AS "weight"' \
         ' FROM "t1";'
 
@@ -749,9 +755,10 @@ def test_infer_auto_with_confidence_nsamples():
             ' from p1') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, _rowid_, 2, 0.9, "sqrt"(2)))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, NULL, _rowid_, 2, 0.9,' \
+                ' "sqrt"(2)))' \
             ' AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, _rowid_, 3, 0.9,' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, NULL, _rowid_, 3, 0.9,' \
                 ' "sqrt"(2)))' \
             ' AS "weight"' \
         ' FROM "t1";'
@@ -761,9 +768,10 @@ def test_infer_auto_with_confidence_where():
             ' where label = \'foo\'') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, _rowid_, 2, 0.9, NULL))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, NULL, _rowid_, 2, 0.9, NULL))' \
             ' AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, _rowid_, 3, 0.9, NULL))' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, NULL, _rowid_, 3, 0.9,'\
+                ' NULL))' \
             ' AS "weight"' \
         ' FROM "t1"' \
         ' WHERE ("label" = \'foo\');'
@@ -775,9 +783,9 @@ def test_infer_auto_with_confidence_nsamples_where():
             ' where label = \'foo\'') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, _rowid_, 2, 0.9, 42))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, NULL, _rowid_, 2, 0.9, 42))' \
             ' AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, _rowid_, 3, 0.9, 42))' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, NULL, _rowid_, 3, 0.9, 42))' \
             ' AS "weight"' \
         ' FROM "t1"' \
         ' WHERE ("label" = \'foo\');'
@@ -788,13 +796,14 @@ def test_infer_auto_with_confidence_nsamples_where_predict():
                 ' = \'foo\'') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, _rowid_, 2, 0.9, NULL))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, NULL, _rowid_, 2, 0.9, NULL))' \
             ' AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, _rowid_, 3, 0.9, NULL))' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, NULL, _rowid_, 3, 0.9,' \
+                ' NULL))' \
             ' AS "weight"' \
         ' FROM "t1"' \
         ' WHERE ("ifnull"("label",' \
-                ' bql_predict(1, NULL, _rowid_, 1, 0.7, NULL))' \
+                ' bql_predict(1, NULL, NULL, _rowid_, 1, 0.7, NULL))' \
             ' = \'foo\');'
 
 def test_infer_auto_with_confidence_nsamples_where_predict_nsamples():
@@ -806,34 +815,34 @@ def test_infer_auto_with_confidence_nsamples_where_predict_nsamples():
                 ' = \'foo\'') \
         == \
         'SELECT "rowid" AS "rowid",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, _rowid_, 2, 0.9, 42))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, NULL, _rowid_, 2, 0.9, 42))' \
             ' AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, _rowid_, 3, 0.9, 42))' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, NULL, _rowid_, 3, 0.9, 42))' \
             ' AS "weight"' \
         ' FROM "t1"' \
         ' WHERE ("ifnull"("label",' \
-                ' bql_predict(1, NULL, _rowid_, 1, 0.7, 73))' \
+                ' bql_predict(1, NULL, NULL, _rowid_, 1, 0.7, 73))' \
             ' = \'foo\');'
 
 def test_infer_auto_star():
     assert bql2sql('infer rowid, * from p1') == \
         'SELECT "rowid" AS "rowid", "id" AS "id",' \
-        ' "IFNULL"("label", bql_predict(1, NULL, _rowid_, 1, 0, NULL))' \
+        ' "IFNULL"("label", bql_predict(1, NULL, NULL, _rowid_, 1, 0, NULL))' \
             ' AS "label",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, _rowid_, 2, 0, NULL))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, NULL, _rowid_, 2, 0, NULL))' \
             ' AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, _rowid_, 3, 0, NULL))' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, NULL, _rowid_, 3, 0, NULL))' \
             ' AS "weight"' \
         ' FROM "t1";'
 
 def test_infer_auto_star_nsamples():
     assert bql2sql('infer rowid, * using 1 samples from p1') == \
         'SELECT "rowid" AS "rowid", "id" AS "id",' \
-        ' "IFNULL"("label", bql_predict(1, NULL, _rowid_, 1, 0, 1))' \
+        ' "IFNULL"("label", bql_predict(1, NULL, NULL, _rowid_, 1, 0, 1))' \
             ' AS "label",' \
-        ' "IFNULL"("age", bql_predict(1, NULL, _rowid_, 2, 0, 1))' \
+        ' "IFNULL"("age", bql_predict(1, NULL, NULL, _rowid_, 2, 0, 1))' \
             ' AS "age",' \
-        ' "IFNULL"("weight", bql_predict(1, NULL, _rowid_, 3, 0, 1))' \
+        ' "IFNULL"("weight", bql_predict(1, NULL, NULL, _rowid_, 3, 0, 1))' \
             ' AS "weight"' \
         ' FROM "t1";'
 
@@ -848,17 +857,17 @@ def test_estimate_columns_trivial():
     assert bql2sql('estimate * from columns of p1 where' +
             ' (probability density of value 42) > 0.5') == \
         prefix + \
-        ' AND (bql_column_value_probability(1, NULL, v.colno, 42) > 0.5);'
+        ' AND (bql_column_value_probability(1, NULL, NULL, v.colno, 42) > 0.5);'
     assert bql2sql('estimate * from columns of p1'
             ' where (probability density of value 8)'
             ' > (probability density of age = 16)') == \
         prefix + \
-        ' AND (bql_column_value_probability(1, NULL, v.colno, 8) >' \
-        ' bql_pdf_joint(1, NULL, 2, 16));'
+        ' AND (bql_column_value_probability(1, NULL, NULL, v.colno, 8) >' \
+        ' bql_pdf_joint(1, NULL, NULL, 2, 16));'
     assert bql2sql('estimate *, probability density of value 8 given (age = 8)'
             ' from columns of p1;') == \
         prefix0 + \
-        ', bql_column_value_probability(1, NULL, v.colno, 8, 2, 8)' + \
+        ', bql_column_value_probability(1, NULL, NULL, v.colno, 8, 2, 8)' + \
         prefix1 + ';'
     with pytest.raises(bayeslite.BQLError):
         bql2sql('estimate probability density of value 8 given (agee = 8)'
@@ -874,7 +883,8 @@ def test_estimate_columns_trivial():
     assert bql2sql('estimate * from columns of p1 where' +
             ' dependence probability with age > 0.5;') == \
         prefix + \
-        ' AND (bql_column_dependence_probability(1, NULL, 2, v.colno) > 0.5);'
+        ' AND (bql_column_dependence_probability(1, NULL, NULL, 2, v.colno)' \
+            ' > 0.5);'
     with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
         bql2sql('estimate * from columns of p1 where' +
@@ -886,18 +896,18 @@ def test_estimate_columns_trivial():
     assert bql2sql('estimate * from columns of p1 order by' +
             ' mutual information with age;') == \
         prefix + \
-        ' ORDER BY bql_column_mutual_information(1, NULL, \'[2]\','\
+        ' ORDER BY bql_column_mutual_information(1, NULL, NULL, \'[2]\','\
         ' \'[\' || v.colno || \']\', NULL);'
     assert bql2sql('estimate * from columns of p1 order by' +
             ' mutual information with (age, label) using 42 samples;') == \
         prefix + \
-        ' ORDER BY bql_column_mutual_information(1, NULL, \'[2, 1]\','\
+        ' ORDER BY bql_column_mutual_information(1, NULL, NULL, \'[2, 1]\','\
         ' \'[\' || v.colno || \']\', 42);'
     assert bql2sql('estimate * from columns of p1 order by' +
             ' mutual information with (age, label)'
             ' given (weight=12) using 42 samples;') == \
         prefix + \
-        ' ORDER BY bql_column_mutual_information(1, NULL, \'[2, 1]\','\
+        ' ORDER BY bql_column_mutual_information(1, NULL, NULL, \'[2, 1]\','\
         ' \'[\' || v.colno || \']\', 42, 3, 12);'
     with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
@@ -917,7 +927,8 @@ def test_estimate_columns_trivial():
             ' mutual information using 42 samples > 0.5;')
     assert bql2sql('estimate * from columns of p1 order by' +
             ' correlation with age desc;') == \
-        prefix + ' ORDER BY bql_column_correlation(1, NULL, 2, v.colno) DESC;'
+        prefix + ' ORDER BY bql_column_correlation(1, NULL, NULL, 2, v.colno)' \
+            ' DESC;'
     with pytest.raises(bayeslite.BQLError):
         # Must omit exactly one column.
         bql2sql('estimate * from columns of p1 order by' +
@@ -935,9 +946,9 @@ def test_estimate_columns_trivial():
             ' from columns of p1'
             ' where depprob > 0.5 order by mutinf desc') == \
         prefix0 + \
-        ', bql_column_dependence_probability(1, NULL, 3, v.colno)' \
+        ', bql_column_dependence_probability(1, NULL, NULL, 3, v.colno)' \
             ' AS "depprob"' \
-        ', bql_column_mutual_information(1, NULL, \'[3]\',' \
+        ', bql_column_mutual_information(1, NULL, NULL, \'[3]\',' \
         ' \'[\' || v.colno || \']\', NULL) AS "mutinf"' \
         + prefix1 + \
         ' AND ("depprob" > 0.5)' \
@@ -948,9 +959,9 @@ def test_estimate_columns_trivial():
             ' from columns of p1'
             ' where depprob > 0.5 order by mutinf desc') == \
         prefix0 + \
-        ', bql_column_dependence_probability(1, NULL, 3, v.colno)' \
+        ', bql_column_dependence_probability(1, NULL, NULL, 3, v.colno)' \
             ' AS "depprob"' \
-        ', bql_column_mutual_information(1, NULL, \'[2, 3]\',' \
+        ', bql_column_mutual_information(1, NULL, NULL, \'[2, 3]\',' \
         ' \'[\' || v.colno || \']\', NULL) AS "mutinf"' \
         + prefix1 + \
         ' AND ("depprob" > 0.5)' \
@@ -989,25 +1000,26 @@ def test_estimate_pairwise_trivial():
     assert bql2sql('estimate dependence probability'
             ' from pairwise columns of p1;') == \
         prefix + \
-        'bql_column_dependence_probability(1, NULL, v0.colno, v1.colno)' + \
+        'bql_column_dependence_probability(1, NULL, NULL, v0.colno,'\
+            ' v1.colno)' + \
         infix + ';'
     assert bql2sql('estimate mutual information'
             ' from pairwise columns of p1 where'
             ' (probability density of age = 0) > 0.5;') == \
         prefix + \
-        'bql_column_mutual_information(1, NULL, '\
-        '\'[\' || v0.colno || \']\', \'[\' || v1.colno || \']\', NULL)' + \
+        'bql_column_mutual_information(1, NULL, NULL, '\
+            '\'[\' || v0.colno || \']\', \'[\' || v1.colno || \']\', NULL)' + \
         infix + \
-        ' AND (bql_pdf_joint(1, NULL, 2, 0) > 0.5);'
+        ' AND (bql_pdf_joint(1, NULL, NULL, 2, 0) > 0.5);'
     assert bql2sql('estimate mutual information given (label=\'go\', weight)'
             ' from pairwise columns of p1 where'
             ' (probability density of age = 0) > 0.5;') == \
         prefix + \
-        'bql_column_mutual_information(1, NULL,'\
+        'bql_column_mutual_information(1, NULL, NULL,'\
         ' \'[\' || v0.colno || \']\', \'[\' || v1.colno || \']\', NULL,'\
         ' 1, \'go\', 3, NULL)' + \
         infix + \
-        ' AND (bql_pdf_joint(1, NULL, 2, 0) > 0.5);'
+        ' AND (bql_pdf_joint(1, NULL, NULL, 2, 0) > 0.5);'
     with pytest.raises(bayeslite.BQLError):
         # PROBABILITY DENSITY OF VALUE is 1-column.
         bql2sql('estimate correlation from pairwise columns of p1 where' +
@@ -1033,9 +1045,10 @@ def test_estimate_pairwise_trivial():
             ' where dependence probability with weight > 0.5;')
     assert bql2sql('estimate correlation from pairwise columns of p1'
             ' where dependence probability > 0.5;') == \
-        prefix + 'bql_column_correlation(1, NULL, v0.colno, v1.colno)' + \
+        prefix + 'bql_column_correlation(1, NULL, NULL, v0.colno, v1.colno)' + \
         infix + ' AND' \
-        ' (bql_column_dependence_probability(1, NULL, v0.colno, v1.colno)' \
+        ' (bql_column_dependence_probability(1, NULL, NULL, v0.colno,' \
+                ' v1.colno)' \
             ' > 0.5);'
     with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
@@ -1059,15 +1072,15 @@ def test_estimate_pairwise_trivial():
             ' where mutual information with weight using 42 samples > 0.5;')
     assert bql2sql('estimate correlation from pairwise columns of p1' +
             ' where mutual information > 0.5;') == \
-        prefix + 'bql_column_correlation(1, NULL, v0.colno, v1.colno)' + \
+        prefix + 'bql_column_correlation(1, NULL, NULL, v0.colno, v1.colno)' + \
         infix + ' AND' + \
-        ' (bql_column_mutual_information(1, NULL,'\
+        ' (bql_column_mutual_information(1, NULL, NULL,'\
         ' \'[\' || v0.colno || \']\', \'[\' || v1.colno || \']\', NULL) > 0.5);'
     assert bql2sql('estimate correlation from pairwise columns of p1' +
             ' where mutual information using 42 samples > 0.5;') == \
-        prefix + 'bql_column_correlation(1, NULL, v0.colno, v1.colno)' + \
+        prefix + 'bql_column_correlation(1, NULL, NULL, v0.colno, v1.colno)' + \
         infix + ' AND' + \
-        ' (bql_column_mutual_information(1, NULL,'\
+        ' (bql_column_mutual_information(1, NULL, NULL,'\
         ' \'[\' || v0.colno || \']\', \'[\' || v1.colno || \']\', 42) > 0.5);'
     with pytest.raises(bayeslite.BQLError):
         # Must omit both columns.
@@ -1085,9 +1098,9 @@ def test_estimate_pairwise_trivial():
             ' where correlation with weight > 0.5;')
     assert bql2sql('estimate correlation from pairwise columns of p1'
             ' where correlation > 0.5;') == \
-        prefix + 'bql_column_correlation(1, NULL, v0.colno, v1.colno)' + \
+        prefix + 'bql_column_correlation(1, NULL, NULL, v0.colno, v1.colno)' + \
         infix + ' AND' + \
-        ' (bql_column_correlation(1, NULL, v0.colno, v1.colno) > 0.5);'
+        ' (bql_column_correlation(1, NULL, NULL, v0.colno, v1.colno) > 0.5);'
     with pytest.raises(bayeslite.BQLError):
         # Makes no sense.
         bql2sql('estimate dependence probability'
@@ -1098,9 +1111,9 @@ def test_estimate_pairwise_trivial():
             ' from pairwise columns of p1'
             ' where depprob > 0.5 order by mutinf desc') == \
         prefix + \
-        'bql_column_dependence_probability(1, NULL, v0.colno, v1.colno)' \
+        'bql_column_dependence_probability(1, NULL, NULL, v0.colno, v1.colno)' \
         ' AS "depprob",' \
-        ' bql_column_mutual_information(1, NULL,'\
+        ' bql_column_mutual_information(1, NULL, NULL,'\
         ' \'[\' || v0.colno || \']\', \'[\' || v1.colno || \']\', NULL)'\
         ' AS "mutinf"' \
         + infix0 + \
@@ -1112,7 +1125,8 @@ def test_estimate_pairwise_row():
     infix = ' AS value FROM "t1" AS r0, "t1" AS r1'
     assert bql2sql('estimate similarity in the context of age' +
             ' from pairwise p1;') == \
-        prefix + ', bql_row_similarity(1, NULL, r0._rowid_, r1._rowid_, 2)' + \
+        prefix + ', bql_row_similarity(1, NULL, NULL,'\
+            ' r0._rowid_, r1._rowid_, 2)' + \
         infix + ';'
     with pytest.raises(bayeslite.BQLError):
         # PREDICT is a 1-row function.
@@ -1122,7 +1136,8 @@ def test_estimate_pairwise_selected_columns():
     assert bql2sql('estimate dependence probability'
             ' from pairwise columns of p1 for label, age') == \
         'SELECT 1 AS population_id, v0.name AS name0, v1.name AS name1,' \
-        ' bql_column_dependence_probability(1, NULL, v0.colno, v1.colno)' \
+        ' bql_column_dependence_probability(1, NULL, NULL,' \
+                ' v0.colno, v1.colno)' \
             ' AS value' \
         ' FROM bayesdb_population AS p,' \
         ' bayesdb_variable AS v0,' \
@@ -1136,7 +1151,8 @@ def test_estimate_pairwise_selected_columns():
             ' for (ESTIMATE * FROM COLUMNS OF p1'
                 ' ORDER BY name DESC LIMIT 2)') == \
         'SELECT 1 AS population_id, v0.name AS name0, v1.name AS name1,' \
-        ' bql_column_dependence_probability(1, NULL, v0.colno, v1.colno)' \
+        ' bql_column_dependence_probability(1, NULL, NULL, v0.colno,' \
+                ' v1.colno)' \
             ' AS value' \
         ' FROM bayesdb_population AS p,' \
         ' bayesdb_variable AS v0,' \
@@ -1533,7 +1549,7 @@ def test_parametrized():
                     ' AND name = ?',
             # ESTIMATE SIMILARITY TO (rowid=1):
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
-            'SELECT bql_row_similarity(1, NULL, _rowid_,'
+            'SELECT bql_row_similarity(1, NULL, NULL, _rowid_,'
                 ' (SELECT _rowid_ FROM "t" WHERE ("rowid" = 1)), 0) FROM "t"',
             'SELECT id FROM bayesdb_generator WHERE population_id = ?',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
@@ -1575,7 +1591,7 @@ def test_parametrized():
                     ' AND name = ?',
             'SELECT tabname FROM bayesdb_population WHERE id = ?',
             # ESTIMATE SIMILARITY TO (rowid=1):
-            'SELECT bql_row_similarity(1, NULL, _rowid_,'
+            'SELECT bql_row_similarity(1, NULL, NULL, _rowid_,'
                 ' (SELECT _rowid_ FROM "t" WHERE ("rowid" = 1)), 0) FROM "t"',
             'SELECT id FROM bayesdb_generator WHERE population_id = ?',
             'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
