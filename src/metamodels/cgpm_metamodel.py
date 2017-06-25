@@ -399,10 +399,6 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             max_seconds=None, ckpt_iterations=None, ckpt_seconds=None,
             program=None):
 
-        # Not sure why model-based analysis is useful.
-        if modelnos:
-            raise NotImplementedError('CGpm analysis by models not supported.')
-
         # Checkpoint by seconds disabled.
         if ckpt_seconds:
             raise NotImplementedError('Checkpoint by seconds in CGPM analyze.')
@@ -460,6 +456,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                     cols=vars_target_baseline,
                     progress=progress,
                     checkpoint=ckpt_iterations,
+                    statenos=modelnos,
                     multiprocess=self._multiprocess,
                 )
             else:
@@ -469,6 +466,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                     cols=vars_target_baseline,
                     progress=progress,
                     checkpoint=ckpt_iterations,
+                    statenos=modelnos,
                     multiprocess=self._multiprocess,
                 )
 
@@ -479,6 +477,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 S=max_seconds,
                 cols=vars_target_foreign,
                 progress=progress,
+                statenos=modelnos,
                 multiprocess=self._multiprocess,
             )
 
@@ -499,7 +498,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Engine gives us a list of dependence probabilities which it is our
         # responsibility to integrate over.
         depprob_list = engine.dependence_probability(
-            colno0, colno1, multiprocess=self._multiprocess)
+            colno0, colno1, statenos=modelnos, multiprocess=self._multiprocess)
 
         return arithmetic_mean(depprob_list)
 
@@ -524,7 +523,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # responsibility to integrate over.
         mi_list = engine.mutual_information(
             colnos0, colnos1, evidence=evidence, N=numsamples,
-            progress=True, multiprocess=self._multiprocess)
+            progress=True, statenos=modelnos, multiprocess=self._multiprocess)
 
         # Pass through the distribution of CMI to BayesDB without aggregation.
         return mi_list
@@ -545,7 +544,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Engine gives us a list of similarities which it is our
         # responsibility to integrate over.
         similarity_list = engine.row_similarity(
-            cgpm_rowid, cgpm_target_rowid, colnos,
+            cgpm_rowid, cgpm_target_rowid, colnos, statenos=modelnos,
             multiprocess=self._multiprocess)
 
         return arithmetic_mean(similarity_list)
@@ -595,7 +594,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Go!
         similarity_list = engine.relevance_probability(
             cgpm_rowid_target, cgpm_rowid_query, colno, hypotheticals_numeric,
-            multiprocess=self._multiprocess)
+            statenos=modelnos, multiprocess=self._multiprocess)
 
         return similarity_list
 
@@ -649,9 +648,11 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         engine = self._engine(bdb, generator_id)
         samples = engine.simulate(
             cgpm_rowid, cgpm_query, cgpm_evidence, N=num_samples,
-            accuracy=accuracy, multiprocess=self._multiprocess)
+            accuracy=accuracy, statenos=modelnos,
+            multiprocess=self._multiprocess)
         weighted_samples = engine._likelihood_weighted_resample(
-            samples, cgpm_rowid, cgpm_evidence, multiprocess=self._multiprocess)
+            samples, cgpm_rowid, cgpm_evidence, statenos=modelnos,
+            multiprocess=self._multiprocess)
         def map_value(colno, value):
             return self._from_numeric(bdb, generator_id, colno, value)
         return [
@@ -677,9 +678,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         engine = self._engine(bdb, generator_id)
         logpdfs = engine.logpdf(
             cgpm_rowid, cgpm_query, cgpm_evidence, accuracy=None,
-            multiprocess=self._multiprocess)
+            statenos=modelnos, multiprocess=self._multiprocess)
         return engine._likelihood_weighted_integrate(
-            logpdfs, cgpm_rowid, cgpm_evidence, multiprocess=self._multiprocess)
+            logpdfs, cgpm_rowid, cgpm_evidence,
+            statenos=modelnos, multiprocess=self._multiprocess)
 
     def _unique_rowid(self, rowids):
         if len(set(rowids)) != 1:

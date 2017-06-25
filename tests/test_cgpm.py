@@ -1144,3 +1144,87 @@ def test_add_drop_models():
             WHERE generator_id = ?
         ''', (generator_id,))
         assert cursor_value(cursor) == 0
+
+def test_using_modelnos():
+    with cgpm_dummy_satellites_bdb() as bdb:
+        bdb.execute('''
+            CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
+                MODEL apogee AS NUMERICAL;
+                MODEL class_of_orbit AS CATEGORICAL;
+                MODEL country_of_operator AS CATEGORICAL;
+                MODEL launch_mass AS NUMERICAL;
+                MODEL perigee AS NUMERICAL;
+                MODEL period AS NUMERICAL
+            )
+        ''')
+        bayesdb_register_metamodel(bdb, CGPM_Metamodel(dict(), multiprocess=0))
+        bdb.execute('''
+            CREATE ANALYSIS SCHEMA g0 FOR satellites USING cgpm(
+                SUBSAMPLE 10
+            );
+        ''')
+        bdb.execute('INITIALIZE 2 ANALYSES FOR g0')
+        # Predictive probability results should be different for modelnos 0, 1.
+
+        # Crash test simulate.
+        bdb.execute('''
+            SIMULATE apogee, class_of_orbit
+            FROM satellites
+            MODELED BY g0
+            USING ANALYSIS 0-1
+            LIMIT 10
+        ''')
+        # Crash test infer explicit.
+        bdb.execute('''
+            INFER EXPLICIT PREDICT period, perigee
+            FROM satellites
+            MODELED BY g0
+            USING ANALYSIS 0
+            LIMIT 2
+        ''')
+        # Crash test dependence probability BY.
+        c = bdb.execute('''
+            ESTIMATE
+                DEPENDENCE PROBABILITY OF launch_mass WITH period
+            BY satellites
+            MODELED BY g0
+            USING ANALYSIS 0
+        ''')
+        assert cursor_value(c) in [0, 1]
+        # Crash test dependence probability pairwise.
+        cursor = bdb.execute('''
+            ESTIMATE
+                DEPENDENCE PROBABILITY
+            FROM PAIRWISE VARIABLES OF satellites
+            MODELED BY g0
+            USING ANALYSIS 1
+        ''')
+        for d in cursor:
+            assert d[0] in [0, 1]
+        # Crash test mutual information 1row.
+        p0 = bdb.execute('''
+            ESTIMATE
+                MUTUAL INFORMATION WITH (period) USING 1 SAMPLES
+            FROM VARIABLES OF satellites
+            USING ANALYSIS 0
+        ''').fetchall()
+        # Test analyze on per-model basis.
+        bdb.execute('''
+            ANALYZE g0
+            ANALYSIS 0
+            FOR 1 ITERATION
+            CHECKPOINT 1 ITERATION
+            WAIT;
+        ''')
+        engine = bdb.metamodels['cgpm']._engine(bdb, 1)
+        assert len(engine.states[0].diagnostics['logscore']) == 1
+        assert len(engine.states[1].diagnostics['logscore']) == 0
+        bdb.execute('''
+            ANALYZE g0
+            ANALYSIS 1
+            FOR 4 ITERATION
+            CHECKPOINT 1 ITERATION
+            WAIT (OPTIMIZED);
+        ''')
+        assert len(engine.states[0].diagnostics['logscore']) == 1
+        assert len(engine.states[1].diagnostics['logscore']) == 4
