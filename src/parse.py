@@ -322,8 +322,9 @@ class BQLSemantics(object):
     def p_analysis_token_compound(self, p):     return ['('] + p + [')']
     def p_analysis_token_primitive(self, t):    return [t]
 
-    def p_command_regress(self, target, givens, nsamp, pop, metamodel):
-        return ast.Regress(target, givens, nsamp, pop, metamodel)
+    def p_command_regress(self, target, givens, nsamp, pop, metamodel,
+            modelnos):
+        return ast.Regress(target, givens, nsamp, pop, metamodel, modelnos)
 
     def p_simulate_s(self, cols, population, generator, modelnos, constraints,
             lim, acc):

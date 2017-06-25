@@ -155,6 +155,7 @@ Regress = namedtuple('Regress', [
     'nsamp',
     'population',
     'metamodel',
+    'modelnos'
 ])
 
 Simulate = namedtuple('Simulate', [

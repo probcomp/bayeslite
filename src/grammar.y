@@ -258,7 +258,8 @@ command(regress)        ::= K_REGRESS column_name(target)
                                 K_GIVEN T_LROUND select_columns(givens) T_RROUND
                                 nsamples_opt(nsamp)
                                 K_BY|K_WITHIN population_name(pop)
-                                modelledby_opt(metamodel).
+                                modelledby_opt(metamodel)
+                                usingmodel_opt(modelnos).
 
 /*
  * Queries

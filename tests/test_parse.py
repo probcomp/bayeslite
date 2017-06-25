@@ -1312,10 +1312,12 @@ def test_regress():
                     expression=ast.ExpCol(table=None, column='y'), name=None),],
             nsamp=ast.ExpLit(value=ast.LitInt(value=10)),
             population='pop',
-            metamodel=None
+            metamodel=None,
+            modelnos=None,
     )]
     assert parse_bql_string('''
-        regress t given (y, x) using 10 samples by pop modeled by m;
+        regress t given (y, x) using 10 samples by pop modeled by m
+        using models 1, 7;
         ''') == [
         ast.Regress(
             target='t',
@@ -1327,6 +1329,7 @@ def test_regress():
             nsamp=ast.ExpLit(value=ast.LitInt(value=10)),
             population='pop',
             metamodel='m',
+            modelnos=[1,7],
     )]
     assert parse_bql_string('regress t given (*) by pop;') == [
         ast.Regress(
@@ -1335,10 +1338,12 @@ def test_regress():
             nsamp=None,
             population='pop',
             metamodel=None,
+            modelnos=None,
     )]
     # Disallow this query in the compiler, mixing * with u.
     assert parse_bql_string('''
-        regress t given (*, u) using 10 samples by pop modeled by m;
+        regress t given (*, u) using 10 samples by pop modeled by m
+        using models 1-3;
     ''') == [
         ast.Regress(
             target='t',
@@ -1349,6 +1354,7 @@ def test_regress():
             nsamp=ast.ExpLit(value=ast.LitInt(value=10)),
             population='pop',
             metamodel='m',
+            modelnos=[1,2,3],
     )]
     # Disallow this query in the compiler, mixing subquery.
     assert parse_bql_string('''
@@ -1379,7 +1385,8 @@ def test_regress():
             ],
             nsamp=ast.ExpLit(value=ast.LitInt(value=10)),
             population='pop',
-            metamodel='f'
+            metamodel='f',
+            modelnos=None,
     )]
 
     with pytest.raises(bayeslite.BQLParseError):
