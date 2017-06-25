@@ -1020,8 +1020,9 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 if ckpt_seconds is not None:
                     ckpt_deadline = time.time() + ckpt_seconds
 
-    def column_dependence_probability(self, bdb, generator_id, modelno,
+    def column_dependence_probability(self, bdb, generator_id, modelnos,
             colno0, colno1):
+        modelno = self.get_modelno(bdb, modelnos)
         if colno0 == colno1:
             return 1
         cc_colno0 = crosscat_cc_colno(bdb, generator_id, colno0)
@@ -1037,8 +1038,9 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             count += 1
         return float('NaN') if nmodels == 0 else (float(count)/float(nmodels))
 
-    def column_mutual_information(self, bdb, generator_id, modelno, colnos0,
+    def column_mutual_information(self, bdb, generator_id, modelnos, colnos0,
             colnos1, constraints=None, numsamples=None):
+        modelno = self.get_modelno(bdb, modelnos)
         if numsamples is None:
             numsamples = 100
         # XXX Raise error about ignored constraints.
@@ -1067,8 +1069,9 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
          # Pass through the distribution of MI to BayesDB without aggregation.
         return mi
 
-    def row_similarity(self, bdb, generator_id, modelno, rowid, target_rowid,
+    def row_similarity(self, bdb, generator_id, modelnos, rowid, target_rowid,
             colnos):
+        modelno = self.get_modelno(bdb, modelnos)
         X_L_list = self._crosscat_latent_state(bdb, generator_id, modelno)
         X_D_list = self._crosscat_latent_data(bdb, generator_id, modelno)
         [given_row_id, target_row_id], X_L_list, X_D_list = \
@@ -1084,8 +1087,9 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 for colno in colnos],
         )
 
-    def predict_confidence(self, bdb, generator_id, modelno, rowid, colno,
+    def predict_confidence(self, bdb, generator_id, modelnos, rowid, colno,
             numsamples=None):
+        modelno = self.get_modelno(bdb, modelnos)
         if numsamples is None:
             numsamples = 100    # XXXWARGHWTF
         M_c = self._crosscat_metadata(bdb, generator_id)
@@ -1114,8 +1118,9 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         value = crosscat_code_to_value(bdb, generator_id, M_c, colno, code)
         return value, confidence
 
-    def simulate_joint(self, bdb, generator_id, rowid, targets, constraints,
-            modelno, num_samples=1, accuracy=None):
+    def simulate_joint(self, bdb, generator_id, modelnos, rowid, targets,
+            constraints, num_samples=1, accuracy=None):
+        modelno = self.get_modelno(bdb, modelnos)
         M_c = self._crosscat_metadata(bdb, generator_id)
         # An invalid constraint value should result in a BQL error.
         if constraints is None:
@@ -1148,8 +1153,9 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
                 for (colno, code) in zip(targets, raw_output)]
             for raw_output in raw_outputs]
 
-    def logpdf_joint(self, bdb, generator_id, rowid, targets, constraints,
-            modelno=None):
+    def logpdf_joint(self, bdb, generator_id, modelnos, rowid, targets,
+            constraints,):
+        modelno = self.get_modelno(bdb, modelnos)
         M_c = self._crosscat_metadata(bdb, generator_id)
         try:
             for colno, value in constraints:
@@ -1178,6 +1184,13 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             Q=Q,
         )
         return r
+
+    def get_modelno(self, bdb, modelnos):
+        if modelnos is None:
+            return None
+        if len(modelnos) > 1:
+            raise BQLError(bdb, 'CrossCat accepts only 1 model number.')
+        return modelnos[0]
 
 class CrosscatCache(object):
     def __init__(self):

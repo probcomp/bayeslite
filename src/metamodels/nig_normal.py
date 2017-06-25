@@ -258,7 +258,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                 (generator_id,))]
 
     def simulate_joint(
-            self, bdb, generator_id, rowid, targets, _constraints, modelno=None,
+            self, bdb, generator_id, modelnos, rowid, targets, _constraints,
             num_samples=1, accuracy=None):
         # Note: The constraints are irrelevant because columns are
         # independent in the true distribution (except in the case of
@@ -268,9 +268,9 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # dependence induced by approximating the true distribution
         # with a finite number of full-table models.
         with bdb.savepoint():
-            if modelno is None:
+            if modelnos is None:
                 modelnos = self._modelnos(bdb, generator_id)
-                modelno = self.prng.choice(modelnos)
+            modelno = self.prng.choice(modelnos)
             (mus, sigmas) = self._model_mus_sigmas(bdb, generator_id, modelno)
             return [[self._simulate_1(bdb, generator_id, mus, sigmas, colno)
                      for colno in targets]
@@ -305,8 +305,8 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             sigmas[colno] = sigma
         return (mus, sigmas)
 
-    def logpdf_joint(self, bdb, generator_id, rowid, targets, _constraints,
-            modelno=None):
+    def logpdf_joint(self, bdb, generator_id, modelnos, rowid, targets,
+            _constraints,):
         # Note: The constraints are irrelevant for the same reason as
         # in simulate_joint.
         (all_mus, all_sigmas) = self._all_mus_sigmas(bdb, generator_id)
@@ -316,6 +316,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             def logpdf_1((colno, x)):
                 return self._logpdf_1(bdb, generator_id, mus, sigmas, colno, x)
             return sum(map(logpdf_1, targets))
+        # XXX Ignore modelnos and aggregate over all of them.
         modelwise = [model_log_pdf(m) for m in sorted(all_mus.keys())]
         return logmeanexp(modelwise)
 
@@ -351,28 +352,28 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                 all_sigmas[modelno][colno] = sigma
             return (all_mus, all_sigmas)
 
-    def column_dependence_probability(self, bdb, generator_id, modelno, colno0,
+    def column_dependence_probability(self, bdb, generator_id, modelnos, colno0,
             colno1):
         # XXX Fix me!
         return 0
 
-    def column_mutual_information(self, bdb, generator_id, modelno, colnos0,
+    def column_mutual_information(self, bdb, generator_id, modelnos, colnos0,
             colnos1, constraints, numsamples):
         # XXX Fix me!
         return [0]
 
-    def row_similarity(self, bdb, generator_id, modelno, rowid, target_rowid,
+    def row_similarity(self, bdb, generator_id, modelnos, rowid, target_rowid,
             colnos):
         # XXX Fix me!
         return 0
 
-    def predict_confidence(self, bdb, generator_id, modelno, rowid, colno,
+    def predict_confidence(self, bdb, generator_id, modelnos, rowid, colno,
             numsamples=None):
         if colno < 0:
             return (0, 1)       # deviation of mode from mean is zero
-        if modelno is None:
+        if modelnos is None:
             modelnos = self._modelnos(bdb, generator_id)
-            modelno = self.prng.choice(modelnos)
+        modelno = self.prng.choice(modelnos)
         mus, _sigmas = self._model_mus_sigmas(bdb, generator_id, modelno)
         return (mus[colno], 1.)
 

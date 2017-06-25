@@ -487,7 +487,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
 
     def column_dependence_probability(
-            self, bdb, generator_id, modelno, colno0, colno1):
+            self, bdb, generator_id, modelnos, colno0, colno1):
         # Optimize special-case vacuous case of self-dependence.
         # XXX Caller should avoid this.
         if colno0 == colno1:
@@ -504,7 +504,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         return arithmetic_mean(depprob_list)
 
     def column_mutual_information(
-            self, bdb, generator_id, modelno, colnos0, colnos1,
+            self, bdb, generator_id, modelnos, colnos0, colnos1,
             constraints=None, numsamples=None):
         # XXX Default number of samples drawn from my arse.
         if numsamples is None:
@@ -530,7 +530,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         return mi_list
 
     def row_similarity(
-            self, bdb, generator_id, modelno, rowid, target_rowid, colnos):
+            self, bdb, generator_id, modelnos, rowid, target_rowid, colnos):
         # Map the variable and individual indexing.
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
         cgpm_target_rowid = self._cgpm_rowid(bdb, generator_id, target_rowid)
@@ -550,8 +550,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         return arithmetic_mean(similarity_list)
 
-    def predictive_relevance(self, bdb, generator_id, modelno, rowid_target,
-            rowid_query, hypotheticals, colno):
+    def predictive_relevance(
+            self, bdb, generator_id, modelnos, rowid_target, rowid_query,
+            hypotheticals, colno):
         # Convert target rowid
         cgpm_rowid_target = self._cgpm_rowid(bdb, generator_id, rowid_target)
 
@@ -599,7 +600,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         return similarity_list
 
     def predict_confidence(
-            self, bdb, generator_id, modelno, rowid, colno, numsamples=None):
+            self, bdb, generator_id, modelnos, rowid, colno, numsamples=None):
         if not numsamples:
             numsamples = 2
         assert numsamples > 0
@@ -619,7 +620,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Retrieve the samples. Specifying `rowid` ensures that relevant
         # constraints are retrieved by `simulate`, so provide empty constraints.
         sample = self.simulate_joint(
-            bdb, generator_id, rowid, [colno], [], modelno, numsamples)
+            bdb, generator_id, modelnos, rowid, [colno], [], numsamples)
 
         # Determine the imputation strategy (mode or mean).
         stattype = core.bayesdb_variable_stattype(
@@ -630,7 +631,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             return _impute_numerical(sample)
 
     def simulate_joint(
-            self, bdb, generator_id, rowid, targets, constraints, modelno,
+            self, bdb, generator_id, modelnos, rowid, targets, constraints,
             num_samples=None, accuracy=None):
         if num_samples is None:
             num_samples = 1
@@ -659,7 +660,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         ]
 
     def logpdf_joint(
-            self, bdb, generator_id, rowid, targets, constraints, modelno):
+            self, bdb, generator_id, modelnos, rowid, targets, constraints):
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
         # TODO: Handle nan values in the logpdf query.
         cgpm_query = {

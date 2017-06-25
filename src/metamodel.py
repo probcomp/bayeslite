@@ -190,22 +190,22 @@ class IBayesDBMetamodel(object):
         """
         raise NotImplementedError
 
-    def column_dependence_probability(self, bdb, generator_id, modelno, colno0,
+    def column_dependence_probability(self, bdb, generator_id, modelnos, colno0,
             colno1):
         """Compute ``DEPENDENCE PROBABILITY OF <col0> WITH <col1>``."""
         raise NotImplementedError
 
-    def column_mutual_information(self, bdb, generator_id, modelno, colnos0,
+    def column_mutual_information(self, bdb, generator_id, modelnos, colnos0,
             colnos1, constraints=None, numsamples=100):
         """Compute ``MUTUAL INFORMATION OF (<cols0>) WITH (<cols1>)``."""
         raise NotImplementedError
 
-    def row_similarity(self, bdb, generator_id, modelno, rowid, target_rowid,
+    def row_similarity(self, bdb, generator_id, modelnos, rowid, target_rowid,
             colnos):
         """Compute ``SIMILARITY TO <target_row>`` for given `rowid`."""
         raise NotImplementedError
 
-    def predictive_relevance(self, bdb, generator_id, modelno, rowid_target,
+    def predictive_relevance(self, bdb, generator_id, modelnos, rowid_target,
             rowid_query, hypotheticals, colno):
         """Compute predictive relevance, also known as relevance probability.
 
@@ -219,22 +219,22 @@ class IBayesDBMetamodel(object):
         raise NotImplementedError
 
 
-    def predict(self, bdb, generator_id, modelno, rowid, colno, threshold,
+    def predict(self, bdb, generator_id, modelnos, rowid, colno, threshold,
             numsamples=None):
         """Predict a value for a column, if confidence is high enough."""
-        value, confidence = self.predict_confidence(bdb, generator_id, modelno,
-            rowid, colno, numsamples=numsamples)
+        value, confidence = self.predict_confidence(
+            bdb, generator_id, modelnos, rowid, colno, numsamples=numsamples)
         if confidence < threshold:
             return None
         return value
 
-    def predict_confidence(self, bdb, generator_id, modelno, rowid, colno,
+    def predict_confidence(self, bdb, generator_id, modelnos, rowid, colno,
             numsamples=None):
         """Predict a value for a column and return confidence."""
         raise NotImplementedError
 
-    def simulate_joint(self, bdb, generator_id, rowid, targets, constraints,
-            modelno, num_samples=1, accuracy=None):
+    def simulate_joint(self, bdb, generator_id, modelnos, rowid, targets,
+            constraints, num_samples=1, accuracy=None):
         """Simulate `targets` from a generator, subject to `constraints`.
 
         Returns a list of lists of values for the specified targets.
@@ -259,8 +259,8 @@ class IBayesDBMetamodel(object):
         """
         raise NotImplementedError
 
-    def logpdf_joint(self, bdb, generator_id, rowid, targets, constraints,
-            modelno=None):
+    def logpdf_joint(self, bdb, generator_id, modelnos, rowid, targets,
+            constraints):
         """Evalute the joint probability of `targets` subject to `constraints`.
 
         Returns the probability density of the targets (in log domain).

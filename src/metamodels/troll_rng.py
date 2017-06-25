@@ -48,11 +48,11 @@ class TrollMetamodel(metamodel.IBayesDBMetamodel):
     def initialize_models(self, *args, **kwargs): pass
     def drop_models(self, *args, **kwargs): pass
     def analyze_models(self, *args, **kwargs): pass
-    def simulate_joint(self, _bdb, _generator_id, rowid, targets, _constraints,
-            modelno=None, num_samples=1):
+    def simulate_joint(self, _bdb, _generator_id, _modelnos, rowid, targets,
+            _constraints, num_samples=1):
         return [[9 for _ in targets]] * num_samples
-    def logpdf_joint(self, _bdb, _generator_id, rowid, targets, constraints,
-            modelno=None):
+    def logpdf_joint(self, _bdb, _generator_id, _modelnos, rowid, targets,
+            constraints):
         for (_, value) in constraints:
             if not value == 9:
                 return float("nan")

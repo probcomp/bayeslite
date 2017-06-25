@@ -430,8 +430,8 @@ def test_t1_simulate(colnos, constraints, numpredictions):
                     bdb, population_id, rowid, i))
                 for i in constraints
             ]
-        bqlfn.bayesdb_simulate(bdb, population_id, constraints, colnos,
-            numpredictions=numpredictions)
+        bqlfn.bayesdb_simulate(bdb, population_id, None, None, constraints,
+            colnos, numpredictions=numpredictions)
 
 @pytest.mark.parametrize('exname,colno',
     [(exname, colno)

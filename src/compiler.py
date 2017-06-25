@@ -729,9 +729,9 @@ def compile_simulate(bdb, simulate, out):
             INSERT INTO %s (%s) VALUES (%s)
         ''' % (qtt, ','.join(qcns), ','.join('?' for qcn in qcns))
         for row in bqlfn.bayesdb_simulate(
-                bdb, population_id, constraints, colnos,
-                generator_id=generator_id, modelnos=simulate.modelnos,
-                numpredictions=nsamples, accuracy=simulate.accuracy
+                bdb, population_id, generator_id, simulate.modelnos,
+                constraints, colnos, numpredictions=nsamples,
+                accuracy=simulate.accuracy
             ):
             out.winder(insert_sql, row)
         out.unwinder('DROP TABLE %s' % (qtt,), ())
