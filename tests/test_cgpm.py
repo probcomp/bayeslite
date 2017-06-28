@@ -1136,8 +1136,14 @@ def test_add_drop_models():
             19: 19,
         })
 
+        # No such models.
+        with pytest.raises(BQLError):
+            bdb.execute('DROP MODELS 20-50 FROM m')
         # Drop all models.
         bdb.execute('DROP MODELS FROM m;')
+        # No such models.
+        with pytest.raises(BQLError):
+            bdb.execute('DROP MODEL 0 FROM m')
         # Assert cgpm mapping is cleared.
         cursor = bdb.sql_execute('''
             SELECT COUNT(*) FROM bayesdb_cgpm_modelno
@@ -1202,7 +1208,7 @@ def test_using_modelnos():
         for d in cursor:
             assert d[0] in [0, 1]
         # Crash test mutual information 1row.
-        p0 = bdb.execute('''
+        bdb.execute('''
             ESTIMATE
                 MUTUAL INFORMATION WITH (period) USING 1 SAMPLES
             FROM VARIABLES OF satellites
@@ -1228,3 +1234,17 @@ def test_using_modelnos():
         ''')
         assert len(engine.states[0].diagnostics['logscore']) == 1
         assert len(engine.states[1].diagnostics['logscore']) == 4
+        # Some errors with bad modelnos.
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                ANALYZE g0 ANALYSIS 0-3 FOR 4 ITERATION WAIT;
+            ''')
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                SIMULATE apogee FROM satellites USING ANALYSIS 25 LIMIT 10;
+            ''')
+        with pytest.raises(BQLError):
+            bdb.execute('''
+                ESTIMATE PREDICTIVE PROBABILITY OF period FROM satellites
+                USING MODELS 0-8 LIMIT 2;
+            ''')
