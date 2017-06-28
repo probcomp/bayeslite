@@ -1081,8 +1081,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         if modelnos is None:
             return modelnos
         cursor = bdb.sql_execute('''
-            SELECT cgpm_modelno
-            FROM bayesdb_cgpm_modelno
+            SELECT cgpm_modelno FROM bayesdb_cgpm_modelno
             WHERE generator_id = ? AND modelno IN (%s)
             ORDER BY cgpm_modelno DESC
         ''' % (','.join(map(str, modelnos)),), (generator_id,))
@@ -1094,14 +1093,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         unions = str.join(' union all ', ['select %d' % (m,) for m in modelnos])
         qc = sqlite3_quote_name(str(modelnos[0]))
         unknown = bdb.sql_execute('''
-            SELECT
-                t.%s
-            FROM (
-                %s
-            ) AS t
+            SELECT t.%s FROM (%s) AS t
             LEFT OUTER JOIN (
-                SELECT modelno
-                FROM bayesdb_cgpm_modelno
+                SELECT modelno FROM bayesdb_cgpm_modelno
                 WHERE generator_id = ?
             ) AS g
             ON t.%s = g.modelno
