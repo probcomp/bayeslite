@@ -322,10 +322,12 @@ class BQLSemantics(object):
     def p_analysis_token_compound(self, p):     return ['('] + p + [')']
     def p_analysis_token_primitive(self, t):    return [t]
 
-    def p_command_regress(self, target, givens, nsamp, pop, metamodel):
-        return ast.Regress(target, givens, nsamp, pop, metamodel)
+    def p_command_regress(self, target, givens, nsamp, pop, metamodel,
+            modelnos):
+        return ast.Regress(target, givens, nsamp, pop, metamodel, modelnos)
 
-    def p_simulate_s(self, cols, population, generator, constraints, lim, acc):
+    def p_simulate_s(self, cols, population, generator, modelnos, constraints,
+            lim, acc):
         for c in cols:
             if isinstance(c, ast.SelColSub):
                 continue
@@ -335,8 +337,9 @@ class BQLSemantics(object):
             self.errors.append('simulate only accepts population variables.')
             return None
         return ast.Simulate(
-            cols, population, generator, constraints, lim.limit, acc)
-    def p_simulate_nolimit(self, cols, population, generator, constraints):
+            cols, population, generator, modelnos, constraints, lim.limit, acc)
+    def p_simulate_nolimit(self, cols, population, generator, modelnos,
+            constraints):
         # XXX Report source location.
         self.errors.append('simulate missing limit')
         for c in cols:
@@ -348,7 +351,7 @@ class BQLSemantics(object):
             self.errors.append('simulate only accepts population variables.')
             return None
         return ast.Simulate(
-            cols, population, generator, constraints, 0, None)
+            cols, population, generator, modelnos, constraints, 0, None)
     def p_simulate_models(self, cols, population, generator):
         return ast.SimulateModelsExp(cols, population, generator)
 
@@ -376,10 +379,11 @@ class BQLSemantics(object):
     def p_select_s(self, quant, cols, tabs, cond, grouping, ord, lim):
         return ast.Select(quant, cols, tabs, cond, grouping, ord, lim)
 
-    def p_estimate_e(self, quant, cols, tabs, generator, cond, grouping,
-            ord, lim):
+    def p_estimate_e(self, quant, cols, tabs, generator, modelnos, cond,
+            grouping, ord, lim):
         constructor = tabs
-        return constructor(quant, cols, generator, cond, grouping, ord, lim)
+        return constructor(quant, cols, generator, modelnos, cond, grouping,
+            ord, lim)
 
     def p_estcol_e(self):
         self.errors.append("deprecated `ESTIMATE COLUMNS'"
@@ -391,17 +395,17 @@ class BQLSemantics(object):
         self.errors.append("deprecated `ESTIMATE PAIRWISE'"
             ": use `ESTIMATE ... FROM PAIRWISE COLUMNS OF'")
 
-    def p_estby_e(self, quant, cols, population, generator):
-        return ast.EstBy(quant, cols, population, generator)
+    def p_estby_e(self, quant, cols, population, generator, modelnos):
+        return ast.EstBy(quant, cols, population, generator, modelnos)
 
-    def p_infer_auto(self, cols, conf, nsamp, population, generator, cond,
+    def p_infer_auto(self, cols, conf, nsamp, population, generator, modelnos,
+            cond, grouping, ord, lim):
+        return ast.InferAuto(cols, conf, nsamp, population, generator, modelnos,
+            cond, grouping, ord, lim)
+    def p_infer_explicit(self, cols, population, generator, modelnos, cond,
             grouping, ord, lim):
-        return ast.InferAuto(cols, conf, nsamp, population, generator, cond,
+        return ast.InferExplicit(cols, population, generator, modelnos, cond,
             grouping, ord, lim)
-    def p_infer_explicit(self, cols, population, generator, cond, grouping,
-            ord, lim):
-        return ast.InferExplicit(cols, population, generator, cond, grouping,
-            ord, lim)
 
     def p_infer_auto_columns_one(self, c):      return [c]
     def p_infer_auto_columns_many(self, cs, c): cs.append(c); return cs
@@ -444,26 +448,30 @@ class BQLSemantics(object):
     def p_from_sel_opt_nonempty(self, tables):  return tables
 
     def p_from_est_row(self, name):
-        def c(quant, cols, generator, cond, grouping, ord, lim):
-            return ast.Estimate(quant, cols, name, generator, cond, grouping,
-                ord, lim)
+        def c(quant, cols, generator, modelnos, cond, grouping, ord, lim):
+            return ast.Estimate(quant, cols, name, generator, modelnos, cond,
+                grouping, ord, lim)
         return c
     def p_from_est_pairrow(self, name):
-        def c(quant, cols, generator, cond, grouping, ord, lim):
-            return ast.EstPairRow(cols, name, generator, cond, ord, lim)
+        def c(quant, cols, generator, modelnos, cond, grouping, ord, lim):
+            return ast.EstPairRow(cols, name, generator, modelnos, cond, ord,
+                lim)
         return c
     def p_from_est_col(self, name):
-        def c(quant, cols, generator, cond, grouping, ord, lim):
-            return ast.EstCols(cols, name, generator, cond, ord, lim)
+        def c(quant, cols, generator, modelnos, cond, grouping, ord, lim):
+            return ast.EstCols(cols, name, generator, modelnos, cond, ord, lim)
         return c
     def p_from_est_paircol(self, name, subcols):
-        def c(quant, cols, generator, cond, grouping, ord, lim):
-            return ast.EstPairCols(cols, name, subcols, generator, cond, ord,
-                lim)
+        def c(quant, cols, generator, modelnos, cond, grouping, ord, lim):
+            return ast.EstPairCols(cols, name, subcols, generator, modelnos,
+                cond, ord, lim)
         return c
 
     def p_modelledby_opt_none(self):            return None
     def p_modelledby_opt_some(self, gen):       return gen
+
+    def p_usingmodel_opt_none(self):            return None
+    def p_usingmodel_opt_some(self, modelnos):  return modelnos
 
     def p_select_tables_one(self, t):           return [t]
     def p_select_tables_many(self, ts, t):      ts.append(t); return ts

@@ -94,9 +94,12 @@ def simulate_models_rows(bdb, simulation):
                 ]))
             nsamples = exp.nsamples and retrieve_literal(exp.nsamples)
             # One mi_list per generator of the population.
+            #
+            # XXX fsaad@20170625: Setting modelnos = None arbitrarily, figure
+            # out how to set the modelnos argument.
             mi_lists = bqlfn._bql_column_mutual_information(
-                bdb, population_id, generator_id, colnos0, colnos1, nsamples,
-                *constraint_args)
+                bdb, population_id, generator_id, None, colnos0, colnos1,
+                nsamples, *constraint_args)
             return list(itertools.chain.from_iterable(mi_lists))
         else:
             raise BQLError(bdb,

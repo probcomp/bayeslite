@@ -199,8 +199,11 @@ class MutinfCursor(object):
         # Compute the mutual information.
         #
         # XXX Expose this API better from bqlfn.
+        #
+        # XXX fsaad@20170624: Setting modelnos = None arbitrarily, figure out
+        # how to set the modelnos argument.
         mis = bqlfn._bql_column_mutual_information(
-            self._bdb, self._population_id, self._generator_id,
+            self._bdb, self._population_id, self._generator_id, None,
             target_vars, reference_vars, self._nsamples,
             *_flatten2(sorted(conditions.iteritems())))
         self._mi = _flatten2(mis)

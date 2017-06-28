@@ -95,7 +95,7 @@ def test_regress_bonanza__ci_integration():
                     LIMIT ?
                 )
             )
-            USING 12 SAMPLES BY satellites;
+            USING 12 SAMPLES BY satellites MODELLED BY m USING MODEL 1;
         ''', (3,)).fetchall()
 
         cursor = bdb.execute('''

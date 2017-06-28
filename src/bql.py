@@ -660,7 +660,8 @@ def execute_phrase(bdb, phrase, bindings=()):
         # Retrieve the metamodel.
         generator_id = None
         if phrase.metamodel:
-            if not core.bayesdb_has_generator(bdb, phrase.metamodel):
+            if not core.bayesdb_has_generator(bdb, population_id,
+                    phrase.metamodel):
                 raise BQLError(bdb,
                     'No such metamodel: %r' % (phrase.population,))
             generator_id = core.bayesdb_get_generator(
@@ -705,9 +706,10 @@ def execute_phrase(bdb, phrase, bindings=()):
         constraints = []
         colnos = [colno_target] + list(colno_givens_unique)
         nsamp = 100 if phrase.nsamp is None else phrase.nsamp.value.value
+        modelnos = None if phrase.modelnos is None else str(phrase.modelnos)
         rows = bqlfn.bayesdb_simulate(
-            bdb, population_id, constraints,
-            colnos, generator_id=generator_id, numpredictions=nsamp)
+            bdb, population_id, generator_id, modelnos, constraints,
+            colnos, numpredictions=nsamp)
         # Retrieve the stattypes.
         stattypes = [
             core.bayesdb_variable_stattype(bdb, population_id, colno_given)

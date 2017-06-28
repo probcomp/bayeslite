@@ -22,4 +22,5 @@
 /src/metamodels/cgpm_schema/grammar.sha256.tmp
 /src/version.py
 __pycache__/
+.cache/
 .eggs
