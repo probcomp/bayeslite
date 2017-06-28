@@ -365,13 +365,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Drop some models.
         else:
             engine = self._engine(bdb, generator_id)
-            cursor = bdb.sql_execute('''
-                SELECT cgpm_modelno FROM bayesdb_cgpm_modelno
-                WHERE generator_id = ? AND modelno IN %s
-                ORDER BY cgpm_modelno DESC
-            ''' % (str(tuple(modelnos)),), (generator_id,))
-            modelnos_cgpm = [m[0] for m in cursor]
-            for m in modelnos_cgpm:
+            cgpm_modelnos = self._get_modelnos(bdb, generator_id, modelnos)
+            for m in cgpm_modelnos:
                 del engine.states[m]
                 # Delete the modelno entry.
                 bdb.sql_execute('''
@@ -405,6 +400,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         if program is None:
             program = []
+
+        # Get the modelnos.
+        cgpm_modelnos = self._get_modelnos(bdb, generator_id, modelnos)
 
         # Retrieve the engine.
         engine = self._engine(bdb, generator_id)
@@ -456,7 +454,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                     cols=vars_target_baseline,
                     progress=progress,
                     checkpoint=ckpt_iterations,
-                    statenos=modelnos,
+                    statenos=cgpm_modelnos,
                     multiprocess=self._multiprocess,
                 )
             else:
@@ -466,7 +464,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                     cols=vars_target_baseline,
                     progress=progress,
                     checkpoint=ckpt_iterations,
-                    statenos=modelnos,
+                    statenos=cgpm_modelnos,
                     multiprocess=self._multiprocess,
                 )
 
@@ -477,7 +475,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 S=max_seconds,
                 cols=vars_target_foreign,
                 progress=progress,
-                statenos=modelnos,
+                statenos=cgpm_modelnos,
                 multiprocess=self._multiprocess,
             )
 
@@ -492,13 +490,17 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         if colno0 == colno1:
             return 1
 
+        # Get the modelnos.
+        cgpm_modelnos = self._get_modelnos(bdb, generator_id, modelnos)
+
         # Get the engine.
         engine = self._engine(bdb, generator_id)
 
         # Engine gives us a list of dependence probabilities which it is our
         # responsibility to integrate over.
         depprob_list = engine.dependence_probability(
-            colno0, colno1, statenos=modelnos, multiprocess=self._multiprocess)
+            colno0, colno1, statenos=cgpm_modelnos,
+            multiprocess=self._multiprocess)
 
         return arithmetic_mean(depprob_list)
 
@@ -508,6 +510,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # XXX Default number of samples drawn from my arse.
         if numsamples is None:
             numsamples = 1000
+
+        # Get the modelnos.
+        cgpm_modelnos = self._get_modelnos(bdb, generator_id, modelnos)
 
         # Get the engine.
         engine = self._engine(bdb, generator_id)
@@ -523,13 +528,17 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # responsibility to integrate over.
         mi_list = engine.mutual_information(
             colnos0, colnos1, evidence=evidence, N=numsamples,
-            progress=True, statenos=modelnos, multiprocess=self._multiprocess)
+            progress=True, statenos=cgpm_modelnos,
+            multiprocess=self._multiprocess)
 
         # Pass through the distribution of CMI to BayesDB without aggregation.
         return mi_list
 
     def row_similarity(
             self, bdb, generator_id, modelnos, rowid, target_rowid, colnos):
+        # Retrieve the modelnos.
+        cgpm_modelnos = self._get_modelnos(bdb, generator_id, modelnos)
+
         # Map the variable and individual indexing.
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
         cgpm_target_rowid = self._cgpm_rowid(bdb, generator_id, target_rowid)
@@ -544,7 +553,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Engine gives us a list of similarities which it is our
         # responsibility to integrate over.
         similarity_list = engine.row_similarity(
-            cgpm_rowid, cgpm_target_rowid, colnos, statenos=modelnos,
+            cgpm_rowid, cgpm_target_rowid, colnos, statenos=cgpm_modelnos,
             multiprocess=self._multiprocess)
 
         return arithmetic_mean(similarity_list)
@@ -552,6 +561,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
     def predictive_relevance(
             self, bdb, generator_id, modelnos, rowid_target, rowid_query,
             hypotheticals, colno):
+        # Retrieve cgpm modelnos.
+        cgpm_modelnos = self._get_modelnos(bdb, generator_id, modelnos)
+
         # Convert target rowid
         cgpm_rowid_target = self._cgpm_rowid(bdb, generator_id, rowid_target)
 
@@ -594,7 +606,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Go!
         similarity_list = engine.relevance_probability(
             cgpm_rowid_target, cgpm_rowid_query, colno, hypotheticals_numeric,
-            statenos=modelnos, multiprocess=self._multiprocess)
+            statenos=cgpm_modelnos, multiprocess=self._multiprocess)
 
         return similarity_list
 
@@ -634,6 +646,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             num_samples=None, accuracy=None):
         if num_samples is None:
             num_samples = 1
+        cgpm_modelnos = self._get_modelnos(bdb, generator_id, modelnos)
         full_constraints = self._merge_user_table_constraints(
             bdb, generator_id, rowid, targets, constraints)
         # Perpare the rowid, query, and evidence for cgpm.
@@ -648,10 +661,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         engine = self._engine(bdb, generator_id)
         samples = engine.simulate(
             cgpm_rowid, cgpm_query, cgpm_evidence, N=num_samples,
-            accuracy=accuracy, statenos=modelnos,
+            accuracy=accuracy, statenos=cgpm_modelnos,
             multiprocess=self._multiprocess)
         weighted_samples = engine._likelihood_weighted_resample(
-            samples, cgpm_rowid, cgpm_evidence, statenos=modelnos,
+            samples, cgpm_rowid, cgpm_evidence, statenos=cgpm_modelnos,
             multiprocess=self._multiprocess)
         def map_value(colno, value):
             return self._from_numeric(bdb, generator_id, colno, value)
@@ -662,6 +675,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
     def logpdf_joint(
             self, bdb, generator_id, modelnos, rowid, targets, constraints):
+        cgpm_modelnos = self._get_modelnos(bdb, generator_id, modelnos)
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
         # TODO: Handle nan values in the logpdf query.
         cgpm_query = {
@@ -678,10 +692,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         engine = self._engine(bdb, generator_id)
         logpdfs = engine.logpdf(
             cgpm_rowid, cgpm_query, cgpm_evidence, accuracy=None,
-            statenos=modelnos, multiprocess=self._multiprocess)
+            statenos=cgpm_modelnos, multiprocess=self._multiprocess)
         return engine._likelihood_weighted_integrate(
             logpdfs, cgpm_rowid, cgpm_evidence,
-            statenos=modelnos, multiprocess=self._multiprocess)
+            statenos=cgpm_modelnos, multiprocess=self._multiprocess)
 
     def _unique_rowid(self, rowids):
         if len(set(rowids)) != 1:
@@ -1063,6 +1077,39 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             ]
         return table_constraints
 
+    def _get_modelnos(self, bdb, generator_id, modelnos):
+        if modelnos is None:
+            return modelnos
+        cursor = bdb.sql_execute('''
+            SELECT cgpm_modelno
+            FROM bayesdb_cgpm_modelno
+            WHERE generator_id = ? AND modelno IN (%s)
+            ORDER BY cgpm_modelno DESC
+        ''' % (','.join(map(str, modelnos)),), (generator_id,))
+        modelnos_cgpm = [m[0] for m in cursor]
+        # All modelnos are OK.
+        if len(modelnos_cgpm) == len(modelnos):
+            return modelnos_cgpm
+        # Report bad modelnos.
+        unions = str.join(' union all ', ['select %d' % (m,) for m in modelnos])
+        qc = sqlite3_quote_name(str(modelnos[0]))
+        unknown = bdb.sql_execute('''
+            SELECT
+                t.%s
+            FROM (
+                %s
+            ) AS t
+            LEFT OUTER JOIN (
+                SELECT modelno
+                FROM bayesdb_cgpm_modelno
+                WHERE generator_id = ?
+            ) AS g
+            ON t.%s = g.modelno
+            WHERE g.modelno IS NULL
+        ''' % (qc, unions, qc), (generator_id,)).fetchall()
+        generator = core.bayesdb_generator_name(bdb, generator_id)
+        raise BQLError(bdb,
+            'Unknown modelnos for %s: %s' % (generator, unknown))
 
 def _create_schema(bdb, generator_id, schema_ast, **kwargs):
     # Get some parameters.
