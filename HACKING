@@ -74,6 +74,8 @@ To tag a new version:
     % echo 0.2.42+ > VERSION
     % git commit -m 'Bump version to 0.2.42+.' VERSION
 
+Make sure when you push that you pass `--tags' to `git push'.
+
 * SQL/BQL parameters
 
 Use SQL/BQL parameters to pass strings and other values into SQL/BQL.
