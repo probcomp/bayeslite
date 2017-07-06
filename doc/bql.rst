@@ -175,7 +175,7 @@ For those that are modeled, it specifies their statistical type.
 ``DROP POPULATION [IF EXISTS] <population>``
 
    Drop the population *population* and all its contents.
-   Will fail if there are still metamodels associated with this population.
+   Will fail if there are still analysis schemas associated with this population.
 
 .. index:: ``ALTER POPULATION``
 
