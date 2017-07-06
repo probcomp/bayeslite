@@ -234,11 +234,13 @@ variables in a population.
    Drop the analysis schema *schema* and all its contents. Optionally drop only
    the analysis numbered *num* or the analyses ranging from *num0* to *num1*.
 
-.. index:: ``INITIALIZE``
+.. index:: ``INITIALIZE ANALYSES``
 
-``INITIALIZE <num> ANALYSES FOR <schema>``
+``INITIALIZE <num> ANALYSES [IF NOT EXISTS] FOR <schema>``
 
-   Initialize *num* number of analyses for the analysis schema *schema*.
+   Initialize *num* number of analyses for the analysis schema *schema*. Using
+   ``IF NOT EXISTS`` will initialize all analyses in the range 0 to *num - 1*
+   that do not already exist.
 
 .. index:: ``ANALYZE ANALYSIS SCHEMA``
 
