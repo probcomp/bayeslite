@@ -235,9 +235,9 @@ variables in a population.
 
 .. index:: ``INITIALIZE``
 
-``INITIALIZE <num> MODELS FOR <schema>``
+``INITIALIZE <num> ANALYSES FOR <schema>``
 
-   Initialize *num* number of models for the analysis schema *schema*.
+   Initialize *num* number of analyses for the analysis schema *schema*.
 
 .. index:: ``ANALYZE ANALYSIS SCHEMA``
 
