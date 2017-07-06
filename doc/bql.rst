@@ -199,22 +199,22 @@ For those that are modeled, it specifies their statistical type.
       Change the statistical type of variable(s) *variable(s)* in population
       *population* to *stattype*.
 
-++++++++++
-Metamodels
-++++++++++
+++++++++++++++++
+Analysis schemas
+++++++++++++++++
 
-A metamodel specifies the type of generative model(s) used to model the
+An analysis schema specifies the type of generative model(s) used to model the
 variables in a population.
 
-.. index:: ``CREATE METAMODEL``
+.. index:: ``CREATE ANALYSIS SCHEMA``
 
-``CREATE METAMODEL <metamodel> FOR <population> WITH BASELINE <baseline>``
+``CREATE ANALYSIS SCHEMA <schema> FOR <population> WITH BASELINE <baseline>``
 
-``CREATE METAMODEL <metamodel> FOR <population> WITH BASELINE <baseline> (<customization>)``
+``CREATE ANALYSIS SCHEMA <schema> FOR <population> WITH BASELINE <baseline> (<customization>)``
 
-   Create metamodel *metamodel* for the population *population* with
+   Create analysis schema *schema* for the population *population* with
    the baseline generative model *baseline*.  The *customization* is a
-   comma-separated list of clauses customizing the metamodel:
+   comma-separated list of clauses customizing the schema:
 
       ``OVERRIDE GENERATIVE MODEL FOR <target> [GIVEN <variable(s)>] USING <predictor>``
 
@@ -227,27 +227,27 @@ variables in a population.
          Use a randomly chosen subsample of *nrows* rows to train each
          model.
 
-.. index:: ``DROP METAMODEL``
+.. index:: ``DROP ANALYSIS SCHEMA``
 
-``DROP METAMODEL [IF EXISTS] <metamodel>``
+``DROP ANALYSIS SCHEMA [IF EXISTS] <schema>``
 
-   Drop the metamodel *metamodel* and all its contents.
+   Drop the analysis schema *schema* and all its contents.
 
 .. index:: ``INITIALIZE``
 
-``INITIALIZE <num> MODELS FOR <metamodel>``
+``INITIALIZE <num> MODELS FOR <schema>``
 
-   Initialize *num* number of models for the metamodel *metamodel*.
+   Initialize *num* number of models for the analysis schema *schema*.
 
-.. index:: ``ANALYZE METAMODEL``
+.. index:: ``ANALYZE ANALYSIS SCHEMA``
 
-``ANALYZE <metamodel> FOR <duration> [CHECKPOINT <duration>] WAIT``
-``ANALYZE <metamodel> FOR <duration> [CHECKPOINT <duration>] WAIT (<clauses>)``
+``ANALYZE <schema> FOR <duration> [CHECKPOINT <duration>] WAIT``
+``ANALYZE <schema> FOR <duration> [CHECKPOINT <duration>] WAIT (<clauses>)``
 
-   Analyze metamodel *metamodel*. *Duration* can take on values of
-   ``<n> SECOND(S)``, ``<n> MINUTE(S)``, or ``<n> ITERATION(S)``.  The
-   ``FOR`` duration specifies how long to perform analysis.  The
-   ``CHECKPOINT`` duration specifies how often to commit the
+   Perform analysis on the analyses in analysis schema *schema*. *Duration* can
+   take on values of ``<n> SECOND(S)``, ``<n> MINUTE(S)``, or
+   ``<n> ITERATION(S)``.  The ``FOR`` duration specifies how long to perform
+   analysis.  The ``CHECKPOINT`` duration specifies how often to commit the
    intermediate results of analysis to the database on disk.  The
    semicolon-separated *clauses* may further configure the analysis:
 
@@ -327,21 +327,21 @@ BQL Queries
 
 .. index:: ``ESTIMATE``
 
-``ESTIMATE [DISTINCT|ALL] <columns> FROM <population> [MODELED BY <metamodel>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE [DISTINCT|ALL] <columns> FROM <population> [MODELED BY <schema>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the table associated with *population*, extended
    with model estimators of one implied row.
 
 .. index:: ``ESTIMATE FROM VARIABLES OF``
 
-``ESTIMATE <columns> FROM VARIABLES OF <population> [MODELED BY <metamodel>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <columns> FROM VARIABLES OF <population> [MODELED BY <schema>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the modelled columns of *population*, extended
    with model estimators of one implied column.
 
 .. index:: ``ESTIMATE FROM PAIRWISE COLUMNS OF``
 
-``ESTIMATE <columns> FROM PAIRWISE COLUMNS OF <population> [FOR <subcolumns>] [MODELED BY <metamodel>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <columns> FROM PAIRWISE COLUMNS OF <population> [FOR <subcolumns>] [MODELED BY <schema>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the modelled columns of
    *population*, extended with model estimators of two implied columns.
@@ -351,7 +351,7 @@ BQL Queries
 
 .. index:: ``ESTIMATE, PAIRWISE``
 
-``ESTIMATE <expression> FROM PAIRWISE <population> [MODELED BY <metamodel>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <expression> FROM PAIRWISE <population> [MODELED BY <schema>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the table assocated with
    *population*, extended with model estimators of two implied rows.
@@ -361,7 +361,7 @@ BQL Queries
 
 .. index:: ``INFER``
 
-``INFER <colnames> [WITH CONFIDENCE <conf>] FROM <population> [MODELED BY <metamodel>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``INFER <colnames> [WITH CONFIDENCE <conf>] FROM <population> [MODELED BY <schema>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Select the specified *colnames* from *population*, filling in
    missing values if they can be filled in with confidence at least
@@ -379,7 +379,7 @@ BQL Queries
 
 .. index:: ``INFER EXPLICIT``
 
-``INFER EXPLICIT <columns> FROM <population> [MODELED BY <metamodel>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``INFER EXPLICIT <columns> FROM <population> [MODELED BY <schema>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the table associated with *population*, extended
    with model estimators of one implied row and with model predictions.
@@ -396,7 +396,7 @@ BQL Queries
 
 .. index:: ``SIMULATE``
 
-``SIMULATE <colnames> FROM <population> [MODELED BY <metamodel>] [GIVEN <constraints>] [LIMIT <limit>]``
+``SIMULATE <colnames> FROM <population> [MODELED BY <schema>] [GIVEN <constraints>] [LIMIT <limit>]``
 
    Select the requested *colnames* from rows sampled from *population*.
    *Constraints* is a comma-separated list of constraints of the form
@@ -547,7 +547,7 @@ subquery instead:
    Constant, or function of one or two implied columns.  Returns the
    strength of dependence between the two columns, in units of bits.
 
-   If ``USING <n> SAMPLES`` is specified and the underlying metamodel
+   If ``USING <n> SAMPLES`` is specified and the underlying schema
    uses Monte Carlo integration for each model to estimate the mutual
    information (beyond merely the integral averaging all models), the
    integration is performed using *n* samples for each model.
