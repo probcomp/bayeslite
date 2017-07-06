@@ -551,6 +551,6 @@ subquery instead:
    strength of dependence between the two columns, in units of bits.
 
    If ``USING <n> SAMPLES`` is specified and the underlying analysis schema
-   uses Monte Carlo integration for each model to estimate the mutual
-   information (beyond merely the integral averaging all models), the
-   integration is performed using *n* samples for each model.
+   uses Monte Carlo integration for each analysis to estimate the mutual
+   information (beyond merely the integral averaging all analyses), the
+   integration is performed using *n* samples for each analysis.
