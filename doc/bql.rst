@@ -231,8 +231,8 @@ variables in a population.
 
 ``DROP [[ANALYSIS <num>] [ANALYSES <num0>-<num1>] FROM] ANALYSIS SCHEMA [IF EXISTS] <schema>``
 
-   Drop the analysis schema *schema* and all its contents. Optionally drop the
-   analysis numbered *num* or the analyses ranging from *num0* to *num1*.
+   Drop the analysis schema *schema* and all its contents. Optionally drop only
+   the analysis numbered *num* or the analyses ranging from *num0* to *num1*.
 
 .. index:: ``INITIALIZE``
 
