@@ -550,20 +550,7 @@ subquery instead:
    Constant, or function of one or two implied columns.  Returns the
    strength of dependence between the two columns, in units of bits.
 
-   If ``USING <n> SAMPLES`` is specified and the underlying schema
+   If ``USING <n> SAMPLES`` is specified and the underlying analysis schema
    uses Monte Carlo integration for each model to estimate the mutual
    information (beyond merely the integral averaging all models), the
    integration is performed using *n* samples for each model.
-
-Model Predictions
-^^^^^^^^^^^^^^^^^
-
-.. index:: ``PREDICT``
-
-``PREDICT <column> [WITH CONFIDENCE <confidence>]``
-
-   Function of one implied row.  Samples a value for the column named
-   *column* from the model given the other values in the row, and
-   returns it if the confidence of the prediction is at least the
-   value of the BQL expression *confidence*; otherwise returns null.
-
