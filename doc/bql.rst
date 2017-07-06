@@ -229,9 +229,10 @@ variables in a population.
 
 .. index:: ``DROP ANALYSIS SCHEMA``
 
-``DROP ANALYSIS SCHEMA [IF EXISTS] <schema>``
+``DROP [[ANALYSIS <num>] [ANALYSES <num0>-<num1>] FROM] ANALYSIS SCHEMA [IF EXISTS] <schema>``
 
-   Drop the analysis schema *schema* and all its contents.
+   Drop the analysis schema *schema* and all its contents. Optionally drop the
+   analysis numbered *num* or the analyses ranging from *num0* to *num1*.
 
 .. index:: ``INITIALIZE``
 
@@ -327,21 +328,21 @@ BQL Queries
 
 .. index:: ``ESTIMATE``
 
-``ESTIMATE [DISTINCT|ALL] <columns> FROM <population> [MODELED BY <schema>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE [DISTINCT|ALL] <columns> FROM <population> [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the table associated with *population*, extended
    with model estimators of one implied row.
 
 .. index:: ``ESTIMATE FROM VARIABLES OF``
 
-``ESTIMATE <columns> FROM VARIABLES OF <population> [MODELED BY <schema>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <columns> FROM VARIABLES OF <population> [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the modelled columns of *population*, extended
    with model estimators of one implied column.
 
 .. index:: ``ESTIMATE FROM PAIRWISE COLUMNS OF``
 
-``ESTIMATE <columns> FROM PAIRWISE COLUMNS OF <population> [FOR <subcolumns>] [MODELED BY <schema>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <columns> FROM PAIRWISE COLUMNS OF <population> [FOR <subcolumns>] [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the modelled columns of
    *population*, extended with model estimators of two implied columns.
@@ -351,7 +352,7 @@ BQL Queries
 
 .. index:: ``ESTIMATE, PAIRWISE``
 
-``ESTIMATE <expression> FROM PAIRWISE <population> [MODELED BY <schema>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <expression> FROM PAIRWISE <population> [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the table assocated with
    *population*, extended with model estimators of two implied rows.
@@ -361,7 +362,7 @@ BQL Queries
 
 .. index:: ``INFER``
 
-``INFER <colnames> [WITH CONFIDENCE <conf>] FROM <population> [MODELED BY <schema>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``INFER <colnames> [WITH CONFIDENCE <conf>] FROM <population> [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Select the specified *colnames* from *population*, filling in
    missing values if they can be filled in with confidence at least
@@ -379,7 +380,7 @@ BQL Queries
 
 .. index:: ``INFER EXPLICIT``
 
-``INFER EXPLICIT <columns> FROM <population> [MODELED BY <schema>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``INFER EXPLICIT <columns> FROM <population> [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the table associated with *population*, extended
    with model estimators of one implied row and with model predictions.
@@ -396,7 +397,7 @@ BQL Queries
 
 .. index:: ``SIMULATE``
 
-``SIMULATE <colnames> FROM <population> [MODELED BY <schema>] [GIVEN <constraints>] [LIMIT <limit>]``
+``SIMULATE <colnames> FROM <population> [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [GIVEN <constraints>] [LIMIT <limit>]``
 
    Select the requested *colnames* from rows sampled from *population*.
    *Constraints* is a comma-separated list of constraints of the form
