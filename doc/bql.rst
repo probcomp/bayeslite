@@ -342,9 +342,9 @@ BQL Queries
    Like ``SELECT`` on the modelled columns of *population*, extended
    with model estimators of one implied column.
 
-.. index:: ``ESTIMATE FROM PAIRWISE COLUMNS OF``
+.. index:: ``ESTIMATE FROM PAIRWISE VARIABLES OF``
 
-``ESTIMATE <columns> FROM PAIRWISE COLUMNS OF <population> [FOR <subcolumns>] [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <columns> FROM PAIRWISE VARIABLES OF <population> [FOR <subcolumns>] [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the modelled columns of
    *population*, extended with model estimators of two implied columns.
@@ -438,7 +438,7 @@ being stored in the output of queries.  For example,
 
         ESTIMATE
             MUTUAL INFORMATION AS mutinf
-        FROM PAIRWISE COLUMNS OF p
+        FROM PAIRWISE VARIABLES OF p
         ORDER BY mutinf
 
 has the effect of estimating mutual information twice for each row because it is
@@ -456,7 +456,7 @@ subquery instead:
         SELECT *
         FROM (
             ESTIMATE MUTUAL INFORMATION AS mutinf
-            FROM PAIRWISE COLUMNS OF p
+            FROM PAIRWISE VARIABLES OF p
         )
         ORDER BY mutinf
 
