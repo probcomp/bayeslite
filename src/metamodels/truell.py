@@ -120,7 +120,9 @@ class TruellMetamodel(metamodel.IBayesDBMetamodel):
     def simulate_joint(self, bdb, generator_id, modelnos, rowid, targets,
             _constraints, num_samples=1, accuracy=None):
         mu_sigma = self._get_mus_sigmas(bdb, generator_id)
-        return [[self.prng.gauss(mu_sigma[colno][0], math.sqrt(mu_sigma[colno][1])) for colno in targets] for _ in range(num_samples)]
+        return [[self.prng.gauss(mu_sigma[colno][0],
+            math.sqrt(mu_sigma[colno][1])) for colno in targets]
+            for _ in range(num_samples)]
 
     def logpdf_joint(self, bdb, generator_id, modelnos, rowid, targets,
             constraints):
