@@ -51,7 +51,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         table = core.bayesdb_population_table(bdb, population_id)
 
-        # Ingest table data
         # Collect data from bdb
         headers = []
         data = []
@@ -97,13 +96,8 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                 loom.tasks.ingest(core.bayesdb_generator_name(bdb, generator_id),
                         rows_csv=csv_file.name, schema=schema_file.name)
 
-
                 # TODO store the string-int transformations - use in logpdf
 
-
-    #def _table_to_csv(self, bdb, table, population_id, temp_file):
-
-    #def _table_to_schema(self, bdb, table, population_id, temp_file):
     def _get_path(self, loom_name):
         return os.path.join(self.DATA_PATH, loom_name)
 
