@@ -3,15 +3,13 @@
 This module implements the :class:`bayeslite.IBayesDBMetamodel`
 interface for the Loom Model.
 """
+import csv
 import json
-import math
 import os
 import os.path
-import random
 import tempfile
 
 import loom.tasks
-import csv
 
 import bayeslite.core as core
 import bayeslite.metamodel as metamodel
@@ -31,11 +29,12 @@ STATTYPE_TO_LOOMTYPE = {'categorical': 'dd', 'numerical': 'nich'}
 class LoomMetamodel(metamodel.IBayesDBMetamodel):
     """Loom metamodel for BayesDB."""
 
-    def __init__(self, seed=0,
+    def __init__(self,
             data_path='/scratch/mntruell/venv/lib/python2.7/site-packages/data/'):
         self.DATA_PATH = data_path
 
-    def name(self): return 'loom'
+    def name(self):
+        return 'loom'
 
     def register(self, bdb):
         with bdb.savepoint():
@@ -43,7 +42,8 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
     def create_generator(self, bdb, generator_id, schema, **kwargs):
         """
-        Converts the data encoded in the bdb table in question into a temporary csv file
+        Converts the data encoded in the bdb table in question
+            into a temporary csv file
         Ingests the data into the loom system
         Stores the name of the loom session in a bdb table
 
@@ -117,7 +117,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             core.bayesdb_generator_column_name(bdb, generator_id, colno1)])
         split_array = [a.split(CSV_DELIMITER) for a in output.split('\n')]
 
-        print(float(split_array[1][2]))
         return float(split_array[1][2])
 
     def column_mutual_information(self, bdb, generator_id, modelnos, colnos0,
@@ -133,7 +132,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         return (0, 1)
 
     def simulate_joint(self, bdb, generator_id, modelnos, rowid, targets,
-            _constraints, num_samples=1, accuracy=None):
+            constraints, num_samples=1, accuracy=None):
         # Prepare a predicted row
         headers = []
         row = []
@@ -141,7 +140,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             headers.append(core.bayesdb_generator_column_name(bdb, generator_id, colno))
 
             is_constraint = False
-            for (colno2, value) in _constraints:
+            for (colno2, value) in constraints:
                 if colno2 == colno:
                     row.append(value)
                     is_constraint = True
