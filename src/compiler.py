@@ -822,7 +822,7 @@ def compile_simulate_models_1(
         reference_vars = map(map_var, exp.columns1)
         compile_string(bdb, json_dumps(reference_vars), out)
     else:
-        colno_exp = bql_compiler.implicit_reference_var_colno_exp()
+        colno_exp = bql_compiler.implicit_reference_var_colno_exp(bdb)
         out.write(sql_json_singleton(colno_exp))
     if exp.constraints is not None:
         out.write(' AND conditions = ')
@@ -1074,14 +1074,14 @@ def compile_estpairrow(bdb, estpairrow, out):
             compile_expression(bdb, estpairrow.limit.offset, bql_compiler, out)
 
 class IBQLCompiler(object):
-    def implicit_reference_var_colno_exp(self):
+    def implicit_reference_var_colno_exp(self, bdb):
         raise NotImplementedError
     def compile_bql(self, bdb, bql, out):
         raise NotImplementedError
 
 class BQLCompiler_None(IBQLCompiler):
     @override(IBQLCompiler)
-    def implicit_reference_var_colno_exp(self):
+    def implicit_reference_var_colno_exp(self, bdb):
         raise BQLError(bdb, 'No implicit BQL population variable')
 
     @override(IBQLCompiler)
@@ -1099,7 +1099,7 @@ class BQLCompiler_Const(IBQLCompiler):
         self.modelnos = modelnos
 
     @override(IBQLCompiler)
-    def implicit_reference_var_colno_exp(self):
+    def implicit_reference_var_colno_exp(self, bdb):
         raise BQLError(bdb, 'No implicit BQL population variable')
 
     @override(IBQLCompiler)
@@ -1154,7 +1154,7 @@ class BQLCompiler_Const(IBQLCompiler):
 
 class BQLCompiler_1Row(BQLCompiler_Const):
     @override(IBQLCompiler)
-    def implicit_reference_var_colno_exp(self):
+    def implicit_reference_var_colno_exp(self, bdb):
         raise BQLError(bdb, 'No implicit BQL population variable')
 
     @override(IBQLCompiler)
@@ -1272,7 +1272,7 @@ class BQLCompiler_1Row(BQLCompiler_Const):
 
 class BQLCompiler_1Row_Infer(BQLCompiler_1Row):
     @override(IBQLCompiler)
-    def implicit_reference_var_colno_exp(self):
+    def implicit_reference_var_colno_exp(self, bdb):
         raise BQLError(bdb, 'No implicit BQL population variable')
 
     @override(IBQLCompiler)
@@ -1336,7 +1336,7 @@ class BQLCompiler_2Row(IBQLCompiler):
         self.rowid1_exp = rowid1_exp
 
     @override(IBQLCompiler)
-    def implicit_reference_var_colno_exp(self):
+    def implicit_reference_var_colno_exp(self, bdb):
         raise BQLError(bdb, 'No implicit BQL population variable')
 
     @override(IBQLCompiler)
@@ -1394,7 +1394,7 @@ class BQLCompiler_1Col(BQLCompiler_Const):
         self.colno_exp = colno_exp
 
     @override(IBQLCompiler)
-    def implicit_reference_var_colno_exp(self):
+    def implicit_reference_var_colno_exp(self, bdb):
         return self.colno_exp
 
     @override(IBQLCompiler)
@@ -1452,7 +1452,7 @@ class BQLCompiler_2Col(BQLCompiler_Const):
         self.colno1_exp = colno1_exp
 
     @override(IBQLCompiler)
-    def implicit_reference_var_colno_exp(self):
+    def implicit_reference_var_colno_exp(self, bdb):
         raise BQLError(bdb, 'Nonunique implicit BQL population variable')
 
     @override(IBQLCompiler)
