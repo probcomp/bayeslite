@@ -66,7 +66,7 @@ def simulate_models_rows(bdb, simulation):
                 # constraints.
                 constraints = [
                     (retrieve_variable(v), retrieve_literal(e))
-                    for c, e in simulation.constraints
+                    for v, e in simulation.constraints
                 ]
             else:
                 constraints = []
