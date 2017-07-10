@@ -131,7 +131,37 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
     def row_similarity(self, bdb, generator_id, modelnos, rowid, target_rowid,
             colnos):
-        return 0
+        # TODO don't ignore the context
+
+        def _reorder_row(row):
+            """Reorder a row of columns according to loom's encoding
+
+            Row should be a list of (colno, value) tuples
+
+            Returns a list of scalar values in the proper order.
+            """
+            ordered_column_labels = self._get_order(bdb, generator_id)
+            ordererd_column_dict = collections.OrderedDict(
+                    [(a, None) for a in ordered_column_labels])
+
+            population_id = core.bayesdb_generator_population(bdb, generator_id)
+            for (colno, value) in zip(range(len(row)), row):
+                column_name = core.bayesdb_variable_name(bdb, population_id, colno)
+                ordererd_column_dict[column_name] = str(value)
+
+            return [value for (column_name, value) in ordererd_column_dict.iteritems()]
+
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        target_row = _reorder_row(
+                core.bayesdb_population_row_values(bdb, population_id, target_rowid))
+        row = _reorder_row(
+                core.bayesdb_population_row_values(bdb, population_id, rowid))
+
+        # TODO: cache server
+        # Run simlarity query
+        server = loom.tasks.query(core.bayesdb_generator_name(bdb, generator_id))
+        output = server.similar([target_row], rows2=[row])
+        return float(output)
 
     def predict_confidence(self, bdb, generator_id, modelnos, rowid, colno,
             numsamples=None):
@@ -182,7 +212,8 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
     def logpdf_joint(self, bdb, generator_id, modelnos, rowid, targets,
             constraints):
         # TODO optimize bdb calls
-        def _convert_to_proper_stattype(bdb, population_id, colno, value):
+
+        def _convert_to_proper_stattype(bdb, generator_id, colno, value):
             """
             Convert a value from whats given by the logpdf_joint
             method parameters, to what loom can handle.
@@ -191,6 +222,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             if value is None:
                 return value
 
+            population_id = core.bayesdb_generator_population(bdb, generator_id)
             stattype = core.bayesdb_variable_stattype(
                             bdb, population_id, colno)
             if stattype == "numerical":
@@ -215,13 +247,13 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             column_name = core.bayesdb_variable_name(bdb, population_id, colno)
 
             and_case[column_name] = _convert_to_proper_stattype(bdb,
-                    population_id, colno, value)
+                    generator_id, colno, value)
             conditional_case[column_name] = None
         for (colno, value) in constraints:
             column_name = core.bayesdb_variable_name(bdb,
                     population_id, colno)
             processed_value = _convert_to_proper_stattype(bdb,
-                    population_id, colno, value)
+                    generator_id, colno, value)
 
             and_case[column_name] = processed_value
             conditional_case[column_name] = processed_value
