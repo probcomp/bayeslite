@@ -23,11 +23,11 @@ def test_loom():
         bdb.execute('create generator g for p using loom')
         bdb.execute('initialize 1 model for g')
         bdb.execute('analyze g for 1 iteration wait')
-        bdb.execute('estimate similarity
-            in the context of x from pairwise p limit 1').fetchall()
+        print(bdb.execute('estimate similarity \
+            in the context of x from pairwise p limit 1').fetchall())
         bdb.execute('estimate probability density of x = 50 by p').fetchall()
         bdb.execute('estimate probability density of z = "a" by p').fetchall()
         print(bdb.execute('simulate x, y from p limit 10').fetchall())
-        print(bdb.execute('estimate dependence probability
+        print(bdb.execute('estimate dependence probability \
             from pairwise variables of p').fetchall())
 
