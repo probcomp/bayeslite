@@ -21,7 +21,7 @@ def test_loom():
                         'a' if random.uniform(0, 1) > 0.5 else 'b'))
         bdb.execute('create population p for t(x numerical; y numerical; z categorical)')
         bdb.execute('create generator g for p using loom')
-        bdb.execute('initialize 1 model for g')
+        bdb.execute('initialize 10 model for g')
         bdb.execute('analyze g for 1 iteration wait')
         print(bdb.execute('estimate similarity \
             in the context of x from pairwise p limit 1').fetchall())
