@@ -379,26 +379,26 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         return qserver.score(and_case) - qserver.score(conditional_case)
 
     def _convert_to_proper_stattype(self, bdb, generator_id, colno, value):
-            """
-            Convert a value from whats given by the logpdf_joint
-            method parameters, to what loom can handle.
-            Ex. from an integer to real or from a string to an integer
-            """
-            if value is None:
-                return value
-
-            population_id = core.bayesdb_generator_population(bdb,
-                    generator_id)
-            stattype = core.bayesdb_variable_stattype(
-                            bdb, population_id, colno)
-            if stattype == 'numerical':
-                return float(value)
-
-            # Lookup the string encoding
-            if stattype == 'categorical':
-                return self._get_integer_form(bdb, generator_id, colno, value)
-
+        """
+        Convert a value from whats given by the logpdf_joint
+        method parameters, to what loom can handle.
+        Ex. from an integer to real or from a string to an integer
+        """
+        if value is None:
             return value
+
+        population_id = core.bayesdb_generator_population(bdb,
+                generator_id)
+        stattype = core.bayesdb_variable_stattype(
+                        bdb, population_id, colno)
+        if stattype == 'numerical':
+            return float(value)
+
+        # Lookup the string encoding
+        if stattype == 'categorical':
+            return self._get_integer_form(bdb, generator_id, colno, value)
+
+        return value
 
     def _get_integer_form(self, bdb, generator_id, colno, string_form):
         gather_data_sql = '''
