@@ -131,7 +131,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         ''' % (generator_id,
                 datetime.datetime.fromtimestamp(time.time())
                 .strftime('%Y%m%d-%H%M%S'),
-                #"",
                 core.bayesdb_generator_name(bdb, generator_id))
         bdb.sql_execute(insert_generator_sql)
 
@@ -246,7 +245,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         return os.path.join(self.data_path, loom_name)
 
     def initialize_models(self, bdb, generator_id, modelnos):
-        self.num_models= len(modelnos)
+        self.num_models = len(modelnos)
 
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
             max_seconds=None, ckpt_iterations=None, ckpt_seconds=None,
@@ -259,8 +258,10 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
     def _store_kind_partition(self, bdb, generator_id, num_models):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         for modelno in range(num_models):
-            column_partition = self._retrieve_column_partition(bdb, generator_id, modelno)
-            for colno in core.bayesdb_variable_numbers(bdb, population_id, None):
+            column_partition = self._retrieve_column_partition(bdb,
+                    generator_id, modelno)
+            for colno in core.bayesdb_variable_numbers(bdb,
+                    population_id, None):
                 loom_rank = self._get_loom_rank(bdb, generator_id, colno)
                 kind_id = column_partition[loom_rank]
                 insert_generator_sql = '''
@@ -269,7 +270,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                         VALUES (%d, %d, %d, %d)
                 ''' % (generator_id, modelno, colno, kind_id)
                 bdb.sql_execute(insert_generator_sql)
-
 
     def _retrieve_column_partition(self, bdb, generator_id, modelno):
         """Return column partition from CrossCat `sample`.
@@ -285,7 +285,8 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
     def _get_cross_cat(self, bdb, generator_id, modelno):
         """Return the loom CrossCat structure whose id is `modelno`."""
         model_in = os.path.join(
-            self.data_path, self._get_name(bdb, generator_id), 'samples', 'sample.%d' % (modelno,), 'model.pb.gz')
+            self.data_path, self._get_name(bdb, generator_id),
+            'samples', 'sample.%d' % (modelno,), 'model.pb.gz')
         cross_cat = loom.schema_pb2.CrossCat()
         with open_compressed(model_in, 'rb') as f:
             cross_cat.ParseFromString(f.read())
@@ -301,7 +302,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             hit_list.append(1 if dependent else 0)
 
         return sum(hit_list)/len(hit_list)
-
 
     def _get_kind_id(self, bdb, generator_id, modelno, colno):
         gather_data_sql = '''
@@ -362,11 +362,19 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
     def simulate_joint(self, bdb, generator_id, modelnos, rowid, targets,
             constraints, num_samples=1, accuracy=None):
-        """
         if rowid != core.bayesdb_generator_fresh_row_id(bdb, generator_id):
-           for (colno, value) in core.bayesdb_generator_row_values(bdb, generator_id, rowid):
+            row_values = [entry for entry in
+                    core.bayesdb_generator_row_values(bdb, generator_id, rowid)
+                    if entry[1] is not None]
 
-        """
+            constraints_colnos, _ = zip(*constraints)
+            row_colnos, _ = zip(*row_values)
+            if any([colno in constraints_colnos for colno in row_colnos]):
+                raise ValueError('''Conflict between
+                        constraints and target row in simulate''')
+
+            constraints += row_values
+
         headers = []
         row = []
         for colno in targets:
