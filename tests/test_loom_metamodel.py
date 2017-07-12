@@ -23,13 +23,13 @@ def test_loom():
         bdb.execute('create generator g for p using loom')
         bdb.execute('initialize 2 model for g')
         bdb.execute('analyze g for 1 iteration wait')
-        print(bdb.execute('estimate similarity \
-            in the context of x from pairwise p limit 1').fetchall())
+        bdb.execute('estimate similarity \
+            in the context of x from pairwise p limit 1').fetchall()
         bdb.execute('estimate probability density of x = 50 by p').fetchall()
         bdb.execute('estimate probability density of z = "a" by p').fetchall()
-        print(bdb.execute('estimate mutual information as mutinf from pairwise columns of p order by mutinf').fetchall())
-        print(bdb.execute('simulate x, y from p limit 10').fetchall())
-        print(bdb.execute('INFER EXPLICIT PREDICT z CONFIDENCE x_c FROM p').fetchall())
-        print(bdb.execute('estimate dependence probability \
-            from pairwise variables of p').fetchall())
+        bdb.execute('estimate mutual information as mutinf from pairwise columns of p order by mutinf').fetchall()
+        bdb.execute('simulate x, y from p limit 10').fetchall()
+        bdb.execute('INFER EXPLICIT PREDICT z CONFIDENCE x_c FROM p').fetchall()
+        bdb.execute('estimate dependence probability \
+            from pairwise variables of p').fetchall()
 

@@ -134,6 +134,7 @@ class TruellMetamodel(metamodel.IBayesDBMetamodel):
 
     def _logpdf_gaussian(self, x, mu, sigma):
         deviation = x - mu
+        print(- math.log(sigma) - HALF_LOG2PI - (0.5 * deviation * deviation / (sigma * sigma)))
         return - math.log(sigma) - HALF_LOG2PI - (0.5 * deviation * deviation / (sigma * sigma))
 
     def _get_mus_sigmas(self, bdb, generator_id):

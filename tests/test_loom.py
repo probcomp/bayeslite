@@ -46,6 +46,7 @@ def loom_analyze(csv_filename):
         bdb.execute('CREATE METAMODEL m FOR p WITH BASELINE crosscat;')
         bdb.execute('INITIALIZE 10 MODELS FOR m')
         bdb.execute('ANALYZE m FOR 20 ITERATION WAIT (loom);')
+
         # targeted analysis for Loom not supported.
         with pytest.raises(BQLError):
             bdb.execute('''

@@ -26,6 +26,7 @@ import bayeslite.core as core
 from bayeslite import bql_quote_name
 from bayeslite.metamodels.crosscat import CrosscatMetamodel
 from bayeslite.metamodels.iid_gaussian import StdNormalMetamodel
+from bayeslite.metamodels.loom_metamodel import LoomMetamodel
 
 examples = {
     'crosscat': (
@@ -46,6 +47,25 @@ examples = {
         'CREATE GENERATOR p_cc FOR p USING crosscat()',
         'CREATE GENERATOR p_cc FOR p USING crosscat(DEPENDENT)',
         'CREATE GENERATOR p_cc FOR p USING crosscat(INDEPENDENT)',
+    ),
+    'loom': (
+        lambda: LoomMetamodel(),
+        't',
+        'CREATE TABLE t(x NUMERIC, y CYCLIC, z CATEGORICAL)',
+        'INSERT INTO t (x, y, z) VALUES (?, ?, ?)',
+        [
+            (0, 1.57, 'foo'),
+            (1.83, 3.141, 'bar'),
+            (1.82, 3.140, 'bar'),
+            (-1, 6.28, 'foo'),
+        ],
+        'p',
+        'p_cc',
+        'CREATE POPULATION p FOR t'
+            '(x NUMERICAL; y CYCLIC; z CATEGORICAL)',
+        'CREATE GENERATOR p_cc FOR p USING loom',
+        'CREATE GENERATOR p_cc FOR p USING loom',
+        'CREATE GENERATOR p_cc FOR p USING loom'
     ),
     'iid_gaussian': (
         lambda: StdNormalMetamodel(seed=0),

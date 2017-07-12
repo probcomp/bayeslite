@@ -51,7 +51,7 @@ from distributions.io.stream import open_compressed
 # TODO should we use "generator" or "metamodel" in the name of
 # "bayesdb_loom_generator"
 
-USE_TIMESTAMP = True
+USE_TIMESTAMP = False
 LOOM_SCHEMA_1 = '''
 INSERT INTO bayesdb_metamodel (name, version)
     VALUES (?, 1);
@@ -90,7 +90,7 @@ CSV_DELIMITER = ','
 
 # TODO fill out
 # TODO optimize number of bdb calls
-STATTYPE_TO_LOOMTYPE = {'categorical': 'dd', 'numerical': 'nich'}
+STATTYPE_TO_LOOMTYPE = {'categorical': 'dd', 'cyclic': 'nich', 'numerical': 'nich'}
 
 
 class LoomMetamodel(metamodel.IBayesDBMetamodel):
@@ -134,7 +134,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         ''' % (generator_id,
                 datetime.datetime.fromtimestamp(time.time())
                 .strftime('%Y%m%d-%H%M%S') if USE_TIMESTAMP else
-                "",
+                '',
                 core.bayesdb_generator_name(bdb, generator_id))
         bdb.sql_execute(insert_generator_sql)
 
@@ -185,10 +185,10 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                 VALUES (:generator_id, :colno, :string_form, :integer_form)
         '''
         for col in encoding:
-            if "symbols" in col:
+            if 'symbols' in col:
                 colno = core.bayesdb_table_column_number(bdb,
-                        table, str(col["name"]))
-                for (string_form, integer_form) in col["symbols"].iteritems():
+                        table, str(col['name']))
+                for (string_form, integer_form) in col['symbols'].iteritems():
                     bdb.sql_execute(insert_string_encoding, {
                         'generator_id': generator_id,
                         'colno': colno,
@@ -204,7 +204,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         '''
         for col_index in range(len(encoding)):
             colno = core.bayesdb_table_column_number(bdb,
-                    table, str(encoding[col_index]["name"]))
+                    table, str(encoding[col_index]['name']))
             bdb.sql_execute(insert_order_sql, {
                 'generator_id': generator_id,
                 'colno': colno,
@@ -256,7 +256,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             program=None):
         name = self._get_name(bdb, generator_id)
         num_models = (self.num_models if modelnos is None else len(modelnos))
-        loom.tasks.infer(name, sample_count = num_models)
+        #loom.tasks.infer(name, sample_count = num_models)
         self._store_kind_partition(bdb, generator_id, num_models)
 
     def _store_kind_partition(self, bdb, generator_id, num_models):
