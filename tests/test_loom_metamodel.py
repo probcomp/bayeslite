@@ -27,6 +27,7 @@ def test_loom():
             in the context of x from pairwise p limit 1').fetchall())
         bdb.execute('estimate probability density of x = 50 by p').fetchall()
         bdb.execute('estimate probability density of z = "a" by p').fetchall()
+        print(bdb.execute('estimate mutual information as mutinf from pairwise columns of p order by mutinf').fetchall())
         print(bdb.execute('simulate x, y from p limit 10').fetchall())
         print(bdb.execute('INFER EXPLICIT PREDICT z CONFIDENCE x_c FROM p').fetchall())
         print(bdb.execute('estimate dependence probability \

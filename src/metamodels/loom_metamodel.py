@@ -322,7 +322,20 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
     def column_mutual_information(self, bdb, generator_id, modelnos, colnos0,
             colnos1, constraints, numsamples):
-        return [0]
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        colnames0 = [str(core.bayesdb_variable_name(bdb, population_id, colno))
+                for colno in colnos0]
+        colnames1 = [str(core.bayesdb_variable_name(bdb, population_id, colno))
+                for colno in colnos1]
+
+        server = loom.tasks.query(self._get_name(bdb, generator_id))
+        target_set  = server._cols_to_mask(server.encode_set(colnames0))
+        query_set  = server._cols_to_mask(server.encode_set(colnames1))
+        return server._query_server.mutual_information(
+                target_set,
+                query_set,
+                entropys=None,
+                sample_count=loom.preql.SAMPLE_COUNT)
 
     def row_similarity(self, bdb, generator_id, modelnos, rowid, target_rowid,
             colnos):
