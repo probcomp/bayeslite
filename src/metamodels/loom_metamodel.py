@@ -51,7 +51,6 @@ from distributions.io.stream import open_compressed
 # TODO should we use "generator" or "metamodel" in the name of
 # "bayesdb_loom_generator"
 
-USE_TIMESTAMP = True
 LOOM_SCHEMA_1 = '''
 INSERT INTO bayesdb_metamodel (name, version)
     VALUES (?, 1);
@@ -130,12 +129,8 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         insert_generator_sql = '''
             INSERT INTO bayesdb_loom_generator
                 (generator_id, name)
-                VALUES (%d, "%s-%s")
-        ''' % (generator_id,
-                datetime.datetime.fromtimestamp(time.time())
-                .strftime('%Y%m%d-%H%M%S.%f') if USE_TIMESTAMP else
-                '',
-                core.bayesdb_generator_name(bdb, generator_id))
+                VALUES (%d, "%s")
+        ''' % (generator_id, self._generate_name(bdb, generator_id))
         bdb.sql_execute(insert_generator_sql)
 
         # Collect data from into list form
@@ -234,6 +229,11 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
         return schema_file
 
+    def _generate_name(self, bdb, generator_id):
+        return "%s-%s" % (datetime.datetime.fromtimestamp(time.time())
+                .strftime('%Y%m%d-%H%M%S.%f'),
+                core.bayesdb_generator_name(bdb, generator_id))
+
     def _get_name(self, bdb, generator_id):
         gather_data_sql = '''
             SELECT name FROM bayesdb_loom_generator WHERE
@@ -254,38 +254,32 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
     def drop_generator(self, bdb, generator_id):
         with bdb.savepoint():
             self.drop_models(bdb, generator_id)
-            delete_bayesdb_loom_generator = '''
-                DELETE FROM bayesdb_loom_generator
+            bdb.sql_execute('''
+                    DELETE FROM bayesdb_loom_generator
                     WHERE generator_id = ?
-            '''
-            bdb.sql_execute(delete_bayesdb_loom_generator, (generator_id,))
-            delete_bayesdb_loom_string_encoding = '''
-                DELETE FROM bayesdb_loom_string_encoding
+                    ''', (generator_id,))
+            bdb.sql_execute('''
+                    DELETE FROM bayesdb_loom_string_encoding
                     WHERE generator_id = ?
-            '''
-            bdb.sql_execute(delete_bayesdb_loom_string_encoding, (generator_id,))
-            delete_bayesdb_loom_column_ordering = '''
-                DELETE FROM bayesdb_loom_column_ordering
+                    ''', (generator_id,))
+            bdb.sql_execute('''
+                    DELETE FROM bayesdb_loom_column_ordering
                     WHERE generator_id = ?
-            '''
-            bdb.sql_execute(delete_bayesdb_loom_column_ordering, (generator_id,))
+                    ''', (generator_id,))
 
     def drop_models(self, bdb, generator_id, modelnos=None):
         with bdb.savepoint():
             if modelnos is None:
-                delete_bayesdb_loom_kind_partition = '''
-                    DELETE FROM bayesdb_loom_kind_partition
+                bdb.sql_execute('''
+                        DELETE FROM bayesdb_loom_kind_partition
                         WHERE generator_id = ?;
-                '''
-                bdb.sql_execute(delete_bayesdb_loom_kind_partition, (generator_id,))
+                        ''', (generator_id,))
             else:
-                delete_bayesdb_loom_kind_partition = '''
-                    DELETE FROM bayesdb_loom_kind_partition
-                        WHERE generator_id = ? and modelno = ?;
-                '''
                 for modelno in modelnos:
-                    bdb.sql_execute(delete_bayesdb_loom_kind_partition,
-                            (generator_id, modelno))
+                    bdb.sql_execute('''
+                            DELETE FROM bayesdb_loom_kind_partition
+                            WHERE generator_id = ? and modelno = ?;
+                            ''', (generator_id, modelno))
 
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
             max_seconds=None, ckpt_iterations=None, ckpt_seconds=None,
@@ -295,13 +289,15 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             try:
                 self.num_models
             except AttributeError:
-                return
+                BQLError(bdb,
+                        '''Cannot perform model analysis
+                        before models have been initialized''')
 
         self.drop_models(bdb, generator_id, modelnos=modelnos)
 
         name = self._get_name(bdb, generator_id)
         num_models = (self.num_models if modelnos is None else len(modelnos))
-        loom.tasks.infer(name, sample_count = num_models)
+        loom.tasks.infer(name, sample_count=num_models)
         self._store_kind_partition(bdb, generator_id, modelnos)
 
     def _store_kind_partition(self, bdb, generator_id, modelnos):
