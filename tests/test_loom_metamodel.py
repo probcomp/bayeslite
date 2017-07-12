@@ -9,7 +9,7 @@ from bayeslite import bayesdb_open
 from bayeslite import bayesdb_register_metamodel
 from bayeslite.metamodels.loom_metamodel import LoomMetamodel
 
-def test_loom():
+def test_loom_three_var():
     prng = random.Random(time.time())
     with bayesdb_open(':memory:') as bdb:
         bayesdb_register_metamodel(bdb, LoomMetamodel())
@@ -33,3 +33,19 @@ def test_loom():
         bdb.execute('estimate dependence probability \
             from pairwise variables of p').fetchall()
 
+def test_loom_one_numeric():
+    with bayesdb_open(':memory:') as bdb:
+        bayesdb_register_metamodel(bdb, LoomMetamodel())
+        bdb.sql_execute('create table t(x)')
+        for x in xrange(100):
+            bdb.sql_execute('insert into t(x) values(?)', (x,))
+        bdb.execute('create population p for t(x numerical)')
+        bdb.execute('create generator g for p using loom')
+        bdb.execute('initialize 1 model for g')
+        bdb.execute('analyze g for 1 iteration wait')
+        bdb.execute('estimate probability density of x = 50 from p').fetchall()
+        bdb.execute('simulate x from p limit 1').fetchall()
+        bdb.execute('drop models from g')
+        bdb.execute('drop generator g')
+        bdb.execute('drop population p')
+        bdb.execute('drop table t')

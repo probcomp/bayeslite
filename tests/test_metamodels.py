@@ -63,9 +63,9 @@ examples = {
         'p_cc',
         'CREATE POPULATION p FOR t'
             '(x NUMERICAL; y CYCLIC; z CATEGORICAL)',
-        'CREATE GENERATOR p_cc FOR p USING loom',
-        'CREATE GENERATOR p_cc FOR p USING loom',
-        'CREATE GENERATOR p_cc FOR p USING loom'
+        'CREATE GENERATOR p_cc FOR p USING loom()',
+        'CREATE GENERATOR p_cc FOR p USING loom ...',
+        'CREATE GENERATOR p_cc FOR p USING loom ...',
     ),
     'iid_gaussian': (
         lambda: StdNormalMetamodel(seed=0),
