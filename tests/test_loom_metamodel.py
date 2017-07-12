@@ -15,7 +15,6 @@
 #   limitations under the License.
 
 import pytest
-import random
 import time
 
 import bayeslite.core as core
@@ -29,18 +28,17 @@ PREDICT_RUNS = 100
 X_MIN, Y_MIN = 0, 0
 X_MAX, Y_MAX = 200, 100
 def test_loom_three_var():
-    prng = random.Random(time.time())
     with bayesdb_open(':memory:') as bdb:
         bayesdb_register_metamodel(bdb, LoomMetamodel())
         bdb.sql_execute('create table t(x, xx, y, z)')
         bdb.sql_execute('insert into t(x, xx, y, z) values(100, 200, 50, "a")')
         bdb.sql_execute('insert into t(x, xx, y, z) values(100, 200, 50, "a")')
         for index in xrange(100):
-            x = random.randrange(X_MIN, X_MAX)
+            x = bdb._prng.weakrandom_uniform(X_MAX)
             bdb.sql_execute('insert into t(x, xx, y, z) values(?, ?, ?, ?)',
                     (x, x*2,
-                        random.randrange(Y_MIN, Y_MAX),
-                        'a' if random.uniform(0, 1) > 0.5 else 'b'))
+                        int(bdb._prng.weakrandom_uniform(Y_MAX)),
+                        'a' if bdb._prng.weakrandom_uniform(2) == 1 else 'b'))
 
         bdb.execute('create population p for t(x numerical; xx numerical; y numerical; z categorical)')
         bdb.execute('create generator g for p using loom')
