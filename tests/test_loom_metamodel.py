@@ -39,7 +39,8 @@ def test_loom_four_var():
     """
 
     with bayesdb_open(':memory:') as bdb:
-        bayesdb_register_metamodel(bdb, LoomMetamodel())
+        bayesdb_register_metamodel(bdb, LoomMetamodel(loom_store_path=
+                    '/scratch/mntruell/venv/lib/python2.7/site-packages/data/'))
         bdb.sql_execute('create table t(x, xx, y, z)')
         bdb.sql_execute('insert into t(x, xx, y, z) values(100, 200, 50, "a")')
         bdb.sql_execute('insert into t(x, xx, y, z) values(100, 200, 50, "a")')
@@ -118,7 +119,9 @@ def test_loom_one_numeric():
     Only checks for errors from the Loom system.
     """
     with bayesdb_open(':memory:') as bdb:
-        bayesdb_register_metamodel(bdb, LoomMetamodel())
+        bayesdb_register_metamodel(bdb,
+                LoomMetamodel(loom_store_path=
+                    '/scratch/mntruell/venv/lib/python2.7/site-packages/data/'))
         bdb.sql_execute('create table t(x)')
         for x in xrange(100):
             bdb.sql_execute('insert into t(x) values(?)', (x,))

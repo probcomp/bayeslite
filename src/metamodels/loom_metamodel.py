@@ -48,6 +48,7 @@ from bayeslite.metamodel import bayesdb_metamodel_version
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 from distributions.io.stream import open_compressed
+from loom.cFormat import assignment_stream_load
 
 # TODO should we use "generator" or "metamodel" in the name of
 # "bayesdb_loom_generator"
@@ -64,25 +65,34 @@ CREATE TABLE bayesdb_loom_generator (
 
 CREATE TABLE bayesdb_loom_string_encoding (
     generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
-    colno           INTEGRER NOT NULL,
+    colno           INTEGER NOT NULL,
     string_form     VARCHAR(64) NOT NULL,
-    integer_form    INTEGRER NOT NULL,
+    integer_form    INTEGER NOT NULL,
     PRIMARY KEY(generator_id, colno, integer_form)
 );
 
 CREATE TABLE bayesdb_loom_column_ordering (
     generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
-    colno           INTEGRER NOT NULL,
-    rank            INTEGRER NOT NULL,
+    colno           INTEGER NOT NULL,
+    rank            INTEGER NOT NULL,
     PRIMARY KEY(generator_id, colno)
 );
 
-CREATE TABLE bayesdb_loom_kind_partition (
+CREATE TABLE bayesdb_loom_column_kind_partition (
     generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
-    modelno         INTEGRER NOT NULL,
-    colno           INTEGRER NOT NULL,
-    kind_id          INTEGRER NOT NULL,
+    modelno         INTEGER NOT NULL,
+    colno           INTEGER NOT NULL,
+    kind_id         INTEGER NOT NULL,
     PRIMARY KEY(generator_id, modelno, colno)
+);
+
+CREATE TABLE bayesdb_loom_row_kind_partition (
+    generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    modelno         INTEGER NOT NULL,
+    rowid           INTEGER NOT NULL,
+    kind_id         INTEGER NOT NULL,
+    partition_id    INTEGER NOT NULL,
+    PRIMARY KEY(generator_id, modelno, rowid, kind_id)
 );
 '''
 
@@ -163,10 +173,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         self._store_encoding_info(bdb, generator_id)
 
     def _store_encoding_info(self, bdb, generator_id):
-        name = self._get_name(bdb, generator_id)
-        assert name is not None
-
-        encoding_path = os.path.join(self._get_loom_project_path(name),
+        encoding_path = os.path.join(self._get_loom_project_path(bdb, generator_id),
                 'ingest', 'encoding.json.gz')
         assert os.path.isfile(encoding_path)
         with gzip.open(encoding_path) as encoding_file:
@@ -243,8 +250,9 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                 generator_id=?;
                 ''', (generator_id,)))
 
-    def _get_loom_project_path(self, loom_name):
-        return os.path.join(self.loom_store_path, loom_name)
+    def _get_loom_project_path(self, bdb, generator_id):
+        name = self._get_name(bdb, generator_id)
+        return os.path.join(self.loom_store_path, name)
 
     def initialize_models(self, bdb, generator_id, modelnos):
         self.num_models = len(modelnos)
@@ -269,13 +277,13 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         with bdb.savepoint():
             if modelnos is None:
                 bdb.sql_execute('''
-                        DELETE FROM bayesdb_loom_kind_partition
+                        DELETE FROM bayesdb_loom_column_kind_partition
                         WHERE generator_id = ?;
                         ''', (generator_id,))
             else:
                 for modelno in modelnos:
                     bdb.sql_execute('''
-                            DELETE FROM bayesdb_loom_kind_partition
+                            DELETE FROM bayesdb_loom_column_kind_partition
                             WHERE generator_id = ? and modelno = ?;
                             ''', (generator_id, modelno))
 
@@ -308,13 +316,27 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                 loom_rank = self._get_loom_rank(bdb, generator_id, colno)
                 kind_id = column_partition[loom_rank]
                 bdb.sql_execute('''
-                        INSERT INTO bayesdb_loom_kind_partition
+                        INSERT INTO bayesdb_loom_column_kind_partition
                         (generator_id, modelno, colno, kind_id)
                         VALUES (?, ?, ?, ?)
                         ''', (generator_id, modelno, colno, kind_id,))
 
+            row_partition = self._retrieve_row_partition(bdb,
+                    generator_id, modelno)
+            for kind_id in row_partition.keys():
+                for rowid, partition_id in zip(
+                        range(len(row_partition[kind_id])), row_partition[kind_id]):
+                    print("%d, %d, %d" % (rowid, kind_id, partition_id))
+                    bdb.sql_execute('''
+                            INSERT INTO bayesdb_loom_row_kind_partition
+                            (generator_id, modelno, rowid, kind_id, partition_id)
+                            VALUES (?, ?, ?, ?, ?)
+                            ''', (generator_id, modelno, rowid, kind_id, partition_id,))
+
+
+
     def _retrieve_column_partition(self, bdb, generator_id, modelno):
-        """Return column partition from CrossCat `sample`.
+        """Return column partition from a CrossCat model.
 
         The returned structure is of the form `cgpm.crosscat.state.State.Zv`.
         """
@@ -323,6 +345,26 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             [(loom_rank, k) for loom_rank in kind.featureids]
             for k, kind in enumerate(cross_cat.kinds)
         ]))
+
+    def _retrieve_row_partition(self, bdb, generator_id, modelno):
+        """Return row partition from a CrossCat model.
+
+        The returned structure is of the form `cgpm.crosscat.state.State.Zv`.
+        """
+        cross_cat = self._get_cross_cat(bdb, generator_id, modelno)
+        num_kinds = len(cross_cat.kinds)
+        assign_in = os.path.join(
+            self._get_loom_project_path(bdb, generator_id), 'samples', 'sample.%d' % (modelno,), 'assign.pbs.gz')
+        assignments = {
+            a.rowid: [a.groupids(k) for k in xrange(num_kinds)]
+            for a in assignment_stream_load(assign_in)
+        }
+        rowids = sorted(assignments)
+        return {
+            k: [assignments[rowid][k] for rowid in rowids]
+            for k in xrange(num_kinds)
+        }
+
 
     def _get_cross_cat(self, bdb, generator_id, modelno):
         """Return the loom CrossCat structure whose id is `modelno`."""
@@ -347,7 +389,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
     def _get_kind_id(self, bdb, generator_id, modelno, colno):
         return util.cursor_value(bdb.sql_execute('''
-                SELECT kind_id FROM bayesdb_loom_kind_partition
+                SELECT kind_id FROM bayesdb_loom_column_kind_partition
                 WHERE generator_id = ? and
                 modelno = ? and
                 colno = ?;
@@ -547,7 +589,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
         # TODO cache
         qserver = loom.query.get_server(
-                self._get_loom_project_path(self._get_name(bdb, generator_id)))
+                self._get_loom_project_path(bdb, generator_id))
         return qserver.score(and_case) - qserver.score(conditional_case)
 
     def _convert_to_proper_stattype(self, bdb, generator_id, colno, value):
