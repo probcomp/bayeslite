@@ -329,8 +329,8 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                 for colno in colnos1]
 
         server = loom.tasks.query(self._get_name(bdb, generator_id))
-        target_set  = server._cols_to_mask(server.encode_set(colnames0))
-        query_set  = server._cols_to_mask(server.encode_set(colnames1))
+        target_set = server._cols_to_mask(server.encode_set(colnames0))
+        query_set = server._cols_to_mask(server.encode_set(colnames1))
         return server._query_server.mutual_information(
                 target_set,
                 query_set,
