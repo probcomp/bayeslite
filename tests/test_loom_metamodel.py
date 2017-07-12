@@ -14,7 +14,7 @@ def test_loom():
     with bayesdb_open(':memory:') as bdb:
         bayesdb_register_metamodel(bdb, LoomMetamodel())
         bdb.sql_execute('create table t(x, y, z)')
-        for x in xrange(1000):
+        for x in xrange(50):
             bdb.sql_execute('insert into t(x, y, z) values(?, ?, ?)',
                     (random.randrange(0, 200),
                         random.randrange(0, 100),
@@ -28,6 +28,7 @@ def test_loom():
         bdb.execute('estimate probability density of x = 50 by p').fetchall()
         bdb.execute('estimate probability density of z = "a" by p').fetchall()
         print(bdb.execute('simulate x, y from p limit 10').fetchall())
+        print(bdb.execute('INFER EXPLICIT PREDICT z CONFIDENCE x_c FROM p').fetchall())
         print(bdb.execute('estimate dependence probability \
             from pairwise variables of p').fetchall())
 

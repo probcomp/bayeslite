@@ -36,19 +36,22 @@ import tempfile
 import time
 
 from StringIO import StringIO
+from collections import Counter
 
 import loom.tasks
 
 import bayeslite.core as core
 import bayeslite.metamodel as metamodel
 
-from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.metamodel import bayesdb_metamodel_version
+from bayeslite.sqlite3_util import sqlite3_quote_name
+from bayeslite.util import casefold
 from distributions.io.stream import open_compressed
 
 # TODO should we use "generator" or "metamodel" in the name of
 # "bayesdb_loom_generator"
 
+USE_TIMESTAMP = True
 LOOM_SCHEMA_1 = '''
 INSERT INTO bayesdb_metamodel (name, version)
     VALUES (?, 1);
@@ -130,7 +133,8 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                 VALUES (%d, "%s-%s")
         ''' % (generator_id,
                 datetime.datetime.fromtimestamp(time.time())
-                .strftime('%Y%m%d-%H%M%S'),
+                .strftime('%Y%m%d-%H%M%S') if USE_TIMESTAMP else
+                "",
                 core.bayesdb_generator_name(bdb, generator_id))
         bdb.sql_execute(insert_generator_sql)
 
@@ -324,11 +328,11 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             colnos):
         # TODO don't ignore the context
         population_id = core.bayesdb_generator_population(bdb, generator_id)
-        target_row = self._reorder_row(bdb, generator_id,
+        _, target_row = zip(*self._reorder_row(bdb, generator_id,
                 core.bayesdb_population_row_values(bdb,
-                    population_id, target_rowid))
-        row = self._reorder_row(bdb, generator_id,
-                core.bayesdb_population_row_values(bdb, population_id, rowid))
+                    population_id, target_rowid)))
+        _, row = zip(*self._reorder_row(bdb, generator_id,
+                core.bayesdb_population_row_values(bdb, population_id, rowid)))
 
         # TODO: cache server
         # Run simlarity query
@@ -336,12 +340,12 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         output = server.similar([target_row], rows2=[row])
         return float(output)
 
-    def _reorder_row(self, bdb, generator_id, row):
+    def _reorder_row(self, bdb, generator_id, row, dense=True):
         """Reorder a row of columns according to loom's column order
 
         Row should be a list of (colno, value) tuples
 
-        Returns a list of scalar values in the proper order.
+        Returns a list of (colno, value) tuples in the proper order.
         """
         ordered_column_labels = self._get_ordered_column_labels(bdb,
                 generator_id)
@@ -353,66 +357,117 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             column_name = core.bayesdb_variable_name(bdb, population_id, colno)
             ordererd_column_dict[column_name] = str(value)
 
-        return [value
-                for (_, value) in ordererd_column_dict.iteritems()]
+        if dense is False:
+            return [(colno, value)
+                    for (colno, value) in ordererd_column_dict.iteritems()
+                    if value is not None]
+
+        return ordererd_column_dict.iteritems()
 
     def predict_confidence(self, bdb, generator_id, modelnos, rowid, colno,
             numsamples=None):
-        return (0, 1)
+        if not numsamples:
+            numsamples = 2
+        assert numsamples > 0
+
+        def _impute_categorical(sample):
+            counts = Counter(s[0] for s in sample)
+            mode_count = max(counts[v] for v in counts)
+            pred = iter(v for v in counts if counts[v] == mode_count).next()
+            conf = float(mode_count) / numsamples
+            return pred, conf
+
+        def _impute_numerical(sample):
+            pred = sum(s[0] for s in sample) / float(len(sample))
+            conf = 0
+            return pred, conf
+
+        def _is_categorical(stattype):
+            return casefold(stattype) in ['categorical', 'nominal']
+
+        # Retrieve the samples. Specifying `rowid` ensures that relevant
+        # constraints are retrieved by `simulate`, so provide empty constraints.
+        sample = self.simulate_joint(
+            bdb, generator_id, modelnos, rowid, [colno], [], numsamples)
+
+        # Determine the imputation strategy (mode or mean).
+        stattype = core.bayesdb_variable_stattype(
+            bdb, core.bayesdb_generator_population(bdb, generator_id), colno)
+        if _is_categorical(stattype):
+            return _impute_categorical(sample)
+        else:
+            return _impute_numerical(sample)
 
     def simulate_joint(self, bdb, generator_id, modelnos, rowid, targets,
             constraints, num_samples=1, accuracy=None):
         if rowid != core.bayesdb_generator_fresh_row_id(bdb, generator_id):
-            row_values = [entry for entry in
-                    core.bayesdb_generator_row_values(bdb, generator_id, rowid)
+            row_values = [str(a) if isinstance(a, unicode) else a
+                    for a in
+                    core.bayesdb_generator_row_values(bdb, generator_id, rowid)]
+
+            row = [entry for entry in
+                    zip(range(len(row_values)), row_values)
                     if entry[1] is not None]
 
-            constraints_colnos, _ = zip(*constraints)
-            row_colnos, _ = zip(*row_values)
+            constraints_colnos, _ = ([], []) if len(
+                    constraints) == 0 else zip(*constraints)
+            row_colnos, _ = zip(*row)
             if any([colno in constraints_colnos for colno in row_colnos]):
                 raise ValueError('''Conflict between
                         constraints and target row in simulate''')
 
-            constraints += row_values
+            constraints += row
 
-        headers = []
-        row = []
+        row = {}
+        target_no_to_name = {}
         for colno in targets:
-            headers.append(core.bayesdb_generator_column_name(bdb,
-                generator_id, colno))
-            row.append('')
+            name = core.bayesdb_generator_column_name(bdb,
+                generator_id, colno)
+            target_no_to_name[colno] = name
+
+            row[name] = ''
         for (colno, value) in constraints:
-            headers.append(core.bayesdb_generator_column_name(bdb,
-                generator_id, colno))
-            row.append(value)
+            row[core.bayesdb_generator_column_name(bdb,
+                generator_id, colno)] = value
+
+        csv_headers, csv_values = zip(*row.iteritems())
 
         # TODO cache
         server = loom.tasks.query(self._get_name(bdb, generator_id))
 
         # Perform predict query with some boiler plate
         # to make loom using StringIO() and an iterable instead of disk
+        csv_headers = [str(a) for a in csv_headers]
+        csv_values = [str(a) for a in csv_values]
         outfile = StringIO()
         writer = loom.preql.CsvWriter(outfile, returns=outfile.getvalue)
-        reader = iter([headers]+[row])
+        reader = iter([csv_headers]+[csv_values])
         server._predict(reader, num_samples, writer, False)
         output = writer.result()
 
         # Parse output
-        loom_output = [a.split(CSV_DELIMITER)
+        returned_headers = output.strip().split('\r\n')[0].split(CSV_DELIMITER)
+        loom_output = [zip(returned_headers, a.split(CSV_DELIMITER))
                 for a in output.strip().split('\r\n')[1:]]
-
-        # Convert output values to proper data types
         population_id = core.bayesdb_generator_population(bdb,
                 generator_id)
-        for row_index in range(len(loom_output)):
-            for col_index in range(len(loom_output[row_index])):
+        return_list = []
+        for row in loom_output:
+            return_list.append([])
+            row_dict = dict(row)
+
+            for colno in targets:
+                colname = target_no_to_name[colno]
+                value = row_dict[colname]
                 stattype = core.bayesdb_variable_stattype(
-                        bdb, population_id, targets[col_index])
+                        bdb, population_id, colno)
                 # TODO dont use private
-                if core._STATTYPE_TO_AFFINITY[stattype] is 'real':
-                    loom_output[row_index][col_index] = float(
-                            loom_output[row_index][col_index])
-        return loom_output
+                if core._STATTYPE_TO_AFFINITY[stattype] == 'real':
+                    return_list[-1].append(float(value))
+                else:
+                    return_list[-1].append(value)
+
+        return return_list
 
     def logpdf_joint(self, bdb, generator_id, modelnos, rowid, targets,
             constraints):
