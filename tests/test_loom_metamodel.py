@@ -14,12 +14,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pytest
-import time
-
-import bayeslite.core as core
-
-from bayeslite import BQLError
 from bayeslite import bayesdb_open
 from bayeslite import bayesdb_register_metamodel
 from bayeslite.metamodels.loom_metamodel import LoomMetamodel
@@ -27,7 +21,23 @@ from bayeslite.metamodels.loom_metamodel import LoomMetamodel
 PREDICT_RUNS = 100
 X_MIN, Y_MIN = 0, 0
 X_MAX, Y_MAX = 200, 100
-def test_loom_three_var():
+
+
+def test_loom_four_var():
+    """Test Loom on a four variable table.
+    Table consists of:
+    * x - a random int between 0 and 200
+    * y - a random int between 0 and 100
+    * xx - just 2*x
+    * z - a categorical variable that has an even
+    chance of being 'a' or 'b'
+
+    Queries run and tested include:
+    estimate similarity, estimate probability density, simulate,
+    estimate mutual information, estimate dependence probability,
+    infer explicit predict
+    """
+
     with bayesdb_open(':memory:') as bdb:
         bayesdb_register_metamodel(bdb, LoomMetamodel())
         bdb.sql_execute('create table t(x, xx, y, z)')
@@ -40,7 +50,8 @@ def test_loom_three_var():
                         int(bdb._prng.weakrandom_uniform(Y_MAX)),
                         'a' if bdb._prng.weakrandom_uniform(2) == 1 else 'b'))
 
-        bdb.execute('create population p for t(x numerical; xx numerical; y numerical; z categorical)')
+        bdb.execute('''create population p for t(x numerical; xx numerical;
+                y numerical; z categorical)''')
         bdb.execute('create generator g for p using loom')
         bdb.execute('initialize 2 model for g')
         bdb.execute('analyze g for 1 iteration wait')
@@ -51,31 +62,39 @@ def test_loom_three_var():
         assert similarities[0][2] == similarities[1][2]
 
         impossible_density = bdb.execute(
-                'estimate probability density of x = %d by p' % (X_MAX*2.5)).fetchall()
+                'estimate probability density of x = %d by p'
+                % (X_MAX*2.5)).fetchall()
         assert impossible_density[0][0] < 0.0001
 
         possible_density = bdb.execute(
-                'estimate probability density of x = %d  by p' %  ((X_MAX-X_MIN)/2)).fetchall()
+                'estimate probability density of x = %d  by p' %
+                ((X_MAX-X_MIN)/2)).fetchall()
         assert possible_density[0][0] > 0.001
 
-        categorical_density = bdb.execute('estimate probability density of z = "a" by p').fetchall()
+        categorical_density = bdb.execute('''estimate probability density of
+                z = "a" by p''').fetchall()
         assert abs(categorical_density[0][0]-.5) < 0.2
 
-        mutual_info = bdb.execute('estimate mutual information as mutinf from pairwise columns of p order by mutinf').fetchall()
+        mutual_info = bdb.execute('''estimate mutual information as mutinf
+                from pairwise columns of p order by mutinf''').fetchall()
         _, a, b, c = zip(*mutual_info)
         mutual_info_dict = dict(zip(zip(a, b), c))
-        assert mutual_info_dict[('x', 'y')] < mutual_info_dict[('x', 'xx')] < mutual_info_dict[('x', 'x')]
+        assert mutual_info_dict[('x', 'y')] < mutual_info_dict[
+                ('x', 'xx')] < mutual_info_dict[('x', 'x')]
 
-        simulated_data = bdb.execute('simulate x, y from p limit %d' % (PREDICT_RUNS)).fetchall()
+        simulated_data = bdb.execute('simulate x, y from p limit %d' %
+                (PREDICT_RUNS)).fetchall()
         xs, ys = zip(*simulated_data)
         assert abs((sum(xs)/len(xs)) - (X_MAX-X_MIN)/2) < (X_MAX-X_MIN)/5
         assert abs((sum(ys)/len(ys)) - (Y_MAX-Y_MIN)/2) < (Y_MAX-Y_MIN)/5
 
-        assert sum([1 if (x < Y_MIN or x > X_MAX) else 0 for x in xs]) < .5*PREDICT_RUNS
-        assert sum([1 if (y < Y_MIN or y > Y_MAX) else 0 for y in ys]) < .5*PREDICT_RUNS
+        assert sum([1 if (x < Y_MIN or x > X_MAX)
+            else 0 for x in xs]) < .5*PREDICT_RUNS
+        assert sum([1 if (y < Y_MIN or y > Y_MAX)
+            else 0 for y in ys]) < .5*PREDICT_RUNS
 
-        dependence = bdb.execute('estimate dependence probability \
-            from pairwise variables of p').fetchall()
+        dependence = bdb.execute('''estimate dependence probability
+            from pairwise variables of p''').fetchall()
         for (_, col1, col2, d_val) in dependence:
             if col1 == col2:
                 assert d_val == 1
@@ -87,11 +106,17 @@ def test_loom_three_var():
         predict_confidence = bdb.execute(
                 'infer explicit predict x confidence x_c FROM p').fetchall()
         predictions, confidences = zip(*predict_confidence)
-        assert abs((sum(predictions)/len(predictions)) - (X_MAX-X_MIN)/2) < (X_MAX-X_MIN)/5
-        assert sum([1 if (p < X_MIN or p > X_MAX) else 0 for p in predictions]) < .5*PREDICT_RUNS
+        assert abs((sum(predictions)/len(predictions))
+                - (X_MAX-X_MIN)/2) < (X_MAX-X_MIN)/5
+        assert sum([1 if (p < X_MIN or p > X_MAX)
+            else 0 for p in predictions]) < .5*PREDICT_RUNS
         assert all([c == 0 for c in confidences])
 
+
 def test_loom_one_numeric():
+    """Simple test of the LoomMetamodel on a one variable table
+    Only checks for errors from the Loom system.
+    """
     with bayesdb_open(':memory:') as bdb:
         bayesdb_register_metamodel(bdb, LoomMetamodel())
         bdb.sql_execute('create table t(x)')
