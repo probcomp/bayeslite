@@ -280,10 +280,18 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                         DELETE FROM bayesdb_loom_column_kind_partition
                         WHERE generator_id = ?;
                         ''', (generator_id,))
+                bdb.sql_execute('''
+                        DELETE FROM bayesdb_loom_row_kind_partition
+                        WHERE generator_id = ?;
+                        ''', (generator_id,))
             else:
                 for modelno in modelnos:
                     bdb.sql_execute('''
                             DELETE FROM bayesdb_loom_column_kind_partition
+                            WHERE generator_id = ? and modelno = ?;
+                            ''', (generator_id, modelno))
+                    bdb.sql_execute('''
+                            DELETE FROM bayesdb_loom_row_kind_partition
                             WHERE generator_id = ? and modelno = ?;
                             ''', (generator_id, modelno))
 
@@ -326,7 +334,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             for kind_id in row_partition.keys():
                 for rowid, partition_id in zip(
                         range(len(row_partition[kind_id])), row_partition[kind_id]):
-                    print("%d, %d, %d" % (rowid, kind_id, partition_id))
                     bdb.sql_execute('''
                             INSERT INTO bayesdb_loom_row_kind_partition
                             (generator_id, modelno, rowid, kind_id, partition_id)
