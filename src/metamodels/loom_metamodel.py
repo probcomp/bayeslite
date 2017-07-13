@@ -125,7 +125,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         self.num_models = 1
         self.loom_prefix = loom_prefix
         self.loom_store_path = loom_store_path
-        print("initialize objectttt")
 
     def name(self):
         return 'loom'
@@ -398,6 +397,15 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                 colno = ?;
                 ''', (generator_id, modelno, colno,)))
 
+    def _get_partition_id(self, bdb, generator_id, modelno, kind_id, rowid):
+        return util.cursor_value(bdb.sql_execute('''
+                SELECT partition_id FROM bayesdb_loom_row_kind_partition
+                WHERE generator_id = ? and
+                modelno = ? and
+                kind_id = ? and
+                rowid = ?;
+                ''', (generator_id, modelno, kind_id, rowid)))
+
     def column_mutual_information(self, bdb, generator_id, modelnos, colnos0,
             colnos1, constraints, numsamples):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
@@ -454,6 +462,21 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                     if value is not None]
 
         return ordererd_column_dict.iteritems()
+
+    def predictive_relevance(self, bdb, generator_id, modelnos, rowid_target,
+            rowid_queries, hypotheticals, colno):
+        if modelnos is None:
+            modelnos = range(self.num_models)
+
+        hitSums = [0 for _ in rowid_queries]
+        for modelno in modelnos:
+            kind_id_context = self._get_kind_id(bdb, generator_id, modelno, colno)
+            partition_id_target = self._get_partition_id(bdb, generator_id, modelno, kind_id_context, rowid_target)
+            for (query_index, rowid_query) in zip(range(len(rowid_queries)), rowid_queries):
+                partition_id_query= self._get_partition_id(bdb, generator_id, modelno, kind_id_context, rowid_query)
+                if partition_id_target == partition_id_query:
+                    hitSums[query_index] += 1
+        return [xsum/len(modelnos) for xsum in hitSums]
 
     def predict_confidence(self, bdb, generator_id, modelnos, rowid, colno,
             numsamples=None):

@@ -39,7 +39,7 @@ def test_loom_four_var():
     """
 
     with bayesdb_open(':memory:') as bdb:
-        bayesdb_register_metamodel(bdb, LoomMetamodel(loom_store_path=
+        bayesdb_register_metamodel(bdb, LoomMetamodel(loom_prefix="20170713-141218.595059", loom_store_path=
                     '/scratch/mntruell/venv/lib/python2.7/site-packages/data/'))
         bdb.sql_execute('create table t(x, xx, y, z)')
         bdb.sql_execute('insert into t(x, xx, y, z) values(100, 200, 50, "a")')
@@ -56,6 +56,13 @@ def test_loom_four_var():
         bdb.execute('create generator g for p using loom')
         bdb.execute('initialize 2 model for g')
         bdb.execute('analyze g for 1 iteration wait')
+
+        relevance = bdb.execute('''ESTIMATE PREDICTIVE RELEVANCE
+                TO EXISTING ROWS (rowid = 1)
+                IN THE CONTEXT OF "x"
+                FROM p
+                WHERE rowid = 1''').fetchall()
+        assert relevance[0][0] == 1
 
         similarities = bdb.execute('estimate similarity \
             in the context of x from pairwise p limit 2').fetchall()
@@ -114,13 +121,14 @@ def test_loom_four_var():
         assert all([c == 0 for c in confidences])
 
 
+"""
 def test_loom_one_numeric():
-    """Simple test of the LoomMetamodel on a one variable table
+    Simple test of the LoomMetamodel on a one variable table
     Only checks for errors from the Loom system.
-    """
+
     with bayesdb_open(':memory:') as bdb:
         bayesdb_register_metamodel(bdb,
-                LoomMetamodel(loom_store_path=
+                LoomMetamodel(loom_prefix="20170713-141218.595059", loom_store_path=
                     '/scratch/mntruell/venv/lib/python2.7/site-packages/data/'))
         bdb.sql_execute('create table t(x)')
         for x in xrange(100):
@@ -135,3 +143,4 @@ def test_loom_one_numeric():
         bdb.execute('drop generator g')
         bdb.execute('drop population p')
         bdb.execute('drop table t')
+        """
