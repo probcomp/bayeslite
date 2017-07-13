@@ -114,15 +114,18 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
     database with names that begin with ``bayesdb_loom``.
     """
 
-    def __init__(self, loom_prefix=None, loom_store_path=os.path.join('tmp','bayeslite','loomstore')):
+    def __init__(self, loom_prefix=None,
+            loom_store_path=os.path.join('tmp','bayeslite','loomstore')):
         """Initialize the loom metamodel
 
         `loom_store_path` is the absolute path at which loom stores its data files
         `loom_prefix` is the prefix of the loom project name. If none,
         a timestamp will be used.
         """
+        self.num_models = 1
         self.loom_prefix = loom_prefix
         self.loom_store_path = loom_store_path
+        print("initialize objectttt")
 
     def name(self):
         return 'loom'
@@ -298,14 +301,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
             max_seconds=None, ckpt_iterations=None, ckpt_seconds=None,
             program=None):
-        # Make sure we've been initialized or given a modelnos list
-        if modelnos is None:
-            try:
-                self.num_models
-            except AttributeError:
-                BQLError(bdb,
-                        '''Cannot perform model analysis
-                        before models have been initialized''')
 
         self.drop_models(bdb, generator_id, modelnos=modelnos)
 
@@ -361,7 +356,8 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         cross_cat = self._get_cross_cat(bdb, generator_id, modelno)
         num_kinds = len(cross_cat.kinds)
         assign_in = os.path.join(
-            self._get_loom_project_path(bdb, generator_id), 'samples', 'sample.%d' % (modelno,), 'assign.pbs.gz')
+            self._get_loom_project_path(bdb, generator_id),
+            'samples', 'sample.%d' % (modelno,), 'assign.pbs.gz')
         assignments = {
             a.rowid: [a.groupids(k) for k in xrange(num_kinds)]
             for a in assignment_stream_load(assign_in)

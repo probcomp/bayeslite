@@ -49,7 +49,8 @@ examples = {
         'CREATE GENERATOR p_cc FOR p USING crosscat(INDEPENDENT)',
     ),
     'loom': (
-        lambda: LoomMetamodel(),
+        lambda: LoomMetamodel(loom_prefix="", loom_store_path=
+                '/scratch/mntruell/venv/lib/python2.7/site-packages/data/'),
         't',
         'CREATE TABLE t(x NUMERIC, y CYCLIC, z CATEGORICAL)',
         'INSERT INTO t (x, y, z) VALUES (?, ?, ?)',
@@ -60,12 +61,12 @@ examples = {
             (-1, 6.28, 'foo'),
         ],
         'p',
-        'p_cc',
+        'p_lm',
         'CREATE POPULATION p FOR t'
             '(x NUMERICAL; y CYCLIC; z CATEGORICAL)',
-        'CREATE GENERATOR p_cc FOR p USING loom()',
-        'CREATE GENERATOR p_cc FOR p USING loom ...',
-        'CREATE GENERATOR p_cc FOR p USING loom ...',
+        'CREATE GENERATOR p_lm FOR p USING loom()',
+        'CREATE GENERATOR p_lm FOR p USING loom ...',
+        'CREATE GENERATOR p_lm FOR p USING loom ...',
     ),
     'iid_gaussian': (
         lambda: StdNormalMetamodel(seed=0),
@@ -96,6 +97,7 @@ def test_example(persist, exname):
                 _test_example(bdb, exname)
             with bayeslite.bayesdb_open(pathname=f.name,
                     builtin_metamodels=False) as bdb:
+                pass
                 _retest_example(bdb, exname)
     else:
         with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
@@ -201,9 +203,11 @@ def _test_example(bdb, exname):
         assert [0] == core.bayesdb_generator_modelnos(bdb, gid)
 
     # Test analyzing models.
+    print("STARTT")
     bdb.execute('ANALYZE %s FOR 1 ITERATION WAIT' % (qg,))
     bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION WAIT' % (qg,))
     bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION WAIT' % (qg,))
+    print("DONEEEEE")
 
 def _retest_example(bdb, exname):
     mm, t, t_sql, data_sql, data, p, g, p_bql, g_bql, g_bqlbad0, g_bqlbad1 = \
@@ -219,6 +223,9 @@ def _retest_example(bdb, exname):
     gid = core.bayesdb_get_generator(bdb, p_id, g)
     assert core.bayesdb_generator_has_model(bdb, gid, 0)
     assert core.bayesdb_generator_has_model(bdb, gid, 1)
+
+    print("STARTT2")
     bdb.execute('ANALYZE %s FOR 1 ITERATION WAIT' % (qg,))
     bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION WAIT' % (qg,))
     bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION WAIT' % (qg,))
+
