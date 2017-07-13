@@ -39,12 +39,11 @@ def test_loom_four_var():
     """
 
     with bayesdb_open(':memory:') as bdb:
-        bayesdb_register_metamodel(bdb, LoomMetamodel(loom_prefix="20170713-141218.595059", loom_store_path=
-                    '/scratch/mntruell/venv/lib/python2.7/site-packages/data/'))
+        bayesdb_register_metamodel(bdb, LoomMetamodel(loom_prefix="20170713-141218.595059"))
         bdb.sql_execute('create table t(x, xx, y, z)')
         bdb.sql_execute('insert into t(x, xx, y, z) values(100, 200, 50, "a")')
         bdb.sql_execute('insert into t(x, xx, y, z) values(100, 200, 50, "a")')
-        for index in xrange(100):
+        for index in xrange(100)
             x = bdb._prng.weakrandom_uniform(X_MAX)
             bdb.sql_execute('insert into t(x, xx, y, z) values(?, ?, ?, ?)',
                     (x, x*2,
@@ -64,8 +63,8 @@ def test_loom_four_var():
                 WHERE rowid = 1''').fetchall()
         assert relevance[0][0] == 1
 
-        similarities = bdb.execute('estimate similarity \
-            in the context of x from pairwise p limit 2').fetchall()
+        similarities = bdb.execute('''estimate similarity
+            in the context of x from pairwise p limit 2''').fetchall()
         assert similarities[0][2] > 1
         assert similarities[0][2] == similarities[1][2]
 
@@ -121,7 +120,6 @@ def test_loom_four_var():
         assert all([c == 0 for c in confidences])
 
 
-"""
 def test_loom_one_numeric():
     Simple test of the LoomMetamodel on a one variable table
     Only checks for errors from the Loom system.
@@ -143,4 +141,3 @@ def test_loom_one_numeric():
         bdb.execute('drop generator g')
         bdb.execute('drop population p')
         bdb.execute('drop table t')
-        """
