@@ -51,6 +51,7 @@ from distributions.io.stream import open_compressed
 from loom.cFormat import assignment_stream_load
 
 # TODO should we use "generator" or "metamodel" in the name of
+
 # "bayesdb_loom_generator"
 
 LOOM_SCHEMA_1 = '''
@@ -60,6 +61,12 @@ INSERT INTO bayesdb_metamodel (name, version)
 CREATE TABLE bayesdb_loom_generator (
     generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
     name            VARCHAR(64) NOT NULL,
+    PRIMARY KEY(generator_id)
+);
+
+CREATE TABLE bayesdb_loom_generator_model_info (
+    generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    num_models      INTEGER NOT NULL,
     PRIMARY KEY(generator_id)
 );
 
@@ -115,16 +122,19 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
     """
 
     def __init__(self, loom_prefix=None,
-            loom_store_path=os.path.join('tmp','bayeslite','loomstore')):
+            loom_store_path=None):
         """Initialize the loom metamodel
 
-        `loom_store_path` is the absolute path at which loom stores its data files
+        `loom_store_path` is the absolute path at which loom
+        stores its data files
         `loom_prefix` is the prefix of the loom project name. If none,
         a timestamp will be used.
         """
-        self.num_models = 1
         self.loom_prefix = loom_prefix
         self.loom_store_path = loom_store_path
+        if self.loom_store_path is None:
+            self.loom_store_path = os.path.join(os.path.expanduser('~'), 'loomstore')
+
 
     def name(self):
         return 'loom'
@@ -142,10 +152,10 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
         # Store generator info in bdb
         bdb.sql_execute('''
-                INSERT INTO bayesdb_loom_generator
-                (generator_id, name)
-                VALUES (?, ?)
-                ''', (generator_id, self._generate_name(bdb, generator_id),))
+            INSERT INTO bayesdb_loom_generator
+            (generator_id, name)
+            VALUES (?, ?)
+        ''', (generator_id, self._generate_name(bdb, generator_id),))
 
         # Collect data from into list form
         headers = []
@@ -158,8 +168,8 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             qcn = sqlite3_quote_name(column_name)
 
             gather_data_sql = '''
-                    SELECT %s FROM %s
-                    ''' % (qcn, qt)
+                SELECT %s FROM %s
+            ''' % (qcn, qt)
             cursor = bdb.sql_execute(gather_data_sql)
             data.append([item for (item,) in cursor])
         data = [list(i) for i in zip(*data)]
@@ -175,8 +185,8 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         self._store_encoding_info(bdb, generator_id)
 
     def _store_encoding_info(self, bdb, generator_id):
-        encoding_path = os.path.join(self._get_loom_project_path(bdb, generator_id),
-                'ingest', 'encoding.json.gz')
+        encoding_path = os.path.join(self._get_loom_project_path(
+                bdb, generator_id), 'ingest', 'encoding.json.gz')
         assert os.path.isfile(encoding_path)
         with gzip.open(encoding_path) as encoding_file:
             encoding = json.loads(encoding_file.read().decode('ascii'))
@@ -193,7 +203,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         for col in encoding:
             if 'symbols' in col:
                 colno = core.bayesdb_table_column_number(bdb,
-                        table, str(col['name']))
+                    table, str(col['name']))
                 for (string_form, integer_form) in col['symbols'].iteritems():
                     bdb.sql_execute(insert_string_encoding, {
                         'generator_id': generator_id,
@@ -210,7 +220,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         '''
         for col_index in range(len(encoding)):
             colno = core.bayesdb_table_column_number(bdb,
-                    table, str(encoding[col_index]['name']))
+                table, str(encoding[col_index]['name']))
             bdb.sql_execute(insert_order_sql, {
                 'generator_id': generator_id,
                 'colno': colno,
@@ -230,9 +240,9 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         for colno in core.bayesdb_variable_numbers(bdb,
                 population_id, None):
             column_name = core.bayesdb_variable_name(bdb,
-                    population_id, colno)
+                population_id, colno)
             stattype = core.bayesdb_variable_stattype(bdb,
-                    population_id, colno)
+                population_id, colno)
             json_dict[column_name] = STATTYPE_TO_LOOMTYPE[stattype]
 
         with tempfile.NamedTemporaryFile(delete=False) as schema_file:
@@ -241,61 +251,75 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         return schema_file
 
     def _generate_name(self, bdb, generator_id):
-        return '%s-%s' % (datetime.datetime.fromtimestamp(time.time())
-                .strftime('%Y%m%d-%H%M%S.%f') if self.loom_prefix is None else
-                self.loom_prefix,
-                core.bayesdb_generator_name(bdb, generator_id))
+        return '%s_%s' % (datetime.datetime.fromtimestamp(time.time())
+            .strftime('%Y%m%d-%H%M%S.%f') if self.loom_prefix is None else
+            self.loom_prefix,
+            core.bayesdb_generator_name(bdb, generator_id))
 
     def _get_name(self, bdb, generator_id):
         return util.cursor_value(bdb.sql_execute('''
-                SELECT name FROM bayesdb_loom_generator WHERE
-                generator_id=?;
-                ''', (generator_id,)))
+            SELECT name FROM bayesdb_loom_generator WHERE
+            generator_id=?;
+        ''', (generator_id,)))
 
     def _get_loom_project_path(self, bdb, generator_id):
         name = self._get_name(bdb, generator_id)
         return os.path.join(self.loom_store_path, name)
 
     def initialize_models(self, bdb, generator_id, modelnos):
-        self.num_models = len(modelnos)
+        bdb.sql_execute('''
+            INSERT INTO bayesdb_loom_generator_model_info
+            (generator_id, num_models)
+            VALUES (?, ?)
+        ''', (generator_id, len(modelnos)))
+
+    def _get_num_models(self, bdb, generator_id):
+        return util.cursor_value(bdb.sql_execute('''
+            SELECT num_models FROM bayesdb_loom_generator_model_info
+            WHERE generator_id = ?;
+        ''', (generator_id,)))
 
     def drop_generator(self, bdb, generator_id):
         with bdb.savepoint():
             self.drop_models(bdb, generator_id)
             bdb.sql_execute('''
-                    DELETE FROM bayesdb_loom_generator
-                    WHERE generator_id = ?
-                    ''', (generator_id,))
+                DELETE FROM bayesdb_loom_generator
+                WHERE generator_id = ?
+            ''', (generator_id,))
             bdb.sql_execute('''
-                    DELETE FROM bayesdb_loom_string_encoding
-                    WHERE generator_id = ?
-                    ''', (generator_id,))
+                DELETE FROM bayesdb_loom_generator_model_info
+                WHERE generator_id = ?
+            ''', (generator_id,))
             bdb.sql_execute('''
-                    DELETE FROM bayesdb_loom_column_ordering
-                    WHERE generator_id = ?
-                    ''', (generator_id,))
+                DELETE FROM bayesdb_loom_string_encoding
+                WHERE generator_id = ?
+            ''', (generator_id,))
+            bdb.sql_execute('''
+                DELETE FROM bayesdb_loom_column_ordering
+                WHERE generator_id = ?
+            ''', (generator_id,))
 
     def drop_models(self, bdb, generator_id, modelnos=None):
         with bdb.savepoint():
             if modelnos is None:
                 bdb.sql_execute('''
-                        DELETE FROM bayesdb_loom_column_kind_partition
-                        WHERE generator_id = ?;
-                        ''', (generator_id,))
+                    DELETE FROM bayesdb_loom_column_kind_partition
+                    WHERE generator_id = ?;
+                ''', (generator_id,))
                 bdb.sql_execute('''
-                        DELETE FROM bayesdb_loom_row_kind_partition
-                        WHERE generator_id = ?;
-                        ''', (generator_id,))
+                    DELETE FROM bayesdb_loom_row_kind_partition
+                    WHERE generator_id = ?;
+                ''', (generator_id,))
             else:
                 for modelno in modelnos:
                     bdb.sql_execute('''
-                            DELETE FROM bayesdb_loom_column_kind_partition
-                            WHERE generator_id = ? and modelno = ?;
-                            ''', (generator_id, modelno))
+                        DELETE FROM bayesdb_loom_column_kind_partition
+                        WHERE generator_id = ? and modelno = ?;
+                    ''', (generator_id, modelno))
                     bdb.sql_execute('''
-                            DELETE FROM bayesdb_loom_row_kind_partition
-                            WHERE generator_id = ? and modelno = ?;
-                            ''', (generator_id, modelno))
+                        DELETE FROM bayesdb_loom_row_kind_partition
+                        WHERE generator_id = ? and modelno = ?;
+                    ''', (generator_id, modelno))
 
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
             max_seconds=None, ckpt_iterations=None, ckpt_seconds=None,
@@ -304,37 +328,41 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         self.drop_models(bdb, generator_id, modelnos=modelnos)
 
         name = self._get_name(bdb, generator_id)
-        num_models = (self.num_models if modelnos is None else len(modelnos))
+        num_models = (self._get_num_models(bdb, generator_id)
+            if modelnos is None else len(modelnos))
+        print("num")
+        print(num_models)
         loom.tasks.infer(name, sample_count=num_models)
         self._store_kind_partition(bdb, generator_id, modelnos)
 
     def _store_kind_partition(self, bdb, generator_id, modelnos):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
-        for modelno in range(self.num_models) if modelnos is None else modelnos:
+        for modelno in range(self._get_num_models(bdb, generator_id)) if modelnos is None else modelnos:
             column_partition = self._retrieve_column_partition(bdb,
-                    generator_id, modelno)
+                generator_id, modelno)
             for colno in core.bayesdb_variable_numbers(bdb,
                     population_id, None):
                 loom_rank = self._get_loom_rank(bdb, generator_id, colno)
                 kind_id = column_partition[loom_rank]
                 bdb.sql_execute('''
-                        INSERT INTO bayesdb_loom_column_kind_partition
-                        (generator_id, modelno, colno, kind_id)
-                        VALUES (?, ?, ?, ?)
-                        ''', (generator_id, modelno, colno, kind_id,))
+                    INSERT INTO bayesdb_loom_column_kind_partition
+                    (generator_id, modelno, colno, kind_id)
+                    VALUES (?, ?, ?, ?)
+                ''', (generator_id, modelno, colno, kind_id,))
 
             row_partition = self._retrieve_row_partition(bdb,
-                    generator_id, modelno)
+                generator_id, modelno)
             for kind_id in row_partition.keys():
                 for rowid, partition_id in zip(
-                        range(len(row_partition[kind_id])), row_partition[kind_id]):
+                        range(len(row_partition[kind_id])),
+                        row_partition[kind_id]):
                     bdb.sql_execute('''
-                            INSERT INTO bayesdb_loom_row_kind_partition
-                            (generator_id, modelno, rowid, kind_id, partition_id)
-                            VALUES (?, ?, ?, ?, ?)
-                            ''', (generator_id, modelno, rowid, kind_id, partition_id,))
-
-
+                        INSERT INTO bayesdb_loom_row_kind_partition
+                        (generator_id, modelno,
+                        rowid, kind_id, partition_id)
+                        VALUES (?, ?, ?, ?, ?)
+                    ''', (generator_id, modelno, rowid,
+                        kind_id, partition_id,))
 
     def _retrieve_column_partition(self, bdb, generator_id, modelno):
         """Return column partition from a CrossCat model.
@@ -367,7 +395,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             for k in xrange(num_kinds)
         }
 
-
     def _get_cross_cat(self, bdb, generator_id, modelno):
         """Return the loom CrossCat structure whose id is `modelno`."""
         model_in = os.path.join(
@@ -381,62 +408,73 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
     def column_dependence_probability(self,
             bdb, generator_id, modelnos, colno0, colno1):
         hit_list = []
-        for modelno in range(self.num_models) if modelnos is None else modelnos:
-            dependent = (self._get_kind_id(bdb,
-                    generator_id, modelno, colno0) == self._get_kind_id(bdb,
-                            generator_id, modelno, colno1))
+        for modelno in range(self._get_num_models(bdb, generator_id)) if modelnos is None else modelnos:
+            dependent = self._get_kind_id(
+                bdb,
+                generator_id,
+                modelno,
+                colno0
+            ) == self._get_kind_id(
+                bdb,
+                generator_id,
+                modelno,
+                colno1
+            )
             hit_list.append(1 if dependent else 0)
 
         return sum(hit_list)/len(hit_list)
 
     def _get_kind_id(self, bdb, generator_id, modelno, colno):
         return util.cursor_value(bdb.sql_execute('''
-                SELECT kind_id FROM bayesdb_loom_column_kind_partition
-                WHERE generator_id = ? and
-                modelno = ? and
-                colno = ?;
-                ''', (generator_id, modelno, colno,)))
+            SELECT kind_id FROM bayesdb_loom_column_kind_partition
+            WHERE generator_id = ? and
+            modelno = ? and
+            colno = ?;
+        ''', (generator_id, modelno, colno,)))
 
     def _get_partition_id(self, bdb, generator_id, modelno, kind_id, rowid):
         return util.cursor_value(bdb.sql_execute('''
-                SELECT partition_id FROM bayesdb_loom_row_kind_partition
-                WHERE generator_id = ? and
-                modelno = ? and
-                kind_id = ? and
-                rowid = ?;
-                ''', (generator_id, modelno, kind_id, rowid)))
+            SELECT partition_id FROM bayesdb_loom_row_kind_partition
+            WHERE generator_id = ? and
+            modelno = ? and
+            kind_id = ? and
+            rowid = ?;
+        ''', (generator_id, modelno, kind_id, rowid)))
 
     def column_mutual_information(self, bdb, generator_id, modelnos, colnos0,
             colnos1, constraints, numsamples):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         colnames0 = [str(core.bayesdb_variable_name(bdb, population_id, colno))
-                for colno in colnos0]
+            for colno in colnos0]
         colnames1 = [str(core.bayesdb_variable_name(bdb, population_id, colno))
-                for colno in colnos1]
+            for colno in colnos1]
 
         server = loom.tasks.query(self._get_name(bdb, generator_id))
         target_set = server._cols_to_mask(server.encode_set(colnames0))
         query_set = server._cols_to_mask(server.encode_set(colnames1))
-        return server._query_server.mutual_information(
-                target_set,
-                query_set,
-                entropys=None,
-                sample_count=loom.preql.SAMPLE_COUNT)
+        mi = server._query_server.mutual_information(
+            target_set,
+            query_set,
+            entropys=None,
+            sample_count=loom.preql.SAMPLE_COUNT)
+        server.close();
+        return mi
 
     def row_similarity(self, bdb, generator_id, modelnos, rowid, target_rowid,
             colnos):
         # TODO don't ignore the context
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         _, target_row = zip(*self._reorder_row(bdb, generator_id,
-                core.bayesdb_population_row_values(bdb,
-                    population_id, target_rowid)))
+            core.bayesdb_population_row_values(bdb,
+                population_id, target_rowid)))
         _, row = zip(*self._reorder_row(bdb, generator_id,
-                core.bayesdb_population_row_values(bdb, population_id, rowid)))
+            core.bayesdb_population_row_values(bdb, population_id, rowid)))
 
         # TODO: cache server
         # Run simlarity query
         server = loom.tasks.query(self._get_name(bdb, generator_id))
         output = server.similar([target_row], rows2=[row])
+        server.close()
         return float(output)
 
     def _reorder_row(self, bdb, generator_id, row, dense=True):
@@ -447,9 +485,9 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         Returns a list of (colno, value) tuples in the proper order.
         """
         ordered_column_labels = self._get_ordered_column_labels(bdb,
-                generator_id)
+            generator_id)
         ordererd_column_dict = collections.OrderedDict(
-                [(a, None) for a in ordered_column_labels])
+            [(a, None) for a in ordered_column_labels])
 
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         for (colno, value) in zip(range(len(row)), row):
@@ -458,22 +496,25 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
         if dense is False:
             return [(colno, value)
-                    for (colno, value) in ordererd_column_dict.iteritems()
-                    if value is not None]
+                for (colno, value) in ordererd_column_dict.iteritems()
+                if value is not None]
 
         return ordererd_column_dict.iteritems()
 
     def predictive_relevance(self, bdb, generator_id, modelnos, rowid_target,
             rowid_queries, hypotheticals, colno):
         if modelnos is None:
-            modelnos = range(self.num_models)
+            modelnos = range(self._get_num_models(bdb, generator_id))
 
         hitSums = [0 for _ in rowid_queries]
         for modelno in modelnos:
-            kind_id_context = self._get_kind_id(bdb, generator_id, modelno, colno)
-            partition_id_target = self._get_partition_id(bdb, generator_id, modelno, kind_id_context, rowid_target)
+            kind_id_context = self._get_kind_id(bdb,
+                generator_id, modelno, colno)
+            partition_id_target = self._get_partition_id(bdb,
+                generator_id, modelno, kind_id_context, rowid_target)
             for (query_index, rowid_query) in zip(range(len(rowid_queries)), rowid_queries):
-                partition_id_query= self._get_partition_id(bdb, generator_id, modelno, kind_id_context, rowid_query)
+                partition_id_query= self._get_partition_id(bdb, generator_id,
+                    modelno, kind_id_context, rowid_query)
                 if partition_id_target == partition_id_query:
                     hitSums[query_index] += 1
         return [xsum/len(modelnos) for xsum in hitSums]
@@ -516,19 +557,19 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             constraints, num_samples=1, accuracy=None):
         if rowid != core.bayesdb_generator_fresh_row_id(bdb, generator_id):
             row_values = [str(a) if isinstance(a, unicode) else a
-                    for a in
-                    core.bayesdb_generator_row_values(bdb, generator_id, rowid)]
+                for a in
+                core.bayesdb_generator_row_values(bdb, generator_id, rowid)]
 
             row = [entry for entry in
-                    zip(range(len(row_values)), row_values)
-                    if entry[1] is not None]
+                zip(range(len(row_values)), row_values)
+                if entry[1] is not None]
 
             constraints_colnos, _ = ([], []) if len(
-                    constraints) == 0 else zip(*constraints)
+                constraints) == 0 else zip(*constraints)
             row_colnos, _ = zip(*row)
             if any([colno in constraints_colnos for colno in row_colnos]):
                 raise ValueError('''Conflict between
-                        constraints and target row in simulate''')
+                    constraints and target row in simulate''')
 
             constraints += row
 
@@ -558,13 +599,14 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         reader = iter([csv_headers]+[csv_values])
         server._predict(reader, num_samples, writer, False)
         output = writer.result()
+        server.close()
 
         # Parse output
         returned_headers = output.strip().split('\r\n')[0].split(CSV_DELIMITER)
         loom_output = [zip(returned_headers, a.split(CSV_DELIMITER))
-                for a in output.strip().split('\r\n')[1:]]
+            for a in output.strip().split('\r\n')[1:]]
         population_id = core.bayesdb_generator_population(bdb,
-                generator_id)
+            generator_id)
         return_list = []
         for row in loom_output:
             return_list.append([])
@@ -574,7 +616,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                 colname = target_no_to_name[colno]
                 value = row_dict[colname]
                 stattype = core.bayesdb_variable_stattype(
-                        bdb, population_id, colno)
+                    bdb, population_id, colno)
                 # TODO dont use private
                 if core._STATTYPE_TO_AFFINITY[stattype] == 'real':
                     return_list[-1].append(float(value))
@@ -587,7 +629,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             constraints):
         # TODO optimize bdb calls
         ordered_column_labels = self._get_ordered_column_labels(bdb,
-                generator_id)
+            generator_id)
 
         and_case = collections.OrderedDict([(a, None)
             for a in ordered_column_labels])
@@ -599,13 +641,13 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             column_name = core.bayesdb_variable_name(bdb, population_id, colno)
 
             and_case[column_name] = self._convert_to_proper_stattype(bdb,
-                    generator_id, colno, value)
+                generator_id, colno, value)
             conditional_case[column_name] = None
         for (colno, value) in constraints:
             column_name = core.bayesdb_variable_name(bdb,
-                    population_id, colno)
+                population_id, colno)
             processed_value = self._convert_to_proper_stattype(bdb,
-                    generator_id, colno, value)
+                generator_id, colno, value)
 
             and_case[column_name] = processed_value
             conditional_case[column_name] = processed_value
@@ -615,8 +657,15 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
         # TODO cache
         qserver = loom.query.get_server(
-                self._get_loom_project_path(bdb, generator_id))
-        return qserver.score(and_case) - qserver.score(conditional_case)
+            self._get_loom_project_path(bdb, generator_id))
+        print(self._get_num_models(bdb, generator_id))
+        print(self._get_loom_project_path(bdb, generator_id))
+        print(and_case)
+        print(conditional_case)
+        and_score = qserver.score(and_case)
+        conditional_score = qserver.score(conditional_case)
+        qserver.close()
+        return and_score - conditional_score
 
     def _convert_to_proper_stattype(self, bdb, generator_id, colno, value):
         """
@@ -628,9 +677,9 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             return value
 
         population_id = core.bayesdb_generator_population(bdb,
-                generator_id)
+            generator_id)
         stattype = core.bayesdb_variable_stattype(
-                        bdb, population_id, colno)
+            bdb, population_id, colno)
         if stattype == 'numerical':
             return float(value)
 
@@ -642,29 +691,29 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
     def _get_integer_form(self, bdb, generator_id, colno, string_form):
         return util.cursor_value(bdb.sql_execute('''
-                SELECT integer_form FROM bayesdb_loom_string_encoding
-                WHERE generator_id = ? and
-                colno = ? and
-                string_form = ?;
-                ''', (generator_id, colno, string_form,)))
+            SELECT integer_form FROM bayesdb_loom_string_encoding
+            WHERE generator_id = ? and
+            colno = ? and
+            string_form = ?;
+        ''', (generator_id, colno, string_form,)))
 
     def _get_ordered_column_labels(self, bdb, generator_id):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         return [core.bayesdb_variable_name(bdb, population_id, colno)
-                for colno in self._get_order(bdb, generator_id)]
+            for colno in self._get_order(bdb, generator_id)]
 
     def _get_loom_rank(self, bdb, generator_id, colno):
         return util.cursor_value(bdb.sql_execute('''
-                SELECT rank FROM bayesdb_loom_column_ordering
-                WHERE generator_id = ? and
-                colno = ?
-                ''', (generator_id, colno,)))
+            SELECT rank FROM bayesdb_loom_column_ordering
+            WHERE generator_id = ? and
+            colno = ?
+        ''', (generator_id, colno,)))
 
     def _get_order(self, bdb, generator_id):
         """Get the ordering of the columns according to loom"""
         cursor = bdb.sql_execute('''
-                SELECT colno FROM bayesdb_loom_column_ordering
-                WHERE generator_id = ?
-                ORDER BY rank ASC
-                ''', (generator_id,))
+            SELECT colno FROM bayesdb_loom_column_ordering
+            WHERE generator_id = ?
+            ORDER BY rank ASC
+        ''', (generator_id,))
         return [colno for (colno,) in cursor]

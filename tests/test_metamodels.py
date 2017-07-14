@@ -49,8 +49,7 @@ examples = {
         'CREATE GENERATOR p_cc FOR p USING crosscat(INDEPENDENT)',
     ),
     'loom': (
-        lambda: LoomMetamodel(loom_prefix="", loom_store_path=
-                '/scratch/mntruell/venv/lib/python2.7/site-packages/data/'),
+        lambda: LoomMetamodel(loom_prefix=""),
         't',
         'CREATE TABLE t(x NUMERIC, y CYCLIC, z CATEGORICAL)',
         'INSERT INTO t (x, y, z) VALUES (?, ?, ?)',
@@ -63,7 +62,7 @@ examples = {
         'p',
         'p_lm',
         'CREATE POPULATION p FOR t'
-            '(x NUMERICAL; y CYCLIC; z CATEGORICAL)',
+        '(x NUMERICAL; y CYCLIC; z CATEGORICAL)',
         'CREATE GENERATOR p_lm FOR p USING loom()',
         'CREATE GENERATOR p_lm FOR p USING loom ...',
         'CREATE GENERATOR p_lm FOR p USING loom ...',
@@ -85,6 +84,7 @@ examples = {
     ),
 }
 
+
 @pytest.mark.parametrize('persist,exname',
     [(persist, key)
         for persist in (True, False)
@@ -102,6 +102,7 @@ def test_example(persist, exname):
     else:
         with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
             _test_example(bdb, exname)
+
 
 def _test_example(bdb, exname):
     mm, t, t_sql, data_sql, data, p, g, p_bql, g_bql, g_bqlbad0, g_bqlbad1 = \
@@ -207,10 +208,10 @@ def _test_example(bdb, exname):
     bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION WAIT' % (qg,))
     bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION WAIT' % (qg,))
 
+
 def _retest_example(bdb, exname):
     mm, t, t_sql, data_sql, data, p, g, p_bql, g_bql, g_bqlbad0, g_bqlbad1 = \
         examples[exname]
-    qt = bql_quote_name(t)
     qg = bql_quote_name(g)
 
     bayeslite.bayesdb_register_metamodel(bdb, mm())
@@ -225,4 +226,3 @@ def _retest_example(bdb, exname):
     bdb.execute('ANALYZE %s FOR 1 ITERATION WAIT' % (qg,))
     bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION WAIT' % (qg,))
     bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION WAIT' % (qg,))
-
