@@ -22,6 +22,9 @@ PREDICT_RUNS = 100
 X_MIN, Y_MIN = 0, 0
 X_MAX, Y_MAX = 200, 100
 
+# TODO fix fail when two tests are run with the same prefix
+# currently low priority since bql users will use timestamps as prefix
+
 def test_loom_four_var():
     """Test Loom on a four variable table.
     Table consists of:
@@ -125,7 +128,7 @@ def test_loom_one_numeric():
 
     with bayesdb_open(':memory:') as bdb:
         bayesdb_register_metamodel(bdb,
-                LoomMetamodel(loom_prefix=""))
+                LoomMetamodel())
         bdb.sql_execute('create table t(x)')
         for x in xrange(100):
             bdb.sql_execute('insert into t(x) values(?)', (x,))
