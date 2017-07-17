@@ -142,3 +142,46 @@ def test_loom_one_numeric():
         bdb.execute('drop generator g')
         bdb.execute('drop population p')
         bdb.execute('drop table t')
+
+
+def test_stattypes():
+    """Test of the LoomMetamodel on a table with all possible datatypes
+    Only checks for errors from the Loom system."""
+
+    with bayesdb_open(':memory:') as bdb:
+        bayesdb_register_metamodel(bdb,
+            LoomMetamodel())
+        bdb.sql_execute('create table t(u, co, b, ca, cy, nu, no)')
+        for x in xrange(10):
+            cat_dict = ['a', 'b', 'c']
+            bdb.sql_execute('''insert into t(u, co, b, ca, cy, nu, no)
+                values (?, ?, ?, ?, ?, ?, ?)''',
+                (
+                    cat_dict[bdb._prng.weakrandom_uniform(3)],
+                    bdb._prng.weakrandom_uniform(200),
+                    bdb._prng.weakrandom_uniform(2),
+                    cat_dict[bdb._prng.weakrandom_uniform(3)],
+                    bdb._prng.weakrandom_uniform(1000)/4.0,
+                    bdb._prng.weakrandom_uniform(1000)/4.0 - 100.0,
+                    bdb._prng.weakrandom_uniform(1000)/4.0
+                ))
+        bdb.execute('''create population p for t(
+            u unboundedcategorical;
+            co counts;
+            b boolean;
+            ca categorical;
+            cy cyclic;
+            nu numerical;
+            no nominal)
+        ''')
+        bdb.execute('create generator g for p using loom')
+        bdb.execute('initialize 1 model for g')
+        bdb.execute('analyze g for 1 iteration wait')
+        bdb.execute('''estimate probability density of
+            nu = 50, u="a" from p''').fetchall()
+        bdb.execute('''simulate u, co, b, ca, cy, nu, no
+            from p limit 1''').fetchall()
+        bdb.execute('drop models from g')
+        bdb.execute('drop generator g')
+        bdb.execute('drop population p')
+        bdb.execute('drop table t')

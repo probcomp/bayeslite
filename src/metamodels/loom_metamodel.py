@@ -107,7 +107,15 @@ CSV_DELIMITER = ','
 
 # TODO fill out
 # TODO optimize number of bdb calls
-STATTYPE_TO_LOOMTYPE = {'categorical': 'dd', 'cyclic': 'nich', 'numerical': 'nich', 'nominal': 'dd'}
+STATTYPE_TO_LOOMTYPE = {
+    'unboundedcategorical': 'dpd',
+    'counts': 'gp',
+    'boolean': 'bb',
+    'categorical': 'dd',
+    'cyclic': 'nich',
+    'numerical': 'nich',
+    'nominal': 'dd'
+}
 
 
 class LoomMetamodel(metamodel.IBayesDBMetamodel):
