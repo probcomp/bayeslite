@@ -2736,3 +2736,13 @@ def test_tracing_execution_error_smoke():
         assert tracer.error_calls == 1
         assert tracer.finished_calls == 0
         assert tracer.abandoned_calls == 0
+
+def test_pdf_var():
+    with test_core.t1() as (bdb, population_id, _generator_id):
+        bdb.execute('initialize 6 models for p1_cc;')
+        c = bdb.execute(
+            'estimate probability density of label = label from p1')
+        c.fetchall()
+        assert bql2sql(
+                'estimate probability density of label = label from p1') == \
+            'SELECT bql_pdf_joint(1, NULL, NULL, 1, "label") FROM "t1";'
