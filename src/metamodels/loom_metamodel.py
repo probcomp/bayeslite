@@ -436,7 +436,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             )
             hit_list.append(1 if dependent else 0)
 
-        return sum(hit_list)/len(hit_list)
+        return float(sum(hit_list))/float(len(hit_list))
 
     def _get_kind_id(self, bdb, generator_id, modelno, colno):
         return util.cursor_value(bdb.sql_execute('''
@@ -531,7 +531,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                     modelno, kind_id_context, rowid_query)
                 if partition_id_target == partition_id_query:
                     hitSums[query_index] += 1
-        return [xsum/len(modelnos) for xsum in hitSums]
+        return [float(xsum)/float(len(modelnos)) for xsum in hitSums]
 
     def predict_confidence(self, bdb, generator_id, modelnos, rowid, colno,
             numsamples=None):
