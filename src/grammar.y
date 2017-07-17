@@ -221,35 +221,6 @@ analysis_program(nonempty)      ::= analysis_program(p) analysis_token(t).
 analysis_token(compound)        ::= T_LROUND analysis_program(p) T_RROUND.
 analysis_token(primitive)       ::= ANY(t).
 
-simulate(s)             ::= K_SIMULATE select_columns(cols)
-                                K_FROM population_name(population)
-                                modelledby_opt(generator)
-                                usingmodel_opt(modelnos)
-                                given_opt(constraints)
-                                limit(lim)
-                                accuracy_opt(acc).
-simulate(nolimit)       ::= K_SIMULATE select_columns(cols)
-                                K_FROM population_name(population)
-                                modelledby_opt(generator)
-                                usingmodel_opt(modelnos)
-                                given_opt(constraints).
-
-given_opt(none)         ::= .
-given_opt(some)         ::= K_GIVEN constraints(constraints).
-constraints(one)        ::= constraint(c).
-constraints(many)       ::= constraints(cs) T_COMMA constraint(c).
-constraint(c)           ::= column_name(col) T_EQ expression(value).
-constraints_opt(none)   ::= .
-constraints_opt(some)   ::= constraints(cs).
-constraints_list(one)   ::= T_LROUND constraints(cs) T_RROUND.
-constraints_list(some)  ::= constraints_list(css) T_COMMA
-                                T_LROUND constraints(cs) T_RROUND.
-
-simulate(models)        ::= K_SIMULATE select_columns(cols)
-                                K_FROM K_MODELS K_OF
-                                        population_name(population)
-                                modelledby_opt(generator).
-
 /*
  * Commands based on ad-hoc capabilities.
  */
@@ -343,6 +314,35 @@ infer_exp_column(pred)  ::= K_PREDICT column_name(col) as(name)
 
 conf_opt(none)  ::= .
 conf_opt(some)  ::= K_CONFIDENCE column_name(confname).
+
+simulate(s)             ::= K_SIMULATE select_columns(cols)
+                                K_FROM population_name(population)
+                                modelledby_opt(generator)
+                                usingmodel_opt(modelnos)
+                                given_opt(constraints)
+                                limit(lim)
+                                accuracy_opt(acc).
+simulate(nolimit)       ::= K_SIMULATE select_columns(cols)
+                                K_FROM population_name(population)
+                                modelledby_opt(generator)
+                                usingmodel_opt(modelnos)
+                                given_opt(constraints).
+
+given_opt(none)         ::= .
+given_opt(some)         ::= K_GIVEN constraints(constraints).
+constraints(one)        ::= constraint(c).
+constraints(many)       ::= constraints(cs) T_COMMA constraint(c).
+constraint(c)           ::= column_name(col) T_EQ expression(value).
+constraints_opt(none)   ::= .
+constraints_opt(some)   ::= constraints(cs).
+constraints_list(one)   ::= T_LROUND constraints(cs) T_RROUND.
+constraints_list(some)  ::= constraints_list(css) T_COMMA
+                                T_LROUND constraints(cs) T_RROUND.
+
+simulate(models)        ::= K_SIMULATE select_columns(cols)
+                                K_FROM K_MODELS K_OF
+                                        population_name(population)
+                                modelledby_opt(generator).
 
 select_quant(distinct)  ::= K_DISTINCT.
 select_quant(all)       ::= K_ALL.
