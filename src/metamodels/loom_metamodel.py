@@ -351,7 +351,9 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
     def _store_kind_partition(self, bdb, generator_id, modelnos):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
-        for modelno in range(self._get_num_models(bdb, generator_id)) if modelnos is None else modelnos:
+        if modelnos is None:
+            modelnos = range(self._get_num_models(bdb, generator_id))
+        for modelno in modelnos:
             column_partition = self._retrieve_column_partition(bdb,
                 generator_id, modelno)
             for colno in core.bayesdb_variable_numbers(bdb,
@@ -422,7 +424,9 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
     def column_dependence_probability(self,
             bdb, generator_id, modelnos, colno0, colno1):
         hit_list = []
-        for modelno in range(self._get_num_models(bdb, generator_id)) if modelnos is None else modelnos:
+        if modelnos is None:
+            modelnos = range(self._get_num_models(bdb, generator_id))
+        for modelno in modelnos:
             dependent = self._get_kind_id(
                 bdb,
                 generator_id,
@@ -471,7 +475,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             query_set,
             entropys=None,
             sample_count=loom.preql.SAMPLE_COUNT)
-        server.close();
+        server.close()
         return mi
 
     def row_similarity(self, bdb, generator_id, modelnos, rowid, target_rowid,
@@ -526,9 +530,9 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                 generator_id, modelno, colno)
             partition_id_target = self._get_partition_id(bdb,
                 generator_id, modelno, kind_id_context, rowid_target)
-            for (query_index, rowid_query) in zip(range(len(rowid_queries)), rowid_queries):
-                partition_id_query= self._get_partition_id(bdb, generator_id,
-                    modelno, kind_id_context, rowid_query)
+            for query_index in range(len(rowid_queries)):
+                partition_id_query = self._get_partition_id(bdb, generator_id,
+                    modelno, kind_id_context, rowid_queries[query_index])
                 if partition_id_target == partition_id_query:
                     hitSums[query_index] += 1
         return [float(xsum)/float(len(modelnos)) for xsum in hitSums]
@@ -678,10 +682,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         # TODO cache
         qserver = loom.query.get_server(
             self._get_loom_project_path(bdb, generator_id))
-        print(self._get_num_models(bdb, generator_id))
-        print(self._get_loom_project_path(bdb, generator_id))
-        print(and_case)
-        print(conditional_case)
         and_score = qserver.score(and_case)
         conditional_score = qserver.score(conditional_case)
         qserver.close()
