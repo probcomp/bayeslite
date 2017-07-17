@@ -233,8 +233,17 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         with tempfile.NamedTemporaryFile(delete=False) as csv_file:
             csv_writer = csv.writer(csv_file, delimiter=CSV_DELIMITER)
             csv_writer.writerow(headers)
-            for r in data:
-                csv_writer.writerow(r)
+            for row in data:
+                processed_row = []
+                for elem in row:
+                    if elem is None:
+                        processed_row.append("")
+                    elif isinstance(elem, unicode):
+                        processed_row.append(elem.encode("ascii", "ignore"))
+                    else:
+                        processed_row.append(elem)
+
+                csv_writer.writerow(processed_row)
         return csv_file
 
     def _data_to_schema(self, bdb, population_id, data):
