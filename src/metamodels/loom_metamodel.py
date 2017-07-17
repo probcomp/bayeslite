@@ -141,10 +141,10 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         self.loom_prefix = loom_prefix
         self.loom_store_path = loom_store_path
         if self.loom_store_path is None:
-            self.loom_store_path = os.path.join(os.path.expanduser('~'), 'tmp', 'bayeslite', 'loomstore')
+            self.loom_store_path = os.path.join(os.path.expanduser('~'),
+            'venv', 'lib', 'python2.7', 'site-packages', 'data')
             if not os.path.isdir(self.loom_store_path):
                 os.makesdir(self.loom_store_path)
-
 
     def name(self):
         return 'loom'
