@@ -602,12 +602,17 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         csv_headers, csv_values = zip(*row.iteritems())
 
         # TODO cache
-        server = loom.tasks.query(self._get_name(bdb, generator_id))
-
         # Perform predict query with some boiler plate
         # to make loom using StringIO() and an iterable instead of disk
-        csv_headers = [str(a) for a in csv_headers]
+        server = loom.tasks.query(self._get_name(bdb, generator_id))
+
+        # Loom only uses lowercased headers
+        # TODO race condition if bayesdb is case sensitive
+        # could have duplicate header
+        lower_to_upper = {str(a).lower(): str(a) for a in csv_headers}
+        csv_headers = lower_to_upper.keys()
         csv_values = [str(a) for a in csv_values]
+
         outfile = StringIO()
         writer = loom.preql.CsvWriter(outfile, returns=outfile.getvalue)
         reader = iter([csv_headers]+[csv_values])
@@ -616,7 +621,8 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         server.close()
 
         # Parse output
-        returned_headers = output.strip().split('\r\n')[0].split(CSV_DELIMITER)
+        returned_headers = [lower_to_upper[a] for a in
+                output.strip().split('\r\n')[0].split(CSV_DELIMITER)]
         loom_output = [zip(returned_headers, a.split(CSV_DELIMITER))
             for a in output.strip().split('\r\n')[1:]]
         population_id = core.bayesdb_generator_population(bdb,
