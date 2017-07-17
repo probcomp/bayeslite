@@ -107,7 +107,7 @@ CSV_DELIMITER = ','
 
 # TODO fill out
 # TODO optimize number of bdb calls
-STATTYPE_TO_LOOMTYPE = {'categorical': 'dd', 'cyclic': 'nich', 'numerical': 'nich'}
+STATTYPE_TO_LOOMTYPE = {'categorical': 'dd', 'cyclic': 'nich', 'numerical': 'nich', 'nominal': 'dd'}
 
 
 class LoomMetamodel(metamodel.IBayesDBMetamodel):
@@ -332,8 +332,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         name = self._get_name(bdb, generator_id)
         num_models = (self._get_num_models(bdb, generator_id)
             if modelnos is None else len(modelnos))
-        print("num")
-        print(num_models)
+
         loom.tasks.infer(name, sample_count=num_models)
         self._store_kind_partition(bdb, generator_id, modelnos)
 
