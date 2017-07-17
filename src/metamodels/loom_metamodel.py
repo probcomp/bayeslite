@@ -279,6 +279,10 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
     def initialize_models(self, bdb, generator_id, modelnos):
         bdb.sql_execute('''
+            DELETE FROM bayesdb_loom_generator_model_info
+            WHERE generator_id = ?
+        ''', (generator_id,))
+        bdb.sql_execute('''
             INSERT INTO bayesdb_loom_generator_model_info
             (generator_id, num_models)
             VALUES (?, ?)
