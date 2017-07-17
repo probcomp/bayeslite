@@ -17,6 +17,7 @@
 import StringIO
 import apsw
 import pytest
+import struct
 
 import bayeslite
 import bayeslite.ast as ast
@@ -2616,6 +2617,34 @@ def test_create_generator_ifnotexists():
                 assert False  # Should have said it exists.
             except bayeslite.BQLError:
                 pass
+
+def test_bql_rand():
+    with bayeslite.bayesdb_open() as bdb:
+        bdb.sql_execute('CREATE TABLE frobotz(x)')
+        for _ in range(10):
+            bdb.sql_execute('INSERT INTO frobotz VALUES(2)')
+        cursor = bdb.execute('SELECT bql_rand() FROM frobotz LIMIT 10;')
+        rands = cursor.fetchall()
+        # These are "the" random numbers (internal PRNG is seeded to 0)
+        ans = [(0.28348770982811367,), (0.4789774612650598,), (0.07824908989551316,),
+               (0.6091223239372148,), (0.03906608409906187,), (0.3690599096081546,),
+               (0.8223420512129717,), (0.7777771914916722,), (0.061856771629497986,),
+               (0.6492586781908201,)]
+        assert rands == ans
+
+def test_bql_rand2():
+    seed = struct.pack('<QQQQ', 0, 0, 0, 3)
+    with bayeslite.bayesdb_open(seed=seed) as bdb:
+        bdb.sql_execute('CREATE TABLE frobotz(x)')
+        for _ in range(10):
+            bdb.sql_execute('INSERT INTO frobotz VALUES(2)')
+        cursor = bdb.execute('SELECT bql_rand() FROM frobotz LIMIT 10;')
+        rands = cursor.fetchall()
+        ans = [(0.8351877951287725,), (0.9735099617243271,), (0.026142315910925418,),
+               (0.09380653289687524,), (0.1097050387582088,), (0.33154896906379605,),
+               (0.4579314980719317,), (0.09072802203491703,), (0.5276180968829105,),
+               (0.9993280772797679,)]
+        assert rands == ans
 
 class MockTracerOneQuery(bayeslite.IBayesDBTracer):
     def __init__(self, q, qid):

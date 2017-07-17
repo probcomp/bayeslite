@@ -39,6 +39,7 @@ def bayesdb_install_bql(db, cookie):
         bql_column_dependence_probability)
     function("bql_column_mutual_information", -1, bql_column_mutual_information)
     function("bql_column_value_probability", -1, bql_column_value_probability)
+    function("bql_rand", 0, bql_rand)
     function("bql_row_similarity", 6, bql_row_similarity)
     function("bql_row_predictive_relevance", -1, bql_row_predictive_relevance)
     function("bql_row_column_predictive_probability", 6,
@@ -581,6 +582,11 @@ def bayesdb_simulate(
     all_rows = [row for rows in rowses for row in rows]
     assert all(isinstance(row, (tuple, list)) for row in all_rows)
     return all_rows
+
+### Seeded random number generation
+
+def bql_rand(bdb):
+    return bdb.np_prng.uniform()
 
 ### Helper functions functions
 
