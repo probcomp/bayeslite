@@ -370,7 +370,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                 generator_id, modelno)
             for kind_id in row_partition.keys():
                 for rowid, partition_id in zip(
-                        range(len(row_partition[kind_id])),
+                        range(1, len(row_partition[kind_id])+1),
                         row_partition[kind_id]):
                     bdb.sql_execute('''
                         INSERT INTO bayesdb_loom_row_kind_partition
