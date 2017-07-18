@@ -61,6 +61,7 @@ INSERT INTO bayesdb_metamodel (name, version)
 CREATE TABLE bayesdb_loom_generator (
     generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
     name            VARCHAR(64) NOT NULL,
+    project_path    VARCHAR(64) NOT NULL,
     PRIMARY KEY(generator_id)
 );
 
@@ -161,11 +162,12 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         table = core.bayesdb_population_table(bdb, population_id)
 
         # Store generator info in bdb
+        name = self._generate_name(bdb, generator_id)
         bdb.sql_execute('''
             INSERT INTO bayesdb_loom_generator
-            (generator_id, name)
-            VALUES (?, ?)
-        ''', (generator_id, self._generate_name(bdb, generator_id),))
+            (generator_id, name, project_path)
+            VALUES (?, ?, ?)
+        ''', (generator_id, name, os.path.join(self.loom_store_path, name)))
 
         # Collect data from into list form
         headers = []
@@ -282,8 +284,11 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         ''', (generator_id,)))
 
     def _get_loom_project_path(self, bdb, generator_id):
-        name = self._get_name(bdb, generator_id)
-        return os.path.join(self.loom_store_path, name)
+        return util.cursor_value(bdb.sql_execute('''
+            SELECT project_path
+            FROM bayesdb_loom_generator WHERE
+            generator_id=?;
+        ''', (generator_id,)))
 
     def initialize_models(self, bdb, generator_id, modelnos):
         bdb.sql_execute('''
@@ -422,7 +427,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
     def _get_cross_cat(self, bdb, generator_id, modelno):
         """Return the loom CrossCat structure whose id is `modelno`."""
         model_in = os.path.join(
-            self.loom_store_path, self._get_name(bdb, generator_id),
+            self._get_loom_project_path(bdb, generator_id),
             'samples', 'sample.%d' % (modelno,), 'model.pb.gz')
         cross_cat = loom.schema_pb2.CrossCat()
         with open_compressed(model_in, 'rb') as f:
