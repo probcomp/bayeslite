@@ -554,3 +554,15 @@ subquery instead:
    uses Monte Carlo integration for each analysis to estimate the mutual
    information (beyond merely the integral averaging all analyses), the
    integration is performed using *n* samples for each analysis.
+
+Model Predictions
+^^^^^^^^^^^^^^^^^
+
+.. index:: ``PREDICT``
+
+``PREDICT <column> [WITH CONFIDENCE <confidence>]``
+
+   Function of one implied row.  Samples a value for the column named
+   *column* from the model given the other values in the row, and
+   returns it if the confidence of the prediction is at least the
+   value of the BQL expression *confidence*; otherwise returns null.
