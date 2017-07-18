@@ -25,6 +25,7 @@ X_MAX, Y_MAX = 200, 100
 # TODO fix fail when two tests are run with the same prefix
 # currently low priority since bql users will use timestamps as prefix
 
+
 def test_loom_four_var():
     """Test Loom on a four variable table.
     Table consists of:
@@ -39,7 +40,6 @@ def test_loom_four_var():
     estimate mutual information, estimate dependence probability,
     infer explicit predict
     """
-
     with bayesdb_open(':memory:') as bdb:
         bayesdb_register_metamodel(bdb, LoomMetamodel())
         bdb.sql_execute('create table t(x, xx, y, z)')
@@ -130,7 +130,7 @@ def test_loom_one_numeric():
         bayesdb_register_metamodel(bdb,
             LoomMetamodel())
         bdb.sql_execute('create table t(x)')
-        for x in xrange(100):
+        for x in xrange(10):
             bdb.sql_execute('insert into t(x) values(?)', (x,))
         bdb.execute('create population p for t(x numerical)')
         bdb.execute('create generator g for p using loom')
@@ -183,5 +183,50 @@ def test_stattypes():
             from p limit 1''').fetchall()
         bdb.execute('drop models from g')
         bdb.execute('drop generator g')
+        bdb.execute('drop population p')
+        bdb.execute('drop table t')
+
+
+def test_conversion():
+    """Test the workflow of:
+    1. inference in loom
+    2. conversion to cgpm,
+    3. querying in cgpm."""
+
+    with bayesdb_open(':memory:') as bdb:
+        bayesdb_register_metamodel(bdb,
+            LoomMetamodel())
+        bdb.sql_execute('create table t(x, y)')
+        for x in xrange(10):
+            bdb.sql_execute('insert into t(x, y) values(?, ?)',
+            (x, bdb._prng.weakrandom_uniform(200),))
+        bdb.execute('create population p for t(x numerical; y numerical)')
+        bdb.execute('create generator lm for p using loom')
+        bdb.execute('initialize 1 model for lm')
+        bdb.execute('analyze lm for 1 iteration wait')
+        bdb.execute('convert lm to cp using cgpm')
+        bdb.execute('''estimate probability density of
+                x = 50 from p modeled by cp''').fetchall()
+
+        # Kinds/Views and partitions are the same,
+        # so predictive relevance should be the same
+        loom_relevance = bdb.execute('''ESTIMATE PREDICTIVE RELEVANCE
+            TO EXISTING ROWS (rowid = 1)
+            IN THE CONTEXT OF "x"
+            FROM p
+            MODELED BY lm
+            WHERE rowid = 1''').fetchall()
+        cgpm_relevance = bdb.execute('''ESTIMATE PREDICTIVE RELEVANCE
+            TO EXISTING ROWS (rowid = 1)
+            IN THE CONTEXT OF "x"
+            FROM p
+            MODELED BY cp
+            WHERE rowid = 1''').fetchall()
+        assert loom_relevance[0] == cgpm_relevance[0]
+
+        bdb.execute('drop models from cp')
+        bdb.execute('drop generator cp')
+        bdb.execute('drop models from lm')
+        bdb.execute('drop generator lm')
         bdb.execute('drop population p')
         bdb.execute('drop table t')

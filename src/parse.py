@@ -229,6 +229,9 @@ class BQLSemantics(object):
         return ast.DropGen(ifexists, name)
     def p_command_altergen(self, generator, cmds):
         return ast.AlterGen(generator, cmds)
+    def p_command_convertgen(self, currentname, newname, newmetamodel, schema):
+        return ast.ConvertGen(
+            currentname, newname, newmetamodel, schema)
 
     def p_altergen_cmds_one(self, cmd):         return [cmd]
     def p_altergen_cmds_many(self, cmds, cmd):  cmds.append(cmd); return cmds

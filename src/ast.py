@@ -126,6 +126,12 @@ AlterGen = namedtuple('AlterGen', [
 AlterGenRenameGen = namedtuple('AlterGenRenameGen', [
     'name',                     # XXX name
 ])
+ConvertGen = namedtuple('ConvertGen', [
+    'currentname',              # XXX name
+    'newname',                  # XXX name
+    'newmetamodel',             # XXX name
+    'schema',                   # nested list of tokens
+])
 
 ### BQL Model Analysis Language
 
