@@ -716,11 +716,12 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             generator_id)
         stattype = core.bayesdb_variable_stattype(
             bdb, population_id, colno)
-        if stattype == 'numerical':
+
+        if core._STATTYPE_TO_AFFINITY[stattype] == 'real':
             return float(value)
 
         # Lookup the string encoding
-        if stattype == 'categorical':
+        if core._STATTYPE_TO_AFFINITY[stattype] == 'text':
             return self._get_integer_form(bdb, generator_id, colno, value)
 
         return value
