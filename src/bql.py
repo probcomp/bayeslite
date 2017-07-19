@@ -539,15 +539,6 @@ def execute_phrase(bdb, phrase, bindings=()):
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.ConvertGen):
-        # Get the name of the new metamodel
-        new_metamodel_type_name = phrase.newmetamodel
-        if phrase.newmetamodel is None:
-            new_metamodel_type_name = 'cgpm'
-        if new_metamodel_type_name not in bdb.metamodels:
-            raise BQLError(bdb, 'No such metamodel: %s' %
-                (repr(new_metamodel_type_name),))
-        new_metamodel_type = bdb.metamodels[new_metamodel_type_name]
-
         with bdb.savepoint():
             # Get the population and table from the current metamodel
             current_name = phrase.currentname
@@ -560,10 +551,18 @@ def execute_phrase(bdb, phrase, bindings=()):
                     bdb, current_generator_id)
             population_id = core.bayesdb_generator_population(
                     bdb, current_generator_id)
+            population_name = core.bayesdb_population_name(
+                    bdb, population_id)
             table = core.bayesdb_population_table(bdb, population_id)
 
-            # ----- Initialize the new metamodel ----
-            # TODO helper function
+            # Initialize the new metamodel
+            new_metamodel_type_name = phrase.newmetamodel
+            if phrase.newmetamodel is None:
+                new_metamodel_type_name = 'cgpm'
+            if new_metamodel_type_name not in bdb.metamodels:
+                raise BQLError(bdb, 'No such metamodel: %s' %
+                    (repr(new_metamodel_type_name),))
+            new_metamodel_type = bdb.metamodels[new_metamodel_type_name]
 
             new_metamodel_name = phrase.newname
             if core.bayesdb_has_generator(bdb, population_id, new_metamodel_name):
@@ -571,56 +570,17 @@ def execute_phrase(bdb, phrase, bindings=()):
                     bdb, 'Name already defined as generator: %s' %
                     (repr(new_metamodel_name),))
 
-            # Insert a record into bayesdb_generator and get the
-            # assigned id.
-            bdb.sql_execute('''
-                INSERT INTO bayesdb_generator
-                    (name, tabname, population_id, metamodel)
-                    VALUES (?, ?, ?, ?)
-            ''', (new_metamodel_name,
-                table, population_id, new_metamodel_type.name()))
-            new_generator_id = core.bayesdb_get_generator(
+            bdb.execute('''CREATE GENERATOR %s
+            FOR %s
+            USING %s
+            ''' % (new_metamodel_name,
+                population_name,
+                new_metamodel_type_name))
+
+            new_generator_id =core.bayesdb_get_generator(
                 bdb, population_id, new_metamodel_name)
-
-            # Populate bayesdb_generator_column.
-            #
-            # XXX Omit needless bayesdb_generator_column table --
-            # Github issue #441.
-            bdb.sql_execute('''
-                INSERT INTO bayesdb_generator_column
-                    (generator_id, colno, stattype)
-                    SELECT :generator_id, colno, stattype
-                        FROM bayesdb_variable
-                        WHERE population_id = :population_id
-                            AND generator_id IS NULL
-            ''', {
-                'generator_id': new_generator_id,
-                'population_id': population_id,
-            })
-
-            # Do any metamodel-specific initialization.
-            # TODO do we need schema?
-            new_metamodel_type.create_generator(
-                bdb, new_generator_id, phrase.schema)
-
-            # Populate bayesdb_generator_column with any latent
-            # variables that metamodel.create_generator has added
-            # with bayesdb_add_latent.
-            bdb.sql_execute('''
-                INSERT INTO bayesdb_generator_column
-                    (generator_id, colno, stattype)
-                    SELECT :generator_id, colno, stattype
-                        FROM bayesdb_variable
-                        WHERE population_id = :population_id
-                            AND generator_id = :generator_id
-            ''', {
-                'generator_id': new_generator_id,
-                'population_id': population_id,
-            })
-
-            # Finally grab the new metamodel
             new_metamodel = core.bayesdb_generator_metamodel(
-                    bdb, new_generator_id)
+                bdb, new_generator_id)
 
             # Now that we have a created metamodel,
             # Convert loom's views to those of cgpm
