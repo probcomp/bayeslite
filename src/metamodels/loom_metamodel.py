@@ -150,6 +150,12 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             if not os.path.isdir(self.loom_store_path):
                 os.makesdir(self.loom_store_path)
 
+        # The cache is a dictionary whose keys are bayeslite.BayesDB objects,
+        # and whose values are dictionaries (one cache per bdb). We need
+        # self._cache to have separate caches for each bdb because the same
+        # instance of LoomMetamodel may be used across multiple bdb instances.
+        self._cache = dict()
+
     def name(self):
         return 'loom'
 
@@ -311,6 +317,8 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         ''', (generator_id,)))
 
     def drop_generator(self, bdb, generator_id):
+        self._del_cache_entry(bdb, generator_id, None)
+
         with bdb.savepoint():
             self.drop_models(bdb, generator_id)
             bdb.sql_execute('''
@@ -341,6 +349,8 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                     DELETE FROM bayesdb_loom_row_kind_partition
                     WHERE generator_id = ?;
                 ''', (generator_id,))
+                self._del_cache_entry(bdb, generator_id, 'q_server')
+                self._del_cache_entry(bdb, generator_id, 'preql_server')
             else:
                 for modelno in modelnos:
                     bdb.sql_execute('''
@@ -364,6 +374,12 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
         loom.tasks.infer(name, sample_count=num_models)
         self._store_kind_partition(bdb, generator_id, modelnos)
+
+        self._set_cache_entry(bdb, generator_id, 'q_server',
+            loom.query.get_server(
+                self._get_loom_project_path(bdb, generator_id)))
+        self._set_cache_entry(bdb, generator_id, 'preql_server',
+                loom.tasks.query(self._get_name(bdb, generator_id)))
 
     def _store_kind_partition(self, bdb, generator_id, modelnos):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
@@ -483,7 +499,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         colnames1 = [str(core.bayesdb_variable_name(bdb, population_id, colno))
             for colno in colnos1]
 
-        server = loom.tasks.query(self._get_name(bdb, generator_id))
+        server = self._get_cache_entry(bdb, generator_id, 'preql_server')
         target_set = server._cols_to_mask(server.encode_set(colnames0))
         query_set = server._cols_to_mask(server.encode_set(colnames1))
         mi = server._query_server.mutual_information(
@@ -491,7 +507,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             query_set,
             entropys=None,
             sample_count=loom.preql.SAMPLE_COUNT)
-        server.close()
         return mi
 
     def row_similarity(self, bdb, generator_id, modelnos, rowid, target_rowid,
@@ -506,9 +521,8 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
         # TODO: cache server
         # Run simlarity query
-        server = loom.tasks.query(self._get_name(bdb, generator_id))
+        server = self._get_cache_entry(bdb, generator_id, 'preql_server')
         output = server.similar([target_row], rows2=[row])
-        server.close()
         return float(output)
 
     def _reorder_row(self, bdb, generator_id, row, dense=True):
@@ -624,7 +638,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         # TODO cache
         # Perform predict query with some boiler plate
         # to make loom using StringIO() and an iterable instead of disk
-        server = loom.tasks.query(self._get_name(bdb, generator_id))
+        server = self._get_cache_entry(bdb, generator_id, 'preql_server')
 
         # Loom only uses lowercased headers
         # TODO race condition if bayesdb is case sensitive
@@ -638,7 +652,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         reader = iter([csv_headers]+[csv_values])
         server._predict(reader, num_samples, writer, False)
         output = writer.result()
-        server.close()
 
         # Parse output
         returned_headers = [lower_to_upper[a] for a in
@@ -696,11 +709,9 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         conditional_case = conditional_case.values()
 
         # TODO cache
-        qserver = loom.query.get_server(
-            self._get_loom_project_path(bdb, generator_id))
-        and_score = qserver.score(and_case)
-        conditional_score = qserver.score(conditional_case)
-        qserver.close()
+        q_server = self._get_cache_entry(bdb, generator_id, 'q_server')
+        and_score = q_server.score(and_case)
+        conditional_score = q_server.score(conditional_case)
         return and_score - conditional_score
 
     def _convert_to_proper_stattype(self, bdb, generator_id, colno, value):
@@ -806,3 +817,33 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         state._check_partitions()
 
         return state
+
+    def _retrieve_cache(self, bdb,):
+        if bdb in self._cache:
+            return self._cache[bdb]
+        self._cache[bdb] = dict()
+        return self._cache[bdb]
+
+    def _set_cache_entry(self, bdb, generator_id, key, value):
+        cache = self._retrieve_cache(bdb)
+        if generator_id not in cache:
+            cache[generator_id] = dict()
+        cache[generator_id][key] = value
+
+    def _get_cache_entry(self, bdb, generator_id, key):
+        # Returns None if the generator_id or key do not exist.
+        cache = self._retrieve_cache(bdb)
+        if generator_id not in cache:
+            return None
+        if key not in cache[generator_id]:
+            return None
+        return cache[generator_id][key]
+
+    def _del_cache_entry(self, bdb, generator_id, key):
+        # If key is None, wipes bdb[generator_id] in its entirety.
+        cache = self._retrieve_cache(bdb)
+        if generator_id in cache:
+            if key is None:
+                del cache[generator_id]
+            elif key in cache[generator_id]:
+                del cache[generator_id][key]
