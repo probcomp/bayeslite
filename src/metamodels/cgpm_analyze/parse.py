@@ -30,15 +30,25 @@ grep -o 'K_[A-Z][A-Z0-9_]*' < grammar.y | sort -u | awk '
 '''
 
 KEYWORDS = {
+    'clustering': grammar.K_CLUSTERING,
+    'concentration': grammar.K_CONCENTRATION,
+    'hyperparameters': grammar.K_HYPERPARAMETERS,
     'loom': grammar.K_LOOM,
     'optimized': grammar.K_OPTIMIZED,
     'quiet': grammar.K_QUIET,
+    'row': grammar.K_ROW,
+    'rows': grammar.K_ROWS,
     'skip': grammar.K_SKIP,
+    'subproblem': grammar.K_SUBPROBLEM,
+    'subproblems': grammar.K_SUBPROBLEMS,
+    'variable': grammar.K_VARIABLE,
     'variables': grammar.K_VARIABLES,
 }
 
 PUNCTUATION = {
     ',': grammar.T_COMMA,
+    '(': grammar.T_LROUND,
+    ')': grammar.T_RROUND,
     ';': grammar.T_SEMI,
 }
 
@@ -101,29 +111,50 @@ class CGpmAnalyzeSemantics(object):
         return ps
 
     def p_phrase_none(self,):                   return None
+
     def p_phrase_variables(self, cols):         return Variables(cols)
     def p_phrase_skip(self, cols):              return Skip(cols)
+
+    def p_phrase_rows(self, rows):               return Rows(rows)
+
     def p_phrase_loom(self):                    return Optimized('loom')
     def p_phrase_optimized(self):               return Optimized('lovecat')
+
     def p_phrase_quiet(self):                   return Quiet(True)
+
+    def p_phrase_subproblems(self, s):          return Subproblem(s)
+
+    def p_subproblems_list_one(self, s):        return [s]
+    def p_subproblems_list_many(self, s):       return s
+
+    def p_subproblems_one(self, s):             return [s]
+    def p_subproblems_many(self, ss, s):        ss.append(s); return ss
+
+    def p_subproblem_variable_hyperparameters(self):
+        return 'variable_hyperparameters'
+
+    def p_subproblem_variable_clustering(self):
+        return 'variable_clustering'
+    def p_subproblem_variable_clustering_concentration(self):
+        return 'variable_clustering_concentration'
+
+    def p_subproblem_row_clustering(self):
+        return 'row_clustering'
+    def p_subproblem_row_clustering_concentration(self):
+        return 'row_clustering_concentration'
 
     def p_column_list_one(self, col):           return [col]
     def p_column_list_many(self, cols, col):    cols.append(col); return cols
     def p_column_name_n(self, name):            return name
 
+    def p_row_list_one(self, row):           return [row]
+    def p_row_list_many(self, rows, row):    rows.append(row); return rows
+    def p_row_index_n(self, n):              return n
 
-Variables = namedtuple('Variables', [
-    'vars',
-])
 
-Skip = namedtuple('Skip', [
-    'vars',
-])
-
-Optimized = namedtuple('Optimized', [
-    'backend',
-])
-
-Quiet = namedtuple('Quiet', [
-    'flag',
-])
+Optimized = namedtuple('Optimized', ['backend'])
+Quiet = namedtuple('Quiet', ['flag'])
+Rows = namedtuple('Rows', ['rows'])
+Skip = namedtuple('Skip', ['vars'])
+Subproblem = namedtuple('Subproblem', ['subproblems'])
+Variables = namedtuple('Variables', ['vars'])
