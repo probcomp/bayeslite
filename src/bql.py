@@ -570,6 +570,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                     bdb, 'Name already defined as generator: %s' %
                     (repr(new_metamodel_name),))
 
+            # TODO use phrase.schema
             bdb.execute('''CREATE GENERATOR %s
             FOR %s
             USING %s
