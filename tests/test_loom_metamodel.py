@@ -197,7 +197,9 @@ def test_loom_four_var():
             similarities = bdb.execute('''estimate similarity
                 in the context of x from pairwise p limit 2''').fetchall()
             assert similarities[0][2] > 1
-            assert similarities[0][2] == similarities[1][2]
+            assert abs(
+                similarities[0][2]-similarities[1][2])/float(
+                similarities[1][2]) < 0.005
 
             impossible_density = bdb.execute(
                 'estimate probability density of x = %d by p'
