@@ -97,6 +97,7 @@ INSERT INTO bayesdb_cgpm_modelno (generator_id, modelno, cgpm_modelno)
 
 
 class CGPM_Metamodel(IBayesDBMetamodel):
+
     def __init__(self, cgpm_registry, multiprocess=None):
         self._cgpm_registry = cgpm_registry
         self._multiprocess = multiprocess
@@ -409,10 +410,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Retrieve user-specified target variables to transition.
         analyze_ast = cgpm_analyze.parse.parse(program)
-        vars_user, optimized, quiet = _retrieve_analyze_variables(
-            bdb, generator_id, analyze_ast)
+        vars_user, rowids_user, subproblems, optimized, quiet = \
+            _retrieve_analyze_variables(bdb, generator_id, analyze_ast)
 
-        # Explicitly supress prograss bar if quiet, otherwise use default.
+        # Explicitly suppress progress bar if quiet, otherwise use default.
         progress = False if quiet else None
 
         vars_baseline = engine.states[0].outputs
@@ -432,10 +433,39 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         assert vars_target_baseline or vars_target_foreign
 
-        # Timed analysis is incompatible with mixed baseline and foreign.
+        # Convert the user rowids to cgpm rowids.
+        rowids_cgpm = None
+        if rowids_user:
+            unknown_rowids = []
+            def get_cgpm_rowid(rowid_user):
+                try:
+                    return self.cgpm_rowid(
+                        bdb, generator_id, rowid_user, nullok=False)
+                except AssertionError:
+                    unknown_rowids.append(rowid_user)
+                    return None
+            rowids_cgpm = map(get_cgpm_rowid, rowids_user)
+            if unknown_rowids:
+                raise BQLError(bdb, 'Unknown ROWS: %s' % (rowids_user,))
+
+        # Convert the user subproblems into kernels.
+        kernels = None
+        if subproblems:
+            backend = optimized.backend if optimized else 'cgpm'
+            kernels = self._convert_subproblems_to_kernel(
+                bdb, subproblems, backend)
+
+        # Error: Timed analysis is incompatible with mixed baseline and foreign.
         if max_seconds and (vars_target_baseline and vars_target_foreign):
             raise BQLError(bdb,
                 'Timed analysis accepts foreign xor baseline variables.')
+
+        # Error: Targeted analysis with loom backend is not supported.
+        if optimized and optimized.backend == 'loom':
+            if vars_user:
+                raise BQLError(bdb, 'No VARIABLES or SKIP in Loom.')
+            if rowids_user:
+                raise BQLError(bdb, 'No ROWS in Loom.')
 
         # Run transitions on baseline variables.
         if vars_target_baseline:
@@ -451,7 +481,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 engine.transition_lovecat(
                     N=iterations,
                     S=max_seconds,
+                    kernels=kernels,
                     cols=vars_target_baseline,
+                    rowids=rowids_cgpm,
                     progress=progress,
                     checkpoint=ckpt_iterations,
                     statenos=cgpm_modelnos,
@@ -461,7 +493,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 engine.transition(
                     N=iterations,
                     S=max_seconds,
+                    kernels=kernels,
                     cols=vars_target_baseline,
+                    rowids=rowids_cgpm,
                     progress=progress,
                     checkpoint=ckpt_iterations,
                     statenos=cgpm_modelnos,
@@ -947,12 +981,12 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             elif key in cache[generator_id]:
                 del cache[generator_id][key]
 
-    def _cgpm_rowid(self, bdb, generator_id, table_rowid):
+    def _cgpm_rowid(self, bdb, generator_id, table_rowid, nullok=True):
         cursor = bdb.sql_execute('''
             SELECT cgpm_rowid FROM bayesdb_cgpm_individual
                 WHERE generator_id = ? AND table_rowid = ?
         ''', (generator_id, table_rowid))
-        cgpm_rowid = cursor_value(cursor, nullok=True)
+        cgpm_rowid = cursor_value(cursor, nullok=nullok)
         return cgpm_rowid if cgpm_rowid is not None else -1
 
     def _to_numeric(self, bdb, generator_id, colno, value):
@@ -1104,6 +1138,52 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         generator = core.bayesdb_generator_name(bdb, generator_id)
         raise BQLError(bdb,
             'Unknown modelnos for %s: %s' % (generator, unknown))
+
+    def _convert_subproblems_to_kernel(self, bdb, subproblems, backend):
+        # Keys are bayeslite subproblems, entries are cgpm where first element
+        # is gpmcc kernel name, and secodn element is lovecat kernel name.
+        if subproblems is None:
+            return None
+        conversions = {
+            'column_hyperparameters'                : {
+                'cgpm'      : 'column_hypers',
+                # XXX No column hyper transitions in lovecat.
+            },
+            'column_partition'                      : {
+                'cgpm'      : 'columns',
+                'lovecat'   : 'column_partition_assignments'
+            },
+            'column_partition_concentration'        : {
+                'cgpm'      : 'alpha',
+                'lovecat'   : 'column_partition_hyperparameter'
+            },
+            'row_partition'                         : {
+                'cgpm'      : 'rows',
+                'lovecat'   : 'row_partition_assignments',
+            },
+            'row_partition_concentration'           : {
+                'cgpm'      : 'view_alphas',
+                'lovecat'   : 'row_partition_hyperparameters',
+            }
+        }
+        kernels = []
+        unknown_subproblems = []
+        unavailable_subproblems = []
+        for subproblem in subproblems:
+            if subproblem not in conversions:
+                unknown_subproblems.append(subproblem)
+            if backend not in conversions[subproblem]:
+                unavailable_subproblems.append(subproblem)
+            kernels.append(conversions[subproblem])
+        if unknown_subproblems:
+            raise BQLError(bdb,
+                'Invalid subproblems: %s' % (unknown_subproblems,))
+        if unavailable_subproblems:
+            raise BQLError(bdb,
+                'Subproblems not available in backend: %s, %s'
+                % (unknown_subproblems, backend,))
+        return kernels
+
 
 def _create_schema(bdb, generator_id, schema_ast, **kwargs):
     # Get some parameters.
@@ -1459,14 +1539,18 @@ def _retrieve_analyze_variables(bdb, generator_id, ast):
 
     population_id = core.bayesdb_generator_population(bdb, generator_id)
 
-    # Transitions all variables by default.
+    # Transitions all variables and rows by default.
     variables = None
+    rowids = None
+
+    # Cycle through all Gibbs transition kernels by default.
+    subproblems = None
+    optimized = False
+    quiet = False
 
     # Exactly 1 VARIABLES or SKIP clause supported for simplicity.
     seen_variables = False
     seen_skip = False
-    seen_optimized = False
-    seen_quiet = False
 
     for clause in ast:
 
@@ -1510,33 +1594,39 @@ def _retrieve_analyze_variables(bdb, generator_id, ast):
                 bdb, population_id, generator_id)
             variables = sorted(set(all_vars) - excluded)
 
-        # OPTIMIZED is incompatible with any other clause.
+        # Transition rows specified by user.
+        elif isinstance(clause, cgpm_analyze.parse.Rows):
+            if rowids is None:
+                rowids = []
+            rowids.extend(clause.rows)
+
+        # Specify which transition subproblems to run.
+        elif isinstance(clause, cgpm_analyze.parse.Subproblem):
+            if subproblems is None:
+                subproblems = []
+            subproblems.extend(clause.subproblems)
+
+        # Optimized non-cgpm analysis.
         elif isinstance(clause, cgpm_analyze.parse.Optimized):
             if clause.backend not in ['loom', 'lovecat']:
                 raise BQLError(bdb,
                     'Unknown OPTIMIZED backend: %s' % (clause.backend))
-            seen_optimized = clause
+            optimized = clause
 
-        # QUIET supresses the progress bar.
+        # QUIET suppresses the progress bar.
         elif isinstance(clause, cgpm_analyze.parse.Quiet):
-            seen_quiet = True
+            quiet = True
 
         # Unknown/impossible clause.
         else:
             raise BQLError(bdb, 'Unknown clause in ANALYZE: %s.' % (ast,))
-
-    # Targeted analysis with the LOOM backend is not supported.
-    if seen_optimized and seen_optimized.backend == 'loom':
-        if seen_skip or seen_variables:
-            raise BQLError(bdb,
-                'LOOM analysis does not targeted analysis on variables.')
 
     variable_numbers = [
         core.bayesdb_variable_number(bdb, population_id, generator_id, v)
         for v in variables
     ] if variables else None
 
-    return (variable_numbers, seen_optimized, seen_quiet)
+    return (variable_numbers, rowids, subproblems, optimized, quiet)
 
 
 def _default_categorical(bdb, generator_id, var):
