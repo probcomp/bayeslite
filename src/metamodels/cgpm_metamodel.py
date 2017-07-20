@@ -20,7 +20,6 @@ import math
 
 from collections import Counter
 from collections import defaultdict
-from collections import namedtuple
 
 from cgpm.crosscat.engine import Engine
 
