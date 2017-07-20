@@ -12,6 +12,10 @@
 /src/grammar.py
 /src/grammar.sha256
 /src/grammar.sha256.tmp
+/src/metamodels/cgpm_alter/grammar.out
+/src/metamodels/cgpm_alter/grammar.py
+/src/metamodels/cgpm_alter/grammar.sha256
+/src/metamodels/cgpm_alter/grammar.sha256.tmp
 /src/metamodels/cgpm_analyze/grammar.out
 /src/metamodels/cgpm_analyze/grammar.py
 /src/metamodels/cgpm_analyze/grammar.sha256
