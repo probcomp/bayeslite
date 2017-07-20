@@ -439,9 +439,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             unknown_rowids = []
             def get_cgpm_rowid(rowid_user):
                 try:
-                    return self.cgpm_rowid(
+                    return self._cgpm_rowid(
                         bdb, generator_id, rowid_user, nullok=False)
-                except AssertionError:
+                except ValueError:
                     unknown_rowids.append(rowid_user)
                     return None
             rowids_cgpm = map(get_cgpm_rowid, rowids_user)
@@ -1145,23 +1145,23 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         if subproblems is None:
             return None
         conversions = {
-            'column_hyperparameters'                : {
+            'variable_hyperparameters'               : {
                 'cgpm'      : 'column_hypers',
                 # XXX No column hyper transitions in lovecat.
             },
-            'column_partition'                      : {
+            'variable_clustering'                    : {
                 'cgpm'      : 'columns',
                 'lovecat'   : 'column_partition_assignments'
             },
-            'column_partition_concentration'        : {
+            'variable_clustering_concentration'      : {
                 'cgpm'      : 'alpha',
                 'lovecat'   : 'column_partition_hyperparameter'
             },
-            'row_partition'                         : {
+            'row_clustering'                         : {
                 'cgpm'      : 'rows',
                 'lovecat'   : 'row_partition_assignments',
             },
-            'row_partition_concentration'           : {
+            'row_clustering_concentration'           : {
                 'cgpm'      : 'view_alphas',
                 'lovecat'   : 'row_partition_hyperparameters',
             }
@@ -1172,16 +1172,17 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         for subproblem in subproblems:
             if subproblem not in conversions:
                 unknown_subproblems.append(subproblem)
-            if backend not in conversions[subproblem]:
+            elif backend not in conversions[subproblem]:
                 unavailable_subproblems.append(subproblem)
-            kernels.append(conversions[subproblem])
+            else:
+                kernels.append(conversions[subproblem][backend])
         if unknown_subproblems:
             raise BQLError(bdb,
                 'Invalid subproblems: %s' % (unknown_subproblems,))
         if unavailable_subproblems:
             raise BQLError(bdb,
                 'Subproblems not available in backend: %s, %s'
-                % (unknown_subproblems, backend,))
+                % (unavailable_subproblems, backend,))
         return kernels
 
 
