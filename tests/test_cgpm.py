@@ -1170,7 +1170,6 @@ def test_using_modelnos():
             );
         ''')
         bdb.execute('INITIALIZE 2 ANALYSES FOR g0')
-        # Predictive probability results should be different for modelnos 0, 1.
 
         # Crash test simulate.
         bdb.execute('''
