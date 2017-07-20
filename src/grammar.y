@@ -140,8 +140,7 @@ command(convertgen)      ::= K_CONVERT
                                 generator_name(currentname)
                                 K_TO
                                 generator_name(newname)
-                                runtime_name_opt(newmetamodel)
-                                generator_schema_opt(schema).
+                                runtime_name_opt(newmetamodel).
 
 runtime_name_opt(none)          ::= .
 runtime_name_opt(one)           ::= K_USING metamodel_name(metamodel).
