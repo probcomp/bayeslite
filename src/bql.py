@@ -512,6 +512,9 @@ def execute_phrase(bdb, phrase, bindings=()):
             generator_id = core.bayesdb_get_generator(bdb, None, generator)
             for cmd in phrase.commands:
                 if isinstance(cmd, ast.AlterGenRenameGen):
+                    # Disable modelnos with AlterGenRenameGen.
+                    if phrase.modelnos is not None:
+                        raise BQLError(bdb, 'Cannot specify models for RENAME')
                     # Make sure nothing else has this name.
                     if casefold(generator) != casefold(cmd.name):
                         if core.bayesdb_has_table(bdb, cmd.name):
