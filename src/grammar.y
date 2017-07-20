@@ -117,6 +117,7 @@ pop_columns(many)  ::= pop_columns(cols) T_COMMA column_name(c).
 stattypes_for_opt       ::= .
 stattypes_for_opt       ::= K_STATTYPES K_FOR.
 
+
 /* XXX Temporary generators?  */
 command(creategen)      ::= K_CREATE generator_token
                                 ifnotexists(ifnotexists0)
@@ -129,12 +130,15 @@ command(creategen)      ::= K_CREATE generator_token
 command(dropgen)        ::= K_DROP generator_token ifexists(ifexists)
                                 generator_name(name).
 command(altergen)       ::= K_ALTER generator_token
-                                generator_name(generator) altergen_cmds(cmds).
+                                generator_name(generator)
+                                anmodelset_matched_opt(models)
+                                altergen_cmds(cmds).
 
 altergen_cmds(one)      ::= altergen_cmd(cmd).
 altergen_cmds(many)     ::= altergen_cmds(cmds) T_COMMA altergen_cmd(cmd).
 
 altergen_cmd(renamegen) ::= K_RENAME K_TO generator_name(name).
+altergen_cmd(generic)   ::= generator_schemum(s).
 
 runtime_name_opt(none)          ::= .
 runtime_name_opt(one)           ::= K_USING metamodel_name(metamodel).
@@ -175,6 +179,9 @@ ifnotexists(some)       ::= K_IF K_NOT K_EXISTS.
 
 anmodelset_opt(none)    ::= .
 anmodelset_opt(some)    ::= model_token modelset(m).
+
+anmodelset_matched_opt(none)    ::= .
+anmodelset_matched_opt(some)    ::= model_token T_LROUND modelset(m) T_RROUND.
 
 /* XXX Hackery for WITH BASELINE  */
 baseline_opt(none)      ::= .

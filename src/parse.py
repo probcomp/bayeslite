@@ -227,13 +227,15 @@ class BQLSemantics(object):
             name, ifnotexists, pop, baseline, metamodel, schema)
     def p_command_dropgen(self, ifexists, name):
         return ast.DropGen(ifexists, name)
-    def p_command_altergen(self, generator, cmds):
-        return ast.AlterGen(generator, cmds)
+    def p_command_altergen(self, generator, models, cmds):
+        return ast.AlterGen(generator, models, cmds)
 
     def p_altergen_cmds_one(self, cmd):         return [cmd]
     def p_altergen_cmds_many(self, cmds, cmd):  cmds.append(cmd); return cmds
     def p_altergen_cmd_renamegen(self, name):
         return ast.AlterGenRenameGen(name)
+    def p_altergen_cmd_generic(self, s):
+        return ast.AlterGenGeneric(s)
 
     def p_runtime_name_opt_none(self):              return None
     def p_runtime_name_opt_one(self, metamodel):    return metamodel
@@ -296,6 +298,8 @@ class BQLSemantics(object):
 
     def p_anmodelset_opt_none(self):            return None
     def p_anmodelset_opt_some(self, m):         return sorted(m)
+    def p_anmodelset_matched_opt_none(self):    return None
+    def p_anmodelset_matched_opt_some(self, m): return sorted(m)
     def p_modelset_opt_none(self):              return None
     def p_modelset_opt_some(self, m):           return sorted(m)
     def p_modelset_one(self, r):                return r
