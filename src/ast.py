@@ -128,7 +128,7 @@ AlterGenRenameGen = namedtuple('AlterGenRenameGen', [
     'name',                     # XXX name
 ])
 AlterGenGeneric = namedtuple('AlterGenGeneric', [
-    'schema',
+    'command',
 ])
 
 ### BQL Model Analysis Language
