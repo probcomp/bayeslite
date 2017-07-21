@@ -51,17 +51,17 @@ def test_basic():
     assert parse_alter_cmds('ensure variables (foo, bar, baz) independent') == \
         [cgpm_alter_parser.SetVarCluster(
             ['foo', 'bar', 'baz'],
-            cgpm_alter_parser.EnsureIndependent()
+            cgpm_alter_parser.EnsureIndependent
         )]
     assert parse_alter_cmds('ensure variables (foo, bar, baz) dependent') == \
         [cgpm_alter_parser.SetVarCluster(
             ['foo', 'bar', 'baz'],
-            cgpm_alter_parser.EnsureDependent()
+            cgpm_alter_parser.EnsureDependent
         )]
     assert parse_alter_cmds('ensure variables * dependent') == \
         [cgpm_alter_parser.SetVarCluster(
-            cgpm_alter_parser.SqlAll(),
-            cgpm_alter_parser.EnsureDependent()
+            cgpm_alter_parser.SqlAll,
+            cgpm_alter_parser.EnsureDependent
         )]
     with pytest.raises(bayeslite.BQLParseError):
         # Cannot parenthesize *.
@@ -70,22 +70,22 @@ def test_basic():
         cgpm_alter_parser.SetVarCluster(['a'], 'd')
     ]
     assert parse_alter_cmds('ensure variables * in view of d;') == [
-        cgpm_alter_parser.SetVarCluster(cgpm_alter_parser.SqlAll(), 'd')
+        cgpm_alter_parser.SetVarCluster(cgpm_alter_parser.SqlAll, 'd')
     ]
     assert parse_alter_cmds('ensure variables (a, b) in view of d;') == [
         cgpm_alter_parser.SetVarCluster(['a', 'b'], 'd')
     ]
     assert parse_alter_cmds('ensure variable a in singleton view;') == [
         cgpm_alter_parser.SetVarCluster(
-            ['a'], cgpm_alter_parser.SingletonCluster())
+            ['a'], cgpm_alter_parser.SingletonCluster)
     ]
     assert parse_alter_cmds('ensure variables ("a", b) in singleton view;') == [
         cgpm_alter_parser.SetVarCluster(
-            ['a', 'b'], cgpm_alter_parser.SingletonCluster())
+            ['a', 'b'], cgpm_alter_parser.SingletonCluster)
     ]
     assert parse_alter_cmds('ensure variables * in singleton view;') == [
         cgpm_alter_parser.SetVarCluster(
-            cgpm_alter_parser.SqlAll(), cgpm_alter_parser.SingletonCluster())
+            cgpm_alter_parser.SqlAll, cgpm_alter_parser.SingletonCluster)
     ]
     assert parse_alter_cmds('set view concentration parameter to 1.12;') == [
         cgpm_alter_parser.SetVarClusterConc(1.12)
@@ -93,7 +93,7 @@ def test_basic():
     assert parse_alter_cmds('''
         ensure rows * in cluster of row 1 within view of bar
     ''') == [
-        cgpm_alter_parser.SetRowCluster(cgpm_alter_parser.SqlAll(), 1, 'bar')
+        cgpm_alter_parser.SetRowCluster(cgpm_alter_parser.SqlAll, 1, 'bar')
     ]
     assert parse_alter_cmds('''
         ensure row 3 in cluster of row 1 within view of bar
@@ -109,14 +109,14 @@ def test_basic():
         ensure rows (1, 2) in singleton cluster within view of quux
     ''') == [
         cgpm_alter_parser.SetRowCluster(
-            [1, 2], cgpm_alter_parser.SingletonCluster(), 'quux')
+            [1, 2], cgpm_alter_parser.SingletonCluster, 'quux')
     ]
     assert parse_alter_cmds('''
         ensure rows * in singleton cluster within view of quagga
     ''') == [
         cgpm_alter_parser.SetRowCluster(
-            cgpm_alter_parser.SqlAll(),
-            cgpm_alter_parser.SingletonCluster(),
+            cgpm_alter_parser.SqlAll,
+            cgpm_alter_parser.SingletonCluster,
             'quagga')
     ]
     assert parse_alter_cmds('''

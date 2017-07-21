@@ -125,7 +125,7 @@ class CGpmAlterSemantics(object):
         return SetVarCluster(cols0, col1)
 
     def p_phrase_set_var_cluster_singleton(self, cols):
-        return SetVarCluster(cols, SingletonCluster())
+        return SetVarCluster(cols, SingletonCluster)
 
     def p_phrase_set_var_cluster_conc(self, conc):
         return SetVarClusterConc(conc)
@@ -134,16 +134,16 @@ class CGpmAlterSemantics(object):
         return SetRowCluster(rows0, row1, col)
 
     def p_phrase_set_row_cluster_singleton(self, rows0, col):
-        return SetRowCluster(rows0, SingletonCluster(), col)
+        return SetRowCluster(rows0, SingletonCluster, col)
 
     def p_phrase_set_row_cluster_conc(self, col, conc):
         return SetRowClusterConc(col, conc)
 
-    def p_dependency_independent(self):         return EnsureIndependent()
-    def p_dependency_dependent(self):           return EnsureDependent()
+    def p_dependency_independent(self):         return EnsureIndependent
+    def p_dependency_dependent(self):           return EnsureDependent
 
     def p_columns_one(self, col):               return [col]
-    def p_columns_all(self):                    return SqlAll()
+    def p_columns_all(self):                    return SqlAll
     def p_columns_many(self, cols):             return cols
 
     def p_column_list_one(self, col):           return [col]
@@ -152,7 +152,7 @@ class CGpmAlterSemantics(object):
     def p_column_name_n(self, n):               return n
 
     def p_rows_one(self, row):                  return [row]
-    def p_rows_all(self):                       return SqlAll()
+    def p_rows_all(self):                       return SqlAll
     def p_rows_many(self, rows):                return rows
 
     def p_row_list_one(self, row):              return [row]
@@ -188,7 +188,7 @@ SetRowClusterConc = namedtuple('SetRowClusterConc', [
     'concentration'     # real valued concentration parameter
 ])
 
-SqlAll = namedtuple('SqlAll', [])
-EnsureDependent = namedtuple('EnsureDependent', [])
-EnsureIndependent = namedtuple('EnsureIndependent', [])
-SingletonCluster = namedtuple('SingletonCluster', [])
+SqlAll = 'SqlAll'
+EnsureDependent = 'EnsureDependent'
+EnsureIndependent = 'EnsureIndependent'
+SingletonCluster = 'SingletonCluster'
