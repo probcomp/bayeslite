@@ -3,6 +3,7 @@ import time
 
 from itertools import chain
 
+import cProfile
 import matplotlib.pyplot as plt
 
 from bayeslite import bayesdb_open
@@ -16,7 +17,7 @@ from pandas import DataFrame
 CSV_FILE = 'satellites.csv'
 
 NUM_SAMPLES = 3
-MAGNITUDE_RANGE = range(1, 6)
+MAGNITUDE_RANGE = range(1, 5)
 BASE = 10
 
 
@@ -35,7 +36,7 @@ def cgpm_sat_run(num_rows):
         bdb.execute('initialize 1 model for g')
 
         start_analyze = time.time()
-        bdb.execute('analyze g for 1 iteration wait')
+        bdb.execute('analyze g for 1 iteration wait (optimized)')
         elapsed_analyze = time.time() - start_analyze
 
         start_pdf = time.time()
@@ -187,25 +188,49 @@ def init_ovoc(num_rows, bdb):
     frame = DataFrame(p_data)
     bayesdb_read_pandas_df(bdb, 't', frame, create=True)
 
+    bdb.execute('''create population p
+        for t with schema
+        (MODEL "0", "1", "2", "3" AS numerical);
+    ''')
 
-def ovoc_run(num_rows,
-        metamodel_phrase, metamodel_to_register=None):
+
+def init_mvoc(num_rows, bdb, num_views=10, num_columns=20):
+    data = gen_data_table(
+        num_rows,
+        [1/float(num_views)]*num_views,
+        [[1]]*num_views,
+        ['lognormal']*num_columns,
+        [[]]*num_columns,
+        [0]*num_columns)
+    data = list(data[0])
+    p_data = {str(colno): data[colno]
+            for colno in range(len(data))}
+    frame = DataFrame(p_data)
+    bayesdb_read_pandas_df(bdb, 't', frame, create=True)
+
+    bdb.execute('''create population p
+        for t with schema
+        (MODEL %s AS numerical);
+    ''' % (', '.join(['"%s"' % (n) for n in range(num_columns)])))
+
+
+def synthetic_dataset_run(num_rows,
+        init_function, metamodel_phrase,
+        metamodel_to_register=None):
     with bayesdb_open(':memory:') as bdb:
         if metamodel_to_register is not None:
             bayesdb_register_metamodel(bdb,
                     metamodel_to_register)
 
-        init_ovoc(num_rows, bdb)
+        init_function(num_rows, bdb)
 
-        bdb.execute('''create population p
-            for t with schema
-            (MODEL "0", "1", "2", "3" AS numerical);
-        ''')
         bdb.execute('create generator g for p %s' % (metamodel_phrase))
         bdb.execute('initialize 1 model for g')
-
         start_analyze = time.time()
-        bdb.execute('analyze g for 1 iteration wait')
+
+        cProfile.runctx(
+            "bdb.execute('analyze g for 1 iteration wait (OPTIMIZED)')",
+            globals(), locals())
         elapsed_analyze = time.time() - start_analyze
 
         start_sim = time.time()
@@ -227,34 +252,8 @@ def ovoc_run(num_rows,
 
 
 def one_view_one_cluster():
-    loom_data_analyze, loom_data_pdf, loom_data_sim = profile_run(
-            ovoc_run, ['using loom', LoomMetamodel()])
-
-    csv_write(loom_data_analyze, 'loom-analyze')
-    csv_write(loom_data_pdf, 'loom-pdf')
-    csv_write(loom_data_sim, 'loom-sim')
-
-    generate_fig(loom_data_analyze,
-        'loom-analyze-1v1c',
-        '''Loom Single Model Analysis Runtime
-            \non a One View One Cluster Dataset''',
-        label1='loom',
-        ylabel='Analysis Time (seconds)')
-    generate_fig(loom_data_pdf,
-        'loom-pdf-1v1c',
-        '''Loom Single Model Logpdf Query Runtime
-            \non a One View One Cluster Dataset''',
-        label1='loom',
-        ylabel='Logpdf Query Time (seconds)')
-    generate_fig(loom_data_sim,
-        'loom-sim-1v1c',
-        '''Loom Single Model Simulate Query Runtime
-            \non a One View One Cluster Dataset''',
-        label1='loom',
-        ylabel='Simulate Query Time (seconds)')
-
     cgpm_data_analyze, cgpm_data_pdf, cgpm_data_sim = profile_run(
-            ovoc_run, ['with baseline crosscat'])
+            synthetic_dataset_run, [init_ovoc, 'with baseline crosscat'])
 
     csv_write(cgpm_data_analyze, 'cgpm-1v1c-analyze')
     csv_write(cgpm_data_pdf, 'cgpm-1v1c-pdf')
@@ -279,6 +278,33 @@ def one_view_one_cluster():
         label1='cgpm',
         ylabel='Simulate Query Time (seconds)')
 
+    loom_data_analyze, loom_data_pdf, loom_data_sim = profile_run(
+            synthetic_dataset_run,
+            [init_ovoc, 'using loom', LoomMetamodel()])
+
+    csv_write(loom_data_analyze, 'loom-analyze')
+    csv_write(loom_data_pdf, 'loom-pdf')
+    csv_write(loom_data_sim, 'loom-sim')
+
+    generate_fig(loom_data_analyze,
+        'loom-analyze-1v1c',
+        '''Loom Single Model Analysis Runtime
+            \non a One View One Cluster Dataset''',
+        label1='loom',
+        ylabel='Analysis Time (seconds)')
+    generate_fig(loom_data_pdf,
+        'loom-pdf-1v1c',
+        '''Loom Single Model Logpdf Query Runtime
+            \non a One View One Cluster Dataset''',
+        label1='loom',
+        ylabel='Logpdf Query Time (seconds)')
+    generate_fig(loom_data_sim,
+        'loom-sim-1v1c',
+        '''Loom Single Model Simulate Query Runtime
+            \non a One View One Cluster Dataset''',
+        label1='loom',
+        ylabel='Simulate Query Time (seconds)')
+
     generate_fig(
         loom_data_analyze,
         'all-analyze-1v1c',
@@ -300,6 +326,90 @@ def one_view_one_cluster():
     generate_fig(
         loom_data_sim,
         'all-sim-1v1c',
+        '''Loom vs CGPM: Single Model Simulate Query Runtime
+            \non a One view One Cluster Dataset''',
+        label1='loom',
+        data2=cgpm_data_sim,
+        label2='cgpm',
+        ylabel='Simulate Query Time (seconds)')
+    plt.show()
+
+
+def many_view_one_cluster():
+    cgpm_data_analyze, cgpm_data_pdf, cgpm_data_sim = profile_run(
+            synthetic_dataset_run, [init_mvoc, 'with baseline crosscat'])
+
+    csv_write(cgpm_data_analyze, 'cgpm-mv1c-analyze')
+    csv_write(cgpm_data_pdf, 'cgpm-mv1c-pdf')
+    csv_write(cgpm_data_sim, 'cgpm-mv1c-sim')
+
+    generate_fig(cgpm_data_analyze,
+        'cgpm-analyze-mv1c',
+        '''CGPM Single Model Analysis Runtime
+            \non a Many View One Cluster Dataset''',
+        label1='cgpm',
+        ylabel='Analysis Time (seconds)')
+    generate_fig(cgpm_data_pdf,
+        'cgpm-pdf-mv1c',
+        '''CGPM Single Model Logpdf Query Runtime
+            \non a Many View One Cluster Dataset''',
+        label1='cgpm',
+        ylabel='Logpdf Query Time (seconds)')
+    generate_fig(cgpm_data_sim,
+        'cgpm-sim-mv1c',
+        '''CGPM Single Model Simulate Query Runtime
+            \non a Many View One Cluster Dataset''',
+        label1='cgpm',
+        ylabel='Simulate Query Time (seconds)')
+
+    loom_data_analyze, loom_data_pdf, loom_data_sim = profile_run(
+            synthetic_dataset_run,
+            [init_mvoc, 'using loom', LoomMetamodel()])
+
+    csv_write(loom_data_analyze, 'loom-analyze')
+    csv_write(loom_data_pdf, 'loom-pdf')
+    csv_write(loom_data_sim, 'loom-sim')
+
+    generate_fig(loom_data_analyze,
+        'loom-analyze-mv1c',
+        '''Loom Single Model Analysis Runtime
+            \non a Many View One Cluster Dataset''',
+        label1='loom',
+        ylabel='Analysis Time (seconds)')
+    generate_fig(loom_data_pdf,
+        'loom-pdf-mv1c',
+        '''Loom Single Model Logpdf Query Runtime
+            \non a Many View One Cluster Dataset''',
+        label1='loom',
+        ylabel='Logpdf Query Time (seconds)')
+    generate_fig(loom_data_sim,
+        'loom-sim-mv1c',
+        '''Loom Single Model Simulate Query Runtime
+            \non a Many View One Cluster Dataset''',
+        label1='loom',
+        ylabel='Simulate Query Time (seconds)')
+
+    generate_fig(
+        loom_data_analyze,
+        'all-analyze-mv1c',
+        '''Loom vs CGPM: Single Model Analysis Runtime
+            \non a One view One Cluster Dataset''',
+        label1='loom analysis',
+        data2=cgpm_data_analyze,
+        label2='cgpm analysis',
+        ylabel='Analysis Time (seconds)')
+    generate_fig(
+        loom_data_pdf,
+        'all-pdf-mv1c',
+        '''Loom vs CGPM: Single Model Logpdf Query Runtime
+            \non a One view One Cluster Dataset''',
+        label1='loom',
+        data2=cgpm_data_pdf,
+        label2='cgpm',
+        ylabel='Logpdf Query Time (seconds)')
+    generate_fig(
+        loom_data_sim,
+        'all-sim-mv1c',
         '''Loom vs CGPM: Single Model Simulate Query Runtime
             \non a One view One Cluster Dataset''',
         label1='loom',
@@ -374,7 +484,7 @@ def csv_write(data, postfix):
 
 
 def main():
-    one_view_one_cluster()
+    many_view_one_cluster()
 
 
 if __name__ == "__main__":
