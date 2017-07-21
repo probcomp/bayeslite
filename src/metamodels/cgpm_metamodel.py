@@ -34,6 +34,9 @@ from bayeslite.util import casefold
 from bayeslite.util import cursor_value
 from bayeslite.util import json_dumps
 
+import cgpm_alter.alterations
+
+import cgpm_alter.parse
 import cgpm_analyze.parse
 import cgpm_schema.parse
 
@@ -388,6 +391,168 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             assert modelnos_cgpm_new == range(engine.num_states())
             # Serialize the engine.
             self._serialize_engine(bdb, generator_id, engine, True)
+
+    def alter(self, bdb, generator_id, modelnos, commands):
+        # Get the population_id.
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
+
+        # Get the modelnos.
+        cgpm_modelnos = self._get_modelnos(bdb, generator_id, modelnos)
+
+        # Retrieve the engine.
+        engine = self._engine(bdb, generator_id)
+
+        # Find baseline variable numbers for error checking.
+        vars_baseline = engine.states[0].outputs
+
+        # Retrieve the AST.
+        alter_ast =  cgpm_alter.parse.parse(commands)
+
+        # Prepare alteration functions.
+        alter_funcs = []
+
+        # Reduce verbosity with helper functions.
+        get_varno = lambda variable: core.bayesdb_variable_number(
+            bdb, population_id, generator_id, variable)
+        has_var = lambda variable: core.bayesdb_has_variable(
+            bdb, population_id, generator_id, variable)
+
+        # Interpret the AST.
+        for clause in alter_ast:
+
+            # ENSURE VARIABLES * DEPENDENT|INDEPENDENT.
+            if isinstance(clause, cgpm_alter.parse.SetVarDependency):
+                # Get the columns to migrate. Reject anything other than *.
+                if clause.columns != cgpm_alter.parse.SqlAll:
+                    raise BQLError(bdb,
+                        'Only all variables can be made (in)dependent, use *.')
+                func = cgpm_alter.alterations.make_set_var_dependency(
+                    clause.dependency)
+
+                # Make the alteration function.
+                alter_funcs.append(func)
+
+            # ENSURE VARIABLES <columns0> IN VIEW OF <column1>
+            # ENSURE VARIABLES <columns0> IN SINGLETON VIEW.
+            elif isinstance(clause, cgpm_alter.parse.SetVarCluster):
+                # Get the columns to migrate.
+                if clause.columns0 == cgpm_alter.parse.SqlAll:
+                    varnos0 = vars_baseline
+                else:
+                    unknown = [v for v in clause.columns0 if not has_var(v)]
+                    if unknown:
+                        raise BQLError(bdb,
+                            'Unknown variables: %r' % (sorted(unknown),))
+                    varnos0 = map(get_varno, clause.columns0)
+                    # Reject non-CrossCat variables.
+                    columns_invalid = [
+                        column
+                        for (column, varno) in zip(clause.columns0, varnos0)
+                        if varno not in vars_baseline
+                    ]
+                    if columns_invalid:
+                        raise BQLError(bdb,
+                            'Only baseline variables can be altered: %s'
+                            % (columns_invalid,))
+
+                # Get the column indexing the view.
+                if clause.column1 == cgpm_alter.parse.SingletonCluster:
+                    varno1 = clause.column1
+                else:
+                    if not core.bayesdb_has_variable(
+                            bdb, population_id, generator_id, clause.column1):
+                        raise BQLError(bdb,
+                            'Unknown variable: %s' % (clause.column1,))
+                    varno1 = get_varno(clause.column1)
+                    if varno1 not in vars_baseline:
+                        raise BQLError(bdb,
+                            'Only baseline variables can be specified: %s'
+                            % (clause.column1))
+
+                # Make the alteration function.
+                func = cgpm_alter.alterations.make_set_var_cluster(
+                    set(varnos0), varno1)
+                alter_funcs.append(func)
+
+            # SET VIEW CONCENTRATION PARAMETER TO <concentration>
+            elif isinstance(clause, cgpm_alter.parse.SetVarClusterConc):
+                func = cgpm_alter.alterations.make_set_var_cluster_conc(
+                    clause.concentration)
+                alter_funcs.append(func)
+
+            # ENSURE ROWS <rows0> IN CLUSTER OF ROW <row1> WITHIN VIEW OF <col>.
+            # ENSURE ROWS <rows0> IN SINGLETON CLUSTER WITHIN VIEW OF <col>.
+            elif isinstance(clause, cgpm_alter.parse.SetRowCluster):
+                # Get the context view.
+                if not has_var(clause.column):
+                    raise BQLError(bdb,
+                        'Unknown columns: %s' % (clause.column,))
+                varno = get_varno(clause.column)
+                if varno not in vars_baseline:
+                    raise BQLError(bdb,
+                        'Only baseline variables can be specified: %s'
+                        % (clause.column))
+
+                # Get rows to move.
+                if clause.rows0 == cgpm_alter.parse.SqlAll:
+                    cursor = bdb.sql_execute('''
+                        SELECT cgpm_rowid
+                            FROM bayesdb_cgpm_individual
+                            WHERE generator_id = ?
+                    ''', (generator_id,))
+                    rows0 = [c[0] for c in cursor]
+                else:
+                    unknown_rowids = []
+                    def get_cgpm_rowid(rowid_user):
+                        try:
+                            return self._cgpm_rowid(
+                                bdb, generator_id, rowid_user, nullok=False)
+                        except ValueError:
+                            unknown_rowids.append(rowid_user)
+                            return None
+                    rows0 = map(get_cgpm_rowid, clause.rows0)
+                    if unknown_rowids:
+                        raise BQLError(bdb,
+                            'Unknown rows: %s' % (unknown_rowids,))
+
+                # Get the reference row.
+                if clause.row1 == cgpm_alter.parse.SingletonCluster:
+                    row1 = clause.row1
+                else:
+                    try:
+                        row1 = self._cgpm_rowid(
+                            bdb, generator_id, clause.row1, nullok=False)
+                    except ValueError:
+                        raise BQLError(bdb, 'Unknown row: %s' % (clause.row1))
+
+                # Make the alteration function.
+                func = cgpm_alter.alterations.make_set_row_cluster(
+                    rows0, row1, varno)
+                alter_funcs.append(func)
+
+            # SET ROW CLUSTER CONCENTRATION WITHIN VIEW OF <column> TO <conc>.
+            elif isinstance(clause, cgpm_alter.parse.SetRowClusterConc):
+                # Get the context column.
+                if not has_var(clause.column):
+                    raise BQLError(bdb,
+                        'Unknown columns: %s' % (clause.column,))
+                varno = get_varno(clause.column)
+                if varno not in vars_baseline:
+                    raise BQLError(bdb,
+                        'Only baseline variables can be specified: %s'
+                        % (clause.column,))
+
+                # Make the alteration function.
+                func = cgpm_alter.alterations.make_set_row_cluster_conc(
+                    varno, clause.concentration)
+                alter_funcs.append(func)
+
+        # Execute alteration functions.
+        engine.alter(alter_funcs, statenos=cgpm_modelnos,
+            multiprocess=self._multiprocess)
+
+        # Serialize the engine.
+        self._serialize_engine(bdb, generator_id, engine, True)
 
     def analyze_models(
             self, bdb, generator_id, modelnos=None, iterations=None,
