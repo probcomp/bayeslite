@@ -29,34 +29,44 @@ phrases(many)       ::= phrases(ps) T_COMMA phrase(p).
 
 phrase(none)        ::= .
 
-phrase(set_var_dependency)  ::= K_ENSURE K_VARIABLE|K_VARIABLES columns(cols)
+phrase(set_var_dependency)  ::= K_ENSURE variable_token_opt columns(cols)
                                     dependency(dep).
 
-phrase(set_var_cluster)     ::= K_ENSURE K_VARIABLE|K_VARIABLES
-                                    columns(cols0) K_IN K_VIEW K_OF
-                                    column_name(col1).
+phrase(set_var_cluster)     ::= K_ENSURE variable_token_opt
+                                    columns(cols0) K_IN view_token
+                                    K_OF column_name(col1).
 
-phrase(set_var_cluster_singleton)   ::= K_ENSURE K_VARIABLE|K_VARIABLES
+phrase(set_var_cluster_singleton)   ::= K_ENSURE variable_token_opt
                                             columns(cols)
-                                            K_IN K_SINGLETON K_VIEW.
+                                            K_IN K_SINGLETON view_token.
 
-phrase(set_var_cluster_conc)    ::= K_SET K_VIEW K_CONCENTRATION K_PARAMETER
-                                        K_TO concentration(conc).
+phrase(set_var_cluster_conc)        ::= K_SET view_token
+                                            K_CONCENTRATION K_PARAMETER
+                                            K_TO concentration(conc).
 
 phrase(set_row_cluster)         ::= K_ENSURE K_ROW|K_ROWS rows(rows0)
                                         K_IN K_CLUSTER K_OF K_ROW
                                         row_index(row1)
-                                        K_WITHIN K_VIEW K_OF column_name(col).
+                                        K_WITHIN view_token
+                                        K_OF column_name(col).
 
 phrase(set_row_cluster_singleton)   ::= K_ENSURE K_ROW|K_ROWS rows(rows0)
                                             K_IN K_SINGLETON K_CLUSTER
-                                            K_WITHIN K_VIEW
+                                            K_WITHIN view_token
                                             K_OF column_name(col).
 
 phrase(set_row_cluster_conc)   ::= K_SET K_ROW K_CLUSTER
                                         K_CONCENTRATION K_PARAMETER
-                                        K_WITHIN K_VIEW K_OF column_name(col)
+                                        K_WITHIN view_token
+                                        K_OF column_name(col)
                                         K_TO concentration(conc).
+
+variable_token_opt      ::= .
+variable_token_opt      ::= K_VARIABLE.
+variable_token_opt      ::= K_VARIABLES.
+
+view_token              ::= K_VIEW.
+view_token              ::= K_CONTEXT.
 
 dependency(independent) ::= K_INDEPENDENT.
 dependency(dependent)   ::= K_DEPENDENT.

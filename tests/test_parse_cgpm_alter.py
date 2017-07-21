@@ -79,7 +79,7 @@ def test_basic():
         cgpm_alter_parser.SetVarCluster(
             ['a'], cgpm_alter_parser.SingletonCluster)
     ]
-    assert parse_alter_cmds('ensure variables ("a", b) in singleton view;') == [
+    assert parse_alter_cmds('ensure ("a", b) in singleton view;') == [
         cgpm_alter_parser.SetVarCluster(
             ['a', 'b'], cgpm_alter_parser.SingletonCluster)
     ]
@@ -96,7 +96,7 @@ def test_basic():
         cgpm_alter_parser.SetRowCluster(cgpm_alter_parser.SqlAll, 1, 'bar')
     ]
     assert parse_alter_cmds('''
-        ensure row 3 in cluster of row 1 within view of bar
+        ensure row 3 in cluster of row 1 within context of bar
     ''') == [
         cgpm_alter_parser.SetRowCluster([3], 1, 'bar')
     ]
@@ -112,7 +112,7 @@ def test_basic():
             [1, 2], cgpm_alter_parser.SingletonCluster, 'quux')
     ]
     assert parse_alter_cmds('''
-        ensure rows * in singleton cluster within view of quagga
+        ensure rows * in singleton cluster within context of quagga
     ''') == [
         cgpm_alter_parser.SetRowCluster(
             cgpm_alter_parser.SqlAll,

@@ -34,6 +34,7 @@ grep -o 'K_[A-Z][A-Z0-9_]*' < grammar.y | sort -u | awk '
 
 KEYWORDS = {
     'cluster': grammar.K_CLUSTER,
+    'context': grammar.K_CONTEXT,
     'concentration': grammar.K_CONCENTRATION,
     'dependent': grammar.K_DEPENDENT,
     'ensure': grammar.K_ENSURE,
