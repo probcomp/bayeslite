@@ -179,7 +179,7 @@ SetVarClusterConc = namedtuple('SetVarClusterConc', [
 
 SetRowCluster = namedtuple('SetRowCluster', [
     'rows0',            # rows to modify
-    'row',              # row whose cluster to move rows0 to
+    'row1',             # row whose cluster to move rows0 to
     'column'            # context column
 ])
 
