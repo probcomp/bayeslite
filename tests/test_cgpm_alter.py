@@ -187,3 +187,75 @@ def test_cgpm_alter_basic():
                 assert value == 1.
             else:
                 assert value is None
+
+def test_cgpm_alter_errors():
+    with cgpm_dummy_satellites_pop_bdb() as bdb:
+        # Prepare the bdb.
+        bdb.execute('''
+            create analysis schema g0 for satellites using cgpm(
+                subsample 10
+            );
+        ''')
+        bdb.execute('initialize 4 analyses for g0')
+        # Retrieve rows in the subsample.
+        population_id = bayeslite.core.bayesdb_get_population(bdb, 'satellites')
+        generator_id = bayeslite.core.bayesdb_get_generator(
+            bdb, population_id, 'g0')
+        cursor = bdb.execute('''
+            SELECT table_rowid FROM  bayesdb_cgpm_individual
+            WHERE generator_id = ?
+        ''', (generator_id,))
+        subsample_rows = [c[0] for c in cursor]
+        # Invoke errors.
+        with pytest.raises(BQLError):
+            # ensure variables accepts * only, not named variables.
+            bdb.execute('''
+                alter analysis schema g0 analyses (0,1)
+                    ensure variables (period_minutes, perigee) dependent;
+            ''')
+        with pytest.raises(BQLError):
+            # Non existent target variable apogees.
+            bdb.execute('''
+                alter analysis schema g0
+                    ensure variables (perigee, apogees) in context of period
+            ''')
+        with pytest.raises(BQLError):
+            # Non existent context variable periods
+            bdb.execute('''
+                alter analysis schema g0
+                    ensure variables (perigee, apogee) in context of periods
+            ''')
+        with pytest.raises(BQLError):
+            # Non existent context variable periods
+            bdb.execute('''
+                alter analysis schema g0
+                    ensure variables (perigee, apogee) in context of periods
+            ''')
+        with pytest.raises(BQLError):
+            # Non existent target row 1000.
+            bdb.execute('''
+                alter analysis schema g0
+                    ensure rows (1, 1000) in cluster of row %d
+                        within context of country_of_operator
+            ''' % (subsample_rows[0],))
+        with pytest.raises(BQLError):
+            # Non existent reference row 1000.
+            bdb.execute('''
+                alter analysis schema g0
+                    ensure rows (%s) in cluster of row 1000
+                        within context of country_of_operator
+            ''' % (subsample_rows[0],))
+        with pytest.raises(BQLError):
+            # Non existent context variable country_of_operators.
+            bdb.execute('''
+                alter analysis schema g0
+                    ensure rows (%s) in cluster of row %s
+                        within context of country_of_operators
+            ''' % (subsample_rows[0], subsample_rows[1]))
+        with pytest.raises(BQLError):
+            # Non existent context variable periods.
+            bdb.execute('''
+                alter analysis schema g0 analysis (1,3)
+                    set row cluster concentration parameter
+                        within view of periods to 12;
+            ''')
