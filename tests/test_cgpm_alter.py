@@ -14,6 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import contextlib
 import pytest
 
 import bayeslite.core
@@ -26,7 +27,8 @@ from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
 from test_cgpm import cgpm_dummy_satellites_bdb
 
 
-def test_cgpm_alter_basic():
+@contextlib.contextmanager
+def cgpm_dummy_satellites_pop_bdb():
     with cgpm_dummy_satellites_bdb() as bdb:
         bdb.execute('''
             create population satellites for satellites_ucs with schema(
@@ -38,10 +40,13 @@ def test_cgpm_alter_basic():
                 model period as numerical
             )
         ''')
-
         metamodel = CGPM_Metamodel(dict(), multiprocess=0)
         bayesdb_register_metamodel(bdb, metamodel)
+        yield bdb
 
+
+def test_cgpm_alter_basic():
+    with cgpm_dummy_satellites_pop_bdb() as bdb:
         bdb.execute('''
             create analysis schema g0 for satellites using cgpm(
                 subsample 10
@@ -135,12 +140,12 @@ def test_cgpm_alter_basic():
             alter analysis schema g0
                 set view concentration parameter to 1000
         ''')
-        engine = metamodel._engine(bdb, generator_id)
+        engine = bdb.metamodels['cgpm']._engine(bdb, generator_id)
         for state in engine.states:
             assert abserr(1./1000, state.alpha()) < 1e-5
 
         # Change row crp concentration in view of period.
-        engine = metamodel._engine(bdb, generator_id)
+        engine = bdb.metamodels['cgpm']._engine(bdb, generator_id)
         varno = bayeslite.core.bayesdb_variable_number(
             bdb, population_id, generator_id, 'period')
         initial_alphas = [s.view_for(varno).alpha() for s in engine.states]
