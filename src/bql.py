@@ -510,8 +510,12 @@ def execute_phrase(bdb, phrase, bindings=()):
                 raise BQLError(bdb, 'No such generator: %s' %
                     (repr(generator),))
             generator_id = core.bayesdb_get_generator(bdb, None, generator)
+            cmds_generic = []
             for cmd in phrase.commands:
                 if isinstance(cmd, ast.AlterGenRenameGen):
+                    # Disable modelnos with AlterGenRenameGen.
+                    if phrase.modelnos is not None:
+                        raise BQLError(bdb, 'Cannot specify models for RENAME')
                     # Make sure nothing else has this name.
                     if casefold(generator) != casefold(cmd.name):
                         if core.bayesdb_has_table(bdb, cmd.name):
@@ -533,9 +537,24 @@ def execute_phrase(bdb, phrase, bindings=()):
                     assert bdb._sqlite3.totalchanges() - total_changes == 1
                     # Remember the new name for subsequent commands.
                     generator = cmd.name
+                elif isinstance(cmd, ast.AlterGenGeneric):
+                    cmds_generic.append(cmd.command)
                 else:
                     assert False, 'Invalid ALTER GENERATOR command: %s' % \
                         (repr(cmd),)
+            if cmds_generic:
+                modelnos = phrase.modelnos
+                modelnos_invalid = None if modelnos is None else [
+                    modelno for modelno in modelnos if not
+                    core.bayesdb_generator_has_model(bdb, generator_id, modelno)
+                ]
+                if modelnos_invalid:
+                    raise BQLError(bdb,
+                        'No such models in generator %s: %s' %
+                        (repr(phrase.generator), repr(modelnos)))
+                # Call generic alternations on the metamodel.
+                metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
+                metamodel.alter(bdb, generator_id, modelnos, cmds_generic)
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.InitModels):

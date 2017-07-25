@@ -20,7 +20,6 @@ import math
 
 from collections import Counter
 from collections import defaultdict
-from collections import namedtuple
 
 from cgpm.crosscat.engine import Engine
 
@@ -35,6 +34,9 @@ from bayeslite.util import casefold
 from bayeslite.util import cursor_value
 from bayeslite.util import json_dumps
 
+import cgpm_alter.alterations
+
+import cgpm_alter.parse
 import cgpm_analyze.parse
 import cgpm_schema.parse
 
@@ -97,6 +99,7 @@ INSERT INTO bayesdb_cgpm_modelno (generator_id, modelno, cgpm_modelno)
 
 
 class CGPM_Metamodel(IBayesDBMetamodel):
+
     def __init__(self, cgpm_registry, multiprocess=None):
         self._cgpm_registry = cgpm_registry
         self._multiprocess = multiprocess
@@ -389,6 +392,168 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             # Serialize the engine.
             self._serialize_engine(bdb, generator_id, engine, True)
 
+    def alter(self, bdb, generator_id, modelnos, commands):
+        # Get the population_id.
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
+
+        # Get the modelnos.
+        cgpm_modelnos = self._get_modelnos(bdb, generator_id, modelnos)
+
+        # Retrieve the engine.
+        engine = self._engine(bdb, generator_id)
+
+        # Find baseline variable numbers for error checking.
+        vars_baseline = engine.states[0].outputs
+
+        # Retrieve the AST.
+        alter_ast =  cgpm_alter.parse.parse(commands)
+
+        # Prepare alteration functions.
+        alter_funcs = []
+
+        # Reduce verbosity with helper functions.
+        get_varno = lambda variable: core.bayesdb_variable_number(
+            bdb, population_id, generator_id, variable)
+        has_var = lambda variable: core.bayesdb_has_variable(
+            bdb, population_id, generator_id, variable)
+
+        # Interpret the AST.
+        for clause in alter_ast:
+
+            # ENSURE VARIABLES * DEPENDENT|INDEPENDENT.
+            if isinstance(clause, cgpm_alter.parse.SetVarDependency):
+                # Get the columns to migrate. Reject anything other than *.
+                if clause.columns != cgpm_alter.parse.SqlAll:
+                    raise BQLError(bdb,
+                        'Only all variables can be made (in)dependent, use *.')
+                func = cgpm_alter.alterations.make_set_var_dependency(
+                    clause.dependency)
+
+                # Make the alteration function.
+                alter_funcs.append(func)
+
+            # ENSURE VARIABLES <columns0> IN VIEW OF <column1>
+            # ENSURE VARIABLES <columns0> IN SINGLETON VIEW.
+            elif isinstance(clause, cgpm_alter.parse.SetVarCluster):
+                # Get the columns to migrate.
+                if clause.columns0 == cgpm_alter.parse.SqlAll:
+                    varnos0 = vars_baseline
+                else:
+                    unknown = [v for v in clause.columns0 if not has_var(v)]
+                    if unknown:
+                        raise BQLError(bdb,
+                            'Unknown variables: %r' % (sorted(unknown),))
+                    varnos0 = map(get_varno, clause.columns0)
+                    # Reject non-CrossCat variables.
+                    columns_invalid = [
+                        column
+                        for (column, varno) in zip(clause.columns0, varnos0)
+                        if varno not in vars_baseline
+                    ]
+                    if columns_invalid:
+                        raise BQLError(bdb,
+                            'Only baseline variables can be altered: %s'
+                            % (columns_invalid,))
+
+                # Get the column indexing the view.
+                if clause.column1 == cgpm_alter.parse.SingletonCluster:
+                    varno1 = clause.column1
+                else:
+                    if not core.bayesdb_has_variable(
+                            bdb, population_id, generator_id, clause.column1):
+                        raise BQLError(bdb,
+                            'Unknown variable: %s' % (clause.column1,))
+                    varno1 = get_varno(clause.column1)
+                    if varno1 not in vars_baseline:
+                        raise BQLError(bdb,
+                            'Only baseline variables can be specified: %s'
+                            % (clause.column1))
+
+                # Make the alteration function.
+                func = cgpm_alter.alterations.make_set_var_cluster(
+                    set(varnos0), varno1)
+                alter_funcs.append(func)
+
+            # SET VIEW CONCENTRATION PARAMETER TO <concentration>
+            elif isinstance(clause, cgpm_alter.parse.SetVarClusterConc):
+                func = cgpm_alter.alterations.make_set_var_cluster_conc(
+                    clause.concentration)
+                alter_funcs.append(func)
+
+            # ENSURE ROWS <rows0> IN CLUSTER OF ROW <row1> WITHIN VIEW OF <col>.
+            # ENSURE ROWS <rows0> IN SINGLETON CLUSTER WITHIN VIEW OF <col>.
+            elif isinstance(clause, cgpm_alter.parse.SetRowCluster):
+                # Get the context view.
+                if not has_var(clause.column):
+                    raise BQLError(bdb,
+                        'Unknown columns: %s' % (clause.column,))
+                varno = get_varno(clause.column)
+                if varno not in vars_baseline:
+                    raise BQLError(bdb,
+                        'Only baseline variables can be specified: %s'
+                        % (clause.column))
+
+                # Get rows to move.
+                if clause.rows0 == cgpm_alter.parse.SqlAll:
+                    cursor = bdb.sql_execute('''
+                        SELECT cgpm_rowid
+                            FROM bayesdb_cgpm_individual
+                            WHERE generator_id = ?
+                    ''', (generator_id,))
+                    rows0 = [c[0] for c in cursor]
+                else:
+                    unknown_rowids = []
+                    def get_cgpm_rowid(rowid_user):
+                        try:
+                            return self._cgpm_rowid(
+                                bdb, generator_id, rowid_user, nullok=False)
+                        except ValueError:
+                            unknown_rowids.append(rowid_user)
+                            return None
+                    rows0 = map(get_cgpm_rowid, clause.rows0)
+                    if unknown_rowids:
+                        raise BQLError(bdb,
+                            'Unknown rows: %s' % (unknown_rowids,))
+
+                # Get the reference row.
+                if clause.row1 == cgpm_alter.parse.SingletonCluster:
+                    row1 = clause.row1
+                else:
+                    try:
+                        row1 = self._cgpm_rowid(
+                            bdb, generator_id, clause.row1, nullok=False)
+                    except ValueError:
+                        raise BQLError(bdb, 'Unknown row: %s' % (clause.row1))
+
+                # Make the alteration function.
+                func = cgpm_alter.alterations.make_set_row_cluster(
+                    rows0, row1, varno)
+                alter_funcs.append(func)
+
+            # SET ROW CLUSTER CONCENTRATION WITHIN VIEW OF <column> TO <conc>.
+            elif isinstance(clause, cgpm_alter.parse.SetRowClusterConc):
+                # Get the context column.
+                if not has_var(clause.column):
+                    raise BQLError(bdb,
+                        'Unknown columns: %s' % (clause.column,))
+                varno = get_varno(clause.column)
+                if varno not in vars_baseline:
+                    raise BQLError(bdb,
+                        'Only baseline variables can be specified: %s'
+                        % (clause.column,))
+
+                # Make the alteration function.
+                func = cgpm_alter.alterations.make_set_row_cluster_conc(
+                    varno, clause.concentration)
+                alter_funcs.append(func)
+
+        # Execute alteration functions.
+        engine.alter(alter_funcs, statenos=cgpm_modelnos,
+            multiprocess=self._multiprocess)
+
+        # Serialize the engine.
+        self._serialize_engine(bdb, generator_id, engine, True)
+
     def analyze_models(
             self, bdb, generator_id, modelnos=None, iterations=None,
             max_seconds=None, ckpt_iterations=None, ckpt_seconds=None,
@@ -409,10 +574,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Retrieve user-specified target variables to transition.
         analyze_ast = cgpm_analyze.parse.parse(program)
-        vars_user, optimized, quiet = _retrieve_analyze_variables(
-            bdb, generator_id, analyze_ast)
+        vars_user, rowids_user, subproblems, optimized, quiet = \
+            _retrieve_analyze_variables(bdb, generator_id, analyze_ast)
 
-        # Explicitly supress prograss bar if quiet, otherwise use default.
+        # Explicitly suppress progress bar if quiet, otherwise use default.
         progress = False if quiet else None
 
         vars_baseline = engine.states[0].outputs
@@ -432,10 +597,39 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         assert vars_target_baseline or vars_target_foreign
 
-        # Timed analysis is incompatible with mixed baseline and foreign.
+        # Convert the user rowids to cgpm rowids.
+        rowids_cgpm = None
+        if rowids_user:
+            unknown_rowids = []
+            def get_cgpm_rowid(rowid_user):
+                try:
+                    return self._cgpm_rowid(
+                        bdb, generator_id, rowid_user, nullok=False)
+                except ValueError:
+                    unknown_rowids.append(rowid_user)
+                    return None
+            rowids_cgpm = map(get_cgpm_rowid, rowids_user)
+            if unknown_rowids:
+                raise BQLError(bdb, 'Unknown ROWS: %s' % (rowids_user,))
+
+        # Convert the user subproblems into kernels.
+        kernels = None
+        if subproblems:
+            backend = optimized.backend if optimized else 'cgpm'
+            kernels = self._convert_subproblems_to_kernel(
+                bdb, subproblems, backend)
+
+        # Error: Timed analysis is incompatible with mixed baseline and foreign.
         if max_seconds and (vars_target_baseline and vars_target_foreign):
             raise BQLError(bdb,
                 'Timed analysis accepts foreign xor baseline variables.')
+
+        # Error: Targeted analysis with loom backend is not supported.
+        if optimized and optimized.backend == 'loom':
+            if vars_user:
+                raise BQLError(bdb, 'No VARIABLES or SKIP in Loom.')
+            if rowids_user:
+                raise BQLError(bdb, 'No ROWS in Loom.')
 
         # Run transitions on baseline variables.
         if vars_target_baseline:
@@ -451,7 +645,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 engine.transition_lovecat(
                     N=iterations,
                     S=max_seconds,
+                    kernels=kernels,
                     cols=vars_target_baseline,
+                    rowids=rowids_cgpm,
                     progress=progress,
                     checkpoint=ckpt_iterations,
                     statenos=cgpm_modelnos,
@@ -461,7 +657,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 engine.transition(
                     N=iterations,
                     S=max_seconds,
+                    kernels=kernels,
                     cols=vars_target_baseline,
+                    rowids=rowids_cgpm,
                     progress=progress,
                     checkpoint=ckpt_iterations,
                     statenos=cgpm_modelnos,
@@ -947,12 +1145,12 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             elif key in cache[generator_id]:
                 del cache[generator_id][key]
 
-    def _cgpm_rowid(self, bdb, generator_id, table_rowid):
+    def _cgpm_rowid(self, bdb, generator_id, table_rowid, nullok=True):
         cursor = bdb.sql_execute('''
             SELECT cgpm_rowid FROM bayesdb_cgpm_individual
                 WHERE generator_id = ? AND table_rowid = ?
         ''', (generator_id, table_rowid))
-        cgpm_rowid = cursor_value(cursor, nullok=True)
+        cgpm_rowid = cursor_value(cursor, nullok=nullok)
         return cgpm_rowid if cgpm_rowid is not None else -1
 
     def _to_numeric(self, bdb, generator_id, colno, value):
@@ -1104,6 +1302,53 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         generator = core.bayesdb_generator_name(bdb, generator_id)
         raise BQLError(bdb,
             'Unknown modelnos for %s: %s' % (generator, unknown))
+
+    def _convert_subproblems_to_kernel(self, bdb, subproblems, backend):
+        # Keys are bayeslite subproblems, entries are cgpm where first element
+        # is gpmcc kernel name, and secodn element is lovecat kernel name.
+        if subproblems is None:
+            return None
+        conversions = {
+            'variable_hyperparameters'               : {
+                'cgpm'      : 'column_hypers',
+                # XXX No column hyper transitions in lovecat.
+            },
+            'variable_clustering'                    : {
+                'cgpm'      : 'columns',
+                'lovecat'   : 'column_partition_assignments'
+            },
+            'variable_clustering_concentration'      : {
+                'cgpm'      : 'alpha',
+                'lovecat'   : 'column_partition_hyperparameter'
+            },
+            'row_clustering'                         : {
+                'cgpm'      : 'rows',
+                'lovecat'   : 'row_partition_assignments',
+            },
+            'row_clustering_concentration'           : {
+                'cgpm'      : 'view_alphas',
+                'lovecat'   : 'row_partition_hyperparameters',
+            }
+        }
+        kernels = []
+        unknown_subproblems = []
+        unavailable_subproblems = []
+        for subproblem in subproblems:
+            if subproblem not in conversions:
+                unknown_subproblems.append(subproblem)
+            elif backend not in conversions[subproblem]:
+                unavailable_subproblems.append(subproblem)
+            else:
+                kernels.append(conversions[subproblem][backend])
+        if unknown_subproblems:
+            raise BQLError(bdb,
+                'Invalid subproblems: %s' % (unknown_subproblems,))
+        if unavailable_subproblems:
+            raise BQLError(bdb,
+                'Subproblems not available in backend: %s, %s'
+                % (unavailable_subproblems, backend,))
+        return kernels
+
 
 def _create_schema(bdb, generator_id, schema_ast, **kwargs):
     # Get some parameters.
@@ -1459,14 +1704,18 @@ def _retrieve_analyze_variables(bdb, generator_id, ast):
 
     population_id = core.bayesdb_generator_population(bdb, generator_id)
 
-    # Transitions all variables by default.
+    # Transitions all variables and rows by default.
     variables = None
+    rowids = None
+
+    # Cycle through all Gibbs transition kernels by default.
+    subproblems = None
+    optimized = False
+    quiet = False
 
     # Exactly 1 VARIABLES or SKIP clause supported for simplicity.
     seen_variables = False
     seen_skip = False
-    seen_optimized = False
-    seen_quiet = False
 
     for clause in ast:
 
@@ -1510,33 +1759,39 @@ def _retrieve_analyze_variables(bdb, generator_id, ast):
                 bdb, population_id, generator_id)
             variables = sorted(set(all_vars) - excluded)
 
-        # OPTIMIZED is incompatible with any other clause.
+        # Transition rows specified by user.
+        elif isinstance(clause, cgpm_analyze.parse.Rows):
+            if rowids is None:
+                rowids = []
+            rowids.extend(clause.rows)
+
+        # Specify which transition subproblems to run.
+        elif isinstance(clause, cgpm_analyze.parse.Subproblem):
+            if subproblems is None:
+                subproblems = []
+            subproblems.extend(clause.subproblems)
+
+        # Optimized non-cgpm analysis.
         elif isinstance(clause, cgpm_analyze.parse.Optimized):
             if clause.backend not in ['loom', 'lovecat']:
                 raise BQLError(bdb,
                     'Unknown OPTIMIZED backend: %s' % (clause.backend))
-            seen_optimized = clause
+            optimized = clause
 
-        # QUIET supresses the progress bar.
+        # QUIET suppresses the progress bar.
         elif isinstance(clause, cgpm_analyze.parse.Quiet):
-            seen_quiet = True
+            quiet = True
 
         # Unknown/impossible clause.
         else:
             raise BQLError(bdb, 'Unknown clause in ANALYZE: %s.' % (ast,))
-
-    # Targeted analysis with the LOOM backend is not supported.
-    if seen_optimized and seen_optimized.backend == 'loom':
-        if seen_skip or seen_variables:
-            raise BQLError(bdb,
-                'LOOM analysis does not targeted analysis on variables.')
 
     variable_numbers = [
         core.bayesdb_variable_number(bdb, population_id, generator_id, v)
         for v in variables
     ] if variables else None
 
-    return (variable_numbers, seen_optimized, seen_quiet)
+    return (variable_numbers, rowids, subproblems, optimized, quiet)
 
 
 def _default_categorical(bdb, generator_id, var):

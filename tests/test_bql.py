@@ -1436,6 +1436,9 @@ def test_trivial_commands():
         bdb.execute('alter table T0 rename to t0')
         assert bdb.execute('select count(*) from t0_temp').fetchvalue() == 0
         assert bdb.execute('select count(*) from t0').fetchvalue() > 0
+        with pytest.raises(bayeslite.BQLError):
+            # Cannot specify models with rename.
+            bdb.execute('alter generator p_cc models (1) rename to p_cc_fail')
         bdb.execute('drop table T0_TEMP')
         bdb.execute('analyze p_cc model 0 for 1 iteration wait')
         bdb.execute('analyze p_cc model 1 for 1 iteration wait')
