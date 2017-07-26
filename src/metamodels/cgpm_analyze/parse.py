@@ -103,7 +103,7 @@ class CGpmAnalyzeSemantics(object):
             self.errors.append("Syntax error near [%s] after [%s]" % (
                 text, ' '.join([str(t) for (_t, t) in self.context[:-1]])))
 
-    def p_anlaysis_start(self, ps):             self.phrases = ps
+    def p_analysis_start(self, ps):             self.phrases = ps
 
     def p_phrases_one(self, p):                 return [p] if p else []
     def p_phrases_many(self, ps, p):

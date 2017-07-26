@@ -195,7 +195,7 @@ class IBayesDBMetamodel(object):
         :param int ckpt_iterations: number of iterations before committing
             results of analysis to the database
         :param int ckpt_seconds: number of seconds before committing results of
-            anlaysis to the database
+            analysis to the database
         :param object program: None, or list of tokens of analysis program
         """
         raise NotImplementedError

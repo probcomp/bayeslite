@@ -22,7 +22,7 @@
  */
 
 
-anlaysis(start)     ::= phrases(ps).
+analysis(start)     ::= phrases(ps).
 
 phrases(one)        ::= phrase(p).
 phrases(many)       ::= phrases(ps) T_SEMI phrase(p).
