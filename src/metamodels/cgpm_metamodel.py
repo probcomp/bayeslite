@@ -1805,15 +1805,35 @@ def _default_categorical(bdb, generator_id, var):
 def _default_numerical(bdb, generator_id, var):
     return 'normal', {}
 
+def _default_counts(bdb, generator_id, var):
+    return 'poisson', {}
+
+def _default_numerical_ranged(bdb, generator_id, var):
+    return 'beta', {}
+
+def _default_magnitude(bdb, generator_id, var):
+    return 'lognormal', {}
+
+def _default_crp(bdb, generator_id, var):
+    return 'crp', {}
+
+def _default_vonmises(bdb, generator_id, var):
+    return 'vonmises', {}
+
+def _default_exponential(bdb, generator_id, var):
+    return 'exponential', {}
+
 def _is_categorical(stattype):
     return casefold(stattype) in ['categorical', 'nominal']
 
 _DEFAULT_DIST = {
     'categorical':      _default_categorical,
-    'counts':           _default_numerical,     # XXX change to poisson.
-    'cyclic':           _default_numerical,     # XXX change to von mises.
-    'magnitude':        _default_numerical,     # XXX change to lognormal.
+    'crp':              _default_crp,
+    'counts':           _default_counts,
+    'cyclic':           _default_vonmises,
+    'exponential':      _default_exponential,
+    'magnitude':        _default_magnitude,
     'nominal':          _default_categorical,
     'numerical':        _default_numerical,
-    'numericalranged':  _default_numerical,     # XXX change to beta.
+    'numericalranged':  _default_numerical_ranged,
 }
