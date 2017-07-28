@@ -1824,7 +1824,7 @@ def _default_exponential(bdb, generator_id, var):
     return 'exponential', {}
 
 def _is_categorical(stattype):
-    return casefold(stattype) in ['categorical', 'nominal']
+    return casefold(stattype) in ['categorical', 'nominal', 'crp']
 
 _DEFAULT_DIST = {
     'categorical':      _default_categorical,

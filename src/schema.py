@@ -19,7 +19,7 @@ from bayeslite.util import cursor_value
 
 APPLICATION_ID = 0x42594442
 STALE_VERSIONS = (1,)
-USABLE_VERSIONS = (5, 6, 7, 8, 9, 10,)
+USABLE_VERSIONS = (5, 6, 7, 8, 9, 10, 11,)
 
 LATEST_VERSION = USABLE_VERSIONS[-1]
 
@@ -185,6 +185,12 @@ INSERT INTO bayesdb_rowid_tokens VALUES ('rowid');
 INSERT INTO bayesdb_rowid_tokens VALUES ('oid');
 '''
 
+bayesdb_schema_10to11 = '''
+PRAGMA user_version = 11;
+
+INSERT INTO bayesdb_stattype VALUES ('crp');
+'''
+
 
 ### BayesDB SQLite setup
 
@@ -236,6 +242,7 @@ def bayesdb_install_schema(bdb, version=None, compatible=None):
     bdb.sql_execute('PRAGMA integrity_check')
     bdb.sql_execute('PRAGMA foreign_key_check')
 
+
 def _upgrade_schema(bdb, current_version=None, desired_version=None):
     if current_version is None:
         with bdb.transaction():
@@ -271,11 +278,17 @@ def _upgrade_schema(bdb, current_version=None, desired_version=None):
         with bdb.transaction():
             bdb.sql_execute(bayesdb_schema_9to10)
         current_version = 10
+    if current_version == 10 and current_version < desired_version:
+        with bdb.transaction():
+            bdb.sql_execute(bayesdb_schema_10to11)
+        current_version = 11
     bdb.sql_execute('PRAGMA integrity_check')
     bdb.sql_execute('PRAGMA foreign_key_check')
 
+
 def _schema_version(bdb):
     return cursor_value(bdb.sql_execute('PRAGMA user_version'))
+
 
 def bayesdb_upgrade_schema(bdb, version=None):
     """Upgrade the BayesDB internal database schema.
@@ -286,9 +299,11 @@ def bayesdb_upgrade_schema(bdb, version=None):
     """
     _upgrade_schema(bdb, current_version=None, desired_version=version)
 
+
 def bayesdb_schema_version(bdb):
     """Return the version number for the BayesDB internal database schema."""
     return _schema_version(bdb)
+
 
 def bayesdb_schema_required(bdb, version, why):
     """Fail if `bdb`'s internal database schema version is not new enough.
@@ -299,6 +314,6 @@ def bayesdb_schema_required(bdb, version, why):
     current_version = bayesdb_schema_version(bdb)
     if current_version < version:
         raise BayesDBException(bdb, 'BayesDB schema version too old'
-            ' to support %s: current version %r, at least %r required;'
-            ' use bayesdb_upgrade_schema to upgrade.'
-            % (why, current_version, version))
+                                    ' to support %s: current version %r, at least %r required;'
+                                    ' use bayesdb_upgrade_schema to upgrade.'
+                               % (why, current_version, version))
