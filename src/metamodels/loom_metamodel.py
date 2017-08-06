@@ -43,7 +43,6 @@ import loom.tasks
 import bayeslite.core as core
 import bayeslite.metamodel as metamodel
 import bayeslite.util as util
-import cgpm
 
 from bayeslite.metamodel import bayesdb_metamodel_version
 from bayeslite.sqlite3_util import sqlite3_quote_name
