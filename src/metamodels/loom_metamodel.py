@@ -281,6 +281,10 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         return schema_file
 
     def _generate_name(self, bdb, generator_id):
+        # TODO expose name overriding in iventure
+        # since jupyter kernals will naturally be stopped
+        # so loading back up a large inference should be
+        # supported functionality
         return '%s_%s' % (datetime.datetime.fromtimestamp(time.time())
             .strftime('%Y%m%d-%H%M%S.%f') if self.loom_prefix is None else
             self.loom_prefix,
@@ -372,6 +376,8 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         num_models = (self._get_num_models(bdb, generator_id)
             if modelnos is None else len(modelnos))
 
+        # TODO implement extra passes by appending
+        # `config={"schedule": {"extra_passes": 1000}`
         loom.tasks.infer(name, sample_count=num_models)
         self._store_kind_partition(bdb, generator_id, modelnos)
 
@@ -545,6 +551,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             [(a, None) for a in ordered_column_labels])
 
         population_id = core.bayesdb_generator_population(bdb, generator_id)
+        # TODO fix bug - colnos are not dense
         for (colno, value) in zip(range(len(row)), row):
             column_name = core.bayesdb_variable_name(bdb, population_id, colno)
             ordererd_column_dict[column_name] = str(value)
