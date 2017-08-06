@@ -388,29 +388,36 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         for modelno in modelnos:
             column_partition = self._retrieve_column_partition(bdb,
                 generator_id, modelno)
+
+            column_query = '''
+                INSERT INTO bayesdb_loom_column_kind_partition
+                (generator_id, modelno, colno, kind_id)
+                VALUES
+            '''
             for colno in core.bayesdb_variable_numbers(bdb,
                     population_id, None):
                 loom_rank = self._get_loom_rank(bdb, generator_id, colno)
                 kind_id = column_partition[loom_rank]
-                bdb.sql_execute('''
-                    INSERT INTO bayesdb_loom_column_kind_partition
-                    (generator_id, modelno, colno, kind_id)
-                    VALUES (?, ?, ?, ?)
-                ''', (generator_id, modelno, colno, kind_id,))
+                column_query += ' (%d, %d, %d, %d),' % (
+                    generator_id, modelno, colno, kind_id)
+            bdb.sql_execute(column_query[:-1])
 
             row_partition = self._retrieve_row_partition(bdb,
                 generator_id, modelno)
+            row_query = '''
+                INSERT INTO bayesdb_loom_row_kind_partition
+                (generator_id, modelno,
+                rowid, kind_id, partition_id)
+                VALUES
+            '''
             for kind_id in row_partition.keys():
                 for rowid, partition_id in zip(
                         range(1, len(row_partition[kind_id])+1),
                         row_partition[kind_id]):
-                    bdb.sql_execute('''
-                        INSERT INTO bayesdb_loom_row_kind_partition
-                        (generator_id, modelno,
-                        rowid, kind_id, partition_id)
-                        VALUES (?, ?, ?, ?, ?)
-                    ''', (generator_id, modelno, rowid,
-                        kind_id, partition_id,))
+                    row_query += ' (%d, %d, %d, %d, %d),' % (
+                        generator_id, modelno, rowid,
+                        kind_id, partition_id)
+            bdb.sql_execute(row_query[:-1])
 
     def _retrieve_column_partition(self, bdb, generator_id, modelno):
         """Return column partition from a CrossCat model.
