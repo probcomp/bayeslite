@@ -1,0 +1,35 @@
+package:
+  name: bayeslite
+  version: "0.1"
+
+source:
+  path: ../
+
+build:
+  script: python setup.py install
+
+requirements:
+  build:
+    - git
+    - python 2.7.*
+    - cython >=0.20.1
+  run:
+    - numpy >=1.7.0
+    - scipy >=0.11.0
+    - six
+    - cgpm
+
+test:
+  requires:
+    - python 2.7.*
+    - pytest 2.5.1.*
+    - apsw
+    - crosscat
+    - jsonschema
+  commands:
+    - python -m pytest --pyargs bayeslite -k "not __ci_"
+
+about:
+  home: https://github.com/probcomp/bayeslite
+  license: Apache
+  license_file: LICENSE.txt
