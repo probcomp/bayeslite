@@ -18,7 +18,7 @@ install:
   - conda install conda-build
 
 script:
-  - export IVENTURE_VERSION="$(git describe --exact match 2> /dev/null || git describe | sed 's/^v\([^-]*\).*/\1_dev/')"
+  - export CONDA_PACKAGE_VERSION="$(git describe --exact match 2> /dev/null || git describe | sed 's/^v\([^-]*\).*/\1_dev/')"
   - conda build .
   - conda install bayeslite -c probcomp
 
