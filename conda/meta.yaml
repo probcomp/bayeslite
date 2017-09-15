@@ -1,6 +1,6 @@
 package:
   name: bayeslite
-  version: "0.1"
+  version: {{ IVENTURE_VERSION }}
 
 source:
   path: ../
