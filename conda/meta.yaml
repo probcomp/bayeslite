@@ -16,6 +16,7 @@ requirements:
   run:
     - numpy >=1.7.0
     - scipy >=0.11.0
+    - jsonschema
     - six
     - cgpm
     - apsw
@@ -26,7 +27,6 @@ test:
   requires:
     - python 2.7.*
     - pytest 2.5.1.*
-    - jsonschema
   commands:
     - python -m pytest --pyargs bayeslite -k "not __ci_"
 
