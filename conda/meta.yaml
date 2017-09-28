@@ -20,13 +20,12 @@ requirements:
     - cgpm
     - apsw
     - crosscat
+    - iventure
 
 test:
   requires:
     - python 2.7.*
     - pytest 2.5.1.*
-    - apsw
-    - crosscat
     - jsonschema
   commands:
     - python -m pytest --pyargs bayeslite -k "not __ci_"
