@@ -18,6 +18,8 @@ requirements:
     - scipy >=0.11.0
     - six
     - cgpm
+    - apsw
+    - crosscat
 
 test:
   requires:
