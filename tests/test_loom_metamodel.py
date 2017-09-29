@@ -54,14 +54,62 @@ def test_loom_one_numeric():
                 bdb.sql_execute('insert into t(x) values(?)', (x,))
             bdb.execute('create population p for t(x numerical)')
             bdb.execute('create generator g for p using loom')
-            bdb.execute('initialize 1 model for g')
+            # bdb.execute('create generator g for p using loom')
+            bdb.execute('initialize 1 models for g')
+            # bdb.execute('initialize  3 models for g')
             bdb.execute('analyze g for 1 iteration wait')
-            bdb.execute('estimate probability density of x = 50 from p').fetchall()
+            #bdb.execute('analyze g for 1 iteration wait')
+            probDensity = bdb.execute('estimate probability density of x = 50 from p').fetchall()
+            print "prob density:",probDensity
+
+            bdb.execute('analyze g for 3 iterations wait')
+            probDensity2 = bdb.execute('estimate probability density of x = 50 from p').fetchall()
+            print "prob density2:",probDensity2
             bdb.execute('simulate x from p limit 1').fetchall()
             bdb.execute('drop models from g')
+            #bdb.execute('initialize 2 models for g')
+            #bdb.execute('analyze g for 1 iteration wait')
             bdb.execute('drop generator g')
             bdb.execute('drop population p')
             bdb.execute('drop table t')
+
+def test_complex_add_analyze_drop_sequence():
+    with tempdir('bayeslite-loom') as loom_store_path:
+        with bayesdb_open(':memory:') as bdb:
+            bayesdb_register_metamodel(bdb,
+                LoomMetamodel(loom_store_path=loom_store_path))
+            bdb.sql_execute('create table t(x)')
+            for x in xrange(10):
+                bdb.sql_execute('insert into t(x) values(?)', (x,))
+            bdb.execute('create population p for t(x numerical)')
+            bdb.execute('create generator g for p using loom')
+
+            bdb.execute('initialize 2 models for g')
+            bdb.execute('analyze g for 1 iteration wait')
+
+            # a second analyze query should pick up where the first left off
+            # and succeed at updating the parititons based on the new analysis
+            bdb.execute('analyze g for 2 iterations wait')
+            bdb.execute('drop models from g')
+
+            bdb.execute('initialize 1 model for g')
+            num_models = bdb.sql_execute('''
+                SELECT num_models from bayesdb_loom_generator_model_info
+                WHERE generator_id=?;
+                ''',(generator_id,))
+            assert num_models == 1
+            bdb.execute('analyze g for 1 iteration wait')
+
+            #bdb.execute('analyze g for 1 iteration wait')
+            bdb.execute('estimate probability density of x = 50 from p').fetchall()
+            bdb.execute('simulate x from p limit 1').fetchall()
+            bdb.execute('drop models from g')
+            #bdb.execute('initialize 2 models for g')
+            #bdb.execute('analyze g for 1 iteration wait')
+            bdb.execute('drop generator g')
+            bdb.execute('drop population p')
+            bdb.execute('drop table t')
+
 
 
 def test_stattypes():
@@ -144,6 +192,22 @@ def test_conversion():
                 MODELED BY cp''').fetchall()
             print(loom_relevance)
             print(cgpm_relevance)
+            bdb.execute('analyze lm for 5 iterations wait')
+            print "AFTER SECOND ANALYZE"
+
+            loom_relevance = bdb.execute('''ESTIMATE PREDICTIVE RELEVANCE
+                TO EXISTING ROWS (rowid = 1)
+                IN THE CONTEXT OF "x"
+                FROM p
+                MODELED BY lm''').fetchall()
+            cgpm_relevance = bdb.execute('''ESTIMATE PREDICTIVE RELEVANCE
+                TO EXISTING ROWS (rowid = 1)
+                IN THE CONTEXT OF "x"
+                FROM p
+                MODELED BY cp''').fetchall()
+            print(loom_relevance)
+            print(cgpm_relevance)
+
             assert loom_relevance[0] == cgpm_relevance[0]
 
             bdb.execute('drop models from cp')

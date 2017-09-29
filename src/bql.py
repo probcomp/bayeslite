@@ -55,7 +55,7 @@ def execute_phrase(bdb, phrase, bindings=()):
         n_numpar = 0
         nampar_map = None
         # Ignore extraneous bindings.  XXX Bad idea?
-
+    print "PHRASE:",phrase
     if ast.is_query(phrase):
         # Compile the query in the transaction in case we need to
         # execute subqueries to determine column lists.  Compiling is
