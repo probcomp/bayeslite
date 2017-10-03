@@ -359,12 +359,12 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
     def drop_models(self, bdb, generator_id, modelnos=None):
         with bdb.savepoint():
             name = self._get_name(bdb, generator_id)
-	    print "paths in drop_models:",loom.store.get_paths(name)
-            print "keys of paths:",loom.store.get_paths(name).keys()
-            print "paths root:",loom.store.get_paths(name)['root']
-            print "path to remove:",os.path.join(loom.store.get_paths(name)['root'], 'samples')
+	    # print "paths in drop_models:",loom.store.get_paths(name)
+            #print "keys of paths:",loom.store.get_paths(name).keys()
+            #print "paths root:",loom.store.get_paths(name)['root']
+            #print "path to remove:",os.path.join(loom.store.get_paths(name)['root'], 'samples')
             if modelnos is not None:
-                raise BQLError(bdb, 'Loom cannot drop specific models numbers and can only drop all models at once.')
+                raise BQLError(bdb, 'Loom cannot drop specific models numbers.')
             #if modelnos is None:
             bdb.sql_execute('''
                 DELETE FROM bayesdb_loom_column_kind_partition
@@ -403,18 +403,22 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             program=None):
 
         #self.drop_models(bdb, generator_id, modelnos=modelnos)
-
+        if modelnos is not None:
+            raise BQLError(bdb, 'Loom cannot analyze specific models numbers.')
         name = self._get_name(bdb, generator_id)
-        num_models = (self._get_num_models(bdb, generator_id)
-            if modelnos is None else len(modelnos))
+        num_models = (self._get_num_models(bdb, generator_id))
         print "num models in analyze_models:",num_models
+        print "in analyze models: program -",program
 
         printPaths = loom.store.get_paths(name, sample_count=1)
-        print "Paths for sample 1 in analyze BEFORE INFER:",printPaths
+        #print "Paths for sample 1 in analyze BEFORE INFER:",printPaths
 
-        # TODO implement extra passes by appending
-        # config={"schedule": {"extra_passes": 10}} - WORKS BUT NEED A WAY TO PASS IT TO THIS FUNCTION
-        loom.tasks.infer(name, sample_count=num_models)
+        config = None
+        if program is not None and 'extra_passes' in program:
+            index = program.index('extra_passes')
+            extra_passes = int(program[index + 2])
+            config = {'schedule': {'extra_passes': extra_passes}}
+        loom.tasks.infer(name, sample_count=num_models, config=config)
         print "in analyze models: generator_id: {}, modelnos: {}".format(generator_id, modelnos)
         self._store_kind_partition(bdb, generator_id, modelnos)
 
@@ -425,7 +429,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                 loom.tasks.query(self._get_name(bdb, generator_id)))
 
         printPaths = loom.store.get_paths(name, sample_count=1)
-        print "Paths for sample 1 in analyze BEFORE INFER:",printPaths
+        #print "Paths for sample 1 in analyze AFTER INFER:",printPaths
 
     def _store_kind_partition(self, bdb, generator_id, modelnos):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
@@ -565,6 +569,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
     def row_similarity(self, bdb, generator_id, modelnos, rowid, target_rowid,
             colnos):
+        print "called row_similarity: generator id {}, modelnos {}, rowid {}, target_rowid {}, colnos {}".format(generator_id, modelnos, rowid, target_rowid, colnos)
         # TODO don't ignore the context
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         _, target_row = zip(*self._reorder_row(bdb, generator_id,
@@ -573,11 +578,57 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         _, row = zip(*self._reorder_row(bdb, generator_id,
             core.bayesdb_population_row_values(bdb, population_id, rowid)))
 
+        #res = bdb.sql_execute('''SELECT rowid, partition_id, modelno from bayesdb_loom_row_kind_partition
+        #   WHERE generator_id = ? and
+        #    rowid = ?
+        #    ORDER BY modelno; ''',(generator_id, rowid))
+        #print "RES IN ROW SIMILARITY",res
+        #for r in res:
+        #    print "RESULT:",r
+        if modelnos is None:
+            modelnos = range(self._get_num_models(bdb, generator_id))
+        #if True:
+        #    res = bdb.sql_execute('''SELECT rowid, partition_id from bayesdb_loom_row_kind_partition
+        #        WHERE generator_id = ? and
+        #        modelno IN ? and
+        #        rowid IN ?;''',(generator_id, modelnos, [rowid, target_rowid]))
+        #    print "RES IN ROW SIMILARITY",res
+        model_similarities = []
+        for modelno in modelnos:
+            if colnos is not None:
+                assert len(colnos) == 1,"Number of columns provided cannot exceed 1"
+                kind_id = self._get_kind_id(bdb, generator_id, modelno, colnos[0])
+                partition_ids = bdb.sql_execute('''SELECT partition_id from bayesdb_loom_row_kind_partition
+                    WHERE generator_id = ? and
+                    modelno = ? and
+                    kind_id = ? and
+                    rowid IN (?, ?)''',(generator_id, modelno, kind_id, rowid, target_rowid,)).fetchall()
+                #iidsToCompare = [partition_id for partition_id in partition_ids]
+                assert len(partition_ids) <= 2,"Error selecting rows for comparision in row_similarity"
+                model_similarities.append(partition_ids[0] == partition_ids[1] if len(partition_ids) == 2 else 1)
+            else:
+                partition_ids = bdb.sql_execute('''SELECT partition_id,kind_id from bayesdb_loom_row_kind_partition
+                    WHERE generator_id = ? and
+                    modelno = ? and
+                    rowid IN (?, ?)
+                    ORDER BY kind_id''',(generator_id, modelno, rowid, target_rowid,)).fetchall()
+                assert len(partition_ids) %  2 == 0,"Error selecting rows for comparision in row_similarity"
+                index = 0
+                score = 0
+                while index < len(partition_ids):
+                    score += (partition_ids[index][0] == partition_ids[index + 1][0])
+                    index += 2
+                score /= float(len(partition_ids) / 2)
+                model_similarities.append(score)
+        print "Output of row_similarity:", sum(model_similarities) / float(len(model_similarities))
+        return sum(model_similarities) / float(len(model_similarities))
+
         # TODO: cache server
         # Run simlarity query
-        server = self._get_cache_entry(bdb, generator_id, 'preql_server')
-        output = server.similar([target_row], rows2=[row])
-        return float(output)
+        #server = self._get_cache_entry(bdb, generator_id, 'preql_server')
+        #output = server.similar([target_row], rows2=[row])
+        #print "OUTPUT OF ROW SIMILARITY:",float(output)
+        #return float(output)
 
     def _reorder_row(self, bdb, generator_id, row, dense=True):
         """Reorder a row of columns according to loom's column order

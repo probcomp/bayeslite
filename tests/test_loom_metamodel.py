@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- c_ding: utf-8 -*-
 
 #   Copyright (c) 2010-2016, MIT Probabilistic Computing Project
 #
@@ -19,8 +19,11 @@ import shutil
 import tempfile
 import os.path
 
+import bayeslite.core as core
+
 from bayeslite import bayesdb_open
 from bayeslite import bayesdb_register_metamodel
+from bayeslite.exception import BQLError
 from bayeslite.metamodels.loom_metamodel import LoomMetamodel
 
 PREDICT_RUNS = 100
@@ -57,7 +60,7 @@ def test_loom_one_numeric():
             # bdb.execute('create generator g for p using loom')
             bdb.execute('initialize 1 models for g')
             # bdb.execute('initialize  3 models for g')
-            bdb.execute('analyze g for 1 iteration wait')
+            bdb.execute('analyze g for 1 iteration wait (extra_passes = 3)')
             #bdb.execute('analyze g for 1 iteration wait')
             probDensity = bdb.execute('estimate probability density of x = 50 from p').fetchall()
             print "prob density:",probDensity
@@ -72,6 +75,7 @@ def test_loom_one_numeric():
             bdb.execute('drop generator g')
             bdb.execute('drop population p')
             bdb.execute('drop table t')
+
 
 def test_complex_add_analyze_drop_sequence():
     with tempdir('bayeslite-loom') as loom_store_path:
@@ -89,21 +93,38 @@ def test_complex_add_analyze_drop_sequence():
 
             # a second analyze query should pick up where the first left off
             # and succeed at updating the parititons based on the new analysis
-            bdb.execute('analyze g for 2 iterations wait')
+            bdb.execute('analyze g for 2 iterations wait (extra_passes = 3)')
+            try:
+                bdb.execute('drop model 1 from g')
+                assert False,"Expected BQL error when trying to drop specific model numbers from loom."
+            except BQLError, e:
+                pass
             bdb.execute('drop models from g')
+            print "Finished dropping first set of models (2 models dropped)"
 
             bdb.execute('initialize 1 model for g')
+            print "initialized 1 new model, should be 1 model total now"
+            population_id = core.bayesdb_get_population(bdb, 'p')
+            generator_id = core.bayesdb_get_generator(bdb, population_id, 'g')
             num_models = bdb.sql_execute('''
                 SELECT num_models from bayesdb_loom_generator_model_info
                 WHERE generator_id=?;
-                ''',(generator_id,))
+                ''',(generator_id,)).fetchall()[0][0]
+            # make sure that the number of models was reset after dropping
             assert num_models == 1
             bdb.execute('analyze g for 1 iteration wait')
+            print "finished analyzing new model in g for 1 iteration"
 
             #bdb.execute('analyze g for 1 iteration wait')
-            bdb.execute('estimate probability density of x = 50 from p').fetchall()
+            probDensityX1 = bdb.execute('estimate probability density of x = 50 from p').fetchall()
+            print "probDensityX1:",probDensityX1
             bdb.execute('simulate x from p limit 1').fetchall()
             bdb.execute('drop models from g')
+
+            bdb.execute('initialize 1 model for g')
+            bdb.execute('analyze g for 1 iteration wait')
+            probDensityX2 = bdb.execute('estimate probability density of x = 50 from p').fetchall()
+            print "probDensityX2:",probDensityX2
             #bdb.execute('initialize 2 models for g')
             #bdb.execute('analyze g for 1 iteration wait')
             bdb.execute('drop generator g')
@@ -251,6 +272,16 @@ def test_loom_four_var():
             bdb.execute('initialize 2 model for g')
             bdb.execute('analyze g for 1 iteration wait')
 
+            try:
+                relevance = bdb.execute('''ESTIMATE PREDICTIVE RELEVANCE
+                    TO HYPOTHETICAL ROWS WITH VALUES ((x=50, xx=100))
+                    IN THE CONTEXT OF "x"
+                    FROM p
+                    WHERE rowid = 1''').fetchall()
+                assert False,"predictive relevance queries in loom cannot handle hypotheticals"
+            except BQLError, e:
+                pass
+
             relevance = bdb.execute('''ESTIMATE PREDICTIVE RELEVANCE
                 TO EXISTING ROWS (rowid = 1)
                 IN THE CONTEXT OF "x"
@@ -258,12 +289,26 @@ def test_loom_four_var():
                 WHERE rowid = 1''').fetchall()
             assert relevance[0][0] == 1
 
+            #similarities = bdb.execute('''estimate similarity
+            #    from pairwise p limit 2''').fetchall()
+
+            # test similarity query with context
             similarities = bdb.execute('''estimate similarity
                 in the context of x from pairwise p limit 2''').fetchall()
-            assert similarities[0][2] > 1
+            print "SIMILARITIES RETURNED IN TEST",similarities
+            #assert similarities[0][2] > 1
             assert abs(
                 similarities[0][2]-similarities[1][2])/float(
                 similarities[1][2]) < 0.005
+
+            # TODO: make this work
+            # test similarity query without context
+            #similarities = bdb.execute('''estimate similarity of (rowid = 1) to (rowid = 2)''').fetchall()
+            #print "SIMILARITIES NO CONTEXT RETURNED IN TEST",similarities
+            #assert similarities[0][2] > 1
+            #assert abs(
+            #    similarities[0][2]-similarities[1][2])/float(
+            #    similarities[1][2]) < 0.005
 
             impossible_density = bdb.execute(
                 'estimate probability density of x = %d by p'
