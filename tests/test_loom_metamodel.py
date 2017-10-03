@@ -57,27 +57,19 @@ def test_loom_one_numeric():
                 bdb.sql_execute('insert into t(x) values(?)', (x,))
             bdb.execute('create population p for t(x numerical)')
             bdb.execute('create generator g for p using loom')
-            # bdb.execute('create generator g for p using loom')
-            bdb.execute('initialize 1 models for g')
-            # bdb.execute('initialize  3 models for g')
-            bdb.execute('analyze g for 1 iteration wait (extra_passes = 3)')
-            #bdb.execute('analyze g for 1 iteration wait')
-            probDensity = bdb.execute('estimate probability density of x = 50 from p').fetchall()
-            print "prob density:",probDensity
-
-            bdb.execute('analyze g for 3 iterations wait')
-            probDensity2 = bdb.execute('estimate probability density of x = 50 from p').fetchall()
-            print "prob density2:",probDensity2
+            bdb.execute('initialize 2 models for g')
+            bdb.execute('analyze g for 1 iteration wait')
+            bdb.execute('estimate probability density of x = 50 from p').fetchall()
             bdb.execute('simulate x from p limit 1').fetchall()
             bdb.execute('drop models from g')
-            #bdb.execute('initialize 2 models for g')
-            #bdb.execute('analyze g for 1 iteration wait')
-            bdb.execute('drop generator g')
-            bdb.execute('drop population p')
-            bdb.execute('drop table t')
+            bdb.execute('initialize 1 models for g')
+            bdb.execute('analyze g for 1 iteration wait')
+            #bdb.execute('drop generator g')
+            #bdb.execute('drop population p')
+            #bdb.execute('drop table t')
 
 
-def test_complex_add_analyze_drop_sequence():
+def test_loom_complex_add_analyze_drop_sequence():
     with tempdir('bayeslite-loom') as loom_store_path:
         with bayesdb_open(':memory:') as bdb:
             bayesdb_register_metamodel(bdb,
@@ -89,21 +81,23 @@ def test_complex_add_analyze_drop_sequence():
             bdb.execute('create generator g for p using loom')
 
             bdb.execute('initialize 2 models for g')
+            print "about to do first analysis"
             bdb.execute('analyze g for 1 iteration wait')
 
             # a second analyze query should pick up where the first left off
             # and succeed at updating the parititons based on the new analysis
-            bdb.execute('analyze g for 2 iterations wait (extra_passes = 3)')
+            #bdb.execute('analyze g for 2 iterations wait (extra_passes = 3)')
             try:
                 bdb.execute('drop model 1 from g')
                 assert False,"Expected BQL error when trying to drop specific model numbers from loom."
             except BQLError, e:
                 pass
+            print "about to drop models"
             bdb.execute('drop models from g')
-            print "Finished dropping first set of models (2 models dropped)"
+            print "dropped models"
 
-            bdb.execute('initialize 1 model for g')
-            print "initialized 1 new model, should be 1 model total now"
+            bdb.execute('initialize 1 models for g')
+            print "initialized models"
             population_id = core.bayesdb_get_population(bdb, 'p')
             generator_id = core.bayesdb_get_generator(bdb, population_id, 'g')
             num_models = bdb.sql_execute('''
@@ -112,21 +106,24 @@ def test_complex_add_analyze_drop_sequence():
                 ''',(generator_id,)).fetchall()[0][0]
             # make sure that the number of models was reset after dropping
             assert num_models == 1
+            print "about to start analysis"
             bdb.execute('analyze g for 1 iteration wait')
-            print "finished analyzing new model in g for 1 iteration"
+            print "finished analysis"
 
-            #bdb.execute('analyze g for 1 iteration wait')
             probDensityX1 = bdb.execute('estimate probability density of x = 50 from p').fetchall()
-            print "probDensityX1:",probDensityX1
+            probDensityX1 = map(lambda x: x[0], probDensityX1)
             bdb.execute('simulate x from p limit 1').fetchall()
             bdb.execute('drop models from g')
 
             bdb.execute('initialize 1 model for g')
             bdb.execute('analyze g for 1 iteration wait')
             probDensityX2 = bdb.execute('estimate probability density of x = 50 from p').fetchall()
-            print "probDensityX2:",probDensityX2
-            #bdb.execute('initialize 2 models for g')
-            #bdb.execute('analyze g for 1 iteration wait')
+            probDensityX2 = map(lambda x: x[0], probDensityX2)
+            # check that the analysis started fresh after dropping models and produces similar results
+            # the second time
+            for i in range(len(probDensityX1)):
+                assert abs(probDensityX1[i] - probDensityX2[i]) < .01
+            bdb.execute('drop models from g')
             bdb.execute('drop generator g')
             bdb.execute('drop population p')
             bdb.execute('drop table t')
@@ -289,26 +286,13 @@ def test_loom_four_var():
                 WHERE rowid = 1''').fetchall()
             assert relevance[0][0] == 1
 
-            #similarities = bdb.execute('''estimate similarity
-            #    from pairwise p limit 2''').fetchall()
-
-            # test similarity query with context
             similarities = bdb.execute('''estimate similarity
                 in the context of x from pairwise p limit 2''').fetchall()
-            print "SIMILARITIES RETURNED IN TEST",similarities
-            #assert similarities[0][2] > 1
+            assert similarities[0][2] <= 1
+            assert similarities[1][2] <= 1
             assert abs(
                 similarities[0][2]-similarities[1][2])/float(
                 similarities[1][2]) < 0.005
-
-            # TODO: make this work
-            # test similarity query without context
-            #similarities = bdb.execute('''estimate similarity of (rowid = 1) to (rowid = 2)''').fetchall()
-            #print "SIMILARITIES NO CONTEXT RETURNED IN TEST",similarities
-            #assert similarities[0][2] > 1
-            #assert abs(
-            #    similarities[0][2]-similarities[1][2])/float(
-            #    similarities[1][2]) < 0.005
 
             impossible_density = bdb.execute(
                 'estimate probability density of x = %d by p'
