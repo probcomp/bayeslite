@@ -353,6 +353,12 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                 DELETE FROM bayesdb_loom_row_kind_partition
                 WHERE generator_id = ?;
             ''', (generator_id,))
+            q_server = self._get_cache_entry(bdb, generator_id, 'q_server')
+            if q_server is not None:
+                q_server.close()
+            preql_server = self._get_cache_entry(bdb, generator_id, 'preql_server')
+            if preql_server is not None:
+                preql_server.close()
             self._del_cache_entry(bdb, generator_id, 'q_server')
             self._del_cache_entry(bdb, generator_id, 'preql_server')
 
@@ -388,8 +394,8 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         self._set_cache_entry(bdb, generator_id, 'q_server',
             loom.query.get_server(
                 self._get_loom_project_path(bdb, generator_id)))
-        self._set_cache_entry(bdb, generator_id, 'preql_server',
-                loom.tasks.query(self._get_name(bdb, generator_id)))
+        queryRes = loom.tasks.query(self._get_name(bdb, generator_id))
+        self._set_cache_entry(bdb, generator_id, 'preql_server', queryRes)
 
     def _store_kind_partition(self, bdb, generator_id, modelnos):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
