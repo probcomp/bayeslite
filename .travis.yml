@@ -1,0 +1,7 @@
+language: generic
+
+services:
+  - docker
+
+install:
+  - docker build -f docker/ubuntu1404 .
