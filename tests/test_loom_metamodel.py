@@ -47,7 +47,7 @@ def tempdir(prefix):
 def test_loom_one_numeric():
     """Simple test of the LoomMetamodel on a one variable table
     Only checks for errors from the Loom system."""
-
+    from datetime import datetime
     with tempdir('bayeslite-loom') as loom_store_path:
         with bayesdb_open(':memory:') as bdb:
             bayesdb_register_metamodel(bdb,
@@ -57,8 +57,16 @@ def test_loom_one_numeric():
                 bdb.sql_execute('insert into t(x) values(?)', (x,))
             bdb.execute('create population p for t(x numerical)')
             bdb.execute('create generator g for p using loom')
-            bdb.execute('initialize 2 models for g')
-            bdb.execute('analyze g for 1 iteration wait')
+            bdb.execute('initialize 1 models for g')
+            print "TIME START 10:",datetime.now()
+            bdb.execute('analyze g for 10 iterations wait')
+            print "TIME COMPLETE 10:",datetime.now()
+            #print "TIME START 300:",datetime.now()
+            #bdb.execute('analyze g for 300 iterations wait')
+            #print "TIME COMPLETE 300:",datetime.now()
+            #print "TIME START 500:",datetime.now()
+            #bdb.execute('analyze g for 500 iterations wait')
+            #print "TIME COMPLETE 500:",datetime.now()
             bdb.execute('estimate probability density of x = 50 from p').fetchall()
             bdb.execute('simulate x from p limit 1').fetchall()
             bdb.execute('drop models from g')
@@ -79,11 +87,19 @@ def test_loom_complex_add_analyze_drop_sequence():
             bdb.execute('create generator g for p using loom')
 
             bdb.execute('initialize 2 models for g')
-            bdb.execute('analyze g for 1 iteration wait')
 
-            # a second analyze query should pick up where the first left off
-            # and succeed at updating the parititons based on the new analysis
-            bdb.execute('analyze g for 2 iterations wait (extra_passes = 3)')
+            bdb.execute('initialize 3 models if not exists for g')
+            population_id = core.bayesdb_get_population(bdb, 'p')
+            generator_id = core.bayesdb_get_generator(bdb, population_id, 'g')
+            num_models = bdb.sql_execute('''
+                SELECT num_models from bayesdb_loom_generator_model_info
+                WHERE generator_id=?;
+                ''',(generator_id,)).fetchall()[0][0]
+            # make sure that the total number of models is 3 and not 2 + 3 = 5
+            assert num_models == 3
+
+            bdb.execute('analyze g for 50 iterations wait')
+
             try:
                 bdb.execute('drop model 1 from g')
                 assert False,"Expected BQL error when trying to drop specific model numbers from loom."
@@ -99,8 +115,8 @@ def test_loom_complex_add_analyze_drop_sequence():
                 WHERE generator_id=?;
                 ''',(generator_id,)).fetchall()[0][0]
             # make sure that the number of models was reset after dropping
-            #assert num_models == 1
-            bdb.execute('analyze g for 1 iteration wait')
+            assert num_models == 1
+            bdb.execute('analyze g for 50 iterations wait')
 
             probDensityX1 = bdb.execute('estimate probability density of x = 50 from p').fetchall()
             probDensityX1 = map(lambda x: x[0], probDensityX1)
@@ -108,7 +124,7 @@ def test_loom_complex_add_analyze_drop_sequence():
             bdb.execute('drop models from g')
 
             bdb.execute('initialize 1 model for g')
-            bdb.execute('analyze g for 1 iteration wait')
+            bdb.execute('analyze g for 50 iterations wait')
             probDensityX2 = bdb.execute('estimate probability density of x = 50 from p').fetchall()
             probDensityX2 = map(lambda x: x[0], probDensityX2)
             # check that the analysis started fresh after dropping models and produces similar results
@@ -155,7 +171,7 @@ def test_stattypes():
             ''')
             bdb.execute('create generator g for p using loom')
             bdb.execute('initialize 1 model for g')
-            bdb.execute('analyze g for 1 iteration wait')
+            bdb.execute('analyze g for 50 iterations wait')
             bdb.execute('''estimate probability density of
                 nu = 50, u="a" from p''').fetchall()
             bdb.execute('''simulate u, co, b, ca, cy, nu, no
@@ -183,7 +199,7 @@ def test_conversion():
             bdb.execute('create population p for t(x numerical; y numerical)')
             bdb.execute('create generator lm for p using loom')
             bdb.execute('initialize 1 model for lm')
-            bdb.execute('analyze lm for 1 iteration wait')
+            bdb.execute('analyze lm for 50 iterations wait')
             bdb.execute('convert lm to cp using cgpm')
             bdb.execute('''estimate probability density of
                     x = 50 from p modeled by cp''').fetchall()
@@ -244,7 +260,7 @@ def test_loom_four_var():
                 y numerical; z categorical)''')
             bdb.execute('create generator g for p using loom')
             bdb.execute('initialize 2 model for g')
-            bdb.execute('analyze g for 1 iteration wait')
+            bdb.execute('analyze g for 50 iterations wait')
 
             try:
                 relevance = bdb.execute('''ESTIMATE PREDICTIVE RELEVANCE
@@ -265,25 +281,27 @@ def test_loom_four_var():
 
             similarities = bdb.execute('''estimate similarity
                 in the context of x from pairwise p limit 2''').fetchall()
+            print "SIMILARITIES:",similarities
             assert similarities[0][2] <= 1
             assert similarities[1][2] <= 1
             assert abs(
-                similarities[0][2]-similarities[1][2])/float(
-                similarities[1][2]) < 0.005
+                similarities[0][2]-similarities[1][2]) < 0.005
 
             impossible_density = bdb.execute(
                 'estimate probability density of x = %d by p'
                 % (X_MAX*2.5)).fetchall()
             assert impossible_density[0][0] < 0.0001
+            print "DID FIRST LOGPDF"
 
             possible_density = bdb.execute(
                 'estimate probability density of x = %d  by p' %
                 ((X_MAX-X_MIN)/2)).fetchall()
             assert possible_density[0][0] > 0.001
-
+            print "DID SECOND LOGPDF"
             categorical_density = bdb.execute('''estimate probability density of
                 z = "a" by p''').fetchall()
             assert abs(categorical_density[0][0]-.5) < 0.2
+            print "DID THIRD LOGPDF"
 
             mutual_info = bdb.execute('''estimate mutual information as mutinf
                     from pairwise columns of p order by mutinf''').fetchall()
@@ -291,13 +309,14 @@ def test_loom_four_var():
             mutual_info_dict = dict(zip(zip(a, b), c))
             assert mutual_info_dict[('x', 'y')] < mutual_info_dict[
                 ('x', 'xx')] < mutual_info_dict[('x', 'x')]
+            print "DID MUTUAL INFO"
 
             simulated_data = bdb.execute('simulate x, y from p limit %d' %
                 (PREDICT_RUNS)).fetchall()
             xs, ys = zip(*simulated_data)
             assert abs((sum(xs)/len(xs)) - (X_MAX-X_MIN)/2) < (X_MAX-X_MIN)/5
             assert abs((sum(ys)/len(ys)) - (Y_MAX-Y_MIN)/2) < (Y_MAX-Y_MIN)/5
-
+            print "GOT SIMULATED DATA"
             assert sum([1 if (x < Y_MIN or x > X_MAX)
                 else 0 for x in xs]) < .5*PREDICT_RUNS
             assert sum([1 if (y < Y_MIN or y > Y_MAX)
@@ -312,7 +331,7 @@ def test_loom_four_var():
                     assert d_val > 0.99
                 else:
                     assert d_val == 0
-
+            print "DID LAST DEPENDENCE PROBABILITY"
             predict_confidence = bdb.execute(
                     'infer explicit predict x confidence x_c FROM p').fetchall()
             predictions, confidences = zip(*predict_confidence)

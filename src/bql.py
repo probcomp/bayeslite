@@ -658,6 +658,7 @@ def execute_phrase(bdb, phrase, bindings=()):
         generator_id = core.bayesdb_get_generator(bdb, None, phrase.generator)
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
         # XXX Should allow parameters for iterations and ckpt/iter.
+        print "ANALYZE MODELS PHRASE:",phrase
         metamodel.analyze_models(bdb, generator_id,
             modelnos=phrase.modelnos,
             iterations=phrase.iterations,

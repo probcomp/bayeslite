@@ -324,8 +324,10 @@ def _bql_column_mutual_information(
         raise ValueError('Odd constraint arguments: %s.' % (constraint_args))
     constraints = zip(constraint_args[::2], constraint_args[1::2]) \
         if constraint_args else None
+    print "_bql col mut inf has colnos0: {}, colnos1: {}".format(colnos0, colnos1)
     def generator_mutinf(generator_id):
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
+        print "Generator mutinf calling metamodel mut inf with colnos0: {}, colnos1: {}, generator id: {}".format(colnos0, colnos1, generator_id)
         return metamodel.column_mutual_information(
             bdb, generator_id, modelnos, colnos0, colnos1,
             constraints=constraints, numsamples=numsamples)
