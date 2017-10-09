@@ -126,8 +126,9 @@ STATTYPE_TO_LOOMTYPE = {
 
 def LOG(message):
     #if VERBOSITY:
-    sys.stdout.write('{}\n'.format(message))
-    sys.stdout.flush()
+    return ""
+    #sys.stdout.write('{}\n'.format(message))
+    #sys.stdout.flush()
 
 class LoomMetamodel(metamodel.IBayesDBMetamodel):
     """Loom metamodel for BayesDB.
@@ -552,7 +553,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         server = self._get_cache_entry(bdb, generator_id, 'preql_server')
         target_set = server._cols_to_mask(server.encode_set(colnames0))
         query_set = server._cols_to_mask(server.encode_set(colnames1))
-        print "In mutual information about to call query server, generator_id: {}, modelnos: {}, colnos0: {}, colnos1: {}, constraints: {}, numsamples: {}".format(generator_id, modelnos, colnos0, colnos1, constraints, numsamples)
+        print "In mutual information about to call query server, generator_id: {}, modelnos: {}, colnos0: {}, colnos1: {}, constraints: {}, numsamples: {}, using server: {}".format(generator_id, modelnos, colnos0, colnos1, constraints, numsamples, server)
         mi = server._query_server.mutual_information(
             target_set,
             query_set,

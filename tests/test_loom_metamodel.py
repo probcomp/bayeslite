@@ -260,7 +260,7 @@ def test_loom_four_var():
                 y numerical; z categorical)''')
             bdb.execute('create generator g for p using loom')
             bdb.execute('initialize 2 model for g')
-            bdb.execute('analyze g for 50 iterations wait')
+            bdb.execute('analyze g for 500 iterations wait')
 
             try:
                 relevance = bdb.execute('''ESTIMATE PREDICTIVE RELEVANCE
