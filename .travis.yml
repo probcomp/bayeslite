@@ -14,7 +14,9 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda install conda-build
-script: conda build .
+script:
+  - conda install -c probcomp crosscat
+  - conda build .
 after_success:
   - conda install anaconda-client
   - anaconda -t $CONDA_UPLOAD_TOKEN upload -u $CONDA_USER ~/miniconda/conda-bld/linux-64/bayeslite-*.tar.bz2 --force
