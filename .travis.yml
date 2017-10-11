@@ -13,12 +13,8 @@ install:
   - hash -r
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
-  - pip install -r requirements.txt
-  - pip install -i https://pypi.anaconda.org/probcomp/simple cgpm
-  - pip install -i https://pypi.anaconda.org/probcomp/simple crosscat
-script: ./check.sh
+  - conda install conda-build
+script: conda build .
 after_success:
-  - python setup.py sdist
-  - python setup.py bdist
-  #- test $TRAVIS_BRANCH = "travis" && conda install conda-build && conda install anaconda-client && bash conda/conda_upload.sh
-  - conda install anaconda-client && anaconda -t $CONDA_UPLOAD_TOKEN upload -u $CONDA_USER -l test dist/*.tar.gz --force
+  - conda install anaconda-client
+  - anaconda -t $CONDA_UPLOAD_TOKEN upload -u $CONDA_USER ~/miniconda/conda-bld/linux-64/bayeslite-*.tar.bz2 --force
