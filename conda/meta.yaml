@@ -13,8 +13,10 @@ requirements:
     - git
     - python 2.7.*
     - cython >=0.20.1
+    - jsonschema
     - numpy 1.8.*
   run:
+    - jsonschema
     - numpy 1.8.*
     - scipy >=0.11.0
     - six
