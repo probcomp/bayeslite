@@ -14,6 +14,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import time
+import random
+import string
 import contextlib
 import shutil
 import tempfile
@@ -21,8 +23,7 @@ import os.path
 
 import bayeslite.core as core
 
-from bayeslite import bayesdb_open
-from bayeslite import bayesdb_register_metamodel
+from bayeslite import bayesdb_open, bayesdb_register_metamodel
 from bayeslite.exception import BQLError
 from bayeslite.metamodels.loom_metamodel import LoomMetamodel
 
@@ -181,6 +182,32 @@ def test_stattypes():
             bdb.execute('drop population p')
             bdb.execute('drop table t')
 
+
+def test_loom_guess_schema_categorical():
+    """Test to make sure that the LoomMetamodel handles the case where
+    the user provides a categorical variable with more than 256 distinct
+    types. In this case, the metamodel code should know to specify the type
+    unboundedcategorical to loom."""
+
+    with tempdir('bayeslite-loom') as loom_store_path:
+        with bayesdb_open(':memory:') as bdb:
+            bayesdb_register_metamodel(bdb,
+                LoomMetamodel(loom_store_path=loom_store_path))
+            bdb.sql_execute('create table t(v)')
+            vals_to_insert = [''.join(random.choice(string.lowercase) for i in range(20)) for j in range(300)]
+            #print "random example:",vals_to_insert
+            for i in xrange(len(vals_to_insert)):
+                bdb.sql_execute('''insert into t(v) values (?)''', (vals_to_insert[i],))
+            #bdb.sql_execute('select * from t')
+            bdb.execute('create population p for t(v categorical)')
+            #bdb.execute('create population p for t with schema (guess stattypes for (*))')
+            bdb.execute('create generator g for p using loom')
+            bdb.execute('initialize 1 model for g')
+            bdb.execute('analyze g for 50 iterations wait')
+            bdb.execute('drop models from g')
+            bdb.execute('drop generator g')
+            bdb.execute('drop population p')
+            bdb.execute('drop table t')
 
 def test_conversion():
     """Test the workflow of:
