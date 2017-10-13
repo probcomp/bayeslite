@@ -35,8 +35,6 @@ import os.path
 import tempfile
 import time
 
-import sys # REMOVE THIS LATER
-
 from StringIO import StringIO
 from collections import Counter
 
@@ -124,12 +122,6 @@ STATTYPE_TO_LOOMTYPE = {
 }
 
 
-def LOG(message):
-    #if VERBOSITY:
-    return ""
-    #sys.stdout.write('{}\n'.format(message))
-    #sys.stdout.flush()
-
 class LoomMetamodel(metamodel.IBayesDBMetamodel):
     """Loom metamodel for BayesDB.
 
@@ -208,8 +200,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             data.append(col_data)
             data_by_column[column_name] = col_data
         data = [list(i) for i in zip(*data)]
-        #print "DATA:",data
-        #print "DATA BY COLUMN:",data_by_column
+
         # Ingest data into loom
         schema_file = self._data_to_schema(bdb, population_id, data_by_column)
         csv_file = self._data_to_csv(bdb, population_id, headers, data)
@@ -284,17 +275,14 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         json_dict = {}
         for colno in core.bayesdb_variable_numbers(bdb,
                 population_id, None):
-            #print "data to schema iterator for col no: {}".format(colno)
             column_name = core.bayesdb_variable_name(bdb,
                 population_id, colno)
             stattype = core.bayesdb_variable_stattype(bdb,
                 population_id, colno)
             if (stattype == 'nominal' or stattype == 'categorical') \
                     and len(set(data_by_column[column_name])) > 256:
-                print "CHANGED STATTYPE TO UNBOUNDED CATEGORICAL"
                 stattype = 'unboundedcategorical'
             json_dict[column_name] = STATTYPE_TO_LOOMTYPE[stattype]
-        #print "JSON DICT FOR SCHEMA:",json_dict
         with tempfile.NamedTemporaryFile(delete=False) as schema_file:
             schema_file.write(json.dumps(json_dict))
 
@@ -328,7 +316,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             SELECT num_models from bayesdb_loom_generator_model_info
             WHERE generator_id = ?
             ''', (generator_id,)).fetchall()
-        #print "NUM EXISTING:",num_existing
         if num_existing is None or len(num_existing) == 0:
             num_existing = 0
         else:
@@ -403,7 +390,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
             max_seconds=None, ckpt_iterations=None, ckpt_seconds=None,
             program=None):
-        LOG("In analyze models")
         if max_seconds is not None:
             raise ValueError("Loom does not suport inference with a number of seconds.")
         if ckpt_iterations is not None or ckpt_seconds is not None:
@@ -413,16 +399,9 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             raise BQLError(bdb, 'Loom cannot analyze specific models numbers.')
         name = self._get_name(bdb, generator_id)
         num_models = (self._get_num_models(bdb, generator_id))
-
-        '''
-        config = None
-        if program is not None and 'extra_passes' in program:
-            index = program.index('extra_passes')
-            extra_passes = int(program[index + 2])
-            config = {'schedule': {'extra_passes': extra_passes}}
-        '''
+        iterations = int(iterations)
+        assert iterations >= 1,"Analyze must have num iterations >= 1."
         config = {'schedule': {'extra_passes': iterations}}
-        print "Analyze using config:",config
         loom.tasks.infer(name, sample_count=num_models, config=config)
 
         self._store_kind_partition(bdb, generator_id, modelnos)
@@ -470,7 +449,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                         generator_id, modelno, rowid,
                         kind_id, partition_id)
             bdb.sql_execute(row_query[:-1])
-            LOG("Stored Kind Partitions")
 
     def _retrieve_column_partition(self, bdb, generator_id, modelno):
         """Return column partition from a CrossCat model.
@@ -562,43 +540,28 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         server = self._get_cache_entry(bdb, generator_id, 'preql_server')
         target_set = server._cols_to_mask(server.encode_set(colnames0))
         query_set = server._cols_to_mask(server.encode_set(colnames1))
-        print "In mutual information about to call query server, generator_id: {}, modelnos: {}, colnos0: {}, colnos1: {}, constraints: {}, numsamples: {}, using server: {}".format(generator_id, modelnos, colnos0, colnos1, constraints, numsamples, server)
         mi = server._query_server.mutual_information(
             target_set,
             query_set,
             entropys=None,
             sample_count=loom.preql.SAMPLE_COUNT)
-        print "In mutual information completed query server call"
         return mi
 
     def row_similarity(self, bdb, generator_id, modelnos, rowid, target_rowid,
             colnos):
-        #LOG("In Row Similarity")
         population_id = core.bayesdb_generator_population(bdb, generator_id)
-        #LOG("Row similarity population id: {}".format(population_id))
-       # _, target_row = zip(*self._reorder_row(bdb, generator_id,
-       #     core.bayesdb_population_row_values(bdb,
-       #         population_id, target_rowid)))
-       # LOG("Row similarity target_row: {}".format(target_row))
-       # _, row = zip(*self._reorder_row(bdb, generator_id,
-       #     core.bayesdb_population_row_values(bdb, population_id, rowid)))
-        #LOG("Row similarity row: {}".format(row))
-
         if modelnos is None:
             modelnos = range(self._get_num_models(bdb, generator_id))
-        #print "Row Similarity using modelnos: {}".format(modelnos)
         model_similarities = []
         for modelno in modelnos:
             if colnos is not None:
                 assert len(colnos) == 1,"Number of columns provided cannot exceed 1"
                 kind_id = self._get_kind_id(bdb, generator_id, modelno, colnos[0])
-                LOG("About to get partition ids")
                 partition_ids = bdb.sql_execute('''SELECT partition_id from bayesdb_loom_row_kind_partition
                     WHERE generator_id = ? and
                     modelno = ? and
                     kind_id = ? and
                     rowid IN (?, ?)''',(generator_id, modelno, kind_id, rowid, target_rowid,)).fetchall()
-                #LOG("Finished getting partition ids: {}".format(partition_ids))
                 assert len(partition_ids) > 0 and len(partition_ids) <= 2,"Error selecting rows for comparision in row_similarity"
                 model_similarities.append(partition_ids[0] == partition_ids[1] if len(partition_ids) == 2 else 1)
             else:
@@ -624,22 +587,15 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
         Returns a list of (colno, value) tuples in the proper order.
         """
-        #LOG("entered reorder row generator id: {}, row: {}".format(generator_id, row))
         ordered_column_labels = self._get_ordered_column_labels(bdb,
             generator_id)
-        #LOG("_reorder_row ordered col labels: {}".format(ordered_column_labels))
         ordererd_column_dict = collections.OrderedDict(
             [(a, None) for a in ordered_column_labels])
 
         population_id = core.bayesdb_generator_population(bdb, generator_id)
-        #LOG("_reorder row population id: {}".format(population_id))
-        # TODO fix bug - colnos are not dense
         for (colno, value) in zip(range(1, len(row) + 1), row):
-            #LOG("trying to get variable name for colno: {} will store value: {}".format(colno, value))
             column_name = core.bayesdb_variable_name(bdb, population_id, colno) #THIS RETURNS AN EMPTY CURSOR
-            #LOG("got column name (variable name): {} for colno: {}".format(column_name, colno))
             ordererd_column_dict[column_name] = str(value)
-        #LOG("created ordered column dict: {}".format(ordered_column_dict))
         if dense is False:
             return [(colno, value)
                 for (colno, value) in ordererd_column_dict.iteritems()
@@ -781,7 +737,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
     def logpdf_joint(self, bdb, generator_id, modelnos, rowid, targets,
             constraints):
         # TODO optimize bdb calls
-        #print "In logpdf_joint with rowid={}, targets={}".format(rowid, targets)
         ordered_column_labels = self._get_ordered_column_labels(bdb,
             generator_id)
 
@@ -847,21 +802,9 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         ''', (generator_id, colno, string_form,)))
 
     def _get_ordered_column_labels(self, bdb, generator_id):
-        #LOG("in get ordered column labels")
         population_id = core.bayesdb_generator_population(bdb, generator_id)
-        #LOG("got population id")
-        col_order = self._get_order(bdb, generator_id)
-        #LOG("got col_order")
-        names = []
-        for colno in col_order:
-            #print "getting name for colno: {}".format(colno)
-            name = core.bayesdb_variable_name(bdb, population_id, colno)
-            #print "got name for colno: {} as name: {}".format(colno, name)
-            names.append(name)
-        #names = [core.bayesdb_variable_name(bdb, population_id, colno) for colno in col_order]
-        return names
-        #return [core.bayesdb_variable_name(bdb, population_id, colno)
-        #    for colno in self._get_order(bdb, generator_id)]
+        return [core.bayesdb_variable_name(bdb, population_id, colno)
+            for colno in self._get_order(bdb, generator_id)]
 
     def _get_loom_rank(self, bdb, generator_id, colno):
         return util.cursor_value(bdb.sql_execute('''

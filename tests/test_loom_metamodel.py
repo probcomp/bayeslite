@@ -59,15 +59,7 @@ def test_loom_one_numeric():
             bdb.execute('create population p for t(x numerical)')
             bdb.execute('create generator g for p using loom')
             bdb.execute('initialize 1 models for g')
-            print "TIME START 10:",datetime.now()
             bdb.execute('analyze g for 10 iterations wait')
-            print "TIME COMPLETE 10:",datetime.now()
-            #print "TIME START 300:",datetime.now()
-            #bdb.execute('analyze g for 300 iterations wait')
-            #print "TIME COMPLETE 300:",datetime.now()
-            #print "TIME START 500:",datetime.now()
-            #bdb.execute('analyze g for 500 iterations wait')
-            #print "TIME COMPLETE 500:",datetime.now()
             bdb.execute('estimate probability density of x = 50 from p').fetchall()
             bdb.execute('simulate x from p limit 1').fetchall()
             bdb.execute('drop models from g')
@@ -195,12 +187,9 @@ def test_loom_guess_schema_categorical():
                 LoomMetamodel(loom_store_path=loom_store_path))
             bdb.sql_execute('create table t(v)')
             vals_to_insert = [''.join(random.choice(string.lowercase) for i in range(20)) for j in range(300)]
-            #print "random example:",vals_to_insert
             for i in xrange(len(vals_to_insert)):
                 bdb.sql_execute('''insert into t(v) values (?)''', (vals_to_insert[i],))
-            #bdb.sql_execute('select * from t')
             bdb.execute('create population p for t(v categorical)')
-            #bdb.execute('create population p for t with schema (guess stattypes for (*))')
             bdb.execute('create generator g for p using loom')
             bdb.execute('initialize 1 model for g')
             bdb.execute('analyze g for 50 iterations wait')
@@ -308,7 +297,6 @@ def test_loom_four_var():
 
             similarities = bdb.execute('''estimate similarity
                 in the context of x from pairwise p limit 2''').fetchall()
-            print "SIMILARITIES:",similarities
             assert similarities[0][2] <= 1
             assert similarities[1][2] <= 1
             assert abs(
@@ -318,17 +306,15 @@ def test_loom_four_var():
                 'estimate probability density of x = %d by p'
                 % (X_MAX*2.5)).fetchall()
             assert impossible_density[0][0] < 0.0001
-            print "DID FIRST LOGPDF"
 
             possible_density = bdb.execute(
                 'estimate probability density of x = %d  by p' %
                 ((X_MAX-X_MIN)/2)).fetchall()
             assert possible_density[0][0] > 0.001
-            print "DID SECOND LOGPDF"
+
             categorical_density = bdb.execute('''estimate probability density of
                 z = "a" by p''').fetchall()
             assert abs(categorical_density[0][0]-.5) < 0.2
-            print "DID THIRD LOGPDF"
 
             mutual_info = bdb.execute('''estimate mutual information as mutinf
                     from pairwise columns of p order by mutinf''').fetchall()
@@ -336,14 +322,12 @@ def test_loom_four_var():
             mutual_info_dict = dict(zip(zip(a, b), c))
             assert mutual_info_dict[('x', 'y')] < mutual_info_dict[
                 ('x', 'xx')] < mutual_info_dict[('x', 'x')]
-            print "DID MUTUAL INFO"
 
             simulated_data = bdb.execute('simulate x, y from p limit %d' %
                 (PREDICT_RUNS)).fetchall()
             xs, ys = zip(*simulated_data)
             assert abs((sum(xs)/len(xs)) - (X_MAX-X_MIN)/2) < (X_MAX-X_MIN)/5
             assert abs((sum(ys)/len(ys)) - (Y_MAX-Y_MIN)/2) < (Y_MAX-Y_MIN)/5
-            print "GOT SIMULATED DATA"
             assert sum([1 if (x < Y_MIN or x > X_MAX)
                 else 0 for x in xs]) < .5*PREDICT_RUNS
             assert sum([1 if (y < Y_MIN or y > Y_MAX)
@@ -358,7 +342,6 @@ def test_loom_four_var():
                     assert d_val > 0.99
                 else:
                     assert d_val == 0
-            print "DID LAST DEPENDENCE PROBABILITY"
             predict_confidence = bdb.execute(
                     'infer explicit predict x confidence x_c FROM p').fetchall()
             predictions, confidences = zip(*predict_confidence)
