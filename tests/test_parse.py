@@ -879,6 +879,72 @@ def test_analyze():
             ' checkpoint 3 seconds') == \
         [ast.AnalyzeModels('t', None, 10, None, None, 3, False, None)]
 
+def test_altergen():
+    assert parse_bql_string('alter analysis schema g '
+            'rename to rumba') == \
+        [ast.AlterGen(
+            generator='g',
+            modelnos=None,
+            commands=[ast.AlterGenRenameGen('rumba')]
+        )]
+    assert parse_bql_string('alter analysis schema g models (1, 2, 4) '
+            'rename to rumba') == \
+        [ast.AlterGen(
+            generator='g',
+            modelnos=[1,2,4],
+            commands=[ast.AlterGenRenameGen('rumba')]
+        )]
+    assert parse_bql_string('alter analysis schema g '
+            'rename to rumba, generic cmd (a,c), generic cmd2') == \
+        [ast.AlterGen(
+            generator='g',
+            modelnos=None,
+            commands=[
+                ast.AlterGenRenameGen('rumba'),
+                ast.AlterGenGeneric(['generic', 'cmd', ['a', ',', 'c']]),
+                ast.AlterGenGeneric(['generic', 'cmd2']),
+            ],
+        )]
+    assert parse_bql_string('alter analysis schema g models (1-4) '
+            'set variable clustering of (*) to independent, '
+            'set variable clustering of (*) to dependent, '
+            'set variable cluster of bar to cluster of baz, '
+            'set variable cluster of (roger, martin) to singleton, '
+            'set variable clustering hyperparameter to 100, '
+            'set row cluster of 1 to cluster of 2, '
+            'set row clustering hyperparameter of cluster of variable K to 11, '
+            'set row clustering hyperparameter of variable K to -1 '
+        ) == \
+        [ast.AlterGen(
+            generator='g',
+            modelnos=[1, 2, 3, 4],
+            commands=[
+                ast.AlterGenGeneric([
+                    'set', 'variable', 'clustering', 'of', ['*'],
+                    'to', 'independent']),
+                ast.AlterGenGeneric([
+                    'set', 'variable', 'clustering', 'of', ['*'],
+                    'to', 'dependent']),
+                ast.AlterGenGeneric([
+                    'set', 'variable', 'cluster', 'of', 'bar', 'to',
+                    'cluster', 'of', 'baz']),
+                ast.AlterGenGeneric([
+                    'set', 'variable', 'cluster', 'of',
+                    ['roger', ',', 'martin'], 'to', 'singleton']),
+                ast.AlterGenGeneric([
+                    'set', 'variable', 'clustering', 'hyperparameter',
+                    'to', 100]),
+                ast.AlterGenGeneric(
+                    ['set', 'row', 'cluster', 'of', 1, 'to',
+                    'cluster', 'of', 2]),
+                ast.AlterGenGeneric([
+                    'set', 'row', 'clustering', 'hyperparameter', 'of',
+                    'cluster', 'of', 'variable', 'K', 'to', 11]),
+                ast.AlterGenGeneric([
+                    'set', 'row', 'clustering', 'hyperparameter', 'of',
+                    'variable', 'K', 'to', '-', 1])
+        ])]
+
 def test_create_tab_csv():
     assert parse_bql_string('create temp table if not exists f '
             'from \'foo.csv\'') == \
@@ -911,7 +977,6 @@ def test_alterpop_stattype():
             ast.AlterPopStatType(['c'], 'nominal'),]
         )]
 
-
 def test_alterpop_addvar():
     assert parse_bql_string('alter population p '
             'add variable r') == \
@@ -934,7 +999,6 @@ def test_alterpop_addvar():
         )]
     with pytest.raises(bayeslite.BQLParseError):
         parse_bql_string('alter population v add variable;')
-
 
 def test_infer_trivial():
     assert parse_bql_string('infer x from p') == \

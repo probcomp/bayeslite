@@ -22,19 +22,47 @@
  */
 
 
-anlaysis(start)     ::= phrases(ps).
+analysis(start)     ::= phrases(ps).
 
 phrases(one)        ::= phrase(p).
 phrases(many)       ::= phrases(ps) T_SEMI phrase(p).
 
 phrase(none)        ::= .
+
 phrase(variables)   ::= K_VARIABLES column_list(cols).
 phrase(skip)        ::= K_SKIP column_list(cols).
+
+phrase(rows)        ::= K_ROWS row_list(rows).
+
 phrase(loom)        ::= K_LOOM.
 phrase(optimized)   ::= K_OPTIMIZED.
+
 phrase(quiet)       ::= K_QUIET.
+
+phrase(subproblems) ::= K_SUBPROBLEM|K_SUBPROBLEMS subproblems_list(s).
+
+subproblems_list(one)   ::= subproblem(s).
+subproblems_list(many)  ::= T_LROUND subproblems(s) T_RROUND.
+
+subproblems(one)        ::= subproblem(s).
+subproblems(many)       ::= subproblems(ss) T_COMMA subproblem(s).
+
+subproblem(variable_hyperparameters)    ::= K_VARIABLE K_HYPERPARAMETERS.
+
+subproblem(variable_clustering)                 ::= K_VARIABLE K_CLUSTERING.
+subproblem(variable_clustering_concentration)   ::= K_VARIABLE K_CLUSTERING
+                                                    K_CONCENTRATION.
+
+subproblem(row_clustering)                  ::= K_ROW K_CLUSTERING.
+subproblem(row_clustering_concentration)    ::= K_ROW K_CLUSTERING
+                                                    K_CONCENTRATION.
 
 column_list(one)    ::= column_name(col).
 column_list(many)   ::= column_list(cols) T_COMMA column_name(col).
 
 column_name(n)      ::= L_NAME(name).
+
+row_list(one)       ::= row_index(row).
+row_list(many)      ::= row_list(rows) T_COMMA row_index(row).
+
+row_index(n)        ::= L_NUMBER(n).

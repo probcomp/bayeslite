@@ -172,6 +172,16 @@ class IBayesDBMetamodel(object):
         """
         raise NotImplementedError
 
+    def alter(self, bdb, generator_id, modelnos, commands):
+        """Modify the generator according to the metamdoel-specific commands.
+
+        Used by the MML::
+
+            ALTER GENERATOR <generator> [MODELS [(<modelnos>)]]
+                commands...
+        """
+        raise NotImplementedError
+
     def analyze_models(self, bdb, generator_id, modelnos=None, iterations=1,
             max_seconds=None, ckpt_iterations=None, ckpt_seconds=None,
             program=None):
@@ -185,7 +195,7 @@ class IBayesDBMetamodel(object):
         :param int ckpt_iterations: number of iterations before committing
             results of analysis to the database
         :param int ckpt_seconds: number of seconds before committing results of
-            anlaysis to the database
+            analysis to the database
         :param object program: None, or list of tokens of analysis program
         """
         raise NotImplementedError

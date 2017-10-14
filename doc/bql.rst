@@ -175,7 +175,7 @@ For those that are modeled, it specifies their statistical type.
 ``DROP POPULATION [IF EXISTS] <population>``
 
    Drop the population *population* and all its contents.
-   Will fail if there are still metamodels associated with this population.
+   Will fail if there are still analysis schemas associated with this population.
 
 .. index:: ``ALTER POPULATION``
 
@@ -199,22 +199,22 @@ For those that are modeled, it specifies their statistical type.
       Change the statistical type of variable(s) *variable(s)* in population
       *population* to *stattype*.
 
-++++++++++
-Metamodels
-++++++++++
+++++++++++++++++
+Analysis schemas
+++++++++++++++++
 
-A metamodel specifies the type of generative model(s) used to model the
+An analysis schema specifies the type of generative model(s) used to model the
 variables in a population.
 
-.. index:: ``CREATE METAMODEL``
+.. index:: ``CREATE ANALYSIS SCHEMA``
 
-``CREATE METAMODEL <metamodel> FOR <population> WITH BASELINE <baseline>``
+``CREATE ANALYSIS SCHEMA <schema> FOR <population> WITH BASELINE <baseline>``
 
-``CREATE METAMODEL <metamodel> FOR <population> WITH BASELINE <baseline> (<customization>)``
+``CREATE ANALYSIS SCHEMA <schema> FOR <population> WITH BASELINE <baseline> (<customization>)``
 
-   Create metamodel *metamodel* for the population *population* with
+   Create analysis schema *schema* for the population *population* with
    the baseline generative model *baseline*.  The *customization* is a
-   comma-separated list of clauses customizing the metamodel:
+   comma-separated list of clauses customizing the schema:
 
       ``OVERRIDE GENERATIVE MODEL FOR <target> [GIVEN <variable(s)>] USING <predictor>``
 
@@ -227,27 +227,30 @@ variables in a population.
          Use a randomly chosen subsample of *nrows* rows to train each
          model.
 
-.. index:: ``DROP METAMODEL``
+.. index:: ``DROP ANALYSIS SCHEMA``
 
-``DROP METAMODEL [IF EXISTS] <metamodel>``
+``DROP [[ANALYSIS <num>] [ANALYSES <num0>-<num1>] FROM] ANALYSIS SCHEMA [IF EXISTS] <schema>``
 
-   Drop the metamodel *metamodel* and all its contents.
+   Drop the analysis schema *schema* and all its contents. Optionally drop only
+   the analysis numbered *num* or the analyses ranging from *num0* to *num1*.
 
-.. index:: ``INITIALIZE``
+.. index:: ``INITIALIZE ANALYSES``
 
-``INITIALIZE <num> MODELS FOR <metamodel>``
+``INITIALIZE <num> ANALYSES [IF NOT EXISTS] FOR <schema>``
 
-   Initialize *num* number of models for the metamodel *metamodel*.
+   Initialize *num* number of analyses for the analysis schema *schema*. Using
+   ``IF NOT EXISTS`` will initialize all analyses in the range 0 to *num - 1*
+   that do not already exist.
 
-.. index:: ``ANALYZE METAMODEL``
+.. index:: ``ANALYZE ANALYSIS SCHEMA``
 
-``ANALYZE <metamodel> FOR <duration> [CHECKPOINT <duration>] WAIT``
-``ANALYZE <metamodel> FOR <duration> [CHECKPOINT <duration>] WAIT (<clauses>)``
+``ANALYZE <schema> FOR <duration> [CHECKPOINT <duration>] WAIT``
+``ANALYZE <schema> FOR <duration> [CHECKPOINT <duration>] WAIT (<clauses>)``
 
-   Analyze metamodel *metamodel*. *Duration* can take on values of
-   ``<n> SECOND(S)``, ``<n> MINUTE(S)``, or ``<n> ITERATION(S)``.  The
-   ``FOR`` duration specifies how long to perform analysis.  The
-   ``CHECKPOINT`` duration specifies how often to commit the
+   Perform analysis on the analyses in analysis schema *schema*. *Duration* can
+   take on values of ``<n> SECOND(S)``, ``<n> MINUTE(S)``, or
+   ``<n> ITERATION(S)``.  The ``FOR`` duration specifies how long to perform
+   analysis.  The ``CHECKPOINT`` duration specifies how often to commit the
    intermediate results of analysis to the database on disk.  The
    semicolon-separated *clauses* may further configure the analysis:
 
@@ -327,21 +330,21 @@ BQL Queries
 
 .. index:: ``ESTIMATE``
 
-``ESTIMATE [DISTINCT|ALL] <columns> FROM <population> [MODELED BY <metamodel>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE [DISTINCT|ALL] <columns> FROM <population> [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the table associated with *population*, extended
    with model estimators of one implied row.
 
 .. index:: ``ESTIMATE FROM VARIABLES OF``
 
-``ESTIMATE <columns> FROM VARIABLES OF <population> [MODELED BY <metamodel>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <columns> FROM VARIABLES OF <population> [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the modelled columns of *population*, extended
    with model estimators of one implied column.
 
-.. index:: ``ESTIMATE FROM PAIRWISE COLUMNS OF``
+.. index:: ``ESTIMATE FROM PAIRWISE VARIABLES OF``
 
-``ESTIMATE <columns> FROM PAIRWISE COLUMNS OF <population> [FOR <subcolumns>] [MODELED BY <metamodel>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <columns> FROM PAIRWISE VARIABLES OF <population> [FOR <subcolumns>] [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the modelled columns of
    *population*, extended with model estimators of two implied columns.
@@ -351,7 +354,7 @@ BQL Queries
 
 .. index:: ``ESTIMATE, PAIRWISE``
 
-``ESTIMATE <expression> FROM PAIRWISE <population> [MODELED BY <metamodel>] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <expression> FROM PAIRWISE <population> [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the table assocated with
    *population*, extended with model estimators of two implied rows.
@@ -361,7 +364,7 @@ BQL Queries
 
 .. index:: ``INFER``
 
-``INFER <colnames> [WITH CONFIDENCE <conf>] FROM <population> [MODELED BY <metamodel>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``INFER <colnames> [WITH CONFIDENCE <conf>] FROM <population> [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Select the specified *colnames* from *population*, filling in
    missing values if they can be filled in with confidence at least
@@ -379,7 +382,7 @@ BQL Queries
 
 .. index:: ``INFER EXPLICIT``
 
-``INFER EXPLICIT <columns> FROM <population> [MODELED BY <metamodel>] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``INFER EXPLICIT <columns> FROM <population> [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the table associated with *population*, extended
    with model estimators of one implied row and with model predictions.
@@ -396,7 +399,7 @@ BQL Queries
 
 .. index:: ``SIMULATE``
 
-``SIMULATE <colnames> FROM <population> [MODELED BY <metamodel>] [GIVEN <constraints>] [LIMIT <limit>]``
+``SIMULATE <colnames> FROM <population> [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [GIVEN <constraints>] [LIMIT <limit>]``
 
    Select the requested *colnames* from rows sampled from *population*.
    *Constraints* is a comma-separated list of constraints of the form
@@ -435,7 +438,7 @@ being stored in the output of queries.  For example,
 
         ESTIMATE
             MUTUAL INFORMATION AS mutinf
-        FROM PAIRWISE COLUMNS OF p
+        FROM PAIRWISE VARIABLES OF p
         ORDER BY mutinf
 
 has the effect of estimating mutual information twice for each row because it is
@@ -453,7 +456,7 @@ subquery instead:
         SELECT *
         FROM (
             ESTIMATE MUTUAL INFORMATION AS mutinf
-            FROM PAIRWISE COLUMNS OF p
+            FROM PAIRWISE VARIABLES OF p
         )
         ORDER BY mutinf
 
@@ -547,10 +550,10 @@ subquery instead:
    Constant, or function of one or two implied columns.  Returns the
    strength of dependence between the two columns, in units of bits.
 
-   If ``USING <n> SAMPLES`` is specified and the underlying metamodel
-   uses Monte Carlo integration for each model to estimate the mutual
-   information (beyond merely the integral averaging all models), the
-   integration is performed using *n* samples for each model.
+   If ``USING <n> SAMPLES`` is specified and the underlying analysis schema
+   uses Monte Carlo integration for each analysis to estimate the mutual
+   information (beyond merely the integral averaging all analyses), the
+   integration is performed using *n* samples for each analysis.
 
 Model Predictions
 ^^^^^^^^^^^^^^^^^
@@ -563,4 +566,3 @@ Model Predictions
    *column* from the model given the other values in the row, and
    returns it if the confidence of the prediction is at least the
    value of the BQL expression *confidence*; otherwise returns null.
-

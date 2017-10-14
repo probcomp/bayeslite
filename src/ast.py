@@ -121,6 +121,7 @@ DropGen = namedtuple('DropGen', [
 ])
 AlterGen = namedtuple('AlterGen', [
     'generator',                # XXX name
+    'modelnos',                 # XXX name
     'commands',                 # AlterGen*
 ])
 AlterGenRenameGen = namedtuple('AlterGenRenameGen', [
@@ -130,6 +131,8 @@ ConvertGen = namedtuple('ConvertGen', [
     'currentname',              # XXX name
     'newname',                  # XXX name
     'newmetamodel',             # XXX name
+AlterGenGeneric = namedtuple('AlterGenGeneric', [
+    'command',
 ])
 
 ### BQL Model Analysis Language
