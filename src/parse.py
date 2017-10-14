@@ -227,8 +227,8 @@ class BQLSemantics(object):
             name, ifnotexists, pop, baseline, metamodel, schema)
     def p_command_dropgen(self, ifexists, name):
         return ast.DropGen(ifexists, name)
-    def p_command_altergen(self, generator, cmds):
-        return ast.AlterGen(generator, cmds)
+    def p_command_altergen(self, generator, models, cmds):
+        return ast.AlterGen(generator, models, cmds)
     def p_command_convertgen(self, currentname, newname, newmetamodel):
         return ast.ConvertGen(
             currentname, newname, newmetamodel)

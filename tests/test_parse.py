@@ -809,7 +809,7 @@ def test_trivial_commands():
 
     assert parse_bql_string('convert t_cc'
             ' to cg using cgpm') == \
-        [ast.ConvertGen('t_cc', 'cg', 'cgpm', [[]])]
+        [ast.ConvertGen('t_cc', 'cg', 'cgpm')]
 
     assert parse_bql_string('initialize 1 model for t;') == \
         [ast.InitModels(False, 't', 1)]
