@@ -131,6 +131,7 @@ ConvertGen = namedtuple('ConvertGen', [
     'currentname',              # XXX name
     'newname',                  # XXX name
     'newmetamodel',             # XXX name
+])
 AlterGenGeneric = namedtuple('AlterGenGeneric', [
     'command',
 ])
