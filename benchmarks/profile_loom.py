@@ -92,7 +92,7 @@ def loom_sat_run(num_rows):
         bdb.execute('drop population p')
         bdb.execute('drop table t')
         bdb.execute('drop table big_t')
-
+        print "Num rows: {}, analyze time: {}, logpdf time: {}, simulatte time: {}".format(num_rows, elapsed_analyze, elapsed_pdf, elapsed_sim)
         return elapsed_analyze, elapsed_pdf, elapsed_sim
 
 
@@ -484,7 +484,8 @@ def csv_write(data, postfix):
 
 
 def main():
-    many_view_one_cluster()
+    #many_view_one_cluster()
+    loom_sat_run(100)
 
 
 if __name__ == "__main__":
