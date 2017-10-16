@@ -221,6 +221,7 @@ setup(
         'bayeslite.metamodels.cgpm_schema',
         'bayeslite.plex',
         'bayeslite.shell',
+        'bayeslite.streaming_app',
         'bayeslite.tests',
         'bayeslite.weakprng',
     ],

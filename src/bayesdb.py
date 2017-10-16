@@ -30,6 +30,10 @@ import bayeslite.txn as txn
 import bayeslite.weakprng as weakprng
 
 from bayeslite.util import cursor_value
+
+import bayeslite.metamodels
+import bayeslite.streaming_app
+from bayeslite.streaming_app.stream_factory import StreamingApp
 
 bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
 
@@ -109,6 +113,8 @@ class BayesDB(object):
         empty_cursor = self._sqlite3.cursor()
         empty_cursor.execute('')
         self._empty_cursor = bql.BayesDBCursor(self, empty_cursor)
+
+        self.apps = []
 
     def __enter__(self):
         return self
@@ -222,6 +228,20 @@ class BayesDB(object):
         bindings for parameters in the query, or ``None`` to supply no
         bindings.
         """
+        parts = string.split(' ')
+        if len(parts) > 0 and parts[0].lower() == 'stream':
+            print "detected streaming query, about to initialize app"
+            stream = StreamingApp(self, ' '.join(parts[1:]))
+            print "initialized app"
+            #stream.start()
+            stream.run()
+            print "started streaming app"
+            stream.pingIndex()
+            print "did ping index"
+            stream.shutdown()
+            print "shutdown streaming app"
+            return
+
         if bindings is None:
             bindings = ()
         return self._maybe_trace(

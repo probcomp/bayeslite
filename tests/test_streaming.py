@@ -25,7 +25,7 @@ import bayeslite.core as core
 
 from bayeslite import bayesdb_open, bayesdb_register_metamodel
 from bayeslite.exception import BQLError
-from bayeslite.metamodels.loom_metamodel import LoomMetamodel
+#from bayeslite.metamodels.loom_metamodel import LoomMetamodel
 
 PREDICT_RUNS = 100
 X_MIN, Y_MIN = 0, 0
@@ -49,21 +49,23 @@ def test_basic_stream():
     """Simple test of the LoomMetamodel on a one variable table
     Only checks for errors from the Loom system."""
     from datetime import datetime
-    with tempdir('bayeslite-loom') as loom_store_path:
-        with bayesdb_open(':memory:') as bdb:
-            #bayesdb_register_metamodel(bdb,
-            #    LoomMetamodel(loom_store_path=loom_store_path))
-            bdb.sql_execute('create table t(x)')
-            for x in xrange(10):
-                bdb.sql_execute('insert into t(x) values(?)', (x,))
-            bdb.execute('create population p for t(x numerical)')
-            bdb.execute('create generator g for p')
-            bdb.execute('initialize 1 models for g')
-            bdb.execute('analyze g for 10 iterations wait')
-            bdb.execute('stream estimate probability density of x = ? from p').fetchall()
-            #bdb.execute('simulate x from p limit 1').fetchall()
-            bdb.execute('drop models from g')
-            bdb.execute('drop generator g')
-            bdb.execute('drop population p')
-            bdb.execute('drop table t')
+    #with tempdir('bayeslite-streaming') as loom_store_path:
+    with bayesdb_open(':memory:') as bdb:
+        #bayesdb_register_metamodel(bdb,
+        #    LoomMetamodel(loom_store_path=loom_store_path))
+        bdb.sql_execute('create table t(x)')
+        for x in xrange(10):
+            bdb.sql_execute('insert into t(x) values(?)', (x,))
+        bdb.execute('create population p for t(x numerical)')
+        bdb.execute('create generator g for p')
+        bdb.execute('initialize 1 models for g')
+        bdb.execute('analyze g for 10 iterations wait')
+        print "Finished analyzing...about to start streaming"
+        bdb.execute('stream estimate probability density of x = ? from p')
+        print "finished streaming query"
+        #bdb.execute('simulate x from p limit 1').fetchall()
+        bdb.execute('drop models from g')
+        bdb.execute('drop generator g')
+        bdb.execute('drop population p')
+        bdb.execute('drop table t')
 
