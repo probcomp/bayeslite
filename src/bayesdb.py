@@ -242,16 +242,16 @@ class BayesDB(object):
             print "initialized app"
             #stream.start()
             stream.run()
-            print "started streaming app"
-            stream.send_data_single([50])
-            time.sleep(5)
-            results = stream.get_results()
-            print "results:",results
+            #print "started streaming app"
+            #stream.send_data_single([50])
+            #time.sleep(5)
+            #results = stream.get_results()
+            #print "results:",results
             #stream.pingIndex()
-            print "did ping index"
-            stream.shutdown()
-            print "shutdown streaming app"
-            return
+            #print "did ping index"
+            #stream.shutdown()
+            #print "shutdown streaming app"
+            return stream
 
         if bindings is None:
             bindings = ()

@@ -61,7 +61,18 @@ def test_basic_stream():
         bdb.execute('initialize 1 models for g')
         bdb.execute('analyze g for 10 iterations wait')
         print "Finished analyzing...about to start streaming"
-        bdb.execute('stream estimate probability density of x = ? from p')
+
+        stream = bdb.execute('stream estimate probability density of x = ? from p')
+        stream.send_data_single([50])
+        time.sleep(5)
+        results = stream.get_results()
+        print "results after sending 50:",results
+
+        stream.send_data_single([5])
+        time.sleep(5)
+        results = stream.get_results()
+        print "results after sending 50 and 5:",results
+        stream.shutdown()
         print "finished streaming query"
         #bdb.execute('simulate x from p limit 1').fetchall()
         bdb.execute('drop models from g')
