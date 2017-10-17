@@ -222,6 +222,7 @@ setup(
         'bayeslite.plex',
         'bayeslite.shell',
         'bayeslite.streaming_app',
+        'bayeslite.streaming_app.app',
         'bayeslite.tests',
         'bayeslite.weakprng',
     ],

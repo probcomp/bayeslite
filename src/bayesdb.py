@@ -34,6 +34,10 @@ from bayeslite.util import cursor_value
 import bayeslite.metamodels
 import bayeslite.streaming_app
 from bayeslite.streaming_app.stream_factory import StreamingApp
+
+import time
+import requests
+import sys
 
 bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
 
@@ -231,12 +235,19 @@ class BayesDB(object):
         parts = string.split(' ')
         if len(parts) > 0 and parts[0].lower() == 'stream':
             print "detected streaming query, about to initialize app"
+            #requests.post('http://127.0.0.1:5000/send_bdb', data={'bdb': self})
+            #print "Finished post"
+            #sys.exit(0)
             stream = StreamingApp(self, ' '.join(parts[1:]))
             print "initialized app"
             #stream.start()
             stream.run()
             print "started streaming app"
-            stream.pingIndex()
+            stream.send_data_single([50])
+            time.sleep(5)
+            results = stream.get_results()
+            print "results:",results
+            #stream.pingIndex()
             print "did ping index"
             stream.shutdown()
             print "shutdown streaming app"
