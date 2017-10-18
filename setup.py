@@ -199,11 +199,6 @@ setup(
     author='MIT Probabilistic Computing Project',
     author_email='bayesdb@mit.edu',
     license='Apache License, Version 2.0',
-    install_requires=[
-        'jsonschema',
-        'numpy',
-        'setuptools', # For parse_version in src/remote.py
-    ],
     tests_require=[
         'pandas',
         'pexpect',
