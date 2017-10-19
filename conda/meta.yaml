@@ -31,4 +31,4 @@ test:
 about:
   home: https://github.com/probcomp/bayeslite
   license: Apache
-  license_file: LICENSE
+  license_file: LICENSE.txt
