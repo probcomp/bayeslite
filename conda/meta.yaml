@@ -1,6 +1,6 @@
 package:
   name: bayeslite
-  version: "0.3.1"
+  version: {{ CONDA_PACKAGE_VERSION }}
 
 source:
   path: ../
