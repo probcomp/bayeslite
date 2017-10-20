@@ -6,6 +6,10 @@ branches:
 
 python:
   - 2.7
+virtualenv:
+  system_site_package: true
+before_install:
+  - pip install apsw
 install:
   - wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
@@ -14,8 +18,6 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda install conda-build
-  # needed because there is not an old enough apsw in conda
-  - pip install apsw
 script:
   - export CONDA_PACKAGE_VERSION="$(git describe --exact match 2> /dev/null || git describe | sed 's/^v\([^-]*\).*/\1_dev/')"
   - conda install -c probcomp crosscat
