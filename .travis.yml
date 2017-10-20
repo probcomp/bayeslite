@@ -14,6 +14,8 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda install conda-build
+  # needed because there is not an old enough apsw in conda
+  - pip install apsw
 script:
   - export CONDA_PACKAGE_VERSION="$(git describe --exact match 2> /dev/null || git describe | sed 's/^v\([^-]*\).*/\1_dev/')"
   - conda install -c probcomp crosscat
