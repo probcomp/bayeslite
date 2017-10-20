@@ -15,8 +15,7 @@ install:
   - conda update -q conda
   - conda install conda-build
 script:
-  - export CONDA_PACKAGE_VERSION="$(git describe --exact match 2> /dev/null || git describe | sed 's/^v\([^-]*\).*/\1/')"
+  - export CONDA_PACKAGE_VERSION="${TRAVIS_TAG:-$(date +%Y.%m.%d)}"
   - conda build . -c probcomp
 after_success:
-  - conda install anaconda-client
-  - anaconda -t $CONDA_UPLOAD_TOKEN upload -u $CONDA_USER ~/miniconda/conda-bld/linux-64/bayeslite-*.tar.bz2 --force
+  - bash conda/upload.sh
