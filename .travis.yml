@@ -15,7 +15,7 @@ install:
   - conda update -q conda
   - conda install conda-build
 script:
-  - export CONDA_PACKAGE_VERSION="$(git describe --exact match 2> /dev/null || git describe | sed 's/^v\([^-]*\).*/\1_dev/')"
+  - export CONDA_PACKAGE_VERSION="$(git describe --exact match 2> /dev/null || git describe | sed 's/^v\([^-]*\).*/\1/')"
   - conda build . -c probcomp
 after_success:
   - conda install anaconda-client
