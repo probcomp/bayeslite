@@ -13,13 +13,12 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import time
-import random
-import string
 import contextlib
+import os
+import pytest
 import shutil
+import string
 import tempfile
-import os.path
 
 import bayeslite.core as core
 
@@ -31,15 +30,11 @@ PREDICT_RUNS = 100
 X_MIN, Y_MIN = 0, 0
 X_MAX, Y_MAX = 200, 100
 
-# TODO fix fail when two tests are run with the same prefix
-# currently low priority since bql users will use timestamps as prefix
-
-
 @contextlib.contextmanager
 def tempdir(prefix):
     path = tempfile.mkdtemp(prefix=prefix)
     try:
-        yield
+        yield path
     finally:
         if os.path.isdir(path):
             shutil.rmtree(path)
@@ -60,7 +55,9 @@ def test_loom_one_numeric():
             bdb.execute('create generator g for p using loom')
             bdb.execute('initialize 1 models for g')
             bdb.execute('analyze g for 10 iterations wait')
-            bdb.execute('estimate probability density of x = 50 from p').fetchall()
+            bdb.execute('''
+                    estimate probability density of x = 50 from p
+            ''').fetchall()
             bdb.execute('simulate x from p limit 1').fetchall()
             bdb.execute('drop models from g')
             bdb.execute('drop generator g')
@@ -83,47 +80,58 @@ def test_loom_complex_add_analyze_drop_sequence():
 
             bdb.execute('initialize 3 models if not exists for g')
             population_id = core.bayesdb_get_population(bdb, 'p')
-            generator_id = core.bayesdb_get_generator(bdb, population_id, 'g')
-            num_models = bdb.sql_execute('''
-                SELECT num_models from bayesdb_loom_generator_model_info
-                WHERE generator_id=?;
-                ''',(generator_id,)).fetchall()[0][0]
-            # make sure that the total number of models is 3 and not 2 + 3 = 5
+            generator_id = core.bayesdb_get_generator(
+                    bdb, population_id, 'g')
+            cursor = bdb.sql_execute('''
+                SELECT num_models FROM bayesdb_loom_generator_model_info
+                    WHERE generator_id=?;
+            ''',(generator_id,))
+            num_models = cursor.fetchall()[0][0]
+            # Make sure that the total number of models is
+            # 3 and not 2 + 3 = 5.
             assert num_models == 3
+
+            # Check for a bql error if a query is run after initialization
+            # but before analyze.
+            with pytest.raises(BQLError):
+                bdb.execute('estimate probability density of x = 50 from p')
 
             bdb.execute('analyze g for 50 iterations wait')
 
-            try:
+            with pytest.raises(BQLError):
                 bdb.execute('drop model 1 from g')
-                assert False,"Expected BQL error when trying to drop specific model numbers from loom."
-            except BQLError, e:
-                pass
             bdb.execute('drop models from g')
 
             bdb.execute('initialize 1 models for g')
             population_id = core.bayesdb_get_population(bdb, 'p')
-            generator_id = core.bayesdb_get_generator(bdb, population_id, 'g')
-            num_models = bdb.sql_execute('''
-                SELECT num_models from bayesdb_loom_generator_model_info
-                WHERE generator_id=?;
-                ''',(generator_id,)).fetchall()[0][0]
-            # make sure that the number of models was reset after dropping
+            generator_id = core.bayesdb_get_generator(
+                    bdb, population_id, 'g')
+            cursor = bdb.sql_execute('''
+                SELECT num_models FROM bayesdb_loom_generator_model_info
+                    WHERE generator_id=?;
+            ''',(generator_id,))
+            num_models = cursor.fetchall()[0][0]
+            # Make sure that the number of models was reset after dropping.
             assert num_models == 1
             bdb.execute('analyze g for 50 iterations wait')
 
-            probDensityX1 = bdb.execute('estimate probability density of x = 50 from p').fetchall()
+            cursor = bdb.execute('''
+                estimate probability density of x = 50 from p''')
+            probDensityX1 = cursor.fetchall()
             probDensityX1 = map(lambda x: x[0], probDensityX1)
             bdb.execute('simulate x from p limit 1').fetchall()
             bdb.execute('drop models from g')
 
             bdb.execute('initialize 1 model for g')
             bdb.execute('analyze g for 50 iterations wait')
-            probDensityX2 = bdb.execute('estimate probability density of x = 50 from p').fetchall()
+            cursor = bdb.execute('''
+                estimate probability density of x = 50 from p''')
+            probDensityX2 = cursor.fetchall()
             probDensityX2 = map(lambda x: x[0], probDensityX2)
-            # check that the analysis started fresh after dropping models and produces similar results
-            # the second time
-            for i in range(len(probDensityX1)):
-                assert abs(probDensityX1[i] - probDensityX2[i]) < .01
+            # Check that the analysis started fresh after dropping models
+            # and that it produces similar results the second time.
+            for px1, px2 in zip(probDensityX1, probDensityX2):
+                assert abs(px1 - px2) < .01
             bdb.execute('drop models from g')
             bdb.execute('drop generator g')
             bdb.execute('drop population p')
@@ -186,9 +194,19 @@ def test_loom_guess_schema_categorical():
             bayesdb_register_metamodel(bdb,
                 LoomMetamodel(loom_store_path=loom_store_path))
             bdb.sql_execute('create table t(v)')
-            vals_to_insert = [''.join(random.choice(string.lowercase) for i in range(20)) for j in range(300)]
+            vals_to_insert = []
+            for i in xrange(300):
+                word = ""
+                for j in xrange(20):
+                    letter_index = \
+                        bdb._prng.weakrandom_uniform(len(string.letters))
+                    word += string.letters[letter_index]
+                vals_to_insert.append(word)
             for i in xrange(len(vals_to_insert)):
-                bdb.sql_execute('''insert into t(v) values (?)''', (vals_to_insert[i],))
+                bdb.sql_execute('''
+                    insert into t(v) values (?)
+                ''', (vals_to_insert[i],))
+
             bdb.execute('create population p for t(v categorical)')
             bdb.execute('create generator g for p using loom')
             bdb.execute('initialize 1 model for g')
@@ -212,7 +230,8 @@ def test_conversion():
             for x in xrange(10):
                 bdb.sql_execute('insert into t(x, y) values(?, ?)',
                 (x, bdb._prng.weakrandom_uniform(200),))
-            bdb.execute('create population p for t(x numerical; y numerical)')
+            bdb.execute('''
+                create population p for t(x numerical; y numerical)''')
             bdb.execute('create generator lm for p using loom')
             bdb.execute('initialize 1 model for lm')
             bdb.execute('analyze lm for 50 iterations wait')
@@ -221,7 +240,7 @@ def test_conversion():
                     x = 50 from p modeled by cp''').fetchall()
 
             # Kinds/Views and partitions are the same,
-            # so predictive relevance should be the same
+            # so predictive relevance should be the same.
             loom_relevance = bdb.execute('''ESTIMATE PREDICTIVE RELEVANCE
                 TO EXISTING ROWS (rowid = 1)
                 IN THE CONTEXT OF "x"
@@ -261,32 +280,34 @@ def test_loom_four_var():
     """
     with tempdir('bayeslite-loom') as loom_store_path:
         with bayesdb_open(':memory:') as bdb:
-            bayesdb_register_metamodel(bdb, LoomMetamodel(loom_store_path=loom_store_path))
+            bayesdb_register_metamodel(
+                    bdb, LoomMetamodel(loom_store_path=loom_store_path))
             bdb.sql_execute('create table t(x, xx, y, z)')
-            bdb.sql_execute('insert into t(x, xx, y, z) values(100, 200, 50, "a")')
-            bdb.sql_execute('insert into t(x, xx, y, z) values(100, 200, 50, "a")')
+            bdb.sql_execute('''
+                insert into t(x, xx, y, z) values(100, 200, 50, "a")''')
+            bdb.sql_execute('''
+                insert into t(x, xx, y, z) values(100, 200, 50, "a")''')
             for index in xrange(100):
                 x = bdb._prng.weakrandom_uniform(X_MAX)
-                bdb.sql_execute('insert into t(x, xx, y, z) values(?, ?, ?, ?)',
-                    (x, x*2,
-                        int(bdb._prng.weakrandom_uniform(Y_MAX)),
-                        'a' if bdb._prng.weakrandom_uniform(2) == 1 else 'b'))
+                bdb.sql_execute('''
+                    insert into t(x, xx, y, z) values(?, ?, ?, ?)
+                    ''', (x, x*2, int(bdb._prng.weakrandom_uniform(Y_MAX)),
+                        'a' if bdb._prng.weakrandom_uniform(2) == 1
+                        else 'b'))
 
-            bdb.execute('''create population p for t(x numerical; xx numerical;
+            bdb.execute('''
+                create population p for t(x numerical; xx numerical;
                 y numerical; z categorical)''')
             bdb.execute('create generator g for p using loom')
             bdb.execute('initialize 2 model for g')
             bdb.execute('analyze g for 500 iterations wait')
 
-            try:
+            with pytest.raises(BQLError):
                 relevance = bdb.execute('''ESTIMATE PREDICTIVE RELEVANCE
                     TO HYPOTHETICAL ROWS WITH VALUES ((x=50, xx=100))
                     IN THE CONTEXT OF "x"
                     FROM p
                     WHERE rowid = 1''').fetchall()
-                assert False,"predictive relevance queries in loom cannot handle hypotheticals"
-            except BQLError, e:
-                pass
 
             relevance = bdb.execute('''ESTIMATE PREDICTIVE RELEVANCE
                 TO EXISTING ROWS (rowid = 1)
@@ -312,22 +333,25 @@ def test_loom_four_var():
                 ((X_MAX-X_MIN)/2)).fetchall()
             assert possible_density[0][0] > 0.001
 
-            categorical_density = bdb.execute('''estimate probability density of
-                z = "a" by p''').fetchall()
+            categorical_density = bdb.execute('''
+                estimate probability density of z = "a" by p''').fetchall()
             assert abs(categorical_density[0][0]-.5) < 0.2
 
-            mutual_info = bdb.execute('''estimate mutual information as mutinf
-                    from pairwise columns of p order by mutinf''').fetchall()
+            mutual_info = bdb.execute('''
+                estimate mutual information as mutinf
+                from pairwise columns of p order by mutinf''').fetchall()
             _, a, b, c = zip(*mutual_info)
             mutual_info_dict = dict(zip(zip(a, b), c))
             assert mutual_info_dict[('x', 'y')] < mutual_info_dict[
                 ('x', 'xx')] < mutual_info_dict[('x', 'x')]
 
             simulated_data = bdb.execute('simulate x, y from p limit %d' %
-                (PREDICT_RUNS)).fetchall()
+                (PREDICT_RUNS,)).fetchall()
             xs, ys = zip(*simulated_data)
-            assert abs((sum(xs)/len(xs)) - (X_MAX-X_MIN)/2) < (X_MAX-X_MIN)/5
-            assert abs((sum(ys)/len(ys)) - (Y_MAX-Y_MIN)/2) < (Y_MAX-Y_MIN)/5
+            assert abs((sum(xs)/len(xs)) - (X_MAX-X_MIN)/2) < \
+                    (X_MAX-X_MIN)/5
+            assert abs((sum(ys)/len(ys)) - (Y_MAX-Y_MIN)/2) < \
+                    (Y_MAX-Y_MIN)/5
             assert sum([1 if (x < Y_MIN or x > X_MAX)
                 else 0 for x in xs]) < .5*PREDICT_RUNS
             assert sum([1 if (y < Y_MIN or y > Y_MAX)
@@ -342,8 +366,9 @@ def test_loom_four_var():
                     assert d_val > 0.99
                 else:
                     assert d_val == 0
-            predict_confidence = bdb.execute(
-                    'infer explicit predict x confidence x_c FROM p').fetchall()
+            predict_confidence = bdb.execute('''
+                    infer explicit predict x confidence x_c FROM p
+                ''').fetchall()
             predictions, confidences = zip(*predict_confidence)
             assert abs((sum(predictions)/len(predictions))
                 - (X_MAX-X_MIN)/2) < (X_MAX-X_MIN)/5
