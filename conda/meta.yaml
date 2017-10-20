@@ -20,7 +20,7 @@ requirements:
     - crosscat
     - jsonschema
     - numpy 1.8.*
-    - scipy >=0.11.0
+    - scipy >=0.13.3
     - six
 
 test:
