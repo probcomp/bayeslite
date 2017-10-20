@@ -23,6 +23,7 @@ requirements:
 
 test:
   requires:
+    - apsw
     - python 2.7.*
     - pytest 2.5.1.*
   commands:
