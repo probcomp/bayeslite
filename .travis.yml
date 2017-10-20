@@ -16,7 +16,6 @@ install:
   - conda install conda-build
 script:
   - export CONDA_PACKAGE_VERSION="$(git describe --exact match 2> /dev/null || git describe | sed 's/^v\([^-]*\).*/\1_dev/')"
-  - conda install -c probcomp crosscat
   - conda build . -c probcomp
 after_success:
   - conda install anaconda-client
