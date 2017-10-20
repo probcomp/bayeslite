@@ -10,9 +10,9 @@ build:
 
 requirements:
   build:
+    - git
     - python 2.7.*
     - cython >=0.20.1
-    - git
     - jsonschema
     - numpy 1.8.*
   run:
@@ -28,10 +28,11 @@ test:
     - apsw
     - cgpm
     - crosscat
+    - pandas
     - python 2.7.*
     - pytest 2.5.1.*
   commands:
-    - python -m pytest --pyargs bayeslite
+    - python -m pytest --pyargs bayeslite -k "not __ci_"
 
 about:
   home: https://github.com/probcomp/bayeslite
