@@ -6,10 +6,6 @@ branches:
 
 python:
   - 2.7
-virtualenv:
-  system_site_package: true
-before_install:
-  - pip install apsw
 install:
   - wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
@@ -20,7 +16,7 @@ install:
   - conda install conda-build
 script:
   - export CONDA_PACKAGE_VERSION="$(git describe --exact match 2> /dev/null || git describe | sed 's/^v\([^-]*\).*/\1_dev/')"
-  - conda install -c probcomp crosscat
+  - conda install -c probcomp apsw crosscat
   - conda build . -c probcomp
 after_success:
   - conda install anaconda-client
