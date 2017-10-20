@@ -1,8 +1,5 @@
 language: python
 dist: trusty
-branches:
-  only:
-  - travis
 
 python:
   - 2.7
