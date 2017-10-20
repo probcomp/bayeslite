@@ -26,6 +26,8 @@ test:
     - apsw
     - python 2.7.*
     - pytest 2.5.1.*
+  imports:
+    - crosscat
   commands:
     - python -m pytest --pyargs bayeslite
 
