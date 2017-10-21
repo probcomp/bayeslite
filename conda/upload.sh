@@ -2,7 +2,7 @@
 set -ev
 
 # if this build was invoked by a tag or a cron, then upload the package. otherwise exit.
-if [ -n ${TRAVIS_TAG} ]; then
+if [ -n "${TRAVIS_TAG}" ]; then
   conda install anaconda-client
   anaconda -t ${CONDA_UPLOAD_TOKEN} upload -u ${CONDA_USER} ~/miniconda/conda-bld/linux-64/bayeslite-*.tar.bz2 --force
 elif [ ${TRAVIS_EVENT_TYPE} = "cron" ]; then
