@@ -216,53 +216,6 @@ def test_loom_guess_schema_categorical():
             bdb.execute('drop population p')
             bdb.execute('drop table t')
 
-def test_conversion():
-    """Test the workflow of:
-    1. inference in loom
-    2. conversion to cgpm,
-    3. querying in cgpm."""
-
-    with tempdir('bayeslite-loom') as loom_store_path:
-        with bayesdb_open(':memory:') as bdb:
-            bayesdb_register_metamodel(bdb,
-                LoomMetamodel(loom_store_path=loom_store_path))
-            bdb.sql_execute('create table t(x, y)')
-            for x in xrange(10):
-                bdb.sql_execute('insert into t(x, y) values(?, ?)',
-                (x, bdb._prng.weakrandom_uniform(200),))
-            bdb.execute('''
-                create population p for t(x numerical; y numerical)''')
-            bdb.execute('create generator lm for p using loom')
-            bdb.execute('initialize 1 model for lm')
-            bdb.execute('analyze lm for 50 iterations wait')
-            bdb.execute('convert lm to cp using cgpm')
-            bdb.execute('''estimate probability density of
-                    x = 50 from p modeled by cp''').fetchall()
-
-            # Kinds/Views and partitions are the same,
-            # so predictive relevance should be the same.
-            loom_relevance = bdb.execute('''ESTIMATE PREDICTIVE RELEVANCE
-                TO EXISTING ROWS (rowid = 1)
-                IN THE CONTEXT OF "x"
-                FROM p
-                MODELED BY lm''').fetchall()
-            cgpm_relevance = bdb.execute('''ESTIMATE PREDICTIVE RELEVANCE
-                TO EXISTING ROWS (rowid = 1)
-                IN THE CONTEXT OF "x"
-                FROM p
-                MODELED BY cp''').fetchall()
-            print(loom_relevance)
-            print(cgpm_relevance)
-
-            assert loom_relevance[0] == cgpm_relevance[0]
-
-            bdb.execute('drop models from cp')
-            bdb.execute('drop generator cp')
-            bdb.execute('drop models from lm')
-            bdb.execute('drop generator lm')
-            bdb.execute('drop population p')
-            bdb.execute('drop table t')
-
 
 def test_loom_four_var():
     """Test Loom on a four variable table.

@@ -27,7 +27,6 @@ import itertools
 import json
 import os
 import tempfile
-import time
 
 from StringIO import StringIO
 from collections import Counter
@@ -37,10 +36,6 @@ import loom.tasks
 
 from distributions.io.stream import open_compressed
 from loom.cFormat import assignment_stream_load
-
-# XXX Remove these imports.
-from cgpm.mixtures.view import View
-from cgpm.utils.parallel_map import parallel_map
 
 import bayeslite.core as core
 import bayeslite.metamodel as metamodel
@@ -807,60 +802,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             ORDER BY rank ASC
         ''', (generator_id,))
         return [colno for (colno,) in cursor]
-
-    def populate_cgpm_engine(self, bdb, generator_id, engine):
-        # Update the engine and save the engine.
-        args = [
-            (bdb, generator_id, engine.states[i], i)
-            for i in xrange(engine.num_states())
-        ]
-        engine.states = parallel_map(self._update_state_mp, args)
-
-        # Transition the non-structural parameters.
-        num_transitions = int(len(engine.states[0].outputs)**.5)
-        engine.transition(
-            N=num_transitions,
-            kernels=[
-                'column_hypers', 'column_params', 'alpha', 'view_alphas'
-                ]
-        )
-
-    def _update_state_mp(self, args):
-        return self._update_state(*args)
-
-    def _update_state(self, bdb, generator_id, state, modelno):
-        population_id = core.bayesdb_generator_population(bdb, generator_id)
-        column_partition = self._retrieve_column_partition(bdb,
-            generator_id, modelno)
-        column_partition = {
-            colno: column_partition[
-                self._get_loom_rank(bdb, generator_id, colno)]
-            for colno in
-            core.bayesdb_variable_numbers(bdb, population_id, None)}
-
-        row_partition = self._retrieve_row_partition(bdb,
-            generator_id, modelno)
-
-        starting_id = max(state.views) + 1
-        for view_index in range(len(row_partition)):
-            view_id = starting_id + view_index
-            view = View(
-                state.X,
-                outputs=[state.crp_id_view + view_id],
-                Zr=row_partition[view_index],
-                rng=state.rng
-            )
-            state._append_view(view, view_id)
-
-        for c in state.outputs:
-            v_current = state.Zv(c)
-            v_new = column_partition[c] + starting_id
-            state._migrate_dim(v_current,
-                    v_new, state.dim_for(c), reassign=True)
-
-        state._check_partitions()
-
-        return state
 
     def _retrieve_cache(self, bdb,):
         if bdb in self._cache:

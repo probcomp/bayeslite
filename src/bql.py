@@ -55,6 +55,7 @@ def execute_phrase(bdb, phrase, bindings=()):
         n_numpar = 0
         nampar_map = None
         # Ignore extraneous bindings.  XXX Bad idea?
+
     if ast.is_query(phrase):
         # Compile the query in the transaction in case we need to
         # execute subqueries to determine column lists.  Compiling is
@@ -554,63 +555,6 @@ def execute_phrase(bdb, phrase, bindings=()):
                 # Call generic alternations on the metamodel.
                 metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
                 metamodel.alter(bdb, generator_id, modelnos, cmds_generic)
-        return empty_cursor(bdb)
-
-    if isinstance(phrase, ast.ConvertGen):
-        with bdb.savepoint():
-            # Get the population and table from the current metamodel
-            current_name = phrase.currentname
-            if not core.bayesdb_has_generator(bdb, None, current_name):
-                raise BQLError(bdb, 'No such generator: %s' %
-                    (repr(current_name),))
-            current_generator_id = core.bayesdb_get_generator(
-                    bdb, None, current_name)
-            current_metamodel = core.bayesdb_generator_metamodel(
-                    bdb, current_generator_id)
-            population_id = core.bayesdb_generator_population(
-                    bdb, current_generator_id)
-            population_name = core.bayesdb_population_name(
-                    bdb, population_id)
-            table = core.bayesdb_population_table(bdb, population_id)
-
-            # Initialize the new metamodel
-            new_metamodel_type_name = phrase.newmetamodel
-            if phrase.newmetamodel is None:
-                new_metamodel_type_name = 'cgpm'
-            if new_metamodel_type_name not in bdb.metamodels:
-                raise BQLError(bdb, 'No such metamodel: %s' %
-                    (repr(new_metamodel_type_name),))
-            new_metamodel_type = bdb.metamodels[new_metamodel_type_name]
-
-            new_metamodel_name = phrase.newname
-            if core.bayesdb_has_generator(bdb, population_id, new_metamodel_name):
-                raise BQLError(
-                    bdb, 'Name already defined as generator: %s' %
-                    (repr(new_metamodel_name),))
-
-            bdb.execute('''CREATE GENERATOR %s
-            FOR %s
-            USING %s
-            ''' % (new_metamodel_name,
-                population_name,
-                new_metamodel_type_name))
-
-            new_generator_id =core.bayesdb_get_generator(
-                bdb, population_id, new_metamodel_name)
-            new_metamodel = core.bayesdb_generator_metamodel(
-                bdb, new_generator_id)
-
-            # Now that we have a created metamodel,
-            # Convert loom's views to those of cgpm
-            new_metamodel.initialize_models(
-                    bdb, new_generator_id,
-                    range(
-                        current_metamodel._get_num_models(
-                            bdb, current_generator_id)))
-            current_metamodel.populate_cgpm_engine(
-                    bdb, current_generator_id,
-                    new_metamodel._engine(bdb, new_generator_id))
-
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.InitModels):
