@@ -188,7 +188,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
         # Ingest data into loom.
         schema_file = self._data_to_schema(bdb, population_id, data_by_column)
-        csv_file = self._data_to_csv(bdb, population_id, headers, data)
+        csv_file = self._data_to_csv(bdb, headers, data)
         loom.tasks.ingest(
             self._get_loom_project_path(bdb, generator_id),
             rows_csv=csv_file.name, schema=schema_file.name)
@@ -257,7 +257,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             raise BQLError(bdb, 'Analyze must be run before any BQL'\
                 ' queries when using loom.')
 
-    def _data_to_csv(self, bdb, population_id, headers, data):
+    def _data_to_csv(self, bdb, headers, data):
         # TODO: Fix the use of delete=False so loom doesn't litter
         #   the filesystem with the files used to communicate with loom.
         with tempfile.NamedTemporaryFile(delete=False) as csv_file:
