@@ -27,7 +27,11 @@ from bayeslite import bayesdb_register_metamodel
 from bayeslite.core import bayesdb_get_generator
 from bayeslite.core import bayesdb_get_population
 from bayeslite.exception import BQLError
-from bayeslite.metamodels.loom_metamodel import LoomMetamodel
+
+try:
+    from bayeslite.metamodels.loom_metamodel import LoomMetamodel
+except ImportError:
+    pytest.skip('Failed to import Loom.')
 
 
 PREDICT_RUNS = 100
