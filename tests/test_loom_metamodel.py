@@ -13,22 +13,27 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+
 import contextlib
 import os
-import pytest
 import shutil
 import string
 import tempfile
 
+import pytest
+
 import bayeslite.core as core
 
-from bayeslite import bayesdb_open, bayesdb_register_metamodel
+from bayeslite import bayesdb_open
+from bayeslite import bayesdb_register_metamodel
 from bayeslite.exception import BQLError
 from bayeslite.metamodels.loom_metamodel import LoomMetamodel
+
 
 PREDICT_RUNS = 100
 X_MIN, Y_MIN = 0, 0
 X_MAX, Y_MAX = 200, 100
+
 
 @contextlib.contextmanager
 def tempdir(prefix):
@@ -50,8 +55,8 @@ def test_loom_one_numeric():
                 LoomMetamodel(loom_store_path=loom_store_path))
             bdb.sql_execute('create table t(x)')
             for x in xrange(10):
-                bdb.sql_execute('insert into t(x) values(?)', (x,))
-            bdb.execute('create population p for t(x numerical)')
+                bdb.sql_execute('insert into t (x) values (?)', (x,))
+            bdb.execute('create population p for t (x numerical)')
             bdb.execute('create generator g for p using loom')
             bdb.execute('initialize 1 models for g')
             bdb.execute('analyze g for 10 iterations wait')
@@ -70,10 +75,10 @@ def test_loom_complex_add_analyze_drop_sequence():
         with bayesdb_open(':memory:') as bdb:
             bayesdb_register_metamodel(bdb,
                 LoomMetamodel(loom_store_path=loom_store_path))
-            bdb.sql_execute('create table t(x)')
+            bdb.sql_execute('create table t (x)')
             for x in xrange(10):
-                bdb.sql_execute('insert into t(x) values(?)', (x,))
-            bdb.execute('create population p for t(x numerical)')
+                bdb.sql_execute('insert into t (x) values (?)', (x,))
+            bdb.execute('create population p for t (x numerical)')
             bdb.execute('create generator g for p using loom')
 
             bdb.execute('initialize 2 models for g')
@@ -118,7 +123,7 @@ def test_loom_complex_add_analyze_drop_sequence():
             cursor = bdb.execute('''
                 estimate probability density of x = 50 from p''')
             probDensityX1 = cursor.fetchall()
-            probDensityX1 = map(lambda x: x[0], probDensityX1)
+            probDensityX1 = [x[0] for x in probDensityX1]
             bdb.execute('simulate x from p limit 1').fetchall()
             bdb.execute('drop models from g')
 
@@ -127,7 +132,7 @@ def test_loom_complex_add_analyze_drop_sequence():
             cursor = bdb.execute('''
                 estimate probability density of x = 50 from p''')
             probDensityX2 = cursor.fetchall()
-            probDensityX2 = map(lambda x: x[0], probDensityX2)
+            probDensityX2 = [x[0] for x in probDensityX2]
             # Check that the analysis started fresh after dropping models
             # and that it produces similar results the second time.
             for px1, px2 in zip(probDensityX1, probDensityX2):
@@ -138,19 +143,19 @@ def test_loom_complex_add_analyze_drop_sequence():
             bdb.execute('drop table t')
 
 
-
 def test_stattypes():
-    """Test of the LoomMetamodel on a table with all possible datatypes
-    Only checks for errors from the Loom system."""
-
+    """Test of the LoomMetamodel on a table with all possible data types.
+    Only checks for errors from Loom.
+    """
     with tempdir('bayeslite-loom') as loom_store_path:
         with bayesdb_open(':memory:') as bdb:
             bayesdb_register_metamodel(bdb,
                 LoomMetamodel(loom_store_path=loom_store_path))
-            bdb.sql_execute('create table t(u, co, b, ca, cy, nu, no)')
-            for x in xrange(10):
+            bdb.sql_execute('create table t (u, co, b, ca, cy, nu, no)')
+            for _x in xrange(10):
                 cat_dict = ['a', 'b', 'c']
-                bdb.sql_execute('''insert into t(u, co, b, ca, cy, nu, no)
+                bdb.sql_execute('''
+                    insert into t (u, co, b, ca, cy, nu, no)
                     values (?, ?, ?, ?, ?, ?, ?)''',
                     (
                         cat_dict[bdb._prng.weakrandom_uniform(3)],
@@ -174,7 +179,7 @@ def test_stattypes():
             bdb.execute('initialize 1 model for g')
             bdb.execute('analyze g for 50 iterations wait')
             bdb.execute('''estimate probability density of
-                nu = 50, u="a" from p''').fetchall()
+                nu = 50, u='a' from p''').fetchall()
             bdb.execute('''simulate u, co, b, ca, cy, nu, no
                 from p limit 1''').fetchall()
             bdb.execute('drop models from g')
@@ -184,30 +189,32 @@ def test_stattypes():
 
 
 def test_loom_guess_schema_categorical():
-    """Test to make sure that the LoomMetamodel handles the case where
+    """Test to make sure that LoomMetamodel handles the case where
     the user provides a categorical variable with more than 256 distinct
-    types. In this case, the metamodel code should know to specify the type
-    unboundedcategorical to loom."""
+    values.
 
+    In this case, the metamodel code automatically specify the
+    unboundedcategorical type to Loom.
+    """
     with tempdir('bayeslite-loom') as loom_store_path:
         with bayesdb_open(':memory:') as bdb:
             bayesdb_register_metamodel(bdb,
                 LoomMetamodel(loom_store_path=loom_store_path))
-            bdb.sql_execute('create table t(v)')
+            bdb.sql_execute('create table t (v)')
             vals_to_insert = []
             for i in xrange(300):
                 word = ""
-                for j in xrange(20):
-                    letter_index = \
-                        bdb._prng.weakrandom_uniform(len(string.letters))
+                for _j in xrange(20):
+                    letter_index = bdb._prng.weakrandom_uniform(
+                        len(string.letters))
                     word += string.letters[letter_index]
                 vals_to_insert.append(word)
             for i in xrange(len(vals_to_insert)):
                 bdb.sql_execute('''
-                    insert into t(v) values (?)
+                    insert into t (v) values (?)
                 ''', (vals_to_insert[i],))
 
-            bdb.execute('create population p for t(v categorical)')
+            bdb.execute('create population p for t (v categorical)')
             bdb.execute('create generator g for p using loom')
             bdb.execute('initialize 1 model for g')
             bdb.execute('analyze g for 50 iterations wait')
@@ -237,10 +244,10 @@ def test_loom_four_var():
                     bdb, LoomMetamodel(loom_store_path=loom_store_path))
             bdb.sql_execute('create table t(x, xx, y, z)')
             bdb.sql_execute('''
-                insert into t(x, xx, y, z) values(100, 200, 50, "a")''')
+                insert into t (x, xx, y, z) values (100, 200, 50, 'a')''')
             bdb.sql_execute('''
-                insert into t(x, xx, y, z) values(100, 200, 50, "a")''')
-            for index in xrange(100):
+                insert into t (x, xx, y, z) values (100, 200, 50, 'a')''')
+            for _index in xrange(100):
                 x = bdb._prng.weakrandom_uniform(X_MAX)
                 bdb.sql_execute('''
                     insert into t(x, xx, y, z) values(?, ?, ?, ?)
@@ -256,17 +263,21 @@ def test_loom_four_var():
             bdb.execute('analyze g for 500 iterations wait')
 
             with pytest.raises(BQLError):
-                relevance = bdb.execute('''ESTIMATE PREDICTIVE RELEVANCE
+                relevance = bdb.execute('''
+                    ESTIMATE PREDICTIVE RELEVANCE
                     TO HYPOTHETICAL ROWS WITH VALUES ((x=50, xx=100))
                     IN THE CONTEXT OF "x"
                     FROM p
-                    WHERE rowid = 1''').fetchall()
+                    WHERE rowid = 1
+                ''').fetchall()
 
-            relevance = bdb.execute('''ESTIMATE PREDICTIVE RELEVANCE
+            relevance = bdb.execute('''
+                ESTIMATE PREDICTIVE RELEVANCE
                 TO EXISTING ROWS (rowid = 1)
                 IN THE CONTEXT OF "x"
                 FROM p
-                WHERE rowid = 1''').fetchall()
+                WHERE rowid = 1
+            ''').fetchall()
             assert relevance[0][0] == 1
 
             similarities = bdb.execute('''estimate similarity
@@ -278,28 +289,31 @@ def test_loom_four_var():
 
             impossible_density = bdb.execute(
                 'estimate probability density of x = %d by p'
-                % (X_MAX*2.5)).fetchall()
+                % (X_MAX*2.5,)).fetchall()
             assert impossible_density[0][0] < 0.0001
 
             possible_density = bdb.execute(
                 'estimate probability density of x = %d  by p' %
-                ((X_MAX-X_MIN)/2)).fetchall()
+                ((X_MAX-X_MIN)/2,)).fetchall()
             assert possible_density[0][0] > 0.001
 
             categorical_density = bdb.execute('''
-                estimate probability density of z = "a" by p''').fetchall()
+                estimate probability density of z = 'a' by p
+            ''').fetchall()
             assert abs(categorical_density[0][0]-.5) < 0.2
 
             mutual_info = bdb.execute('''
                 estimate mutual information as mutinf
-                from pairwise columns of p order by mutinf''').fetchall()
+                from pairwise columns of p order by mutinf
+            ''').fetchall()
             _, a, b, c = zip(*mutual_info)
             mutual_info_dict = dict(zip(zip(a, b), c))
             assert mutual_info_dict[('x', 'y')] < mutual_info_dict[
                 ('x', 'xx')] < mutual_info_dict[('x', 'x')]
 
-            simulated_data = bdb.execute('simulate x, y from p limit %d' %
-                (PREDICT_RUNS,)).fetchall()
+            simulated_data = bdb.execute(
+                'simulate x, y from p limit %d'
+                % (PREDICT_RUNS,)).fetchall()
             xs, ys = zip(*simulated_data)
             assert abs((sum(xs)/len(xs)) - (X_MAX-X_MIN)/2) < \
                     (X_MAX-X_MIN)/5
@@ -319,9 +333,8 @@ def test_loom_four_var():
                     assert d_val > 0.99
                 else:
                     assert d_val == 0
-            predict_confidence = bdb.execute('''
-                    infer explicit predict x confidence x_c FROM p
-                ''').fetchall()
+            predict_confidence = bdb.execute(
+                'infer explicit predict x confidence x_c FROM p').fetchall()
             predictions, confidences = zip(*predict_confidence)
             assert abs((sum(predictions)/len(predictions))
                 - (X_MAX-X_MIN)/2) < (X_MAX-X_MIN)/5
