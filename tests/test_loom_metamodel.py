@@ -22,10 +22,10 @@ import tempfile
 
 import pytest
 
-import bayeslite.core as core
-
 from bayeslite import bayesdb_open
 from bayeslite import bayesdb_register_metamodel
+from bayeslite.core import bayesdb_get_generator
+from bayeslite.core import bayesdb_get_population
 from bayeslite.exception import BQLError
 from bayeslite.metamodels.loom_metamodel import LoomMetamodel
 
@@ -84,9 +84,8 @@ def test_loom_complex_add_analyze_drop_sequence():
             bdb.execute('initialize 2 models for g')
 
             bdb.execute('initialize 3 models if not exists for g')
-            population_id = core.bayesdb_get_population(bdb, 'p')
-            generator_id = core.bayesdb_get_generator(
-                    bdb, population_id, 'g')
+            population_id = bayesdb_get_population(bdb, 'p')
+            generator_id = bayesdb_get_generator(bdb, population_id, 'g')
             cursor = bdb.sql_execute('''
                 SELECT num_models FROM bayesdb_loom_generator_model_info
                     WHERE generator_id=?;
@@ -108,9 +107,8 @@ def test_loom_complex_add_analyze_drop_sequence():
             bdb.execute('drop models from g')
 
             bdb.execute('initialize 1 models for g')
-            population_id = core.bayesdb_get_population(bdb, 'p')
-            generator_id = core.bayesdb_get_generator(
-                    bdb, population_id, 'g')
+            population_id = bayesdb_get_population(bdb, 'p')
+            generator_id = bayesdb_get_generator(bdb, population_id, 'g')
             cursor = bdb.sql_execute('''
                 SELECT num_models FROM bayesdb_loom_generator_model_info
                     WHERE generator_id=?;
