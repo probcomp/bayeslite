@@ -547,10 +547,11 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         self._check_loom_initialized(bdb, generator_id)
         if modelnos is None:
             modelnos = range(self._get_num_models(bdb, generator_id))
+        assert len(colnos) == 1
+        if rowid == target_rowid:
+            return 1.
         model_similarities = []
         for modelno in modelnos:
-            if colnos is not None:
-                assert len(colnos) == 1
                 kind_id = self._get_kind_id(
                     bdb, generator_id, modelno, colnos[0])
                 cursor = bdb.sql_execute('''
@@ -562,27 +563,9 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                         AND rowid IN (?, ?)
                 ''', (generator_id, modelno, kind_id, rowid, target_rowid,))
                 partition_ids = cursor.fetchall()
-                assert len(partition_ids) in [1, 2]
-                similar = partition_ids[0] == partition_ids[1]\
-                    if len(partition_ids) == 2 else 1
+                assert len(partition_ids) == 2
+                similar = partition_ids[0] == partition_ids[1]
                 model_similarities.append(int(similar))
-            else:
-                cursor = bdb.sql_execute('''
-                    SELECT partition_id, kind_id
-                    FROM bayesdb_loom_row_kind_partition
-                    WHERE generator_id = ?
-                        AND modelno = ?
-                        AND rowid IN (?, ?)
-                    ORDER BY kind_id
-                ''', (generator_id, modelno, rowid, target_rowid,))
-                partition_ids = cursor.fetchall()
-                assert len(partition_ids) > 0
-                assert len(partition_ids) %  2 == 0
-                score = sum([partition_ids[i][0] == partition_ids[i + 1][0]
-                    for i in xrange(0, len(partition_ids), 2)])
-                num_kinds = len(partition_ids) / 2
-                score = score / num_kinds
-                model_similarities.append(score)
         return arithmetic_mean(model_similarities)
 
     def _reorder_row(self, bdb, generator_id, row, dense=True):
