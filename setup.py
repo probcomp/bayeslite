@@ -223,6 +223,9 @@ setup(
         'bayeslite.shell',
         'bayeslite.streaming_app',
         'bayeslite.streaming_app.app',
+        'bayeslite.streaming_app.templates',
+        'bayeslite.streaming_app.templates.app',
+        'bayeslite.streaming_app.static',
         'bayeslite.tests',
         'bayeslite.weakprng',
     ],
@@ -245,6 +248,12 @@ setup(
         'bayeslite.metamodels': ['*.schema.json'],
         'bayeslite.tests': [
             'dha.csv',
+        ],
+        'bayeslite.streaming_app.templates': [
+            '*.html'
+        ],
+        'bayeslite.streaming_app.templates.app': [
+            '*.html'
         ],
     },
 )
