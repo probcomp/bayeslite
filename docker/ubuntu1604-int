@@ -1,17 +1,19 @@
 FROM            ubuntu:16.04
 MAINTAINER      MIT Probabilistic Computing Project
 
-RUN             apt-get update -qq && apt-get install -qq \
-                        git \
-                        python-jsonschema \
-                        python-numpy \
-                        python-pandas \
-                        python-pexpect \
-                        python-pytest \
-                        python-scipy \
-                        python-six \
-                        python-sklearn \
-                        ; # end of package list
+RUN             apt-get update -qq \
+                && apt-get upgrade -qq \
+                && apt-get install -qq -y \
+                    git \
+                    python-jsonschema \
+                    python-numpy \
+                    python-pandas \
+                    python-pexpect \
+                    python-pytest \
+                    python-scipy \
+                    python-six \
+                    python-sklearn \
+                    ; # end of package list
 
 ADD             . /bayeslite
 WORKDIR         /bayeslite
