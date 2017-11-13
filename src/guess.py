@@ -25,11 +25,9 @@ cyclic.
 
 import collections
 import math
-import os
 
 import bayeslite.core as core
 
-from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 from bayeslite.util import unique

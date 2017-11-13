@@ -15,10 +15,8 @@
 #   limitations under the License.
 
 import math
-import numpy as np
-import pytest
 
-from cgpm.utils import general as gu
+import pytest
 
 import bayeslite.core as core
 

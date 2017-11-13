@@ -30,17 +30,16 @@ import struct
 import time
 
 import bayeslite.core as core
-import bayeslite.guess as guess
 import bayeslite.metamodel as metamodel
 import bayeslite.weakprng as weakprng
-import crosscat_generator_schema
-import crosscat_theta_validator
 
 from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
-from bayeslite.stats import arithmetic_mean
 from bayeslite.util import casefold
 from bayeslite.util import cursor_value
+
+import crosscat_generator_schema
+import crosscat_theta_validator
 
 crosscat_schema_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('crosscat', 1);

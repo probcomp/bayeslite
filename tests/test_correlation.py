@@ -14,11 +14,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import numpy
-
 import crosscat.LocalEngine
 
 import bayeslite
+
 from bayeslite.metamodels.crosscat import CrosscatMetamodel
 from bayeslite.math_util import relerr
 from bayeslite.math_util import abserr

@@ -27,7 +27,6 @@ import crosscat.MultiprocessingEngine
 import bayeslite
 import bayeslite.bqlfn as bqlfn
 import bayeslite.core as core
-import bayeslite.guess as guess
 import bayeslite.metamodel as metamodel
 
 from bayeslite.metamodels.crosscat import CrosscatMetamodel
@@ -35,8 +34,6 @@ from bayeslite.metamodels.crosscat import CrosscatMetamodel
 from bayeslite import bql_quote_name
 from bayeslite.sqlite3_util import sqlite3_connection
 from bayeslite.util import cursor_value
-
-import test_csv
 
 def powerset(s):
     s = list(s)

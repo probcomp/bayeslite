@@ -18,13 +18,10 @@ import os
 
 import pytest
 
-import crosscat.LocalEngine
-
 import bayeslite
 import bayeslite.read_csv as read_csv
 
 from bayeslite.guess import bayesdb_guess_population
-from bayeslite.metamodels.crosscat import CrosscatMetamodel
 
 
 root = os.path.dirname(os.path.abspath(__file__))
