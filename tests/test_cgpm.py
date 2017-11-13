@@ -28,6 +28,8 @@ from cgpm.cgpm import CGpm
 from cgpm.dummy.barebones import BareBonesCGpm
 from cgpm.dummy.piecewise import PieceWise
 from cgpm.dummy.trollnormal import TrollNormal
+from cgpm.factor.factor import FactorAnalysis
+from cgpm.regressions.linreg import LinearRegression
 from cgpm.utils import general as gu
 
 from bayeslite import bayesdb_nullify
@@ -354,11 +356,6 @@ class Kepler(TrollNormal):
         return super(Kepler, self).__init__(outputs, inputs, *args, **kwargs)
 
 def test_cgpm_kepler():
-    try:
-        from cgpm.regressions.linreg import LinearRegression
-    except ImportError:
-        pytest.skip('no sklearn')
-        return
     with cgpm_dummy_satellites_bdb() as bdb:
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
@@ -474,11 +471,7 @@ def test_cgpm_kepler():
         bdb.execute('DROP METAMODEL g1')
 
 def test_unknown_stattype():
-    try:
-        from cgpm.regressions.linreg import LinearRegression
-    except ImportError:
-        pytest.skip('no sklearn')
-        return
+    from cgpm.regressions.linreg import LinearRegression
     with cgpm_dummy_satellites_bdb() as bdb:
         # Add a column called relaunches, sum of apogee and perigee.
         bdb.sql_execute('ALTER TABLE satellites_ucs ADD COLUMN relaunches')
@@ -550,11 +543,6 @@ def test_unknown_stattype():
         ''')
 
 def test_bad_analyze_vars():
-    try:
-        from cgpm.regressions.linreg import LinearRegression
-    except ImportError:
-        pytest.skip('no sklearn')
-        return
     with cgpm_dummy_satellites_bdb() as bdb:
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
@@ -593,11 +581,6 @@ def test_bad_analyze_vars():
             ''')
 
 def test_output_stattypes():
-    try:
-        from cgpm.factor.factor import FactorAnalysis
-    except ImportError:
-        pytest.skip('no sklearn')
-        return
     with cgpm_dummy_satellites_bdb() as bdb:
         # Missing policy for class_of_orbit, perigee, period
         with pytest.raises(BQLError):

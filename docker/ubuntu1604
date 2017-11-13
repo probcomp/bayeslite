@@ -1,6 +1,8 @@
 FROM            ubuntu:16.04
 MAINTAINER      MIT Probabilistic Computing Project
 
+ARG             check_args
+
 RUN             apt-get update -qq \
                 && apt-get upgrade -qq \
                 && apt-get install -qq -y \
@@ -12,6 +14,7 @@ RUN             apt-get update -qq \
                     python-pytest \
                     python-scipy \
                     python-six \
+                    python-sklearn \
                     ; # end of package list
 
 ADD             . /bayeslite
@@ -20,6 +23,7 @@ RUN \
                 ./docker/deps/bayeslite-apsw/pythenv.sh \
                 ./docker/deps/cgpm/pythenv.sh \
                 ./docker/deps/crosscat/pythenv.sh \
-                ./check.sh
+                ./check.sh ${check_args}
+
 RUN             python setup.py sdist
 RUN             python setup.py bdist
