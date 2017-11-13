@@ -36,7 +36,6 @@ import bayeslite.ast as ast
 import bayeslite.bqlfn as bqlfn
 import bayeslite.core as core
 import bayeslite.macro as macro
-import bayeslite.simulate as simulate
 
 from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name

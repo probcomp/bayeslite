@@ -32,8 +32,6 @@ from bayeslite.math_util import relerr
 from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
 from bayeslite.util import cursor_value
 
-from bayeslite import bayesdb_open
-
 import test_core
 import test_csv
 
