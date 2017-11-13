@@ -1334,7 +1334,7 @@ def test_modelledby_usingmodels_trival():
 
 def test_simulate_columns_all():
     with pytest.raises(parse.BQLParseError):
-        bql2sql('simulate * from p1')
+        bql2sql('simulate * from p1 limit 1')
 
 def test_trivial_commands():
     with test_csv.bayesdb_csv_file(test_csv.csv_data) as (bdb, fname):
