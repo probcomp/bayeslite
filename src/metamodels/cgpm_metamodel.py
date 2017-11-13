@@ -29,7 +29,6 @@ from bayeslite.exception import BQLError
 from bayeslite.metamodel import IBayesDBMetamodel
 from bayeslite.metamodel import bayesdb_metamodel_version
 from bayeslite.sqlite3_util import sqlite3_quote_name
-from bayeslite.stats import arithmetic_mean
 from bayeslite.util import casefold
 from bayeslite.util import cursor_value
 from bayeslite.util import json_dumps
@@ -684,9 +683,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
     def column_dependence_probability(
             self, bdb, generator_id, modelnos, colno0, colno1):
         # Optimize special-case vacuous case of self-dependence.
-        # XXX Caller should avoid this.
+        # XXX Caller should avoid this. We also should really return a list
+        # of ones equal to the number of user-specified models (or all).
         if colno0 == colno1:
-            return 1
+            return [1]
 
         # Get the modelnos.
         cgpm_modelnos = self._get_modelnos(bdb, generator_id, modelnos)
@@ -700,7 +700,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             colno0, colno1, statenos=cgpm_modelnos,
             multiprocess=self._multiprocess)
 
-        return arithmetic_mean(depprob_list)
+        return depprob_list
 
     def column_mutual_information(
             self, bdb, generator_id, modelnos, colnos0, colnos1,
@@ -743,7 +743,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # XXX TODO: If neither rowids are incorporated, return None.
         if cgpm_rowid == -1 or cgpm_target_rowid == -1:
-            return float('nan')
+            return [float('nan')]
 
         # Get the engine.
         engine = self._engine(bdb, generator_id)
@@ -754,7 +754,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             cgpm_rowid, cgpm_target_rowid, colnos, statenos=cgpm_modelnos,
             multiprocess=self._multiprocess)
 
-        return arithmetic_mean(similarity_list)
+        return similarity_list
 
     def predictive_relevance(
             self, bdb, generator_id, modelnos, rowid_target, rowid_query,
