@@ -10,17 +10,17 @@ build:
 
 requirements:
   build:
-    - cython >=0.20.1
+    - cython 0.23.*
     - git
     - python 2.7.*
     - jsonschema
-    - numpy 1.8.*
+    - numpy 1.11.*
   run:
     - cgpm
     - crosscat
     - jsonschema
-    - numpy 1.8.*
-    - scipy >=0.13,<=0.19.*
+    - numpy 1.11.*
+    - scipy 0.17.*
     - six 1.10.*
 
 test:
@@ -28,7 +28,7 @@ test:
     - apsw
     - cgpm
     - crosscat
-    - pandas >=0.14,<0.19
+    - pandas 0.17.*
     - pytest 2.5.1.*
     - python 2.7.*
   commands:
