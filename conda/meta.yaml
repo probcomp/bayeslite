@@ -16,8 +16,9 @@ requirements:
     - jsonschema
     - numpy 1.11.*
   run:
-    - cgpm
-    - crosscat
+    ## add this back after PRs merged and packages released to main label. for now, explicitly install in Dockerfile
+    #- cgpm
+    #- crosscat
     - jsonschema
     - numpy 1.11.*
     - scipy 0.17.*
@@ -26,8 +27,9 @@ requirements:
 test:
   requires:
     - apsw
-    - cgpm
-    - crosscat
+    ## add this back after PRs merged and packages released to main label. for now, explicitly install in travis config
+    #- cgpm
+    #- crosscat
     - pandas 0.18.*
     - pytest 2.8.*
     - python 2.7.*
