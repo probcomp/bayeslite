@@ -29,7 +29,7 @@ test:
     - cgpm
     - crosscat
     - pandas 0.18.*
-    - pytest 2.8.7
+    - pytest 2.8.*
     - python 2.7.*
   commands:
     - python -m pytest --pyargs bayeslite -k "not __ci_"
