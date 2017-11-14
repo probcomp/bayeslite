@@ -1023,19 +1023,16 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             colno0, colno1):
         modelno = self.get_modelno(bdb, modelnos)
         if colno0 == colno1:
-            return 1
+            return [1]
         cc_colno0 = crosscat_cc_colno(bdb, generator_id, colno0)
         cc_colno1 = crosscat_cc_colno(bdb, generator_id, colno1)
-        count = 0
-        nmodels = 0
+        depprob_list = []
         for X_L, X_D in self._crosscat_latent_stata(bdb, generator_id,
                 modelno):
-            nmodels += 1
             assignments = X_L['column_partition']['assignments']
-            if assignments[cc_colno0] != assignments[cc_colno1]:
-                continue
-            count += 1
-        return float('NaN') if nmodels == 0 else (float(count)/float(nmodels))
+            dependent = int(assignments[cc_colno0] == assignments[cc_colno1])
+            depprob_list.append(dependent)
+        return depprob_list or [float('NaN')]
 
     def column_mutual_information(self, bdb, generator_id, modelnos, colnos0,
             colnos1, constraints=None, numsamples=None):
@@ -1076,7 +1073,7 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
         [given_row_id, target_row_id], X_L_list, X_D_list = \
             self._crosscat_get_rows(bdb, generator_id, [rowid, target_rowid],
                 X_L_list, X_D_list)
-        return self._crosscat.similarity(
+        similarity = self._crosscat.similarity(
             M_c=self._crosscat_metadata(bdb, generator_id),
             X_L_list=X_L_list,
             X_D_list=X_D_list,
@@ -1085,6 +1082,9 @@ class CrosscatMetamodel(metamodel.IBayesDBMetamodel):
             target_columns=[crosscat_cc_colno(bdb, generator_id, colno)
                 for colno in colnos],
         )
+        # XXX Return a singleton list, since self._crosscat.similarity
+        # is already aggregating.
+        return [similarity]
 
     def predict_confidence(self, bdb, generator_id, modelnos, rowid, colno,
             numsamples=None):

@@ -296,8 +296,9 @@ def bql_column_dependence_probability(
     modelnos = _retrieve_modelnos(modelnos)
     def generator_depprob(generator_id):
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-        return metamodel.column_dependence_probability(
+        depprob_list = metamodel.column_dependence_probability(
             bdb, generator_id, modelnos, colno0, colno1)
+        return stats.arithmetic_mean(depprob_list)
     generator_ids = _retrieve_generator_ids(bdb, population_id, generator_id)
     depprobs = map(generator_depprob, generator_ids)
     return stats.arithmetic_mean(depprobs)
@@ -427,8 +428,9 @@ def bql_row_similarity(
     def generator_similarity(generator_id):
         metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
         # XXX Change [colno] to colno by updating IBayesDBMetamodel.
-        return metamodel.row_similarity(
+        similarity_list = metamodel.row_similarity(
             bdb, generator_id, modelnos, rowid, target_rowid, [colno])
+        return stats.arithmetic_mean(similarity_list)
     generator_ids = _retrieve_generator_ids(bdb, population_id, generator_id)
     similarities = map(generator_similarity, generator_ids)
     return stats.arithmetic_mean(similarities)

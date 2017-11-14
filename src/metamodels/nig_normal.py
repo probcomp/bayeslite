@@ -355,7 +355,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
     def column_dependence_probability(self, bdb, generator_id, modelnos, colno0,
             colno1):
         # XXX Fix me!
-        return 0
+        return [0]
 
     def column_mutual_information(self, bdb, generator_id, modelnos, colnos0,
             colnos1, constraints, numsamples):
@@ -365,7 +365,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
     def row_similarity(self, bdb, generator_id, modelnos, rowid, target_rowid,
             colnos):
         # XXX Fix me!
-        return 0
+        return [0]
 
     def predict_confidence(self, bdb, generator_id, modelnos, rowid, colno,
             numsamples=None):
