@@ -1,4 +1,4 @@
-# -*- c_ding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 #   Copyright (c) 2010-2016, MIT Probabilistic Computing Project
 #
