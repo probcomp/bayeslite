@@ -15,6 +15,8 @@ script:
   - export CONDA_PACKAGE_VERSION="${TRAVIS_TAG:-$(date +%Y.%m.%d)}"
   # remove leading v from tags if they exist
   - CONDA_PACKAGE_VERSION="$(sed s/^v// <<<$CONDA_PACKAGE_VERSION)"
+  # line below can removed in favor of conda meta.yaml deps after PRs merged and main package release
+  - conda install -c probcomp/label/dev cgpm crosscat
   - conda build . -c probcomp
 after_success:
   - bash conda/upload.sh
