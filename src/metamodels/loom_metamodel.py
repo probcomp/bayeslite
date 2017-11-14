@@ -421,27 +421,33 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             column_partition = self._retrieve_column_partition(
                 bdb, generator_id, modelno)
 
+            # Bulk insertion of mapping from colno to kind_id.
             colnos = core.bayesdb_variable_numbers(bdb, population_id, None)
-            for colno in colnos:
-                loom_rank = self._get_loom_rank(bdb, generator_id, colno)
-                kind_id = column_partition[loom_rank]
-                bdb.sql_execute('''
-                    INSERT OR REPLACE INTO bayesdb_loom_column_kind_partition
-                    (generator_id, modelno, colno, kind_id)
-                    VALUES (?, ?, ?, ?)
-                ''', (generator_id, modelno, colno, kind_id))
+            ranks = [self._get_loom_rank(bdb, generator_id, colno)
+                for colno in colnos]
+            insertions = ','.join(
+                str((generator_id, modelno, colno, column_partition[rank]))
+                for colno, rank in zip(colnos, ranks)
+            )
+            bdb.sql_execute('''
+                INSERT OR REPLACE INTO bayesdb_loom_column_kind_partition
+                (generator_id, modelno, colno, kind_id)
+                VALUES %s
+            ''' % (insertions,))
 
+            # Bulk insertion of mapping from (kind_id, rowid) to cluster_id.
             row_partition = self._retrieve_row_partition(
                 bdb, generator_id, modelno)
-            for kind_id in row_partition.keys():
-                for rowid, partition_id in zip(
-                        range(1, len(row_partition[kind_id])+1),
-                        row_partition[kind_id]):
-                    bdb.sql_execute('''
-                        INSERT OR REPLACE INTO bayesdb_loom_row_kind_partition
-                        (generator_id, modelno, rowid, kind_id, partition_id)
-                        VALUES (?, ?, ?, ?, ?)
-                    ''', (generator_id, modelno, rowid, kind_id, partition_id))
+            insertions = ','.join(
+                str((generator_id, modelno, rowid+1, kind_id, partition_id))
+                for kind_id in row_partition
+                for rowid, partition_id in enumerate(row_partition[kind_id]))
+            bdb.sql_execute('''
+                INSERT OR REPLACE INTO
+                    bayesdb_loom_row_kind_partition
+                (generator_id, modelno, rowid, kind_id, partition_id)
+                VALUES %s
+            ''' % (insertions,))
 
     def _retrieve_column_partition(self, bdb, generator_id, modelno):
         """Return column partition from a CrossCat model.
