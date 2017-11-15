@@ -7,6 +7,7 @@ RUN             apt-get update -qq \
                 && apt-get upgrade -qq \
                 && apt-get install -qq -y \
                     git \
+                    python-apsw \
                     python-jsonschema \
                     python-numpy \
                     python-pandas \
@@ -20,7 +21,6 @@ RUN             apt-get update -qq \
 ADD             . /bayeslite
 WORKDIR         /bayeslite
 RUN \
-                ./docker/deps/bayeslite-apsw/pythenv.sh \
                 ./docker/deps/cgpm/pythenv.sh \
                 ./docker/deps/crosscat/pythenv.sh \
                 ./check.sh ${check_args}
