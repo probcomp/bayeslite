@@ -1,0 +1,22 @@
+language: python
+dist: trusty
+
+python:
+  - 2.7
+install:
+  - wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda install conda-build
+script:
+  - export CONDA_PACKAGE_VERSION="${TRAVIS_TAG:-$(date +%Y.%m.%d)}"
+  # remove leading v from tags if they exist
+  - CONDA_PACKAGE_VERSION="$(sed s/^v// <<<$CONDA_PACKAGE_VERSION)"
+  # line below can removed in favor of conda meta.yaml deps after PRs merged and main package release
+  - conda config --add channels probcomp/label/dev
+  - conda build . -c probcomp
+after_success:
+  - bash conda/upload.sh
