@@ -1,5 +1,7 @@
 # Bayeslite
 
+[![Build Status](https://travis-ci.org/probcomp/bayeslite.svg?branch=master)](https://travis-ci.org/probcomp/bayeslite)
+
 BQL interpretation and storage for BayesDB.
 Please see http://probcomp.csail.mit.edu/bayesdb for more info.
 
