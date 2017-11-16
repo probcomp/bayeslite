@@ -998,19 +998,19 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             # values sensibly yet, so until we have that sorted
             # out we both (a) omit nulls and (b) ignore errors in
             # incorporate.
-            query = {
+            obs_values = {
                 colno: row[i]
                 for i, colno in enumerate(outputs)
                 if not math.isnan(row[i])
             }
             n = len(outputs)
-            evidence = {
+            input_values = {
                 colno: row[n + i]
                 for i, colno in enumerate(inputs)
                 if not math.isnan(row[n + i])
             }
             try:
-                cgpm.incorporate(cgpm_rowid, query, evidence)
+                cgpm.incorporate(cgpm_rowid, obs_values, input_values)
             except Exception:
                 pass
         return cgpm
