@@ -494,15 +494,22 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
     def column_dependence_probability(self,
             bdb, generator_id, modelnos, colno0, colno1):
         self._check_loom_initialized(bdb, generator_id)
-        depprob_list = []
         if modelnos is None:
             modelnos = range(self._get_num_models(bdb, generator_id))
-        for modelno in modelnos:
-            kind0 = self._get_kind_id(bdb, generator_id, modelno, colno0)
-            kind1 = self._get_kind_id(bdb, generator_id, modelno, colno1)
-            dependent = kind0 == kind1
-            depprob_list.append(int(dependent))
-        return arithmetic_mean(depprob_list)
+        if colno0 == colno1:
+            return 1.
+        cursor = bdb.sql_execute('''
+            SELECT
+                AVG(t1.kind_id = t2.kind_id)
+            FROM bayesdb_loom_column_kind_partition as t1
+                JOIN bayesdb_loom_column_kind_partition as t2 USING
+                    (generator_id, modelno)
+            WHERE t1.generator_id = ?
+                AND t1.modelno in (%s)
+                AND t1.colno = ?
+                AND t2.colno = ?
+        ''' % (','.join(map(str, modelnos)),), (generator_id, colno0, colno1))
+        return util.cursor_value(cursor)
 
     def _get_kind_id(self, bdb, generator_id, modelno, colno):
         cursor = bdb.sql_execute('''
@@ -552,23 +559,26 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         assert len(colnos) == 1
         if rowid == target_rowid:
             return 1.
-        model_similarities = []
-        for modelno in modelnos:
-                kind_id = self._get_kind_id(
-                    bdb, generator_id, modelno, colnos[0])
-                cursor = bdb.sql_execute('''
-                    SELECT partition_id
-                    FROM bayesdb_loom_row_kind_partition
-                    WHERE generator_id = ?
-                        AND modelno = ?
-                        AND kind_id = ?
-                        AND rowid IN (?, ?)
-                ''', (generator_id, modelno, kind_id, rowid, target_rowid,))
-                partition_ids = cursor.fetchall()
-                assert len(partition_ids) == 2
-                similar = partition_ids[0] == partition_ids[1]
-                model_similarities.append(int(similar))
-        return arithmetic_mean(model_similarities)
+        cursor = bdb.sql_execute('''
+            SELECT
+                AVG(t1.partition_id = t2.partition_id)
+            FROM bayesdb_loom_row_kind_partition as t1
+                JOIN bayesdb_loom_row_kind_partition as t2
+                USING (generator_id, modelno, kind_id)
+            WHERE t1.generator_id = ?
+                AND t1.modelno in (%s)
+                AND t1.kind_id = (
+                    SELECT kind_id
+                    FROM bayesdb_loom_column_kind_partition
+                    WHERE generator_id = t1.generator_id
+                        AND modelno = t1.modelno
+                        AND colno = ?
+                )
+                AND t1.rowid = ?
+                AND t2.rowid = ?
+        ''' % (','.join(map(str, modelnos)),), (
+            generator_id, colnos[0], rowid, target_rowid))
+        return util.cursor_value(cursor)
 
     def _reorder_row(self, bdb, generator_id, row, dense=True):
         """Reorder a row of columns according to loom's column order
