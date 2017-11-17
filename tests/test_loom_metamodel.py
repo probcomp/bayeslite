@@ -261,8 +261,8 @@ def test_loom_four_var():
                 create population p for t(x numerical; xx numerical;
                 y numerical; z categorical)''')
             bdb.execute('create generator g for p using loom')
-            bdb.execute('initialize 2 model for g')
-            bdb.execute('analyze g for 500 iterations wait')
+            bdb.execute('initialize 10 model for g')
+            bdb.execute('analyze g for 20 iterations wait')
 
             with pytest.raises(BQLError):
                 relevance = bdb.execute('''
@@ -334,9 +334,9 @@ def test_loom_four_var():
                 if col1 == col2:
                     assert d_val == 1
                 elif col1 in ['xx', 'x'] and col2 in ['xx', 'x']:
-                    assert d_val > 0.99
+                    assert d_val > 0.80
                 else:
-                    assert d_val == 0
+                    assert d_val < 0.20
             predict_confidence = bdb.execute(
                 'infer explicit predict x confidence x_c FROM p').fetchall()
             predictions, confidences = zip(*predict_confidence)
