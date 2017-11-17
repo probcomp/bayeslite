@@ -266,19 +266,21 @@ def test_loom_four_var():
 
             with pytest.raises(BQLError):
                 relevance = bdb.execute('''
-                    ESTIMATE PREDICTIVE RELEVANCE
-                    TO HYPOTHETICAL ROWS WITH VALUES ((x=50, xx=100))
-                    IN THE CONTEXT OF "x"
-                    FROM p
-                    WHERE rowid = 1
+                    estimate
+                        predictive relevance
+                            to hypothetical rows with values ((x=50, xx=100))
+                            in the context of "x"
+                    from p
+                    where rowid = 1
                 ''').fetchall()
 
             relevance = bdb.execute('''
-                ESTIMATE PREDICTIVE RELEVANCE
-                TO EXISTING ROWS (rowid = 1)
-                IN THE CONTEXT OF "x"
-                FROM p
-                WHERE rowid = 1
+                estimate
+                    predictive relevance
+                        to existing rows (rowid = 1)
+                        in the context of "x"
+                from p
+                where rowid = 1
             ''').fetchall()
             assert relevance[0][0] == 1
 
