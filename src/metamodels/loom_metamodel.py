@@ -322,6 +322,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             (generator_id, num_models)
             VALUES (?, ?)
         ''', (generator_id, len(modelnos) + num_existing))
+        self.analyze_models(bdb, generator_id, iterations=1)
 
     def _get_num_models(self, bdb, generator_id):
         cursor = bdb.sql_execute('''
@@ -493,7 +494,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
     def column_dependence_probability(self,
             bdb, generator_id, modelnos, colno0, colno1):
-        self._check_loom_initialized(bdb, generator_id)
         if modelnos is None:
             modelnos = range(self._get_num_models(bdb, generator_id))
         if colno0 == colno1:
@@ -534,7 +534,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
     def column_mutual_information(self, bdb, generator_id, modelnos, colnos0,
             colnos1, constraints, numsamples):
-        self._check_loom_initialized(bdb, generator_id)
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         colnames0 = [str(core.bayesdb_variable_name(bdb, population_id, colno))
             for colno in colnos0]
@@ -553,7 +552,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
     def row_similarity(self, bdb, generator_id, modelnos, rowid, target_rowid,
             colnos):
-        self._check_loom_initialized(bdb, generator_id)
         if modelnos is None:
             modelnos = range(self._get_num_models(bdb, generator_id))
         assert len(colnos) == 1
@@ -607,7 +605,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
     def predictive_relevance(self, bdb, generator_id, modelnos, rowid_target,
             rowid_queries, hypotheticals, colno):
-        self._check_loom_initialized(bdb, generator_id)
         if len(hypotheticals) > 0:
             raise BQLError(bdb, 'Loom cannot handle hypothetical rows' \
                 ' because it is unable to insert rows into CrossCat')
@@ -630,7 +627,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
     def predict_confidence(self, bdb, generator_id, modelnos, rowid, colno,
             numsamples=None):
-        self._check_loom_initialized(bdb, generator_id)
         if not numsamples:
             numsamples = 2
         assert numsamples > 0
@@ -666,7 +662,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
     def simulate_joint(self, bdb, generator_id, modelnos, rowid, targets,
             constraints, num_samples=1, accuracy=None):
-        self._check_loom_initialized(bdb, generator_id)
         if rowid != core.bayesdb_generator_fresh_row_id(bdb, generator_id):
             row_values_raw = core.bayesdb_generator_row_values(
                 bdb, generator_id, rowid)
@@ -733,8 +728,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
     def logpdf_joint(self, bdb, generator_id, modelnos, rowid, targets,
             constraints):
-        self._check_loom_initialized(bdb, generator_id)
-
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         ordered_column_labels = self._get_ordered_column_labels(
             bdb, generator_id)

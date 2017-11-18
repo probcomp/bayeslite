@@ -99,12 +99,8 @@ def test_loom_complex_add_analyze_drop_sequence():
             # 3 and not 2 + 3 = 5.
             assert num_models == 3
 
-            # Check for a bql error if a query is run after initialization
-            # but before analyze.
-            with pytest.raises(BQLError):
-                bdb.execute('estimate probability density of x = 50 from p')
-
-            bdb.execute('analyze g for 50 iterations wait')
+            bdb.execute('analyze g for 10 iterations wait')
+            bdb.execute('estimate probability density of x = 50 from p')
 
             with pytest.raises(BQLError):
                 bdb.execute('drop model 1 from g')
