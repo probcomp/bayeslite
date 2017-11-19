@@ -725,7 +725,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Engine gives us a list of samples which it is our
         # responsibility to integrate over.
         mi_list = engine.mutual_information(
-            colnos0, colnos1, evidence=evidence, N=numsamples,
+            colnos0, colnos1, constraints=evidence, N=numsamples,
             progress=True, statenos=cgpm_modelnos,
             multiprocess=self._multiprocess)
 
@@ -849,25 +849,36 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             bdb, generator_id, rowid, targets, constraints)
         # Perpare the rowid, query, and evidence for cgpm.
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
-        cgpm_query = targets
-        cgpm_evidence = {}
+        cgpm_targets = targets
+        cgpm_constraints = {}
         for colno, value in full_constraints:
             value_numeric = self._to_numeric(bdb, generator_id, colno, value)
             if not math.isnan(value_numeric):
-                cgpm_evidence.update({colno: value_numeric})
+                cgpm_constraints.update({colno: value_numeric})
         # Retrieve the engine.
         engine = self._engine(bdb, generator_id)
         samples = engine.simulate(
-            cgpm_rowid, cgpm_query, cgpm_evidence, N=num_samples,
-            accuracy=accuracy, statenos=cgpm_modelnos,
-            multiprocess=self._multiprocess)
+            rowid=cgpm_rowid,
+            targets=cgpm_targets,
+            constraints=cgpm_constraints,
+            inputs=None,
+            N=num_samples,
+            accuracy=accuracy,
+            statenos=cgpm_modelnos,
+            multiprocess=self._multiprocess
+        )
         weighted_samples = engine._likelihood_weighted_resample(
-            samples, cgpm_rowid, cgpm_evidence, statenos=cgpm_modelnos,
-            multiprocess=self._multiprocess)
+            samples=samples,
+            rowid=cgpm_rowid,
+            constraints=cgpm_constraints,
+            inputs=None,
+            statenos=cgpm_modelnos,
+            multiprocess=self._multiprocess
+        )
         def map_value(colno, value):
             return self._from_numeric(bdb, generator_id, colno, value)
         return [
-            [map_value(colno, row[colno]) for colno in cgpm_query]
+            [map_value(colno, row[colno]) for colno in cgpm_targets]
             for row in weighted_samples
         ]
 
@@ -876,24 +887,35 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         cgpm_modelnos = self._get_modelnos(bdb, generator_id, modelnos)
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
         # TODO: Handle nan values in the logpdf query.
-        cgpm_query = {
+        cgpm_targets = {
             colno: self._to_numeric(bdb, generator_id, colno, value)
             for colno, value in targets
         }
         # Build the evidence, ignoring nan values.
-        cgpm_evidence = {}
+        cgpm_constraints = {}
         for colno, value in constraints:
             value_numeric = self._to_numeric(bdb, generator_id, colno, value)
             if not math.isnan(value_numeric):
-                cgpm_evidence.update({colno: value_numeric})
+                cgpm_constraints.update({colno: value_numeric})
         # Retrieve the engine.
         engine = self._engine(bdb, generator_id)
         logpdfs = engine.logpdf(
-            cgpm_rowid, cgpm_query, cgpm_evidence, accuracy=None,
-            statenos=cgpm_modelnos, multiprocess=self._multiprocess)
+            rowid=cgpm_rowid,
+            targets=cgpm_targets,
+            constraints=cgpm_constraints,
+            inputs=None,
+            accuracy=None,
+            statenos=cgpm_modelnos,
+            multiprocess=self._multiprocess
+        )
         return engine._likelihood_weighted_integrate(
-            logpdfs, cgpm_rowid, cgpm_evidence,
-            statenos=cgpm_modelnos, multiprocess=self._multiprocess)
+            logpdfs=logpdfs,
+            rowid=cgpm_rowid,
+            constraints=cgpm_constraints,
+            inputs=None,
+            statenos=cgpm_modelnos,
+            multiprocess=self._multiprocess,
+        )
 
     def _unique_rowid(self, rowids):
         if len(set(rowids)) != 1:
@@ -998,19 +1020,19 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             # values sensibly yet, so until we have that sorted
             # out we both (a) omit nulls and (b) ignore errors in
             # incorporate.
-            query = {
+            obs_values = {
                 colno: row[i]
                 for i, colno in enumerate(outputs)
                 if not math.isnan(row[i])
             }
             n = len(outputs)
-            evidence = {
+            input_values = {
                 colno: row[n + i]
                 for i, colno in enumerate(inputs)
                 if not math.isnan(row[n + i])
             }
             try:
-                cgpm.incorporate(cgpm_rowid, query, evidence)
+                cgpm.incorporate(cgpm_rowid, obs_values, input_values)
             except Exception:
                 pass
         return cgpm
