@@ -21,15 +21,12 @@ import json
 import pytest
 import tempfile
 
-import crosscat.LocalEngine
-import crosscat.MultiprocessingEngine
-
 import bayeslite
 import bayeslite.bqlfn as bqlfn
 import bayeslite.core as core
 import bayeslite.metamodel as metamodel
 
-from bayeslite.metamodels.crosscat import CrosscatMetamodel
+from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
 
 from bayeslite import bql_quote_name
 from bayeslite.sqlite3_util import sqlite3_connection
@@ -40,17 +37,10 @@ def powerset(s):
     combinations = (itertools.combinations(s, r) for r in range(len(s) + 1))
     return itertools.chain.from_iterable(combinations)
 
-def local_crosscat():
-    return crosscat.LocalEngine.LocalEngine(seed=0)
-
-def multiprocessing_crosscat():
-    return crosscat.MultiprocessingEngine.MultiprocessingEngine(seed=0)
-
 @contextlib.contextmanager
 def bayesdb(metamodel=None, **kwargs):
     if metamodel is None:
-        crosscat = local_crosscat()
-        metamodel = CrosscatMetamodel(crosscat)
+        metamodel = CGPM_Metamodel(cgpm_registry={}, multiprocess=False)
     bdb = bayeslite.bayesdb_open(builtin_metamodels=False, **kwargs)
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)
     try:
@@ -114,20 +104,20 @@ def test_hackmetamodel():
     bdb.sql_execute('CREATE TABLE u AS SELECT * FROM t')
     bdb.execute('CREATE POPULATION p FOR t(b IGNORE; a NUMERICAL)')
     with pytest.raises(bayeslite.BQLError):
-        bdb.execute('CREATE GENERATOR p_cc FOR p USING crosscat(a NUMERICAL)')
+        bdb.execute('CREATE GENERATOR p_cc FOR p USING cgpm;')
     with pytest.raises(bayeslite.BQLError):
-        bdb.execute('CREATE GENERATOR p_dd FOR p USING dotdog(a NUMERICAL)')
+        bdb.execute('CREATE GENERATOR p_dd FOR p USING dotdog;')
     dotdog_metamodel = DotdogMetamodel()
     bayeslite.bayesdb_register_metamodel(bdb, dotdog_metamodel)
     bayeslite.bayesdb_deregister_metamodel(bdb, dotdog_metamodel)
     bayeslite.bayesdb_register_metamodel(bdb, dotdog_metamodel)
     with pytest.raises(bayeslite.BQLError):
-        bdb.execute('CREATE GENERATOR p_cc FOR p USING crosscat(a NUMERICAL)')
+        bdb.execute('CREATE GENERATOR p_cc FOR p USING cgpm;')
     bdb.execute('CREATE GENERATOR p_dd FOR p USING dotdog(a NUMERICAL)')
     with pytest.raises(bayeslite.BQLError):
         bdb.execute('CREATE GENERATOR p_dd FOR p USING dotdog(a NUMERICAL)')
     with pytest.raises(bayeslite.BQLError):
-        bdb.execute('CREATE GENERATOR p_cc FOR p USING crosscat(a NUMERICAL)')
+        bdb.execute('CREATE GENERATOR p_cc FOR p USING cgpm;')
     with pytest.raises(bayeslite.BQLError):
         bdb.execute('CREATE GENERATOR p_dd FOR p USING dotdog(a NUMERICAL)')
     # XXX Rest of test originally exercised default metamodel, but
@@ -138,7 +128,7 @@ def test_hackmetamodel():
 
 @contextlib.contextmanager
 def bayesdb_population(mkbdb, tab, pop, gen, table_schema, data, columns,
-        metamodel_name='crosscat'):
+        metamodel_name='cgpm'):
     with mkbdb as bdb:
         table_schema(bdb)
         data(bdb)
@@ -148,8 +138,8 @@ def bayesdb_population(mkbdb, tab, pop, gen, table_schema, data, columns,
         qmm = bql_quote_name(metamodel_name)
         bdb.execute('CREATE POPULATION %s FOR %s(%s)' %
             (qp, qt, ';'.join(columns)))
-        bdb.execute('CREATE GENERATOR %s FOR %s USING %s(%s)' %
-            (qg, qp, qmm, ','.join(columns)))
+        bdb.execute('CREATE GENERATOR %s FOR %s USING %s;' %
+            (qg, qp, qmm,))
         population_id = core.bayesdb_get_population(bdb, pop)
         generator_id = core.bayesdb_get_generator(bdb, population_id, gen)
         yield bdb, population_id, generator_id
@@ -294,8 +284,7 @@ def t1_subcat():
             'weight CATEGORICAL'])
 
 def t1_mp():
-    crosscat = multiprocessing_crosscat()
-    metamodel = CrosscatMetamodel(crosscat)
+    metamodel = CGPM_Metamodel(cgpm_registry={}, multiprocess=True)
     return bayesdb_population(bayesdb(metamodel=metamodel),
         't1', 'p1', 'p1_cc', t1_schema, t1_data,
          columns=['id IGNORE','label CATEGORICAL', 'age NUMERICAL',
@@ -388,7 +377,7 @@ def test_t1_analysis_time_deadline():
         pass
 
 def test_t1_analysis_iter_deadline__ci_slow():
-    with analyzed_bayesdb_population(t1(), 10, 1, max_seconds=10):
+    with analyzed_bayesdb_population(t1(), 5, 1, max_seconds=10):
         pass
 
 @pytest.mark.parametrize('rowid,colno,confidence',
@@ -426,6 +415,7 @@ def test_t1_simulate(colnos, constraints, numpredictions):
                 (i, core.bayesdb_population_cell_value(
                     bdb, population_id, rowid, i))
                 for i in constraints
+                if i not in colnos
             ]
         bqlfn.bayesdb_simulate(bdb, population_id, None, None, constraints,
             colnos, numpredictions=numpredictions)
@@ -532,66 +522,6 @@ def test_row_column_predictive_probability(exname, rowid, colno):
                 ?, NULL, NULL, ?, \'%s\', \'%s\')
             ''' % (targets, constraints), (population_id, rowid)
         ).fetchall()
-
-def test_crosscat_constraints():
-    class FakeEngine(crosscat.LocalEngine.LocalEngine):
-        def predictive_probability_multistate(self, M_c, X_L_list,
-                X_D_list, Y, Q):
-            self._last_Y = Y
-            sup = super(FakeEngine, self)
-            return sup.simple_predictive_probability_multistate(M_c=M_c,
-                X_L_list=X_L_list, X_D_list=X_D_list, Y=Y, Q=Q)
-        def simple_predictive_sample(self, seed, M_c, X_L, X_D, Y, Q, n):
-            self._last_Y = Y
-            return super(FakeEngine, self).simple_predictive_sample(seed=seed,
-                M_c=M_c, X_L=X_L, X_D=X_D, Y=Y, Q=Q, n=n)
-        def impute_and_confidence(self, seed, M_c, X_L, X_D, Y, Q, n):
-            self._last_Y = Y
-            return super(FakeEngine, self).impute_and_confidence(seed=seed,
-                M_c=M_c, X_L=X_L, X_D=X_D, Y=Y, Q=Q, n=n)
-    engine = FakeEngine(seed=0)
-    mm = CrosscatMetamodel(engine)
-    with bayesdb(metamodel=mm) as bdb:
-        t1_schema(bdb)
-        t1_data(bdb)
-        bdb.execute('''
-            CREATE POPULATION p1 FOR t1 (
-                id IGNORE;
-                label CATEGORICAL;
-                age NUMERICAL;
-                weight NUMERICAL
-            )
-        ''')
-        bdb.execute('''
-            CREATE GENERATOR p1_cc FOR p1 USING crosscat(
-                label CATEGORICAL,
-                age NUMERICAL,
-                weight NUMERICAL
-            )
-        ''')
-        pid = core.bayesdb_get_population(bdb, 'p1')
-        assert core.bayesdb_variable_number(bdb, pid, None, 'label') == 1
-        assert core.bayesdb_variable_number(bdb, pid, None, 'age') == 2
-        assert core.bayesdb_variable_number(bdb, pid, None, 'weight') == 3
-        gid = core.bayesdb_get_generator(bdb, pid, 'p1_cc')
-        from bayeslite.metamodels.crosscat import crosscat_cc_colno
-        assert crosscat_cc_colno(bdb, gid, 1) == 0
-        assert crosscat_cc_colno(bdb, gid, 2) == 1
-        assert crosscat_cc_colno(bdb, gid, 3) == 2
-        bdb.execute('INITIALIZE 1 MODEL FOR p1_cc')
-        bdb.execute('ANALYZE p1_cc FOR 1 ITERATION WAIT')
-        bdb.execute('ESTIMATE PROBABILITY DENSITY OF age = 8'
-            ' GIVEN (weight = 16)'
-            ' BY p1').next()
-        assert engine._last_Y == [(28, 2, 16)]
-        bdb.execute("SELECT age FROM t1 WHERE label = 'baz'").next()
-        bdb.execute("INFER age FROM p1 WHERE label = 'baz'").next()
-        assert engine._last_Y == [(3, 0, 1), (3, 2, 32)]
-        bdb.execute('SIMULATE weight FROM p1 GIVEN age = 8 LIMIT 1').next()
-        assert engine._last_Y == [(28, 1, 8)]
-        # Simulate with an unknown nominal value should throw an error.
-        with pytest.raises(bayeslite.BQLError):
-            bdb.execute('SIMULATE weight FROM p1 GIVEN label = \'q\' LIMIT 1;')
 
 def test_bayesdb_population_fresh_row_id():
     with bayesdb_population(
