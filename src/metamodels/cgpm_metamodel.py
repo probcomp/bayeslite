@@ -557,6 +557,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             self, bdb, generator_id, modelnos=None, iterations=None,
             max_seconds=None, ckpt_iterations=None, ckpt_seconds=None,
             program=None):
+        # No analysis specified.
+        if not iterations and not max_seconds:
+            return
 
         # Checkpoint by seconds disabled.
         if ckpt_seconds:
