@@ -1246,6 +1246,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         the user specified `constraints` will remain there, and probably result
         in an error by cgpm.
         """
+        # Handle `None` constraints.
+        constraints = constraints or []
         # Retrieve table constraints.
         table_constraints = self._retrieve_table_constraints(
             bdb, generator_id, rowid)
@@ -1264,7 +1266,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                     % (names,))
         # Ignore table_constraints if they are in the targets.
         table_constraints = [c for c in table_constraints if c[0] not in targets]
-        return constraints + table_constraints
+        return table_constraints + constraints
 
     def _retrieve_table_constraints(self, bdb, generator_id, rowid):
         """If `rowid` exists in table but is unincorporated, load the data."""
