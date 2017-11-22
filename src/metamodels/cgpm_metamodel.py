@@ -1104,8 +1104,12 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Check whether cached_engine is latest version on disk.
         cached_stamp = self._get_cache_entry(bdb, generator_id, 'stamp')
         latest_stamp = self._engine_stamp(bdb, generator_id)
-        assert cached_stamp <= latest_stamp
-        # Return the cached_engine if stamps match, else None
+        # XXX This assertion, which we expected to be true in general, will
+        # actually fail if the analyze statement was placed in a rollback, in
+        # which case the cached stamp would have incremented but the latest
+        # stamp would have been rolled back. Therefore, return an engine if and
+        # only if the stamps match.
+        # --- incorrect assertion --> assert cached_stamp <= latest_stamp
         return cached_engine if cached_stamp == latest_stamp else None
 
     def _engine_stamp(self, bdb, generator_id):

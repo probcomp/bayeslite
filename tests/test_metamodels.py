@@ -17,21 +17,19 @@
 import pytest
 import tempfile
 
-import crosscat.LocalEngine
-
 import bayeslite
 
 import bayeslite.core as core
 
 from bayeslite import bql_quote_name
-from bayeslite.metamodels.crosscat import CrosscatMetamodel
+from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
 from bayeslite.metamodels.iid_gaussian import StdNormalMetamodel
 
 examples = {
-    'crosscat': (
-        lambda: CrosscatMetamodel(crosscat.LocalEngine.LocalEngine(seed=0)),
+    'cgpm': (
+        lambda: CGPM_Metamodel(cgpm_registry={}, multiprocess=False),
         't',
-        'CREATE TABLE t(x NUMERIC, y CYCLIC, z CATEGORICAL)',
+        'CREATE TABLE t(x NUMERIC, y NUMERIC, z NUMERIC)',
         'INSERT INTO t (x, y, z) VALUES (?, ?, ?)',
         [
             (0, 1.57, 'foo'),
@@ -42,10 +40,10 @@ examples = {
         'p',
         'p_cc',
         'CREATE POPULATION p FOR t'
-            '(x NUMERICAL; y CYCLIC; z CATEGORICAL)',
-        'CREATE GENERATOR p_cc FOR p USING crosscat()',
-        'CREATE GENERATOR p_cc FOR p USING crosscat(DEPENDENT)',
-        'CREATE GENERATOR p_cc FOR p USING crosscat(INDEPENDENT)',
+            '(x NUMERICAL; y NUMERICAL; z CATEGORICAL)',
+        'CREATE GENERATOR p_cc FOR p USING cgpm()',
+        'CREATE GENERATOR p_cc FOR p USING crosscat',
+        'CREATE GENERATOR p_cc FOR p USING cgpm ...' ,
     ),
     'iid_gaussian': (
         lambda: StdNormalMetamodel(seed=0),
