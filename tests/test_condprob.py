@@ -16,7 +16,7 @@
 
 import bayeslite
 
-def test_conditional_probability_pathologies():
+def test_conditional_probability_simple_inferences():
     data = [
         ['x', 'a'], ['x', 'a'], ['x', 'a'],
         ['y', 'b'], ['y', 'b'], ['y', 'b'],
@@ -30,20 +30,24 @@ def test_conditional_probability_pathologies():
                 model foo, bar as categorical
             )
         ''')
-        bdb.execute('create generator p_cc for p using crosscat()')
-        bdb.execute('initialize 1 models for p_cc')
-        bdb.execute('analyze p_cc for 1 iterations wait')
-        assert bdb.execute('''
-            estimate probability density of foo = 'x' by p
-        ''').fetchvalue() < 1
-        assert bdb.execute('''
-            estimate probability density of foo = 'x' given (foo = 'x') by p
-        ''').fetchvalue() == 1
-        assert bdb.execute('''
-            estimate probability density of value 'x' given (foo = 'x')
-                from columns of p
-                where v.name = 'foo'
-        ''').fetchvalue() == 1
-        assert bdb.execute('''
-            estimate probability density of foo = 'x' given (foo = 'y') by p
-        ''').fetchvalue() == 0
+        bdb.execute('create generator p_cc for p using cgpm;')
+        bdb.execute('initialize 10 models for p_cc')
+        bdb.execute('analyze p_cc for 100 iterations wait')
+        cursor = bdb.execute('''
+            estimate
+                probability density of foo = 'x',
+                probability density of foo = 'x' given (bar = 'a'),
+                probability density of foo = 'x' given (bar = 'b'),
+                probability density of foo = 'y',
+                probability density of foo = 'y' given (bar = 'a'),
+                probability density of foo = 'y' given (bar = 'b')
+
+            by p
+        ''').fetchall()
+        px, pxa, pxb, py, pya, pyb = cursor[0]
+        # Inferences on x.
+        assert px < pxa
+        assert pxb < px
+        # Inferences on y.
+        assert py < pyb
+        assert pya < py
