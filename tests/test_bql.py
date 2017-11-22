@@ -2455,7 +2455,7 @@ def test_create_generator_ifnotexists():
     #
     # [TRC 20160627: The above comment appears to be no longer true --
     # if it was ever true.]
-    for using_clause in ('crosscat()',):
+    for using_clause in ('cgpm()',):
         with bayeslite.bayesdb_open() as bdb:
             bdb.sql_execute('CREATE TABLE t(x, y, z)')
             bdb.sql_execute('INSERT INTO t VALUES(1,2,3)')
