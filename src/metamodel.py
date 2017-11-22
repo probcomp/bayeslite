@@ -19,24 +19,24 @@
 To be used to model data in a :class:`bayeslite.BayesDB` handle, a metamodel
 must first be registered with :func:`bayesdb_register_metamodel`.
 
-The Crosscat metamodel is registered by default, but we can suppress
+The CGPM metamodel is registered by default, but we can suppress
 that for illustration::
 
    import bayeslite
-   import crosscat.LocalEngine
-   from bayeslite.metamodels.crosscat import CrosscatMetamodel
+   from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
 
    bdb = bayeslite.bayesdb_open(pathname='foo.bdb', builtin_metamodels=False)
-   cc = crosscat.LocalEngine.LocalEngine(seed=0)
-   bayeslite.bayesdb_register_metamodel(bdb, CrosscatMetamodel(cc))
+   metamodel = CGPM_Metamodel(cgpm_registry=dict(), multiprocess=False)
+   bayeslite.bayesdb_register_metamodel(bdb, metamodel)
 
-Then you can model a table with Crosscat and query the probable
-implications of the data in the table::
+Then you can model a table and query the probable implications of the data in
+the table::
 
-   bdb.execute('create generator t_cc for t using crosscat(guess(*))')
+   bdb.execute('create population p for t with schema(guess stattypes for (*))')
+   bdb.execute('create generator p_cc for t using cgpm;')
    bdb.execute('initialize 10 models for t_cc')
    bdb.execute('analyze t_cc for 10 iterations wait')
-   for x in bdb.execute('estimate pairwise dependence probablity from t_cc'):
+   for x in bdb.execute('estimate pairwise dependence probability from t_cc'):
        print x
 """
 
