@@ -29,26 +29,33 @@ dha_csv = os.path.join(root, 'dha.csv')
 
 
 # Test that simulating a column constrained to have a specific value
-# returns that value, not any old random draw from the observed
-# variables given the conditionally drawn latent variables.
+# returns an error.
 #
 # XXX This should be a metamodel-independent test.
-def test_simulate_drawconstraint():
+def test_simulate_drawconstraint_error__ci_slow():
     with bayeslite.bayesdb_open() as bdb:
         with open(dha_csv, 'rU') as f:
             read_csv.bayesdb_read_csv(bdb, 'dha', f, header=True, create=True)
+        bdb.metamodels['cgpm'].set_multiprocess(False)
         bayesdb_guess_population(
             bdb, 'hospital', 'dha', overrides=[('name', 'key')])
         bdb.execute(
-            'CREATE METAMODEL hospital_cc FOR hospital USING crosscat()')
+            'CREATE METAMODEL hospital_cc FOR hospital USING cgpm;')
         bdb.execute('INITIALIZE 1 MODEL FOR hospital_cc')
-        bdb.execute('ANALYZE hospital_cc FOR 1 ITERATION WAIT')
+        bdb.execute('ANALYZE hospital_cc FOR 1 ITERATION WAIT (OPTIMIZED);')
+        with pytest.raises(ValueError):
+            bdb.execute('''
+                SIMULATE ttl_mdcr_spnd, n_death_ill FROM hospital
+                    GIVEN TTL_MDCR_SPND = 40000
+                    LIMIT 100
+            ''').fetchall()
         samples = bdb.execute('''
-            SIMULATE ttl_mdcr_spnd, n_death_ill FROM hospital
+            SIMULATE n_death_ill FROM hospital
                 GIVEN TTL_MDCR_SPND = 40000
                 LIMIT 100
         ''').fetchall()
-        assert [s[0] for s in samples] == [40000] * 100
+        assert len(samples) == 100
+        assert all(len(s) == 1 for s in samples)
 
 
 data = [
