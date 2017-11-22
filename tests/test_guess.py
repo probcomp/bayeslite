@@ -23,9 +23,6 @@ import bayeslite
 from bayeslite.guess import bayesdb_guess_population
 from bayeslite.guess import bayesdb_guess_stattypes
 from bayeslite.exception import BQLError
-from bayeslite.metamodels.crosscat import CrosscatMetamodel
-
-import crosscat.LocalEngine
 
 def test_guess_stattypes():
     n = ['a', 'b']
@@ -132,16 +129,13 @@ def test_guess_stattypes():
         ['numerical', 'numerical']
 
 def test_guess_population():
-    bdb = bayeslite.bayesdb_open(builtin_metamodels=False)
+    bdb = bayeslite.bayesdb_open()
     bdb.sql_execute('CREATE TABLE t(x NUMERIC, y NUMERIC, z NUMERIC)')
     a_z = range(ord('a'), ord('z') + 1)
     aa_zz = ((c, d) for c in a_z for d in a_z)
     data = ((chr(c) + chr(d), (c + d) % 2, math.sqrt(c + d)) for c, d in aa_zz)
     for row in data:
         bdb.sql_execute('INSERT INTO t (x, y, z) VALUES (?, ?, ?)', row)
-    cc = crosscat.LocalEngine.LocalEngine(seed=0)
-    metamodel = CrosscatMetamodel(cc)
-    bayeslite.bayesdb_register_metamodel(bdb, metamodel)
     with pytest.raises(ValueError):
         # No modelled columns.  (x is key.)
         bayesdb_guess_population(bdb, 'p', 't',
@@ -156,7 +150,7 @@ def test_guess_population():
     ]
 
 def test_guess_schema():
-    bdb = bayeslite.bayesdb_open(builtin_metamodels=False)
+    bdb = bayeslite.bayesdb_open()
     bdb.sql_execute('CREATE TABLE t(x NUMERIC, y NUMERIC, z NUMERIC)')
     a_z = range(ord('a'), ord('z') + 1)
     aa_zz = ((c, d) for c in a_z for d in a_z)
