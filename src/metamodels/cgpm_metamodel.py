@@ -149,8 +149,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Store the schema.
         bdb.sql_execute('''
-            INSERT INTO bayesdb_cgpm_generator (generator_id, schema_json)
-                VALUES (?, ?)
+            INSERT INTO bayesdb_cgpm_generator
+                (generator_id, schema_json, engine_json) VALUES (?, ?, NULL)
         ''', (generator_id, json_dumps(schema)))
 
         # Get the underlying population and table.
@@ -1077,12 +1077,13 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             SELECT engine_json, engine_stamp FROM bayesdb_cgpm_generator
                 WHERE generator_id = ?
         ''', (generator_id,)).fetchall()
-        if not cursor:
-            generator = core.bayesdb_generator_name(bdb, generator_id)
-            raise BQLError(bdb,
-                'No models initialized for generator: %r' % (generator,))
+        engine_json, engine_stamp = cursor[0]
 
-        (engine_json, engine_stamp) = cursor[0]
+        # Check if the generator has an initialized engine.
+        if not engine_json:
+            generator = core.bayesdb_generator_name(bdb, generator_id)
+            raise BQLError(bdb, 'No models initialized for generator: %r'
+                % (generator,))
 
         # Deserialize the engine.
         engine = Engine.from_metadata(
