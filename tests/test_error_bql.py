@@ -24,7 +24,7 @@ import test_core
 def test_droppop_with_metamodels():
     with test_core.t1() as (bdb, _population_id, _generator_id):
         distinctive_name = 'frobbledithorpequack'
-        bdb.execute('create metamodel %s for p1 using crosscat' %
+        bdb.execute('create metamodel %s for p1 using cgpm' %
             (distinctive_name,))
         with pytest.raises(bayeslite.BQLError):
             try:
