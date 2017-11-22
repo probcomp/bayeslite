@@ -245,7 +245,7 @@ def bayesdb_variable_number(bdb, population_id, generator_id, name):
 def bayesdb_variable_names(bdb, population_id, generator_id):
     """Return a list of the names of columns modelled in `population_id`."""
     colnos = bayesdb_variable_numbers(bdb, population_id, generator_id)
-    return [bayesdb_variable_name(bdb, population_id, colno)
+    return [bayesdb_variable_name(bdb, population_id, generator_id, colno)
         for colno in colnos]
 
 def bayesdb_variable_numbers(bdb, population_id, generator_id):
@@ -258,11 +258,14 @@ def bayesdb_variable_numbers(bdb, population_id, generator_id):
     ''', (population_id, generator_id))
     return [colno for (colno,) in cursor]
 
-def bayesdb_variable_name(bdb, population_id, colno):
+def bayesdb_variable_name(bdb, population_id, generator_id, colno):
     """Return the name a population variable."""
     cursor = bdb.sql_execute('''
-        SELECT name FROM bayesdb_variable WHERE population_id = ? AND colno = ?
-    ''', (population_id, colno))
+        SELECT name FROM bayesdb_variable
+            WHERE population_id = ?
+                AND (generator_id IS NULL OR generator_id = ?)
+                AND colno = ?
+    ''', (population_id, generator_id, colno))
     return cursor_value(cursor)
 
 def bayesdb_variable_stattype(bdb, population_id, colno):
@@ -328,7 +331,7 @@ def bayesdb_population_cell_value(bdb, population_id, rowid, colno):
         # Latent variables do not appear in the table.
         return None
     table_name = bayesdb_population_table(bdb, population_id)
-    var = bayesdb_variable_name(bdb, population_id, colno)
+    var = bayesdb_variable_name(bdb, population_id, None, colno)
     qt = sqlite3_quote_name(table_name)
     qv = sqlite3_quote_name(var)
     value_sql = 'SELECT %s FROM %s WHERE _rowid_ = ?' % (qv, qt)

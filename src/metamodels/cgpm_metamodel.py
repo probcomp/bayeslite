@@ -239,7 +239,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
     def add_column(self, bdb, generator_id, colno):
 
         population_id = core.bayesdb_generator_population(bdb, generator_id)
-        varname = core.bayesdb_variable_name(bdb, population_id, colno)
+        varname = core.bayesdb_variable_name(bdb, population_id, generator_id, colno)
 
         # Ensure variable exists in population.
         if not core.bayesdb_has_variable(bdb, population_id, None, varname):
@@ -1262,13 +1262,16 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             table_cols = set(c[0] for c in table_constraints)
             intersection = set.intersection(user_cols, table_cols)
             if intersection:
+                population_id = core.bayesdb_generator_population(
+                    bdb, generator_id)
                 names = [
-                    (core.bayesdb_variable_name(bdb, generator_id, c[0]), c[1])
+                    (core.bayesdb_variable_name(
+                        bdb, population_id, generator_id, c[0]),
+                    c[1])
                     for c in constraints if c[0] in intersection
                 ]
                 raise BQLError(bdb,
-                    'Cannot override existing values in table: %s'
-                    % (names,))
+                    'Cannot override existing values in table: %s' % (names,))
         # Ignore table_constraints if they are in the targets.
         table_constraints = [c for c in table_constraints if c[0] not in targets]
         return table_constraints + constraints

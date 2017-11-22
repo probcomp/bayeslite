@@ -490,7 +490,7 @@ def test_t1_column_value_probability(colno, rowid):
         bqlfn.bql_column_value_probability(
             bdb, population_id, None, None, colno, value)
         table_name = core.bayesdb_population_table(bdb, population_id)
-        var = core.bayesdb_variable_name(bdb, population_id, colno)
+        var = core.bayesdb_variable_name(bdb, population_id, None, colno)
         qt = bql_quote_name(table_name)
         qv = bql_quote_name(var)
         sql = '''

@@ -121,7 +121,8 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         table = core.bayesdb_population_table(bdb, population_id)
         for colno in core.bayesdb_variable_numbers(bdb, population_id, None):
-            column_name = core.bayesdb_variable_name(bdb, population_id, colno)
+            column_name = core.bayesdb_variable_name(
+                bdb, population_id, generator_id, colno)
             stattype = core.bayesdb_variable_stattype(
                 bdb, population_id, colno)
             if not stattype == 'numerical':

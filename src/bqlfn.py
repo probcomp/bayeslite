@@ -56,8 +56,8 @@ def bql_variable_stattypes_and_data(bdb, population_id, colno0, colno1):
     st1 = core.bayesdb_variable_stattype(bdb, population_id, colno1)
     table_name = core.bayesdb_population_table(bdb, population_id)
     qt = sqlite3_quote_name(table_name)
-    varname0 = core.bayesdb_variable_name(bdb, population_id, colno0)
-    varname1 = core.bayesdb_variable_name(bdb, population_id, colno1)
+    varname0 = core.bayesdb_variable_name(bdb, population_id, None, colno0)
+    varname1 = core.bayesdb_variable_name(bdb, population_id, None, colno1)
     qvn0 = sqlite3_quote_name(varname0)
     qvn1 = sqlite3_quote_name(varname1)
     data_sql = '''
@@ -74,11 +74,11 @@ def bql_column_correlation(bdb, population_id, _generator_id, _modelnos,
     if colno0 < 0:
         raise BQLError(bdb,
             'No correlation for latent variable: %r' %
-            (core.bayesdb_variable_name(bdb, population_id, colno0),))
+            (core.bayesdb_variable_name(bdb, population_id, None, colno0),))
     if colno1 < 0:
         raise BQLError(bdb,
             'No correlation for latent variable: %r' %
-            (core.bayesdb_variable_name(bdb, population_id, colno1),))
+            (core.bayesdb_variable_name(bdb, population_id, None, colno1),))
     (st0, st1, data0, data1) = bql_variable_stattypes_and_data(bdb,
         population_id, colno0, colno1)
     if (st0, st1) not in correlation_methods:
@@ -90,13 +90,14 @@ def bql_column_correlation(bdb, population_id, _generator_id, _modelnos,
 def bql_column_correlation_pvalue(
         bdb, population_id, _generator_id, _modelnos, colno0, colno1):
     if colno0 < 0:
-        raise BQLError(bdb,
-            'No correlation p-value for latent variable: %r' %
-            (core.bayesdb_variable_name(bdb, population_id, colno0),))
+        v = core.bayesdb_variable_name(bdb, population_id, _generator_id, colno0)
+        raise BQLError(bdb, 'No correlation p-value for latent variable: %r'
+            % (varname,))
     if colno1 < 0:
-        raise BQLError(bdb,
-            'No correlation p-value for latent variable: %r' %
-            (core.bayesdb_variable_name(bdb, population_id, colno1),))
+        varname = core.bayesdb_variable_name(
+            bdb, population_id, _generator_id, colno1)
+        raise BQLError(bdb, 'No correlation p-value for latent variable: %r'
+            % (varname,))
     (st0, st1, data0, data1) = bql_variable_stattypes_and_data(bdb,
         population_id, colno0, colno1)
     if (st0, st1) not in correlation_p_methods:

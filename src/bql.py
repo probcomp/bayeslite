@@ -737,7 +737,7 @@ def execute_phrase(bdb, phrase, bindings=()):
         target_values = [row[0] for row in rows]
         given_values = [row[1:] for row in rows]
         given_names = [
-            core.bayesdb_variable_name(bdb, population_id, given)
+            core.bayesdb_variable_name(bdb, population_id, generator_id, given)
             for given in colno_givens_unique
         ]
         # Compute the coefficients. The import to regress_ols is here since the
