@@ -18,7 +18,7 @@ import argparse
 import os
 
 import bayeslite
-from bayeslite.metamodels.crosscat import CrosscatMetamodel
+from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
 import bayeslite.shell.core as shell
 import bayeslite.shell.hook as hook
 
@@ -60,16 +60,10 @@ def run(stdin, stdout, stderr, argv):
     bdb = bayeslite.bayesdb_open(pathname=args.bdbpath,
         builtin_metamodels=False)
 
-    if args.jobs != 1:
-        import crosscat.MultiprocessingEngine as ccme
-        jobs = args.jobs if args.jobs > 0 else None
-        crosscat = ccme.MultiprocessingEngine(seed=args.seed, cpu_count=jobs)
-    else:
-        import crosscat.LocalEngine as ccle
-        crosscat = ccle.LocalEngine(seed=args.seed)
-    metamodel = CrosscatMetamodel(crosscat)
+    multiprocess = args.jobs != 1
+    metamodel = CGPM_Metamodel(cgpm_registry={}, multiprocess=multiprocess)
     bayeslite.bayesdb_register_metamodel(bdb, metamodel)
-    bdbshell = shell.Shell(bdb, 'crosscat', stdin, stdout, stderr)
+    bdbshell = shell.Shell(bdb, 'cgpm', stdin, stdout, stderr)
     with hook.set_current_shell(bdbshell):
         if not args.no_init_file:
             init_file = os.path.join(os.path.expanduser('~/.bayesliterc'))

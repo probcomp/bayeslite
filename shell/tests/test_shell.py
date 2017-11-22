@@ -115,7 +115,7 @@ def spawntablepop(spawntable):
 def spawntablepopgen(spawntablepop):
     table, pop, c = spawntablepop
     c.sendexpectcmd(
-        'create generator hospitals_cc for %s using crosscat;' % (pop,))
+        'create generator hospitals_cc for %s using cgpm;' % (pop,))
     c.expect_prompt()
     return table, pop, 'hospitals_cc', c
 
