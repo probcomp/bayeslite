@@ -764,9 +764,9 @@ def test_trivial_commands():
         ])]
     assert parse_bql_string('drop population satellites') == \
         [ast.DropPop(False, 'satellites')]
-    assert parse_bql_string('create generator t_cc for t using crosscat'
+    assert parse_bql_string('create generator t_cc for t using cgpm'
             '(xyz numerical, pqr categorical, lmn cyclic)') == \
-        [ast.CreateGen('t_cc', False, 't', None, 'crosscat', [
+        [ast.CreateGen('t_cc', False, 't', None, 'cgpm', [
             ['xyz', 'numerical'],
             ['pqr', 'categorical'],
             ['lmn', 'cyclic'],
@@ -783,17 +783,17 @@ def test_trivial_commands():
                 ['lmn', 'cyclic'],
         ])]
     assert parse_bql_string('create generator t_cc if not exists'
-            ' for t using crosscat'
+            ' for t using cgpm'
             '(xyz numerical, pqr categorical, lmn cyclic)') == \
-        [ast.CreateGen('t_cc', True, 't', None, 'crosscat', [
+        [ast.CreateGen('t_cc', True, 't', None, 'cgpm', [
             ['xyz', 'numerical'],
             ['pqr', 'categorical'],
             ['lmn', 'cyclic'],
         ])]
     assert parse_bql_string('create generator if not exists t_cc'
-            ' for t using crosscat'
+            ' for t using cgpm'
             '(xyz numerical, pqr categorical, lmn cyclic)') == \
-        [ast.CreateGen('t_cc', True, 't', None, 'crosscat', [
+        [ast.CreateGen('t_cc', True, 't', None, 'cgpm', [
             ['xyz', 'numerical'],
             ['pqr', 'categorical'],
             ['lmn', 'cyclic'],
@@ -801,11 +801,11 @@ def test_trivial_commands():
     # XXX Schema of [[]] instead of [] is kinda wacky.  Fix?  (But
     # make sure the empty-parens and no-parens cases are equivalent.)
     assert parse_bql_string('create generator t_cc'
-            ' for t using crosscat()') == \
-        [ast.CreateGen('t_cc', False, 't', None, 'crosscat', [[]])]
+            ' for t using cgpm()') == \
+        [ast.CreateGen('t_cc', False, 't', None, 'cgpm', [[]])]
     assert parse_bql_string('create generator t_cc'
-            ' for t using crosscat') == \
-        [ast.CreateGen('t_cc', False, 't', None, 'crosscat', [[]])]
+            ' for t using cgpm') == \
+        [ast.CreateGen('t_cc', False, 't', None, 'cgpm', [[]])]
     assert parse_bql_string('initialize 1 model for t;') == \
         [ast.InitModels(False, 't', 1)]
     assert parse_bql_string('initialize 1 model if not exists for t;') == \
