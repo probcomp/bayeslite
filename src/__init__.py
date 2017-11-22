@@ -93,11 +93,6 @@ __all__ = [
     'IBayesDBTracer',
 ]
 
-# Register crosscat as a builtin metamodel.
-from bayeslite.metamodels.crosscat import CrosscatMetamodel
-from crosscat.LocalEngine import LocalEngine as CrosscatLocalEngine
-bayesdb_builtin_metamodel(CrosscatMetamodel(CrosscatLocalEngine(seed=0)))
-
 # Register cgpm as a builtin metamodel.
 from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
 bayesdb_builtin_metamodel(CGPM_Metamodel({}, multiprocess=True))
