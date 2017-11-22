@@ -17,12 +17,10 @@
 import pytest
 import tempfile
 
-import crosscat.LocalEngine
-
 import bayeslite
 
-from bayeslite.exception import BQLError
-from bayeslite.metamodels.crosscat import CrosscatMetamodel
+from bayeslite.math_util import abserr
+from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
 
 
 dummy_data = iter(['kerberos,age,city',
@@ -53,9 +51,8 @@ def test_codebook_value_map():
     '''
 
     with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
-        cc = crosscat.LocalEngine.LocalEngine(seed=0)
-        ccme = CrosscatMetamodel(cc)
-        bayeslite.bayesdb_register_metamodel(bdb, ccme)
+        metamodel = CGPM_Metamodel(cgpm_registry={}, multiprocess=True)
+        bayeslite.bayesdb_register_metamodel(bdb, metamodel)
 
         bayeslite.bayesdb_read_csv(bdb,'dummy', dummy_data,
             header=True,create=True)
@@ -73,7 +70,7 @@ def test_codebook_value_map():
                 city CATEGORICAL
             )
         ''')
-        bdb.execute('CREATE GENERATOR dummy_cc FOR dummy_pop USING crosscat')
+        bdb.execute('CREATE GENERATOR dummy_cc FOR dummy_pop USING cgpm')
         bdb.execute('INITIALIZE 10 MODELS FOR dummy_cc')
         bdb.execute('ANALYZE dummy_cc FOR 20 ITERATIONS WAIT')
         bdb.execute('SIMULATE age FROM dummy_pop GIVEN city = RIO LIMIT 5')
@@ -82,8 +79,16 @@ def test_codebook_value_map():
                 ('jackie', 18, 'LA'), ('rocker', 22, 'DC')
         ''')
         bdb.execute('ANALYZE dummy_cc FOR 20 ITERATIONS WAIT')
-        with pytest.raises(BQLError):
-            bdb.execute('SIMULATE age FROM dummy_pop GIVEN city = LA LIMIT 5')
+        # city = 'LA' is not seen in the training dataset, so the constraint
+        # is ignored when conditioning the probability density of age = 1.
+        p0 = bdb.execute('''
+            ESTIMATE PROBABILITY DENSITY OF age = 1 GIVEN (city = 'LA')
+            BY dummy_pop
+        ''').fetchall()
+        p1 = bdb.execute('''
+            ESTIMATE PROBABILITY DENSITY OF age = 1 BY dummy_pop
+        ''').fetchall()
+        assert abserr(p0[0][0], p1[0][0]) < 1e-5
 
 def test_empty_codebook():
     with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
