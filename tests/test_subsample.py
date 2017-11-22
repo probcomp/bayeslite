@@ -16,22 +16,19 @@
 
 import os
 
-import crosscat.LocalEngine
-
 import bayeslite
 import bayeslite.read_csv as read_csv
 
 from bayeslite.core import bayesdb_get_generator
 from bayeslite.guess import bayesdb_guess_population
-from bayeslite.metamodels.crosscat import CrosscatMetamodel
+from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
 
 root = os.path.dirname(os.path.abspath(__file__))
 dha_csv = os.path.join(root, 'dha.csv')
 
 def test_subsample():
     with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
-        cc = crosscat.LocalEngine.LocalEngine(seed=0)
-        metamodel = CrosscatMetamodel(cc)
+        metamodel = CGPM_Metamodel(cgpm_registry={}, multiprocess=False)
         bayeslite.bayesdb_register_metamodel(bdb, metamodel)
         with open(dha_csv, 'rU') as f:
             read_csv.bayesdb_read_csv(bdb, 'dha', f, header=True, create=True)
@@ -40,17 +37,15 @@ def test_subsample():
         bayesdb_guess_population(bdb, 'hospitals_sub', 'dha',
             overrides=[('name', 'key')])
         bdb.execute('''
-            CREATE GENERATOR hosp_full_cc FOR hospitals_full USING crosscat (
-                SUBSAMPLE(OFF)
-            )
+            CREATE GENERATOR hosp_full_cc FOR hospitals_full USING cgpm;
         ''')
         bdb.execute('''
-            CREATE GENERATOR hosp_sub_cc FOR hospitals_sub USING crosscat (
-                SUBSAMPLE(100)
+            CREATE GENERATOR hosp_sub_cc FOR hospitals_sub USING cgpm(
+                SUBSAMPLE 100
             )
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR hosp_sub_cc')
-        bdb.execute('ANALYZE hosp_sub_cc FOR 1 ITERATION WAIT')
+        bdb.execute('ANALYZE hosp_sub_cc FOR 1 ITERATION WAIT (OPTIMIZED)')
         bdb.execute('''
             ESTIMATE SIMILARITY TO (_rowid_=2) IN THE CONTEXT OF PNEUM_SCORE
             FROM hospitals_sub WHERE _rowid_ = 1 OR _rowid_ = 101
@@ -76,9 +71,9 @@ def test_subsample():
             WHERE _rowid_ = 1 OR _rowid_ = 101
         ''').fetchall()
         sql = '''
-            SELECT sql_rowid FROM bayesdb_crosscat_subsample
+            SELECT table_rowid FROM bayesdb_cgpm_individual
                 WHERE generator_id = ?
-                ORDER BY cc_row_id ASC
+                ORDER BY cgpm_rowid ASC
                 LIMIT 100
         '''
         gid_full = bayesdb_get_generator(bdb, None, 'hosp_full_cc')
