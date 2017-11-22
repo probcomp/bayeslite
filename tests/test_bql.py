@@ -2164,11 +2164,8 @@ def test_txn():
         # XXX To do: Make sure other effects (e.g., analysis) get
         # rolled back by ROLLBACK.
 
-@pytest.mark.parametrize('metamodel,mml', [
-    # (None, 'using crosscat()'),
-    (CGPM_Metamodel({}), 'using cgpm;')
-])
-def test_predprob_null(metamodel, mml):
+def test_predprob_null():
+    metamodel = CGPM_Metamodel({}, multiprocess=False)
     with test_core.bayesdb(metamodel=metamodel) as bdb:
         bdb.sql_execute('''
             create table foo (
@@ -2198,7 +2195,7 @@ def test_predprob_null(metamodel, mml):
                 z numerical;
             )
         ''')
-        bdb.execute('create metamodel pfoo_cc for pfoo %s;' % (mml,))
+        bdb.execute('create metamodel pfoo_cc for pfoo using cgpm;')
         bdb.execute('initialize 1 model for pfoo_cc')
         bdb.execute('analyze pfoo_cc for 1 iteration wait')
         # Null value => null predictive probability.
