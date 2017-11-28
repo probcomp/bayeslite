@@ -16,8 +16,8 @@ requirements:
     - numpy 1.11.*
     - python 2.7.*
   run:
-    #- cgpm
-    #- crosscat
+    - cgpm
+    - crosscat
     - jsonschema
     - numpy 1.11.*
     - scipy 0.17.*
@@ -26,8 +26,6 @@ requirements:
 test:
   requires:
     - apsw
-    - cgpm 0.1.1rc8
-    - crosscat 0.1.57rc6
     - pandas 0.18.*
     - pytest 2.8.*
     - python 2.7.*

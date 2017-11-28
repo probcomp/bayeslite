@@ -1,5 +1,10 @@
 language: python
 dist: trusty
+env:
+  global:
+    - PACKAGE_NAME=bayeslite
+    # get all the branches referencing this commit
+    - REAL_BRANCH=$(git ls-remote origin | sed -n "\|$TRAVIS_COMMIT\s\+refs/heads/|{s///p}")
 
 python:
   - 2.7
@@ -15,8 +20,8 @@ script:
   - export CONDA_PACKAGE_VERSION="${TRAVIS_TAG:-$(date +%Y.%m.%d)}"
   # remove leading v from tags if they exist
   - CONDA_PACKAGE_VERSION="$(sed s/^v// <<<$CONDA_PACKAGE_VERSION)"
-  # line below can removed in favor of conda meta.yaml deps after PRs merged and main package release
-  - conda config --add channels probcomp/label/dev
+  # use "edge" channel (latest master) for testing with cgpm/crosscat
+  - conda install -c probcomp/label/edge cgpm crosscat
   - conda build . -c probcomp
 after_success:
   - bash conda/upload.sh
