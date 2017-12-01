@@ -19,162 +19,17 @@ from bayeslite.util import cursor_value
 
 APPLICATION_ID = 0x42594442
 STALE_VERSIONS = (1,)
-USABLE_VERSIONS = (5, 6, 7, 8, 9, 10,)
+USABLE_VERSIONS = (11,)
 
 LATEST_VERSION = USABLE_VERSIONS[-1]
 
-bayesdb_schema_5 = '''
-PRAGMA user_version = 5;
+bayesdb_schema_11 = '''
+PRAGMA user_version = 11;
 
 CREATE TABLE bayesdb_metamodel (
-	name		TEXT COLLATE NOCASE NOT NULL PRIMARY KEY,
-	version		INTEGER NOT NULL
+    name        TEXT COLLATE NOCASE NOT NULL PRIMARY KEY,
+    version     INTEGER NOT NULL
 );
-
--- Statistics type.
-CREATE TABLE bayesdb_stattype (
-	name		TEXT COLLATE NOCASE NOT NULL PRIMARY KEY
-);
-
-INSERT INTO bayesdb_stattype VALUES ('categorical');
-INSERT INTO bayesdb_stattype VALUES ('cyclic');
-INSERT INTO bayesdb_stattype VALUES ('numerical');
-
-CREATE TABLE bayesdb_column (
-	tabname		TEXT COLLATE NOCASE NOT NULL,
-	colno		INTEGER NOT NULL CHECK (0 <= colno),
-	name		TEXT COLLATE NOCASE NOT NULL,
-	shortname	TEXT,
-	description	TEXT,
-	PRIMARY KEY(tabname, colno),
-	UNIQUE(tabname, name)
-);
-
-CREATE TABLE bayesdb_column_map (
-	tabname		TEXT COLLATE NOCASE NOT NULL,
-	colno		INTEGER NOT NULL,
-	key		TEXT NOT NULL,
-	value		TEXT NOT NULL,
-	PRIMARY KEY(tabname, colno, key),
-	FOREIGN KEY(tabname, colno) REFERENCES bayesdb_column(tabname, colno)
-);
-
-CREATE TABLE bayesdb_generator (
-	-- We use AUTOINCREMENT so that generator id numbers don't get
-	-- reused and are safe to hang onto outside a transaction.
-	id		INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
-				CHECK (0 < id),
-	name		TEXT COLLATE NOCASE NOT NULL UNIQUE,
-	tabname		TEXT COLLATE NOCASE NOT NULL,
-				-- REFERENCES sqlite_master(name)
-	metamodel	INTEGER NOT NULL REFERENCES bayesdb_metamodel(name)
-);
-
-CREATE TABLE bayesdb_generator_column (
-	generator_id	INTEGER NOT NULL REFERENCES bayesdb_generator(id),
-	colno		INTEGER NOT NULL,
-	stattype	TEXT NOT NULL REFERENCES bayesdb_stattype(name),
-	PRIMARY KEY(generator_id, colno)
-);
-
-CREATE TABLE bayesdb_generator_model (
-	generator_id	INTEGER NOT NULL REFERENCES bayesdb_generator(id),
-	modelno		INTEGER NOT NULL,
-	iterations	INTEGER NOT NULL CHECK (0 <= iterations),
-	PRIMARY KEY(generator_id, modelno)
-);
-'''
-
-bayesdb_schema_5to6 = '''
-PRAGMA user_version = 6;
-
--- ALTER TABLE bayesdb_generator
---     ADD COLUMN defaultp BOOLEAN DEFAULT 0;
-
--- CREATE UNIQUE INDEX bayesdb_generator_i_default ON bayesdb_generator (tabname)
---     WHERE defaultp;
-'''
-
-bayesdb_schema_6to7 = '''
-PRAGMA user_version = 7;
-
-CREATE TABLE bayesdb_session (
-	id		INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
-				CHECK (0 < id),
-	sent	BOOLEAN DEFAULT 0,
-	version	TEXT NOT NULL
-);
-
-CREATE TABLE bayesdb_session_entries (
-	id		INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
-				CHECK (0 < id),
-	session_id	INTEGER NOT NULL REFERENCES bayesdb_session(id),
-	type		TEXT CHECK (type IN ('bql','sql')) NOT NULL,
-	data		TEXT NOT NULL,
-	-- Timing is by the local POSIX clock.
-	start_time	INTEGER NOT NULL,
-	end_time	INTEGER,
-	error		TEXT
-);
-'''
-
-bayesdb_schema_7to8 = '''
-PRAGMA user_version = 8;
-
-CREATE TABLE bayesdb_population (
-	id		INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
-				CHECK (0 < id),
-	name		TEXT COLLATE NOCASE NOT NULL UNIQUE,
-	tabname		TEXT COLLATE NOCASE NOT NULL
-				-- REFERENCES sqlite_master(name)
-);
-
-CREATE TABLE bayesdb_variable (
-	population_id	INTEGER NOT NULL REFERENCES bayesdb_population(id),
-	generator_id	INTEGER REFERENCES bayesdb_generator(id)
-				ON DELETE CASCADE,
-	colno		INTEGER NOT NULL,
-	name		TEXT COLLATE NOCASE NOT NULL,
-	stattype	TEXT COLLATE NOCASE NOT NULL
-				REFERENCES bayesdb_stattype(name),
-	PRIMARY KEY(population_id, colno),
-	UNIQUE(population_id, name),
-	UNIQUE(generator_id, colno),
-	UNIQUE(generator_id, name)
-);
-
-INSERT INTO bayesdb_variable (population_id, name, colno, stattype)
-    SELECT p.id, c.name, gc.colno, gc.stattype
-        FROM bayesdb_population AS p,
-            bayesdb_generator AS g,
-            bayesdb_generator_column AS gc,
-            bayesdb_column AS c
-        WHERE p.name = g.name
-            AND g.id = gc.generator_id
-            AND p.tabname = c.tabname
-            AND gc.colno = c.colno;
-
--- Adapt each existing generator to a single population.
-INSERT INTO bayesdb_population (name, tabname)
-    SELECT name, tabname FROM bayesdb_generator;
-ALTER TABLE bayesdb_generator
-    ADD COLUMN population_id INTEGER REFERENCES bayesdb_population(id);
-UPDATE bayesdb_generator
-    SET population_id =
-        (SELECT p.id FROM bayesdb_population AS p WHERE p.tabname = tabname);
-'''
-
-bayesdb_schema_8to9 = '''
-PRAGMA user_version = 9;
-
-INSERT INTO bayesdb_stattype VALUES ('counts');
-INSERT INTO bayesdb_stattype VALUES ('magnitude');
-INSERT INTO bayesdb_stattype VALUES ('nominal');
-INSERT INTO bayesdb_stattype VALUES ('numericalranged');
-'''
-
-bayesdb_schema_9to10 = '''
-PRAGMA user_version = 10;
 
 CREATE TABLE bayesdb_rowid_tokens(
     token        TEXT COLLATE NOCASE NOT NULL PRIMARY KEY
@@ -183,16 +38,83 @@ CREATE TABLE bayesdb_rowid_tokens(
 INSERT INTO bayesdb_rowid_tokens VALUES ('_rowid_');
 INSERT INTO bayesdb_rowid_tokens VALUES ('rowid');
 INSERT INTO bayesdb_rowid_tokens VALUES ('oid');
+
+CREATE TABLE bayesdb_stattype (
+    name        TEXT COLLATE NOCASE NOT NULL PRIMARY KEY
+);
+
+INSERT INTO bayesdb_stattype VALUES ('categorical');
+INSERT INTO bayesdb_stattype VALUES ('cyclic');
+INSERT INTO bayesdb_stattype VALUES ('numerical');
+INSERT INTO bayesdb_stattype VALUES ('counts');
+INSERT INTO bayesdb_stattype VALUES ('magnitude');
+INSERT INTO bayesdb_stattype VALUES ('nominal');
+INSERT INTO bayesdb_stattype VALUES ('numericalranged');
+
+CREATE TABLE bayesdb_column (
+    tabname             TEXT COLLATE NOCASE NOT NULL,
+    colno               INTEGER NOT NULL CHECK (0 <= colno),
+    name                TEXT COLLATE NOCASE NOT NULL,
+    shortname           TEXT,
+    description         TEXT,
+
+    PRIMARY KEY(tabname, colno),
+    UNIQUE(tabname, name)
+);
+
+CREATE TABLE bayesdb_column_map (
+    tabname     TEXT COLLATE NOCASE NOT NULL,
+    colno       INTEGER NOT NULL,
+    key         TEXT NOT NULL,
+    value       TEXT NOT NULL,
+
+    PRIMARY KEY(tabname, colno, key),
+    FOREIGN KEY(tabname, colno) REFERENCES bayesdb_column(tabname, colno)
+);
+
+CREATE TABLE bayesdb_generator (
+    -- We use AUTOINCREMENT so that generator id numbers don't get
+    -- reused and are safe to hang onto outside a transaction.
+    id              INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
+                        CHECK (0 < id),
+    name            TEXT COLLATE NOCASE NOT NULL UNIQUE,
+    tabname         TEXT COLLATE NOCASE NOT NULL,
+                        -- REFERENCES sqlite_master(name)
+    metamodel       INTEGER NOT NULL REFERENCES bayesdb_metamodel(name),
+    population_id   INTEGER REFERENCES bayesdb_population(id)
+);
+
+CREATE TABLE bayesdb_generator_model (
+    generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    modelno         INTEGER NOT NULL,
+    iterations      INTEGER NOT NULL CHECK (0 <= iterations),
+
+    PRIMARY KEY(generator_id, modelno)
+);
+
+CREATE TABLE bayesdb_population (
+    id              INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
+                        CHECK (0 < id),
+    name            TEXT COLLATE NOCASE NOT NULL UNIQUE,
+    tabname         TEXT COLLATE NOCASE NOT NULL
+                -- REFERENCES sqlite_master(name)
+);
+
+CREATE TABLE bayesdb_variable (
+    population_id   INTEGER NOT NULL REFERENCES bayesdb_population(id),
+    generator_id    INTEGER REFERENCES bayesdb_generator(id) ON DELETE CASCADE,
+    colno           INTEGER NOT NULL,
+    name            TEXT COLLATE NOCASE NOT NULL,
+    stattype        TEXT COLLATE NOCASE NOT NULL
+                        REFERENCES bayesdb_stattype(name),
+
+    PRIMARY KEY(population_id, colno),
+    UNIQUE(population_id, name),
+    UNIQUE(generator_id, colno),
+    UNIQUE(generator_id, name)
+);
+
 '''
-
-bayesdb_schema_10to11 = '''
-PRAGMA user_version = 11;
-
--- We cannot drop table due to LockedError. A solution is to just rewrite the
--- entire bayeslite schema for 10to11 and make 11 the latest usable schema.
--- DROP TABLE bayesdb_generator_column
-'''
-
 
 ### BayesDB SQLite setup
 
@@ -229,8 +151,8 @@ def bayesdb_install_schema(bdb, version=None, compatible=None):
         # everyone else sets application_id and user_version too...
         with bdb.transaction():
             bdb.sql_execute('PRAGMA application_id = %d' % (APPLICATION_ID,))
-            bdb.sql_execute(bayesdb_schema_5)
-        user_version = 5
+            bdb.sql_execute(bayesdb_schema_11)
+        user_version = 11
         install = True
     elif application_id != APPLICATION_ID:
         raise IOError('Wrong application id: 0x%08x' % (application_id,))
@@ -258,27 +180,11 @@ def _upgrade_schema(bdb, current_version=None, desired_version=None):
         raise IOError('Unsupported bayeslite desired version: %d' % (
             desired_version,))
 
-    # 5 was the last prerelease version (and where we start replay for new bdbs)
-    if current_version == 5 and current_version < desired_version:
-        with bdb.transaction():
-            bdb.sql_execute(bayesdb_schema_5to6)
-        current_version = 6
-    if current_version == 6 and current_version < desired_version:
-        with bdb.transaction():
-            bdb.sql_execute(bayesdb_schema_6to7)
-        current_version = 7
-    if current_version == 7 and current_version < desired_version:
-        with bdb.transaction():
-            bdb.sql_execute(bayesdb_schema_7to8)
-        current_version = 8
-    if current_version == 8 and current_version < desired_version:
-        with bdb.transaction():
-            bdb.sql_execute(bayesdb_schema_8to9)
-        current_version = 9
-    if current_version == 9 and current_version < desired_version:
-        with bdb.transaction():
-            bdb.sql_execute(bayesdb_schema_9to10)
-        current_version = 10
+    # When bayesdb_schema_11to12 exists, uncomment this to activate the upgrade.
+    # if current_version == 11 and current_version < desired_version:
+    #     with bdb.transaction():
+    #         bdb.sql_execute(bayesdb_schema_11to12)
+    #     current_version = 12
     bdb.sql_execute('PRAGMA integrity_check')
     bdb.sql_execute('PRAGMA foreign_key_check')
 
