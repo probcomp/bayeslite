@@ -129,7 +129,7 @@ class BayesDB_Backend(object):
         ``bayesdb_variable`` tables.
 
         `schema` is a list of schema items corresponding to the
-        comma-separated ‘columns’ from a BQL ``CREATE GENERATOR``
+        comma-separated 'columns' from a BQL ``CREATE GENERATOR``
         command.  Each schema item is a list of strings or lists of
         schema items, corresponding to whitespace-separated tokens and
         parenthesized lists.  Note that within parenthesized lists,
