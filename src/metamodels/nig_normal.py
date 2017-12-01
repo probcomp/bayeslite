@@ -40,27 +40,29 @@ nig_normal_schema_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('nig_normal', 1);
 
 CREATE TABLE bayesdb_nig_normal_column (
+    population_id   INTEGER NOT NULL REFERENCES bayesdb_population(id),
     generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
     colno       INTEGER NOT NULL,
     count       INTEGER NOT NULL,
     sum         REAL NOT NULL,
     sumsq       REAL NOT NULL,
-    PRIMARY KEY(generator_id, colno),
-    FOREIGN KEY(generator_id, colno)
-        REFERENCES bayesdb_generator_column(generator_id, colno)
+    PRIMARY KEY(population_id, generator_id, colno),
+    FOREIGN KEY(population_id, colno)
+        REFERENCES bayesdb_variable(population_id, colno)
 );
 
 CREATE TABLE bayesdb_nig_normal_model (
+    population_id   INTEGER NOT NULL REFERENCES bayesdb_population(id),
     generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
     colno           INTEGER NOT NULL,
     modelno         INTEGER NOT NULL,
     mu              REAL NOT NULL,
     sigma           REAL NOT NULL,
-    PRIMARY KEY(generator_id, colno, modelno),
+    PRIMARY KEY(population_id, generator_id, colno, modelno),
     FOREIGN KEY(generator_id, modelno)
         REFERENCES bayesdb_generator_model(generator_id, modelno),
-    FOREIGN KEY(generator_id, colno)
-        REFERENCES bayesdb_nig_normal_column(generator_id, colno)
+    FOREIGN KEY(population_id, generator_id, colno)
+        REFERENCES bayesdb_nig_normal_column(population_id, generator_id, colno)
 );
 '''
 
@@ -72,9 +74,7 @@ CREATE TABLE bayesdb_nig_normal_deviation (
     generator_id        INTEGER NOT NULL REFERENCES bayesdb_generator(id),
     deviation_colno     INTEGER NOT NULL,
     observed_colno      INTEGER NOT NULL,
-    PRIMARY KEY(generator_id, deviation_colno),
-    FOREIGN KEY(generator_id, deviation_colno)
-        REFERENCES bayesdb_variable(generator_id, colno),
+    PRIMARY KEY(population_id, generator_id, deviation_colno),
     FOREIGN KEY(population_id, observed_colno)
         REFERENCES bayesdb_variable(population_id, colno)
 );
@@ -115,8 +115,9 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # XXX Do something with the schema.
         insert_column_sql = '''
             INSERT INTO bayesdb_nig_normal_column
-                (generator_id, colno, count, sum, sumsq)
-                VALUES (:generator_id, :colno, :count, :sum, :sumsq)
+                (population_id, generator_id, colno, count, sum, sumsq)
+                VALUES (:population_id, :generator_id, :colno,
+                    :count, :sum, :sumsq)
         '''
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         table = core.bayesdb_population_table(bdb, population_id)
@@ -124,13 +125,14 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             column_name = core.bayesdb_variable_name(
                 bdb, population_id, generator_id, colno)
             stattype = core.bayesdb_variable_stattype(
-                bdb, population_id, colno)
+                bdb, population_id, generator_id, colno)
             if not stattype == 'numerical':
                 raise BQLError(bdb, 'NIG-Normal only supports'
                     ' numerical columns, but %s is %s'
                     % (repr(column_name), repr(stattype)))
             (count, xsum, sumsq) = data_suff_stats(bdb, table, column_name)
             bdb.sql_execute(insert_column_sql, {
+                'population_id': population_id,
                 'generator_id': generator_id,
                 'colno': colno,
                 'count': count,
@@ -181,12 +183,15 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             bdb.sql_execute(delete_deviations_sql, (generator_id,))
 
     def initialize_models(self, bdb, generator_id, modelnos):
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
         insert_sample_sql = '''
             INSERT INTO bayesdb_nig_normal_model
-                (generator_id, colno, modelno, mu, sigma)
-                VALUES (:generator_id, :colno, :modelno, :mu, :sigma)
+                (population_id, generator_id, colno, modelno, mu, sigma)
+                VALUES (:population_id, :generator_id, :colno, :modelno,
+                    :mu, :sigma)
         '''
-        self._set_models(bdb, generator_id, modelnos, insert_sample_sql)
+        self._set_models(bdb, population_id, generator_id, modelnos,
+            insert_sample_sql)
 
     def drop_models(self, bdb, generator_id, modelnos=None):
         with bdb.savepoint():
@@ -211,6 +216,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             # XXX
             raise NotImplementedError('nig_normal analysis programs')
 
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
         # Ignore analysis timing control, because one step reaches the
         # posterior anyway.
         # NOTE: Does not update the model iteration count.  This would
@@ -220,7 +226,9 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
         # that one step was done or not.
         update_sample_sql = '''
             UPDATE bayesdb_nig_normal_model SET mu = :mu, sigma = :sigma
-                WHERE generator_id = :generator_id
+                WHERE
+                    population_id = :population_id
+                    AND generator_id = :generator_id
                     AND colno = :colno
                     AND modelno = :modelno
         '''
@@ -228,9 +236,10 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
             # This assumes that models x columns forms a dense
             # rectangle in the database, which it should.
             modelnos = self._modelnos(bdb, generator_id)
-        self._set_models(bdb, generator_id, modelnos, update_sample_sql)
+        self._set_models(bdb, population_id, generator_id, modelnos,
+            update_sample_sql)
 
-    def _set_models(self, bdb, generator_id, modelnos, sql):
+    def _set_models(self, bdb, population_id, generator_id, modelnos, sql):
         collect_stats_sql = '''
             SELECT colno, count, sum, sumsq FROM
                 bayesdb_nig_normal_column WHERE generator_id = ?
@@ -242,6 +251,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
                 for modelno in modelnos:
                     (mu, sig) = self._gibbs_step_params(self.hypers, stats)
                     bdb.sql_execute(sql, {
+                        'population_id': population_id,
                         'generator_id': generator_id,
                         'colno': colno,
                         'modelno': modelno,

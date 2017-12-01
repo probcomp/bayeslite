@@ -185,6 +185,14 @@ INSERT INTO bayesdb_rowid_tokens VALUES ('rowid');
 INSERT INTO bayesdb_rowid_tokens VALUES ('oid');
 '''
 
+bayesdb_schema_10to11 = '''
+PRAGMA user_version = 11;
+
+-- We cannot drop table due to LockedError. A solution is to just rewrite the
+-- entire bayeslite schema for 10to11 and make 11 the latest usable schema.
+-- DROP TABLE bayesdb_generator_column
+'''
+
 
 ### BayesDB SQLite setup
 

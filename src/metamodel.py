@@ -125,7 +125,7 @@ class IBayesDBMetamodel(object):
         The generator id and column numbers may be used to create
         metamodel-specific records in the database for the generator
         with foreign keys referring to the ``bayesdb_generator`` and
-        ``bayesdb_generator_column`` tables.
+        ``bayesdb_variable`` tables.
 
         `schema` is a list of schema items corresponding to the
         comma-separated ‘columns’ from a BQL ``CREATE GENERATOR``

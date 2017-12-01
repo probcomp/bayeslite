@@ -208,13 +208,10 @@ def test_cgpm_extravaganza__ci_slow():
 
         population_id = core.bayesdb_get_population(bdb, 'satellites')
         generator_id = core.bayesdb_get_generator(bdb, population_id, 'g0')
-        assert core.bayesdb_generator_column_numbers(bdb, generator_id) == \
-            [-2, -1, 1, 2, 3, 4, 5, 6]
-        assert core.bayesdb_variable_numbers(bdb, population_id, None) == \
-            [1, 2, 3, 4, 5, 6]
-        assert core.bayesdb_variable_numbers(
-                bdb, population_id, generator_id) == \
-            [-2, -1, 1, 2, 3, 4, 5, 6]
+        assert core.bayesdb_variable_numbers(bdb, population_id, None) \
+            == [1, 2, 3, 4, 5, 6]
+        assert core.bayesdb_variable_numbers(bdb, population_id, generator_id) \
+            == [-2, -1, 1, 2, 3, 4, 5, 6]
 
         # -- MODEL country_of_operator GIVEN class_of_orbit USING forest;
         bdb.execute('INITIALIZE 1 MODELS FOR g0')

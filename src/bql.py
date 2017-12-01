@@ -336,16 +336,6 @@ def execute_phrase(bdb, phrase, bindings=()):
                                 bdb, population_id),
                         )
                         for generator_id in generator_ids:
-                            # XXX Omit needless bayesdb_generator_column table
-                            # Github issue #441.
-                            bdb.sql_execute('''
-                                INSERT INTO bayesdb_generator_column
-                                    VALUES (:generator_id, :colno, :stattype)
-                            ''', {
-                                'generator_id': generator_id,
-                                'colno': colno,
-                                'stattype': stattype,
-                            })
                             metamodel = core.bayesdb_generator_metamodel(
                                 bdb, generator_id)
                             metamodel.add_column(bdb, generator_id, colno)
@@ -435,41 +425,9 @@ def execute_phrase(bdb, phrase, bindings=()):
                 ''', (phrase.name, table, population_id, metamodel.name()))
                 generator_id = core.bayesdb_get_generator(
                     bdb, population_id, phrase.name)
-
-                # Populate bayesdb_generator_column.
-                #
-                # XXX Omit needless bayesdb_generator_column table --
-                # Github issue #441.
-                bdb.sql_execute('''
-                    INSERT INTO bayesdb_generator_column
-                        (generator_id, colno, stattype)
-                        SELECT :generator_id, colno, stattype
-                            FROM bayesdb_variable
-                            WHERE population_id = :population_id
-                                AND generator_id IS NULL
-                ''', {
-                    'generator_id': generator_id,
-                    'population_id': population_id,
-                })
-
                 # Do any metamodel-specific initialization.
                 metamodel.create_generator(
                     bdb, generator_id, phrase.schema, baseline=phrase.baseline)
-
-                # Populate bayesdb_generator_column with any latent
-                # variables that metamodel.create_generator has added
-                # with bayesdb_add_latent.
-                bdb.sql_execute('''
-                    INSERT INTO bayesdb_generator_column
-                        (generator_id, colno, stattype)
-                        SELECT :generator_id, colno, stattype
-                            FROM bayesdb_variable
-                            WHERE population_id = :population_id
-                                AND generator_id = :generator_id
-                ''', {
-                    'generator_id': generator_id,
-                    'population_id': population_id,
-                })
 
         # All done.  Nothing to return.
         return empty_cursor(bdb)
@@ -487,9 +445,9 @@ def execute_phrase(bdb, phrase, bindings=()):
             # Metamodel-specific destruction.
             metamodel.drop_generator(bdb, generator_id)
 
-            # Drop the columns, models, and, finally, generator.
+            # Drop latent variables, models, and, finally, generator.
             drop_columns_sql = '''
-                DELETE FROM bayesdb_generator_column WHERE generator_id = ?
+                DELETE FROM bayesdb_variable WHERE generator_id = ?
             '''
             bdb.sql_execute(drop_columns_sql, (generator_id,))
             drop_model_sql = '''
@@ -690,8 +648,9 @@ def execute_phrase(bdb, phrase, bindings=()):
             raise BQLError(bdb, 'No such variable: %r' % (phrase.target,))
         colno_target = core.bayesdb_variable_number(
             bdb, population_id, None, phrase.target)
-        if core.bayesdb_variable_stattype(bdb, population_id, colno_target) != \
-                'numerical':
+        stattype = core.bayesdb_variable_stattype(bdb, population_id,
+            generator_id, colno_target)
+        if stattype != 'numerical':
             raise BQLError(bdb,
                 'Target variable is not numerical: %r' % (phrase.target,))
         # Build the given variables.
@@ -730,7 +689,8 @@ def execute_phrase(bdb, phrase, bindings=()):
             colnos, numpredictions=nsamp)
         # Retrieve the stattypes.
         stattypes = [
-            core.bayesdb_variable_stattype(bdb, population_id, colno_given)
+            core.bayesdb_variable_stattype(
+                bdb, population_id, generator_id, colno_given)
             for colno_given in colno_givens_unique
         ]
         # Separate the target values from the given values.

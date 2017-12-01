@@ -268,13 +268,15 @@ def bayesdb_variable_name(bdb, population_id, generator_id, colno):
     ''', (population_id, generator_id, colno))
     return cursor_value(cursor)
 
-def bayesdb_variable_stattype(bdb, population_id, colno):
+def bayesdb_variable_stattype(bdb, population_id, generator_id, colno):
     """Return the statistical type of a population variable."""
     sql = '''
         SELECT stattype FROM bayesdb_variable
-            WHERE population_id = ? AND colno = ?
+            WHERE population_id = ?
+                AND (generator_id IS NULL OR generator_id = ?)
+                AND colno = ?
     '''
-    cursor = bdb.sql_execute(sql, (population_id, colno))
+    cursor = bdb.sql_execute(sql, (population_id, generator_id, colno))
     try:
         row = cursor.next()
     except StopIteration:
@@ -446,135 +448,6 @@ def bayesdb_generator_population(bdb, id):
         assert len(row) == 1
         return row[0]
 
-def bayesdb_generator_column_names(bdb, generator_id):
-    """Return a list of names of columns modelled by `generator_id`."""
-    sql = '''
-        SELECT c.name
-            FROM bayesdb_column AS c,
-                bayesdb_generator AS g,
-                bayesdb_generator_column AS gc
-            WHERE g.id = ?
-                AND gc.generator_id = g.id
-                AND c.tabname = g.tabname
-                AND c.colno = gc.colno
-            ORDER BY c.colno ASC
-    '''
-    # str because column names can't contain Unicode in sqlite3.
-    return [str(row[0]) for row in bdb.sql_execute(sql, (generator_id,))]
-
-def bayesdb_generator_column_stattype(bdb, generator_id, colno):
-    """Return the statistical type of the column `colno` in `generator_id`."""
-    sql = '''
-        SELECT stattype FROM bayesdb_generator_column
-            WHERE generator_id = ? AND colno = ?
-    '''
-    cursor = bdb.sql_execute(sql, (generator_id, colno))
-    try:
-        row = cursor.next()
-    except StopIteration:
-        generator = bayesdb_generator_name(bdb, generator_id)
-        sql = '''
-            SELECT COUNT(*)
-                FROM bayesdb_generator AS g, bayesdb_column AS c
-                WHERE g.id = :generator_id
-                    AND g.tabname = c.tabname
-                    AND c.colno = :colno
-        '''
-        cursor = bdb.sql_execute(sql, {
-            'generator_id': generator_id,
-            'colno': colno,
-        })
-        if cursor_value(cursor) == 0:
-            raise ValueError('No such column in generator %s: %d' %
-                (generator, colno))
-        else:
-            raise ValueError('Column not modelled in generator %s: %d' %
-                (generator, colno))
-    else:
-        assert len(row) == 1
-        return row[0]
-
-def bayesdb_generator_has_column(bdb, generator_id, column_name):
-    """True if `generator_id` models a column named `name`."""
-    sql = '''
-        SELECT COUNT(*)
-            FROM bayesdb_generator AS g,
-                bayesdb_generator_column as gc,
-                bayesdb_column AS c
-            WHERE g.id = :generator_id AND c.name = :column_name
-                AND g.id = gc.generator_id
-                AND g.tabname = c.tabname
-                AND gc.colno = c.colno
-    '''
-    cursor = bdb.sql_execute(sql, {
-        'generator_id': generator_id,
-        'column_name': column_name,
-    })
-    return cursor_value(cursor)
-
-def bayesdb_generator_column_name(bdb, generator_id, colno):
-    """Return the name of the column numbered `colno` in `generator_id`."""
-    sql = '''
-        SELECT c.name
-            FROM bayesdb_generator AS g,
-                bayesdb_generator_column AS gc,
-                bayesdb_column AS c
-            WHERE g.id = :generator_id
-                AND gc.colno = :colno
-                AND g.id = gc.generator_id
-                AND g.tabname = c.tabname
-                AND gc.colno = c.colno
-    '''
-    cursor = bdb.sql_execute(sql, {
-        'generator_id': generator_id,
-        'colno': colno,
-    })
-    try:
-        row = cursor.next()
-    except StopIteration:
-        generator = bayesdb_generator_name(bdb, generator_id)
-        raise ValueError('No such column number in generator %s: %d' %
-            (repr(generator), colno))
-    else:
-        assert len(row) == 1
-        return row[0]
-
-def bayesdb_generator_column_number(bdb, generator_id, column_name):
-    """Return the number of the column `column_name` in `generator_id`."""
-    sql = '''
-        SELECT c.colno
-            FROM bayesdb_generator AS g,
-                bayesdb_generator_column AS gc,
-                bayesdb_column AS c
-            WHERE g.id = :generator_id AND c.name = :column_name
-                AND g.id = gc.generator_id
-                AND g.tabname = c.tabname
-                AND gc.colno = c.colno
-    '''
-    cursor = bdb.sql_execute(sql, {
-        'generator_id': generator_id,
-        'column_name': column_name,
-    })
-    try:
-        row = cursor.next()
-    except StopIteration:
-        generator = bayesdb_generator_name(bdb, generator_id)
-        raise ValueError('No such column in generator %s: %s' %
-            (repr(generator), repr(column_name)))
-    else:
-        assert len(row) == 1
-        assert isinstance(row[0], int)
-        return row[0]
-
-def bayesdb_generator_column_numbers(bdb, generator_id):
-    """Return a list of the numbers of columns modelled in `generator_id`."""
-    sql = '''
-        SELECT colno FROM bayesdb_generator_column
-            WHERE generator_id = ?
-            ORDER BY colno ASC
-    '''
-    return [row[0] for row in bdb.sql_execute(sql, (generator_id,))]
-
 def bayesdb_generator_has_model(bdb, generator_id, modelno):
     """True if `generator_id` has a model numbered `modelno`."""
     sql = '''
@@ -593,7 +466,8 @@ def bayesdb_generator_modelnos(bdb, generator_id):
 
 def bayesdb_generator_cell_value(bdb, generator_id, rowid, colno):
     table_name = bayesdb_generator_table(bdb, generator_id)
-    colname = bayesdb_generator_column_name(bdb, generator_id, colno)
+    population_id = bayesdb_generator_population(bdb, generator_id)
+    colname = bayesdb_variable_name(bdb, population_id, generator_id, colno)
     qt = sqlite3_quote_name(table_name)
     qcn = sqlite3_quote_name(colname)
     value_sql = 'SELECT %s FROM %s WHERE _rowid_ = ?' % (qcn, qt)
@@ -637,8 +511,9 @@ def bayesdb_population_row_values(bdb, population_id, rowid):
     return row
 
 def bayesdb_generator_row_values(bdb, generator_id, rowid):
+    population_id = bayesdb_get_population(bdb, generator_id)
     table_name = bayesdb_generator_table(bdb, generator_id)
-    column_names = bayesdb_generator_column_names(bdb, generator_id)
+    column_names = bayesdb_variable_names(bdb, population_id, generator_id)
     qt = sqlite3_quote_name(table_name)
     qcns = ','.join(map(sqlite3_quote_name, column_names))
     select_sql = ('SELECT %s FROM %s WHERE _rowid_ = ?' % (qcns, qt))

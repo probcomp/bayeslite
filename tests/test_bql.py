@@ -1372,7 +1372,8 @@ def test_trivial_commands():
         bdb.execute('initialize 2 models for p_cc')
         bdb.execute('initialize 1 model if not exists for p_cc')
         bdb.execute('initialize 2 models if not exists for p_cc')
-        generator_id = core.bayesdb_get_generator(bdb, None, 'p_cc')
+        population_id = core.bayesdb_get_population(bdb, 'p')
+        generator_id = core.bayesdb_get_generator(bdb, population_id, 'p_cc')
         assert core.bayesdb_generator_table(bdb, generator_id) == 't'
         bdb.execute('alter table t rename to t')
         assert core.bayesdb_generator_table(bdb, generator_id) == 't'
@@ -1394,20 +1395,20 @@ def test_trivial_commands():
             bdb.execute('estimate count(*) from p_cc')
         bdb.execute('alter generator p0_cc rename to P0_cc')
         bdb.execute('analyze p0_cc for 1 iteration wait')
-        colno = core.bayesdb_generator_column_number(bdb, generator_id,
+        colno = core.bayesdb_variable_number(bdb, population_id, generator_id,
             'gender')
         with pytest.raises(parse.BQLParseError):
             # Rename the table's columns, not the generator's columns.
             bdb.execute('alter generator p0_cc rename gender to sex')
         with pytest.raises(NotImplementedError): # XXX
             bdb.execute('alter table t rename to t0, rename gender to sex')
-            assert core.bayesdb_generator_column_number(bdb, generator_id,
-                    'sex') \
+            assert core.bayesdb_variable_number(
+                    bdb, population_id, generator_id, 'sex') \
                 == colno
             bdb.execute('analyze p0_cc model 0 for 1 iteration wait')
             bdb.execute('alter generator p0_cc rename to p_cc')
-            assert core.bayesdb_generator_column_number(bdb, generator_id,
-                    'sex') \
+            assert core.bayesdb_variable_number(
+                    bdb, population_id, generator_id, 'sex') \
                 == colno
             bdb.execute('select sex from t0').fetchall()
             with pytest.raises(AssertionError): # XXX
@@ -1425,8 +1426,8 @@ def test_trivial_commands():
                 bdb.execute('infer explicit predict gender with confidence 0.9'
                     ' from p')
             bdb.execute('alter table t0 rename sex to gender')
-            assert core.bayesdb_generator_column_number(bdb, generator_id,
-                    'gender') \
+            assert core.bayesdb_variable_number(
+                    bdb, population_id, generator_id, 'gender') \
                 == colno
         bdb.execute('alter generator p0_cc rename to p_cc')     # XXX
         bdb.execute('alter table t rename to T0')               # XXX
@@ -1706,58 +1707,66 @@ def test_parametrized():
                 ' WHERE generator_id = ? AND table_rowid = ? LIMIT 1',
             'SELECT cgpm_rowid FROM bayesdb_cgpm_individual'
                 ' WHERE generator_id = ? AND table_rowid = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT population_id FROM bayesdb_generator WHERE id = ?',
+            'SELECT stattype FROM bayesdb_variable WHERE population_id = ? AND (generator_id IS NULL OR generator_id = ?) AND colno = ?',
             'SELECT code FROM bayesdb_cgpm_category'
                 ' WHERE generator_id = ? AND colno = ? AND value = ?',
             'SELECT engine_stamp FROM bayesdb_cgpm_generator'
                 ' WHERE generator_id = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT population_id FROM bayesdb_generator WHERE id = ?',
+            'SELECT stattype FROM bayesdb_variable WHERE population_id = ? AND (generator_id IS NULL OR generator_id = ?) AND colno = ?',
             'SELECT value FROM bayesdb_cgpm_category'
                 ' WHERE generator_id = ? AND colno = ? AND code = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT population_id FROM bayesdb_generator WHERE id = ?',
+            'SELECT stattype FROM bayesdb_variable WHERE population_id = ? AND (generator_id IS NULL OR generator_id = ?) AND colno = ?',
             'SELECT value FROM bayesdb_cgpm_category'
                 ' WHERE generator_id = ? AND colno = ? AND code = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT population_id FROM bayesdb_generator WHERE id = ?',
+            'SELECT stattype FROM bayesdb_variable WHERE population_id = ? AND (generator_id IS NULL OR generator_id = ?) AND colno = ?',
             'SELECT value FROM bayesdb_cgpm_category'
                 ' WHERE generator_id = ? AND colno = ? AND code = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT population_id FROM bayesdb_generator WHERE id = ?',
+            'SELECT stattype FROM bayesdb_variable WHERE population_id = ? AND (generator_id IS NULL OR generator_id = ?) AND colno = ?',
             'SELECT value FROM bayesdb_cgpm_category'
                 ' WHERE generator_id = ? AND colno = ? AND code = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT population_id FROM bayesdb_generator WHERE id = ?',
+            'SELECT stattype FROM bayesdb_variable WHERE population_id = ?'
+                ' AND (generator_id IS NULL OR generator_id = ?) AND colno = ?',
             'SELECT value FROM bayesdb_cgpm_category'
                 ' WHERE generator_id = ? AND colno = ? AND code = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT population_id FROM bayesdb_generator WHERE id = ?',
+            'SELECT stattype FROM bayesdb_variable WHERE population_id = ?'
+                ' AND (generator_id IS NULL OR generator_id = ?) AND colno = ?',
             'SELECT value FROM bayesdb_cgpm_category'
                 ' WHERE generator_id = ? AND colno = ? AND code = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT population_id FROM bayesdb_generator WHERE id = ?',
+            'SELECT stattype FROM bayesdb_variable WHERE population_id = ?'
+                ' AND (generator_id IS NULL OR generator_id = ?) AND colno = ?',
             'SELECT value FROM bayesdb_cgpm_category'
                 ' WHERE generator_id = ? AND colno = ? AND code = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT population_id FROM bayesdb_generator WHERE id = ?',
+            'SELECT stattype FROM bayesdb_variable WHERE population_id = ?'
+                ' AND (generator_id IS NULL OR generator_id = ?) AND colno = ?',
             'SELECT value FROM bayesdb_cgpm_category'
                 ' WHERE generator_id = ? AND colno = ? AND code = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT population_id FROM bayesdb_generator WHERE id = ?',
+            'SELECT stattype FROM bayesdb_variable WHERE population_id = ?'
+                ' AND (generator_id IS NULL OR generator_id = ?) AND colno = ?',
             'SELECT value FROM bayesdb_cgpm_category'
                 ' WHERE generator_id = ? AND colno = ? AND code = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT population_id FROM bayesdb_generator WHERE id = ?',
+            'SELECT stattype FROM bayesdb_variable WHERE population_id = ?'
+                ' AND (generator_id IS NULL OR generator_id = ?) AND colno = ?',
             'SELECT value FROM bayesdb_cgpm_category'
                 ' WHERE generator_id = ? AND colno = ? AND code = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT population_id FROM bayesdb_generator WHERE id = ?',
+            'SELECT stattype FROM bayesdb_variable WHERE population_id = ?'
+                ' AND (generator_id IS NULL OR generator_id = ?) AND colno = ?',
             'SELECT value FROM bayesdb_cgpm_category'
                 ' WHERE generator_id = ? AND colno = ? AND code = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT population_id FROM bayesdb_generator WHERE id = ?',
+            'SELECT stattype FROM bayesdb_variable WHERE population_id = ?'
+                ' AND (generator_id IS NULL OR generator_id = ?) AND colno = ?',
             'SELECT value FROM bayesdb_cgpm_category'
                 ' WHERE generator_id = ? AND colno = ? AND code = ?',
             'CREATE TEMP TABLE "bayesdb_temp_0"'
@@ -1813,26 +1822,31 @@ def test_parametrized():
                 ' WHERE generator_id = ? AND table_rowid = ? LIMIT 1',
             'SELECT cgpm_rowid FROM bayesdb_cgpm_individual'
                 ' WHERE generator_id = ? AND table_rowid = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT population_id FROM bayesdb_generator WHERE id = ?',
+            'SELECT stattype FROM bayesdb_variable WHERE population_id = ?'
+                ' AND (generator_id IS NULL OR generator_id = ?) AND colno = ?',
             'SELECT code FROM bayesdb_cgpm_category'
                 ' WHERE generator_id = ? AND colno = ? AND value = ?',
             'SELECT engine_stamp FROM bayesdb_cgpm_generator'
                 ' WHERE generator_id = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT population_id FROM bayesdb_generator WHERE id = ?',
+            'SELECT stattype FROM bayesdb_variable WHERE population_id = ?'
+                ' AND (generator_id IS NULL OR generator_id = ?) AND colno = ?',
             'SELECT value FROM bayesdb_cgpm_category'
                 ' WHERE generator_id = ? AND colno = ? AND code = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT population_id FROM bayesdb_generator WHERE id = ?',
+            'SELECT stattype FROM bayesdb_variable WHERE population_id = ?'
+                ' AND (generator_id IS NULL OR generator_id = ?) AND colno = ?',
             'SELECT value FROM bayesdb_cgpm_category'
                 ' WHERE generator_id = ? AND colno = ? AND code = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT population_id FROM bayesdb_generator WHERE id = ?',
+            'SELECT stattype FROM bayesdb_variable WHERE population_id = ?'
+                ' AND (generator_id IS NULL OR generator_id = ?) AND colno = ?',
             'SELECT value FROM bayesdb_cgpm_category'
                 ' WHERE generator_id = ? AND colno = ? AND code = ?',
-            'SELECT stattype FROM bayesdb_generator_column'
-                ' WHERE generator_id = ? AND colno = ?',
+            'SELECT population_id FROM bayesdb_generator WHERE id = ?',
+            'SELECT stattype FROM bayesdb_variable WHERE population_id = ?'
+                ' AND (generator_id IS NULL OR generator_id = ?) AND colno = ?',
             'SELECT value FROM bayesdb_cgpm_category'
                 ' WHERE generator_id = ? AND colno = ? AND code = ?',
             'CREATE TEMP TABLE "bayesdb_temp_1" ("age" NUMERIC)',
@@ -1935,8 +1949,8 @@ def test_createtab():
         bdb.execute('drop population p0')
         population_id = core.bayesdb_get_population(bdb, 'p')
         colno = core.bayesdb_variable_number(bdb, population_id, None, 'age')
-        assert core.bayesdb_variable_stattype(bdb, population_id, colno) == \
-            'numerical'
+        assert core.bayesdb_variable_stattype(
+            bdb, population_id, None, colno) == 'numerical'
         bdb.execute('initialize 1 model for p_cc')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('drop table t')

@@ -64,9 +64,7 @@ def test_nig_normal_latent_numbering():
         g1 = core.bayesdb_get_generator(bdb, pid, 'g1')
         assert core.bayesdb_variable_numbers(bdb, pid, None) == [1, 2]
         assert core.bayesdb_variable_numbers(bdb, pid, g0) == [1, 2]
-        assert core.bayesdb_generator_column_numbers(bdb, g0) == [1, 2]
         assert core.bayesdb_variable_numbers(bdb, pid, g1) == [-1, 1, 2]
-        assert core.bayesdb_generator_column_numbers(bdb, g1) == [-1, 1, 2]
 
 def test_nig_normal_latent_smoke():
     with bayesdb_open(':memory:') as bdb:
@@ -263,6 +261,7 @@ def test_nig_normal_latent_2var_smoke():
                 from pairwise variables of p modelled by g0
         ''').fetchall())
         with pytest.raises(BQLError):
+            # g1 has a latent variable xe.
             assert 4 == len(bdb.execute('''
                 estimate correlation, correlation pvalue
                     from pairwise variables of p modelled by g1

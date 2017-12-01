@@ -246,7 +246,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             raise BQLError(bdb, 'No such column in population: %d' % (varname,))
 
         # Retrieve the stattype and default distribution.
-        stattype = core.bayesdb_variable_stattype(bdb, population_id, colno)
+        stattype = core.bayesdb_variable_stattype(
+            bdb, population_id, generator_id, colno)
         if stattype not in _DEFAULT_DIST:
             raise BQLError(bdb, 'No distribution for stattype: %s' % (stattype))
         dist, params = _DEFAULT_DIST[stattype](bdb, generator_id, varname)
@@ -835,8 +836,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             bdb, generator_id, modelnos, rowid, [colno], [], numsamples)
 
         # Determine the imputation strategy (mode or mean).
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
         stattype = core.bayesdb_variable_stattype(
-            bdb, core.bayesdb_generator_population(bdb, generator_id), colno)
+            bdb, population_id, generator_id, colno)
         if _is_categorical(stattype):
             return _impute_categorical(sample)
         else:
@@ -933,7 +935,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             for var in vars
         ]
         stattypes = [
-            core.bayesdb_variable_stattype(bdb, population_id, colno)
+            core.bayesdb_variable_stattype(
+                bdb, population_id, generator_id, colno)
             for colno in colnos
         ]
 
@@ -1192,8 +1195,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # the user supplied, as a float.
         if colno < 0:
             return float(value)
-        stattype = core.bayesdb_generator_column_stattype(
-            bdb, generator_id, colno)
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        stattype = core.bayesdb_variable_stattype(
+            bdb, population_id, generator_id, colno)
         if _is_categorical(stattype):
             cursor = bdb.sql_execute('''
                 SELECT code FROM bayesdb_cgpm_category
@@ -1216,8 +1220,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             return value
         if math.isnan(value):
             return None
-        stattype = core.bayesdb_generator_column_stattype(
-            bdb, generator_id, colno)
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        stattype = core.bayesdb_variable_stattype(
+            bdb, population_id, generator_id, colno)
         if _is_categorical(stattype):
             cursor = bdb.sql_execute('''
                 SELECT value FROM bayesdb_cgpm_category
@@ -1479,7 +1484,7 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
 
             # Add it to the list and mark it modelled by default.
             stattype = core.bayesdb_variable_stattype(
-                bdb, population_id, colno)
+                bdb, population_id, generator_id, colno)
             variables.append([var, stattype, dist, params])
             assert var not in variable_dist
             variable_dist[var] = (stattype, dist, params)
@@ -1629,7 +1634,8 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
             continue
         colno = core.bayesdb_variable_number(bdb, population_id, None, var)
         assert 0 <= colno
-        stattype = core.bayesdb_variable_stattype(bdb, population_id, colno)
+        stattype = core.bayesdb_variable_stattype(
+            bdb, population_id, generator_id, colno)
         distparams = default_dist(var, stattype)
         if distparams is None:
             continue
@@ -1668,7 +1674,7 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
                 colno = core.bayesdb_variable_number(
                     bdb, population_id, None, var)
                 stattype = core.bayesdb_variable_stattype(
-                    bdb, population_id, colno)
+                    bdb, population_id, generator_id, colno)
             distparams = default_dist(var, stattype)
             if distparams is None:
                 continue
@@ -1703,7 +1709,7 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
             assert core.bayesdb_has_variable(bdb, population_id, None, var)
             colno = core.bayesdb_variable_number(bdb, population_id, None, var)
             var_stattype = core.bayesdb_variable_stattype(
-                bdb, population_id, colno)
+                bdb, population_id, generator_id, colno)
             distparams = default_dist(var, var_stattype)
             if distparams is None:
                 continue
