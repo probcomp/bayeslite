@@ -35,23 +35,23 @@ from cgpm.utils import general as gu
 from bayeslite import bayesdb_nullify
 from bayeslite import bayesdb_open
 from bayeslite import bayesdb_read_csv
-from bayeslite import bayesdb_register_metamodel
+from bayeslite import bayesdb_register_backend
 from bayeslite.core import bayesdb_get_generator
 from bayeslite.core import bayesdb_get_population
 from bayeslite.exception import BQLError
-from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
+from bayeslite.backends.cgpm_backend import CGPM_Backend
 from bayeslite.util import cursor_value
 
 import test_csv
 
 @contextlib.contextmanager
 def cgpm_smoke_bdb():
-    with bayesdb_open(':memory:', builtin_metamodels=False) as bdb:
+    with bayesdb_open(':memory:', builtin_backends=False) as bdb:
         registry = {
             'piecewise': PieceWise,
         }
-        bayesdb_register_metamodel(
-            bdb, CGPM_Metamodel(registry, multiprocess=0))
+        bayesdb_register_backend(
+            bdb, CGPM_Backend(registry, multiprocess=0))
 
         bdb.sql_execute('CREATE TABLE t (Output, cat, Input)')
         for i in xrange(3):
@@ -81,7 +81,7 @@ def cgpm_smoke_bdb():
 
 @contextlib.contextmanager
 def cgpm_dummy_satellites_bdb():
-    with bayesdb_open(':memory:', builtin_metamodels=False) as bdb:
+    with bayesdb_open(':memory:', builtin_backends=False) as bdb:
         bdb.sql_execute('''
             CREATE TABLE satellites_ucs (
                 apogee,
@@ -124,7 +124,7 @@ def test_cgpm_no_empty_categories():
                 MODEL a, b, c AS NOMINAL
             );
         ''')
-        bdb.execute('CREATE METAMODEL h IF NOT EXISTS FOR q USING cgpm;')
+        bdb.execute('CREATE GENERATOR h IF NOT EXISTS FOR q USING cgpm;')
         bdb.execute('INITIALIZE 1 MODEL FOR h')
         category_rows = bdb.sql_execute('''
             SELECT colno, value FROM bayesdb_cgpm_category;
@@ -179,14 +179,14 @@ def test_cgpm_smoke():
     with cgpm_smoke_bdb() as bdb:
 
         # Default model.
-        bdb.execute('CREATE METAMODEL g_default FOR p USING cgpm')
+        bdb.execute('CREATE GENERATOR g_default FOR p USING cgpm')
         bdb.execute('INITIALIZE 1 MODEL FOR g_default')
         bdb.execute('ANALYZE g_default FOR 1 ITERATION WAIT')
         cgpm_smoke_tests(bdb, 'g_default', ['output', 'cat', 'input'])
 
         # Custom model for output and cat.
         bdb.execute('''
-            CREATE METAMODEL g_manifest FOR p USING cgpm (
+            CREATE GENERATOR g_manifest FOR p USING cgpm (
                 OVERRIDE MODEL FOR Output, Cat
                 GIVEN Input
                 USING piecewise
@@ -198,7 +198,7 @@ def test_cgpm_smoke():
 
         # Custom model for latent output, manifest output.
         bdb.execute('''
-            CREATE METAMODEL g_latout FOR p USING cgpm (
+            CREATE GENERATOR g_latout FOR p USING cgpm (
                 LATENT output_ NUMERICAL;
                 OVERRIDE MODEL FOR output_, cat GIVEN input USING piecewise;
             )
@@ -210,7 +210,7 @@ def test_cgpm_smoke():
 
         # Custom model for manifest out, latent cat.
         bdb.execute('''
-            CREATE METAMODEL g_latcat FOR p USING cgpm (
+            CREATE GENERATOR g_latcat FOR p USING cgpm (
                 LATENT cat_ CATEGORICAL;
                 OVERRIDE MODEL FOR output, cat_ GIVEN input USING piecewise
             )
@@ -221,7 +221,7 @@ def test_cgpm_smoke():
 
         # Custom chained model.
         bdb.execute('''
-            CREATE METAMODEL g_chain FOR p USING cgpm (
+            CREATE GENERATOR g_chain FOR p USING cgpm (
                 LATENT midput NUMERICAL;
                 LATENT excat NUMERICAL;
                 OVERRIDE MODEL FOR midput, cat GIVEN input USING piecewise;
@@ -235,7 +235,7 @@ def test_cgpm_smoke():
 
         # Override the crosscat category model.
         bdb.execute('''
-            CREATE METAMODEL g_category_model FOR p USING cgpm (
+            CREATE GENERATOR g_category_model FOR p USING cgpm (
                 SET CATEGORY MODEL FOR output TO NORMAL;
                 OVERRIDE MODEL FOR input, cat GIVEN output USING piecewise;
             )
@@ -247,32 +247,32 @@ def test_cgpm_smoke():
 
         with pytest.raises(BQLError):
             bdb.execute('''
-                CREATE METAMODEL g_error_typo FOR p USING cgpm (
+                CREATE GENERATOR g_error_typo FOR p USING cgpm (
                     SET CATEGORY MODEL FOR uot TO NORMAL
                 )
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
-                CREATE METAMODEL g_error_typo_manifest FOR p USING cgpm (
+                CREATE GENERATOR g_error_typo_manifest FOR p USING cgpm (
                     OVERRIDE MODEL FOR output, cat GIVEN ni USING piecewise
                 )
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
-                CREATE METAMODEL g_error_typo_output FOR p USING cgpm (
+                CREATE GENERATOR g_error_typo_output FOR p USING cgpm (
                     OVERRIDE MODEL FOR output, dog GIVEN input USING piecewise;
                 )
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
-                CREATE METAMODEL g_error_dup_manifest FOR p USING cgpm (
+                CREATE GENERATOR g_error_dup_manifest FOR p USING cgpm (
                     SET CATEGORY MODEL FOR input TO NORMAL;
                     SET CATEGORY MODEL FOR input TO LOGNORMAL
                 )
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
-                CREATE METAMODEL g_error_dup_latent FOR p USING cgpm (
+                CREATE GENERATOR g_error_dup_latent FOR p USING cgpm (
                     LATENT output_error NUMERICAL;
                     LATENT output_error CATEGORICAL;
 
@@ -282,21 +282,21 @@ def test_cgpm_smoke():
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
-                CREATE METAMODEL g_error_latent_exists FOR p USING cgpm (
+                CREATE GENERATOR g_error_latent_exists FOR p USING cgpm (
                     LATENT output_ NUMERICAL;
                     OVERRIDE MODEL FOR output_, cat GIVEN input USING piecewise;
                 )
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
-                CREATE METAMODEL g_error_latent_manifest FOR p USING cgpm (
+                CREATE GENERATOR g_error_latent_manifest FOR p USING cgpm (
                     LATENT output NUMERICAL;
                     OVERRIDE MODEL FOR output, cat GIVEN input USING piecewise;
                 )
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
-                CREATE METAMODEL g_category_override_dupe FOR p USING cgpm (
+                CREATE GENERATOR g_category_override_dupe FOR p USING cgpm (
                     SET CATEGORY MODEL FOR output TO LOGNORMAL;
                     OVERRIDE MODEL FOR output, cat GIVEN input USING piecewise;
                 )
@@ -317,7 +317,7 @@ def test_cgpm_analysis_iteration_timed__ci_slow():
     # extreme amounts of analysis are quickly short-circuited.
     with cgpm_smoke_bdb() as bdb:
 
-        bdb.execute('CREATE METAMODEL g2 FOR p USING cgpm')
+        bdb.execute('CREATE GENERATOR g2 FOR p USING cgpm')
         bdb.execute('INITIALIZE 2 MODELS FOR g2')
 
         start0 = time.time()
@@ -374,10 +374,10 @@ def test_cgpm_kepler():
             'kepler': Kepler,
             'linreg': LinearRegression,
         }
-        bayesdb_register_metamodel(
-            bdb, CGPM_Metamodel(registry, multiprocess=0))
+        bayesdb_register_backend(
+            bdb, CGPM_Backend(registry, multiprocess=0))
         bdb.execute('''
-            CREATE METAMODEL g0 FOR satellites USING cgpm (
+            CREATE GENERATOR g0 FOR satellites USING cgpm (
                 OVERRIDE GENERATIVE MODEL FOR period
                 GIVEN apogee, perigee
                 USING linreg
@@ -388,7 +388,7 @@ def test_cgpm_kepler():
         n = c.fetchvalue()
         # Another generator: exponential launch mass instead of normal.
         bdb.execute('''
-            CREATE METAMODEL g1 FOR satellites USING cgpm (
+            CREATE GENERATOR g1 FOR satellites USING cgpm (
                 SET CATEGORY MODEL FOR launch_mass TO EXPONENTIAL;
                 OVERRIDE MODEL FOR period GIVEN apogee, perigee
                     USING kepler(quagga = eland);
@@ -467,8 +467,8 @@ def test_cgpm_kepler():
         assert len(results[0]) == 1
         assert isinstance(results[0][0], unicode)
         bdb.execute('DROP MODELS FROM g0')
-        bdb.execute('DROP METAMODEL g0')
-        bdb.execute('DROP METAMODEL g1')
+        bdb.execute('DROP GENERATOR g0')
+        bdb.execute('DROP GENERATOR g1')
 
 def test_unknown_stattype():
     from cgpm.regressions.linreg import LinearRegression
@@ -517,26 +517,26 @@ def test_unknown_stattype():
             'kepler': Kepler,
             'linreg': LinearRegression,
         }
-        bayesdb_register_metamodel(bdb, CGPM_Metamodel(registry))
+        bayesdb_register_backend(bdb, CGPM_Backend(registry))
         with pytest.raises(BQLError):
             # Can't model QUAGGA by default.
-            bdb.execute('CREATE METAMODEL g0 FOR satellites USING cgpm')
+            bdb.execute('CREATE GENERATOR g0 FOR satellites USING cgpm')
         with pytest.raises(BQLError):
             # Can't model QUAGGA as input.
             bdb.execute('''
-                CREATE METAMODEL g0 FOR satellites USING cgpm (
+                CREATE GENERATOR g0 FOR satellites USING cgpm (
                     OVERRIDE MODEL FOR relaunches GIVEN apogee USING linreg;
                     OVERRIDE MODEL FOR period GIVEN relaunches USING linreg
                 )
             ''')
         # Can model QUAGGA with an explicit distribution family.
         bdb.execute('''
-            CREATE METAMODEL g0 FOR satellites USING cgpm (
+            CREATE GENERATOR g0 FOR satellites USING cgpm (
                 SET CATEGORY MODEL FOR relaunches TO POISSON
             )
         ''')
         bdb.execute('''
-            CREATE METAMODEL g1 FOR satellites USING cgpm (
+            CREATE GENERATOR g1 FOR satellites USING cgpm (
                 SET CATEGORY MODEL FOR relaunches TO POISSON;
                 OVERRIDE MODEL FOR period GIVEN relaunches USING linreg
             )
@@ -558,9 +558,9 @@ def test_bad_analyze_vars():
             'kepler': Kepler,
             'linreg': LinearRegression,
         }
-        bayesdb_register_metamodel(bdb, CGPM_Metamodel(registry))
+        bayesdb_register_backend(bdb, CGPM_Backend(registry))
         bdb.execute('''
-            CREATE METAMODEL satellites_cgpm FOR satellites USING cgpm
+            CREATE GENERATOR satellites_cgpm FOR satellites USING cgpm
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR satellites_cgpm')
         bdb.execute('ANALYZE satellites_cgpm FOR 1 ITERATION WAIT ()')
@@ -600,10 +600,10 @@ def test_output_stattypes():
         registry = {
             'factor_analysis': FactorAnalysis,
         }
-        bayesdb_register_metamodel(bdb, CGPM_Metamodel(registry))
+        bayesdb_register_backend(bdb, CGPM_Backend(registry))
         # Creating factor analysis with categorical manifest should crash.
         bdb.execute('''
-            CREATE METAMODEL satellites_g0 FOR satellites(
+            CREATE GENERATOR satellites_g0 FOR satellites(
                 OVERRIDE MODEL FOR apogee, country_of_operator
                 AND EXPOSE pc_1 NUMERICAL
                 USING factor_analysis(L=1)
@@ -614,7 +614,7 @@ def test_output_stattypes():
         with pytest.raises(BQLError):
             # Duplicate pc_2 in LATENT and EXPOSE.
             bdb.execute('''
-                CREATE METAMODEL satellites_g1 FOR satellites(
+                CREATE GENERATOR satellites_g1 FOR satellites(
                     LATENT pc_2 CATEGORICAL,
                     OVERRIDE GENERATIVE MODEL FOR
                         apogee, launch_mass
@@ -624,7 +624,7 @@ def test_output_stattypes():
             ''')
         # Creating factor analysis with categorical latent should crash.
         bdb.execute('''
-            CREATE METAMODEL satellites_g1 FOR satellites(
+            CREATE GENERATOR satellites_g1 FOR satellites(
                 OVERRIDE GENERATIVE MODEL FOR
                     apogee, launch_mass
                 AND EXPOSE pc_2 CATEGORICAL
@@ -635,7 +635,7 @@ def test_output_stattypes():
             bdb.execute('INITIALIZE 1 MODEL FOR satellites_g1')
         # Creating factor analysis with all numerical should be ok.
         bdb.execute('''
-            CREATE METAMODEL satellites_g2 FOR satellites USING cgpm(
+            CREATE GENERATOR satellites_g2 FOR satellites USING cgpm(
                 LATENT pc_3 NUMERICAL;
 
                 OVERRIDE MODEL FOR apogee, launch_mass, pc_3, pc_4
@@ -680,17 +680,17 @@ def test_output_stattypes():
         ''').fetchall()
 
 def test_initialize_with_all_nulls():
-    # This test ensures that trying to initialize a CGPM metamodel with any
+    # This test ensures that trying to initialize a generator with any
     # (manifest) column of all null variables will crash.
     # Initializing an overriden column with all null variables should not
     # be a problem in general, so we test this case as well.
 
-    with bayesdb_open(':memory:', builtin_metamodels=False) as bdb:
+    with bayesdb_open(':memory:', builtin_backends=False) as bdb:
         registry = {
             'barebones': BareBonesCGpm,
         }
-        bayesdb_register_metamodel(
-            bdb, CGPM_Metamodel(registry, multiprocess=0))
+        bayesdb_register_backend(
+            bdb, CGPM_Backend(registry, multiprocess=0))
         # Create table with all missing values for a.
         bdb.sql_execute('''
             CREATE TABLE t (a REAL, b REAL, c REAL);
@@ -709,7 +709,7 @@ def test_initialize_with_all_nulls():
             )
         ''')
         bdb.execute('''
-            CREATE METAMODEL m FOR p WITH BASELINE crosscat;
+            CREATE GENERATOR m FOR p WITH BASELINE crosscat;
         ''')
         with pytest.raises(BQLError):
             bdb.execute('''
@@ -723,7 +723,7 @@ def test_initialize_with_all_nulls():
                 MODEL b, c AS NUMERICAL
             )
         ''')
-        bdb.execute('CREATE METAMODEL m2 FOR p2 WITH BASELINE crosscat;')
+        bdb.execute('CREATE GENERATOR m2 FOR p2 WITH BASELINE crosscat;')
         with pytest.raises(BQLError):
             bdb.execute('INITIALIZE 2 MODELS FOR m2;')
 
@@ -734,13 +734,13 @@ def test_initialize_with_all_nulls():
                 MODEL b, c AS NUMERICAL
             )
         ''')
-        bdb.execute('CREATE METAMODEL m3 FOR p3 WITH BASELINE crosscat;')
+        bdb.execute('CREATE GENERATOR m3 FOR p3 WITH BASELINE crosscat;')
         bdb.execute('INITIALIZE 2 MODELS FOR m3;')
 
 
         # Succeed when a is numerical overriden using a dummy CGPM.
         bdb.execute('''
-            CREATE METAMODEL m4 FOR p WITH BASELINE crosscat(
+            CREATE GENERATOR m4 FOR p WITH BASELINE crosscat(
                 OVERRIDE MODEL FOR a GIVEN b USING barebones
             )
         ''')
@@ -762,11 +762,11 @@ def test_add_variable():
                 rank        ignore;
             )
         ''')
-        bdb.metamodels['cgpm'].set_multiprocess(False)
-        bdb.execute('CREATE METAMODEL m0 FOR p WITH BASELINE crosscat;')
+        bdb.backends['cgpm'].set_multiprocess(False)
+        bdb.execute('CREATE GENERATOR m0 FOR p WITH BASELINE crosscat;')
         bdb.execute('INITIALIZE 1 MODELS FOR m0;')
         bdb.execute('ANALYZE m0 FOR 5 ITERATION WAIT;')
-        # Run some queries on the new variable in a metamodel or aggregated.
+        # Run some queries on the new variable in the generator or aggregated.
         def run_queries(target, m):
             extra = 'MODELED BY %s' % (m,) if m is not None else ''
             bdb.execute('''
@@ -792,10 +792,10 @@ def test_add_variable():
         bdb.execute('ANALYZE m0 FOR 5 ITERATION WAIT (VARIABLES height);')
         # Queries should now be successful.
         run_queries('height', 'm0')
-        # Create a new metamodel, and create a custom cateogry model for
+        # Create a new generator, and create a custom category model for
         # the new variable `height`.
         bdb.execute('''
-            CREATE METAMODEL m1 FOR p WITH BASELINE crosscat(
+            CREATE GENERATOR m1 FOR p WITH BASELINE crosscat(
                 SET CATEGORY MODEL FOR age TO exponential;
                 SET CATEGORY MODEL FOR height TO lognormal;
             )
@@ -830,7 +830,7 @@ def test_add_variable():
 
 def test_predictive_relevance():
     with cgpm_dummy_satellites_bdb() as bdb:
-        bayesdb_register_metamodel(bdb, CGPM_Metamodel(cgpm_registry=dict()))
+        bayesdb_register_backend(bdb, CGPM_Backend(cgpm_registry=dict()))
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA (
                 MODEL apogee AS NUMERICAL;
@@ -841,7 +841,7 @@ def test_predictive_relevance():
                 MODEL period AS NUMERICAL
             )
         ''')
-        bdb.execute('CREATE METAMODEL m FOR satellites;')
+        bdb.execute('CREATE GENERATOR m FOR satellites;')
         bdb.execute('INITIALIZE 2 MODELS FOR m;')
         bdb.execute('ANALYZE m FOR 25 ITERATION WAIT (OPTIMIZED);')
 
@@ -998,14 +998,14 @@ def test_predictive_relevance():
 
 def test_add_drop_models():
     with cgpm_dummy_satellites_bdb() as bdb:
-        bayesdb_register_metamodel(
-            bdb, CGPM_Metamodel(dict(), multiprocess=0))
+        bayesdb_register_backend(
+            bdb, CGPM_Backend(dict(), multiprocess=0))
         bdb.execute('''
             CREATE POPULATION p FOR satellites_ucs WITH SCHEMA(
                 GUESS STATTYPES FOR (*);
             )
         ''')
-        bdb.execute('CREATE METAMODEL m FOR p (SUBSAMPLE 10);')
+        bdb.execute('CREATE GENERATOR m FOR p (SUBSAMPLE 10);')
 
         # Retrieve id for testing.
         population_id = bayesdb_get_population(bdb, 'p')
@@ -1146,7 +1146,7 @@ def test_using_modelnos():
                 MODEL period AS NUMERICAL
             )
         ''')
-        bayesdb_register_metamodel(bdb, CGPM_Metamodel(dict(), multiprocess=0))
+        bayesdb_register_backend(bdb, CGPM_Backend(dict(), multiprocess=0))
         bdb.execute('''
             CREATE ANALYSIS SCHEMA g0 FOR satellites USING cgpm(
                 SUBSAMPLE 10
@@ -1204,7 +1204,7 @@ def test_using_modelnos():
             CHECKPOINT 1 ITERATION
             WAIT;
         ''')
-        engine = bdb.metamodels['cgpm']._engine(bdb, 1)
+        engine = bdb.backends['cgpm']._engine(bdb, 1)
         assert len(engine.states[0].diagnostics['logscore']) == 1
         assert len(engine.states[1].diagnostics['logscore']) == 0
         bdb.execute('''

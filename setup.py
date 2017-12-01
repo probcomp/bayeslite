@@ -186,9 +186,9 @@ version_py = 'src/version.py'
 lemonade = 'external/lemonade/dist'
 grammars = [
     'src/grammar.y',
-    'src/metamodels/cgpm_alter/grammar.y',
-    'src/metamodels/cgpm_analyze/grammar.y',
-    'src/metamodels/cgpm_schema/grammar.y',
+    'src/backends/cgpm_alter/grammar.y',
+    'src/backends/cgpm_analyze/grammar.y',
+    'src/backends/cgpm_schema/grammar.y',
 ]
 
 setup(
@@ -207,10 +207,10 @@ setup(
     ],
     packages=[
         'bayeslite',
-        'bayeslite.metamodels',
-        'bayeslite.metamodels.cgpm_alter',
-        'bayeslite.metamodels.cgpm_analyze',
-        'bayeslite.metamodels.cgpm_schema',
+        'bayeslite.backends',
+        'bayeslite.backends.cgpm_alter',
+        'bayeslite.backends.cgpm_analyze',
+        'bayeslite.backends.cgpm_schema',
         'bayeslite.plex',
         'bayeslite.shell',
         'bayeslite.tests',
@@ -232,7 +232,7 @@ setup(
         'test': local_test,
     },
     package_data={
-        'bayeslite.metamodels': ['*.schema.json'],
+        'bayeslite.backends': ['*.schema.json'],
         'bayeslite.tests': [
             'dha.csv',
         ],

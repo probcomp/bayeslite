@@ -88,11 +88,11 @@ CREATE TABLE bayesdb_generator_model (
 bayesdb_schema_5to6 = '''
 PRAGMA user_version = 6;
 
-ALTER TABLE bayesdb_generator
-    ADD COLUMN defaultp BOOLEAN DEFAULT 0;
+-- ALTER TABLE bayesdb_generator
+--     ADD COLUMN defaultp BOOLEAN DEFAULT 0;
 
-CREATE UNIQUE INDEX bayesdb_generator_i_default ON bayesdb_generator (tabname)
-    WHERE defaultp;
+-- CREATE UNIQUE INDEX bayesdb_generator_i_default ON bayesdb_generator (tabname)
+--     WHERE defaultp;
 '''
 
 bayesdb_schema_6to7 = '''

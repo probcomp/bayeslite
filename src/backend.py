@@ -14,20 +14,21 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""Metamodel interface.
+"""Backend interface.
 
-To be used to model data in a :class:`bayeslite.BayesDB` handle, a metamodel
-must first be registered with :func:`bayesdb_register_metamodel`.
+To be used as a modeling and inference backend in a :class:`bayeslite.BayesDB`
+handle, a backends must first be registered with
+:func:`bayesdb_register_backend`.
 
-The CGPM metamodel is registered by default, but we can suppress
+The CGPM backend is registered by default, but we can suppress
 that for illustration::
 
    import bayeslite
-   from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
+   from bayeslite.backends.cgpm_backend import CGPM_Backend
 
-   bdb = bayeslite.bayesdb_open(pathname='foo.bdb', builtin_metamodels=False)
-   metamodel = CGPM_Metamodel(cgpm_registry=dict(), multiprocess=False)
-   bayeslite.bayesdb_register_metamodel(bdb, metamodel)
+   bdb = bayeslite.bayesdb_open(pathname='foo.bdb', builtin_backends=False)
+   backend = CGPM_Backend(cgpm_registry=dict(), multiprocess=False)
+   bayeslite.bayesdb_register_backend(bdb, backend)
 
 Then you can model a table and query the probable implications of the data in
 the table::
@@ -42,65 +43,65 @@ the table::
 
 from bayeslite.util import cursor_value
 
-builtin_metamodels = []
-builtin_metamodel_names = set()
+builtin_backends = []
+builtin_backend_names = set()
 
-def bayesdb_builtin_metamodel(metamodel):
-    name = metamodel.name()
-    assert name not in builtin_metamodel_names
-    builtin_metamodels.append(metamodel)
-    builtin_metamodel_names.add(name)
+def bayesdb_builtin_backend(backend):
+    name = backend.name()
+    assert name not in builtin_backend_names
+    builtin_backends.append(backend)
+    builtin_backend_names.add(name)
 
-def bayesdb_register_builtin_metamodels(bdb):
-    """Register all builtin metamodels in `bdb`."""
-    for metamodel in builtin_metamodels:
-        bayesdb_register_metamodel(bdb, metamodel)
+def bayesdb_register_builtin_backends(bdb):
+    """Register all builtin backends in `bdb`."""
+    for backend in builtin_backends:
+        bayesdb_register_backend(bdb, backend)
 
-def bayesdb_register_metamodel(bdb, metamodel):
-    """Register `metamodel` in `bdb`, creating any necessary tables.
+def bayesdb_register_backend(bdb, backend):
+    """Register `backend` in `bdb`, creating any necessary tables.
 
-    `metamodel` must not already be registered in any BayesDB, nor any
-    metamodel by the same name.
+    `backend` must not already be registered in any BayesDB, nor any
+    backend by the same name.
     """
-    name = metamodel.name()
-    if name in bdb.metamodels:
-        raise ValueError('Metamodel already registered: %s' % (name,))
+    name = backend.name()
+    if name in bdb.backends:
+        raise ValueError('Backend already registered: %s' % (name,))
     with bdb.savepoint():
-        metamodel.register(bdb)
-        bdb.metamodels[name] = metamodel
+        backend.register(bdb)
+        bdb.backends[name] = backend
 
-def bayesdb_deregister_metamodel(bdb, metamodel):
-    """Deregister `metamodel`, which must have been registered in `bdb`."""
-    name = metamodel.name()
-    assert name in bdb.metamodels
-    assert bdb.metamodels[name] == metamodel
-    del bdb.metamodels[name]
+def bayesdb_deregister_backend(bdb, backend):
+    """Deregister `backend`, which must have been registered in `bdb`."""
+    name = backend.name()
+    assert name in bdb.backends
+    assert bdb.backends[name] == backend
+    del bdb.backends[name]
 
-def bayesdb_metamodel_version(bdb, mm_name):
+def bayesdb_backend_version(bdb, mm_name):
     cursor = bdb.sql_execute('''
         SELECT version FROM bayesdb_metamodel WHERE name = ?
     ''', (mm_name,))
     return cursor_value(cursor, nullok=True)
 
-class IBayesDBMetamodel(object):
-    """BayesDB metamodel interface.
+class BayesDB_Backend(object):
+    """BayesDB backend interface.
 
-    Subclasses of :class:`IBayesDBMetamodel` implement the
+    Subclasses of :class:`BayesDB_Backend` implement the
     functionality needed by probabilistic BQL queries to sample from
     and inquire about the posterior distribution of a generative model
     conditioned on data in a table.  Instances of subclasses of
-    `IBayesDBMetamodel` contain any in-memory state associated with
-    the metamodel in the database.
+    `BayesDB_Backend` contain any in-memory state associated with
+    the backend in the database.
     """
 
     def name(self):
-        """Return the name of the metamodel as a str."""
+        """Return the name of the backend as a str."""
         raise NotImplementedError
 
     def register(self, bdb):
-        """Install any state needed for the metamodel in `bdb`.
+        """Install any state needed for the backend in `bdb`.
 
-        Called by :func:`bayeslite.bayesdb_register_metamodel`.
+        Called by :func:`bayeslite.bayesdb_register_backend`.
 
         Normally this will create SQL tables if necessary.
         """
@@ -123,7 +124,7 @@ class IBayesDBMetamodel(object):
         Must parse `schema` to build the generator.
 
         The generator id and column numbers may be used to create
-        metamodel-specific records in the database for the generator
+        backend-specific records in the database for the generator
         with foreign keys referring to the ``bayesdb_generator`` and
         ``bayesdb_variable`` tables.
 
@@ -137,7 +138,7 @@ class IBayesDBMetamodel(object):
         raise NotImplementedError
 
     def drop_generator(self, bdb, generator_id):
-        """Drop any metamodel-specific records for a generator.
+        """Drop any backend-specific records for a generator.
 
         Called when executing ``DROP GENERATOR``.
         """
@@ -153,7 +154,7 @@ class IBayesDBMetamodel(object):
         raise NotImplementedError
 
     def add_column(self, bdb, generator_id, colno):
-        """Add `colno` from the population as a variable in the metamodel.
+        """Add `colno` from the population as a variable in the backend.
 
         Used by the MML::
 
@@ -264,7 +265,7 @@ class IBayesDBMetamodel(object):
         distributed from the true target.
 
         The results are samples from the distribution on targets,
-        independent conditioned on (the latent state of the metamodel
+        independent conditioned on (the latent state of the backend
         and) the constraints.
         """
         raise NotImplementedError

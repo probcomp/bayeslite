@@ -18,7 +18,7 @@ import argparse
 import os
 
 import bayeslite
-from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
+from bayeslite.backends.cgpm_backend import CGPM_Backend
 import bayeslite.shell.core as shell
 import bayeslite.shell.hook as hook
 
@@ -58,11 +58,11 @@ def run(stdin, stdout, stderr, argv):
         stderr.write('%s: missing option?\n' % (progname,))
         return 1
     bdb = bayeslite.bayesdb_open(pathname=args.bdbpath,
-        builtin_metamodels=False)
+        builtin_backends=False)
 
     multiprocess = args.jobs != 1
-    metamodel = CGPM_Metamodel(cgpm_registry={}, multiprocess=multiprocess)
-    bayeslite.bayesdb_register_metamodel(bdb, metamodel)
+    backend = CGPM_Backend(cgpm_registry={}, multiprocess=multiprocess)
+    bayeslite.bayesdb_register_backend(bdb, backend)
     bdbshell = shell.Shell(bdb, 'cgpm', stdin, stdout, stderr)
     with hook.set_current_shell(bdbshell):
         if not args.no_init_file:

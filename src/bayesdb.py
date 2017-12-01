@@ -23,17 +23,17 @@ import struct
 import bayeslite.bql as bql
 import bayeslite.bqlfn as bqlfn
 import bayeslite.bqlvtab as bqlvtab
-import bayeslite.metamodel as metamodel
 import bayeslite.parse as parse
 import bayeslite.schema as schema
 import bayeslite.txn as txn
 import bayeslite.weakprng as weakprng
 
+from bayeslite.backend import bayesdb_register_builtin_backends
 from bayeslite.util import cursor_value
 
 bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
 
-def bayesdb_open(pathname=None, builtin_metamodels=None, seed=None,
+def bayesdb_open(pathname=None, builtin_backends=None, seed=None,
         version=None, compatible=None):
     """Open the BayesDB in the file at `pathname`.
 
@@ -51,12 +51,12 @@ def bayesdb_open(pathname=None, builtin_metamodels=None, seed=None,
     `bayesdb_open` will not incompatibly change the format of the
     database (but some newer bayesdb features may not work).
     """
-    if builtin_metamodels is None:
-        builtin_metamodels = True
+    if builtin_backends is None:
+        builtin_backends = True
     bdb = BayesDB(bayesdb_open_cookie, pathname=pathname, seed=seed,
         version=version, compatible=compatible)
-    if builtin_metamodels:
-        metamodel.bayesdb_register_builtin_metamodels(bdb)
+    if builtin_backends:
+        bayesdb_register_builtin_backends(bdb)
     return bdb
 
 class BayesDB(object):
@@ -81,7 +81,7 @@ class BayesDB(object):
         self._sqlite3 = apsw.Connection(pathname)
         self._txn_depth = 0     # managed in txn.py
         self._cache = None      # managed in txn.py
-        self.metamodels = {}
+        self.backends = {}
         self.tracer = None
         self.sql_tracer = None
         self.temptable = 0

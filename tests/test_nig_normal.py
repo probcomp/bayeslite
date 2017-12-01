@@ -20,12 +20,12 @@ import bayeslite.core as core
 
 from bayeslite import BQLError
 from bayeslite import bayesdb_open
-from bayeslite import bayesdb_register_metamodel
-from bayeslite.metamodels.nig_normal import NIGNormalMetamodel
+from bayeslite import bayesdb_register_backend
+from bayeslite.backends.nig_normal import NIGNormalBackend
 
 def test_nig_normal_smoke():
     with bayesdb_open(':memory:') as bdb:
-        bayesdb_register_metamodel(bdb, NIGNormalMetamodel())
+        bayesdb_register_backend(bdb, NIGNormalBackend())
         bdb.sql_execute('create table t(x)')
         for x in xrange(100):
             bdb.sql_execute('insert into t(x) values(?)', (x,))
@@ -42,7 +42,7 @@ def test_nig_normal_smoke():
 
 def test_nig_normal_latent_numbering():
     with bayesdb_open(':memory:') as bdb:
-        bayesdb_register_metamodel(bdb, NIGNormalMetamodel())
+        bayesdb_register_backend(bdb, NIGNormalBackend())
         bdb.sql_execute('create table t(id integer primary key, x, y)')
         for x in xrange(100):
             bdb.sql_execute('insert into t(x, y) values(?, ?)', (x, x*x - 100))
@@ -68,7 +68,7 @@ def test_nig_normal_latent_numbering():
 
 def test_nig_normal_latent_smoke():
     with bayesdb_open(':memory:') as bdb:
-        bayesdb_register_metamodel(bdb, NIGNormalMetamodel())
+        bayesdb_register_backend(bdb, NIGNormalBackend())
         bdb.sql_execute('create table t(x)')
         for x in xrange(100):
             bdb.sql_execute('insert into t(x) values(?)', (x,))
@@ -163,7 +163,7 @@ def test_nig_normal_latent_smoke():
 
 def test_nig_normal_latent_conditional_smoke():
     with bayesdb_open(':memory:') as bdb:
-        bayesdb_register_metamodel(bdb, NIGNormalMetamodel())
+        bayesdb_register_backend(bdb, NIGNormalBackend())
         bdb.sql_execute('create table t(x)')
         for x in xrange(100):
             bdb.sql_execute('insert into t(x) values(?)', (x,))
@@ -229,7 +229,7 @@ def test_nig_normal_latent_conditional_smoke():
 
 def test_nig_normal_latent_2var_smoke():
     with bayesdb_open(':memory:') as bdb:
-        bayesdb_register_metamodel(bdb, NIGNormalMetamodel())
+        bayesdb_register_backend(bdb, NIGNormalBackend())
         bdb.sql_execute('create table t(x, y)')
         for x in xrange(100):
             bdb.sql_execute('insert into t(x, y) values(?, ?)',
@@ -308,7 +308,7 @@ def test_nig_normal_latent_2var_smoke():
 
 def test_nig_normal_latent_2var_conditional_smoke():
     with bayesdb_open(':memory:') as bdb:
-        bayesdb_register_metamodel(bdb, NIGNormalMetamodel())
+        bayesdb_register_backend(bdb, NIGNormalBackend())
         bdb.sql_execute('create table t(x, y)')
         for x in xrange(100):
             bdb.sql_execute('insert into t(x, y) values(?, ?)',
@@ -455,7 +455,7 @@ def test_nig_normal_latent_2var_conditional_smoke():
 
 def test_nig_normal_latent_2var2lat_conditional_smoke():
     with bayesdb_open(':memory:') as bdb:
-        bayesdb_register_metamodel(bdb, NIGNormalMetamodel())
+        bayesdb_register_backend(bdb, NIGNormalBackend())
         bdb.sql_execute('create table t(x, y)')
         for x in xrange(100):
             bdb.sql_execute('insert into t(x, y) values(?, ?)',

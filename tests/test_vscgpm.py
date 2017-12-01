@@ -21,9 +21,9 @@ import pytest
 import bayeslite.core as core
 
 from bayeslite import bayesdb_open
-from bayeslite import bayesdb_register_metamodel
+from bayeslite import bayesdb_register_backend
 from bayeslite.exception import BQLError
-from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
+from bayeslite.backends.cgpm_backend import CGPM_Backend
 
 # ------------------------------------------------------------------------------
 # XXX Kepler source code.
@@ -109,7 +109,7 @@ def test_cgpm_extravaganza__ci_slow():
     except ImportError:
         pytest.skip('no sklearn or venturescript')
         return
-    with bayesdb_open(':memory:', builtin_metamodels=False) as bdb:
+    with bayesdb_open(':memory:', builtin_backends=False) as bdb:
         # XXX Use the real satellites data instead of this bogosity?
         bdb.sql_execute('''
             CREATE TABLE satellites_ucs (
@@ -161,30 +161,30 @@ def test_cgpm_extravaganza__ci_slow():
             'linreg': LinearRegression,
             'forest': RandomForest,
         }
-        cgpmt = CGPM_Metamodel(cgpm_registry)
-        bayesdb_register_metamodel(bdb, cgpmt)
+        cgpmt = CGPM_Backend(cgpm_registry)
+        bayesdb_register_backend(bdb, cgpmt)
 
         with pytest.raises(BQLError):
             bdb.execute('''
-                CREATE METAMODEL g0 FOR satellites USING cgpm (
+                CREATE GENERATOR g0 FOR satellites USING cgpm (
                     SET CATEGORY MODEL FOR apoge TO NORMAL
                 )
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
-                CREATE METAMODEL g0 FOR satellites USING cgpm (
+                CREATE GENERATOR g0 FOR satellites USING cgpm (
                     OVERRIDE MODEL FOR perigee GIVEN apoge USING linreg
                 )
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
-                CREATE METAMODEL g0 FOR satellites USING cgpm (
+                CREATE GENERATOR g0 FOR satellites USING cgpm (
                     LATENT apogee NUMERICAL
                 )
             ''')
 
         bdb.execute('''
-            CREATE METAMODEL g0 FOR satellites USING cgpm (
+            CREATE GENERATOR g0 FOR satellites USING cgpm (
                 SET CATEGORY MODEL FOR apogee TO NORMAL;
 
                 LATENT kepler_cluster_id NUMERICAL;
@@ -288,6 +288,6 @@ def test_cgpm_extravaganza__ci_slow():
         ''').fetchall()
 
         bdb.execute('DROP MODELS FROM g0')
-        bdb.execute('DROP METAMODEL g0')
+        bdb.execute('DROP GENERATOR g0')
         bdb.execute('DROP POPULATION satellites')
         bdb.execute('DROP TABLE satellites_ucs')

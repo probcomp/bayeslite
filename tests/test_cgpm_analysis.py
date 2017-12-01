@@ -18,14 +18,14 @@ import pytest
 
 import bayeslite.core
 
-from bayeslite import bayesdb_register_metamodel
+from bayeslite import bayesdb_register_backend
 from bayeslite.exception import BQLError
-from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
+from bayeslite.backends.cgpm_backend import CGPM_Backend
 
 from test_cgpm import cgpm_dummy_satellites_bdb
 
 # This test suite needs expanding to confirm the subproblems are compiled to the
-# right inference kernels in cgpm_metamodel, but the information is quite nested
+# right inference kernels in cgpm_backend, but the information is quite nested
 # so it is not trivial to retrieve this information. Considering refactoring the
 # interpreter to make unit testing easier.
 
@@ -42,7 +42,7 @@ def test_analysis_subproblems_basic():
                 MODEL period AS NUMERICAL
             )
         ''')
-        bayesdb_register_metamodel(bdb, CGPM_Metamodel(dict(), multiprocess=0))
+        bayesdb_register_backend(bdb, CGPM_Backend(dict(), multiprocess=0))
         bdb.execute('''
             CREATE ANALYSIS SCHEMA g0 FOR satellites USING cgpm(
                 SUBSAMPLE 10

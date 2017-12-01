@@ -221,10 +221,9 @@ class BQLSemantics(object):
     def p_pop_columns_guess_list(self, cols): return cols
 
     def p_command_creategen(self, ifnotexists0, name, ifnotexists1, pop,
-            baseline, metamodel, schema):
+            baseline, backend, schema):
         ifnotexists = ifnotexists0 or ifnotexists1
-        return ast.CreateGen(
-            name, ifnotexists, pop, baseline, metamodel, schema)
+        return ast.CreateGen(name, ifnotexists, pop, baseline, backend, schema)
     def p_command_dropgen(self, ifexists, name):
         return ast.DropGen(ifexists, name)
     def p_command_altergen(self, generator, models, cmds):
@@ -237,8 +236,8 @@ class BQLSemantics(object):
     def p_altergen_cmd_generic(self, s):
         return ast.AlterGenGeneric(s)
 
-    def p_runtime_name_opt_none(self):              return None
-    def p_runtime_name_opt_one(self, metamodel):    return metamodel
+    def p_backend_name_opt_none(self):            return None
+    def p_backend_name_opt_one(self, backend):    return backend
 
     def p_generator_schema_opt_none(self):      return [[]]
     def p_generator_schema_opt_some(self, s):   return s
@@ -326,9 +325,9 @@ class BQLSemantics(object):
     def p_analysis_token_compound(self, p):     return ['('] + p + [')']
     def p_analysis_token_primitive(self, t):    return [t]
 
-    def p_command_regress(self, target, givens, nsamp, pop, metamodel,
+    def p_command_regress(self, target, givens, nsamp, pop, generator,
             modelnos):
-        return ast.Regress(target, givens, nsamp, pop, metamodel, modelnos)
+        return ast.Regress(target, givens, nsamp, pop, generator, modelnos)
 
     def p_simulate_s(self, cols, population, generator, modelnos, constraints,
             lim, acc):
@@ -490,7 +489,7 @@ class BQLSemantics(object):
 
     def p_column_name_cn(self, name):           return name
     def p_generator_name_unqualified(self, name): return name
-    def p_metamodel_name_mn(self, name):        return name
+    def p_backend_name_bn(self, name):          return name
     def p_population_name_pn(self, name):       return name
     def p_table_name_unqualified(self, name):   return name
 

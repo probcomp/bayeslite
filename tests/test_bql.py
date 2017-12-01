@@ -24,12 +24,12 @@ import bayeslite.ast as ast
 import bayeslite.compiler as compiler
 import bayeslite.core as core
 import bayeslite.guess as guess
-import bayeslite.metamodels.troll_rng as troll
+import bayeslite.backends.troll_rng as troll
 import bayeslite.parse as parse
 
 from bayeslite.exception import BQLError
 from bayeslite.math_util import relerr
-from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
+from bayeslite.backends.cgpm_backend import CGPM_Backend
 from bayeslite.util import cursor_value
 
 import test_core
@@ -1270,7 +1270,7 @@ def test_probability_of_mutinf():
 
 def test_modelledby_usingmodels_trival():
     def setup(bdb):
-        bdb.execute('create metamodel m1 for p1 with baseline crosscat;')
+        bdb.execute('create generator m1 for p1 with baseline crosscat;')
     assert bql2sql('estimate predictive probability of weight + 1'
             ' from p1 modelled by m1 using models 1-3, 5;', setup=setup) == \
         'SELECT (bql_row_column_predictive_probability(1, 1, \'[1, 2, 3, 5]\','\
@@ -2006,7 +2006,7 @@ def test_alterpop_addvar():
             )
         ''')
         population_id = core.bayesdb_get_population(bdb, 'p')
-        bdb.execute('create metamodel m for p with baseline crosscat;')
+        bdb.execute('create generator m for p with baseline crosscat;')
         # Fail when variable does not exist in base table.
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('alter population p add variable quux;')
@@ -2179,8 +2179,8 @@ def test_txn():
         # rolled back by ROLLBACK.
 
 def test_predprob_null():
-    metamodel = CGPM_Metamodel({}, multiprocess=False)
-    with test_core.bayesdb(metamodel=metamodel) as bdb:
+    backend = CGPM_Backend({}, multiprocess=False)
+    with test_core.bayesdb(backend=backend) as bdb:
         bdb.sql_execute('''
             create table foo (
                 id integer primary key not null,
@@ -2209,7 +2209,7 @@ def test_predprob_null():
                 z numerical;
             )
         ''')
-        bdb.execute('create metamodel pfoo_cc for pfoo using cgpm;')
+        bdb.execute('create generator pfoo_cc for pfoo using cgpm;')
         bdb.execute('initialize 1 model for pfoo_cc')
         bdb.execute('analyze pfoo_cc for 1 iteration wait')
         # Null value => null predictive probability.
@@ -2281,7 +2281,7 @@ def test_misc_errors():
             # Renaming columns is not yet implemented.
             bdb.execute('alter table t1 rename weight to mass')
         with pytest.raises(bayeslite.BQLError):
-            # xcat does not exist as a metamodel.
+            # xcat does not exist as a backend.
             bdb.execute('create generator p1_xc for p1 using xcat()')
         with pytest.raises(bayeslite.BQLError):
             # p1 already exists as a population.
@@ -2385,7 +2385,7 @@ def test_checkpoint__ci_slow():
                 where generator_id = ?
         '''
         with pytest.raises(AssertionError):
-            # XXX CGPM_Metamodel does not update bayesdb_generator_model.
+            # XXX CGPM_Backend does not update bayesdb_generator_model.
             assert bdb.execute(sql, (generator_id,)).fetchvalue() == 5
         bdb.execute('drop models from p1_cc')
         bdb.execute('initialize 1 model for p1_cc')
@@ -2396,7 +2396,7 @@ def test_checkpoint__ci_slow():
                 where generator_id = ?
         '''
         with pytest.raises(AssertionError):
-            # XXX CGPM_Metamodel does not update bayesdb_generator_model.
+            # XXX CGPM_Backend does not update bayesdb_generator_model.
             assert bdb.execute(sql, (generator_id,)).fetchvalue() == 1
 
 def test_infer_confidence__ci_slow():
@@ -2464,7 +2464,7 @@ def test_empty_cursor():
         empty(bdb.execute('DROP TABLE t'))
 
 def test_create_generator_ifnotexists():
-    # XXX Test other metamodels too, because they have a role in ensuring that
+    # XXX Test other backends too, because they have a role in ensuring that
     # this works. Their create_generator will still be called.
     #
     # [TRC 20160627: The above comment appears to be no longer true --
@@ -2604,11 +2604,13 @@ def test_tracing_error_smoke():
         assert tracer.finished_calls == 0
         assert tracer.abandoned_calls == 0
 
-class Boom(Exception): pass
-class ErroneousMetamodel(troll.TrollMetamodel):
+class Boom(Exception):
+    pass
+class ErroneousBackend(troll.TrollBackend):
     def __init__(self):
         self.call_ct = 0
-    def name(self): return 'erroneous'
+    def name(self):
+        return 'erroneous'
     def logpdf_joint(self, *_args, **_kwargs):
         if self.call_ct > 10: # Wait to avoid raising during sqlite's prefetch
             raise Boom()
@@ -2617,7 +2619,7 @@ class ErroneousMetamodel(troll.TrollMetamodel):
 
 def test_tracing_execution_error_smoke():
     with test_core.t1() as (bdb, _population_id, _generator_id):
-        bayeslite.bayesdb_register_metamodel(bdb, ErroneousMetamodel())
+        bayeslite.bayesdb_register_backend(bdb, ErroneousBackend())
         bdb.execute('DROP GENERATOR p1_cc')
         bdb.execute('CREATE GENERATOR p1_err FOR p1 USING erroneous()')
         q = 'ESTIMATE PREDICTIVE PROBABILITY OF age FROM p1'

@@ -112,7 +112,7 @@ CreateGen = namedtuple('CreateGen', [
     'ifnotexists',              # boolean
     'population',               # XXX name
     'baseline',                 # XXX name
-    'metamodel',                # XXX name
+    'backend',                  # XXX name
     'schema',                   # nested list of tokens
 ])
 DropGen = namedtuple('DropGen', [
@@ -158,7 +158,7 @@ Regress = namedtuple('Regress', [
     'givens',
     'nsamp',
     'population',
-    'metamodel',
+    'generator',
     'modelnos'
 ])
 

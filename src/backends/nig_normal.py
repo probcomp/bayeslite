@@ -20,19 +20,19 @@ unknown parameters.
 The parameters are taken from the normal and inverse-gamma conjuate
 prior.
 
-This module implements the :class:`bayeslite.IBayesDBMetamodel`
+This module implements the :class:`bayeslite.BayesDB_Backend`
 interface for the NIG-Normal model.
 """
 
 import math
 import random
 
+import bayeslite.backend
 import bayeslite.core as core
-import bayeslite.metamodel as metamodel
 
+from bayeslite.backend import bayesdb_backend_version
 from bayeslite.exception import BQLError
 from bayeslite.math_util import logmeanexp
-from bayeslite.metamodel import bayesdb_metamodel_version
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import cursor_value
 
@@ -80,14 +80,14 @@ CREATE TABLE bayesdb_nig_normal_deviation (
 );
 '''
 
-class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
-    """Normal-Inverse-Gamma-Normal metamodel for BayesDB.
+class NIGNormalBackend(bayeslite.backend.BayesDB_Backend):
+    """Normal-Inverse-Gamma-Normal backend for BayesDB.
 
-    The metamodel is named ``nig_normal`` in BQL::
+    The backend is named ``nig_normal`` in BQL::
 
         CREATE GENERATOR t_nig FOR t USING nig_normal(..)
 
-    Internally, the NIG Normal metamodel add SQL tables to the
+    Internally, the NIGNormal backend add SQL tables to the
     database with names that begin with ``bayesdb_nig_normal_``.
 
     """
@@ -100,7 +100,7 @@ class NIGNormalMetamodel(metamodel.IBayesDBMetamodel):
 
     def register(self, bdb):
         with bdb.savepoint():
-            version = bayesdb_metamodel_version(bdb, self.name())
+            version = bayesdb_backend_version(bdb, self.name())
             if version is None:
                 bdb.sql_execute(nig_normal_schema_1)
                 version = 1

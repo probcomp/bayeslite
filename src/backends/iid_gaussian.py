@@ -20,7 +20,7 @@ This is an example of the simplest possible population model that's
 actually stochastic.  The Gaussian has mean 0 and standard deviation
 1.
 
-This module implements the :class:`bayeslite.IBayesDBMetamodel`
+This module implements the :class:`bayeslite.BayesDB_Backend`
 interface for the IID Gaussian Model.
 
 """
@@ -28,7 +28,7 @@ interface for the IID Gaussian Model.
 import math
 import random
 
-import bayeslite.metamodel as metamodel
+import bayeslite.backend
 
 from bayeslite.exception import BQLError
 
@@ -36,10 +36,10 @@ std_normal_schema_1 = '''
 INSERT INTO bayesdb_metamodel (name, version) VALUES ('std_normal', 1);
 '''
 
-class StdNormalMetamodel(metamodel.IBayesDBMetamodel):
-    """IID Gaussian metamodel for BayesDB.
+class StdNormalBackend(bayeslite.backend.BayesDB_Backend):
+    """IID Gaussian backend for BayesDB.
 
-    The metamodel is named ``std_normal`` in BQL::
+    The backend is named ``std_normal`` in BQL::
 
         CREATE GENERATOR t_sn FOR t USING std_normal(..)
     """

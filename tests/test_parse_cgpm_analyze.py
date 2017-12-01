@@ -14,7 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import bayeslite.metamodels.cgpm_analyze.parse as cgpm_analyze_parser
+import bayeslite.backends.cgpm_analyze.parse as cgpm_analyze_parser
 
 from test_parse import parse_bql_string
 

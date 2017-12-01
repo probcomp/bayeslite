@@ -31,16 +31,16 @@ dha_csv = os.path.join(root, 'dha.csv')
 # Test that simulating a column constrained to have a specific value
 # returns an error.
 #
-# XXX This should be a metamodel-independent test.
+# XXX This should be a backend-independent test.
 def test_simulate_drawconstraint_error__ci_slow():
     with bayeslite.bayesdb_open() as bdb:
         with open(dha_csv, 'rU') as f:
             read_csv.bayesdb_read_csv(bdb, 'dha', f, header=True, create=True)
-        bdb.metamodels['cgpm'].set_multiprocess(False)
+        bdb.backends['cgpm'].set_multiprocess(False)
         bayesdb_guess_population(
             bdb, 'hospital', 'dha', overrides=[('name', 'key')])
         bdb.execute(
-            'CREATE METAMODEL hospital_cc FOR hospital USING cgpm;')
+            'CREATE GENERATOR hospital_cc FOR hospital USING cgpm;')
         bdb.execute('INITIALIZE 1 MODEL FOR hospital_cc')
         bdb.execute('ANALYZE hospital_cc FOR 1 ITERATION WAIT (OPTIMIZED);')
         with pytest.raises(ValueError):
@@ -80,7 +80,7 @@ def test_simulate_given_rowid():
     # should produce values that are significantly different from simulated
     # values of the variable for another row.
     with bayeslite.bayesdb_open() as bdb:
-        bdb.metamodels['cgpm'].set_multiprocess(False)
+        bdb.backends['cgpm'].set_multiprocess(False)
         bdb.sql_execute('CREATE TABLE t(x TEXT, y NUMERIC)')
         for row in data:
             bdb.sql_execute('INSERT INTO t (x, y) VALUES (?, ?)', row)
@@ -91,7 +91,7 @@ def test_simulate_given_rowid():
             }
         ''')
         bdb.execute('''
-            CREATE METAMODEL t_g FOR t_p;
+            CREATE GENERATOR t_g FOR t_p;
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR t_g')
         bdb.execute('ANALYZE t_g FOR 3 ITERATION WAIT')
@@ -145,7 +145,7 @@ def test_simulate_given_rowid_multivariate():
     # Test that GIVEN statement can accept a multivariate constraint clause in
     # which one of the constraints is on _rowid_.
     with bayeslite.bayesdb_open() as bdb:
-        bdb.metamodels['cgpm'].set_multiprocess(False)
+        bdb.backends['cgpm'].set_multiprocess(False)
         bdb.sql_execute(
             'CREATE TABLE t(x TEXT, y NUMERIC, z NUMERIC, w NUMERIC)')
         for row in data_multivariate:
@@ -157,7 +157,7 @@ def test_simulate_given_rowid_multivariate():
                 IGNORE x
             }
         ''')
-        bdb.execute('CREATE METAMODEL t_g FOR t_p;')
+        bdb.execute('CREATE GENERATOR t_g FOR t_p;')
         bdb.execute('INITIALIZE 1 MODEL FOR t_g')
         bdb.execute('ANALYZE t_g FOR 100 ITERATION WAIT(OPTIMIZED)')
         bdb.execute('''
@@ -176,7 +176,7 @@ def test_simulate_given_rowid_multivariate():
         row1_2_avg = bdb.execute('SELECT AVG(y) FROM row1_2').fetchall()[0][0]
         # We expect these values to be close to each other, because conditioning
         # on _rowid_ decouples the dependencies between other variables in the
-        # CrossCat metamodel, so the additional condition on w should have no
+        # CrossCat generator, so the additional condition on w should have no
         # effect.
         assert abs(row1_1_avg - row1_2_avg) < 2
 
@@ -211,7 +211,7 @@ def test_simulate_given_rowid_multivariate():
 def test_simulate_given_rowid_unincorporated():
     '''Ensure specifying rowid loads constraints for unincorporated rows'''
     with bayeslite.bayesdb_open() as bdb:
-        bdb.metamodels['cgpm'].set_multiprocess(False)
+        bdb.backends['cgpm'].set_multiprocess(False)
         bdb.sql_execute(
             'CREATE TABLE t(x TEXT, y NUMERIC, z NUMERIC, w NUMERIC)')
         for row in data_multivariate[:-5]:
@@ -223,7 +223,7 @@ def test_simulate_given_rowid_unincorporated():
                 IGNORE x
             }
         ''')
-        bdb.execute('CREATE METAMODEL t_g FOR t_p;')
+        bdb.execute('CREATE GENERATOR t_g FOR t_p;')
         bdb.execute('INITIALIZE 1 MODEL FOR t_g')
         bdb.execute('ANALYZE t_g FOR 20 ITERATION WAIT (OPTIMIZED)')
 
@@ -237,7 +237,7 @@ def test_simulate_given_rowid_unincorporated():
             ''')
 
         # Insert remaining five rows into base table without incorporating
-        # the data into the metamodel.
+        # the data into the generator.
         for row in data_multivariate[-5:]:
             bdb.sql_execute(
                 'INSERT INTO t (x, y, z, w) VALUES (?, ?, ?, ?)', row)

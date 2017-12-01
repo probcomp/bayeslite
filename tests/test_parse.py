@@ -1376,7 +1376,7 @@ def test_regress():
                     expression=ast.ExpCol(table=None, column='y'), name=None),],
             nsamp=ast.ExpLit(value=ast.LitInt(value=10)),
             population='pop',
-            metamodel=None,
+            generator=None,
             modelnos=None,
     )]
     assert parse_bql_string('''
@@ -1392,7 +1392,7 @@ def test_regress():
                     expression=ast.ExpCol(table=None, column='x'), name=None)],
             nsamp=ast.ExpLit(value=ast.LitInt(value=10)),
             population='pop',
-            metamodel='m',
+            generator='m',
             modelnos=[1,7],
     )]
     assert parse_bql_string('regress t given (*) by pop;') == [
@@ -1401,7 +1401,7 @@ def test_regress():
             givens=[ast.SelColAll(None)],
             nsamp=None,
             population='pop',
-            metamodel=None,
+            generator=None,
             modelnos=None,
     )]
     # Disallow this query in the compiler, mixing * with u.
@@ -1417,7 +1417,7 @@ def test_regress():
                     expression=ast.ExpCol(table=None, column='u'), name=None)],
             nsamp=ast.ExpLit(value=ast.LitInt(value=10)),
             population='pop',
-            metamodel='m',
+            generator='m',
             modelnos=[1,2,3],
     )]
     # Disallow this query in the compiler, mixing subquery.
@@ -1449,7 +1449,7 @@ def test_regress():
             ],
             nsamp=ast.ExpLit(value=ast.LitInt(value=10)),
             population='pop',
-            metamodel='f',
+            generator='f',
             modelnos=None,
     )]
 

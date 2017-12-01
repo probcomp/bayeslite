@@ -22,11 +22,11 @@ import pytest
 import tempfile
 
 import bayeslite
+import bayeslite.backend
 import bayeslite.bqlfn as bqlfn
 import bayeslite.core as core
-import bayeslite.metamodel as metamodel
 
-from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
+from bayeslite.backends.cgpm_backend import CGPM_Backend
 
 from bayeslite import bql_quote_name
 from bayeslite.sqlite3_util import sqlite3_connection
@@ -38,11 +38,11 @@ def powerset(s):
     return itertools.chain.from_iterable(combinations)
 
 @contextlib.contextmanager
-def bayesdb(metamodel=None, **kwargs):
-    if metamodel is None:
-        metamodel = CGPM_Metamodel(cgpm_registry={}, multiprocess=False)
-    bdb = bayeslite.bayesdb_open(builtin_metamodels=False, **kwargs)
-    bayeslite.bayesdb_register_metamodel(bdb, metamodel)
+def bayesdb(backend=None, **kwargs):
+    if backend is None:
+        backend = CGPM_Backend(cgpm_registry={}, multiprocess=False)
+    bdb = bayeslite.bayesdb_open(builtin_backends=False, **kwargs)
+    bayeslite.bayesdb_register_backend(bdb, backend)
     try:
         yield bdb
     finally:
@@ -56,7 +56,7 @@ def test_bayesdb_instantiation():
         bayeslite.BayesDB(':memory:', 0xdeadbeef)
 
 def test_prng_determinism():
-    bdb = bayeslite.bayesdb_open(builtin_metamodels=False)
+    bdb = bayeslite.bayesdb_open(builtin_backends=False)
     assert bdb._prng.weakrandom_uniform(1000) == 303
     assert bdb.py_prng.uniform(0, 1) == 0.6156331606142532
     assert bdb.np_prng.uniform(0, 1) == 0.28348770982811367
@@ -85,7 +85,7 @@ def test_bad_db_user_version():
             with bayesdb(pathname=f.name):
                 pass
 
-class DotdogMetamodel(metamodel.IBayesDBMetamodel):
+class DotdogBackend(bayeslite.backend.BayesDB_Backend):
     def name(self):
         return 'dotdog'
     def register(self, bdb):
@@ -97,8 +97,8 @@ class DotdogMetamodel(metamodel.IBayesDBMetamodel):
     def create_generator(self, bdb, generator_id, schema_tokens, **kwargs):
         pass
 
-def test_hackmetamodel():
-    bdb = bayeslite.bayesdb_open(builtin_metamodels=False)
+def test_hackbackend():
+    bdb = bayeslite.bayesdb_open(builtin_backends=False)
     bdb.sql_execute('CREATE TABLE t(a INTEGER, b TEXT)')
     bdb.sql_execute("INSERT INTO t (a, b) VALUES (42, 'fnord')")
     bdb.sql_execute('CREATE TABLE u AS SELECT * FROM t')
@@ -107,10 +107,10 @@ def test_hackmetamodel():
         bdb.execute('CREATE GENERATOR p_cc FOR p USING cgpm;')
     with pytest.raises(bayeslite.BQLError):
         bdb.execute('CREATE GENERATOR p_dd FOR p USING dotdog;')
-    dotdog_metamodel = DotdogMetamodel()
-    bayeslite.bayesdb_register_metamodel(bdb, dotdog_metamodel)
-    bayeslite.bayesdb_deregister_metamodel(bdb, dotdog_metamodel)
-    bayeslite.bayesdb_register_metamodel(bdb, dotdog_metamodel)
+    dotdog_backend = DotdogBackend()
+    bayeslite.bayesdb_register_backend(bdb, dotdog_backend)
+    bayeslite.bayesdb_deregister_backend(bdb, dotdog_backend)
+    bayeslite.bayesdb_register_backend(bdb, dotdog_backend)
     with pytest.raises(bayeslite.BQLError):
         bdb.execute('CREATE GENERATOR p_cc FOR p USING cgpm;')
     bdb.execute('CREATE GENERATOR p_dd FOR p USING dotdog(a NUMERICAL)')
@@ -120,7 +120,7 @@ def test_hackmetamodel():
         bdb.execute('CREATE GENERATOR p_cc FOR p USING cgpm;')
     with pytest.raises(bayeslite.BQLError):
         bdb.execute('CREATE GENERATOR p_dd FOR p USING dotdog(a NUMERICAL)')
-    # XXX Rest of test originally exercised default metamodel, but
+    # XXX Rest of test originally exercised default backend, but
     # syntax doesn't support that now.  Not clear that's wrong either.
     bdb.execute('CREATE GENERATOR q_dd FOR p USING dotdog(a NUMERICAL)')
     with pytest.raises(bayeslite.BQLError):
@@ -128,14 +128,14 @@ def test_hackmetamodel():
 
 @contextlib.contextmanager
 def bayesdb_population(mkbdb, tab, pop, gen, table_schema, data, columns,
-        metamodel_name='cgpm'):
+        backend_name='cgpm'):
     with mkbdb as bdb:
         table_schema(bdb)
         data(bdb)
         qt = bql_quote_name(tab)
         qp = bql_quote_name(pop)
         qg = bql_quote_name(gen)
-        qmm = bql_quote_name(metamodel_name)
+        qmm = bql_quote_name(backend_name)
         bdb.execute('CREATE POPULATION %s FOR %s(%s)' %
             (qp, qt, ';'.join(columns)))
         bdb.execute('CREATE GENERATOR %s FOR %s USING %s;' %
@@ -284,8 +284,8 @@ def t1_subcat():
             'weight CATEGORICAL'])
 
 def t1_mp():
-    metamodel = CGPM_Metamodel(cgpm_registry={}, multiprocess=True)
-    return bayesdb_population(bayesdb(metamodel=metamodel),
+    backend = CGPM_Backend(cgpm_registry={}, multiprocess=True)
+    return bayesdb_population(bayesdb(backend=backend),
         't1', 'p1', 'p1_cc', t1_schema, t1_data,
          columns=['id IGNORE','label CATEGORICAL', 'age NUMERICAL',
             'weight NUMERICAL'])

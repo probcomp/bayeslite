@@ -21,15 +21,15 @@ import bayeslite.read_csv as read_csv
 
 from bayeslite.core import bayesdb_get_generator
 from bayeslite.guess import bayesdb_guess_population
-from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
+from bayeslite.backends.cgpm_backend import CGPM_Backend
 
 root = os.path.dirname(os.path.abspath(__file__))
 dha_csv = os.path.join(root, 'dha.csv')
 
 def test_subsample():
-    with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
-        metamodel = CGPM_Metamodel(cgpm_registry={}, multiprocess=False)
-        bayeslite.bayesdb_register_metamodel(bdb, metamodel)
+    with bayeslite.bayesdb_open(builtin_backends=False) as bdb:
+        backend = CGPM_Backend(cgpm_registry={}, multiprocess=False)
+        bayeslite.bayesdb_register_backend(bdb, backend)
         with open(dha_csv, 'rU') as f:
             read_csv.bayesdb_read_csv(bdb, 'dha', f, header=True, create=True)
         bayesdb_guess_population(bdb, 'hospitals_full', 'dha',

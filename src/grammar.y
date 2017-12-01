@@ -125,7 +125,7 @@ command(creategen)      ::= K_CREATE generator_token
                                 ifnotexists(ifnotexists1)
                                 K_FOR population_name(pop)
                                 baseline_opt(baseline)
-                                runtime_name_opt(metamodel)
+                                backend_name_opt(backend)
                                 generator_schema_opt(schema).
 command(dropgen)        ::= K_DROP generator_token ifexists(ifexists)
                                 generator_name(name).
@@ -140,8 +140,8 @@ altergen_cmds(many)     ::= altergen_cmds(cmds) T_COMMA altergen_cmd(cmd).
 altergen_cmd(renamegen) ::= K_RENAME K_TO generator_name(name).
 altergen_cmd(generic)   ::= generator_schemum(s).
 
-runtime_name_opt(none)          ::= .
-runtime_name_opt(one)           ::= K_USING metamodel_name(metamodel).
+backend_name_opt(none)          ::= .
+backend_name_opt(one)           ::= K_USING backend_name(backend).
 
 generator_schema_opt(none)      ::= .
 generator_schema_opt(some)      ::= T_LROUND|T_LCURLY generator_schema(s)
@@ -236,7 +236,7 @@ command(regress)        ::= K_REGRESS column_name(target)
                                 K_GIVEN T_LROUND select_columns(givens) T_RROUND
                                 nsamples_opt(nsamp)
                                 K_BY|K_WITHIN population_name(pop)
-                                modelledby_opt(metamodel)
+                                modelledby_opt(generator)
                                 usingmodel_opt(modelnos).
 
 /*
@@ -402,13 +402,12 @@ where(conditional)      ::= K_WHERE expression(condition).
 /* XXX Allow database-qualified names.  */
 column_name(cn)         ::= L_NAME(name).
 generator_name(unqualified) ::= L_NAME(name).
-metamodel_name(mn)      ::= L_NAME(name).
+backend_name(bn)        ::= L_NAME(name).
 population_name(pn)     ::= L_NAME(name).
 table_name(unqualified) ::= L_NAME(name).
 
 /* XXX Several tokens for the same concept. */
 generator_token         ::= K_GENERATOR.
-generator_token         ::= K_METAMODEL.
 generator_token         ::= K_ANALYSIS K_SCHEMA.
 
 model_token             ::= K_MODEL.
@@ -841,7 +840,6 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_LIKE
         K_LIMIT
         K_MATCH
-        K_METAMODEL
         K_MINUTE
         K_MINUTES
         K_MODEL

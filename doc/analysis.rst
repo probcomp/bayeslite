@@ -96,16 +96,16 @@ BQL Data Modelling Commands
       ``ANALYZE t_cc MODELS 1-3,7-9 FOR 10 ITERATIONS CHECKPOINT 1 ITERATION``
 
 
-:mod:`bayeslite.metamodel`: Bayeslite metamodel interface
+:mod:`bayeslite.backend`: Bayeslite metamodel interface
 ---------------------------------------------------------
 
-.. automodule:: bayeslite.metamodel
+.. automodule:: bayeslite.backend
    :members:
 
-:mod:`bayeslite.metamodels.crosscat`: Crosscat metamodel
+:mod:`bayeslite.backends.crosscat`: Crosscat metamodel
 --------------------------------------------------------
 
-.. automodule:: bayeslite.metamodels.crosscat
+.. automodule:: bayeslite.backends.crosscat
    :members:
 
 :mod:`bayeslite.guess`: Heuristics for statistical types

@@ -26,7 +26,7 @@ a savepoint.
 
 Each table may optionally be modelled by any number of generators,
 representing a parametrized generative model for the table's data,
-according to a named metamodel.
+according to a named generator.
 
 Each generator models a subset of the columns in its table, which are
 called the modelled columns of that generator.  Each column in a
@@ -305,7 +305,7 @@ def bayesdb_variable_stattype(bdb, population_id, generator_id, colno):
 def bayesdb_add_latent(bdb, population_id, generator_id, var, stattype):
     """Add a generator's latent variable to a population.
 
-    NOTE: To be used ONLY by a metamodel's create_generator method
+    NOTE: To be used ONLY by a backend's create_generator method
     when establishing any latent variables of that generator.
     """
     with bdb.savepoint():
@@ -409,8 +409,8 @@ def bayesdb_generator_name(bdb, id):
     else:
         return row[0]
 
-def bayesdb_generator_metamodel(bdb, id):
-    """Return the metamodel of the generator with id `id`."""
+def bayesdb_generator_backend(bdb, id):
+    """Return the backend of the generator with id `id`."""
     sql = 'SELECT metamodel FROM bayesdb_generator WHERE id = ?'
     cursor = bdb.sql_execute(sql, (id,))
     try:
@@ -418,11 +418,11 @@ def bayesdb_generator_metamodel(bdb, id):
     except StopIteration:
         raise ValueError('No such generator: %s' % (repr(id),))
     else:
-        if row[0] not in bdb.metamodels:
+        if row[0] not in bdb.backends:
             name = bayesdb_generator_name(bdb, id)
-            raise ValueError('Metamodel of generator %s not registered: %s' %
+            raise ValueError('Backend of generator %s not registered: %s' %
                 (repr(name), repr(row[0])))
-        return bdb.metamodels[row[0]]
+        return bdb.backends[row[0]]
 
 def bayesdb_generator_table(bdb, id):
     """Return the name of the table of the generator with id `id`."""

@@ -46,10 +46,10 @@ def smoke_bdb():
             )
         ''')
 
-        bdb.execute('CREATE METAMODEL m1 FOR p;')
+        bdb.execute('CREATE GENERATOR m1 FOR p;')
         bdb.execute('INITIALIZE 10 MODELS FOR m1;')
 
-        bdb.execute('CREATE METAMODEL m2 FOR p;')
+        bdb.execute('CREATE GENERATOR m2 FOR p;')
         bdb.execute('INITIALIZE 10 MODELS FOR m2;')
         yield bdb
 

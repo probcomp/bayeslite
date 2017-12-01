@@ -93,7 +93,6 @@ keywords = {
     "like": grammar.K_LIKE,
     "limit": grammar.K_LIMIT,
     "match": grammar.K_MATCH,
-    "metamodel": grammar.K_METAMODEL,
     "minute": grammar.K_MINUTE,
     "minutes": grammar.K_MINUTES,
     "model": grammar.K_MODEL,

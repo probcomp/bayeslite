@@ -15,7 +15,7 @@
 #   limitations under the License.
 
 '''Ensures that INFER EXPLICIT PREDICT col for a _rowid_ which exists in the
-base table, but not incorporated into the metamodel (i.e. did not exist in the
+base table, but not incorporated into the generator (i.e. did not exist in the
 table during INITIALIZE) correctly retrieves all other values in the row. The
 test cases creates a population of (0,1) and (1,0) -- the complement function --
 and ensures its recovery on a held-out test set.'''
@@ -41,9 +41,9 @@ def bdb():
     for _ in xrange(20):
         bdb.sql_execute('INSERT INTO t (a, b) VALUES (1,0)')
 
-    # Create the population and metamodel on the existing rows.
+    # Create the population and generator on the existing rows.
     bdb.execute('CREATE POPULATION p FOR t (MODEL a, b AS NOMINAL)')
-    bdb.execute('CREATE METAMODEL m FOR p;')
+    bdb.execute('CREATE GENERATOR m FOR p;')
     bdb.execute('INITIALIZE 1 MODELS FOR m;')
     bdb.execute('ANALYZE m FOR 1000 ITERATION WAIT (OPTIMIZED);')
 
@@ -56,7 +56,7 @@ def bdb():
     for _ in xrange(60, 80):
         bdb.sql_execute('INSERT INTO t (a,b) VALUES (NULL, NULL)')
 
-    # Make sure fresh_row_id 80 from the base table, not metamodel.
+    # Make sure fresh_row_id 80 from the base table, not generator.
     population_id = bayesdb_get_population(bdb, 'p')
     assert bayesdb_population_fresh_row_id(bdb, population_id) == 81
 
@@ -69,7 +69,7 @@ def bdb():
     assert cursor_value(cursor) == 40
 
     # Turn off multiprocessing for sequence of queries.
-    bdb.metamodels['cgpm'].set_multiprocess(False)
+    bdb.backends['cgpm'].set_multiprocess(False)
     return bdb
 
 

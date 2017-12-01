@@ -17,16 +17,16 @@
 import pytest
 
 from bayeslite import BQLError
-from bayeslite import bayesdb_register_metamodel
-from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
+from bayeslite import bayesdb_register_backend
+from bayeslite.backends.cgpm_backend import CGPM_Backend
 
 from test_cgpm import cgpm_dummy_satellites_bdb
 
 
 def test_regress_bonanza__ci_integration():
     with cgpm_dummy_satellites_bdb() as bdb:
-        bayesdb_register_metamodel(
-            bdb, CGPM_Metamodel(dict(), multiprocess=0))
+        bayesdb_register_backend(
+            bdb, CGPM_Backend(dict(), multiprocess=0))
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
                 MODEL apogee AS NUMERICAL;
@@ -38,7 +38,7 @@ def test_regress_bonanza__ci_integration():
             )
         ''')
         bdb.execute('''
-            CREATE METAMODEL m FOR satellites WITH BASELINE crosscat;
+            CREATE GENERATOR m FOR satellites WITH BASELINE crosscat;
         ''')
         bdb.execute('INITIALIZE 2 MODELS FOR m;')
 

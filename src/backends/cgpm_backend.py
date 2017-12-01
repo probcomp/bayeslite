@@ -26,8 +26,8 @@ from cgpm.crosscat.engine import Engine
 import bayeslite.core as core
 
 from bayeslite.exception import BQLError
-from bayeslite.metamodel import IBayesDBMetamodel
-from bayeslite.metamodel import bayesdb_metamodel_version
+from bayeslite.backend import BayesDB_Backend
+from bayeslite.backend import bayesdb_backend_version
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 from bayeslite.util import cursor_value
@@ -97,7 +97,7 @@ INSERT INTO bayesdb_cgpm_modelno (generator_id, modelno, cgpm_modelno)
 '''
 
 
-class CGPM_Metamodel(IBayesDBMetamodel):
+class CGPM_Backend(BayesDB_Backend):
 
     def __init__(self, cgpm_registry, multiprocess=None):
         self._cgpm_registry = cgpm_registry
@@ -105,10 +105,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # The cache is a dictionary whose keys are bayeslite.BayesDB objects,
         # and whose values are dictionaries (one cache per bdb). We need
         # self._cache to have separate caches for each bdb because the same
-        # instance of CGPM_Metamodel may be used across multiple bdb instances.
-        # This situation occurs when CGPM_Metamodel is used as a default
-        # metamodel (refer to __init__.py, where the bayeslite module, upon
-        # import, creates a single CGPM_Metamodel object to be used throughout
+        # instance of CGPM_Backend may be used across multiple bdb instances.
+        # This situation occurs when CGPM_Backend is used as a default
+        # backend (refer to __init__.py, where the bayeslite module, upon
+        # import, creates a single CGPM_Backend object to be used throughout
         # the python session).
         self._cache = dict()
 
@@ -118,7 +118,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
     def register(self, bdb):
         with bdb.savepoint():
             # Get the current version, if there is one.
-            version = bayesdb_metamodel_version(bdb, self.name())
+            version = bayesdb_backend_version(bdb, self.name())
             # Check the version.
             if version is None:
                 # No version -- CGPM schema not instantaited.

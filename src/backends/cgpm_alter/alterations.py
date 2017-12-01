@@ -15,7 +15,7 @@
 #   limitations under the License.
 
 
-from bayeslite.metamodels.cgpm_alter import parse
+from bayeslite.backends.cgpm_alter import parse
 
 from cgpm.mixtures.view import View
 

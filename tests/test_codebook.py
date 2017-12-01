@@ -20,7 +20,7 @@ import tempfile
 import bayeslite
 
 from bayeslite.math_util import abserr
-from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
+from bayeslite.backends.cgpm_backend import CGPM_Backend
 
 
 dummy_data = iter(['kerberos,age,city',
@@ -50,9 +50,9 @@ def test_codebook_value_map():
         SIMULATE specifying `city` = `LA` (throws KeyError)
     '''
 
-    with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
-        metamodel = CGPM_Metamodel(cgpm_registry={}, multiprocess=True)
-        bayeslite.bayesdb_register_metamodel(bdb, metamodel)
+    with bayeslite.bayesdb_open(builtin_backends=False) as bdb:
+        backend = CGPM_Backend(cgpm_registry={}, multiprocess=True)
+        bayeslite.bayesdb_register_backend(bdb, backend)
 
         bayeslite.bayesdb_read_csv(bdb,'dummy', dummy_data,
             header=True,create=True)
@@ -91,7 +91,7 @@ def test_codebook_value_map():
         assert abserr(p0[0][0], p1[0][0]) < 1e-5
 
 def test_empty_codebook():
-    with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
+    with bayeslite.bayesdb_open(builtin_backends=False) as bdb:
         bdb.sql_execute('create table t(x, y)')
         with tempfile.NamedTemporaryFile(prefix='bayeslite') as tf:
             with pytest.raises(IOError):

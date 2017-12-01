@@ -19,10 +19,10 @@ import pytest
 
 import bayeslite.core
 
-from bayeslite import bayesdb_register_metamodel
+from bayeslite import bayesdb_register_backend
 from bayeslite.exception import BQLError
 from bayeslite.math_util import abserr
-from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
+from bayeslite.backends.cgpm_backend import CGPM_Backend
 
 from test_cgpm import cgpm_dummy_satellites_bdb
 
@@ -40,8 +40,8 @@ def cgpm_dummy_satellites_pop_bdb():
                 model period as numerical
             )
         ''')
-        metamodel = CGPM_Metamodel(dict(), multiprocess=0)
-        bayesdb_register_metamodel(bdb, metamodel)
+        backend = CGPM_Backend(dict(), multiprocess=0)
+        bayesdb_register_backend(bdb, backend)
         yield bdb
 
 
@@ -140,12 +140,12 @@ def test_cgpm_alter_basic():
             alter analysis schema g0
                 set view concentration parameter to 1000
         ''')
-        engine = bdb.metamodels['cgpm']._engine(bdb, generator_id)
+        engine = bdb.backends['cgpm']._engine(bdb, generator_id)
         for state in engine.states:
             assert abserr(1./1000, state.alpha()) < 1e-5
 
         # Change row crp concentration in view of period.
-        engine = bdb.metamodels['cgpm']._engine(bdb, generator_id)
+        engine = bdb.backends['cgpm']._engine(bdb, generator_id)
         varno = bayeslite.core.bayesdb_variable_number(
             bdb, population_id, generator_id, 'period')
         initial_alphas = [s.view_for(varno).alpha() for s in engine.states]

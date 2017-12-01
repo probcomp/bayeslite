@@ -22,12 +22,12 @@ import bayeslite
 import bayeslite.core as core
 
 from bayeslite import bql_quote_name
-from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
-from bayeslite.metamodels.iid_gaussian import StdNormalMetamodel
+from bayeslite.backends.cgpm_backend import CGPM_Backend
+from bayeslite.backends.iid_gaussian import StdNormalBackend
 
 examples = {
     'cgpm': (
-        lambda: CGPM_Metamodel(cgpm_registry={}, multiprocess=False),
+        lambda: CGPM_Backend(cgpm_registry={}, multiprocess=False),
         't',
         'CREATE TABLE t(x NUMERIC, y NUMERIC, z NUMERIC)',
         'INSERT INTO t (x, y, z) VALUES (?, ?, ?)',
@@ -46,7 +46,7 @@ examples = {
         'CREATE GENERATOR p_cc FOR p USING cgpm ...' ,
     ),
     'iid_gaussian': (
-        lambda: StdNormalMetamodel(seed=0),
+        lambda: StdNormalBackend(seed=0),
         't',
         'CREATE TABLE t(x NUMERIC, y NUMERIC)',
         'INSERT INTO t (x, y) VALUES (?, ?)',
@@ -55,8 +55,7 @@ examples = {
         'p_sn',
         'CREATE POPULATION p FOR t(x NUMERICAL; y NUMERICAL)',
         'CREATE GENERATOR p_sn FOR p USING std_normal()',
-        # XXX Should invent something that fails for
-        # metamodel-specific reasons here.
+        # XXX Invent something that fails for backend-specific reasons here.
         'CREATE GENERATOR p_sn FOR p USING std_normal ...',
         'CREATE GENERATOR p_sn FOR p USING std_normal ...'
     ),
@@ -70,13 +69,13 @@ def test_example(persist, exname):
     if persist:
         with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
             with bayeslite.bayesdb_open(pathname=f.name,
-                    builtin_metamodels=False) as bdb:
+                    builtin_backends=False) as bdb:
                 _test_example(bdb, exname)
             with bayeslite.bayesdb_open(pathname=f.name,
-                    builtin_metamodels=False) as bdb:
+                    builtin_backends=False) as bdb:
                 _retest_example(bdb, exname)
     else:
-        with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
+        with bayeslite.bayesdb_open(builtin_backends=False) as bdb:
             _test_example(bdb, exname)
 
 def _test_example(bdb, exname):
@@ -85,7 +84,7 @@ def _test_example(bdb, exname):
     qt = bql_quote_name(t)
     qg = bql_quote_name(g)
 
-    bayeslite.bayesdb_register_metamodel(bdb, mm())
+    bayeslite.bayesdb_register_backend(bdb, mm())
 
     # Create a table.
     assert not core.bayesdb_has_table(bdb, t)
@@ -189,7 +188,7 @@ def _retest_example(bdb, exname):
     qt = bql_quote_name(t)
     qg = bql_quote_name(g)
 
-    bayeslite.bayesdb_register_metamodel(bdb, mm())
+    bayeslite.bayesdb_register_backend(bdb, mm())
     p_id = core.bayesdb_get_population(bdb, p)
 
     assert core.bayesdb_has_table(bdb, t)

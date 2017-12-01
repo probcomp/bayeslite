@@ -37,7 +37,7 @@ class Shell(cmd.Cmd):
     sql_prompt    = '   sql...> '
     python_prompt = 'python...> '
 
-    def __init__(self, bdb, metamodel, stdin=None, stdout=None, stderr=None):
+    def __init__(self, bdb, backend, stdin=None, stdout=None, stderr=None):
         if stdin is None:
             stdin = sys.stdin
         if stdout is None:
@@ -51,7 +51,7 @@ class Shell(cmd.Cmd):
         cmd.Cmd.__init__(self, 'Tab', stdin, stdout)
 
         self._bdb = bdb
-        self._metamodel = metamodel
+        self._backend = backend
         self._cmds = set([])
         self._traced = False
         self._sql_traced = False
@@ -350,7 +350,7 @@ class Shell(cmd.Cmd):
         if line == '-m':
             line = None
         self._bdb = bayeslite.bayesdb_open(pathname=line,
-            builtin_metamodels=False)
+            builtin_backends=False)
 
     def dot_pythexec(self, line):
         '''execute a Python statement
