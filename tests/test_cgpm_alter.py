@@ -48,11 +48,11 @@ def cgpm_dummy_satellites_pop_bdb():
 def test_cgpm_alter_basic():
     with cgpm_dummy_satellites_pop_bdb() as bdb:
         bdb.execute('''
-            create analysis schema g0 for satellites using cgpm(
+            create generator g0 for satellites using cgpm(
                 subsample 10
             );
         ''')
-        bdb.execute('initialize 4 analyses for g0')
+        bdb.execute('initialize 4 models for g0')
 
         population_id = bayeslite.core.bayesdb_get_population(
             bdb, 'satellites')
@@ -61,7 +61,7 @@ def test_cgpm_alter_basic():
 
         # Make all variables independent in models 0-1.
         bdb.execute('''
-            alter analysis schema g0 analyses (0,1)
+            alter generator g0 models (0,1)
                 ensure variables * independent;
         ''')
         dependencies = bdb.execute('''
@@ -73,7 +73,7 @@ def test_cgpm_alter_basic():
 
         # Make all variables dependent in all models.
         bdb.execute('''
-            alter analysis schema g0
+            alter generator g0
                 ensure variables * dependent;
         ''')
         dependencies = bdb.execute('''
@@ -85,14 +85,14 @@ def test_cgpm_alter_basic():
 
         # Make all variables independent again.
         bdb.execute('''
-            alter analysis schema g0
+            alter generator g0
                 ensure variables * independent;
         ''')
 
         # Move apogee, perigee->view(period), launch_mass->view(class_of_orbit)
         # All other variables should remain independent.
         bdb.execute('''
-            alter analysis schema g0
+            alter generator g0
                 ensure variables (apogee, period, perigee) in context of period,
                 ensure variable launch_mass in context of class_of_orbit;
         ''')
@@ -116,7 +116,7 @@ def test_cgpm_alter_basic():
 
         # Move period to a singleton in model 3.
         bdb.execute('''
-            alter analysis schema g0 analysis (3)
+            alter generator g0 model (3)
                 ensure variable period in singleton view
         ''')
         dependencies = bdb.execute('''
@@ -137,7 +137,7 @@ def test_cgpm_alter_basic():
 
         # Change the column crp concentration.
         bdb.execute('''
-            alter analysis schema g0
+            alter generator g0
                 set view concentration parameter to 1000
         ''')
         engine = bdb.backends['cgpm']._engine(bdb, generator_id)
@@ -150,7 +150,7 @@ def test_cgpm_alter_basic():
             bdb, population_id, generator_id, 'period')
         initial_alphas = [s.view_for(varno).alpha() for s in engine.states]
         bdb.execute('''
-            alter analysis schema g0 analysis (1,3)
+            alter generator g0 models (1,3)
                 set row cluster concentration parameter
                     within view of period to 12;
         ''')
@@ -173,7 +173,7 @@ def test_cgpm_alter_basic():
 
         # Move all rows to same cluster in view of country_of_operator.
         bdb.execute('''
-            alter analysis schema g0
+            alter generator g0
                 ensure rows * in cluster of row %s
                 within context of country_of_operator
         ''' % (subsample_rows[0],))
@@ -192,11 +192,11 @@ def test_cgpm_alter_errors():
     with cgpm_dummy_satellites_pop_bdb() as bdb:
         # Prepare the bdb.
         bdb.execute('''
-            create analysis schema g0 for satellites using cgpm(
+            create generator g0 for satellites using cgpm(
                 subsample 10
             );
         ''')
-        bdb.execute('initialize 4 analyses for g0')
+        bdb.execute('initialize 4 models for g0')
         # Retrieve rows in the subsample.
         population_id = bayeslite.core.bayesdb_get_population(bdb, 'satellites')
         generator_id = bayeslite.core.bayesdb_get_generator(
@@ -210,52 +210,52 @@ def test_cgpm_alter_errors():
         with pytest.raises(BQLError):
             # ensure variables accepts * only, not named variables.
             bdb.execute('''
-                alter analysis schema g0 analyses (0,1)
+                alter generator g0 models (0,1)
                     ensure variables (period_minutes, perigee) dependent;
             ''')
         with pytest.raises(BQLError):
             # Non existent target variable apogees.
             bdb.execute('''
-                alter analysis schema g0
+                alter generator g0
                     ensure variables (perigee, apogees) in context of period
             ''')
         with pytest.raises(BQLError):
             # Non existent context variable periods
             bdb.execute('''
-                alter analysis schema g0
+                alter generator g0
                     ensure variables (perigee, apogee) in context of periods
             ''')
         with pytest.raises(BQLError):
             # Non existent context variable periods
             bdb.execute('''
-                alter analysis schema g0
+                alter generator g0
                     ensure variables (perigee, apogee) in context of periods
             ''')
         with pytest.raises(BQLError):
             # Non existent target row 1000.
             bdb.execute('''
-                alter analysis schema g0
+                alter generator g0
                     ensure rows (1, 1000) in cluster of row %d
                         within context of country_of_operator
             ''' % (subsample_rows[0],))
         with pytest.raises(BQLError):
             # Non existent reference row 1000.
             bdb.execute('''
-                alter analysis schema g0
+                alter generator g0
                     ensure rows (%s) in cluster of row 1000
                         within context of country_of_operator
             ''' % (subsample_rows[0],))
         with pytest.raises(BQLError):
             # Non existent context variable country_of_operators.
             bdb.execute('''
-                alter analysis schema g0
+                alter generator g0
                     ensure rows (%s) in cluster of row %s
                         within context of country_of_operators
             ''' % (subsample_rows[0], subsample_rows[1]))
         with pytest.raises(BQLError):
             # Non existent context variable periods.
             bdb.execute('''
-                alter analysis schema g0 analysis (1,3)
+                alter generator g0 models (1,3)
                     set row cluster concentration parameter
                         within view of periods to 12;
             ''')

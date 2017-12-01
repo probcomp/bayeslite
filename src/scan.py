@@ -34,8 +34,6 @@ keywords = {
     "add": grammar.K_ADD,
     "all": grammar.K_ALL,
     "alter": grammar.K_ALTER,
-    "analyses": grammar.K_ANALYSES,
-    "analysis": grammar.K_ANALYSIS,
     "analyze": grammar.K_ANALYZE,
     "and": grammar.K_AND,
     "as": grammar.K_AS,

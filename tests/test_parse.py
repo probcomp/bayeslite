@@ -875,21 +875,21 @@ def test_analyze():
         [ast.AnalyzeModels('t', None, 10, None, None, 3, False, None)]
 
 def test_altergen():
-    assert parse_bql_string('alter analysis schema g '
+    assert parse_bql_string('alter generator g '
             'rename to rumba') == \
         [ast.AlterGen(
             generator='g',
             modelnos=None,
             commands=[ast.AlterGenRenameGen('rumba')]
         )]
-    assert parse_bql_string('alter analysis schema g models (1, 2, 4) '
+    assert parse_bql_string('alter generator g models (1, 2, 4) '
             'rename to rumba') == \
         [ast.AlterGen(
             generator='g',
             modelnos=[1,2,4],
             commands=[ast.AlterGenRenameGen('rumba')]
         )]
-    assert parse_bql_string('alter analysis schema g '
+    assert parse_bql_string('alter generator g '
             'rename to rumba, generic cmd (a,c), generic cmd2') == \
         [ast.AlterGen(
             generator='g',
@@ -900,7 +900,7 @@ def test_altergen():
                 ast.AlterGenGeneric(['generic', 'cmd2']),
             ],
         )]
-    assert parse_bql_string('alter analysis schema g models (1-4) '
+    assert parse_bql_string('alter generator g models (1-4) '
             'set variable clustering of (*) to independent, '
             'set variable clustering of (*) to dependent, '
             'set variable cluster of bar to cluster of baz, '

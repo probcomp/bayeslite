@@ -44,11 +44,11 @@ def test_analysis_subproblems_basic():
         ''')
         bayesdb_register_backend(bdb, CGPM_Backend(dict(), multiprocess=0))
         bdb.execute('''
-            CREATE ANALYSIS SCHEMA g0 FOR satellites USING cgpm(
+            CREATE GENERATOR g0 FOR satellites USING cgpm(
                 SUBSAMPLE 10
             );
         ''')
-        bdb.execute('INITIALIZE 4 ANALYSES FOR g0')
+        bdb.execute('INITIALIZE 4 MODELS FOR g0')
 
         # Test each subproblem individually except for variable hyperparameters.
         for optimized in ['', 'OPTIMIZED;',]:
@@ -59,7 +59,7 @@ def test_analysis_subproblems_basic():
                 'row clustering concentration',
             ]:
                 bdb.execute('''
-                    ANALYZE g0 ANALYSES 0,1 FOR 4 ITERATION WAIT(
+                    ANALYZE g0 MODELS 0,1 FOR 4 ITERATION WAIT(
                         SUBPROBLEM %s;
                         %s
                     );
@@ -91,7 +91,7 @@ def test_analysis_subproblems_basic():
         bad_rows = [i for i in xrange(20) if i not in subsample_rows]
         for optimized in ['', 'OPTIMIZED;']:
             bdb.execute('''
-                ANALYZE g0 ANALYSIS 3 FOR 1 ITERATION WAIT (
+                ANALYZE g0 MODEL 3 FOR 1 ITERATION WAIT (
                     VARIABLES class_of_orbit;
                     ROWS %s;
                     SUBPROBLEMS (
@@ -104,7 +104,7 @@ def test_analysis_subproblems_basic():
             with pytest.raises(BQLError):
                 # Fail on rows not in the population or subsample.
                 bdb.execute('''
-                    ANALYZE g0 ANALYSIS 3 FOR 1 ITERATION WAIT (
+                    ANALYZE g0 MODEL 3 FOR 1 ITERATION WAIT (
                         VARIABLES class_of_orbit;
                         ROWS %s;
                         SUBPROBLEMS (

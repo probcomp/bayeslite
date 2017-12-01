@@ -175,7 +175,7 @@ For those that are modeled, it specifies their statistical type.
 ``DROP POPULATION [IF EXISTS] <population>``
 
    Drop the population *population* and all its contents.
-   Will fail if there are still analysis schemas associated with this population.
+   Will fail if there are still generators associated with this population.
 
 .. index:: ``ALTER POPULATION``
 
@@ -199,22 +199,21 @@ For those that are modeled, it specifies their statistical type.
       Change the statistical type of variable(s) *variable(s)* in population
       *population* to *stattype*.
 
-++++++++++++++++
-Analysis schemas
-++++++++++++++++
+++++++++++
+Generators
+++++++++++
 
-An analysis schema specifies the type of generative model(s) used to model the
-variables in a population.
+A generator is a probabilistic model for the variables in a population.
 
-.. index:: ``CREATE ANALYSIS SCHEMA``
+.. index:: ``CREATE GENERATOR``
 
-``CREATE ANALYSIS SCHEMA <schema> FOR <population> WITH BASELINE <baseline>``
+``CREATE GENERATOR <g> FOR <pop> WITH BASELINE <baseline>``
 
-``CREATE ANALYSIS SCHEMA <schema> FOR <population> WITH BASELINE <baseline> (<customization>)``
+``CREATE GENERATOR <g> FOR <pop> WITH BASELINE <baseline> (<customization>)``
 
-   Create analysis schema *schema* for the population *population* with
-   the baseline generative model *baseline*.  The *customization* is a
-   comma-separated list of clauses customizing the schema:
+   Create generator *g* for the population *pop* using an optional the baseline
+   generative model *baseline*. The *customization* is a comma-separated list
+   of clauses customizing the schema:
 
       ``OVERRIDE GENERATIVE MODEL FOR <target> [GIVEN <variable(s)>] USING <predictor>``
 
@@ -227,27 +226,26 @@ variables in a population.
          Use a randomly chosen subsample of *nrows* rows to train each
          model.
 
-.. index:: ``DROP ANALYSIS SCHEMA``
+.. index:: ``DROP GENERATOR``
 
-``DROP [[ANALYSIS <num>] [ANALYSES <num0>-<num1>] FROM] ANALYSIS SCHEMA [IF EXISTS] <schema>``
+``DROP [[MODEL <num>] | [MODELS <num0>-<num1>] FROM] GENERATOR [IF EXISTS] <g>``
 
-   Drop the analysis schema *schema* and all its contents. Optionally drop only
-   the analysis numbered *num* or the analyses ranging from *num0* to *num1*.
+   Drop the generator *g* and all its contents. Optionally drop only
+   the model numbered *num* or the models ranging from *num0* to *num1*.
 
-.. index:: ``INITIALIZE ANALYSES``
+.. index:: ``INITIALIZE MODELS``
 
-``INITIALIZE <num> ANALYSES [IF NOT EXISTS] FOR <schema>``
+``INITIALIZE <num> MODELS [IF NOT EXISTS] FOR <g>``
 
-   Initialize *num* number of analyses for the analysis schema *schema*. Using
-   ``IF NOT EXISTS`` will initialize all analyses in the range 0 to *num - 1*
-   that do not already exist.
+   Initialize *num* models for the generator *g*. Using ``IF NOT EXISTS`` will
+   initialize all models in the range 0 to *num - 1* that do not already exist.
 
-.. index:: ``ANALYZE ANALYSIS SCHEMA``
+.. index:: ``ANALYZE GENERATOR``
 
-``ANALYZE <schema> FOR <duration> [CHECKPOINT <duration>] WAIT``
-``ANALYZE <schema> FOR <duration> [CHECKPOINT <duration>] WAIT (<clauses>)``
+``ANALYZE <g> FOR <duration> [CHECKPOINT <duration>] WAIT``
+``ANALYZE <g> FOR <duration> [CHECKPOINT <duration>] WAIT (<clauses>)``
 
-   Perform analysis on the analyses in analysis schema *schema*. *Duration* can
+   Perform analysis on the models in generator *g*. *Duration* can
    take on values of ``<n> SECOND(S)``, ``<n> MINUTE(S)``, or
    ``<n> ITERATION(S)``.  The ``FOR`` duration specifies how long to perform
    analysis.  The ``CHECKPOINT`` duration specifies how often to commit the
@@ -330,21 +328,21 @@ BQL Queries
 
 .. index:: ``ESTIMATE``
 
-``ESTIMATE [DISTINCT|ALL] <columns> FROM <population> [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE [DISTINCT|ALL] <columns> FROM <population> [MODELED BY <g>] [USING [MODEL <num>] [MODELS <num0>-<num1>]] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the table associated with *population*, extended
    with model estimators of one implied row.
 
 .. index:: ``ESTIMATE FROM VARIABLES OF``
 
-``ESTIMATE <columns> FROM VARIABLES OF <population> [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <columns> FROM VARIABLES OF <population> [MODELED BY <g>] [USING [MODEL <num>] [MODELS <num0>-<num1>]] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the modelled columns of *population*, extended
    with model estimators of one implied column.
 
 .. index:: ``ESTIMATE FROM PAIRWISE VARIABLES OF``
 
-``ESTIMATE <columns> FROM PAIRWISE VARIABLES OF <population> [FOR <subcolumns>] [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <columns> FROM PAIRWISE VARIABLES OF <population> [FOR <subcolumns>] [MODELED BY <g>] [USING [MODEL <num>] [MODELS <num0>-<num1>]] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the modelled columns of
    *population*, extended with model estimators of two implied columns.
@@ -354,7 +352,7 @@ BQL Queries
 
 .. index:: ``ESTIMATE, PAIRWISE``
 
-``ESTIMATE <expression> FROM PAIRWISE <population> [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``ESTIMATE <expression> FROM PAIRWISE <population> [MODELED BY <g>] [USING [MODEL <num>] [MODELS <num0>-<num1>]] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the self-join of the table assocated with
    *population*, extended with model estimators of two implied rows.
@@ -364,7 +362,7 @@ BQL Queries
 
 .. index:: ``INFER``
 
-``INFER <colnames> [WITH CONFIDENCE <conf>] FROM <population> [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``INFER <colnames> [WITH CONFIDENCE <conf>] FROM <population> [MODELED BY <g>] [USING [MODEL <num>] [MODELS <num0>-<num1>]] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Select the specified *colnames* from *population*, filling in
    missing values if they can be filled in with confidence at least
@@ -382,7 +380,7 @@ BQL Queries
 
 .. index:: ``INFER EXPLICIT``
 
-``INFER EXPLICIT <columns> FROM <population> [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
+``INFER EXPLICIT <columns> FROM <population> [MODELED BY <g>] [USING [MODEL <num>] [MODELS <num0>-<num1>]] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
    Like ``SELECT`` on the table associated with *population*, extended
    with model estimators of one implied row and with model predictions.
@@ -399,7 +397,7 @@ BQL Queries
 
 .. index:: ``SIMULATE``
 
-``SIMULATE <colnames> FROM <population> [MODELED BY <schema>] [USING [ANALYSIS <num>] [ANALYSES <num0>-<num1>]] [GIVEN <constraints>] [LIMIT <limit>]``
+``SIMULATE <colnames> FROM <population> [MODELED BY <g>] [USING [MODEL <num>] [MODELS <num0>-<num1>]] [GIVEN <constraints>] [LIMIT <limit>]``
 
    Select the requested *colnames* from rows sampled from *population*.
    *Constraints* is a comma-separated list of constraints of the form
@@ -445,8 +443,6 @@ has the effect of estimating mutual information twice for each row because it is
 mentioned twice, once in the output and once in the ORDER BY, which is twice as
 slow as it needs to be.   (Actually, approximately four times, because mutual
 information is symmetric, but that is an orthogonal issue.)
-
-
 
 To avoid this double evaluation, you can order the results of a
 subquery instead:
@@ -550,10 +546,10 @@ subquery instead:
    Constant, or function of one or two implied columns.  Returns the
    strength of dependence between the two columns, in units of bits.
 
-   If ``USING <n> SAMPLES`` is specified and the underlying analysis schema
-   uses Monte Carlo integration for each analysis to estimate the mutual
-   information (beyond merely the integral averaging all analyses), the
-   integration is performed using *n* samples for each analysis.
+   If ``USING <n> SAMPLES`` is specified and the underlying generator
+   uses Monte Carlo integration for each model to estimate the mutual
+   information (beyond merely the integral averaging all generators), the
+   integration is performed using *n* samples for each model.
 
 Model Predictions
 ^^^^^^^^^^^^^^^^^

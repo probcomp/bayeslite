@@ -119,7 +119,7 @@ stattypes_for_opt       ::= K_STATTYPES K_FOR.
 
 
 /* XXX Temporary generators?  */
-command(creategen)      ::= K_CREATE generator_token
+command(creategen)      ::= K_CREATE K_GENERATOR
                                 ifnotexists(ifnotexists0)
                                 generator_name(name)
                                 ifnotexists(ifnotexists1)
@@ -127,9 +127,9 @@ command(creategen)      ::= K_CREATE generator_token
                                 baseline_opt(baseline)
                                 backend_name_opt(backend)
                                 generator_schema_opt(schema).
-command(dropgen)        ::= K_DROP generator_token ifexists(ifexists)
+command(dropgen)        ::= K_DROP K_GENERATOR ifexists(ifexists)
                                 generator_name(name).
-command(altergen)       ::= K_ALTER generator_token
+command(altergen)       ::= K_ALTER K_GENERATOR
                                 generator_name(generator)
                                 anmodelset_matched_opt(models)
                                 altergen_cmds(cmds).
@@ -406,14 +406,8 @@ backend_name(bn)        ::= L_NAME(name).
 population_name(pn)     ::= L_NAME(name).
 table_name(unqualified) ::= L_NAME(name).
 
-/* XXX Several tokens for the same concept. */
-generator_token         ::= K_GENERATOR.
-generator_token         ::= K_ANALYSIS K_SCHEMA.
-
 model_token             ::= K_MODEL.
 model_token             ::= K_MODELS.
-model_token             ::= K_ANALYSIS.
-model_token             ::= K_ANALYSES.
 
 group_by(none)          ::= .
 group_by(some)          ::= K_GROUP K_BY expressions(keys).
@@ -781,8 +775,6 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_ADD
         K_ALL
         K_ALTER
-        K_ANALYSIS
-        K_ANALYSES
         K_ANALYZE
         K_AND
         K_AS

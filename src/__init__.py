@@ -33,7 +33,7 @@ BayesDB handles also serve as context managers, so you can do::
         bdb.execute('SELECT 42')
         ...
 
-You can query the probable (according to the analyses stored in
+You can query the probable (according to the models stored in
 the database) implications of the data by passing BQL queries
 to the :meth:`~BayesDB.execute` method::
 

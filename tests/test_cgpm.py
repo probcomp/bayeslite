@@ -1148,18 +1148,18 @@ def test_using_modelnos():
         ''')
         bayesdb_register_backend(bdb, CGPM_Backend(dict(), multiprocess=0))
         bdb.execute('''
-            CREATE ANALYSIS SCHEMA g0 FOR satellites USING cgpm(
+            CREATE GENERATOR g0 FOR satellites USING cgpm(
                 SUBSAMPLE 10
             );
         ''')
-        bdb.execute('INITIALIZE 2 ANALYSES FOR g0')
+        bdb.execute('INITIALIZE 2 MODELS FOR g0')
 
         # Crash test simulate.
         bdb.execute('''
             SIMULATE apogee, class_of_orbit
             FROM satellites
             MODELED BY g0
-            USING ANALYSIS 0-1
+            USING MODEL 0-1
             LIMIT 10
         ''')
         # Crash test infer explicit.
@@ -1167,7 +1167,7 @@ def test_using_modelnos():
             INFER EXPLICIT PREDICT period, perigee
             FROM satellites
             MODELED BY g0
-            USING ANALYSIS 0
+            USING MODEL 0
             LIMIT 2
         ''')
         # Crash test dependence probability BY.
@@ -1176,7 +1176,7 @@ def test_using_modelnos():
                 DEPENDENCE PROBABILITY OF launch_mass WITH period
             BY satellites
             MODELED BY g0
-            USING ANALYSIS 0
+            USING MODEL 0
         ''')
         assert cursor_value(c) in [0, 1]
         # Crash test dependence probability pairwise.
@@ -1185,7 +1185,7 @@ def test_using_modelnos():
                 DEPENDENCE PROBABILITY
             FROM PAIRWISE VARIABLES OF satellites
             MODELED BY g0
-            USING ANALYSIS 1
+            USING MODEL 1
         ''')
         for d in cursor:
             assert d[0] in [0, 1]
@@ -1194,12 +1194,12 @@ def test_using_modelnos():
             ESTIMATE
                 MUTUAL INFORMATION WITH (period) USING 1 SAMPLES
             FROM VARIABLES OF satellites
-            USING ANALYSIS 0
+            USING MODEL 0
         ''').fetchall()
         # Test analyze on per-model basis.
         bdb.execute('''
             ANALYZE g0
-            ANALYSIS 0
+            MODEL 0
             FOR 1 ITERATION
             CHECKPOINT 1 ITERATION
             WAIT;
@@ -1209,7 +1209,7 @@ def test_using_modelnos():
         assert len(engine.states[1].diagnostics['logscore']) == 0
         bdb.execute('''
             ANALYZE g0
-            ANALYSIS 1
+            MODEL 1
             FOR 4 ITERATION
             CHECKPOINT 1 ITERATION
             WAIT (OPTIMIZED);
@@ -1219,11 +1219,11 @@ def test_using_modelnos():
         # Some errors with bad modelnos.
         with pytest.raises(BQLError):
             bdb.execute('''
-                ANALYZE g0 ANALYSIS 0-3 FOR 4 ITERATION WAIT;
+                ANALYZE g0 MODEL 0-3 FOR 4 ITERATION WAIT;
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
-                SIMULATE apogee FROM satellites USING ANALYSIS 25 LIMIT 10;
+                SIMULATE apogee FROM satellites USING MODEL 25 LIMIT 10;
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
