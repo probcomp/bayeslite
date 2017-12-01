@@ -28,7 +28,7 @@ Type `.help' for help.
 bayeslite> .csv mytable from myfile.csv
 bayeslite> .guess mytable_cc mytable.csv
 bayeslite> INITIALIZE 10 MODELS FOR mytable_cc;
-bayeslite> ANALYZE mytable_cc FOR 100 ITERATIONS WAIT;
+bayeslite> ANALYZE mytable_cc FOR 100 ITERATIONS;
 bayeslite> .hook contrib.py
 added command ".zmatrix"
 added command ".pairplot"

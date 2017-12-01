@@ -273,7 +273,7 @@ def test_conditional_probability(seed):
         bdb.execute('initialize 1 model for p1_cond_prob_cc')
         bdb.execute('alter generator p1_cond_prob_cc '
             'ensure variables * dependent')
-        bdb.execute('analyze p1_cond_prob_cc for 1 iteration wait')
+        bdb.execute('analyze p1_cond_prob_cc for 1 iteration')
         q0 = 'estimate probability density of age = 8 by p1'
         q1 = 'estimate probability density of age = 8 given () by p1'
         age_is_8 = bdb.execute(q0).fetchvalue()
@@ -292,7 +292,7 @@ def test_conditional_probability(seed):
 def test_joint_probability(seed):
     with test_core.t1(seed=seed) as (bdb, _population_id, _generator_id):
         bdb.execute('initialize 10 models for p1_cc')
-        bdb.execute('analyze p1_cc for 10 iterations wait')
+        bdb.execute('analyze p1_cc for 10 iterations')
         q0 = 'estimate probability density of age = 8 by p1'
         q1 = 'estimate probability density of (age = 8) by p1'
         assert bdb.execute(q0).fetchvalue() == bdb.execute(q1).fetchvalue()
@@ -1394,7 +1394,7 @@ def test_trivial_commands():
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate count(*) from p_cc')
         bdb.execute('alter generator p0_cc rename to P0_cc')
-        bdb.execute('analyze p0_cc for 1 iteration wait')
+        bdb.execute('analyze p0_cc for 1 iteration')
         colno = core.bayesdb_variable_number(bdb, population_id, generator_id,
             'gender')
         with pytest.raises(parse.BQLParseError):
@@ -1405,7 +1405,7 @@ def test_trivial_commands():
             assert core.bayesdb_variable_number(
                     bdb, population_id, generator_id, 'sex') \
                 == colno
-            bdb.execute('analyze p0_cc model 0 for 1 iteration wait')
+            bdb.execute('analyze p0_cc model 0 for 1 iteration')
             bdb.execute('alter generator p0_cc rename to p_cc')
             assert core.bayesdb_variable_number(
                     bdb, population_id, generator_id, 'sex') \
@@ -1439,11 +1439,11 @@ def test_trivial_commands():
             # Cannot specify models with rename.
             bdb.execute('alter generator p_cc models (1) rename to p_cc_fail')
         bdb.execute('drop table T0_TEMP')
-        bdb.execute('analyze p_cc model 0 for 1 iteration wait')
-        bdb.execute('analyze p_cc model 1 for 1 iteration wait')
-        bdb.execute('analyze p_cc models 0-1 for 1 iteration wait')
-        bdb.execute('analyze p_cc models 0,1 for 1 iteration wait')
-        bdb.execute('analyze p_cc for 1 iteration wait')
+        bdb.execute('analyze p_cc model 0 for 1 iteration')
+        bdb.execute('analyze p_cc model 1 for 1 iteration')
+        bdb.execute('analyze p_cc models 0-1 for 1 iteration')
+        bdb.execute('analyze p_cc models 0,1 for 1 iteration')
+        bdb.execute('analyze p_cc for 1 iteration')
         bdb.execute('select * from t0').fetchall()
         bdb.execute('select * from T0').fetchall()
         bdb.execute('estimate * from p').fetchall()
@@ -1477,15 +1477,15 @@ def test_trivial_commands():
         bdb.execute('create generator pe_cc for pe;')
         with pytest.raises(bayeslite.BQLError):
             # No models to analyze.
-            bdb.execute('analyze pe_cc for 1 iteration wait')
+            bdb.execute('analyze pe_cc for 1 iteration')
         bdb.execute('initialize 1 model if not exists for pe_cc')
-        bdb.execute('analyze pe_cc for 1 iteration wait')
+        bdb.execute('analyze pe_cc for 1 iteration')
         bdb.execute('estimate correlation'
             ' from pairwise columns of pe').fetchall()
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('initialize 4 models if not exists for t')
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('analyze t0 for 1 iteration wait')
+            bdb.execute('analyze t0 for 1 iteration')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate * from t')
         with pytest.raises(bayeslite.BQLError):
@@ -1496,12 +1496,12 @@ def test_trivial_commands():
             bdb.execute('estimate similarity in the context of age '
                 'from pairwise t')
         bdb.execute('initialize 6 models if not exists for p_cc')
-        bdb.execute('analyze p_cc for 1 iteration wait')
+        bdb.execute('analyze p_cc for 1 iteration')
 
 def test_trivial_deadline():
     with test_core.t1() as (bdb, _population_id, _generator_id):
         bdb.execute('initialize 1 model for p1_cc')
-        bdb.execute('analyze p1_cc for 1 second wait')
+        bdb.execute('analyze p1_cc for 1 second')
 
 def test_parametrized():
     assert bql2sqlparam('select * from t where id = ?') == \
@@ -1869,7 +1869,7 @@ def test_parametrized():
         ''')
         bdb.execute('create generator q_cc for q;')
         bdb.execute('initialize 1 model for q_cc;')
-        assert sqltraced_execute('analyze q_cc for 1 iteration wait;') == [
+        assert sqltraced_execute('analyze q_cc for 1 iteration;') == [
             'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?',
             'SELECT id FROM bayesdb_generator WHERE name = ?',
             'SELECT backend FROM bayesdb_generator WHERE id = ?',
@@ -1891,7 +1891,7 @@ def test_create_table_ifnotexists_as_simulate():
                 overrides=[('age', 'numerical')])
             bdb.execute('create generator p_cc for p;')
             bdb.execute('initialize 1 model for p_cc')
-            bdb.execute('analyze p_cc for 1 iteration wait')
+            bdb.execute('analyze p_cc for 1 iteration')
             bdb.execute('''
                 create table if not exists u as
                     simulate age from p limit 10
@@ -2211,7 +2211,7 @@ def test_predprob_null():
         ''')
         bdb.execute('create generator pfoo_cc for pfoo using cgpm;')
         bdb.execute('initialize 1 model for pfoo_cc')
-        bdb.execute('analyze pfoo_cc for 1 iteration wait')
+        bdb.execute('analyze pfoo_cc for 1 iteration')
         # Null value => null predictive probability.
         assert bdb.execute('estimate predictive probability of x'
                 ' from pfoo where id = 4;').fetchall() == \
@@ -2302,14 +2302,14 @@ def test_misc_errors():
             with pytest.raises(bayeslite.BQLError):
                 # p1_xc already exists as a generator.
                 bdb.execute('alter generator p1_cc rename to p1_xc')
-        with pytest.raises(NotImplementedError):
-            # Need WAIT.
-            bdb.execute('analyze p1_cc for 1 iteration')
+        with pytest.raises(bayeslite.BQLParseError):
+            # WAIT is not allowed.
+            bdb.execute('analyze p1_cc for 1 iteration wait')
         with bdb.savepoint():
             bdb.execute('initialize 1 model for p1_cc')
-            bdb.execute('analyze p1_cc for 1 iteration wait')
+            bdb.execute('analyze p1_cc for 1 iteration')
             bdb.execute('initialize 1 model for p1_xc')
-            bdb.execute('analyze p1_xc for 1 iteration wait')
+            bdb.execute('analyze p1_xc for 1 iteration')
             with pytest.raises(apsw.SQLError):
                 bdb.execute('select'
                     ' nonexistent((simulate age from p1 limit 1));')
@@ -2340,7 +2340,7 @@ def test_misc_errors():
 def test_nested_simulate():
     with test_core.t1() as (bdb, _population_id, _generator_id):
         bdb.execute('initialize 1 model for p1_cc')
-        bdb.execute('analyze p1_cc for 1 iteration wait')
+        bdb.execute('analyze p1_cc for 1 iteration')
         bdb.execute('select (simulate age from p1 limit 1),'
             ' (simulate weight from p1 limit 1)').fetchall()
         assert bdb.temp_table_name() == 'bayesdb_temp_2'
@@ -2369,17 +2369,15 @@ def test_nested_simulate():
 def test_checkpoint__ci_slow():
     with test_core.t1() as (bdb, population_id, generator_id):
         bdb.execute('initialize 1 model for p1_cc')
-        bdb.execute('analyze p1_cc for 10 iterations checkpoint 1 iteration'
-            ' wait')
+        bdb.execute('analyze p1_cc for 10 iterations checkpoint 1 iteration')
         # No checkpoint by seconds.
         with pytest.raises(NotImplementedError):
-            bdb.execute('analyze p1_cc for 5 seconds checkpoint 1 second wait')
+            bdb.execute('analyze p1_cc for 5 seconds checkpoint 1 second')
         bdb.execute('drop models from p1_cc')
         bdb.execute('initialize 1 model for p1_cc')
         # No checkpoint by seconds.
         with pytest.raises(NotImplementedError):
-            bdb.execute('analyze p1_cc for 5 iterations '
-                'checkpoint 1 second wait')
+            bdb.execute('analyze p1_cc for 5 iterations checkpoint 1 second')
         sql = '''
             select iterations from bayesdb_generator_model
                 where generator_id = ?
@@ -2389,8 +2387,7 @@ def test_checkpoint__ci_slow():
             assert bdb.execute(sql, (generator_id,)).fetchvalue() == 5
         bdb.execute('drop models from p1_cc')
         bdb.execute('initialize 1 model for p1_cc')
-        bdb.execute('analyze p1_cc for 1 iteration checkpoint 2 iterations'
-            ' wait')
+        bdb.execute('analyze p1_cc for 1 iteration checkpoint 2 iterations')
         sql = '''
             select iterations from bayesdb_generator_model
                 where generator_id = ?
@@ -2402,7 +2399,7 @@ def test_checkpoint__ci_slow():
 def test_infer_confidence__ci_slow():
     with test_core.t1() as (bdb, _population_id, _generator_id):
         bdb.execute('initialize 1 model for p1_cc')
-        bdb.execute('analyze p1_cc for 1 iteration wait')
+        bdb.execute('analyze p1_cc for 1 iteration')
         bdb.execute('infer explicit rowid, rowid as another_rowid, 4,'
             ' age, predict age as age_inf confidence age_conf'
             ' from p1').fetchall()
@@ -2410,7 +2407,7 @@ def test_infer_confidence__ci_slow():
 def test_infer_as_estimate():
     with test_core.t1() as (bdb, _population_id, _generator_id):
         bdb.execute('initialize 1 model for p1_cc')
-        bdb.execute('analyze p1_cc for 1 iteration wait')
+        bdb.execute('analyze p1_cc for 1 iteration')
         bdb.execute('infer explicit predictive probability of age'
             ' from p1').fetchall()
 
@@ -2426,7 +2423,7 @@ def test_infer_error():
 def test_estimate_by():
     with test_core.t1() as (bdb, _population_id, _generator_id):
         bdb.execute('initialize 1 model for p1_cc')
-        bdb.execute('analyze p1_cc for 1 iteration wait')
+        bdb.execute('analyze p1_cc for 1 iteration')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('estimate predictive probability of age'
                 ' by p1')

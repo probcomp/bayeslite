@@ -243,7 +243,7 @@ A generator is a probabilistic model for the variables in a population.
 .. index:: ``ANALYZE GENERATOR``
 
 ``ANALYZE <g> FOR <duration> [CHECKPOINT <duration>] WAIT``
-``ANALYZE <g> FOR <duration> [CHECKPOINT <duration>] WAIT (<clauses>)``
+``ANALYZE <g> FOR <duration> [CHECKPOINT <duration>] (<clauses>)``
 
    Perform analysis on the models in generator *g*. *Duration* can
    take on values of ``<n> SECOND(S)``, ``<n> MINUTE(S)``, or

@@ -39,7 +39,7 @@ def test_mutinf__ci_slow(seed):
             'create population p for t(x numerical; y numerical; z numerical)')
         bdb.execute('create generator m for p with baseline crosscat')
         bdb.execute('initialize 10 models for m')
-        bdb.execute('analyze m for 10 iterations wait (optimized; quiet)')
+        bdb.execute('analyze m for 10 iterations (optimized; quiet)')
         vars_by_mutinf = bdb.execute('''
             estimate * from variables of p
                 order by probability of (mutual information with x > 0.1) desc

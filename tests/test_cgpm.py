@@ -181,7 +181,7 @@ def test_cgpm_smoke():
         # Default model.
         bdb.execute('CREATE GENERATOR g_default FOR p USING cgpm')
         bdb.execute('INITIALIZE 1 MODEL FOR g_default')
-        bdb.execute('ANALYZE g_default FOR 1 ITERATION WAIT')
+        bdb.execute('ANALYZE g_default FOR 1 ITERATION')
         cgpm_smoke_tests(bdb, 'g_default', ['output', 'cat', 'input'])
 
         # Custom model for output and cat.
@@ -193,7 +193,7 @@ def test_cgpm_smoke():
             )
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR g_manifest')
-        bdb.execute('ANALYZE g_manifest FOR 1 ITERATION WAIT')
+        bdb.execute('ANALYZE g_manifest FOR 1 ITERATION')
         cgpm_smoke_tests(bdb, 'g_manifest', ['output', 'cat', 'input'])
 
         # Custom model for latent output, manifest output.
@@ -204,7 +204,7 @@ def test_cgpm_smoke():
             )
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR g_latout')
-        bdb.execute('ANALYZE g_latout FOR 1 ITERATION WAIT')
+        bdb.execute('ANALYZE g_latout FOR 1 ITERATION')
         cgpm_smoke_tests(bdb, 'g_latout',
             ['output', 'output_', 'cat', 'input'])
 
@@ -216,7 +216,7 @@ def test_cgpm_smoke():
             )
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR g_latcat')
-        bdb.execute('ANALYZE g_latcat FOR 1 ITERATION WAIT')
+        bdb.execute('ANALYZE g_latcat FOR 1 ITERATION')
         cgpm_smoke_tests(bdb, 'g_latcat', ['output', 'cat', 'cat_', 'input'])
 
         # Custom chained model.
@@ -229,7 +229,7 @@ def test_cgpm_smoke():
             )
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR g_chain')
-        bdb.execute('ANALYZE g_chain FOR 1 ITERATION WAIT')
+        bdb.execute('ANALYZE g_chain FOR 1 ITERATION')
         cgpm_smoke_tests(bdb, 'g_chain',
             ['output', 'excat', 'midput', 'cat', 'input'])
 
@@ -241,7 +241,7 @@ def test_cgpm_smoke():
             )
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR g_category_model')
-        bdb.execute('ANALYZE g_category_model FOR 1 ITERATION WAIT')
+        bdb.execute('ANALYZE g_category_model FOR 1 ITERATION')
         cgpm_smoke_tests(bdb, 'g_category_model',
             ['output', 'cat', 'input'])
 
@@ -323,27 +323,28 @@ def test_cgpm_analysis_iteration_timed__ci_slow():
         start0 = time.time()
         bdb.execute('''
             ANALYZE g2 FOR 10000 ITERATION OR 5 SECONDS
-                CHECKPOINT 1 ITERATION WAIT (QUIET);
+                CHECKPOINT 1 ITERATION (QUIET);
         ''')
         assert 5 < time.time() - start0 < 15
 
         start1 = time.time()
         bdb.execute('''
-            ANALYZE g2 FOR 10000 ITERATION OR 5 SECONDS WAIT
-                (OPTIMIZED; QUIET)
+            ANALYZE g2 FOR 10000 ITERATION OR 5 SECONDS (
+                OPTIMIZED; QUIET
+            )
         ''')
         assert 5 < time.time() - start1 < 15
 
         start2 = time.time()
         bdb.execute('''
-            ANALYZE g2 FOR 1 ITERATION OR 100 MINUTES WAIT;
+            ANALYZE g2 FOR 1 ITERATION OR 100 MINUTES
         ''')
         assert 0 < time.time() - start2 < 15
 
         start3 = time.time()
         bdb.execute('''
             ANALYZE g2 FOR 10 ITERATION OR 100 SECONDS
-            CHECKPOINT 1 ITERATION WAIT (OPTIMIZED)
+            CHECKPOINT 1 ITERATION (OPTIMIZED)
         ''')
         assert 0 < time.time() - start3 < 15
 
@@ -399,34 +400,34 @@ def test_cgpm_kepler():
         n_ = c_.fetchvalue()
         assert n_ - n == 20
         bdb.execute('INITIALIZE 1 MODEL IF NOT EXISTS FOR g1')
-        bdb.execute('ANALYZE g0 FOR 1 ITERATION WAIT')
-        bdb.execute('ANALYZE g0 FOR 1 ITERATION WAIT (VARIABLES period)')
-        bdb.execute('ANALYZE g1 FOR 1 ITERATION WAIT')
-        bdb.execute('ANALYZE g1 FOR 1 ITERATION WAIT (VARIABLES period)')
+        bdb.execute('ANALYZE g0 FOR 1 ITERATION')
+        bdb.execute('ANALYZE g0 FOR 1 ITERATION (VARIABLES period)')
+        bdb.execute('ANALYZE g1 FOR 1 ITERATION')
+        bdb.execute('ANALYZE g1 FOR 1 ITERATION (VARIABLES period)')
         # OPTIMIZED is ignored because period is a foreign variable.
         bdb.execute('''
-            ANALYZE g1 FOR 1 ITERATION WAIT (OPTIMIZED; VARIABLES period)
+            ANALYZE g1 FOR 1 ITERATION (OPTIMIZED; VARIABLES period)
         ''')
         # This should fail since we have a SET CATEGORY MODEL which is not
         # compatible with lovecat. The ValueError is from cgpm not bayeslite.
         with pytest.raises(ValueError):
             bdb.execute('''
-                ANALYZE g1 FOR 1 ITERATION WAIT
+                ANALYZE g1 FOR 1 ITERATION
                     (OPTIMIZED; VARIABLES launch_mass)
             ''')
         # Cannot use timed analysis with mixed variables.
         with pytest.raises(BQLError):
             bdb.execute('''
-                ANALYZE g1 FOR 5 SECONDS WAIT (VARIABLES period, apogee)
+                ANALYZE g1 FOR 5 SECONDS (VARIABLES period, apogee)
             ''')
         # Cannot use timed analysis with mixed variables (period by SKIP).
         with pytest.raises(BQLError):
             bdb.execute('''
-                ANALYZE g1 FOR 5 SECONDS WAIT (SKIP apogee)
+                ANALYZE g1 FOR 5 SECONDS (SKIP apogee)
             ''')
         # OK to use iteration analysis with mixed values.
         bdb.execute('''
-                ANALYZE g1 FOR 1 ITERATION WAIT (VARIABLES period, apogee)
+                ANALYZE g1 FOR 1 ITERATION (VARIABLES period, apogee)
             ''')
         bdb.execute('''
             ESTIMATE DEPENDENCE PROBABILITY
@@ -563,19 +564,19 @@ def test_bad_analyze_vars():
             CREATE GENERATOR satellites_cgpm FOR satellites USING cgpm
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR satellites_cgpm')
-        bdb.execute('ANALYZE satellites_cgpm FOR 1 ITERATION WAIT ()')
-        bdb.execute('ANALYZE satellites_cgpm FOR 1 ITERATION WAIT')
+        bdb.execute('ANALYZE satellites_cgpm FOR 1 ITERATION ()')
+        bdb.execute('ANALYZE satellites_cgpm FOR 1 ITERATION')
         with pytest.raises(BQLError):
             # Unknown variable `perige'.
             bdb.execute('''
-                ANALYZE satellites_cgpm FOR 1 ITERATION WAIT (
+                ANALYZE satellites_cgpm FOR 1 ITERATION (
                     VARIABLES period, perige
                 )
             ''')
         with pytest.raises(BQLError):
             # Unknown variable `perige'.
             bdb.execute('''
-                ANALYZE satellites_cgpm FOR 1 ITERATION WAIT (
+                ANALYZE satellites_cgpm FOR 1 ITERATION (
                     SKIP period, perige
                 )
             ''')
@@ -645,15 +646,15 @@ def test_output_stattypes():
             )
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR satellites_g2')
-        bdb.execute('ANALYZE satellites_g2 FOR 2 ITERATION WAIT;')
+        bdb.execute('ANALYZE satellites_g2 FOR 2 ITERATION')
         # Cannot transitioned baseline and foreign using timed analyis.
         with pytest.raises(BQLError):
             bdb.execute('''
-                ANALYZE satellites_g2 FOR 2 SECONDS WAIT (
+                ANALYZE satellites_g2 FOR 2 SECONDS (
                     VARIABLES country_of_operator, apogee, launch_mass, pc_3);
             ''')
         bdb.execute('''
-            ANALYZE satellites_g2 FOR 1 ITERATION WAIT (
+            ANALYZE satellites_g2 FOR 1 ITERATION (
                 VARIABLES apogee, launch_mass);
         ''')
         # Dependence probability of manifest with latent.
@@ -745,7 +746,7 @@ def test_initialize_with_all_nulls():
             )
         ''')
         bdb.execute('INITIALIZE 2 MODELS FOR m4;')
-        bdb.execute('ANALYZE m4 FOR 1 ITERATION WAIT;')
+        bdb.execute('ANALYZE m4 FOR 1 ITERATION')
 
 def test_add_variable():
     with bayesdb_open() as bdb:
@@ -765,7 +766,7 @@ def test_add_variable():
         bdb.backends['cgpm'].set_multiprocess(False)
         bdb.execute('CREATE GENERATOR m0 FOR p WITH BASELINE crosscat;')
         bdb.execute('INITIALIZE 1 MODELS FOR m0;')
-        bdb.execute('ANALYZE m0 FOR 5 ITERATION WAIT;')
+        bdb.execute('ANALYZE m0 FOR 5 ITERATION')
         # Run some queries on the new variable in the generator or aggregated.
         def run_queries(target, m):
             extra = 'MODELED BY %s' % (m,) if m is not None else ''
@@ -788,8 +789,8 @@ def test_add_variable():
         # Add the height variable
         bdb.execute('ALTER POPULATION p ADD VARIABLE height numerical;')
         # Run targeted analysis on the newly included height variable.
-        bdb.execute('ANALYZE m0 FOR 5 ITERATION WAIT;')
-        bdb.execute('ANALYZE m0 FOR 5 ITERATION WAIT (VARIABLES height);')
+        bdb.execute('ANALYZE m0 FOR 5 ITERATION')
+        bdb.execute('ANALYZE m0 FOR 5 ITERATION (VARIABLES height);')
         # Queries should now be successful.
         run_queries('height', 'm0')
         # Create a new generator, and create a custom category model for
@@ -801,7 +802,7 @@ def test_add_variable():
             )
         ''')
         bdb.execute('INITIALIZE 2 MODELS FOR m1')
-        bdb.execute('ANALYZE m1 FOR 2 ITERATION WAIT;')
+        bdb.execute('ANALYZE m1 FOR 2 ITERATION')
         # Run height queries on m1.
         run_queries('height', 'm1')
         # Run height queries on population, aggregating m0 and m1.
@@ -810,19 +811,19 @@ def test_add_variable():
         bdb.execute('ALTER POPULATION p ADD VARIABLE rank numerical;')
         # Analyze rank on m0.
         bdb.execute('''
-            ANALYZE m0 FOR 2 ITERATION WAIT (OPTIMIZED; VARIABLES rank);
+            ANALYZE m0 FOR 2 ITERATION (OPTIMIZED; VARIABLES rank);
         ''')
         # Analyze all except rank on m0.
         bdb.execute('''
-            ANALYZE m0 FOR 2 ITERATION WAIT (OPTIMIZED; SKIP rank);
+            ANALYZE m0 FOR 2 ITERATION (OPTIMIZED; SKIP rank);
         ''')
         # Fail on m1 with OPTIMIZED, since non-standard category models.
         with pytest.raises(ValueError):
             bdb.execute('''
-                ANALYZE m1 FOR 2 ITERATION WAIT (OPTIMIZED; VARIABLES rank);
+                ANALYZE m1 FOR 2 ITERATION (OPTIMIZED; VARIABLES rank);
             ''')
         # Succeed analysis on non-optimized analysis.
-        bdb.execute('ANALYZE m1 FOR 2 ITERATION WAIT;')
+        bdb.execute('ANALYZE m1 FOR 2 ITERATION')
         # Run queries on the new variable.
         run_queries('rank', 'm0')
         run_queries('rank', 'm1')
@@ -843,7 +844,7 @@ def test_predictive_relevance():
         ''')
         bdb.execute('CREATE GENERATOR m FOR satellites;')
         bdb.execute('INITIALIZE 2 MODELS FOR m;')
-        bdb.execute('ANALYZE m FOR 25 ITERATION WAIT (OPTIMIZED);')
+        bdb.execute('ANALYZE m FOR 25 ITERATION (OPTIMIZED);')
 
         # Check self-similarites, and also provide coverage of bindings.
         rowids = bdb.execute('SELECT OID from satellites_ucs;').fetchall()
@@ -1026,7 +1027,7 @@ def test_add_drop_models():
         # Assert identity mapping initially.
         check_modelno_mapping({i:i for i in xrange(16)})
 
-        bdb.execute('ANALYZE m FOR 1 ITERATION WAIT (QUIET);')
+        bdb.execute('ANALYZE m FOR 1 ITERATION (QUIET);')
 
         # Drop some models.
         bdb.execute('DROP MODELS 1, 8-12, 14 FROM m')
@@ -1045,7 +1046,7 @@ def test_add_drop_models():
         })
 
         # Run some analysis again.
-        bdb.execute('ANALYZE m FOR 1 ITERATION WAIT (OPTIMIZED; QUIET);')
+        bdb.execute('ANALYZE m FOR 1 ITERATION (OPTIMIZED; QUIET);')
 
         # Initialize 14 models if not existing.
         bdb.execute('INITIALIZE 14 MODELS IF NOT EXISTS FOR m')
@@ -1198,28 +1199,22 @@ def test_using_modelnos():
         ''').fetchall()
         # Test analyze on per-model basis.
         bdb.execute('''
-            ANALYZE g0
-            MODEL 0
-            FOR 1 ITERATION
-            CHECKPOINT 1 ITERATION
-            WAIT;
+            ANALYZE g0 MODEL 0 FOR 1 ITERATION CHECKPOINT 1 ITERATION
         ''')
         engine = bdb.backends['cgpm']._engine(bdb, 1)
         assert len(engine.states[0].diagnostics['logscore']) == 1
         assert len(engine.states[1].diagnostics['logscore']) == 0
         bdb.execute('''
-            ANALYZE g0
-            MODEL 1
-            FOR 4 ITERATION
-            CHECKPOINT 1 ITERATION
-            WAIT (OPTIMIZED);
+            ANALYZE g0 MODEL 1 FOR 4 ITERATION CHECKPOINT 1 ITERATION (
+                OPTIMIZED
+            );
         ''')
         assert len(engine.states[0].diagnostics['logscore']) == 1
         assert len(engine.states[1].diagnostics['logscore']) == 4
         # Some errors with bad modelnos.
         with pytest.raises(BQLError):
             bdb.execute('''
-                ANALYZE g0 MODEL 0-3 FOR 4 ITERATION WAIT;
+                ANALYZE g0 MODEL 0-3 FOR 4 ITERATION
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''

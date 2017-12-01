@@ -14,8 +14,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import itertools
 import contextlib
+import itertools
 import pytest
 
 import bayeslite
@@ -830,25 +830,25 @@ def test_analyze():
         [ast.AnalyzeModels('t', None, 1, None, None, None, False, None)]
     assert parse_bql_string('analyze t for 7 seconds or 1 iteration;') == \
         [ast.AnalyzeModels('t', None, 1, 7, None, None, False, None)]
-    assert parse_bql_string('analyze t for 1 iteration wait;') == \
+    assert parse_bql_string('analyze t for 1 iteration;') == \
         [ast.AnalyzeModels('t', None, 1, None, None, None, True, None)]
     assert parse_bql_string('analyze t for 1 minute;') == \
         [ast.AnalyzeModels('t', None, None, 60, None, None, False, None)]
-    assert parse_bql_string('analyze t for 1 minute wait;') == \
+    assert parse_bql_string('analyze t for 1 minute;') == \
         [ast.AnalyzeModels('t', None, None, 60, None, None, True, None)]
     assert parse_bql_string('analyze t for 2 minutes;') == \
         [ast.AnalyzeModels('t', None, None, 120, None, None, False, None)]
     assert parse_bql_string('analyze t for 100 iterations or 2 minutes;') == \
         [ast.AnalyzeModels('t', None, 100, 120, None, None, False, None)]
-    assert parse_bql_string('analyze t for 2 minutes wait;') == \
+    assert parse_bql_string('analyze t for 2 minutes;') == \
         [ast.AnalyzeModels('t', None, None, 120, None, None, True, None)]
     assert parse_bql_string('analyze t for 1 second;') == \
         [ast.AnalyzeModels('t', None, None, 1, None, None, False, None)]
-    assert parse_bql_string('analyze t for 1 second wait;') == \
+    assert parse_bql_string('analyze t for 1 second;') == \
         [ast.AnalyzeModels('t', None, None, 1, None, None, True, None)]
     assert parse_bql_string('analyze t for 2 seconds;') == \
         [ast.AnalyzeModels('t', None, None, 2, None, None, False, None)]
-    assert parse_bql_string('analyze t for 2 seconds wait;') == \
+    assert parse_bql_string('analyze t for 2 seconds;') == \
         [ast.AnalyzeModels('t', None, None, 2, None, None, True, None)]
     assert parse_bql_string('analyze t model 1 for 1 iteration;') == \
         [ast.AnalyzeModels('t', [1], 1, None, None, None, False, None)]
@@ -859,7 +859,7 @@ def test_analyze():
     assert parse_bql_string('analyze t for 10 iterations'
             ' checkpoint 3 iterations') == \
         [ast.AnalyzeModels('t', None, 10, None, 3, None, False, None)]
-    assert parse_bql_string('analyze t for 10 iterations wait'
+    assert parse_bql_string('analyze t for 10 iterations'
             ' (mh(default, one, 10))') == \
         [ast.AnalyzeModels('t', None, 10, None, None, None, True, [
             'mh', '(', 'default', ',', 'one', ',', 10, ')'

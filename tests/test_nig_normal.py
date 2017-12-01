@@ -32,7 +32,7 @@ def test_nig_normal_smoke():
         bdb.execute('create population p for t(x numerical)')
         bdb.execute('create generator g for p using nig_normal')
         bdb.execute('initialize 1 model for g')
-        bdb.execute('analyze g for 1 iteration wait')
+        bdb.execute('analyze g for 1 iteration')
         bdb.execute('estimate probability density of x = 50 from p').fetchall()
         bdb.execute('simulate x from p limit 1').fetchall()
         bdb.execute('drop models from g')
@@ -78,9 +78,9 @@ def test_nig_normal_latent_smoke():
             create generator g1 for p using nig_normal(xe deviation(x))
         ''')
         bdb.execute('initialize 1 model for g0')
-        bdb.execute('analyze g0 for 1 iteration wait')
+        bdb.execute('analyze g0 for 1 iteration')
         bdb.execute('initialize 1 model for g1')
-        bdb.execute('analyze g1 for 1 iteration wait')
+        bdb.execute('analyze g1 for 1 iteration')
 
         # PROBABILITY DENSITY OF x = v
         bdb.execute('estimate probability density of x = 50 within p') \
@@ -173,9 +173,9 @@ def test_nig_normal_latent_conditional_smoke():
             create generator g1 for p using nig_normal(xe deviation(x))
         ''')
         bdb.execute('initialize 1 model for g0')
-        bdb.execute('analyze g0 for 1 iteration wait')
+        bdb.execute('analyze g0 for 1 iteration')
         bdb.execute('initialize 1 model for g1')
-        bdb.execute('analyze g1 for 1 iteration wait')
+        bdb.execute('analyze g1 for 1 iteration')
 
         # observed given observed
         bdb.execute('''
@@ -247,9 +247,9 @@ def test_nig_normal_latent_2var_smoke():
             create generator g1 for p using nig_normal(xe deviation(x))
         ''')
         bdb.execute('initialize 1 model for g0')
-        bdb.execute('analyze g0 for 1 iteration wait')
+        bdb.execute('analyze g0 for 1 iteration')
         bdb.execute('initialize 1 model for g1')
-        bdb.execute('analyze g1 for 1 iteration wait')
+        bdb.execute('analyze g1 for 1 iteration')
 
         # CORRELATION, CORRELATION PVALUE, with generators.
         assert 4 == len(bdb.execute('''
@@ -326,9 +326,9 @@ def test_nig_normal_latent_2var_conditional_smoke():
             create generator g1 for p using nig_normal(xe deviation(x))
         ''')
         bdb.execute('initialize 1 model for g0')
-        bdb.execute('analyze g0 for 1 iteration wait')
+        bdb.execute('analyze g0 for 1 iteration')
         bdb.execute('initialize 1 model for g1')
-        bdb.execute('analyze g1 for 1 iteration wait')
+        bdb.execute('analyze g1 for 1 iteration')
 
         # observed given other observed
         bdb.execute('''
@@ -469,9 +469,9 @@ def test_nig_normal_latent_2var2lat_conditional_smoke():
             )
         ''')
         bdb.execute('initialize 1 model for g0')
-        bdb.execute('analyze g0 for 1 iteration wait')
+        bdb.execute('analyze g0 for 1 iteration')
         bdb.execute('initialize 1 model for g1')
-        bdb.execute('analyze g1 for 1 iteration wait')
+        bdb.execute('analyze g1 for 1 iteration')
 
         # latent given latent
         with pytest.raises(BQLError):

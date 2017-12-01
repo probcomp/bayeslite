@@ -51,7 +51,7 @@ def test_engine_increment_stamp():
         assert cgpm_backend._get_cache_entry(bdb, generator_id, 'engine') \
             is None
         # The engine stamp should increment after analysis.
-        bdb.execute('ANALYZE m FOR 1 ITERATIONS WAIT;')
+        bdb.execute('ANALYZE m FOR 1 ITERATIONS')
         assert cgpm_backend._engine_stamp(bdb, generator_id) == 2
         # Caching on analyze.
         assert cgpm_backend._get_cache_entry(bdb, generator_id, 'engine') \
@@ -95,13 +95,13 @@ def test_engine_stamp_two_clients():
                 assert cgpm_backend._engine_stamp(bdb0, generator_id) == 1
                 assert cgpm_backend._engine_stamp(bdb1, generator_id) == 1
 
-            bdb0.execute('ANALYZE m FOR 1 ITERATION WAIT')
+            bdb0.execute('ANALYZE m FOR 1 ITERATION')
             assert cgpm_backend._engine_stamp(bdb0, generator_id) == 2
             assert cgpm_backend._get_cache_entry(
                 bdb0, generator_id, 'engine') is not None
 
             with bayeslite.bayesdb_open(f.name) as bdb2:
-                bdb2.execute('ANALYZE m FOR 1 ITERATION WAIT')
+                bdb2.execute('ANALYZE m FOR 1 ITERATION')
                 assert cgpm_backend._engine_stamp(bdb2, generator_id) == 3
                 assert cgpm_backend._engine_stamp(bdb0, generator_id) == 3
 

@@ -140,7 +140,6 @@ keywords = {
     "values": grammar.K_VALUES,
     "variable": grammar.K_VARIABLE,
     "variables": grammar.K_VARIABLES,
-    "wait": grammar.K_WAIT,
     "when": grammar.K_WHEN,
     "where": grammar.K_WHERE,
     "with": grammar.K_WITH,

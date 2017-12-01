@@ -32,7 +32,7 @@ def test_conditional_probability_simple_inferences():
         ''')
         bdb.execute('create generator p_cc for p using cgpm;')
         bdb.execute('initialize 10 models for p_cc')
-        bdb.execute('analyze p_cc for 100 iterations wait')
+        bdb.execute('analyze p_cc for 100 iterations')
         cursor = bdb.execute('''
             estimate
                 probability density of foo = 'x',

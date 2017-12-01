@@ -559,8 +559,6 @@ def execute_phrase(bdb, phrase, bindings=()):
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.AnalyzeModels):
-        if not phrase.wait:
-            raise NotImplementedError('No background analysis -- use WAIT.')
         # WARNING: It is the backend's responsibility to work in a
         # transaction.
         #

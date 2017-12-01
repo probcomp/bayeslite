@@ -72,13 +72,13 @@ def test_codebook_value_map():
         ''')
         bdb.execute('CREATE GENERATOR dummy_cc FOR dummy_pop USING cgpm')
         bdb.execute('INITIALIZE 10 MODELS FOR dummy_cc')
-        bdb.execute('ANALYZE dummy_cc FOR 20 ITERATIONS WAIT')
+        bdb.execute('ANALYZE dummy_cc FOR 20 ITERATIONS')
         bdb.execute('SIMULATE age FROM dummy_pop GIVEN city = RIO LIMIT 5')
         bdb.sql_execute('''
             INSERT INTO dummy (kerberos, age, city) VALUES
                 ('jackie', 18, 'LA'), ('rocker', 22, 'DC')
         ''')
-        bdb.execute('ANALYZE dummy_cc FOR 20 ITERATIONS WAIT')
+        bdb.execute('ANALYZE dummy_cc FOR 20 ITERATIONS')
         # city = 'LA' is not seen in the training dataset, so the constraint
         # is ignored when conditioning the probability density of age = 1.
         p0 = bdb.execute('''

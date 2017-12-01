@@ -36,7 +36,7 @@ the table::
    bdb.execute('create population p for t with schema(guess stattypes for (*))')
    bdb.execute('create generator p_cc for t using cgpm;')
    bdb.execute('initialize 10 models for t_cc')
-   bdb.execute('analyze t_cc for 10 iterations wait')
+   bdb.execute('analyze t_cc for 10 iterations')
    for x in bdb.execute('estimate pairwise dependence probability from t_cc'):
        print x
 """

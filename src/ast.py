@@ -145,7 +145,6 @@ AnalyzeModels = namedtuple('AnalyzeModels', [
     'seconds',
     'ckpt_iterations',
     'ckpt_seconds',
-    'wait',
     'program',
 ])
 DropModels = namedtuple('DropModels', [

@@ -178,9 +178,9 @@ def _test_example(bdb, exname):
         assert [0] == core.bayesdb_generator_modelnos(bdb, gid)
 
     # Test analyzing models.
-    bdb.execute('ANALYZE %s FOR 1 ITERATION WAIT' % (qg,))
-    bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION WAIT' % (qg,))
-    bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION WAIT' % (qg,))
+    bdb.execute('ANALYZE %s FOR 1 ITERATION' % (qg,))
+    bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION' % (qg,))
+    bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION' % (qg,))
 
 def _retest_example(bdb, exname):
     mm, t, t_sql, data_sql, data, p, g, p_bql, g_bql, g_bqlbad0, g_bqlbad1 = \
@@ -196,6 +196,6 @@ def _retest_example(bdb, exname):
     gid = core.bayesdb_get_generator(bdb, p_id, g)
     assert core.bayesdb_generator_has_model(bdb, gid, 0)
     assert core.bayesdb_generator_has_model(bdb, gid, 1)
-    bdb.execute('ANALYZE %s FOR 1 ITERATION WAIT' % (qg,))
-    bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION WAIT' % (qg,))
-    bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION WAIT' % (qg,))
+    bdb.execute('ANALYZE %s FOR 1 ITERATION' % (qg,))
+    bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION' % (qg,))
+    bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION' % (qg,))

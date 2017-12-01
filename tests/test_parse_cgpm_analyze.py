@@ -22,7 +22,7 @@ from test_parse import parse_bql_string
 # cgpm_analyze.parse.parse?
 def parse_analysis_plan(string):
     phrases = parse_bql_string('''
-        ANALYZE m FOR 1 ITERATION WAIT (%s)
+        ANALYZE m FOR 1 ITERATION (%s)
     ''' % (string,))
     return cgpm_analyze_parser.parse(phrases[0].program)
 

@@ -59,7 +59,7 @@ def test_analysis_subproblems_basic():
                 'row clustering concentration',
             ]:
                 bdb.execute('''
-                    ANALYZE g0 MODELS 0,1 FOR 4 ITERATION WAIT(
+                    ANALYZE g0 MODELS 0,1 FOR 4 ITERATION(
                         SUBPROBLEM %s;
                         %s
                     );
@@ -67,7 +67,7 @@ def test_analysis_subproblems_basic():
 
         # Test variable hyperparameters.
         bdb.execute('''
-            ANALYZE g0 FOR 1 ITERATION WAIT (
+            ANALYZE g0 FOR 1 ITERATION (
                 VARIABLES period, launch_mass;
                 SUBPROBLEM variable hyperparameters;
             )
@@ -75,7 +75,7 @@ def test_analysis_subproblems_basic():
         with pytest.raises(BQLError):
             # OPTIMIZED backend does not support variable hyperparameters.
             bdb.execute('''
-                ANALYZE g0 FOR 1 SECONDS WAIT (
+                ANALYZE g0 FOR 1 SECONDS (
                     SUBPROBLEM variable hyperparameters;
                     OPTIMIZED;
                 )
@@ -91,7 +91,7 @@ def test_analysis_subproblems_basic():
         bad_rows = [i for i in xrange(20) if i not in subsample_rows]
         for optimized in ['', 'OPTIMIZED;']:
             bdb.execute('''
-                ANALYZE g0 MODEL 3 FOR 1 ITERATION WAIT (
+                ANALYZE g0 MODEL 3 FOR 1 ITERATION (
                     VARIABLES class_of_orbit;
                     ROWS %s;
                     SUBPROBLEMS (
@@ -104,7 +104,7 @@ def test_analysis_subproblems_basic():
             with pytest.raises(BQLError):
                 # Fail on rows not in the population or subsample.
                 bdb.execute('''
-                    ANALYZE g0 MODEL 3 FOR 1 ITERATION WAIT (
+                    ANALYZE g0 MODEL 3 FOR 1 ITERATION (
                         VARIABLES class_of_orbit;
                         ROWS %s;
                         SUBPROBLEMS (

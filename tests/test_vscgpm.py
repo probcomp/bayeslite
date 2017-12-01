@@ -215,33 +215,33 @@ def test_cgpm_extravaganza__ci_slow():
 
         # -- MODEL country_of_operator GIVEN class_of_orbit USING forest;
         bdb.execute('INITIALIZE 1 MODELS FOR g0')
-        bdb.execute('ANALYZE g0 FOR 1 iteration WAIT (;)')
+        bdb.execute('ANALYZE g0 FOR 1 iteration (;)')
         bdb.execute('''
-            ANALYZE g0 FOR 1 iteration WAIT (VARIABLES kepler_cluster_id)
+            ANALYZE g0 FOR 1 iteration (VARIABLES kepler_cluster_id)
         ''')
         bdb.execute('''
-            ANALYZE g0 FOR 1 iteration WAIT (
+            ANALYZE g0 FOR 1 iteration (
                 SKIP kepler_cluster_id, kepler_noise, period;
             )
         ''')
         # OPTIMIZED uses the lovecat backend.
-        bdb.execute('ANALYZE g0 FOR 20 iteration WAIT (OPTIMIZED)')
+        bdb.execute('ANALYZE g0 FOR 20 iteration (OPTIMIZED)')
         with pytest.raises(Exception):
             # Disallow both SKIP and VARIABLES clauses.
             #
             # XXX Catch a more specific exception.
             bdb.execute('''
-                ANALYZE g0 FOR 1 ITERATION WAIT (
+                ANALYZE g0 FOR 1 ITERATION (
                     SKIP kepler_cluster_id;
                     VARIABLES apogee, perigee;
                 )
             ''')
         bdb.execute('''
-            ANALYZE g0 FOR 1 iteration WAIT (
+            ANALYZE g0 FOR 1 iteration (
                 SKIP kepler_cluster_id, kepler_noise, period;
             )
         ''')
-        bdb.execute('ANALYZE g0 FOR 1 ITERATION WAIT')
+        bdb.execute('ANALYZE g0 FOR 1 ITERATION')
 
         bdb.execute('''
             ESTIMATE DEPENDENCE PROBABILITY

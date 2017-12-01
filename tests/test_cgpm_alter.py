@@ -162,7 +162,7 @@ def test_cgpm_alter_basic():
                 assert abserr(initial_alphas[i], view_alpha) < 1e-8
 
         # Run 10 steps of analysis.
-        bdb.execute('analyze g0 for 4 iteration wait (optimized)')
+        bdb.execute('analyze g0 for 4 iteration (optimized)')
 
         # Retrieve rows in the subsample.
         cursor = bdb.execute('''

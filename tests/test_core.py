@@ -158,7 +158,7 @@ def analyzed_bayesdb_population(mkbdb, nmodels, nsteps, max_seconds=None):
             duration = '%d SECONDS' % (max_seconds,)
         else:
             duration = '%d ITERATIONS' % (nsteps,)
-        bql = 'ANALYZE %s FOR %s WAIT' % (qg, duration)
+        bql = 'ANALYZE %s FOR %s' % (qg, duration)
         bdb.execute(bql)
         yield bdb, population_id, generator_id
 
