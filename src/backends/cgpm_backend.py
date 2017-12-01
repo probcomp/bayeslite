@@ -40,7 +40,7 @@ import cgpm_analyze.parse
 import cgpm_schema.parse
 
 CGPM_SCHEMA_1 = '''
-INSERT INTO bayesdb_metamodel (name, version) VALUES ('cgpm', 1);
+INSERT INTO bayesdb_backend (name, version) VALUES ('cgpm', 1);
 
 CREATE TABLE bayesdb_cgpm_generator (
     generator_id        INTEGER NOT NULL PRIMARY KEY
@@ -68,7 +68,7 @@ CREATE TABLE bayesdb_cgpm_category (
 '''
 
 CGPM_SCHEMA_2 = '''
-UPDATE bayesdb_metamodel SET version = 2 WHERE name = 'cgpm';
+UPDATE bayesdb_backend SET version = 2 WHERE name = 'cgpm';
 
 ALTER TABLE bayesdb_cgpm_generator
     ADD COLUMN engine_stamp
@@ -76,7 +76,7 @@ ALTER TABLE bayesdb_cgpm_generator
 '''
 
 CGPM_SCHEMA_3 = '''
-UPDATE bayesdb_metamodel SET version = 3 WHERE name = 'cgpm';
+UPDATE bayesdb_backend SET version = 3 WHERE name = 'cgpm';
 
 CREATE TABLE bayesdb_cgpm_modelno (
     generator_id        INTEGER NOT NULL,
@@ -92,7 +92,7 @@ INSERT INTO bayesdb_cgpm_modelno (generator_id, modelno, cgpm_modelno)
     SELECT generator_id, modelno, modelno
     FROM bayesdb_generator_model
     WHERE generator_id IN (
-        SELECT id FROM bayesdb_generator WHERE metamodel = 'cgpm'
+        SELECT id FROM bayesdb_generator WHERE backend = 'cgpm'
     );
 '''
 

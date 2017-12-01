@@ -411,7 +411,7 @@ def bayesdb_generator_name(bdb, id):
 
 def bayesdb_generator_backend(bdb, id):
     """Return the backend of the generator with id `id`."""
-    sql = 'SELECT metamodel FROM bayesdb_generator WHERE id = ?'
+    sql = 'SELECT backend FROM bayesdb_generator WHERE id = ?'
     cursor = bdb.sql_execute(sql, (id,))
     try:
         row = cursor.next()

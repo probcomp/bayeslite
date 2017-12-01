@@ -79,7 +79,7 @@ def bayesdb_deregister_backend(bdb, backend):
 
 def bayesdb_backend_version(bdb, mm_name):
     cursor = bdb.sql_execute('''
-        SELECT version FROM bayesdb_metamodel WHERE name = ?
+        SELECT version FROM bayesdb_backend WHERE name = ?
     ''', (mm_name,))
     return cursor_value(cursor, nullok=True)
 

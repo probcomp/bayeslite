@@ -419,7 +419,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                 # assigned id.
                 bdb.sql_execute('''
                     INSERT INTO bayesdb_generator
-                        (name, tabname, population_id, metamodel)
+                        (name, tabname, population_id, backend)
                         VALUES (?, ?, ?, ?)
                 ''', (phrase.name, table, population_id, backend.name()))
                 generator_id = core.bayesdb_get_generator(

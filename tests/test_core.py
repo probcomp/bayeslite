@@ -90,7 +90,7 @@ class DotdogBackend(bayeslite.backend.BayesDB_Backend):
         return 'dotdog'
     def register(self, bdb):
         sql = '''
-            INSERT OR IGNORE INTO bayesdb_metamodel
+            INSERT OR IGNORE INTO bayesdb_backend
                 VALUES ('dotdog', 42)
         '''
         bdb.sql_execute(sql)

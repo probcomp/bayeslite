@@ -9,11 +9,11 @@ BQL Data Modelling Commands
 
 .. index:: ``CREATE GENERATOR``
 
-``CREATE GENERATOR <name> [IF NOT EXISTS] FOR <table> USING <metamodel> (<schema>)``
+``CREATE GENERATOR <name> [IF NOT EXISTS] FOR <table> USING <backend> (<schema>)``
 
    Create a generative model named *name* for the table named *table*
-   in the language of *metamodel*.  *Schema* describes the generative
-   model in syntax that depends on the metamodel.  Typically, it is a
+   in the language of *backend*.  *Schema* describes the generative
+   model in syntax that depends on the backend.  Typically, it is a
    comma-separated list of clauses of the form
 
       ``<column> <type>``
@@ -54,7 +54,7 @@ BQL Data Modelling Commands
 
 ``INITIALIZE <n> MODEL[S] [IF NOT EXISTS] FOR <name>``
 
-   Perform metamodel-specific initialization of up to *n* models for
+   Perform backend-specific initialization of up to *n* models for
    the generator named *name*.  *n* must be a literal integer.  If the
    generator already had models, the ones it had are unchanged.
    Models are zero-indexed.
@@ -80,7 +80,7 @@ BQL Data Modelling Commands
 
 ``ANALYZE <name> [MODEL[S] <modelset>] [FOR <duration>] [CHECKPOINT <duration>] WAIT``
 
-   Perform metamodel-specific analysis of the specified models of the
+   Perform backend-specific analysis of the specified models of the
    generator *name*.  *Modelset* is a comma-separated list of model
    numbers or hyphenated model number ranges.  *Duration* is either
    ``<n> SECOND[S]``, ``<n> MINUTE[S]``, or ``<n> ITERATION[S]``.
@@ -96,16 +96,10 @@ BQL Data Modelling Commands
       ``ANALYZE t_cc MODELS 1-3,7-9 FOR 10 ITERATIONS CHECKPOINT 1 ITERATION``
 
 
-:mod:`bayeslite.backend`: Bayeslite metamodel interface
+:mod:`bayeslite.backend`: Bayeslite backend interface
 ---------------------------------------------------------
 
 .. automodule:: bayeslite.backend
-   :members:
-
-:mod:`bayeslite.backends.crosscat`: Crosscat metamodel
---------------------------------------------------------
-
-.. automodule:: bayeslite.backends.crosscat
    :members:
 
 :mod:`bayeslite.guess`: Heuristics for statistical types

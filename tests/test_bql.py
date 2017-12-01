@@ -1602,7 +1602,7 @@ def test_parametrized():
             'SELECT bql_row_similarity(1, NULL, NULL, _rowid_,'
                 ' (SELECT _rowid_ FROM "t" WHERE ("rowid" = 1)), 0) FROM "t"',
             'SELECT id FROM bayesdb_generator WHERE population_id = ?',
-            'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
+            'SELECT backend FROM bayesdb_generator WHERE id = ?',
             'SELECT cgpm_rowid FROM bayesdb_cgpm_individual'
                 ' WHERE generator_id = ? AND table_rowid = ?',
             'SELECT cgpm_rowid FROM bayesdb_cgpm_individual '
@@ -1639,7 +1639,7 @@ def test_parametrized():
             'SELECT bql_row_similarity(1, NULL, NULL, _rowid_,'
                 ' (SELECT _rowid_ FROM "t" WHERE ("rowid" = 1)), 0) FROM "t"',
             'SELECT id FROM bayesdb_generator WHERE population_id = ?',
-            'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
+            'SELECT backend FROM bayesdb_generator WHERE id = ?',
             'SELECT cgpm_rowid FROM bayesdb_cgpm_individual'
                 ' WHERE generator_id = ? AND table_rowid = ?',
             'SELECT cgpm_rowid FROM bayesdb_cgpm_individual'
@@ -1700,7 +1700,7 @@ def test_parametrized():
             'SELECT token FROM bayesdb_rowid_tokens',
             'SELECT id FROM bayesdb_generator'
                 ' WHERE population_id = ?',
-            'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
+            'SELECT backend FROM bayesdb_generator WHERE id = ?',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
             'SELECT 1 FROM "t" WHERE oid = ?',
             'SELECT 1 FROM bayesdb_cgpm_individual'
@@ -1815,7 +1815,7 @@ def test_parametrized():
             'SELECT token FROM bayesdb_rowid_tokens',
             'SELECT token FROM bayesdb_rowid_tokens',
             'SELECT id FROM bayesdb_generator WHERE population_id = ?',
-            'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
+            'SELECT backend FROM bayesdb_generator WHERE id = ?',
             'SELECT tabname FROM bayesdb_generator WHERE id = ?',
             'SELECT 1 FROM "t" WHERE oid = ?',
             'SELECT 1 FROM bayesdb_cgpm_individual'
@@ -1872,7 +1872,7 @@ def test_parametrized():
         assert sqltraced_execute('analyze q_cc for 1 iteration wait;') == [
             'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?',
             'SELECT id FROM bayesdb_generator WHERE name = ?',
-            'SELECT metamodel FROM bayesdb_generator WHERE id = ?',
+            'SELECT backend FROM bayesdb_generator WHERE id = ?',
             'SELECT engine_json, engine_stamp FROM bayesdb_cgpm_generator'
                 ' WHERE generator_id = ?',
             'SELECT population_id FROM bayesdb_generator WHERE id = ?',

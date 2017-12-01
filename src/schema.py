@@ -26,7 +26,7 @@ LATEST_VERSION = USABLE_VERSIONS[-1]
 bayesdb_schema_11 = '''
 PRAGMA user_version = 11;
 
-CREATE TABLE bayesdb_metamodel (
+CREATE TABLE bayesdb_backend (
     name        TEXT COLLATE NOCASE NOT NULL PRIMARY KEY,
     version     INTEGER NOT NULL
 );
@@ -80,7 +80,7 @@ CREATE TABLE bayesdb_generator (
     name            TEXT COLLATE NOCASE NOT NULL UNIQUE,
     tabname         TEXT COLLATE NOCASE NOT NULL,
                         -- REFERENCES sqlite_master(name)
-    metamodel       INTEGER NOT NULL REFERENCES bayesdb_metamodel(name),
+    backend         INTEGER NOT NULL REFERENCES bayesdb_backend(name),
     population_id   INTEGER REFERENCES bayesdb_population(id)
 );
 
@@ -113,7 +113,6 @@ CREATE TABLE bayesdb_variable (
     UNIQUE(generator_id, colno),
     UNIQUE(generator_id, name)
 );
-
 '''
 
 ### BayesDB SQLite setup

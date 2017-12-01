@@ -591,7 +591,7 @@ class Shell(cmd.Cmd):
                 if not ok:
                     return
             sql = '''
-                SELECT id, name, tabname, metamodel
+                SELECT id, name, tabname, backend
                     FROM bayesdb_generator
                     WHERE %s
             ''' % (qualifier,)

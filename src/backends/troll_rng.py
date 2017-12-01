@@ -38,7 +38,7 @@ class TrollBackend(bayeslite.backend.BayesDB_Backend):
     def name(self): return 'troll_rng'
     def register(self, bdb):
         bdb.sql_execute('''
-            INSERT INTO bayesdb_metamodel (name, version)
+            INSERT INTO bayesdb_backend (name, version)
                 VALUES (?, 1)
         ''', (self.name(),))
     def create_generator(self, bdb, generator_id, schema, **kwargs):

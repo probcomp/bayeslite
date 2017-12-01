@@ -37,7 +37,7 @@ from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import cursor_value
 
 nig_normal_schema_1 = '''
-INSERT INTO bayesdb_metamodel (name, version) VALUES ('nig_normal', 1);
+INSERT INTO bayesdb_backend (name, version) VALUES ('nig_normal', 1);
 
 CREATE TABLE bayesdb_nig_normal_column (
     population_id   INTEGER NOT NULL REFERENCES bayesdb_population(id),
@@ -67,7 +67,7 @@ CREATE TABLE bayesdb_nig_normal_model (
 '''
 
 nig_normal_schema_2 = '''
-UPDATE bayesdb_metamodel SET version = 2 WHERE name = 'nig_normal';
+UPDATE bayesdb_backend SET version = 2 WHERE name = 'nig_normal';
 
 CREATE TABLE bayesdb_nig_normal_deviation (
     population_id       INTEGER NOT NULL REFERENCES bayesdb_population(id),

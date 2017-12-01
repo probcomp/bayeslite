@@ -33,7 +33,7 @@ import bayeslite.backend
 from bayeslite.exception import BQLError
 
 std_normal_schema_1 = '''
-INSERT INTO bayesdb_metamodel (name, version) VALUES ('std_normal', 1);
+INSERT INTO bayesdb_backend (name, version) VALUES ('std_normal', 1);
 '''
 
 class StdNormalBackend(bayeslite.backend.BayesDB_Backend):
@@ -49,7 +49,7 @@ class StdNormalBackend(bayeslite.backend.BayesDB_Backend):
     def name(self): return 'std_normal'
     def register(self, bdb):
         with bdb.savepoint():
-            schema_sql = 'SELECT version FROM bayesdb_metamodel WHERE name = ?'
+            schema_sql = 'SELECT version FROM bayesdb_backend WHERE name = ?'
             cursor = bdb.sql_execute(schema_sql, (self.name(),))
             version = None
             try:
