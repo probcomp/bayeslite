@@ -13,8 +13,8 @@ if [ -n "${TRAVIS_TAG}" ]; then
   fi
 elif [ ${TRAVIS_BRANCH} = "master" ]; then
   if [ ${TRAVIS_EVENT_TYPE} = "cron" ]; then
-    conda install anaconda-client
-    anaconda -t ${CONDA_UPLOAD_TOKEN} upload -u ${CONDA_USER} -l nightly ~/miniconda/conda-bld/linux-64/${PACKAGE_NAME}-*.tar.bz2 --force
+    # don't build package for nightly cron.. this is just for test stability info
+    exit 0
   else
     conda install anaconda-client
     anaconda -t ${CONDA_UPLOAD_TOKEN} upload -u ${CONDA_USER} -l edge ~/miniconda/conda-bld/linux-64/${PACKAGE_NAME}-*.tar.bz2 --force
