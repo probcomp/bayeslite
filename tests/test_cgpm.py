@@ -647,7 +647,7 @@ def test_output_stattypes():
         ''')
         bdb.execute('INITIALIZE 1 MODEL FOR satellites_g2')
         bdb.execute('ANALYZE satellites_g2 FOR 2 ITERATION')
-        # Cannot transitioned baseline and foreign using timed analyis.
+        # Cannot transition baseline and foreign using timed analysis.
         with pytest.raises(BQLError):
             bdb.execute('''
                 ANALYZE satellites_g2 FOR 2 SECONDS (
@@ -710,7 +710,7 @@ def test_initialize_with_all_nulls():
             )
         ''')
         bdb.execute('''
-            CREATE GENERATOR m FOR p WITH BASELINE crosscat;
+            CREATE GENERATOR m FOR p;
         ''')
         with pytest.raises(BQLError):
             bdb.execute('''
@@ -724,7 +724,7 @@ def test_initialize_with_all_nulls():
                 MODEL b, c AS NUMERICAL
             )
         ''')
-        bdb.execute('CREATE GENERATOR m2 FOR p2 WITH BASELINE crosscat;')
+        bdb.execute('CREATE GENERATOR m2 FOR p2;')
         with pytest.raises(BQLError):
             bdb.execute('INITIALIZE 2 MODELS FOR m2;')
 
@@ -735,13 +735,13 @@ def test_initialize_with_all_nulls():
                 MODEL b, c AS NUMERICAL
             )
         ''')
-        bdb.execute('CREATE GENERATOR m3 FOR p3 WITH BASELINE crosscat;')
+        bdb.execute('CREATE GENERATOR m3 FOR p3;')
         bdb.execute('INITIALIZE 2 MODELS FOR m3;')
 
 
         # Succeed when a is numerical overriden using a dummy CGPM.
         bdb.execute('''
-            CREATE GENERATOR m4 FOR p WITH BASELINE crosscat(
+            CREATE GENERATOR m4 FOR p(
                 OVERRIDE MODEL FOR a GIVEN b USING barebones
             )
         ''')
@@ -764,7 +764,7 @@ def test_add_variable():
             )
         ''')
         bdb.backends['cgpm'].set_multiprocess(False)
-        bdb.execute('CREATE GENERATOR m0 FOR p WITH BASELINE crosscat;')
+        bdb.execute('CREATE GENERATOR m0 FOR p;')
         bdb.execute('INITIALIZE 1 MODELS FOR m0;')
         bdb.execute('ANALYZE m0 FOR 5 ITERATION')
         # Run some queries on the new variable in the generator or aggregated.
@@ -796,7 +796,7 @@ def test_add_variable():
         # Create a new generator, and create a custom category model for
         # the new variable `height`.
         bdb.execute('''
-            CREATE GENERATOR m1 FOR p WITH BASELINE crosscat(
+            CREATE GENERATOR m1 FOR p(
                 SET CATEGORY MODEL FOR age TO exponential;
                 SET CATEGORY MODEL FOR height TO lognormal;
             )

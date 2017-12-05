@@ -124,7 +124,6 @@ command(creategen)      ::= K_CREATE K_GENERATOR
                                 generator_name(name)
                                 ifnotexists(ifnotexists1)
                                 K_FOR population_name(pop)
-                                baseline_opt(baseline)
                                 backend_name_opt(backend)
                                 generator_schema_opt(schema).
 command(dropgen)        ::= K_DROP K_GENERATOR ifexists(ifexists)
@@ -182,20 +181,6 @@ anmodelset_opt(some)    ::= model_token modelset(m).
 anmodelset_matched_opt(none)    ::= .
 anmodelset_matched_opt(some)    ::= model_token T_LROUND modelset(m) T_RROUND.
 
-/* XXX Hackery for WITH BASELINE  */
-baseline_opt(none)      ::= .
-baseline_opt(some)      ::= K_WITH K_BASELINE baseline_name(baseline)
-                                param_opt(params).
-
-baseline_name(bl)       ::= L_NAME(name).
-
-param_opt(none)         ::= .
-param_opt(some)         ::= T_LSQUARE params(ps) T_RSQUARE.
-
-params(one)             ::= param(param).
-params(many)            ::= params(params) T_COMMA param(param).
-
-param(p)                ::= L_NAME(p) T_EQ literal(v).
 /* XXX Temporary generators?  */
 
 modelset_opt(none)      ::= .
@@ -775,7 +760,6 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_AND
         K_AS
         K_ASC
-        K_BASELINE
         K_BEGIN
         K_BETWEEN
         K_BTABLE

@@ -37,7 +37,7 @@ def test_mutinf__ci_slow(seed):
             bdb.sql_execute('INSERT INTO t VALUES(?,?,?)', d)
         bdb.execute(
             'create population p for t(x numerical; y numerical; z numerical)')
-        bdb.execute('create generator m for p with baseline crosscat')
+        bdb.execute('create generator m for p')
         bdb.execute('initialize 10 models for m')
         bdb.execute('analyze m for 10 iterations (optimized; quiet)')
         vars_by_mutinf = bdb.execute('''

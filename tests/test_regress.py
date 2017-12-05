@@ -38,7 +38,7 @@ def test_regress_bonanza__ci_integration():
             )
         ''')
         bdb.execute('''
-            CREATE GENERATOR m FOR satellites WITH BASELINE crosscat;
+            CREATE GENERATOR m FOR satellites;
         ''')
         bdb.execute('INITIALIZE 2 MODELS FOR m;')
 

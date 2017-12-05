@@ -1270,7 +1270,7 @@ def test_probability_of_mutinf():
 
 def test_modelledby_usingmodels_trival():
     def setup(bdb):
-        bdb.execute('create generator m1 for p1 with baseline crosscat;')
+        bdb.execute('create generator m1 for p1 using cgpm;')
     assert bql2sql('estimate predictive probability of weight + 1'
             ' from p1 modelled by m1 using models 1-3, 5;', setup=setup) == \
         'SELECT (bql_row_column_predictive_probability(1, 1, \'[1, 2, 3, 5]\','\
@@ -2006,7 +2006,7 @@ def test_alterpop_addvar():
             )
         ''')
         population_id = core.bayesdb_get_population(bdb, 'p')
-        bdb.execute('create generator m for p with baseline crosscat;')
+        bdb.execute('create generator m for p;')
         # Fail when variable does not exist in base table.
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('alter population p add variable quux;')

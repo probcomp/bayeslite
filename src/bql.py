@@ -425,8 +425,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                 generator_id = core.bayesdb_get_generator(
                     bdb, population_id, phrase.name)
                 # Do any backend-specific initialization.
-                backend.create_generator(bdb, generator_id, phrase.schema,
-                    baseline=phrase.baseline)
+                backend.create_generator(bdb, generator_id, phrase.schema)
 
         # All done.  Nothing to return.
         return empty_cursor(bdb)

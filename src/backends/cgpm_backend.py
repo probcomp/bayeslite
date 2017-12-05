@@ -1390,7 +1390,7 @@ class CGPM_Backend(BayesDB_Backend):
         return kernels
 
 
-def _create_schema(bdb, generator_id, schema_ast, **kwargs):
+def _create_schema(bdb, generator_id, schema_ast):
     # Get some parameters.
     population_id = core.bayesdb_generator_population(bdb, generator_id)
     table = core.bayesdb_population_table(bdb, population_id)
@@ -1432,26 +1432,6 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
     latent_clauses = [cgpm_schema.parse.Latent(v,s) for (v,s) in latent_vars]
     # Append the Latent clauses to the ast.
     schema_ast.extend(latent_clauses)
-
-    # XXX Convert the baseline to a Foreign clause.
-    # Currently the baselines do not accept a schema, and will fail if
-    # `schema_ast` has any entries.
-    baseline = kwargs.get('baseline', None)
-    if baseline is not None and casefold(baseline.name) != 'crosscat':
-        if schema_ast:
-            raise BQLError(bdb,
-                'Cannot accept schema with baseline: %s.' % schema_ast)
-        # Retrieve all variable names in the population
-        outputs = core.bayesdb_variable_names(bdb, population_id, None)
-        # Convert the LITERAL namedtuples to their raw values.
-        ps, vs = zip(*baseline.params)
-        vs_new = [v.value for v in vs]
-        params = zip(ps, vs_new)
-        # Create the clause.
-        clause = cgpm_schema.parse.Foreign(
-            outputs, [], [], baseline.name, params)
-        # And add append it to the schema_ast.
-        schema_ast.append(clause)
 
     # Process each clause one by one.
     for clause in schema_ast:

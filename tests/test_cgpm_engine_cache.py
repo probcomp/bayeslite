@@ -37,7 +37,7 @@ def test_engine_increment_stamp():
                 rank CATEGORICAL
             )
         ''')
-        bdb.execute('CREATE GENERATOR m FOR p WITH BASELINE crosscat;')
+        bdb.execute('CREATE GENERATOR m FOR p;')
         cgpm_backend = bdb.backends['cgpm']
         population_id = bayeslite.core.bayesdb_get_population(bdb, 'p')
         generator_id = bayeslite.core.bayesdb_get_generator(
@@ -82,7 +82,7 @@ def test_engine_stamp_two_clients():
                 )
             ''')
 
-            bdb0.execute('CREATE GENERATOR m FOR p WITH BASELINE crosscat;')
+            bdb0.execute('CREATE GENERATOR m FOR p;')
             cgpm_backend = bdb0.backends['cgpm']
             population_id = bayeslite.core.bayesdb_get_population(bdb0, 'p')
             generator_id = bayeslite.core.bayesdb_get_generator(

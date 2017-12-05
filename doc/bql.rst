@@ -207,13 +207,13 @@ A generator is a probabilistic model for the variables in a population.
 
 .. index:: ``CREATE GENERATOR``
 
-``CREATE GENERATOR <g> FOR <pop> WITH BASELINE <baseline>``
+``CREATE GENERATOR <g> FOR <pop>``
 
-``CREATE GENERATOR <g> FOR <pop> WITH BASELINE <baseline> (<customization>)``
+``CREATE GENERATOR <g> FOR <pop> [USING <backend>] (<customization>)``
 
-   Create generator *g* for the population *pop* using an optional the baseline
-   generative model *baseline*. The *customization* is a comma-separated list
-   of clauses customizing the schema:
+   Create generator *g* for the population *pop*, optionally specifying which
+   *backend* to use (the default is cgpm_backend). The *customization* is a
+   comma-separated list of clauses customizing the schema:
 
       ``OVERRIDE GENERATIVE MODEL FOR <target> [GIVEN <variable(s)>] USING <predictor>``
 
