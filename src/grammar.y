@@ -217,7 +217,7 @@ command(regress)        ::= K_REGRESS column_name(target)
                                 K_GIVEN T_LROUND select_columns(givens) T_RROUND
                                 nsamples_opt(nsamp)
                                 K_BY|K_WITHIN population_name(pop)
-                                modelledby_opt(generator)
+                                modeledby_opt(generator)
                                 usingmodel_opt(modelnos).
 
 /*
@@ -248,7 +248,7 @@ select(s)               ::= K_SELECT select_quant(quant) select_columns(cols)
 
 estimate(e)             ::= K_ESTIMATE select_quant(quant) select_columns(cols)
                                 from_est(tabs)
-                                modelledby_opt(generator)
+                                modeledby_opt(generator)
                                 usingmodel_opt(modelnos)
                                 where(cond)
                                 group_by(grouping)
@@ -261,20 +261,20 @@ estpaircol(e)           ::= K_ESTIMATE K_PAIRWISE error T_SEMI.
 
 estby(e)                ::= K_ESTIMATE select_quant(quant) select_columns(cols)
                                 K_BY|K_WITHIN population_name(population)
-                                modelledby_opt(generator)
+                                modeledby_opt(generator)
                                 usingmodel_opt(modelnos).
 
 infer(auto)             ::= K_INFER infer_auto_columns(cols)
                                 withconf_opt(conf)
                                 nsamples_opt(nsamp)
                                 K_FROM population_name(population)
-                                modelledby_opt(generator)
+                                modeledby_opt(generator)
                                 usingmodel_opt(modelnos)
                                 where(cond) group_by(grouping) order_by(ord)
                                 limit_opt(lim).
 infer(explicit)         ::= K_INFER K_EXPLICIT infer_exp_columns(cols)
                                 K_FROM population_name(population)
-                                modelledby_opt(generator)
+                                modeledby_opt(generator)
                                 usingmodel_opt(modelnos)
                                 where(cond) group_by(grouping) order_by(ord)
                                 limit_opt(lim).
@@ -305,14 +305,14 @@ conf_opt(some)  ::= K_CONFIDENCE column_name(confname).
 
 simulate(s)             ::= K_SIMULATE select_columns(cols)
                                 K_FROM population_name(population)
-                                modelledby_opt(generator)
+                                modeledby_opt(generator)
                                 usingmodel_opt(modelnos)
                                 given_opt(constraints)
                                 limit(lim)
                                 accuracy_opt(acc).
 simulate(nolimit)       ::= K_SIMULATE select_columns(cols)
                                 K_FROM population_name(population)
-                                modelledby_opt(generator)
+                                modeledby_opt(generator)
                                 usingmodel_opt(modelnos)
                                 given_opt(constraints).
 
@@ -330,7 +330,7 @@ constraints_list(some)  ::= constraints_list(css) T_COMMA
 simulate(models)        ::= K_SIMULATE select_columns(cols)
                                 K_FROM K_MODELS K_OF
                                         population_name(population)
-                                modelledby_opt(generator).
+                                modeledby_opt(generator).
 
 select_quant(distinct)  ::= K_DISTINCT.
 select_quant(all)       ::= K_ALL.
@@ -357,8 +357,8 @@ from_est(col)           ::= K_FROM K_COLUMNS|K_VARIABLES
 from_est(paircol)       ::= K_FROM K_PAIRWISE K_COLUMNS|K_VARIABLES K_OF
                                 population_name(name) for(subcols).
 
-modelledby_opt(none)    ::= .
-modelledby_opt(some)    ::= K_MODELED|K_MODELLED K_BY generator_name(gen).
+modeledby_opt(none)    ::= .
+modeledby_opt(some)    ::= K_MODELED|K_MODELLED K_BY generator_name(gen).
 
 /*
  * XXX This mechanism is completely wrong.  The set of models should

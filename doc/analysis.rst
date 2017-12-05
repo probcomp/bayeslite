@@ -18,7 +18,7 @@ BQL Data Modelling Commands
 
       ``<column> <type>``
 
-   requesting the column *column* to be modelled with the statistical
+   requesting the column *column* to be modeled with the statistical
    type *type*, with some additional types of clauses.  For example,
 
    .. code-block:: sql

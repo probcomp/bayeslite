@@ -449,8 +449,8 @@ class BQLSemantics(object):
                 cond, ord, lim)
         return c
 
-    def p_modelledby_opt_none(self):            return None
-    def p_modelledby_opt_some(self, gen):       return gen
+    def p_modeledby_opt_none(self):             return None
+    def p_modeledby_opt_some(self, gen):        return gen
 
     def p_usingmodel_opt_none(self):            return None
     def p_usingmodel_opt_some(self, modelnos):  return modelnos

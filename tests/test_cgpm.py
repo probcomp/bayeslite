@@ -146,32 +146,32 @@ def test_cgpm_no_empty_categories():
         assert all(set(expected[c])==set(seen[c]) for c in expected)
 
 def cgpm_smoke_tests(bdb, gen, vars):
-    modelledby = 'MODELLED BY %s' % (gen,) if gen else ''
+    modeledby = 'MODELED BY %s' % (gen,) if gen else ''
     for var in vars:
         bdb.execute('''
             ESTIMATE PROBABILITY DENSITY OF %s = 1 WITHIN p %s
-        ''' % (var, modelledby)).fetchall()
+        ''' % (var, modeledby)).fetchall()
         bdb.execute('''
             SIMULATE %s FROM p %s LIMIT 1
-        ''' % (var, modelledby)).fetchall()
+        ''' % (var, modeledby)).fetchall()
         bdb.execute('''
             INFER %s FROM p %s LIMIT 1
-        ''' % (var, modelledby)).fetchall()
+        ''' % (var, modeledby)).fetchall()
         nvars = len(bdb.execute('''
-            ESTIMATE * FROM VARIABLES OF p %(modelledby)s
+            ESTIMATE * FROM VARIABLES OF p %(modeledby)s
                 ORDER BY PROBABILITY OF
                     (MUTUAL INFORMATION WITH %(var)s USING 1 SAMPLES > 0.1)
-        ''' % {'var': var, 'modelledby': modelledby}).fetchall())
+        ''' % {'var': var, 'modeledby': modeledby}).fetchall())
         if 0 < nvars:
             c = bdb.execute('''
-                SIMULATE p.(ESTIMATE * FROM VARIABLES OF p %(modelledby)s
+                SIMULATE p.(ESTIMATE * FROM VARIABLES OF p %(modeledby)s
                                 ORDER BY PROBABILITY OF
                                     (MUTUAL INFORMATION WITH %(var)s
                                         USING 1 SAMPLES > 0.1))
                     FROM p
-                    %(modelledby)s
+                    %(modeledby)s
                     LIMIT 1
-            ''' % {'var': var, 'modelledby': modelledby}).fetchall()
+            ''' % {'var': var, 'modeledby': modeledby}).fetchall()
             assert len(c) == 1
             assert len(c[0]) == nvars
 

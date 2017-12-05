@@ -246,18 +246,18 @@ def test_cgpm_extravaganza__ci_slow():
         bdb.execute('''
             ESTIMATE DEPENDENCE PROBABILITY
                 OF kepler_cluster_id WITH period WITHIN satellites
-                MODELLED BY g0
+                MODELED BY g0
         ''').fetchall()
         bdb.execute('''
             ESTIMATE PREDICTIVE PROBABILITY OF apogee FROM satellites LIMIT 1
         ''').fetchall()
         bdb.execute('''
             ESTIMATE PREDICTIVE PROBABILITY OF kepler_cluster_id
-                FROM satellites MODELLED BY g0 LIMIT 1
+                FROM satellites MODELED BY g0 LIMIT 1
         ''').fetchall()
         bdb.execute('''
             ESTIMATE PREDICTIVE PROBABILITY OF kepler_noise
-                FROM satellites MODELLED BY g0 LIMIT 1
+                FROM satellites MODELED BY g0 LIMIT 1
         ''').fetchall()
         bdb.execute('''
             ESTIMATE PREDICTIVE PROBABILITY OF period
@@ -266,15 +266,15 @@ def test_cgpm_extravaganza__ci_slow():
         bdb.execute('''
             INFER EXPLICIT
                     PREDICT kepler_cluster_id CONFIDENCE kepler_cluster_id_conf
-                FROM satellites MODELLED BY g0 LIMIT 2;
+                FROM satellites MODELED BY g0 LIMIT 2;
         ''').fetchall()
         bdb.execute('''
             INFER EXPLICIT PREDICT kepler_noise CONFIDENCE kepler_noise_conf
-                FROM satellites MODELLED BY g0 LIMIT 2;
+                FROM satellites MODELED BY g0 LIMIT 2;
         ''').fetchall()
         bdb.execute('''
             INFER EXPLICIT PREDICT apogee CONFIDENCE apogee_conf
-                FROM satellites MODELLED BY g0 LIMIT 1;
+                FROM satellites MODELED BY g0 LIMIT 1;
         ''').fetchall()
         bdb.execute('''
             ESTIMATE PROBABILITY DENSITY OF period = 42
@@ -284,7 +284,7 @@ def test_cgpm_extravaganza__ci_slow():
 
         bdb.execute('''
             SIMULATE kepler_cluster_id, apogee, perigee, period
-                FROM satellites MODELLED BY g0 LIMIT 4
+                FROM satellites MODELED BY g0 LIMIT 4
         ''').fetchall()
 
         bdb.execute('DROP MODELS FROM g0')

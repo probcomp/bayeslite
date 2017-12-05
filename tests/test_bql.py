@@ -1234,9 +1234,9 @@ def test_simulate_models():
                 " AND target_vars = '[2]'" \
                 " AND reference_vars = '[3]'" \
                 " AND conditions = '{\"1\": \"foo\"}';"
-    # Modelled by a specific generator.
+    # Modeled by a specific generator.
     assert bql2sql('simulate mutual information of age with weight'
-                ' from models of p1 modelled by g1',
+                ' from models of p1 modeled by g1',
             lambda bdb: bdb.execute('create generator g1 for p1')) == \
         'SELECT mi FROM bql_mutinf' \
             ' WHERE population_id = 1' \
@@ -1268,11 +1268,11 @@ def test_probability_of_mutinf():
                 " AND target_vars = '[2]'" \
                 " AND reference_vars = '[3]'))) > 0.5);"
 
-def test_modelledby_usingmodels_trival():
+def test_modeledby_usingmodels_trival():
     def setup(bdb):
         bdb.execute('create generator m1 for p1 using cgpm;')
     assert bql2sql('estimate predictive probability of weight + 1'
-            ' from p1 modelled by m1 using models 1-3, 5;', setup=setup) == \
+            ' from p1 modeled by m1 using models 1-3, 5;', setup=setup) == \
         'SELECT (bql_row_column_predictive_probability(1, 1, \'[1, 2, 3, 5]\','\
                 ' _rowid_, \'[3]\', \'[]\') + 1)' \
             ' FROM "t1";'
@@ -1299,7 +1299,7 @@ def test_modelledby_usingmodels_trival():
                 ("age" = 74, label = 'Europe', "weight" = 7)
             )
             in the context of "weight"
-        by p1 modelled by m1 using models 8, 10-12
+        by p1 modeled by m1 using models 8, 10-12
     ''', setup=setup) == \
         'SELECT bql_row_predictive_relevance(1, 1, \'[8, 10, 11, 12]\', ' \
             '(SELECT _rowid_ FROM "t1" WHERE ("label" = \'Uganda\')), '\

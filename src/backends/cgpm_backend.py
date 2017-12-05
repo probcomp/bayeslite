@@ -164,7 +164,7 @@ class CGPM_Backend(BayesDB_Backend):
                 bdb, population_id, generator_id, var, stattype)
 
         # Assign codes to categories and consecutive column numbers to
-        # the modelled variables.
+        # the modeled variables.
         vars_cursor = bdb.sql_execute('''
             SELECT colno, name, stattype FROM bayesdb_variable
                 WHERE population_id = ? AND 0 <= colno
@@ -1400,8 +1400,8 @@ def _create_schema(bdb, generator_id, schema_ast):
     variable_dist = {}
     latents = {}
     cgpm_composition = []
-    modelled = set()
-    default_modelled = set()
+    modeled = set()
+    default_modeled = set()
     subsample = None
     deferred_input = defaultdict(lambda: [])
     deferred_output = dict()
@@ -1448,8 +1448,8 @@ def _create_schema(bdb, generator_id, schema_ast):
                 unknown.add(var)
                 continue
 
-            # Reject if the variable has already been modelled.
-            if var in modelled:
+            # Reject if the variable has already been modeled.
+            if var in modeled:
                 duplicate.add(var)
                 continue
 
@@ -1462,22 +1462,22 @@ def _create_schema(bdb, generator_id, schema_ast):
             colno = core.bayesdb_variable_number(bdb, population_id, None, var)
             assert 0 <= colno
 
-            # Add it to the list and mark it modelled by default.
+            # Add it to the list and mark it modeled by default.
             stattype = core.bayesdb_variable_stattype(
                 bdb, population_id, generator_id, colno)
             variables.append([var, stattype, dist, params])
             assert var not in variable_dist
             variable_dist[var] = (stattype, dist, params)
-            modelled.add(var)
-            default_modelled.add(var)
+            modeled.add(var)
+            default_modeled.add(var)
 
         elif isinstance(clause, cgpm_schema.parse.Latent):
             var = clause.name
             stattype = clause.stattype
 
-            # Reject if the variable has already been modelled by the
+            # Reject if the variable has already been modeled by the
             # default model.
-            if var in default_modelled:
+            if var in default_modeled:
                 duplicate.add(var)
                 continue
 
@@ -1503,7 +1503,7 @@ def _create_schema(bdb, generator_id, schema_ast):
 
         elif isinstance(clause, cgpm_schema.parse.Foreign):
             # Foreign model: some set of output variables is to be
-            # modelled by foreign logic, possibly conditional on some
+            # modeled by foreign logic, possibly conditional on some
             # set of input variables.
             #
             # Gather up the state for a cgpm_composition record, which
@@ -1532,13 +1532,13 @@ def _create_schema(bdb, generator_id, schema_ast):
             kwds.update(clause.params)
 
             # First make sure all the output variables exist and have
-            # not yet been modelled.
+            # not yet been modeled.
             for var in outputs:
                 must_exist.append(var)
-                if var in modelled:
+                if var in modeled:
                     duplicate.add(var)
                     continue
-                modelled.add(var)
+                modeled.add(var)
                 # Add the output statistical type and its parameters.
                 i = len(output_stattypes)
                 assert i == len(output_statargs)
@@ -1607,10 +1607,10 @@ def _create_schema(bdb, generator_id, schema_ast):
         return dist, params
 
     # Use the default distribution for any variables that remain to be
-    # modelled, excluding any that are latent or that have statistical
+    # modeled, excluding any that are latent or that have statistical
     # types we don't know about.
     for var in core.bayesdb_variable_names(bdb, population_id, None):
-        if var in modelled:
+        if var in modeled:
             continue
         colno = core.bayesdb_variable_number(bdb, population_id, None, var)
         assert 0 <= colno
@@ -1623,32 +1623,31 @@ def _create_schema(bdb, generator_id, schema_ast):
         variables.append([var, stattype, dist, params])
         assert var not in variable_dist
         variable_dist[var] = (stattype, dist, params)
-        modelled.add(var)
+        modeled.add(var)
 
     # Fill in the deferred_input statistical type assignments.
     for var in sorted(deferred_input.iterkeys()):
-        # Check whether the variable is modelled.  If not, skip -- we
+        # Check whether the variable is modeled.  If not, skip -- we
         # will fail later because this variable is guaranteed to also
         # be in needed.
-        if var not in modelled:
+        if var not in modeled:
             assert var in needed
             continue
 
         # Determine (possibly fictitious) distribution and parameters.
-        if var in default_modelled:
-            # Manifest variable modelled by default Crosscat model.
+        if var in default_modeled:
+            # Manifest variable modeled by default Crosscat model.
             assert var in variable_dist
             stattype, dist, params = variable_dist[var]
         else:
-            # Modelled by a foreign model.  Assign a fictitious
-            # default distribution because the 27B/6 of CGPM requires
-            # this.
+            # Modeled by a foreign model.  Assign a fictitious default
+            # distribution because the 27B/6 of CGPM requires this.
             if var in latents:
-                # Latent variable modelled by a foreign model.  Use
+                # Latent variable modeled by a foreign model.  Use
                 # the statistical type specified for it.
                 stattype = latents[var]
             else:
-                # Manifest variable modelled by a foreign model.  Use
+                # Manifest variable modeled by a foreign model.  Use
                 # the statistical type in the population.
                 assert core.bayesdb_has_variable(bdb, population_id, None, var)
                 colno = core.bayesdb_variable_number(
@@ -1671,7 +1670,7 @@ def _create_schema(bdb, generator_id, schema_ast):
     # in the form NUMERICAL or CATEGORICAL.
     for var in deferred_output:
         if var in latents:
-            # Latent variable modelled by a foreign model.  Use
+            # Latent variable modeled by a foreign model.  Use
             # the statistical type specified for it.
             var_stattype = casefold(latents[var])
             if var_stattype not in _DEFAULT_DIST:
@@ -1684,7 +1683,7 @@ def _create_schema(bdb, generator_id, schema_ast):
             # categorical in the base table causing a failure.
             var_statargs = {}
         else:
-            # Manifest variable modelled by a foreign model.  Use
+            # Manifest variable modeled by a foreign model.  Use
             # the statistical type and arguments from the population.
             assert core.bayesdb_has_variable(bdb, population_id, None, var)
             colno = core.bayesdb_variable_number(bdb, population_id, None, var)
@@ -1708,7 +1707,7 @@ def _create_schema(bdb, generator_id, schema_ast):
 
     # If there remain any variables that we needed to model, because
     # others are conditional on them, fail.
-    needed -= modelled
+    needed -= modeled
     if needed:
         raise BQLError(bdb, 'Unmodellable variables: %r' % (needed,))
 

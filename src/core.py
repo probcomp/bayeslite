@@ -24,12 +24,12 @@ tables may be renamed and do not necessarily have numeric ids, so
 there is no way to have a handle on a table that is persistent outside
 a savepoint.
 
-Each table may optionally be modelled by any number of generators,
+Each table may optionally be modeled by any number of generators,
 representing a parametrized generative model for the table's data,
 according to a named generator.
 
 Each generator models a subset of the columns in its table, which are
-called the modelled columns of that generator.  Each column in a
+called the modeled columns of that generator.  Each column in a
 generator has an associated statistical type.  Like tables, generators
 may be renamed.  Unlike tables, each generator has a numeric id, which
 is never reused and therefore persistent across savepoints.
@@ -49,7 +49,7 @@ from bayeslite.util import cursor_value
 def bayesdb_has_table(bdb, name):
     """True if there is a table named `name` in `bdb`.
 
-    The table need not be modelled.
+    The table need not be modeled.
     """
     qt = sqlite3_quote_name(name)
     cursor = bdb.sql_execute('PRAGMA table_info(%s)' % (qt,))
@@ -243,13 +243,13 @@ def bayesdb_variable_number(bdb, population_id, generator_id, name):
     return cursor_value(cursor)
 
 def bayesdb_variable_names(bdb, population_id, generator_id):
-    """Return a list of the names of columns modelled in `population_id`."""
+    """Return a list of the names of columns modeled in `population_id`."""
     colnos = bayesdb_variable_numbers(bdb, population_id, generator_id)
     return [bayesdb_variable_name(bdb, population_id, generator_id, colno)
         for colno in colnos]
 
 def bayesdb_variable_numbers(bdb, population_id, generator_id):
-    """Return a list of the numbers of columns modelled in `population_id`."""
+    """Return a list of the numbers of columns modeled in `population_id`."""
     cursor = bdb.sql_execute('''
         SELECT colno FROM bayesdb_variable
             WHERE population_id = ?
@@ -296,7 +296,7 @@ def bayesdb_variable_stattype(bdb, population_id, generator_id, colno):
             raise ValueError('No such variable in population %s: %d' %
                 (population, colno))
         else:
-            raise ValueError('Variable not modelled in population %s: %d' %
+            raise ValueError('Variable not modeled in population %s: %d' %
                 (population, colno))
     else:
         assert len(row) == 1

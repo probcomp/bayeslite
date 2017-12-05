@@ -138,7 +138,7 @@ def test_guess_population():
         for row in data:
             bdb.sql_execute('INSERT INTO t (x, y, z) VALUES (?, ?, ?)', row)
         with pytest.raises(ValueError):
-            # No modelled columns.  (x is key.)
+            # No modeled columns.  (x is key.)
             bayesdb_guess_population(bdb, 'p', 't',
                 overrides=[('y', 'ignore'), ('z', 'ignore')])
         bayesdb_guess_population(bdb, 'p', 't')

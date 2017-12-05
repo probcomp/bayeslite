@@ -45,7 +45,7 @@ def bayesdb_guess_population(bdb, population, table,
 
     In addition to statistical types, the overrides may specify
     ``key`` or ``ignore``, in which case those columns will not be
-    modelled at all.
+    modeled at all.
 
     """
 
@@ -73,7 +73,7 @@ def bayesdb_guess_population(bdb, population, table,
         ])
         if len([s for s in stattypes if s != 'ignore']) == 0:
             raise ValueError(
-                'Table has no modelled columns: %s'
+                'Table has no modeled columns: %s'
                 % (repr(table),))
         qp = sqlite3_quote_name(population)
         qcns = map(sqlite3_quote_name, column_names)

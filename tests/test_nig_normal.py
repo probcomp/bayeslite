@@ -90,10 +90,10 @@ def test_nig_normal_latent_smoke():
                 .fetchall()
         with pytest.raises(BQLError):
             bdb.execute('''
-                estimate probability density of xe = 1 within p modelled by g0
+                estimate probability density of xe = 1 within p modeled by g0
             ''').fetchall()
         bdb.execute('''
-            estimate probability density of xe = 1 within p modelled by g1
+            estimate probability density of xe = 1 within p modeled by g1
         ''').fetchall()
 
         # PREDICTIVE PROBABILITY OF x
@@ -103,10 +103,10 @@ def test_nig_normal_latent_smoke():
                 'estimate predictive probability of xe from p').fetchall()
         with pytest.raises(BQLError):
             bdb.execute('''
-                estimate predictive probability of xe from p modelled by g0
+                estimate predictive probability of xe from p modeled by g0
             ''').fetchall()
         for r, p_xe in bdb.execute('''
-            estimate rowid, predictive probability of xe from p modelled by g1
+            estimate rowid, predictive probability of xe from p modeled by g1
         '''):
             assert p_xe is None, 'rowid %r p(xe) %r' % (r, p_xe)
 
@@ -119,11 +119,11 @@ def test_nig_normal_latent_smoke():
         with pytest.raises(BQLError):
             bdb.execute('''
                 INFER EXPLICIT PREDICT xe CONFIDENCE xe_c FROM p
-                    MODELLED BY g0
+                    MODELED BY g0
             ''').fetchall()
         bdb.execute('''
             INFER EXPLICIT PREDICT xe CONFIDENCE xe_c FROM p
-                MODELLED BY g1
+                MODELED BY g1
         ''').fetchall()
 
         # SIMULATE x
@@ -132,26 +132,26 @@ def test_nig_normal_latent_smoke():
             bdb.execute('simulate x, xe from p limit 1').fetchall()
         with pytest.raises(BQLError):
             bdb.execute(
-                'simulate x, xe from p modelled by g0 limit 1').fetchall()
-        bdb.execute('simulate x, xe from p modelled by g1 limit 1').fetchall()
+                'simulate x, xe from p modeled by g0 limit 1').fetchall()
+        bdb.execute('simulate x, xe from p modeled by g1 limit 1').fetchall()
 
         assert 100 == len(bdb.execute('''
             estimate similarity in the context of x from pairwise p limit 100
         ''').fetchall())
         assert 1 == len(bdb.execute('''
             estimate similarity in the context of x
-            from pairwise p modelled by g0 limit 1
+            from pairwise p modeled by g0 limit 1
         ''').fetchall())
                 # No such column xe in g0.
         with pytest.raises(BQLError):
             assert 1 == len(bdb.execute('''
                 estimate similarity in the context of xe
-                    from pairwise p modelled by g0 limit 1
+                    from pairwise p modeled by g0 limit 1
             ''').fetchall())
         # Column xe exists in g1.
         assert 1 == len(bdb.execute('''
             estimate similarity in the context of xe
-                from pairwise p modelled by g1 limit 1
+                from pairwise p modeled by g1 limit 1
         ''').fetchall())
 
         bdb.execute('drop models from g0')
@@ -183,11 +183,11 @@ def test_nig_normal_latent_conditional_smoke():
         ''').fetchall()
         bdb.execute('''
             estimate probability density of x = 50 given (x = 50) within p
-                modelled by g0
+                modeled by g0
         ''').fetchall()
         bdb.execute('''
             estimate probability density of x = 50 given (x = 50) within p
-                modelled by g1
+                modeled by g1
         ''').fetchall()
 
         # observed given latent
@@ -198,11 +198,11 @@ def test_nig_normal_latent_conditional_smoke():
         with pytest.raises(BQLError):
             bdb.execute('''
                 estimate probability density of x = 50 given (xe = 50) within p
-                    modelled by g0
+                    modeled by g0
             ''').fetchall()
         bdb.execute('''
             estimate probability density of x = 50 given (xe = 50) within p
-                modelled by g1
+                modeled by g1
         ''').fetchall()
 
         # latent given observed
@@ -213,11 +213,11 @@ def test_nig_normal_latent_conditional_smoke():
         with pytest.raises(BQLError):
             bdb.execute('''
                 estimate probability density of xe = 50 given (x = 50) within p
-                    modelled by g0
+                    modeled by g0
             ''').fetchall()
         bdb.execute('''
             estimate probability density of xe = 50 given (x = 50) within p
-                modelled by g1
+                modeled by g1
         ''').fetchall()
 
         bdb.execute('drop models from g0')
@@ -258,13 +258,13 @@ def test_nig_normal_latent_2var_smoke():
         ''').fetchall())
         assert 4 == len(bdb.execute('''
             estimate correlation, correlation pvalue
-                from pairwise variables of p modelled by g0
+                from pairwise variables of p modeled by g0
         ''').fetchall())
         with pytest.raises(BQLError):
             # g1 has a latent variable xe.
             assert 4 == len(bdb.execute('''
                 estimate correlation, correlation pvalue
-                    from pairwise variables of p modelled by g1
+                    from pairwise variables of p modeled by g1
             ''').fetchall())
 
         # DEPENDENCE PROBABILITY, MUTUAL INFORMATION
@@ -274,11 +274,11 @@ def test_nig_normal_latent_2var_smoke():
         ''').fetchall())
         assert 4 == len(bdb.execute('''
             estimate dependence probability, mutual information
-                from pairwise variables of p modelled by g0
+                from pairwise variables of p modeled by g0
         ''').fetchall())
         assert 9 == len(bdb.execute('''
             estimate dependence probability, mutual information
-                from pairwise variables of p modelled by g1
+                from pairwise variables of p modeled by g1
         ''').fetchall())
 
         # SIMULATE LATENT VARIABLE
@@ -336,18 +336,18 @@ def test_nig_normal_latent_2var_conditional_smoke():
         ''').fetchall()
         bdb.execute('''
             estimate probability density of x = 50 given (y = 49) within p
-                modelled by g0
+                modeled by g0
         ''').fetchall()
         bdb.execute('''
             estimate probability density of x = 50 given (y = 49) within p
-                modelled by g1
+                modeled by g1
         ''').fetchall()
         bdb.execute('simulate x from p given y = 49 limit 1').fetchall()
         bdb.execute('''
-            simulate x from p modelled by g0 given y = 49 limit 1
+            simulate x from p modeled by g0 given y = 49 limit 1
         ''').fetchall()
         bdb.execute('''
-            simulate x from p modelled by g1 given y = 49 limit 1
+            simulate x from p modeled by g1 given y = 49 limit 1
         ''').fetchall()
 
         # observed given related latent
@@ -358,20 +358,20 @@ def test_nig_normal_latent_2var_conditional_smoke():
         with pytest.raises(BQLError):
             bdb.execute('''
                 estimate probability density of x = 50 given (xe = 1) within p
-                    modelled by g0
+                    modeled by g0
             ''').fetchall()
         bdb.execute('''
             estimate probability density of x = 50 given (xe = 1) within p
-                modelled by g1
+                modeled by g1
         ''').fetchall()
         with pytest.raises(BQLError):
             bdb.execute('simulate x from p given xe = 1 limit 1').fetchall()
         with pytest.raises(BQLError):
             bdb.execute('''
-                simulate x from p modelled by g0 given xe = 1 limit 1
+                simulate x from p modeled by g0 given xe = 1 limit 1
             ''').fetchall()
         bdb.execute('''
-            simulate x from p modelled by g1 given xe = 1 limit 1
+            simulate x from p modeled by g1 given xe = 1 limit 1
         ''').fetchall()
 
         # observed given unrelated latent
@@ -382,20 +382,20 @@ def test_nig_normal_latent_2var_conditional_smoke():
         with pytest.raises(BQLError):
             bdb.execute('''
                 estimate probability density of y = 50 given (xe = 1) within p
-                    modelled by g0
+                    modeled by g0
             ''').fetchall()
         bdb.execute('''
             estimate probability density of y = 50 given (xe = 1) within p
-                modelled by g1
+                modeled by g1
         ''').fetchall()
         with pytest.raises(BQLError):
             bdb.execute('simulate y from p given xe = 1 limit 1').fetchall()
         with pytest.raises(BQLError):
             bdb.execute('''
-                simulate y from p modelled by g0 given xe = 1 limit 1
+                simulate y from p modeled by g0 given xe = 1 limit 1
             ''').fetchall()
         bdb.execute('''
-            simulate y from p modelled by g1 given xe = 1 limit 1
+            simulate y from p modeled by g1 given xe = 1 limit 1
         ''').fetchall()
 
         # latent given related observed
@@ -406,20 +406,20 @@ def test_nig_normal_latent_2var_conditional_smoke():
         with pytest.raises(BQLError):
             bdb.execute('''
                 estimate probability density of xe = 1 given (x = 50) within p
-                    modelled by g0
+                    modeled by g0
             ''').fetchall()
         bdb.execute('''
             estimate probability density of xe = 1 given (x = 50) within p
-                modelled by g1
+                modeled by g1
         ''').fetchall()
         with pytest.raises(BQLError):
             bdb.execute('simulate xe from p given x = 50 limit 1').fetchall()
         with pytest.raises(BQLError):
             bdb.execute('''
-                simulate xe from p modelled by g0 given x = 50 limit 1
+                simulate xe from p modeled by g0 given x = 50 limit 1
             ''').fetchall()
         bdb.execute('''
-            simulate xe from p modelled by g1 given x = 50 limit 1
+            simulate xe from p modeled by g1 given x = 50 limit 1
         ''').fetchall()
 
         # latent given unrelated observed
@@ -430,20 +430,20 @@ def test_nig_normal_latent_2var_conditional_smoke():
         with pytest.raises(BQLError):
             bdb.execute('''
                 estimate probability density of xe = 1 given (y = 50) within p
-                    modelled by g0
+                    modeled by g0
             ''').fetchall()
         bdb.execute('''
             estimate probability density of xe = 1 given (y = 50) within p
-                modelled by g1
+                modeled by g1
         ''').fetchall()
         with pytest.raises(BQLError):
             bdb.execute('simulate xe from p given y = 50 limit 1').fetchall()
         with pytest.raises(BQLError):
             bdb.execute('''
-                simulate xe from p modelled by g0 given y = 50 limit 1
+                simulate xe from p modeled by g0 given y = 50 limit 1
             ''').fetchall()
         bdb.execute('''
-            simulate xe from p modelled by g1 given y = 50 limit 1
+            simulate xe from p modeled by g1 given y = 50 limit 1
         ''').fetchall()
 
         bdb.execute('drop models from g0')
@@ -481,11 +481,11 @@ def test_nig_normal_latent_2var2lat_conditional_smoke():
         with pytest.raises(BQLError):
             bdb.execute('''
                 estimate probability density of xe = 1 given (ye = -1) within p
-                     modelled by g0
+                     modeled by g0
             ''').fetchall()
         bdb.execute('''
             estimate probability density of xe = 1 given (ye = -1) within p
-                 modelled by g1
+                 modeled by g1
         ''').fetchall()
 
         with pytest.raises(BQLError):
@@ -494,10 +494,10 @@ def test_nig_normal_latent_2var2lat_conditional_smoke():
             ''').fetchall()
         with pytest.raises(BQLError):
             bdb.execute('''
-                simulate xe from p modelled by g0 given ye = -1 limit 1
+                simulate xe from p modeled by g0 given ye = -1 limit 1
             ''').fetchall()
         bdb.execute('''
-            simulate xe from p modelled by g1 given ye = -1 limit 1
+            simulate xe from p modeled by g1 given ye = -1 limit 1
         ''').fetchall()
 
         with pytest.raises(BQLError):
@@ -506,11 +506,11 @@ def test_nig_normal_latent_2var2lat_conditional_smoke():
         with pytest.raises(BQLError):
             bdb.execute('''
                 estimate dependence probability of xe with ye within p
-                    modelled by g0
+                    modeled by g0
             ''')
         bdb.execute('''
             estimate dependence probability of xe with ye within p
-                modelled by g1
+                modeled by g1
         ''')
 
         with pytest.raises(BQLError):
@@ -519,11 +519,11 @@ def test_nig_normal_latent_2var2lat_conditional_smoke():
         with pytest.raises(BQLError):
             bdb.execute('''
                 estimate mutual information of xe with ye within p
-                    modelled by g0
+                    modeled by g0
             ''')
         bdb.execute('''
             estimate mutual information of xe with ye within p
-                modelled by g1
+                modeled by g1
         ''')
 
         bdb.execute('drop models from g0')

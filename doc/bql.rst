@@ -254,7 +254,7 @@ A generator is a probabilistic model for the variables in a population.
 
       ``OPTIMIZED``
 
-          Use the faster analysis for Crosscat-modelled variables
+          Use the faster analysis for Crosscat-modeled variables
           only.
 
       ``QUIET``
@@ -337,14 +337,14 @@ BQL Queries
 
 ``ESTIMATE <columns> FROM VARIABLES OF <population> [MODELED BY <g>] [USING [MODEL <num>] [MODELS <num0>-<num1>]] [WHERE <condition>] [GROUP BY <grouping>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
-   Like ``SELECT`` on the modelled columns of *population*, extended
+   Like ``SELECT`` on the modeled columns of *population*, extended
    with model estimators of one implied column.
 
 .. index:: ``ESTIMATE FROM PAIRWISE VARIABLES OF``
 
 ``ESTIMATE <columns> FROM PAIRWISE VARIABLES OF <population> [FOR <subcolumns>] [MODELED BY <g>] [USING [MODEL <num>] [MODELS <num0>-<num1>]] [WHERE <condition>] [ORDER BY <ordering>] [LIMIT <limit>]``
 
-   Like ``SELECT`` on the self-join of the modelled columns of
+   Like ``SELECT`` on the self-join of the modeled columns of
    *population*, extended with model estimators of two implied columns.
 
    In addition to a literal list of column names, the list of
