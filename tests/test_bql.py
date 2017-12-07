@@ -44,7 +44,7 @@ def bql2sql(string, setup=None):
         bdb.execute('''
             create population p1 for t1 (
                 id ignore;
-                label categorical;
+                label nominal;
                 age numerical;
                 weight numerical
             )
@@ -67,7 +67,7 @@ def bql2sqlparam(string):
         bdb.execute('''
             create population p1 for t1 (
                 id ignore;
-                label categorical;
+                label nominal;
                 age numerical;
                 weight numerical
             )
@@ -1860,11 +1860,11 @@ def test_parametrized():
         bdb.execute('''
             create population q for t (
                 age NUMERICAL;
-                gender CATEGORICAL;   -- Not binary!
+                gender NOMINAL;   -- Not binary!
                 salary NUMERICAL;
                 height NUMERICAL;
-                division CATEGORICAL;
-                rank CATEGORICAL
+                division NOMINAL;
+                rank NOMINAL;
             )
         ''')
         bdb.execute('create generator q_cc for q;')
@@ -2205,7 +2205,7 @@ def test_predprob_null():
             create population pfoo for foo (
                 id ignore;
                 x numerical;
-                y categorical;
+                y nominal;
                 z numerical;
             )
         ''')
@@ -2453,7 +2453,7 @@ def test_empty_cursor():
         empty(bdb.sql_execute('INSERT INTO t VALUES(4,5,6)'))
         empty(bdb.sql_execute('INSERT INTO t VALUES(7,8,9)'))
         empty(bdb.execute('CREATE POPULATION p FOR t '
-            '(IGNORE z,y; x CATEGORICAL)'))
+            '(IGNORE z,y; x NOMINAL)'))
         empty(bdb.execute('CREATE GENERATOR p_cc FOR p;'))
         empty(bdb.execute('INITIALIZE 1 MODEL FOR p_cc'))
         empty(bdb.execute('DROP GENERATOR p_cc'))
@@ -2474,7 +2474,7 @@ def test_create_generator_ifnotexists():
                 CREATE POPULATION p FOR t (
                     x NUMERICAL;
                     y NUMERICAL;
-                    z CATEGORICAL
+                    z NOMINAL;
                 )
             ''')
             for _i in (0, 1):

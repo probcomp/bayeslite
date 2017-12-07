@@ -34,8 +34,9 @@ def test_analysis_subproblems_basic():
     with cgpm_dummy_satellites_bdb() as bdb:
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
-                SET STATTYPE OF class_of_orbit TO CATEGORICAL;
-                SET STATTYPE OF country_of_operator TO CATEGORICAL;
+                SET STATTYPE OF apogee TO NUMERICAL;
+                SET STATTYPE OF class_of_orbit TO NOMINAL;
+                SET STATTYPE OF country_of_operator TO NOMINAL;
                 SET STATTYPE OF launch_mass TO NUMERICAL;
                 SET STATTYPE OF perigee TO NUMERICAL;
                 SET STATTYPE OF period TO NUMERICAL

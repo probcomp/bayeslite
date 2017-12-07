@@ -212,7 +212,7 @@ def test_cgpm_smoke():
         # Custom model for manifest out, latent cat.
         bdb.execute('''
             CREATE GENERATOR g_latcat FOR p USING cgpm (
-                LATENT cat_ CATEGORICAL;
+                LATENT cat_ NOMINAL;
                 OVERRIDE MODEL FOR output, cat_ GIVEN input USING piecewise
             )
         ''')
@@ -275,8 +275,8 @@ def test_cgpm_smoke():
             bdb.execute('''
                 CREATE GENERATOR g_error_dup_latent FOR p USING cgpm (
                     LATENT output_error NUMERICAL;
-                    LATENT output_error CATEGORICAL;
 
+                    LATENT output_error NOMINAL;
                     OVERRIDE MODEL FOR output_error, cat
                     GIVEN input USING piecewise;
                 )
@@ -362,9 +362,9 @@ def test_cgpm_kepler():
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
                 apogee                  NUMERICAL;
-                class_of_orbit          CATEGORICAL;
-                country_of_operator     CATEGORICAL;
                 launch_mass             NUMERICAL;
+                class_of_orbit          NOMINAL;
+                country_of_operator     NOMINAL;
                 perigee                 NUMERICAL;
                 period                  NUMERICAL
             )
@@ -549,8 +549,8 @@ def test_bad_analyze_vars():
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
                 SET STATTYPE OF apogee TO NUMERICAL;
-                SET STATTYPE OF class_of_orbit TO CATEGORICAL;
-                SET STATTYPE OF country_of_operator TO CATEGORICAL;
+                SET STATTYPE OF class_of_orbit TO NOMINAL;
+                SET STATTYPE OF country_of_operator TO NOMINAL;
                 SET STATTYPE OF launch_mass TO NUMERICAL;
                 SET STATTYPE OF perigee TO NUMERICAL;
                 SET STATTYPE OF period TO NUMERICAL
@@ -589,21 +589,21 @@ def test_output_stattypes():
             bdb.execute('''
                 CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
                     SET STATTYPES OF apogee, launch_mass TO NUMERICAL;
-                    SET STATTYPES OF country_of_operator TO CATEGORICAL
+                    SET STATTYPES OF country_of_operator TO NOMINAL
                 )
             ''')
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
                 IGNORE class_of_orbit, perigee, period;
                 SET STATTYPES OF apogee, launch_mass TO NUMERICAL;
-                SET STATTYPES OF country_of_operator TO CATEGORICAL
+                SET STATTYPES OF country_of_operator TO NOMINAL
             )
         ''')
         registry = {
             'factor_analysis': FactorAnalysis,
         }
         bayesdb_register_backend(bdb, CGPM_Backend(registry))
-        # Creating factor analysis with categorical manifest should crash.
+        # Creating factor analysis with nominal manifest should crash.
         bdb.execute('''
             CREATE GENERATOR satellites_g0 FOR satellites(
                 OVERRIDE MODEL FOR apogee, country_of_operator
@@ -617,19 +617,19 @@ def test_output_stattypes():
             # Duplicate pc_2 in LATENT and EXPOSE.
             bdb.execute('''
                 CREATE GENERATOR satellites_g1 FOR satellites(
-                    LATENT pc_2 CATEGORICAL,
+                    LATENT pc_2 NOMINAL,
                     OVERRIDE GENERATIVE MODEL FOR
                         apogee, launch_mass
-                    AND EXPOSE pc_2 CATEGORICAL
+                    AND EXPOSE pc_2 NOMINAL
                     USING factor_analysis(L=1)
                 )
             ''')
-        # Creating factor analysis with categorical latent should crash.
+        # Creating factor analysis with nominal latent should crash.
         bdb.execute('''
             CREATE GENERATOR satellites_g1 FOR satellites(
                 OVERRIDE GENERATIVE MODEL FOR
                     apogee, launch_mass
-                AND EXPOSE pc_2 CATEGORICAL
+                AND EXPOSE pc_2 NOMINAL
                 USING factor_analysis(L=1)
             )
         ''')
@@ -836,8 +836,8 @@ def test_predictive_relevance():
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA (
                 apogee                  NUMERICAL;
-                class_of_orbit          CATEGORICAL;
-                country_of_operator     CATEGORICAL;
+                class_of_orbit          NOMINAL;
+                country_of_operator     NOMINAL;
                 launch_mass             NUMERICAL;
                 perigee                 NUMERICAL;
                 period                  NUMERICAL
@@ -929,7 +929,7 @@ def test_predictive_relevance():
                 BY satellites
             ''')
 
-        # Unknown categorical values 'Mongolia' in HYPOTHETICAL ROWS.
+        # Unknown nominal values 'Mongolia' in HYPOTHETICAL ROWS.
         with pytest.raises(BQLError):
             bdb.execute('''
                 ESTIMATE PREDICTIVE RELEVANCE
@@ -1141,8 +1141,8 @@ def test_using_modelnos():
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
                 SET STATTYPE OF apogee              TO NUMERICAL;
-                SET STATTYPE OF class_of_orbit      TO CATEGORICAL;
-                SET STATTYPE OF country_of_operator TO CATEGORICAL;
+                SET STATTYPE OF class_of_orbit      TO NOMINAL;
+                SET STATTYPE OF country_of_operator TO NOMINAL;
                 SET STATTYPE OF launch_mass         TO NUMERICAL;
                 SET STATTYPE OF perigee             TO NUMERICAL;
                 SET STATTYPE OF period              TO NUMERICAL

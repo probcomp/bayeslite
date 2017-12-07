@@ -40,7 +40,7 @@ examples = {
         'p',
         'p_cc',
         'CREATE POPULATION p FOR t'
-            '(x NUMERICAL; y NUMERICAL; z CATEGORICAL)',
+            '(x NUMERICAL; y NUMERICAL; z NOMINAL)',
         'CREATE GENERATOR p_cc FOR p USING cgpm()',
         'CREATE GENERATOR p_cc FOR p USING crosscat',
         'CREATE GENERATOR p_cc FOR p USING cgpm ...' ,

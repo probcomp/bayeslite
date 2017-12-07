@@ -180,24 +180,24 @@ def test_casefold_colname():
         with t('t', 'p', 'p_cc', 'create table t(x, X)', []):
             pass
     with pytest.raises(bayeslite.BQLError):
-        columns = ['x CATEGORICAL', 'x CATEGORICAL']
+        columns = ['x NOMINAL', 'x NOMINAL']
         with t('t', 'p', 'p_cc', 'create table t(x, y)', columns):
             pass
     with pytest.raises(bayeslite.BQLError):
-        columns = ['x CATEGORICAL', 'X CATEGORICAL']
+        columns = ['x NOMINAL', 'X NOMINAL']
         with t('t', 'p', 'p_cc', 'create table t(x, y)', columns):
             pass
     with pytest.raises(bayeslite.BQLError):
-        columns = ['x CATEGORICAL', 'X NUMERICAL']
+        columns = ['x NOMINAL', 'X NUMERICAL']
         with t('t', 'p', 'p_cc', 'create table t(x, y)', columns):
             pass
-    columns = ['x CATEGORICAL', 'y CATEGORICAL']
+    columns = ['x NOMINAL', 'y NOMINAL']
     with t('t', 'p', 'p_cc', 'create table t(x, y)', columns):
         pass
-    columns = ['X CATEGORICAL', 'y CATEGORICAL']
+    columns = ['X NOMINAL', 'y NOMINAL']
     with t('t', 'p', 'p_cc', 'create table t(x, y)', columns):
         pass
-    columns = ['x CATEGORICAL', 'Y NUMERICAL']
+    columns = ['x NOMINAL', 'Y NUMERICAL']
     with t('t', 'p', 'p_cc', 'CREATE TABLE T(X, Y)', columns):
         pass
 
@@ -216,7 +216,7 @@ def test_t0_badname():
     with pytest.raises(bayeslite.BQLError):
         with bayesdb_population(
                 bayesdb(), 't0', 'p0', 't0_cc', t0_schema, t0_data,
-                columns=['n CATEGORICAL', 'm CATEGORICAL']):
+                columns=['n NOMINAL', 'm NOMINAL']):
             pass
 
 def t1_schema(bdb):
@@ -268,26 +268,26 @@ def t1(*args, **kwargs):
     return bayesdb_population(
         bayesdb(*args, **kwargs), 't1', 'p1', 'p1_cc',
         t1_schema, t1_data,
-        columns=['id IGNORE', 'label CATEGORICAL',
+        columns=['id IGNORE', 'label NOMINAL',
             'age NUMERICAL', 'weight NUMERICAL',])
 
 def t1_sub():
     return bayesdb_population(bayesdb(), 't1', 'p1', 'p1_sub_cc',
         t1_schema, t1_data,
-        columns=['id IGNORE', 'age IGNORE', 'label CATEGORICAL',
+        columns=['id IGNORE', 'age IGNORE', 'label NOMINAL',
             'weight NUMERICAL',])
 
 def t1_subcat():
     return bayesdb_population(bayesdb(), 't1', 'p1', 'p1_subcat_cc',
         t1_schema, t1_data,
-        columns=['id IGNORE', 'age IGNORE','label CATEGORICAL',
-            'weight CATEGORICAL'])
+        columns=['id IGNORE', 'age IGNORE','label NOMINAL',
+            'weight NOMINAL'])
 
 def t1_mp():
     backend = CGPM_Backend(cgpm_registry={}, multiprocess=True)
     return bayesdb_population(bayesdb(backend=backend),
         't1', 'p1', 'p1_cc', t1_schema, t1_data,
-         columns=['id IGNORE','label CATEGORICAL', 'age NUMERICAL',
+         columns=['id IGNORE','label NOMINAL', 'age NUMERICAL',
             'weight NUMERICAL'])
 
 def t2_schema(bdb):
@@ -305,8 +305,8 @@ def t2_data(bdb):
 def t2():
     return bayesdb_population(
         bayesdb(), 't2', 'p2', 'p2_cc', t2_schema, t2_data,
-        columns=['id IGNORE','label CATEGORICAL', 'age CATEGORICAL',
-            'weight CATEGORICAL'])
+        columns=['id IGNORE','label NOMINAL', 'age NOMINAL',
+            'weight NOMINAL'])
 
 def test_t1_nokey():
     with bayesdb_population(
@@ -319,7 +319,7 @@ def test_t1_nocase():
     with bayesdb_population(bayesdb(), 't1', 'p1', 'p1_cc', t1_schema, t1_data,
             columns=[
                 'id IGNORE',
-                'label CATEGORICAL',
+                'label NOMINAL',
                 'age NUMERICAL',
                 'weight NUMERICAL',
             ]) \
@@ -526,7 +526,7 @@ def test_row_column_predictive_probability(exname, rowid, colno):
 def test_bayesdb_population_fresh_row_id():
     with bayesdb_population(
             bayesdb(), 't1', 'p1', 'p1_cc', t1_schema, lambda x: 0,\
-            columns=['id IGNORE','label CATEGORICAL', 'age NUMERICAL',
+            columns=['id IGNORE','label NOMINAL', 'age NUMERICAL',
                 'weight NUMERICAL'])\
             as (bdb, population_id, generator_id):
         assert core.bayesdb_population_fresh_row_id(bdb, population_id) == 1

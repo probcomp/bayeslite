@@ -25,8 +25,8 @@ def test_correlation():
         bdb.execute('''
             CREATE POPULATION q FOR u (
                 id IGNORE;
-                c0 CATEGORICAL;
-                c1 CATEGORICAL;
+                c0 NOMINAL;
+                c1 NOMINAL;
                 n0 NUMERICAL;
                 n1 NUMERICAL;
                 r0 CYCLIC;

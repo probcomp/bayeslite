@@ -170,7 +170,7 @@ class CGPM_Backend(BayesDB_Backend):
                 WHERE population_id = ? AND 0 <= colno
         ''', (population_id,))
         for colno, name, stattype in vars_cursor:
-            if _is_categorical(stattype):
+            if _is_nominal(stattype):
                 qn = sqlite3_quote_name(name)
                 cursor = bdb.sql_execute('''
                     SELECT DISTINCT %s
@@ -252,8 +252,8 @@ class CGPM_Backend(BayesDB_Backend):
             raise BQLError(bdb, 'No distribution for stattype: %s' % (stattype))
         dist, params = _DEFAULT_DIST[stattype](bdb, generator_id, varname)
 
-        # Update variable value mapping if categorical.
-        if _is_categorical(stattype):
+        # Update variable value mapping if nominal.
+        if _is_nominal(stattype):
             table_name = core.bayesdb_population_table(bdb, population_id)
             qt = sqlite3_quote_name(table_name)
             qv = sqlite3_quote_name(varname)
@@ -719,7 +719,7 @@ class CGPM_Backend(BayesDB_Backend):
         # Get the engine.
         engine = self._engine(bdb, generator_id)
 
-        # Build the evidence, ignoring nan values and converting categoricals.
+        # Build the evidence, ignoring nan values and converting nominals.
         evidence = constraints and {
             colno: (self._to_numeric(bdb, generator_id, colno, value)
                 if value is not None else None)
@@ -799,7 +799,7 @@ class CGPM_Backend(BayesDB_Backend):
             for v in d.itervalues())
         if unknown:
             raise BQLError(bdb,
-                'Unknown categorical values in predictive relevance: %s'
+                'Unknown nominal values in predictive relevance: %s'
                 % (hypotheticals,))
 
         # Get the engine.
@@ -818,7 +818,7 @@ class CGPM_Backend(BayesDB_Backend):
             numsamples = 2
         assert numsamples > 0
 
-        def _impute_categorical(sample):
+        def _impute_nominal(sample):
             counts = Counter(s[0] for s in sample)
             mode_count = max(counts[v] for v in counts)
             pred = iter(v for v in counts if counts[v] == mode_count).next()
@@ -839,8 +839,8 @@ class CGPM_Backend(BayesDB_Backend):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         stattype = core.bayesdb_variable_stattype(
             bdb, population_id, generator_id, colno)
-        if _is_categorical(stattype):
-            return _impute_categorical(sample)
+        if _is_nominal(stattype):
+            return _impute_nominal(sample)
         else:
             return _impute_numerical(sample)
 
@@ -1198,7 +1198,7 @@ class CGPM_Backend(BayesDB_Backend):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         stattype = core.bayesdb_variable_stattype(
             bdb, population_id, generator_id, colno)
-        if _is_categorical(stattype):
+        if _is_nominal(stattype):
             cursor = bdb.sql_execute('''
                 SELECT code FROM bayesdb_cgpm_category
                     WHERE generator_id = ? AND colno = ? AND value = ?
@@ -1223,7 +1223,7 @@ class CGPM_Backend(BayesDB_Backend):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         stattype = core.bayesdb_variable_stattype(
             bdb, population_id, generator_id, colno)
-        if _is_categorical(stattype):
+        if _is_nominal(stattype):
             cursor = bdb.sql_execute('''
                 SELECT value FROM bayesdb_cgpm_category
                     WHERE generator_id = ? AND colno = ? AND code = ?
@@ -1667,7 +1667,7 @@ def _create_schema(bdb, generator_id, schema_ast):
             ccargs[i] = params
 
     # Fill in the deferred_output statistical type assignments. The need to be
-    # in the form NUMERICAL or CATEGORICAL.
+    # in the form NUMERICAL or NOMINAL.
     for var in deferred_output:
         if var in latents:
             # Latent variable modeled by a foreign model.  Use
@@ -1680,7 +1680,7 @@ def _create_schema(bdb, generator_id, schema_ast):
                     unknown_stattype[var] = var_stattype
             # XXX Cannot specify statargs for a latent variable. Trying to using
             # default_dist might lookup the counts for unique values of the
-            # categorical in the base table causing a failure.
+            # nominal in the base table causing a failure.
             var_statargs = {}
         else:
             # Manifest variable modeled by a foreign model.  Use
@@ -1814,7 +1814,7 @@ def _retrieve_analyze_variables(bdb, generator_id, ast):
     return (variable_numbers, rowids, subproblems, optimized, quiet)
 
 
-def _default_categorical(bdb, generator_id, var):
+def _default_nominal(bdb, generator_id, var):
     table = core.bayesdb_generator_table(bdb, generator_id)
     qt = sqlite3_quote_name(table)
     qv = sqlite3_quote_name(var)
@@ -1825,15 +1825,14 @@ def _default_categorical(bdb, generator_id, var):
 def _default_numerical(bdb, generator_id, var):
     return 'normal', {}
 
-def _is_categorical(stattype):
-    return casefold(stattype) in ['categorical', 'nominal']
+def _is_nominal(stattype):
+    return casefold(stattype) == 'nominal'
 
 _DEFAULT_DIST = {
-    'categorical':      _default_categorical,
     'counts':           _default_numerical,     # XXX change to poisson.
     'cyclic':           _default_numerical,     # XXX change to von mises.
     'magnitude':        _default_numerical,     # XXX change to lognormal.
-    'nominal':          _default_categorical,
+    'nominal':          _default_nominal,
     'numerical':        _default_numerical,
     'numericalranged':  _default_numerical,     # XXX change to beta.
 }

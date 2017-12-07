@@ -33,8 +33,8 @@ def cgpm_dummy_satellites_pop_bdb():
         bdb.execute('''
             create population satellites for satellites_ucs with schema(
                 apogee numerical;
-                class_of_orbit categorical;
-                country_of_operator categorical;
+                class_of_orbit nominal;
+                country_of_operator nominal;
                 launch_mass numerical;
                 perigee numerical;
                 period numerical

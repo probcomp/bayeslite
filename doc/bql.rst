@@ -85,10 +85,10 @@ executing SQL instead of BQL in Bayeslite.
 
 .. index:: ``CREATE TABLE``
 
-``CREATE [TEMP|TEMPORARY] TABLE [IF NOT EXISTS] <name> FROM <pathname>``
+``CREATE [TEMP|TEMPORARY] TABLE [IF NOT EXISTS] <name> FROM '<pathname>'``
 
-   Create a table named *name* from the csv file at *pathname*. *Pathname* should
-   be surrounded by single quotes.
+   Create a table named *name* from the csv file at *pathname*. Note that
+   *pathname* is a string, and should be surrounded by single quotes.
 
 ``CREATE [TEMP|TEMPORARY] TABLE [IF NOT EXISTS] <name> AS <query>``
 
@@ -108,8 +108,8 @@ executing SQL instead of BQL in Bayeslite.
 
 ``ALTER TABLE <name> <alterations>``
 
-   Alter the specified properties of the table *name*.  *Alterations*
-   is a comma-separated list of alterations.  The following
+   Alter the specified properties of the table *name*. The *alterations*
+   are a comma-separated list of alterations.  The following
    alterations are supported:
 
    .. index:: ``RENAME TO``
@@ -129,46 +129,42 @@ Metamodeling Language (MML)
 Populations
 +++++++++++
 
-A population specifies which columns in a table should be modeled or ignored.
-For those that are modeled, it specifies their statistical type.
+A BQL *population* is a named database object which contains a collection of
+*variables* and their *statistical data types*. The variables of a population
+correspond to (a subset of) columns in a given SQL table *t*, known as the
+''base table'' of the population.
 
-.. index:: ``GUESS SCHEMA``
+Just like every column in a SQL table has a data type (such as `INT`, `FLOAT`,
+or `VARCHAR`) which determines what kind of data can be stored for that column,
+every variable in a population has a statistical data type (such as `NUMERICAL`,
+`COUNT`, `MAGNITUDE`, or `NOMINAL`) which determines which probabilistic models
+are applicable to that variable.
 
-``GUESS SCHEMA FOR <name>``
-
-   Guess a population schema for the table *name*. The schema maps each column
-   in *name* to its heuristically guessed statistical type and the heuristic
-   reason for the guess. Columns can be guessed to be ``NOMINAL`` or
-   ``NUMERICAL`` or to be ignored (``IGNORE``). The query yields a table created
-   as if by the following ``CREATE TABLE``:
-
-   .. code-block:: sql
-
-      CREATE TABLE guessed_stattypes (
-         name TEXT NOT NULL UNIQUE,
-         stattype TEXT NOT NULL,
-         reason TEXT NOT NULL
-      )
+Note that the term 'column' is used exclusively for a SQL table, while the term
+'variable' is used exclusively for a BQL population.
 
 .. index:: ``CREATE POPULATION``
 
-``CREATE POPULATION [IF NOT EXISTS] FOR <name> WITH SCHEMA (<schema>)``
+``CREATE POPULATION [IF NOT EXISTS] <pop> FOR <table> WITH SCHEMA (<schema>)``
 
-   Create a population for *name* with schema *schema*. *Schema* can be defined
-   using any combination of the following statements, separated by semicolons:
+   Create a population with base table *t* and statistical data types given by
+   *schema*. The *schema* is defined using any combination of the following
+   statements, separated by semicolons:
 
-      ``GUESS STATTYPES FOR (<column(s)>)``
+      ``GUESS STATTYPE(S) OF (<column(s)>)``
 
-         Guess the statistical type for the column(s) *column(s)* by
-         heuristically examining the data.
+         Guess the statistical type for the given comma-separated list of
+         *column(s)*, using data-dependent heuristics. Use `(*)` to indicate all
+         columns in the table.
 
-      ``MODEL <column(s)> AS <stattype>``
+      ``SET STATTYPE(S) OF <column(s)> TO <stattype>``
 
-         Model the column(s) *column(s)* with the statistical type *stattype*.
+         Set the statistical data type of *column(s)* to *stattype*.
 
       ``IGNORE <column(s)>``
 
-         Ignore the column(s) *column(s)*.
+         Ignore *column(s)*; no variable in the population will be created
+         for these columns in the base table
 
 .. index:: ``DROP POPULATION``
 
@@ -198,6 +194,24 @@ For those that are modeled, it specifies their statistical type.
 
       Change the statistical type of variable(s) *variable(s)* in population
       *population* to *stattype*.
+
+.. index:: ``GUESS SCHEMA``
+
+``GUESS SCHEMA FOR <table>``
+
+   Guess a population schema for *table*. The schema maps each column in *table*
+   to its guessed statistical type and the heuristic reason for the guess.
+   Columns can be guessed to be ``NOMINAL`` or ``NUMERICAL`` or to be ignored
+   (``IGNORE``). The query yields a table created as if by the following
+   ``CREATE TABLE``:
+
+   .. code-block:: sql
+
+      CREATE TABLE guessed_stattypes (
+         name        TEXT NOT NULL UNIQUE,
+         stattype    TEXT NOT NULL,
+         reason      TEXT NOT NULL
+      )
 
 ++++++++++
 Generators
@@ -527,8 +541,8 @@ subquery instead:
    standard measures of correlation between columns:
 
    * Pearson correlation coefficient squared for two numerical columns.
-   * Cramer's phi for two categorical columns.
-   * ANOVA R^2 for a categorical column and a numerical column.
+   * Cramer's phi for two nominal columns.
+   * ANOVA R^2 for a nominal column and a numerical column.
 
    Cyclic columns are not supported.
 

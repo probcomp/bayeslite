@@ -38,10 +38,10 @@ city,hometown,student hometown,"{""RIO"":""Rio de Janeiro""\
 
 def test_codebook_value_map():
     '''
-    A categorical column in crosscat can only take on a fixed number of values
-    v1, v2, ..., v3.  In this test, we have a categorical column called
-    `city` which takes on values `RIO, LA, SF, DC` as specified in the codebook
-    value map.
+    A nominal column (modeled using a categorical distribution in crosscat) can
+    only take on a fixed number of values v1, v2, ..., v3.  In this test, we
+    have a nominal column called `city` which takes on values `RIO, LA, SF, DC`
+    as specified in the codebook value map.
 
         INITIALIZE dummy table with only RIO and SF appearing in dataset
         ANALYZE dummy_cc
@@ -67,7 +67,7 @@ def test_codebook_value_map():
             CREATE POPULATION dummy_pop FOR dummy (
                 kerberos IGNORE;
                 age NUMERICAL;
-                city CATEGORICAL
+                city NOMINAL;
             )
         ''')
         bdb.execute('CREATE GENERATOR dummy_cc FOR dummy_pop USING cgpm')

@@ -30,11 +30,11 @@ def test_engine_increment_stamp():
         bdb.execute('''
             CREATE POPULATION p FOR t (
                 age NUMERICAL;
-                gender CATEGORICAL;
+                gender NOMINAL;
                 salary NUMERICAL;
                 height IGNORE;
-                division CATEGORICAL;
-                rank CATEGORICAL
+                division NOMINAL;
+                rank NOMINAL;
             )
         ''')
         bdb.execute('CREATE GENERATOR m FOR p;')
@@ -74,11 +74,11 @@ def test_engine_stamp_two_clients():
             bdb0.execute('''
                 CREATE POPULATION p FOR t (
                     age NUMERICAL;
-                    gender CATEGORICAL;
+                    gender NOMINAL;
                     salary NUMERICAL;
                     height IGNORE;
-                    division CATEGORICAL;
-                    rank CATEGORICAL
+                    division NOMINAL;
+                    rank NOMINAL;
                 )
             ''')
 

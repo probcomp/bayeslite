@@ -747,7 +747,7 @@ def test_trivial_commands():
     assert parse_bql_string('''
         create population satellites for satellites_ucs (
             guess stattypes of launch_site, "contracto=r";
-            set stattype of country_of_operator, orbit_type to categorical;
+            set stattype of country_of_operator, orbit_type to nominal;
             set stattype of launch_mass to numerical;
             set stattype of perigee to numerical;
             set stattype of apogee, period to numerical;
@@ -756,26 +756,26 @@ def test_trivial_commands():
         [ast.CreatePop(False, 'satellites', 'satellites_ucs', [
             ast.PopGuessVars(['launch_site', 'contracto=r']),
             ast.PopModelVars(
-                ['country_of_operator', 'orbit_type'], 'categorical'),
+                ['country_of_operator', 'orbit_type'], 'nominal'),
             ast.PopModelVars(['launch_mass'], 'numerical'),
             ast.PopModelVars(['perigee'], 'numerical'),
             ast.PopModelVars(['apogee', 'period'], 'numerical'),
         ])]
     assert parse_bql_string('''
         create population satellites for satellites_ucs (
-            set stattype of country_of_operator, orbit_type to categorical;;
+            set stattype of country_of_operator, orbit_type to nominal;;
             set stattype of apogee, period to numerical;;
         )
     ''') == \
         [ast.CreatePop(False, 'satellites', 'satellites_ucs', [
             ast.PopModelVars(
-                ['country_of_operator', 'orbit_type'], 'categorical'),
+                ['country_of_operator', 'orbit_type'], 'nominal'),
             ast.PopModelVars(['apogee', 'period'], 'numerical'),
         ])]
     assert parse_bql_string('''
         create population satellites for satellites_ucs (
-            country_of_operator categorical;
-            orbit_type          categorical;
+            country_of_operator nominal;
+            orbit_type          nominal;
             launch_mass         numerical;
             perigee             numerical;
             apogee              numerical;
@@ -783,8 +783,8 @@ def test_trivial_commands():
         )
     ''') == \
         [ast.CreatePop(False, 'satellites', 'satellites_ucs', [
-            ast.PopModelVars(['country_of_operator'], 'categorical'),
-            ast.PopModelVars(['orbit_type'], 'categorical'),
+            ast.PopModelVars(['country_of_operator'], 'nominal'),
+            ast.PopModelVars(['orbit_type'], 'nominal'),
             ast.PopModelVars(['launch_mass'], 'numerical'),
             ast.PopModelVars(['perigee'], 'numerical'),
             ast.PopModelVars(['apogee'], 'numerical'),
@@ -793,36 +793,36 @@ def test_trivial_commands():
     assert parse_bql_string('drop population satellites') == \
         [ast.DropPop(False, 'satellites')]
     assert parse_bql_string('create generator t_cc for t using cgpm'
-            '(xyz numerical, pqr categorical, lmn cyclic)') == \
+            '(xyz numerical, pqr nominal, lmn cyclic)') == \
         [ast.CreateGen('t_cc', False, 't', 'cgpm', [
             ['xyz', 'numerical'],
-            ['pqr', 'categorical'],
+            ['pqr', 'nominal'],
             ['lmn', 'cyclic'],
         ])]
     assert parse_bql_string('create generator t_cc for t'
-            '(xyz numerical, pqr categorical, lmn cyclic)') == \
+            '(xyz numerical, pqr nominal, lmn cyclic)') == \
         [ast.CreateGen(
             't_cc', False, 't',
             None,       # Backend defaults to cgpm.
             [
                 ['xyz', 'numerical'],
-                ['pqr', 'categorical'],
+                ['pqr', 'nominal'],
                 ['lmn', 'cyclic'],
         ])]
     assert parse_bql_string('create generator t_cc if not exists'
             ' for t using cgpm'
-            '(xyz numerical, pqr categorical, lmn cyclic)') == \
+            '(xyz numerical, pqr nominal, lmn cyclic)') == \
         [ast.CreateGen('t_cc', True, 't', 'cgpm', [
             ['xyz', 'numerical'],
-            ['pqr', 'categorical'],
+            ['pqr', 'nominal'],
             ['lmn', 'cyclic'],
         ])]
     assert parse_bql_string('create generator if not exists t_cc'
             ' for t using cgpm'
-            '(xyz numerical, pqr categorical, lmn cyclic)') == \
+            '(xyz numerical, pqr nominal, lmn cyclic)') == \
         [ast.CreateGen('t_cc', True, 't', 'cgpm', [
             ['xyz', 'numerical'],
-            ['pqr', 'categorical'],
+            ['pqr', 'nominal'],
             ['lmn', 'cyclic'],
         ])]
     # XXX Schema of [[]] instead of [] is kinda wacky.  Fix?  (But

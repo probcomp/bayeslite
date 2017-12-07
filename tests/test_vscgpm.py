@@ -144,8 +144,8 @@ def test_cgpm_extravaganza__ci_slow():
             CREATE POPULATION satellites FOR satellites_ucs (
                 name IGNORE;
                 apogee NUMERICAL;
-                class_of_orbit CATEGORICAL;
-                country_of_operator CATEGORICAL;
+                class_of_orbit NOMINAL;
+                country_of_operator NOMINAL;
                 launch_mass NUMERICAL;
                 perigee NUMERICAL;
                 period NUMERICAL

@@ -106,7 +106,7 @@ def test_guess_stattypes():
         == ['numerical', 'key']
     rows = [['none' if c < ord('m') else c, chr(c)] for c in a_z]
     # Nullify 'none' because it is in the nullify list.
-    # Categorical because <20 remaining.
+    # Nominal because <20 remaining.
     assert [st[0] for st in
         bayesdb_guess_stattypes(n, rows)] == ['nominal', 'key']
     rows = [[3 if c < ord('y') else 5, chr(c)] for c in a_z]

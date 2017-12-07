@@ -561,7 +561,6 @@ def bayesdb_has_stattype(bdb, stattype):
 # bayesdb_stattype table -- when we are later willing to contemplate
 # adding statistical types, e.g. COUNT, SCALE, or NONNEGATIVE REAL.
 _STATTYPE_TO_AFFINITY = dict((casefold(st), casefold(af)) for st, af in (
-    ('categorical', 'text'),
     ('cyclic', 'real'),
     ('numerical', 'real'),
     ('counts', 'real'),

@@ -129,10 +129,10 @@ def test_csv_import_schema():
             CREATE POPULATION p_employees FOR employees (
                 height IGNORE;
                 age NUMERICAL;
-                gender CATEGORICAL;
+                gender NOMINAL;
                 salary CYCLIC;
-                division CATEGORICAL;
-                rank CATEGORICAL
+                division NOMINAL;
+                rank NOMINAL
             )
         ''')
         bdb.execute('''

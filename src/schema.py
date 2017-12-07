@@ -43,12 +43,11 @@ CREATE TABLE bayesdb_stattype (
     name        TEXT COLLATE NOCASE NOT NULL PRIMARY KEY
 );
 
-INSERT INTO bayesdb_stattype VALUES ('categorical');
-INSERT INTO bayesdb_stattype VALUES ('cyclic');
-INSERT INTO bayesdb_stattype VALUES ('numerical');
 INSERT INTO bayesdb_stattype VALUES ('counts');
+INSERT INTO bayesdb_stattype VALUES ('cyclic');
 INSERT INTO bayesdb_stattype VALUES ('magnitude');
 INSERT INTO bayesdb_stattype VALUES ('nominal');
+INSERT INTO bayesdb_stattype VALUES ('numerical');
 INSERT INTO bayesdb_stattype VALUES ('numericalranged');
 
 CREATE TABLE bayesdb_column (
