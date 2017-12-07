@@ -34,12 +34,11 @@ def test_analysis_subproblems_basic():
     with cgpm_dummy_satellites_bdb() as bdb:
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
-                MODEL apogee AS NUMERICAL;
-                MODEL class_of_orbit AS CATEGORICAL;
-                MODEL country_of_operator AS CATEGORICAL;
-                MODEL launch_mass AS NUMERICAL;
-                MODEL perigee AS NUMERICAL;
-                MODEL period AS NUMERICAL
+                SET STATTYPE OF class_of_orbit TO CATEGORICAL;
+                SET STATTYPE OF country_of_operator TO CATEGORICAL;
+                SET STATTYPE OF launch_mass TO NUMERICAL;
+                SET STATTYPE OF perigee TO NUMERICAL;
+                SET STATTYPE OF period TO NUMERICAL
             )
         ''')
         bayesdb_register_backend(bdb, CGPM_Backend(dict(), multiprocess=0))

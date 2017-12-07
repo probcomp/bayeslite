@@ -99,9 +99,11 @@ pop_schema(many)        ::= pop_schema(schema) T_SEMI pop_clause(cl).
 
 pop_clause(empty)       ::= .
 pop_clause(column)      ::= column_name(col) stattype(st).
-pop_clause(model)       ::= K_MODEL pop_columns(cols) K_AS stattype(st).
+pop_clause(stattype)    ::= K_SET K_STATTYPES|K_STATTYPE
+                                K_OF pop_columns(cols)
+                                K_TO stattype(st).
 pop_clause(ignore)      ::= K_IGNORE pop_columns(cols).
-pop_clause(guess)       ::= K_GUESS stattypes_for_opt pop_columns_guess(cols).
+pop_clause(guess)       ::= K_GUESS stattypes_of_opt pop_columns_guess(cols).
 
 stattype_opt(none)      ::= .
 stattype_opt(one)       ::= stattype(st).
@@ -114,9 +116,8 @@ pop_columns_guess(list) ::= pop_columns(cols).
 pop_columns(one)   ::= column_name(c).
 pop_columns(many)  ::= pop_columns(cols) T_COMMA column_name(c).
 
-stattypes_for_opt       ::= .
-stattypes_for_opt       ::= K_STATTYPES K_FOR.
-
+stattypes_of_opt        ::= .
+stattypes_of_opt        ::= K_STATTYPE|K_STATTYPES K_OF.
 
 /* XXX Temporary generators?  */
 command(creategen)      ::= K_CREATE K_GENERATOR

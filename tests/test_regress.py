@@ -29,12 +29,12 @@ def test_regress_bonanza__ci_integration():
             bdb, CGPM_Backend(dict(), multiprocess=0))
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
-                MODEL apogee AS NUMERICAL;
-                MODEL class_of_orbit AS NOMINAL;
-                MODEL country_of_operator AS NOMINAL;
-                MODEL launch_mass AS NUMERICAL;
-                MODEL perigee AS NUMERICAL;
-                MODEL period AS NUMERICAL
+                apogee                  NUMERICAL;
+                class_of_orbit          NOMINAL;
+                country_of_operator     NOMINAL;
+                launch_mass             NUMERICAL;
+                perigee                 NUMERICAL;
+                period                  NUMERICAL;
             )
         ''')
         bdb.execute('''

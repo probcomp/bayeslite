@@ -539,7 +539,7 @@ def test_bayesdb_population_add_variable():
         bdb.sql_execute('create table t (a real, b ignore, c real)')
         bdb.execute('''
             create population p for t with schema(
-                model a, c as numerical;
+                set stattypes of a, c to numerical;
                 b ignore;
             );
         ''')

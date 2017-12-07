@@ -42,7 +42,7 @@ def bdb():
         bdb.sql_execute('INSERT INTO t (a, b) VALUES (1,0)')
 
     # Create the population and generator on the existing rows.
-    bdb.execute('CREATE POPULATION p FOR t (MODEL a, b AS NOMINAL)')
+    bdb.execute('CREATE POPULATION p FOR t (SET STATTYPES OF a, b TO NOMINAL)')
     bdb.execute('CREATE GENERATOR m FOR p;')
     bdb.execute('INITIALIZE 1 MODELS FOR m;')
     bdb.execute('ANALYZE m FOR 1000 ITERATION (OPTIMIZED);')

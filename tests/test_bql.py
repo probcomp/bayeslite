@@ -107,7 +107,7 @@ def test_trivial_population():
         # XXX if (not) exists
         bdb.execute('''
             create population p for t (
-                guess stattypes for (*);
+                guess stattypes of (*);
                 age numerical
             )
         ''')
@@ -120,7 +120,7 @@ def test_population_invalid_numerical():
         with pytest.raises(BQLError):
             bdb.execute('''
                 create population p for t (
-                    guess stattypes for (*);
+                    guess stattypes of (*);
                     gender numerical
                 )
             ''')
@@ -131,7 +131,7 @@ def test_population_invalid_numerical_alterpop_addvar():
             bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
         bdb.execute('''
             create population p for t (
-                guess stattypes for (*);
+                guess stattypes of (*);
                 ignore gender
             )
         ''')
@@ -145,7 +145,7 @@ def test_population_invalid_numerical_alterpop_stattype():
             bayeslite.bayesdb_read_csv(bdb, 't', f, header=True, create=True)
         bdb.execute('''
                 create population p for t (
-                    guess stattypes for (*);
+                    guess stattypes of (*);
                     gender nominal
                 )
             ''')
@@ -263,8 +263,8 @@ def test_conditional_probability(seed):
         bdb.execute('''
             create population p1 for t1 (
                 ignore id, label;
-                model age as numerical;
-                model weight as numerical
+                set stattype of age to numerical;
+                set stattype of weight to numerical
             )
         ''')
         bdb.execute('''

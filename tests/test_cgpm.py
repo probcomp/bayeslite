@@ -72,8 +72,9 @@ def cgpm_smoke_bdb():
 
         bdb.execute('''
             CREATE POPULATION p FOR t WITH SCHEMA(
-                MODEL output, input AS NUMERICAL;
-                MODEL cat AS CATEGORICAL
+                output  NUMERICAL;
+                input   NUMERICAL;
+                cat     NOMINAL;
             )
         ''')
 
@@ -121,7 +122,7 @@ def test_cgpm_no_empty_categories():
         bayesdb_nullify(bdb, 'f', '')
         bdb.execute('''
             CREATE POPULATION q FOR f WITH SCHEMA (
-                MODEL a, b, c AS NOMINAL
+                SET STATTYPES OF a, b, c TO NOMINAL
             );
         ''')
         bdb.execute('CREATE GENERATOR h IF NOT EXISTS FOR q USING cgpm;')
@@ -360,12 +361,12 @@ def test_cgpm_kepler():
     with cgpm_dummy_satellites_bdb() as bdb:
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
-                MODEL apogee AS NUMERICAL;
-                MODEL class_of_orbit AS CATEGORICAL;
-                MODEL country_of_operator AS CATEGORICAL;
-                MODEL launch_mass AS NUMERICAL;
-                MODEL perigee AS NUMERICAL;
-                MODEL period AS NUMERICAL
+                apogee                  NUMERICAL;
+                class_of_orbit          CATEGORICAL;
+                country_of_operator     CATEGORICAL;
+                launch_mass             NUMERICAL;
+                perigee                 NUMERICAL;
+                period                  NUMERICAL
             )
         ''')
         bdb.execute('''
@@ -490,28 +491,28 @@ def test_unknown_stattype():
             # No such statistical type at the moment.
             bdb.execute('''
                 CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
-                    MODEL apogee, perigee, launch_mass, period
-                    AS NUMERICAL;
+                    SET STATTYPES OF apogee, perigee, launch_mass, period
+                        TO NUMERICAL;
 
-                    MODEL class_of_orbit, country_of_operator
-                    AS NOMINAL;
+                    SET STATTYPE OF class_of_orbit, country_of_operator
+                        TO NOMINAL;
 
-                    MODEL relaunches
-                    AS QUAGGA
+                    SET STATTYPE OF relaunches
+                        TO QUAGGA
                 )
             ''')
         # Invent the statistical type.
         bdb.sql_execute('INSERT INTO bayesdb_stattype VALUES (?)', ('quagga',))
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
-                MODEL apogee, perigee, launch_mass, period
-                AS NUMERICAL;
+                SET STATTYPES OF apogee, perigee, launch_mass, period
+                    TO NUMERICAL;
 
-                MODEL class_of_orbit, country_of_operator
-                AS NOMINAL;
+                SET STATTYPES OF class_of_orbit, country_of_operator
+                TO NOMINAL;
 
-                MODEL relaunches
-                AS QUAGGA
+                SET STATTYPES OF relaunches
+                TO QUAGGA
             )
         ''')
         registry = {
@@ -547,12 +548,12 @@ def test_bad_analyze_vars():
     with cgpm_dummy_satellites_bdb() as bdb:
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
-                MODEL apogee AS NUMERICAL;
-                MODEL class_of_orbit AS CATEGORICAL;
-                MODEL country_of_operator AS CATEGORICAL;
-                MODEL launch_mass AS NUMERICAL;
-                MODEL perigee AS NUMERICAL;
-                MODEL period AS NUMERICAL
+                SET STATTYPE OF apogee TO NUMERICAL;
+                SET STATTYPE OF class_of_orbit TO CATEGORICAL;
+                SET STATTYPE OF country_of_operator TO CATEGORICAL;
+                SET STATTYPE OF launch_mass TO NUMERICAL;
+                SET STATTYPE OF perigee TO NUMERICAL;
+                SET STATTYPE OF period TO NUMERICAL
             )
         ''')
         registry = {
@@ -587,15 +588,15 @@ def test_output_stattypes():
         with pytest.raises(BQLError):
             bdb.execute('''
                 CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
-                    MODEL apogee, launch_mass AS NUMERICAL;
-                    MODEL country_of_operator AS CATEGORICAL
+                    SET STATTYPES OF apogee, launch_mass TO NUMERICAL;
+                    SET STATTYPES OF country_of_operator TO CATEGORICAL
                 )
             ''')
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
                 IGNORE class_of_orbit, perigee, period;
-                MODEL apogee, launch_mass AS NUMERICAL;
-                MODEL country_of_operator AS CATEGORICAL
+                SET STATTYPES OF apogee, launch_mass TO NUMERICAL;
+                SET STATTYPES OF country_of_operator TO CATEGORICAL
             )
         ''')
         registry = {
@@ -706,7 +707,7 @@ def test_initialize_with_all_nulls():
         # Fail when a is numerical and modeled by crosscat.
         bdb.execute('''
             CREATE POPULATION p FOR t WITH SCHEMA(
-                MODEL a, b, c AS NUMERICAL
+                SET STATTYPES OF a, b, c TO NUMERICAL
             )
         ''')
         bdb.execute('''
@@ -720,8 +721,8 @@ def test_initialize_with_all_nulls():
         # Fail when a is nominal and modeled by crosscat.
         bdb.execute('''
             CREATE POPULATION p2 FOR t WITH SCHEMA(
-                MODEL a AS NOMINAL;
-                MODEL b, c AS NUMERICAL
+                SET STATTYPES OF a TO NOMINAL;
+                SET STATTYPES OF b, c TO NUMERICAL
             )
         ''')
         bdb.execute('CREATE GENERATOR m2 FOR p2;')
@@ -732,7 +733,7 @@ def test_initialize_with_all_nulls():
         bdb.execute('''
             CREATE POPULATION p3 FOR t WITH SCHEMA(
                 IGNORE a;
-                MODEL b, c AS NUMERICAL
+                SET STATTYPES OF b, c TO NUMERICAL
             )
         ''')
         bdb.execute('CREATE GENERATOR m3 FOR p3;')
@@ -834,12 +835,12 @@ def test_predictive_relevance():
         bayesdb_register_backend(bdb, CGPM_Backend(cgpm_registry=dict()))
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA (
-                MODEL apogee AS NUMERICAL;
-                MODEL class_of_orbit AS CATEGORICAL;
-                MODEL country_of_operator AS CATEGORICAL;
-                MODEL launch_mass AS NUMERICAL;
-                MODEL perigee AS NUMERICAL;
-                MODEL period AS NUMERICAL
+                apogee                  NUMERICAL;
+                class_of_orbit          CATEGORICAL;
+                country_of_operator     CATEGORICAL;
+                launch_mass             NUMERICAL;
+                perigee                 NUMERICAL;
+                period                  NUMERICAL
             )
         ''')
         bdb.execute('CREATE GENERATOR m FOR satellites;')
@@ -1003,7 +1004,7 @@ def test_add_drop_models():
             bdb, CGPM_Backend(dict(), multiprocess=0))
         bdb.execute('''
             CREATE POPULATION p FOR satellites_ucs WITH SCHEMA(
-                GUESS STATTYPES FOR (*);
+                GUESS STATTYPES OF (*);
             )
         ''')
         bdb.execute('CREATE GENERATOR m FOR p (SUBSAMPLE 10);')
@@ -1139,12 +1140,12 @@ def test_using_modelnos():
     with cgpm_dummy_satellites_bdb() as bdb:
         bdb.execute('''
             CREATE POPULATION satellites FOR satellites_ucs WITH SCHEMA(
-                MODEL apogee AS NUMERICAL;
-                MODEL class_of_orbit AS CATEGORICAL;
-                MODEL country_of_operator AS CATEGORICAL;
-                MODEL launch_mass AS NUMERICAL;
-                MODEL perigee AS NUMERICAL;
-                MODEL period AS NUMERICAL
+                SET STATTYPE OF apogee              TO NUMERICAL;
+                SET STATTYPE OF class_of_orbit      TO CATEGORICAL;
+                SET STATTYPE OF country_of_operator TO CATEGORICAL;
+                SET STATTYPE OF launch_mass         TO NUMERICAL;
+                SET STATTYPE OF perigee             TO NUMERICAL;
+                SET STATTYPE OF period              TO NUMERICAL
             )
         ''')
         bayesdb_register_backend(bdb, CGPM_Backend(dict(), multiprocess=0))

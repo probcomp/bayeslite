@@ -32,12 +32,12 @@ def cgpm_dummy_satellites_pop_bdb():
     with cgpm_dummy_satellites_bdb() as bdb:
         bdb.execute('''
             create population satellites for satellites_ucs with schema(
-                model apogee as numerical;
-                model class_of_orbit as categorical;
-                model country_of_operator as categorical;
-                model launch_mass as numerical;
-                model perigee as numerical;
-                model period as numerical
+                apogee numerical;
+                class_of_orbit categorical;
+                country_of_operator categorical;
+                launch_mass numerical;
+                perigee numerical;
+                period numerical
             )
         ''')
         backend = CGPM_Backend(dict(), multiprocess=0)

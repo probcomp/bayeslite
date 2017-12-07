@@ -201,7 +201,7 @@ class BQLSemantics(object):
 
     def p_pop_clause_empty(self):            return None
     def p_pop_clause_column(self, col, st):  return ast.PopModelVars([col], st)
-    def p_pop_clause_model(self, cols, st):  return ast.PopModelVars(cols, st)
+    def p_pop_clause_stattype(self, cols, st): return ast.PopModelVars(cols, st)
     def p_pop_clause_ignore(self, cols):     return ast.PopIgnoreVars(cols)
     def p_pop_clause_guess(self, cols):      return ast.PopGuessVars(cols)
 

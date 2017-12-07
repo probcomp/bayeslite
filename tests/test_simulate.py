@@ -87,7 +87,7 @@ def test_simulate_given_rowid():
         bdb.execute('''
             CREATE POPULATION t_p FOR t WITH SCHEMA {
                 IGNORE x;
-                MODEL y AS NUMERICAL;
+                y NUMERICAL;
             }
         ''')
         bdb.execute('''
@@ -153,7 +153,7 @@ def test_simulate_given_rowid_multivariate():
                 'INSERT INTO t (x, y, z, w) VALUES (?, ?, ?, ?)', row)
         bdb.execute('''
             CREATE POPULATION t_p FOR t WITH SCHEMA {
-                MODEL y, z, w AS NUMERICAL;
+                SET STATTYPES OF y, z, w TO NUMERICAL;
                 IGNORE x
             }
         ''')
@@ -219,7 +219,7 @@ def test_simulate_given_rowid_unincorporated():
                 'INSERT INTO t (x, y, z, w) VALUES (?, ?, ?, ?)', row)
         bdb.execute('''
             CREATE POPULATION t_p FOR t WITH SCHEMA {
-                MODEL y, z, w AS NUMERICAL;
+                SET STATTYPES OF y, z, w TO NUMERICAL;
                 IGNORE x
             }
         ''')

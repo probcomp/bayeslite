@@ -41,8 +41,8 @@ def smoke_bdb():
 
         bdb.execute('''
             CREATE POPULATION p FOR t WITH SCHEMA (
-                MODEL a, b, c, d AS NUMERICAL;
-                MODEL e AS NOMINAL
+                SET STATTYPES OF a, b, c, d TO NUMERICAL;
+                SET STATTYPES OF e TO NOMINAL
             )
         ''')
 

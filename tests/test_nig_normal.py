@@ -47,7 +47,10 @@ def test_nig_normal_latent_numbering():
         for x in xrange(100):
             bdb.sql_execute('insert into t(x, y) values(?, ?)', (x, x*x - 100))
         bdb.execute('''
-            create population p for t(id ignore; model x,y as numerical)
+            create population p for t(
+                id ignore;
+                set stattypes of x,y to numerical;
+            )
         ''')
         assert core.bayesdb_has_population(bdb, 'p')
         pid = core.bayesdb_get_population(bdb, 'p')

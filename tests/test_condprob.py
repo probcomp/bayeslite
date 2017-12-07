@@ -27,7 +27,8 @@ def test_conditional_probability_simple_inferences():
             bdb.sql_execute('insert into t values (?, ?)', row)
         bdb.execute('''
             create population p for t (
-                model foo, bar as categorical
+                foo categorical;
+                bar categorical;
             )
         ''')
         bdb.execute('create generator p_cc for p using cgpm;')

@@ -738,13 +738,23 @@ def test_trivial_precedence_error():
 def test_trivial_commands():
     assert parse_bql_string('''
         create population satellites for satellites_ucs (
-            MODEL country_of_operator, orbit_type AS categorical;
-            MODEL launch_mass AS numerical;
-            MODEL perigee AS numerical;
-            MODEL apogee, period AS numerical
+            guess(*);
         )
     ''') == \
         [ast.CreatePop(False, 'satellites', 'satellites_ucs', [
+            ast.PopGuessVars('*'),
+        ])]
+    assert parse_bql_string('''
+        create population satellites for satellites_ucs (
+            guess stattypes of launch_site, "contracto=r";
+            set stattype of country_of_operator, orbit_type to categorical;
+            set stattype of launch_mass to numerical;
+            set stattype of perigee to numerical;
+            set stattype of apogee, period to numerical;
+        )
+    ''') == \
+        [ast.CreatePop(False, 'satellites', 'satellites_ucs', [
+            ast.PopGuessVars(['launch_site', 'contracto=r']),
             ast.PopModelVars(
                 ['country_of_operator', 'orbit_type'], 'categorical'),
             ast.PopModelVars(['launch_mass'], 'numerical'),
@@ -753,14 +763,32 @@ def test_trivial_commands():
         ])]
     assert parse_bql_string('''
         create population satellites for satellites_ucs (
-            MODEL country_of_operator, orbit_type AS categorical;;
-            MODEL apogee, period AS numerical;;
+            set stattype of country_of_operator, orbit_type to categorical;;
+            set stattype of apogee, period to numerical;;
         )
     ''') == \
         [ast.CreatePop(False, 'satellites', 'satellites_ucs', [
             ast.PopModelVars(
                 ['country_of_operator', 'orbit_type'], 'categorical'),
             ast.PopModelVars(['apogee', 'period'], 'numerical'),
+        ])]
+    assert parse_bql_string('''
+        create population satellites for satellites_ucs (
+            country_of_operator categorical;
+            orbit_type          categorical;
+            launch_mass         numerical;
+            perigee             numerical;
+            apogee              numerical;
+            period              numerical;
+        )
+    ''') == \
+        [ast.CreatePop(False, 'satellites', 'satellites_ucs', [
+            ast.PopModelVars(['country_of_operator'], 'categorical'),
+            ast.PopModelVars(['orbit_type'], 'categorical'),
+            ast.PopModelVars(['launch_mass'], 'numerical'),
+            ast.PopModelVars(['perigee'], 'numerical'),
+            ast.PopModelVars(['apogee'], 'numerical'),
+            ast.PopModelVars(['period'], 'numerical'),
         ])]
     assert parse_bql_string('drop population satellites') == \
         [ast.DropPop(False, 'satellites')]

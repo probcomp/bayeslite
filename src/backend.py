@@ -33,7 +33,7 @@ that for illustration::
 Then you can model a table and query the probable implications of the data in
 the table::
 
-   bdb.execute('create population p for t with schema(guess stattypes for (*))')
+   bdb.execute('create population p for t with schema(guess stattypes of (*))')
    bdb.execute('create generator p_cc for t using cgpm;')
    bdb.execute('initialize 10 models for t_cc')
    bdb.execute('analyze t_cc for 10 iterations')
