@@ -44,14 +44,17 @@ def test_simulate_drawconstraint_error__ci_slow():
         bdb.execute('INITIALIZE 1 MODEL FOR hospital_cc')
         bdb.execute('ANALYZE hospital_cc FOR 1 ITERATION (OPTIMIZED);')
         with pytest.raises(ValueError):
+            # Raises a ValueError since the condition variables and query
+            # variables both ttl_mdcr_spnd. ValueError is returned since the
+            # CGPM runtime, not cgpm_backend, captures the error.
             bdb.execute('''
                 SIMULATE ttl_mdcr_spnd, n_death_ill FROM hospital
-                    GIVEN TTL_MDCR_SPND = 40000
+                    GIVEN ttl_mdcr_spnd = 40000
                     LIMIT 100
             ''').fetchall()
         samples = bdb.execute('''
             SIMULATE n_death_ill FROM hospital
-                GIVEN TTL_MDCR_SPND = 40000
+                GIVEN ttl_mdcr_spnd = 40000
                 LIMIT 100
         ''').fetchall()
         assert len(samples) == 100
