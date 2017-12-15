@@ -63,7 +63,6 @@ class Shell(cmd.Cmd):
         #
         # XXX Does not disable the `quit' command and whatever other
         # bollocks is built-in.
-        self._installcmd('codebook', self.dot_codebook)
         self._installcmd('csv', self.dot_csv)
         self._installcmd('describe', self.dot_describe)
         self._installcmd('guess', self.dot_guess)
@@ -450,29 +449,6 @@ class Shell(cmd.Cmd):
             with open(pathname, 'rU') as f:
                 bayeslite.bayesdb_read_csv(self._bdb, table, f, header=True,
                                            create=True, ifnotexists=False)
-        except IOError as e:
-            self.stdout.write('%s\n' % (e,))
-        except Exception:
-            self.stdout.write(traceback.format_exc())
-
-    def dot_codebook(self, line):
-        '''load codebook for table
-        <table> </path/to/codebook.csv>
-
-        Load a codebook -- short names, descriptions, and value
-        descriptions for the columns of a table -- from a CSV file.
-        '''
-        # XXX Lousy, lousy tokenizer.
-        tokens = line.split()
-        if len(tokens) != 2:
-            self.stdout.write('Usage: .codebook <table> '
-                              '</path/to/codebook.csv>\n')
-            return
-        table = tokens[0]
-        pathname = tokens[1]
-        try:
-            bayeslite.bayesdb_load_codebook_csv_file(self._bdb, table,
-                                                     pathname)
         except IOError as e:
             self.stdout.write('%s\n' % (e,))
         except Exception:

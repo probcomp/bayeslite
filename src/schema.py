@@ -61,16 +61,6 @@ CREATE TABLE bayesdb_column (
     UNIQUE(tabname, name)
 );
 
-CREATE TABLE bayesdb_column_map (
-    tabname     TEXT COLLATE NOCASE NOT NULL,
-    colno       INTEGER NOT NULL,
-    key         TEXT NOT NULL,
-    value       TEXT NOT NULL,
-
-    PRIMARY KEY(tabname, colno, key),
-    FOREIGN KEY(tabname, colno) REFERENCES bayesdb_column(tabname, colno)
-);
-
 CREATE TABLE bayesdb_generator (
     -- We use AUTOINCREMENT so that generator id numbers don't get
     -- reused and are safe to hang onto outside a transaction.

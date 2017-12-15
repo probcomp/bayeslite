@@ -56,7 +56,6 @@ you must use :meth:`~BayesDB.sql_execute` for those.)
 from bayeslite.bayesdb import BayesDB
 from bayeslite.bayesdb import bayesdb_open
 from bayeslite.bayesdb import IBayesDBTracer
-from bayeslite.codebook import bayesdb_load_codebook_csv_file
 from bayeslite.exception import BayesDBException
 from bayeslite.exception import BQLError
 from bayeslite.backend import BayesDB_Backend
@@ -81,7 +80,6 @@ __all__ = [
     'BayesDBException',
     'BayesDBTxnError',
     'bayesdb_deregister_backend',
-    'bayesdb_load_codebook_csv_file',
     'bayesdb_nullify',
     'bayesdb_open',
     'bayesdb_read_csv',

@@ -162,7 +162,6 @@ def test_help_returns_list_of_commands(spawnbdb):
     c = spawnbdb
     c.sendexpectcmd('.help')
     c.expect_lines([
-        ' .codebook    load codebook for table',
         '      .csv    create table from CSV file',
         ' .describe    describe BayesDB entities',
         '    .guess    guess population schema',
@@ -386,7 +385,6 @@ def test_hook(spawnbdb):
     c.expect_prompt()
     c.sendexpectcmd('.help')
     c.expect_lines([
-        ' .codebook    load codebook for table',
         '      .csv    create table from CSV file',
         ' .describe    describe BayesDB entities',
         '    .guess    guess population schema',
