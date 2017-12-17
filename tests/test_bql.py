@@ -2380,23 +2380,9 @@ def test_checkpoint__ci_slow():
         # No checkpoint by seconds.
         with pytest.raises(NotImplementedError):
             bdb.execute('analyze p1_cc for 5 iterations checkpoint 1 second')
-        sql = '''
-            select iterations from bayesdb_generator_model
-                where generator_id = ?
-        '''
-        with pytest.raises(AssertionError):
-            # XXX CGPM_Backend does not update bayesdb_generator_model.
-            assert bdb.execute(sql, (generator_id,)).fetchvalue() == 5
         bdb.execute('drop models from p1_cc')
         bdb.execute('initialize 1 model for p1_cc')
         bdb.execute('analyze p1_cc for 1 iteration checkpoint 2 iterations')
-        sql = '''
-            select iterations from bayesdb_generator_model
-                where generator_id = ?
-        '''
-        with pytest.raises(AssertionError):
-            # XXX CGPM_Backend does not update bayesdb_generator_model.
-            assert bdb.execute(sql, (generator_id,)).fetchvalue() == 1
 
 def test_infer_confidence__ci_slow():
     with test_core.t1() as (bdb, _population_id, _generator_id):

@@ -96,7 +96,6 @@ CREATE TABLE bayesdb_generator (
 CREATE TABLE bayesdb_generator_model (
     generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
     modelno         INTEGER NOT NULL,
-    iterations      INTEGER NOT NULL CHECK (0 <= iterations),
 
     PRIMARY KEY(generator_id, modelno)
 );

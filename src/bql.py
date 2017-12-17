@@ -545,14 +545,13 @@ def execute_phrase(bdb, phrase, bindings=()):
             modelnos = sorted(modelnos)
             insert_model_sql = '''
                 INSERT INTO bayesdb_generator_model
-                    (generator_id, modelno, iterations)
-                    VALUES (:generator_id, :modelno, :iterations)
+                    (generator_id, modelno)
+                    VALUES (:generator_id, :modelno)
             '''
             for modelno in modelnos:
                 bdb.sql_execute(insert_model_sql, {
                     'generator_id': generator_id,
                     'modelno': modelno,
-                    'iterations': 0,
                 })
 
             # Do backend-specific initialization.
