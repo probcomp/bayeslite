@@ -151,7 +151,7 @@ def test_population_invalid_numerical_alterpop_stattype():
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
-                alter population p set stattypes for gender to numerical
+                alter population p set stattype of gender to numerical
             ''')
         bdb.execute('drop population p')
 

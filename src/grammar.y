@@ -89,7 +89,7 @@ alterpop_cmds(one)      ::= alterpop_cmd(cmd).
 alterpop_cmds(many)     ::= alterpop_cmds(cmds) T_COMMA alterpop_cmd(cmd).
 
 alterpop_cmd(stattype)  ::= K_SET K_STATTYPES|K_STATTYPE
-                                K_FOR|K_OF pop_columns(cols)
+                                K_OF pop_columns(cols)
                                 K_TO stattype(stattype).
 
 alterpop_cmd(addvar)    ::= K_ADD K_VARIABLE column_name(col) stattype_opt(st).

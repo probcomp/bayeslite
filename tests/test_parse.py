@@ -984,16 +984,16 @@ def test_create_tab_csv():
 
 def test_alterpop_stattype():
     assert parse_bql_string('alter population p '
-            'set stattypes for a to normal') == \
+            'set stattype of a to normal') == \
         [ast.AlterPop('p',
             [ast.AlterPopStatType(['a'], 'normal')]
         )]
     assert parse_bql_string('alter population g '
-            'set stattypes for a, b to BETA') == \
+            'set stattypes of a, b to BETA') == \
         [ast.AlterPop('g', [ast.AlterPopStatType(['a', 'b'], 'BETA')])]
     assert parse_bql_string('alter population p '
-            'set stattypes for a, b to beta, '
-            'set stattypes for c to nominal') == \
+            'set stattypes of a, b to beta, '
+            'set stattype of c to nominal') == \
         [ast.AlterPop('p', [
             ast.AlterPopStatType(['a', 'b'], 'beta'),
             ast.AlterPopStatType(['c'], 'nominal'),]
@@ -1012,7 +1012,7 @@ def test_alterpop_addvar():
         )]
     assert parse_bql_string('alter population p '
             'add variable a, '
-            'set stattypes for a to nominal, '
+            'set stattype of a to nominal, '
             'add variable b numerical') == \
         [ast.AlterPop('p', [
             ast.AlterPopAddVar('a', None),
