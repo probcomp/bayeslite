@@ -61,26 +61,6 @@ CREATE TABLE bayesdb_column (
     UNIQUE(tabname, name)
 );
 
-CREATE TABLE bayesdb_generator (
-    -- We use AUTOINCREMENT so that generator id numbers don't get
-    -- reused and are safe to hang onto outside a transaction.
-    id              INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
-                        CHECK (0 < id),
-    name            TEXT COLLATE NOCASE NOT NULL UNIQUE,
-    tabname         TEXT COLLATE NOCASE NOT NULL,
-                        -- REFERENCES sqlite_master(name)
-    backend         TEXT COLLATE NOCASE REFERENCES bayesdb_backend(name),
-    population_id   INTEGER REFERENCES bayesdb_population(id)
-);
-
-CREATE TABLE bayesdb_generator_model (
-    generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
-    modelno         INTEGER NOT NULL,
-    iterations      INTEGER NOT NULL CHECK (0 <= iterations),
-
-    PRIMARY KEY(generator_id, modelno)
-);
-
 CREATE TABLE bayesdb_population (
     id              INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
                         CHECK (0 < id),
@@ -101,6 +81,26 @@ CREATE TABLE bayesdb_variable (
     UNIQUE(population_id, name),
     UNIQUE(generator_id, colno),
     UNIQUE(generator_id, name)
+);
+
+CREATE TABLE bayesdb_generator (
+    -- We use AUTOINCREMENT so that generator id numbers don't get
+    -- reused and are safe to hang onto outside a transaction.
+    id              INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
+                        CHECK (0 < id),
+    name            TEXT COLLATE NOCASE NOT NULL UNIQUE,
+    tabname         TEXT COLLATE NOCASE NOT NULL,
+                        -- REFERENCES sqlite_master(name)
+    backend         TEXT COLLATE NOCASE REFERENCES bayesdb_backend(name),
+    population_id   INTEGER REFERENCES bayesdb_population(id)
+);
+
+CREATE TABLE bayesdb_generator_model (
+    generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    modelno         INTEGER NOT NULL,
+    iterations      INTEGER NOT NULL CHECK (0 <= iterations),
+
+    PRIMARY KEY(generator_id, modelno)
 );
 '''
 
