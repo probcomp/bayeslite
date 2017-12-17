@@ -14,8 +14,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import itertools
 import contextlib
+import itertools
 import pytest
 
 import bayeslite
@@ -738,74 +738,101 @@ def test_trivial_precedence_error():
 def test_trivial_commands():
     assert parse_bql_string('''
         create population satellites for satellites_ucs (
-            MODEL country_of_operator, orbit_type AS categorical;
-            MODEL launch_mass AS numerical;
-            MODEL perigee AS numerical;
-            MODEL apogee, period AS numerical
+            guess(*);
         )
     ''') == \
         [ast.CreatePop(False, 'satellites', 'satellites_ucs', [
+            ast.PopGuessVars('*'),
+        ])]
+    assert parse_bql_string('''
+        create population satellites for satellites_ucs (
+            guess stattypes of launch_site, "contracto=r";
+            set stattype of country_of_operator, orbit_type to nominal;
+            set stattype of launch_mass to numerical;
+            set stattype of perigee to numerical;
+            set stattype of apogee, period to numerical;
+        )
+    ''') == \
+        [ast.CreatePop(False, 'satellites', 'satellites_ucs', [
+            ast.PopGuessVars(['launch_site', 'contracto=r']),
             ast.PopModelVars(
-                ['country_of_operator', 'orbit_type'], 'categorical'),
+                ['country_of_operator', 'orbit_type'], 'nominal'),
             ast.PopModelVars(['launch_mass'], 'numerical'),
             ast.PopModelVars(['perigee'], 'numerical'),
             ast.PopModelVars(['apogee', 'period'], 'numerical'),
         ])]
     assert parse_bql_string('''
         create population satellites for satellites_ucs (
-            MODEL country_of_operator, orbit_type AS categorical;;
-            MODEL apogee, period AS numerical;;
+            set stattype of country_of_operator, orbit_type to nominal;;
+            set stattype of apogee, period to numerical;;
         )
     ''') == \
         [ast.CreatePop(False, 'satellites', 'satellites_ucs', [
             ast.PopModelVars(
-                ['country_of_operator', 'orbit_type'], 'categorical'),
+                ['country_of_operator', 'orbit_type'], 'nominal'),
             ast.PopModelVars(['apogee', 'period'], 'numerical'),
+        ])]
+    assert parse_bql_string('''
+        create population satellites for satellites_ucs (
+            country_of_operator nominal;
+            orbit_type          nominal;
+            launch_mass         numerical;
+            perigee             numerical;
+            apogee              numerical;
+            period              numerical;
+        )
+    ''') == \
+        [ast.CreatePop(False, 'satellites', 'satellites_ucs', [
+            ast.PopModelVars(['country_of_operator'], 'nominal'),
+            ast.PopModelVars(['orbit_type'], 'nominal'),
+            ast.PopModelVars(['launch_mass'], 'numerical'),
+            ast.PopModelVars(['perigee'], 'numerical'),
+            ast.PopModelVars(['apogee'], 'numerical'),
+            ast.PopModelVars(['period'], 'numerical'),
         ])]
     assert parse_bql_string('drop population satellites') == \
         [ast.DropPop(False, 'satellites')]
-    assert parse_bql_string('create generator t_cc for t using crosscat'
-            '(xyz numerical, pqr categorical, lmn cyclic)') == \
-        [ast.CreateGen('t_cc', False, 't', None, 'crosscat', [
+    assert parse_bql_string('create generator t_cc for t using cgpm'
+            '(xyz numerical, pqr nominal, lmn cyclic)') == \
+        [ast.CreateGen('t_cc', False, 't', 'cgpm', [
             ['xyz', 'numerical'],
-            ['pqr', 'categorical'],
+            ['pqr', 'nominal'],
             ['lmn', 'cyclic'],
         ])]
-    assert parse_bql_string('create generator t_cc for t with baseline crosscat'
-            '(xyz numerical, pqr categorical, lmn cyclic)') == \
+    assert parse_bql_string('create generator t_cc for t'
+            '(xyz numerical, pqr nominal, lmn cyclic)') == \
         [ast.CreateGen(
             't_cc', False, 't',
-            ast.Baseline('crosscat', []),
-            None,       # Defaults to cgpm.
+            None,       # Backend defaults to cgpm.
             [
                 ['xyz', 'numerical'],
-                ['pqr', 'categorical'],
+                ['pqr', 'nominal'],
                 ['lmn', 'cyclic'],
         ])]
     assert parse_bql_string('create generator t_cc if not exists'
-            ' for t using crosscat'
-            '(xyz numerical, pqr categorical, lmn cyclic)') == \
-        [ast.CreateGen('t_cc', True, 't', None, 'crosscat', [
+            ' for t using cgpm'
+            '(xyz numerical, pqr nominal, lmn cyclic)') == \
+        [ast.CreateGen('t_cc', True, 't', 'cgpm', [
             ['xyz', 'numerical'],
-            ['pqr', 'categorical'],
+            ['pqr', 'nominal'],
             ['lmn', 'cyclic'],
         ])]
     assert parse_bql_string('create generator if not exists t_cc'
-            ' for t using crosscat'
-            '(xyz numerical, pqr categorical, lmn cyclic)') == \
-        [ast.CreateGen('t_cc', True, 't', None, 'crosscat', [
+            ' for t using cgpm'
+            '(xyz numerical, pqr nominal, lmn cyclic)') == \
+        [ast.CreateGen('t_cc', True, 't', 'cgpm', [
             ['xyz', 'numerical'],
-            ['pqr', 'categorical'],
+            ['pqr', 'nominal'],
             ['lmn', 'cyclic'],
         ])]
     # XXX Schema of [[]] instead of [] is kinda wacky.  Fix?  (But
     # make sure the empty-parens and no-parens cases are equivalent.)
     assert parse_bql_string('create generator t_cc'
-            ' for t using crosscat()') == \
-        [ast.CreateGen('t_cc', False, 't', None, 'crosscat', [[]])]
+            ' for t using cgpm()') == \
+        [ast.CreateGen('t_cc', False, 't', 'cgpm', [[]])]
     assert parse_bql_string('create generator t_cc'
-            ' for t using crosscat') == \
-        [ast.CreateGen('t_cc', False, 't', None, 'crosscat', [[]])]
+            ' for t using cgpm') == \
+        [ast.CreateGen('t_cc', False, 't', 'cgpm', [[]])]
     assert parse_bql_string('initialize 1 model for t;') == \
         [ast.InitModels(False, 't', 1)]
     assert parse_bql_string('initialize 1 model if not exists for t;') == \
@@ -827,69 +854,69 @@ def test_trivial_commands():
 
 def test_analyze():
     assert parse_bql_string('analyze t for 1 iteration;') == \
-        [ast.AnalyzeModels('t', None, 1, None, None, None, False, None)]
+        [ast.AnalyzeModels('t', None, 1, None, None, None, None)]
     assert parse_bql_string('analyze t for 7 seconds or 1 iteration;') == \
-        [ast.AnalyzeModels('t', None, 1, 7, None, None, False, None)]
-    assert parse_bql_string('analyze t for 1 iteration wait;') == \
-        [ast.AnalyzeModels('t', None, 1, None, None, None, True, None)]
+        [ast.AnalyzeModels('t', None, 1, 7, None, None, None)]
+    assert parse_bql_string('analyze t for 1 iteration;') == \
+        [ast.AnalyzeModels('t', None, 1, None, None, None, None)]
     assert parse_bql_string('analyze t for 1 minute;') == \
-        [ast.AnalyzeModels('t', None, None, 60, None, None, False, None)]
-    assert parse_bql_string('analyze t for 1 minute wait;') == \
-        [ast.AnalyzeModels('t', None, None, 60, None, None, True, None)]
+        [ast.AnalyzeModels('t', None, None, 60, None, None, None)]
+    assert parse_bql_string('analyze t for 1 minute;') == \
+        [ast.AnalyzeModels('t', None, None, 60, None, None, None)]
     assert parse_bql_string('analyze t for 2 minutes;') == \
-        [ast.AnalyzeModels('t', None, None, 120, None, None, False, None)]
+        [ast.AnalyzeModels('t', None, None, 120, None, None, None)]
     assert parse_bql_string('analyze t for 100 iterations or 2 minutes;') == \
-        [ast.AnalyzeModels('t', None, 100, 120, None, None, False, None)]
-    assert parse_bql_string('analyze t for 2 minutes wait;') == \
-        [ast.AnalyzeModels('t', None, None, 120, None, None, True, None)]
+        [ast.AnalyzeModels('t', None, 100, 120, None, None, None)]
+    assert parse_bql_string('analyze t for 2 minutes;') == \
+        [ast.AnalyzeModels('t', None, None, 120, None, None, None)]
     assert parse_bql_string('analyze t for 1 second;') == \
-        [ast.AnalyzeModels('t', None, None, 1, None, None, False, None)]
-    assert parse_bql_string('analyze t for 1 second wait;') == \
-        [ast.AnalyzeModels('t', None, None, 1, None, None, True, None)]
+        [ast.AnalyzeModels('t', None, None, 1, None, None, None)]
+    assert parse_bql_string('analyze t for 1 second;') == \
+        [ast.AnalyzeModels('t', None, None, 1, None, None, None)]
     assert parse_bql_string('analyze t for 2 seconds;') == \
-        [ast.AnalyzeModels('t', None, None, 2, None, None, False, None)]
-    assert parse_bql_string('analyze t for 2 seconds wait;') == \
-        [ast.AnalyzeModels('t', None, None, 2, None, None, True, None)]
+        [ast.AnalyzeModels('t', None, None, 2, None, None, None)]
+    assert parse_bql_string('analyze t for 2 seconds;') == \
+        [ast.AnalyzeModels('t', None, None, 2, None, None, None)]
     assert parse_bql_string('analyze t model 1 for 1 iteration;') == \
-        [ast.AnalyzeModels('t', [1], 1, None, None, None, False, None)]
+        [ast.AnalyzeModels('t', [1], 1, None, None, None, None)]
     assert parse_bql_string('analyze t models 1,2,3 for 1 iteration;') == \
-        [ast.AnalyzeModels('t', [1,2,3], 1, None, None, None, False, None)]
+        [ast.AnalyzeModels('t', [1,2,3], 1, None, None, None, None)]
     assert parse_bql_string('analyze t models 1-3,5 for 1 iteration;') == \
-        [ast.AnalyzeModels('t', [1,2,3,5], 1, None, None, None, False, None)]
+        [ast.AnalyzeModels('t', [1,2,3,5], 1, None, None, None, None)]
     assert parse_bql_string('analyze t for 10 iterations'
             ' checkpoint 3 iterations') == \
-        [ast.AnalyzeModels('t', None, 10, None, 3, None, False, None)]
-    assert parse_bql_string('analyze t for 10 iterations wait'
+        [ast.AnalyzeModels('t', None, 10, None, 3, None, None)]
+    assert parse_bql_string('analyze t for 10 iterations'
             ' (mh(default, one, 10))') == \
-        [ast.AnalyzeModels('t', None, 10, None, None, None, True, [
+        [ast.AnalyzeModels('t', None, 10, None, None, None, [
             'mh', '(', 'default', ',', 'one', ',', 10, ')'
         ])]
     assert parse_bql_string('analyze t for 10 seconds'
             ' checkpoint 3 seconds') == \
-        [ast.AnalyzeModels('t', None, None, 10, None, 3, False, None)]
+        [ast.AnalyzeModels('t', None, None, 10, None, 3, None)]
     assert parse_bql_string('analyze t for 1 minute or 10 minutes'
             ' checkpoint 3 seconds') == \
-        [ast.AnalyzeModels('t', None, None, 60, None, 3, False, None)]
+        [ast.AnalyzeModels('t', None, None, 60, None, 3, None)]
     assert parse_bql_string('analyze t for 100 iterations or 10 iterations'
             ' checkpoint 3 seconds') == \
-        [ast.AnalyzeModels('t', None, 10, None, None, 3, False, None)]
+        [ast.AnalyzeModels('t', None, 10, None, None, 3, None)]
 
 def test_altergen():
-    assert parse_bql_string('alter analysis schema g '
+    assert parse_bql_string('alter generator g '
             'rename to rumba') == \
         [ast.AlterGen(
             generator='g',
             modelnos=None,
             commands=[ast.AlterGenRenameGen('rumba')]
         )]
-    assert parse_bql_string('alter analysis schema g models (1, 2, 4) '
+    assert parse_bql_string('alter generator g models (1, 2, 4) '
             'rename to rumba') == \
         [ast.AlterGen(
             generator='g',
             modelnos=[1,2,4],
             commands=[ast.AlterGenRenameGen('rumba')]
         )]
-    assert parse_bql_string('alter analysis schema g '
+    assert parse_bql_string('alter generator g '
             'rename to rumba, generic cmd (a,c), generic cmd2') == \
         [ast.AlterGen(
             generator='g',
@@ -900,7 +927,7 @@ def test_altergen():
                 ast.AlterGenGeneric(['generic', 'cmd2']),
             ],
         )]
-    assert parse_bql_string('alter analysis schema g models (1-4) '
+    assert parse_bql_string('alter generator g models (1-4) '
             'set variable clustering of (*) to independent, '
             'set variable clustering of (*) to dependent, '
             'set variable cluster of bar to cluster of baz, '
@@ -957,16 +984,16 @@ def test_create_tab_csv():
 
 def test_alterpop_stattype():
     assert parse_bql_string('alter population p '
-            'set stattypes for a to normal') == \
+            'set stattype of a to normal') == \
         [ast.AlterPop('p',
             [ast.AlterPopStatType(['a'], 'normal')]
         )]
     assert parse_bql_string('alter population g '
-            'set stattypes for a, b to BETA') == \
+            'set stattypes of a, b to BETA') == \
         [ast.AlterPop('g', [ast.AlterPopStatType(['a', 'b'], 'BETA')])]
     assert parse_bql_string('alter population p '
-            'set stattypes for a, b to beta, '
-            'set stattypes for c to nominal') == \
+            'set stattypes of a, b to beta, '
+            'set stattype of c to nominal') == \
         [ast.AlterPop('p', [
             ast.AlterPopStatType(['a', 'b'], 'beta'),
             ast.AlterPopStatType(['c'], 'nominal'),]
@@ -985,7 +1012,7 @@ def test_alterpop_addvar():
         )]
     assert parse_bql_string('alter population p '
             'add variable a, '
-            'set stattypes for a to nominal, '
+            'set stattype of a to nominal, '
             'add variable b numerical') == \
         [ast.AlterPop('p', [
             ast.AlterPopAddVar('a', None),
@@ -1376,7 +1403,7 @@ def test_regress():
                     expression=ast.ExpCol(table=None, column='y'), name=None),],
             nsamp=ast.ExpLit(value=ast.LitInt(value=10)),
             population='pop',
-            metamodel=None,
+            generator=None,
             modelnos=None,
     )]
     assert parse_bql_string('''
@@ -1392,7 +1419,7 @@ def test_regress():
                     expression=ast.ExpCol(table=None, column='x'), name=None)],
             nsamp=ast.ExpLit(value=ast.LitInt(value=10)),
             population='pop',
-            metamodel='m',
+            generator='m',
             modelnos=[1,7],
     )]
     assert parse_bql_string('regress t given (*) by pop;') == [
@@ -1401,7 +1428,7 @@ def test_regress():
             givens=[ast.SelColAll(None)],
             nsamp=None,
             population='pop',
-            metamodel=None,
+            generator=None,
             modelnos=None,
     )]
     # Disallow this query in the compiler, mixing * with u.
@@ -1417,7 +1444,7 @@ def test_regress():
                     expression=ast.ExpCol(table=None, column='u'), name=None)],
             nsamp=ast.ExpLit(value=ast.LitInt(value=10)),
             population='pop',
-            metamodel='m',
+            generator='m',
             modelnos=[1,2,3],
     )]
     # Disallow this query in the compiler, mixing subquery.
@@ -1449,7 +1476,7 @@ def test_regress():
             ],
             nsamp=ast.ExpLit(value=ast.LitInt(value=10)),
             population='pop',
-            metamodel='f',
+            generator='f',
             modelnos=None,
     )]
 

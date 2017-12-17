@@ -45,7 +45,7 @@ def relerr(expected, actual):
     return abs((actual - expected)/expected)
 
 def abserr(expected, actual):
-    """Relative error between `expected` and `actual`: ``abs((a - e)/e)``."""
+    """Relative error between `expected` and `actual`: ``abs((a - e))``."""
     return abs((actual - expected))
 
 def ieee_exp(x):

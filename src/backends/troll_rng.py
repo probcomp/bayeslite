@@ -20,16 +20,16 @@ Reference: http://dilbert.com/strip/2001-10-25
 
 This is an example of the simplest possible population model.
 
-This module implements the :class:`bayeslite.IBayesDBMetamodel`
+This module implements the :class:`bayeslite.BayesDB_Backend`
 interface for the Troll Model.
 """
 
-import bayeslite.metamodel as metamodel
+import bayeslite.backend
 
-class TrollMetamodel(metamodel.IBayesDBMetamodel):
-    """Troll metamodel for BayesDB.
+class TrollBackend(bayeslite.backend.BayesDB_Backend):
+    """Troll backend for BayesDB.
 
-    The metamodel is named ``troll_rng`` in BQL::
+    The backend is named ``troll_rng`` in BQL::
 
         CREATE GENERATOR t_troll FOR t USING troll_rng(..)
     """
@@ -38,7 +38,7 @@ class TrollMetamodel(metamodel.IBayesDBMetamodel):
     def name(self): return 'troll_rng'
     def register(self, bdb):
         bdb.sql_execute('''
-            INSERT INTO bayesdb_metamodel (name, version)
+            INSERT INTO bayesdb_backend (name, version)
                 VALUES (?, 1)
         ''', (self.name(),))
     def create_generator(self, bdb, generator_id, schema, **kwargs):

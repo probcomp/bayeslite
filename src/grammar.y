@@ -89,7 +89,7 @@ alterpop_cmds(one)      ::= alterpop_cmd(cmd).
 alterpop_cmds(many)     ::= alterpop_cmds(cmds) T_COMMA alterpop_cmd(cmd).
 
 alterpop_cmd(stattype)  ::= K_SET K_STATTYPES|K_STATTYPE
-                                K_FOR|K_OF pop_columns(cols)
+                                K_OF pop_columns(cols)
                                 K_TO stattype(stattype).
 
 alterpop_cmd(addvar)    ::= K_ADD K_VARIABLE column_name(col) stattype_opt(st).
@@ -99,9 +99,11 @@ pop_schema(many)        ::= pop_schema(schema) T_SEMI pop_clause(cl).
 
 pop_clause(empty)       ::= .
 pop_clause(column)      ::= column_name(col) stattype(st).
-pop_clause(model)       ::= K_MODEL pop_columns(cols) K_AS stattype(st).
+pop_clause(stattype)    ::= K_SET K_STATTYPES|K_STATTYPE
+                                K_OF pop_columns(cols)
+                                K_TO stattype(st).
 pop_clause(ignore)      ::= K_IGNORE pop_columns(cols).
-pop_clause(guess)       ::= K_GUESS stattypes_for_opt pop_columns_guess(cols).
+pop_clause(guess)       ::= K_GUESS stattypes_of_opt pop_columns_guess(cols).
 
 stattype_opt(none)      ::= .
 stattype_opt(one)       ::= stattype(st).
@@ -114,22 +116,20 @@ pop_columns_guess(list) ::= pop_columns(cols).
 pop_columns(one)   ::= column_name(c).
 pop_columns(many)  ::= pop_columns(cols) T_COMMA column_name(c).
 
-stattypes_for_opt       ::= .
-stattypes_for_opt       ::= K_STATTYPES K_FOR.
-
+stattypes_of_opt        ::= .
+stattypes_of_opt        ::= K_STATTYPE|K_STATTYPES K_OF.
 
 /* XXX Temporary generators?  */
-command(creategen)      ::= K_CREATE generator_token
+command(creategen)      ::= K_CREATE K_GENERATOR
                                 ifnotexists(ifnotexists0)
                                 generator_name(name)
                                 ifnotexists(ifnotexists1)
                                 K_FOR population_name(pop)
-                                baseline_opt(baseline)
-                                runtime_name_opt(metamodel)
+                                backend_name_opt(backend)
                                 generator_schema_opt(schema).
-command(dropgen)        ::= K_DROP generator_token ifexists(ifexists)
+command(dropgen)        ::= K_DROP K_GENERATOR ifexists(ifexists)
                                 generator_name(name).
-command(altergen)       ::= K_ALTER generator_token
+command(altergen)       ::= K_ALTER K_GENERATOR
                                 generator_name(generator)
                                 anmodelset_matched_opt(models)
                                 altergen_cmds(cmds).
@@ -140,8 +140,8 @@ altergen_cmds(many)     ::= altergen_cmds(cmds) T_COMMA altergen_cmd(cmd).
 altergen_cmd(renamegen) ::= K_RENAME K_TO generator_name(name).
 altergen_cmd(generic)   ::= generator_schemum(s).
 
-runtime_name_opt(none)          ::= .
-runtime_name_opt(one)           ::= K_USING metamodel_name(metamodel).
+backend_name_opt(none)          ::= .
+backend_name_opt(one)           ::= K_USING backend_name(backend).
 
 generator_schema_opt(none)      ::= .
 generator_schema_opt(some)      ::= T_LROUND|T_LCURLY generator_schema(s)
@@ -165,7 +165,6 @@ command(init_models)    ::= K_INITIALIZE L_INTEGER(n) model_token
 command(analyze_models) ::= K_ANALYZE generator_name(generator)
                                 anmodelset_opt(models) anlimit(anlimit)
                                 anckpt_opt(anckpt)
-                                wait_opt(wait)
                                 analysis_program_opt(program).
 command(drop_models)    ::= K_DROP model_token modelset_opt(models)
                                 K_FROM generator_name(generator).
@@ -183,20 +182,6 @@ anmodelset_opt(some)    ::= model_token modelset(m).
 anmodelset_matched_opt(none)    ::= .
 anmodelset_matched_opt(some)    ::= model_token T_LROUND modelset(m) T_RROUND.
 
-/* XXX Hackery for WITH BASELINE  */
-baseline_opt(none)      ::= .
-baseline_opt(some)      ::= K_WITH K_BASELINE baseline_name(baseline)
-                                param_opt(params).
-
-baseline_name(bl)       ::= L_NAME(name).
-
-param_opt(none)         ::= .
-param_opt(some)         ::= T_LSQUARE params(ps) T_RSQUARE.
-
-params(one)             ::= param(param).
-params(many)            ::= params(params) T_COMMA param(param).
-
-param(p)                ::= L_NAME(p) T_EQ literal(v).
 /* XXX Temporary generators?  */
 
 modelset_opt(none)      ::= .
@@ -218,9 +203,6 @@ anduration(iterations)  ::= L_INTEGER(n) K_ITERATION|K_ITERATIONS.
 anduration(minutes)     ::= L_INTEGER(n) K_MINUTE|K_MINUTES.
 anduration(seconds)     ::= L_INTEGER(n) K_SECOND|K_SECONDS.
 
-wait_opt(none)          ::= .
-wait_opt(some)          ::= K_WAIT.
-
 analysis_program_opt(none)      ::= .
 analysis_program_opt(some)      ::= T_LROUND analysis_program(p) T_RROUND.
 analysis_program(empty)         ::= .
@@ -236,7 +218,7 @@ command(regress)        ::= K_REGRESS column_name(target)
                                 K_GIVEN T_LROUND select_columns(givens) T_RROUND
                                 nsamples_opt(nsamp)
                                 K_BY|K_WITHIN population_name(pop)
-                                modelledby_opt(metamodel)
+                                modeledby_opt(generator)
                                 usingmodel_opt(modelnos).
 
 /*
@@ -267,7 +249,7 @@ select(s)               ::= K_SELECT select_quant(quant) select_columns(cols)
 
 estimate(e)             ::= K_ESTIMATE select_quant(quant) select_columns(cols)
                                 from_est(tabs)
-                                modelledby_opt(generator)
+                                modeledby_opt(generator)
                                 usingmodel_opt(modelnos)
                                 where(cond)
                                 group_by(grouping)
@@ -280,20 +262,20 @@ estpaircol(e)           ::= K_ESTIMATE K_PAIRWISE error T_SEMI.
 
 estby(e)                ::= K_ESTIMATE select_quant(quant) select_columns(cols)
                                 K_BY|K_WITHIN population_name(population)
-                                modelledby_opt(generator)
+                                modeledby_opt(generator)
                                 usingmodel_opt(modelnos).
 
 infer(auto)             ::= K_INFER infer_auto_columns(cols)
                                 withconf_opt(conf)
                                 nsamples_opt(nsamp)
                                 K_FROM population_name(population)
-                                modelledby_opt(generator)
+                                modeledby_opt(generator)
                                 usingmodel_opt(modelnos)
                                 where(cond) group_by(grouping) order_by(ord)
                                 limit_opt(lim).
 infer(explicit)         ::= K_INFER K_EXPLICIT infer_exp_columns(cols)
                                 K_FROM population_name(population)
-                                modelledby_opt(generator)
+                                modeledby_opt(generator)
                                 usingmodel_opt(modelnos)
                                 where(cond) group_by(grouping) order_by(ord)
                                 limit_opt(lim).
@@ -324,14 +306,14 @@ conf_opt(some)  ::= K_CONFIDENCE column_name(confname).
 
 simulate(s)             ::= K_SIMULATE select_columns(cols)
                                 K_FROM population_name(population)
-                                modelledby_opt(generator)
+                                modeledby_opt(generator)
                                 usingmodel_opt(modelnos)
                                 given_opt(constraints)
                                 limit(lim)
                                 accuracy_opt(acc).
 simulate(nolimit)       ::= K_SIMULATE select_columns(cols)
                                 K_FROM population_name(population)
-                                modelledby_opt(generator)
+                                modeledby_opt(generator)
                                 usingmodel_opt(modelnos)
                                 given_opt(constraints).
 
@@ -349,7 +331,7 @@ constraints_list(some)  ::= constraints_list(css) T_COMMA
 simulate(models)        ::= K_SIMULATE select_columns(cols)
                                 K_FROM K_MODELS K_OF
                                         population_name(population)
-                                modelledby_opt(generator).
+                                modeledby_opt(generator).
 
 select_quant(distinct)  ::= K_DISTINCT.
 select_quant(all)       ::= K_ALL.
@@ -376,8 +358,8 @@ from_est(col)           ::= K_FROM K_COLUMNS|K_VARIABLES
 from_est(paircol)       ::= K_FROM K_PAIRWISE K_COLUMNS|K_VARIABLES K_OF
                                 population_name(name) for(subcols).
 
-modelledby_opt(none)    ::= .
-modelledby_opt(some)    ::= K_MODELED|K_MODELLED K_BY generator_name(gen).
+modeledby_opt(none)    ::= .
+modeledby_opt(some)    ::= K_MODELED|K_MODELLED K_BY generator_name(gen).
 
 /*
  * XXX This mechanism is completely wrong.  The set of models should
@@ -402,19 +384,12 @@ where(conditional)      ::= K_WHERE expression(condition).
 /* XXX Allow database-qualified names.  */
 column_name(cn)         ::= L_NAME(name).
 generator_name(unqualified) ::= L_NAME(name).
-metamodel_name(mn)      ::= L_NAME(name).
+backend_name(bn)        ::= L_NAME(name).
 population_name(pn)     ::= L_NAME(name).
 table_name(unqualified) ::= L_NAME(name).
 
-/* XXX Several tokens for the same concept. */
-generator_token         ::= K_GENERATOR.
-generator_token         ::= K_METAMODEL.
-generator_token         ::= K_ANALYSIS K_SCHEMA.
-
 model_token             ::= K_MODEL.
 model_token             ::= K_MODELS.
-model_token             ::= K_ANALYSIS.
-model_token             ::= K_ANALYSES.
 
 group_by(none)          ::= .
 group_by(some)          ::= K_GROUP K_BY expressions(keys).
@@ -782,13 +757,10 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_ADD
         K_ALL
         K_ALTER
-        K_ANALYSIS
-        K_ANALYSES
         K_ANALYZE
         K_AND
         K_AS
         K_ASC
-        K_BASELINE
         K_BEGIN
         K_BETWEEN
         K_BTABLE
@@ -841,7 +813,6 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_LIKE
         K_LIMIT
         K_MATCH
-        K_METAMODEL
         K_MINUTE
         K_MINUTES
         K_MODEL
@@ -891,7 +862,6 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_VALUES
         K_VARIABLE
         K_VARIABLES
-        K_WAIT
         /* K_WHEN */
         K_WHERE
         K_WITH

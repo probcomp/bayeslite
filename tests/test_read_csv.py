@@ -32,7 +32,7 @@ csv_data = '''1,2,3,foo,bar,nan,"",quagga
 csv_hdrdata = csv_hdr + csv_data
 
 def test_read_csv():
-    with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
+    with bayeslite.bayesdb_open(builtin_backends=False) as bdb:
 
         f = StringIO.StringIO(csv_data)
         with pytest.raises(ValueError):

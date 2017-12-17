@@ -21,9 +21,9 @@ import pytest
 import bayeslite.core as core
 
 from bayeslite import bayesdb_open
-from bayeslite import bayesdb_register_metamodel
+from bayeslite import bayesdb_register_backend
 from bayeslite.exception import BQLError
-from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
+from bayeslite.backends.cgpm_backend import CGPM_Backend
 
 # ------------------------------------------------------------------------------
 # XXX Kepler source code.
@@ -109,7 +109,7 @@ def test_cgpm_extravaganza__ci_slow():
     except ImportError:
         pytest.skip('no sklearn or venturescript')
         return
-    with bayesdb_open(':memory:', builtin_metamodels=False) as bdb:
+    with bayesdb_open(':memory:', builtin_backends=False) as bdb:
         # XXX Use the real satellites data instead of this bogosity?
         bdb.sql_execute('''
             CREATE TABLE satellites_ucs (
@@ -144,8 +144,8 @@ def test_cgpm_extravaganza__ci_slow():
             CREATE POPULATION satellites FOR satellites_ucs (
                 name IGNORE;
                 apogee NUMERICAL;
-                class_of_orbit CATEGORICAL;
-                country_of_operator CATEGORICAL;
+                class_of_orbit NOMINAL;
+                country_of_operator NOMINAL;
                 launch_mass NUMERICAL;
                 perigee NUMERICAL;
                 period NUMERICAL
@@ -161,30 +161,30 @@ def test_cgpm_extravaganza__ci_slow():
             'linreg': LinearRegression,
             'forest': RandomForest,
         }
-        cgpmt = CGPM_Metamodel(cgpm_registry)
-        bayesdb_register_metamodel(bdb, cgpmt)
+        cgpmt = CGPM_Backend(cgpm_registry)
+        bayesdb_register_backend(bdb, cgpmt)
 
         with pytest.raises(BQLError):
             bdb.execute('''
-                CREATE METAMODEL g0 FOR satellites USING cgpm (
+                CREATE GENERATOR g0 FOR satellites USING cgpm (
                     SET CATEGORY MODEL FOR apoge TO NORMAL
                 )
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
-                CREATE METAMODEL g0 FOR satellites USING cgpm (
+                CREATE GENERATOR g0 FOR satellites USING cgpm (
                     OVERRIDE MODEL FOR perigee GIVEN apoge USING linreg
                 )
             ''')
         with pytest.raises(BQLError):
             bdb.execute('''
-                CREATE METAMODEL g0 FOR satellites USING cgpm (
+                CREATE GENERATOR g0 FOR satellites USING cgpm (
                     LATENT apogee NUMERICAL
                 )
             ''')
 
         bdb.execute('''
-            CREATE METAMODEL g0 FOR satellites USING cgpm (
+            CREATE GENERATOR g0 FOR satellites USING cgpm (
                 SET CATEGORY MODEL FOR apogee TO NORMAL;
 
                 LATENT kepler_cluster_id NUMERICAL;
@@ -208,59 +208,56 @@ def test_cgpm_extravaganza__ci_slow():
 
         population_id = core.bayesdb_get_population(bdb, 'satellites')
         generator_id = core.bayesdb_get_generator(bdb, population_id, 'g0')
-        assert core.bayesdb_generator_column_numbers(bdb, generator_id) == \
-            [-2, -1, 1, 2, 3, 4, 5, 6]
-        assert core.bayesdb_variable_numbers(bdb, population_id, None) == \
-            [1, 2, 3, 4, 5, 6]
-        assert core.bayesdb_variable_numbers(
-                bdb, population_id, generator_id) == \
-            [-2, -1, 1, 2, 3, 4, 5, 6]
+        assert core.bayesdb_variable_numbers(bdb, population_id, None) \
+            == [1, 2, 3, 4, 5, 6]
+        assert core.bayesdb_variable_numbers(bdb, population_id, generator_id) \
+            == [-2, -1, 1, 2, 3, 4, 5, 6]
 
         # -- MODEL country_of_operator GIVEN class_of_orbit USING forest;
         bdb.execute('INITIALIZE 1 MODELS FOR g0')
-        bdb.execute('ANALYZE g0 FOR 1 iteration WAIT (;)')
+        bdb.execute('ANALYZE g0 FOR 1 iteration (;)')
         bdb.execute('''
-            ANALYZE g0 FOR 1 iteration WAIT (VARIABLES kepler_cluster_id)
+            ANALYZE g0 FOR 1 iteration (VARIABLES kepler_cluster_id)
         ''')
         bdb.execute('''
-            ANALYZE g0 FOR 1 iteration WAIT (
+            ANALYZE g0 FOR 1 iteration (
                 SKIP kepler_cluster_id, kepler_noise, period;
             )
         ''')
         # OPTIMIZED uses the lovecat backend.
-        bdb.execute('ANALYZE g0 FOR 20 iteration WAIT (OPTIMIZED)')
+        bdb.execute('ANALYZE g0 FOR 20 iteration (OPTIMIZED)')
         with pytest.raises(Exception):
             # Disallow both SKIP and VARIABLES clauses.
             #
             # XXX Catch a more specific exception.
             bdb.execute('''
-                ANALYZE g0 FOR 1 ITERATION WAIT (
+                ANALYZE g0 FOR 1 ITERATION (
                     SKIP kepler_cluster_id;
                     VARIABLES apogee, perigee;
                 )
             ''')
         bdb.execute('''
-            ANALYZE g0 FOR 1 iteration WAIT (
+            ANALYZE g0 FOR 1 iteration (
                 SKIP kepler_cluster_id, kepler_noise, period;
             )
         ''')
-        bdb.execute('ANALYZE g0 FOR 1 ITERATION WAIT')
+        bdb.execute('ANALYZE g0 FOR 1 ITERATION')
 
         bdb.execute('''
             ESTIMATE DEPENDENCE PROBABILITY
                 OF kepler_cluster_id WITH period WITHIN satellites
-                MODELLED BY g0
+                MODELED BY g0
         ''').fetchall()
         bdb.execute('''
             ESTIMATE PREDICTIVE PROBABILITY OF apogee FROM satellites LIMIT 1
         ''').fetchall()
         bdb.execute('''
             ESTIMATE PREDICTIVE PROBABILITY OF kepler_cluster_id
-                FROM satellites MODELLED BY g0 LIMIT 1
+                FROM satellites MODELED BY g0 LIMIT 1
         ''').fetchall()
         bdb.execute('''
             ESTIMATE PREDICTIVE PROBABILITY OF kepler_noise
-                FROM satellites MODELLED BY g0 LIMIT 1
+                FROM satellites MODELED BY g0 LIMIT 1
         ''').fetchall()
         bdb.execute('''
             ESTIMATE PREDICTIVE PROBABILITY OF period
@@ -269,15 +266,15 @@ def test_cgpm_extravaganza__ci_slow():
         bdb.execute('''
             INFER EXPLICIT
                     PREDICT kepler_cluster_id CONFIDENCE kepler_cluster_id_conf
-                FROM satellites MODELLED BY g0 LIMIT 2;
+                FROM satellites MODELED BY g0 LIMIT 2;
         ''').fetchall()
         bdb.execute('''
             INFER EXPLICIT PREDICT kepler_noise CONFIDENCE kepler_noise_conf
-                FROM satellites MODELLED BY g0 LIMIT 2;
+                FROM satellites MODELED BY g0 LIMIT 2;
         ''').fetchall()
         bdb.execute('''
             INFER EXPLICIT PREDICT apogee CONFIDENCE apogee_conf
-                FROM satellites MODELLED BY g0 LIMIT 1;
+                FROM satellites MODELED BY g0 LIMIT 1;
         ''').fetchall()
         bdb.execute('''
             ESTIMATE PROBABILITY DENSITY OF period = 42
@@ -287,10 +284,10 @@ def test_cgpm_extravaganza__ci_slow():
 
         bdb.execute('''
             SIMULATE kepler_cluster_id, apogee, perigee, period
-                FROM satellites MODELLED BY g0 LIMIT 4
+                FROM satellites MODELED BY g0 LIMIT 4
         ''').fetchall()
 
         bdb.execute('DROP MODELS FROM g0')
-        bdb.execute('DROP METAMODEL g0')
+        bdb.execute('DROP GENERATOR g0')
         bdb.execute('DROP POPULATION satellites')
         bdb.execute('DROP TABLE satellites_ucs')

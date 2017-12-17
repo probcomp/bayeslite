@@ -186,17 +186,20 @@ def execute_phrase(bdb, phrase, bindings=()):
                         'new': cmd.new,
                     })
                     assert bdb._sqlite3.totalchanges() - total_changes == 1
-                    # ...except metamodels may have the (case-folded)
-                    # name cached.
+                    # ...except backends may have the (case-folded) name cached.
                     if old_folded != new_folded:
-                        generators_sql = '''
-                            SELECT id FROM bayesdb_generator WHERE tabname = ?
+                        populations_sql = '''
+                            SELECT id FROM bayesdb_population WHERE tabname = ?
                         '''
-                        cursor = bdb.sql_execute(generators_sql, (table,))
-                        for (generator_id,) in cursor:
-                            metamodel = core.bayesdb_generator_metamodel(bdb,
+                        cursor = bdb.sql_execute(populations_sql, (table,))
+                        generators = [
+                            bayesdb_population_generators(bdb, population_id)
+                            for (population_id,) in cursor
+                        ]
+                        for generator_id in set(generators):
+                            backend = core.bayesdb_generator_backend(bdb,
                                 generator_id)
-                            metamodel.rename_column(bdb, generator_id,
+                            backend.rename_column(bdb, generator_id,
                                 old_folded, new_folded)
                 else:
                     assert False, 'Invalid alter table command: %s' % \
@@ -249,7 +252,7 @@ def execute_phrase(bdb, phrase, bindings=()):
             if generator_ids:
                 generators = [core.bayesdb_generator_name(bdb, gid)
                     for gid in generator_ids]
-                raise BQLError(bdb, 'Population %r still has metamodels: %r' %
+                raise BQLError(bdb, 'Population %r still has generators: %r' %
                     (phrase.name, generators))
             # XXX helpful error checking if generators still exist
             # XXX check change counts
@@ -328,7 +331,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                             bdb, population_id, cmd.name, stattype)
                         colno = core.bayesdb_variable_number(
                             bdb, population_id, None, cmd.name)
-                        # Add the variable to each (initialized) metamodel in
+                        # Add the variable to each (initialized) generator in
                         # the population.
                         generator_ids = filter(
                             lambda g: core.bayesdb_generator_modelnos(bdb, g),
@@ -336,27 +339,17 @@ def execute_phrase(bdb, phrase, bindings=()):
                                 bdb, population_id),
                         )
                         for generator_id in generator_ids:
-                            # XXX Omit needless bayesdb_generator_column table
-                            # Github issue #441.
-                            bdb.sql_execute('''
-                                INSERT INTO bayesdb_generator_column
-                                    VALUES (:generator_id, :colno, :stattype)
-                            ''', {
-                                'generator_id': generator_id,
-                                'colno': colno,
-                                'stattype': stattype,
-                            })
-                            metamodel = core.bayesdb_generator_metamodel(
+                            backend = core.bayesdb_generator_backend(
                                 bdb, generator_id)
-                            metamodel.add_column(bdb, generator_id, colno)
+                            backend.add_column(bdb, generator_id, colno)
                 elif isinstance(cmd, ast.AlterPopStatType):
-                    # Check the no metamodels are defined for this population.
+                    # Check the no generators are defined for this population.
                     generators = core.bayesdb_population_generators(
                         bdb, population_id)
                     if generators:
                         raise BQLError(bdb,
                             'Cannot update statistical types for population '
-                            '%s, it has metamodels: %s'
+                            '%s, it has generators: %s'
                             % (repr(population), repr(generators),))
                     # Check all the variables are in the population.
                     unknown = [
@@ -408,16 +401,15 @@ def execute_phrase(bdb, phrase, bindings=()):
             raise BQLError(bdb, 'No such population: %r' %
                 (phrase.population,))
         population_id = core.bayesdb_get_population(bdb, phrase.population)
-        table = core.bayesdb_population_table(bdb, population_id)
 
-        # Find the metamodel, or use the default.
-        metamodel_name = phrase.metamodel
-        if phrase.metamodel is None:
-            metamodel_name = 'cgpm'
-        if metamodel_name not in bdb.metamodels:
-            raise BQLError(bdb, 'No such metamodel: %s' %
-                (repr(metamodel_name),))
-        metamodel = bdb.metamodels[metamodel_name]
+        # Find the backend, or use the default.
+        backend_name = phrase.backend
+        if phrase.backend is None:
+            backend_name = 'cgpm'
+        if backend_name not in bdb.backends:
+            raise BQLError(bdb, 'No such backend: %s' %
+                (repr(backend_name),))
+        backend = bdb.backends[backend_name]
 
         with bdb.savepoint():
             if core.bayesdb_has_generator(bdb, population_id, phrase.name):
@@ -430,46 +422,13 @@ def execute_phrase(bdb, phrase, bindings=()):
                 # assigned id.
                 bdb.sql_execute('''
                     INSERT INTO bayesdb_generator
-                        (name, tabname, population_id, metamodel)
-                        VALUES (?, ?, ?, ?)
-                ''', (phrase.name, table, population_id, metamodel.name()))
+                        (name, population_id, backend)
+                        VALUES (?, ?, ?)
+                ''', (phrase.name, population_id, backend.name()))
                 generator_id = core.bayesdb_get_generator(
                     bdb, population_id, phrase.name)
-
-                # Populate bayesdb_generator_column.
-                #
-                # XXX Omit needless bayesdb_generator_column table --
-                # Github issue #441.
-                bdb.sql_execute('''
-                    INSERT INTO bayesdb_generator_column
-                        (generator_id, colno, stattype)
-                        SELECT :generator_id, colno, stattype
-                            FROM bayesdb_variable
-                            WHERE population_id = :population_id
-                                AND generator_id IS NULL
-                ''', {
-                    'generator_id': generator_id,
-                    'population_id': population_id,
-                })
-
-                # Do any metamodel-specific initialization.
-                metamodel.create_generator(
-                    bdb, generator_id, phrase.schema, baseline=phrase.baseline)
-
-                # Populate bayesdb_generator_column with any latent
-                # variables that metamodel.create_generator has added
-                # with bayesdb_add_latent.
-                bdb.sql_execute('''
-                    INSERT INTO bayesdb_generator_column
-                        (generator_id, colno, stattype)
-                        SELECT :generator_id, colno, stattype
-                            FROM bayesdb_variable
-                            WHERE population_id = :population_id
-                                AND generator_id = :generator_id
-                ''', {
-                    'generator_id': generator_id,
-                    'population_id': population_id,
-                })
+                # Do any backend-specific initialization.
+                backend.create_generator(bdb, generator_id, phrase.schema)
 
         # All done.  Nothing to return.
         return empty_cursor(bdb)
@@ -482,14 +441,14 @@ def execute_phrase(bdb, phrase, bindings=()):
                 raise BQLError(bdb, 'No such generator: %s' %
                     (repr(phrase.name),))
             generator_id = core.bayesdb_get_generator(bdb, None, phrase.name)
-            metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
+            backend = core.bayesdb_generator_backend(bdb, generator_id)
 
-            # Metamodel-specific destruction.
-            metamodel.drop_generator(bdb, generator_id)
+            # Backend-specific destruction.
+            backend.drop_generator(bdb, generator_id)
 
-            # Drop the columns, models, and, finally, generator.
+            # Drop latent variables, models, and, finally, generator.
             drop_columns_sql = '''
-                DELETE FROM bayesdb_generator_column WHERE generator_id = ?
+                DELETE FROM bayesdb_variable WHERE generator_id = ?
             '''
             bdb.sql_execute(drop_columns_sql, (generator_id,))
             drop_model_sql = '''
@@ -551,9 +510,9 @@ def execute_phrase(bdb, phrase, bindings=()):
                     raise BQLError(bdb,
                         'No such models in generator %s: %s' %
                         (repr(phrase.generator), repr(modelnos)))
-                # Call generic alternations on the metamodel.
-                metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-                metamodel.alter(bdb, generator_id, modelnos, cmds_generic)
+                # Call generic alternations on the backend.
+                backend = core.bayesdb_generator_backend(bdb, generator_id)
+                backend.alter(bdb, generator_id, modelnos, cmds_generic)
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.InitModels):
@@ -586,31 +545,28 @@ def execute_phrase(bdb, phrase, bindings=()):
             modelnos = sorted(modelnos)
             insert_model_sql = '''
                 INSERT INTO bayesdb_generator_model
-                    (generator_id, modelno, iterations)
-                    VALUES (:generator_id, :modelno, :iterations)
+                    (generator_id, modelno)
+                    VALUES (:generator_id, :modelno)
             '''
             for modelno in modelnos:
                 bdb.sql_execute(insert_model_sql, {
                     'generator_id': generator_id,
                     'modelno': modelno,
-                    'iterations': 0,
                 })
 
-            # Do metamodel-specific initialization.
-            metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
-            metamodel.initialize_models(bdb, generator_id, modelnos)
+            # Do backend-specific initialization.
+            backend = core.bayesdb_generator_backend(bdb, generator_id)
+            backend.initialize_models(bdb, generator_id, modelnos)
         return empty_cursor(bdb)
 
     if isinstance(phrase, ast.AnalyzeModels):
-        if not phrase.wait:
-            raise NotImplementedError('No background analysis -- use WAIT.')
-        # WARNING: It is the metamodel's responsibility to work in a
+        # WARNING: It is the backend's responsibility to work in a
         # transaction.
         #
-        # WARNING: It is the metamodel's responsibility to update the
+        # WARNING: It is the backend's responsibility to update the
         # iteration count in bayesdb_generator_model records.
         #
-        # We do this so that the metamodel can save incremental
+        # We do this so that the backend can save incremental
         # progress in case of ^C in the middle.
         #
         # XXX Put these warning somewhere more appropriate.
@@ -618,9 +574,9 @@ def execute_phrase(bdb, phrase, bindings=()):
             raise BQLError(bdb, 'No such generator: %s' %
                 (phrase.generator,))
         generator_id = core.bayesdb_get_generator(bdb, None, phrase.generator)
-        metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
+        backend = core.bayesdb_generator_backend(bdb, generator_id)
         # XXX Should allow parameters for iterations and ckpt/iter.
-        metamodel.analyze_models(bdb, generator_id,
+        backend.analyze_models(bdb, generator_id,
             modelnos=phrase.modelnos,
             iterations=phrase.iterations,
             max_seconds=phrase.seconds,
@@ -633,7 +589,7 @@ def execute_phrase(bdb, phrase, bindings=()):
         with bdb.savepoint():
             generator_id = core.bayesdb_get_generator(
                 bdb, None, phrase.generator)
-            metamodel = core.bayesdb_generator_metamodel(bdb, generator_id)
+            backend = core.bayesdb_generator_backend(bdb, generator_id)
             modelnos = None
             if phrase.modelnos is not None:
                 lookup_model_sql = '''
@@ -651,7 +607,7 @@ def execute_phrase(bdb, phrase, bindings=()):
                         raise BQLError(bdb, 'No such model'
                             ' in generator %s: %s' %
                             (repr(phrase.generator), repr(modelno)))
-            metamodel.drop_models(bdb, generator_id, modelnos=modelnos)
+            backend.drop_models(bdb, generator_id, modelnos=modelnos)
             if modelnos is None:
                 drop_models_sql = '''
                     DELETE FROM bayesdb_generator_model WHERE generator_id = ?
@@ -675,23 +631,24 @@ def execute_phrase(bdb, phrase, bindings=()):
         if not core.bayesdb_has_population(bdb, phrase.population):
             raise BQLError(bdb, 'No such population: %r' % (phrase.population,))
         population_id = core.bayesdb_get_population(bdb, phrase.population)
-        # Retrieve the metamodel.
+        # Retrieve the generator
         generator_id = None
-        if phrase.metamodel:
+        if phrase.generator:
             if not core.bayesdb_has_generator(bdb, population_id,
-                    phrase.metamodel):
+                    phrase.generator):
                 raise BQLError(bdb,
-                    'No such metamodel: %r' % (phrase.population,))
+                    'No such generator: %r' % (phrase.generator,))
             generator_id = core.bayesdb_get_generator(
-                bdb, population_id, phrase.metamodel)
+                bdb, population_id, phrase.generator)
         # Retrieve the target variable.
         if not core.bayesdb_has_variable(
                 bdb, population_id, None, phrase.target):
             raise BQLError(bdb, 'No such variable: %r' % (phrase.target,))
         colno_target = core.bayesdb_variable_number(
             bdb, population_id, None, phrase.target)
-        if core.bayesdb_variable_stattype(bdb, population_id, colno_target) != \
-                'numerical':
+        stattype = core.bayesdb_variable_stattype(bdb, population_id,
+            generator_id, colno_target)
+        if stattype != 'numerical':
             raise BQLError(bdb,
                 'Target variable is not numerical: %r' % (phrase.target,))
         # Build the given variables.
@@ -730,14 +687,15 @@ def execute_phrase(bdb, phrase, bindings=()):
             colnos, numpredictions=nsamp)
         # Retrieve the stattypes.
         stattypes = [
-            core.bayesdb_variable_stattype(bdb, population_id, colno_given)
+            core.bayesdb_variable_stattype(
+                bdb, population_id, generator_id, colno_given)
             for colno_given in colno_givens_unique
         ]
         # Separate the target values from the given values.
         target_values = [row[0] for row in rows]
         given_values = [row[1:] for row in rows]
         given_names = [
-            core.bayesdb_variable_name(bdb, population_id, given)
+            core.bayesdb_variable_name(bdb, population_id, generator_id, given)
             for given in colno_givens_unique
         ]
         # Compute the coefficients. The import to regress_ols is here since the
@@ -910,16 +868,7 @@ def rename_table(bdb, old, new):
         UPDATE bayesdb_column SET tabname = ? WHERE tabname = ?
     '''
     bdb.sql_execute(update_columns_sql, (new, old))
-    # Update bayesdb_column_map to use the new name.
-    update_column_maps_sql = '''
-        UPDATE bayesdb_column_map SET tabname = ? WHERE tabname = ?
-    '''
-    bdb.sql_execute(update_column_maps_sql, (new, old))
-    # Update bayesdb_generator to use the new name.
-    update_generators_sql = '''
-        UPDATE bayesdb_generator SET tabname = ? WHERE tabname = ?
-    '''
-    bdb.sql_execute(update_generators_sql, (new, old))
+
     # Update bayesdb_population to use the new name.
     update_populations_sql = '''
         UPDATE bayesdb_population SET tabname = ? WHERE tabname = ?

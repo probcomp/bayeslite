@@ -41,15 +41,15 @@ def smoke_bdb():
 
         bdb.execute('''
             CREATE POPULATION p FOR t WITH SCHEMA (
-                MODEL a, b, c, d AS NUMERICAL;
-                MODEL e AS NOMINAL
+                SET STATTYPES OF a, b, c, d TO NUMERICAL;
+                SET STATTYPES OF e TO NOMINAL
             )
         ''')
 
-        bdb.execute('CREATE METAMODEL m1 FOR p;')
+        bdb.execute('CREATE GENERATOR m1 FOR p;')
         bdb.execute('INITIALIZE 10 MODELS FOR m1;')
 
-        bdb.execute('CREATE METAMODEL m2 FOR p;')
+        bdb.execute('CREATE GENERATOR m2 FOR p;')
         bdb.execute('INITIALIZE 10 MODELS FOR m2;')
         yield bdb
 

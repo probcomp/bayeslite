@@ -22,7 +22,7 @@ import bayeslite.ast
 
 from test_parse import parse_bql_string
 
-import bayeslite.metamodels.cgpm_alter.parse as cgpm_alter_parser
+import bayeslite.backends.cgpm_alter.parse as cgpm_alter_parser
 
 
 # XXX Is there a better way to get the tokens that are supplied to

@@ -64,12 +64,6 @@ AlterTabRenameCol = namedtuple('AlterTabRenameCol', [
     'new',                      # XXX name
 ])
 
-# XXX Hackery for baselines.
-Baseline = namedtuple('Baseline', [
-    'name',
-    'params',
-])
-
 ### BQL Model Definition Language
 GuessSchema = namedtuple('GuessSchema', [
     'table'
@@ -111,8 +105,7 @@ CreateGen = namedtuple('CreateGen', [
     'name',                     # XXX name
     'ifnotexists',              # boolean
     'population',               # XXX name
-    'baseline',                 # XXX name
-    'metamodel',                # XXX name
+    'backend',                  # XXX name
     'schema',                   # nested list of tokens
 ])
 DropGen = namedtuple('DropGen', [
@@ -145,7 +138,6 @@ AnalyzeModels = namedtuple('AnalyzeModels', [
     'seconds',
     'ckpt_iterations',
     'ckpt_seconds',
-    'wait',
     'program',
 ])
 DropModels = namedtuple('DropModels', [
@@ -158,7 +150,7 @@ Regress = namedtuple('Regress', [
     'givens',
     'nsamp',
     'population',
-    'metamodel',
+    'generator',
     'modelnos'
 ])
 

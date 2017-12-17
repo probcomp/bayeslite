@@ -37,7 +37,7 @@ class Shell(cmd.Cmd):
     sql_prompt    = '   sql...> '
     python_prompt = 'python...> '
 
-    def __init__(self, bdb, metamodel, stdin=None, stdout=None, stderr=None):
+    def __init__(self, bdb, backend, stdin=None, stdout=None, stderr=None):
         if stdin is None:
             stdin = sys.stdin
         if stdout is None:
@@ -51,7 +51,7 @@ class Shell(cmd.Cmd):
         cmd.Cmd.__init__(self, 'Tab', stdin, stdout)
 
         self._bdb = bdb
-        self._metamodel = metamodel
+        self._backend = backend
         self._cmds = set([])
         self._traced = False
         self._sql_traced = False
@@ -63,7 +63,6 @@ class Shell(cmd.Cmd):
         #
         # XXX Does not disable the `quit' command and whatever other
         # bollocks is built-in.
-        self._installcmd('codebook', self.dot_codebook)
         self._installcmd('csv', self.dot_csv)
         self._installcmd('describe', self.dot_describe)
         self._installcmd('guess', self.dot_guess)
@@ -350,7 +349,7 @@ class Shell(cmd.Cmd):
         if line == '-m':
             line = None
         self._bdb = bayeslite.bayesdb_open(pathname=line,
-            builtin_metamodels=False)
+            builtin_backends=False)
 
     def dot_pythexec(self, line):
         '''execute a Python statement
@@ -450,29 +449,6 @@ class Shell(cmd.Cmd):
             with open(pathname, 'rU') as f:
                 bayeslite.bayesdb_read_csv(self._bdb, table, f, header=True,
                                            create=True, ifnotexists=False)
-        except IOError as e:
-            self.stdout.write('%s\n' % (e,))
-        except Exception:
-            self.stdout.write(traceback.format_exc())
-
-    def dot_codebook(self, line):
-        '''load codebook for table
-        <table> </path/to/codebook.csv>
-
-        Load a codebook -- short names, descriptions, and value
-        descriptions for the columns of a table -- from a CSV file.
-        '''
-        # XXX Lousy, lousy tokenizer.
-        tokens = line.split()
-        if len(tokens) != 2:
-            self.stdout.write('Usage: .codebook <table> '
-                              '</path/to/codebook.csv>\n')
-            return
-        table = tokens[0]
-        pathname = tokens[1]
-        try:
-            bayeslite.bayesdb_load_codebook_csv_file(self._bdb, table,
-                                                     pathname)
         except IOError as e:
             self.stdout.write('%s\n' % (e,))
         except Exception:
@@ -591,7 +567,7 @@ class Shell(cmd.Cmd):
                 if not ok:
                     return
             sql = '''
-                SELECT id, name, tabname, metamodel
+                SELECT id, name, tabname, backend
                     FROM bayesdb_generator
                     WHERE %s
             ''' % (qualifier,)

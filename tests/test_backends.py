@@ -17,21 +17,19 @@
 import pytest
 import tempfile
 
-import crosscat.LocalEngine
-
 import bayeslite
 
 import bayeslite.core as core
 
 from bayeslite import bql_quote_name
-from bayeslite.metamodels.crosscat import CrosscatMetamodel
-from bayeslite.metamodels.iid_gaussian import StdNormalMetamodel
+from bayeslite.backends.cgpm_backend import CGPM_Backend
+from bayeslite.backends.iid_gaussian import StdNormalBackend
 
 examples = {
-    'crosscat': (
-        lambda: CrosscatMetamodel(crosscat.LocalEngine.LocalEngine(seed=0)),
+    'cgpm': (
+        lambda: CGPM_Backend(cgpm_registry={}, multiprocess=False),
         't',
-        'CREATE TABLE t(x NUMERIC, y CYCLIC, z CATEGORICAL)',
+        'CREATE TABLE t(x NUMERIC, y NUMERIC, z NUMERIC)',
         'INSERT INTO t (x, y, z) VALUES (?, ?, ?)',
         [
             (0, 1.57, 'foo'),
@@ -42,13 +40,13 @@ examples = {
         'p',
         'p_cc',
         'CREATE POPULATION p FOR t'
-            '(x NUMERICAL; y CYCLIC; z CATEGORICAL)',
-        'CREATE GENERATOR p_cc FOR p USING crosscat()',
-        'CREATE GENERATOR p_cc FOR p USING crosscat(DEPENDENT)',
-        'CREATE GENERATOR p_cc FOR p USING crosscat(INDEPENDENT)',
+            '(x NUMERICAL; y NUMERICAL; z NOMINAL)',
+        'CREATE GENERATOR p_cc FOR p USING cgpm()',
+        'CREATE GENERATOR p_cc FOR p USING crosscat',
+        'CREATE GENERATOR p_cc FOR p USING cgpm ...' ,
     ),
     'iid_gaussian': (
-        lambda: StdNormalMetamodel(seed=0),
+        lambda: StdNormalBackend(seed=0),
         't',
         'CREATE TABLE t(x NUMERIC, y NUMERIC)',
         'INSERT INTO t (x, y) VALUES (?, ?)',
@@ -57,8 +55,7 @@ examples = {
         'p_sn',
         'CREATE POPULATION p FOR t(x NUMERICAL; y NUMERICAL)',
         'CREATE GENERATOR p_sn FOR p USING std_normal()',
-        # XXX Should invent something that fails for
-        # metamodel-specific reasons here.
+        # XXX Invent something that fails for backend-specific reasons here.
         'CREATE GENERATOR p_sn FOR p USING std_normal ...',
         'CREATE GENERATOR p_sn FOR p USING std_normal ...'
     ),
@@ -72,13 +69,13 @@ def test_example(persist, exname):
     if persist:
         with tempfile.NamedTemporaryFile(prefix='bayeslite') as f:
             with bayeslite.bayesdb_open(pathname=f.name,
-                    builtin_metamodels=False) as bdb:
+                    builtin_backends=False) as bdb:
                 _test_example(bdb, exname)
             with bayeslite.bayesdb_open(pathname=f.name,
-                    builtin_metamodels=False) as bdb:
+                    builtin_backends=False) as bdb:
                 _retest_example(bdb, exname)
     else:
-        with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
+        with bayeslite.bayesdb_open(builtin_backends=False) as bdb:
             _test_example(bdb, exname)
 
 def _test_example(bdb, exname):
@@ -87,7 +84,7 @@ def _test_example(bdb, exname):
     qt = bql_quote_name(t)
     qg = bql_quote_name(g)
 
-    bayeslite.bayesdb_register_metamodel(bdb, mm())
+    bayeslite.bayesdb_register_backend(bdb, mm())
 
     # Create a table.
     assert not core.bayesdb_has_table(bdb, t)
@@ -181,9 +178,9 @@ def _test_example(bdb, exname):
         assert [0] == core.bayesdb_generator_modelnos(bdb, gid)
 
     # Test analyzing models.
-    bdb.execute('ANALYZE %s FOR 1 ITERATION WAIT' % (qg,))
-    bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION WAIT' % (qg,))
-    bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION WAIT' % (qg,))
+    bdb.execute('ANALYZE %s FOR 1 ITERATION' % (qg,))
+    bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION' % (qg,))
+    bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION' % (qg,))
 
 def _retest_example(bdb, exname):
     mm, t, t_sql, data_sql, data, p, g, p_bql, g_bql, g_bqlbad0, g_bqlbad1 = \
@@ -191,7 +188,7 @@ def _retest_example(bdb, exname):
     qt = bql_quote_name(t)
     qg = bql_quote_name(g)
 
-    bayeslite.bayesdb_register_metamodel(bdb, mm())
+    bayeslite.bayesdb_register_backend(bdb, mm())
     p_id = core.bayesdb_get_population(bdb, p)
 
     assert core.bayesdb_has_table(bdb, t)
@@ -199,6 +196,6 @@ def _retest_example(bdb, exname):
     gid = core.bayesdb_get_generator(bdb, p_id, g)
     assert core.bayesdb_generator_has_model(bdb, gid, 0)
     assert core.bayesdb_generator_has_model(bdb, gid, 1)
-    bdb.execute('ANALYZE %s FOR 1 ITERATION WAIT' % (qg,))
-    bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION WAIT' % (qg,))
-    bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION WAIT' % (qg,))
+    bdb.execute('ANALYZE %s FOR 1 ITERATION' % (qg,))
+    bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION' % (qg,))
+    bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION' % (qg,))

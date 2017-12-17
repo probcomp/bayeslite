@@ -23,9 +23,6 @@ import bayeslite
 from bayeslite.guess import bayesdb_guess_population
 from bayeslite.guess import bayesdb_guess_stattypes
 from bayeslite.exception import BQLError
-from bayeslite.metamodels.crosscat import CrosscatMetamodel
-
-import crosscat.LocalEngine
 
 def test_guess_stattypes():
     n = ['a', 'b']
@@ -109,7 +106,7 @@ def test_guess_stattypes():
         == ['numerical', 'key']
     rows = [['none' if c < ord('m') else c, chr(c)] for c in a_z]
     # Nullify 'none' because it is in the nullify list.
-    # Categorical because <20 remaining.
+    # Nominal because <20 remaining.
     assert [st[0] for st in
         bayesdb_guess_stattypes(n, rows)] == ['nominal', 'key']
     rows = [[3 if c < ord('y') else 5, chr(c)] for c in a_z]
@@ -132,46 +129,45 @@ def test_guess_stattypes():
         ['numerical', 'numerical']
 
 def test_guess_population():
-    bdb = bayeslite.bayesdb_open(builtin_metamodels=False)
-    bdb.sql_execute('CREATE TABLE t(x NUMERIC, y NUMERIC, z NUMERIC)')
-    a_z = range(ord('a'), ord('z') + 1)
-    aa_zz = ((c, d) for c in a_z for d in a_z)
-    data = ((chr(c) + chr(d), (c + d) % 2, math.sqrt(c + d)) for c, d in aa_zz)
-    for row in data:
-        bdb.sql_execute('INSERT INTO t (x, y, z) VALUES (?, ?, ?)', row)
-    cc = crosscat.LocalEngine.LocalEngine(seed=0)
-    metamodel = CrosscatMetamodel(cc)
-    bayeslite.bayesdb_register_metamodel(bdb, metamodel)
-    with pytest.raises(ValueError):
-        # No modelled columns.  (x is key.)
-        bayesdb_guess_population(bdb, 'p', 't',
-            overrides=[('y', 'ignore'), ('z', 'ignore')])
-    bayesdb_guess_population(bdb, 'p', 't')
-    with pytest.raises(ValueError):
-        # Population already exists.
+    with bayeslite.bayesdb_open() as bdb:
+        bdb.sql_execute('CREATE TABLE t(x NUMERIC, y NUMERIC, z NUMERIC)')
+        a_z = range(ord('a'), ord('z') + 1)
+        aa_zz = ((c, d) for c in a_z for d in a_z)
+        data = ((chr(c) + chr(d), (c + d) % 2, math.sqrt(c + d))
+            for c, d in aa_zz)
+        for row in data:
+            bdb.sql_execute('INSERT INTO t (x, y, z) VALUES (?, ?, ?)', row)
+        with pytest.raises(ValueError):
+            # No modeled columns.  (x is key.)
+            bayesdb_guess_population(bdb, 'p', 't',
+                overrides=[('y', 'ignore'), ('z', 'ignore')])
         bayesdb_guess_population(bdb, 'p', 't')
-    assert bdb.sql_execute('SELECT * FROM bayesdb_variable').fetchall() == [
-        (1, None, 1, 'y', 'nominal'),
-        (1, None, 2, 'z', 'numerical'),
-    ]
+        with pytest.raises(ValueError):
+            # Population already exists.
+            bayesdb_guess_population(bdb, 'p', 't')
+        assert bdb.sql_execute('SELECT * FROM bayesdb_variable').fetchall() == [
+            (1, None, 1, 'y', 'nominal'),
+            (1, None, 2, 'z', 'numerical'),
+        ]
 
 def test_guess_schema():
-    bdb = bayeslite.bayesdb_open(builtin_metamodels=False)
-    bdb.sql_execute('CREATE TABLE t(x NUMERIC, y NUMERIC, z NUMERIC)')
-    a_z = range(ord('a'), ord('z') + 1)
-    aa_zz = ((c, d) for c in a_z for d in a_z)
-    data = ((chr(c) + chr(d), (c + d) % 2, math.sqrt(c + d)) for c, d in aa_zz)
-    for row in data:
-        bdb.sql_execute('INSERT INTO t (x, y, z) VALUES (?, ?, ?)', row)
-    with pytest.raises(BQLError):
-        bdb.execute('GUESS SCHEMA FOR non_existant_table')
-    guess = bdb.execute('GUESS SCHEMA FOR t')
-    assert len(guess.description) == 4
-    assert guess.description[0][0] == u'column'
-    assert guess.description[1][0] == u'stattype'
-    assert guess.description[2][0] == u'num_distinct'
-    assert guess.description[3][0] == u'reason'
-    assert len(guess.fetchall()) == 3
+    with bayeslite.bayesdb_open() as bdb:
+        bdb.sql_execute('CREATE TABLE t(x NUMERIC, y NUMERIC, z NUMERIC)')
+        a_z = range(ord('a'), ord('z') + 1)
+        aa_zz = ((c, d) for c in a_z for d in a_z)
+        data = ((chr(c) + chr(d), (c + d) % 2, math.sqrt(c + d))
+            for c, d in aa_zz)
+        for row in data:
+            bdb.sql_execute('INSERT INTO t (x, y, z) VALUES (?, ?, ?)', row)
+        with pytest.raises(BQLError):
+            bdb.execute('GUESS SCHEMA FOR non_existant_table')
+        guess = bdb.execute('GUESS SCHEMA FOR t')
+        assert len(guess.description) == 4
+        assert guess.description[0][0] == u'column'
+        assert guess.description[1][0] == u'stattype'
+        assert guess.description[2][0] == u'num_distinct'
+        assert guess.description[3][0] == u'reason'
+        assert len(guess.fetchall()) == 3
 
 def isqrt(n):
     x = n

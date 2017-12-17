@@ -21,15 +21,15 @@ import bayeslite
 import test_core
 
 
-def test_droppop_with_metamodels():
+def test_droppop_with_generators():
     with test_core.t1() as (bdb, _population_id, _generator_id):
         distinctive_name = 'frobbledithorpequack'
-        bdb.execute('create metamodel %s for p1 using crosscat' %
+        bdb.execute('create generator %s for p1 using cgpm' %
             (distinctive_name,))
         with pytest.raises(bayeslite.BQLError):
             try:
                 bdb.execute('drop population p1')
             except bayeslite.BQLError as e:
-                assert 'metamodels' in str(e)
+                assert 'generators' in str(e)
                 assert distinctive_name in str(e)
                 raise
