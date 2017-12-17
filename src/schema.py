@@ -89,8 +89,6 @@ CREATE TABLE bayesdb_generator (
     id              INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
                         CHECK (0 < id),
     name            TEXT COLLATE NOCASE NOT NULL UNIQUE,
-    tabname         TEXT COLLATE NOCASE NOT NULL,
-                        -- REFERENCES sqlite_master(name)
     backend         TEXT COLLATE NOCASE REFERENCES bayesdb_backend(name),
     population_id   INTEGER REFERENCES bayesdb_population(id)
 );

@@ -426,15 +426,8 @@ def bayesdb_generator_backend(bdb, id):
 
 def bayesdb_generator_table(bdb, id):
     """Return the name of the table of the generator with id `id`."""
-    sql = 'SELECT tabname FROM bayesdb_generator WHERE id = ?'
-    cursor = bdb.sql_execute(sql, (id,))
-    try:
-        row = cursor.next()
-    except StopIteration:
-        raise ValueError('No such generator: %s' % (repr(id),))
-    else:
-        assert len(row) == 1
-        return row[0]
+    population_id = bayesdb_generator_population(bdb, id)
+    return bayesdb_population_table(bdb, population_id)
 
 def bayesdb_generator_population(bdb, id):
     """Return the id of the population of the generator with id `id`."""

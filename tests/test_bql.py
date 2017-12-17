@@ -1701,7 +1701,8 @@ def test_parametrized():
             'SELECT id FROM bayesdb_generator'
                 ' WHERE population_id = ?',
             'SELECT backend FROM bayesdb_generator WHERE id = ?',
-            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
+            'SELECT population_id FROM bayesdb_generator WHERE id = ?',
+            'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'SELECT 1 FROM "t" WHERE oid = ?',
             'SELECT 1 FROM bayesdb_cgpm_individual'
                 ' WHERE generator_id = ? AND table_rowid = ? LIMIT 1',
@@ -1816,7 +1817,8 @@ def test_parametrized():
             'SELECT token FROM bayesdb_rowid_tokens',
             'SELECT id FROM bayesdb_generator WHERE population_id = ?',
             'SELECT backend FROM bayesdb_generator WHERE id = ?',
-            'SELECT tabname FROM bayesdb_generator WHERE id = ?',
+            'SELECT population_id FROM bayesdb_generator WHERE id = ?',
+            'SELECT tabname FROM bayesdb_population WHERE id = ?',
             'SELECT 1 FROM "t" WHERE oid = ?',
             'SELECT 1 FROM bayesdb_cgpm_individual'
                 ' WHERE generator_id = ? AND table_rowid = ? LIMIT 1',

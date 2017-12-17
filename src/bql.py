@@ -188,11 +188,15 @@ def execute_phrase(bdb, phrase, bindings=()):
                     assert bdb._sqlite3.totalchanges() - total_changes == 1
                     # ...except backends may have the (case-folded) name cached.
                     if old_folded != new_folded:
-                        generators_sql = '''
-                            SELECT id FROM bayesdb_generator WHERE tabname = ?
+                        populations_sql = '''
+                            SELECT id FROM bayesdb_population WHERE tabname = ?
                         '''
-                        cursor = bdb.sql_execute(generators_sql, (table,))
-                        for (generator_id,) in cursor:
+                        cursor = bdb.sql_execute(populations_sql, (table,))
+                        generators = [
+                            bayesdb_population_generators(bdb, population_id)
+                            for (population_id,) in cursor
+                        ]
+                        for generator_id in set(generators):
                             backend = core.bayesdb_generator_backend(bdb,
                                 generator_id)
                             backend.rename_column(bdb, generator_id,
@@ -397,7 +401,6 @@ def execute_phrase(bdb, phrase, bindings=()):
             raise BQLError(bdb, 'No such population: %r' %
                 (phrase.population,))
         population_id = core.bayesdb_get_population(bdb, phrase.population)
-        table = core.bayesdb_population_table(bdb, population_id)
 
         # Find the backend, or use the default.
         backend_name = phrase.backend
@@ -419,9 +422,9 @@ def execute_phrase(bdb, phrase, bindings=()):
                 # assigned id.
                 bdb.sql_execute('''
                     INSERT INTO bayesdb_generator
-                        (name, tabname, population_id, backend)
-                        VALUES (?, ?, ?, ?)
-                ''', (phrase.name, table, population_id, backend.name()))
+                        (name, population_id, backend)
+                        VALUES (?, ?, ?)
+                ''', (phrase.name, population_id, backend.name()))
                 generator_id = core.bayesdb_get_generator(
                     bdb, population_id, phrase.name)
                 # Do any backend-specific initialization.
@@ -866,11 +869,7 @@ def rename_table(bdb, old, new):
         UPDATE bayesdb_column SET tabname = ? WHERE tabname = ?
     '''
     bdb.sql_execute(update_columns_sql, (new, old))
-    # Update bayesdb_generator to use the new name.
-    update_generators_sql = '''
-        UPDATE bayesdb_generator SET tabname = ? WHERE tabname = ?
-    '''
-    bdb.sql_execute(update_generators_sql, (new, old))
+
     # Update bayesdb_population to use the new name.
     update_populations_sql = '''
         UPDATE bayesdb_population SET tabname = ? WHERE tabname = ?
