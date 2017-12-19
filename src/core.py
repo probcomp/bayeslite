@@ -457,26 +457,6 @@ def bayesdb_generator_modelnos(bdb, generator_id):
     '''
     return [row[0] for row in bdb.sql_execute(sql, (generator_id,))]
 
-def bayesdb_generator_cell_value(bdb, generator_id, rowid, colno):
-    table_name = bayesdb_generator_table(bdb, generator_id)
-    population_id = bayesdb_generator_population(bdb, generator_id)
-    colname = bayesdb_variable_name(bdb, population_id, generator_id, colno)
-    qt = sqlite3_quote_name(table_name)
-    qcn = sqlite3_quote_name(colname)
-    value_sql = 'SELECT %s FROM %s WHERE _rowid_ = ?' % (qcn, qt)
-    value_cursor = bdb.sql_execute(value_sql, (rowid,))
-    value = None
-    try:
-        row = value_cursor.next()
-    except StopIteration:
-        generator = bayesdb_generator_name(bdb, generator_id)
-        raise BQLError(bdb, 'No such row in %s: %d' %
-            (repr(generator), rowid))
-    else:
-        assert len(row) == 1
-        value = row[0]
-    return value
-
 def bayesdb_population_row_values(bdb, population_id, rowid):
     table_name = bayesdb_population_table(bdb, population_id)
     column_names = bayesdb_variable_names(bdb, population_id, None)
@@ -502,42 +482,6 @@ def bayesdb_population_row_values(bdb, population_id, rowid):
             'More than one such row in table %s for population %s: %d' %
             (repr(table_name), repr(population), repr(rowid)))
     return row
-
-def bayesdb_generator_row_values(bdb, generator_id, rowid):
-    population_id = bayesdb_get_population(bdb, generator_id)
-    table_name = bayesdb_generator_table(bdb, generator_id)
-    column_names = bayesdb_variable_names(bdb, population_id, generator_id)
-    qt = sqlite3_quote_name(table_name)
-    qcns = ','.join(map(sqlite3_quote_name, column_names))
-    select_sql = ('SELECT %s FROM %s WHERE _rowid_ = ?' % (qcns, qt))
-    cursor = bdb.sql_execute(select_sql, (rowid,))
-    row = None
-    try:
-        row = cursor.next()
-    except StopIteration:
-        generator = bayesdb_generator_table(bdb, generator_id)
-        raise BQLError(bdb, 'No such row in table %s'
-            ' for generator %d: %d' %
-            (repr(table_name), repr(generator), repr(rowid)))
-    try:
-        cursor.next()
-    except StopIteration:
-        pass
-    else:
-        generator = bayesdb_generator_table(bdb, generator_id)
-        raise BQLError(bdb, 'More than one such row'
-            ' in table %s for generator %s: %d' %
-            (repr(table_name), repr(generator), repr(rowid)))
-    return row
-
-def bayesdb_generator_fresh_row_id(bdb, generator_id):
-    table_name = bayesdb_generator_table(bdb, generator_id)
-    qt = sqlite3_quote_name(table_name)
-    cursor = bdb.sql_execute('SELECT MAX(_rowid_) FROM %s' % (qt,))
-    max_rowid = cursor_value(cursor)
-    if max_rowid is None:
-        max_rowid = 0
-    return max_rowid + 1   # Synthesize a non-existent SQLite row id
 
 def bayesdb_rowid_tokens(bdb):
     tokens = bdb.sql_execute('''
