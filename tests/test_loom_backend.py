@@ -23,13 +23,13 @@ import tempfile
 import pytest
 
 from bayeslite import bayesdb_open
-from bayeslite import bayesdb_register_metamodel
+from bayeslite import bayesdb_register_backend
 from bayeslite.core import bayesdb_get_generator
 from bayeslite.core import bayesdb_get_population
 from bayeslite.exception import BQLError
 
 try:
-    from bayeslite.metamodels.loom_metamodel import LoomMetamodel
+    from bayeslite.backends.loom_backend import LoomBackend
 except ImportError:
     pytest.skip('Failed to import Loom.')
 
@@ -50,20 +50,20 @@ def tempdir(prefix):
 
 
 def test_loom_one_numeric():
-    """Simple test of the LoomMetamodel on a one variable table
+    """Simple test of the LoomBackend on a one variable table
     Only checks for errors from the Loom system."""
     from datetime import datetime
     with tempdir('bayeslite-loom') as loom_store_path:
         with bayesdb_open(':memory:') as bdb:
-            bayesdb_register_metamodel(bdb,
-                LoomMetamodel(loom_store_path=loom_store_path))
+            bayesdb_register_backend(bdb,
+                LoomBackend(loom_store_path=loom_store_path))
             bdb.sql_execute('create table t(x)')
             for x in xrange(10):
                 bdb.sql_execute('insert into t (x) values (?)', (x,))
             bdb.execute('create population p for t (x numerical)')
             bdb.execute('create generator g for p using loom')
             bdb.execute('initialize 1 models for g')
-            bdb.execute('analyze g for 10 iterations wait')
+            bdb.execute('analyze g for 10 iterations')
             bdb.execute('''
                     estimate probability density of x = 50 from p
             ''').fetchall()
@@ -77,8 +77,8 @@ def test_loom_one_numeric():
 def test_loom_complex_add_analyze_drop_sequence():
     with tempdir('bayeslite-loom') as loom_store_path:
         with bayesdb_open(':memory:') as bdb:
-            bayesdb_register_metamodel(bdb,
-                LoomMetamodel(loom_store_path=loom_store_path))
+            bayesdb_register_backend(bdb,
+                LoomBackend(loom_store_path=loom_store_path))
             bdb.sql_execute('create table t (x)')
             for x in xrange(10):
                 bdb.sql_execute('insert into t (x) values (?)', (x,))
@@ -99,7 +99,7 @@ def test_loom_complex_add_analyze_drop_sequence():
             # 3 and not 2 + 3 = 5.
             assert num_models == 3
 
-            bdb.execute('analyze g for 10 iterations wait')
+            bdb.execute('analyze g for 10 iterations')
             bdb.execute('estimate probability density of x = 50 from p')
 
             with pytest.raises(BQLError):
@@ -116,7 +116,7 @@ def test_loom_complex_add_analyze_drop_sequence():
             num_models = cursor.fetchall()[0][0]
             # Make sure that the number of models was reset after dropping.
             assert num_models == 1
-            bdb.execute('analyze g for 50 iterations wait')
+            bdb.execute('analyze g for 50 iterations')
 
             cursor = bdb.execute('''
                 estimate probability density of x = 50 from p''')
@@ -126,7 +126,7 @@ def test_loom_complex_add_analyze_drop_sequence():
             bdb.execute('drop models from g')
 
             bdb.execute('initialize 1 model for g')
-            bdb.execute('analyze g for 50 iterations wait')
+            bdb.execute('analyze g for 50 iterations')
             cursor = bdb.execute('''
                 estimate probability density of x = 50 from p''')
             probDensityX2 = cursor.fetchall()
@@ -142,13 +142,13 @@ def test_loom_complex_add_analyze_drop_sequence():
 
 
 def test_stattypes():
-    """Test of the LoomMetamodel on a table with all possible data types.
+    """Test of the LoomBackend on a table with all possible data types.
     Only checks for errors from Loom.
     """
     with tempdir('bayeslite-loom') as loom_store_path:
         with bayesdb_open(':memory:') as bdb:
-            bayesdb_register_metamodel(bdb,
-                LoomMetamodel(loom_store_path=loom_store_path))
+            bayesdb_register_backend(bdb,
+                LoomBackend(loom_store_path=loom_store_path))
             bdb.sql_execute('create table t (u, co, b, ca, cy, nu, no)')
             for _x in xrange(10):
                 cat_dict = ['a', 'b', 'c']
@@ -165,17 +165,17 @@ def test_stattypes():
                         bdb._prng.weakrandom_uniform(1000)/4.0
                     ))
             bdb.execute('''create population p for t(
-                u unboundedcategorical;
+                u unbounded_nominal;
                 co counts;
                 b boolean;
-                ca categorical;
+                ca nominal;
                 cy cyclic;
                 nu numerical;
                 no nominal)
             ''')
             bdb.execute('create generator g for p using loom')
             bdb.execute('initialize 1 model for g')
-            bdb.execute('analyze g for 50 iterations wait')
+            bdb.execute('analyze g for 50 iterations')
             bdb.execute('''estimate probability density of
                 nu = 50, u='a' from p''').fetchall()
             bdb.execute('''simulate u, co, b, ca, cy, nu, no
@@ -186,18 +186,15 @@ def test_stattypes():
             bdb.execute('drop table t')
 
 
-def test_loom_guess_schema_categorical():
-    """Test to make sure that LoomMetamodel handles the case where
-    the user provides a categorical variable with more than 256 distinct
-    values.
-
-    In this case, the metamodel code automatically specify the
-    unboundedcategorical type to Loom.
+def test_loom_guess_schema_nominal():
+    """Test to make sure that LoomBackend handles the case where the user
+    provides a nominal variable with more than 256 distinct values. In this
+    case, Loom automatically specifies the unbounded_nominal type.
     """
     with tempdir('bayeslite-loom') as loom_store_path:
         with bayesdb_open(':memory:') as bdb:
-            bayesdb_register_metamodel(bdb,
-                LoomMetamodel(loom_store_path=loom_store_path))
+            bayesdb_register_backend(bdb,
+                LoomBackend(loom_store_path=loom_store_path))
             bdb.sql_execute('create table t (v)')
             vals_to_insert = []
             for i in xrange(300):
@@ -212,10 +209,10 @@ def test_loom_guess_schema_categorical():
                     insert into t (v) values (?)
                 ''', (vals_to_insert[i],))
 
-            bdb.execute('create population p for t (v categorical)')
+            bdb.execute('create population p for t (v nominal)')
             bdb.execute('create generator g for p using loom')
             bdb.execute('initialize 1 model for g')
-            bdb.execute('analyze g for 50 iterations wait')
+            bdb.execute('analyze g for 50 iterations')
             bdb.execute('drop models from g')
             bdb.execute('drop generator g')
             bdb.execute('drop population p')
@@ -228,7 +225,7 @@ def test_loom_four_var():
     * x - a random int between 0 and 200
     * y - a random int between 0 and 100
     * xx - just 2*x
-    * z - a categorical variable that has an even
+    * z - a nominal variable that has an even
     chance of being 'a' or 'b'
 
     Queries run and tested include:
@@ -238,8 +235,8 @@ def test_loom_four_var():
     """
     with tempdir('bayeslite-loom') as loom_store_path:
         with bayesdb_open(':memory:') as bdb:
-            bayesdb_register_metamodel(
-                    bdb, LoomMetamodel(loom_store_path=loom_store_path))
+            bayesdb_register_backend(
+                    bdb, LoomBackend(loom_store_path=loom_store_path))
             bdb.sql_execute('create table t(x, xx, y, z)')
             bdb.sql_execute('''
                 insert into t (x, xx, y, z) values (100, 200, 50, 'a')''')
@@ -255,10 +252,10 @@ def test_loom_four_var():
 
             bdb.execute('''
                 create population p for t(x numerical; xx numerical;
-                y numerical; z categorical)''')
+                y numerical; z nominal)''')
             bdb.execute('create generator g for p using loom')
             bdb.execute('initialize 10 model for g')
-            bdb.execute('analyze g for 20 iterations wait')
+            bdb.execute('analyze g for 20 iterations')
 
             with pytest.raises(BQLError):
                 relevance = bdb.execute('''
@@ -297,10 +294,10 @@ def test_loom_four_var():
                 ((X_MAX-X_MIN)/2,)).fetchall()
             assert possible_density[0][0] > 0.001
 
-            categorical_density = bdb.execute('''
+            nominal_density = bdb.execute('''
                 estimate probability density of z = 'a' by p
             ''').fetchall()
-            assert abs(categorical_density[0][0]-.5) < 0.2
+            assert abs(nominal_density[0][0]-.5) < 0.2
 
             mutual_info = bdb.execute('''
                 estimate mutual information as mutinf

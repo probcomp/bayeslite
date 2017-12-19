@@ -24,7 +24,7 @@ import bayeslite.core as core
 from bayeslite import bql_quote_name
 from bayeslite.backends.cgpm_backend import CGPM_Backend
 from bayeslite.backends.iid_gaussian import StdNormalBackend
-from bayeslite.metamodels.loom_metamodel import LoomMetamodel
+from bayeslite.backends.loom_backend import LoomBackend
 
 examples = {
     'cgpm': (
@@ -47,7 +47,7 @@ examples = {
         'CREATE GENERATOR p_cc FOR p USING cgpm ...' ,
     ),
     'loom': (
-        lambda: LoomMetamodel(loom_prefix=""),
+        lambda: LoomBackend(loom_store_path=''),
         't',
         'CREATE TABLE t(x NUMERIC, y CYCLIC, z CATEGORICAL)',
         'INSERT INTO t (x, y, z) VALUES (?, ?, ?)',

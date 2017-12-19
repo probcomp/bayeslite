@@ -14,9 +14,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""Implementation of bayeslite.IBayesDBMetamodel interface using Loom.
+"""Implementation of bayeslite.BayesDB_Backend interface using Loom.
 
-The Loom Metamodel serves as an interface between BayesDB and the Loom
+The Loom backend serves as an interface between BayesDB and the Loom
 implementation of CrossCat: https://github.com/posterior/loom
 """
 
@@ -38,18 +38,18 @@ from distributions.io.stream import open_compressed
 from loom.cFormat import assignment_stream_load
 
 import bayeslite.core as core
-import bayeslite.metamodel as metamodel
 import bayeslite.util as util
 
+from bayeslite.backend import BayesDB_Backend
+from bayeslite.backend import bayesdb_backend_version
 from bayeslite.exception import BQLError
-from bayeslite.metamodel import bayesdb_metamodel_version
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.stats import arithmetic_mean
 from bayeslite.util import casefold
 
 
 LOOM_SCHEMA_1 = '''
-INSERT INTO bayesdb_metamodel (name, version)
+INSERT INTO bayesdb_backend (name, version)
     VALUES (?, 1);
 
 CREATE TABLE bayesdb_loom_generator (
@@ -101,29 +101,29 @@ CREATE TABLE bayesdb_loom_row_kind_partition (
 CSV_DELIMITER = ','
 
 STATTYPE_TO_LOOMTYPE = {
-    'unboundedcategorical' : 'dpd',
+    'unbounded_nominal'    : 'dpd',
     'counts'               : 'gp',
     'boolean'              : 'bb',
-    'categorical'          : 'dd',
+    'nominal'              : 'dd',
     'cyclic'               : 'nich',
     'numerical'            : 'nich',
     'nominal'              : 'dd'
 }
 
 
-class LoomMetamodel(metamodel.IBayesDBMetamodel):
-    """Loom metamodel for BayesDB.
+class LoomBackend(BayesDB_Backend):
+    """Loom backend for BayesDB.
 
-    The metamodel is named ``loom`` in BQL::
+    The backend is named ``loom`` in BQL ::
 
         CREATE GENERATOR t_nig FOR t USING loom
 
-    Internally, the Loom metamodel add SQL tables to the
-    database with names that begin with ``bayesdb_loom``.
+    Internally, the Loom backend add SQL tables to the database with names that
+    begin with ``bayesdb_loom``.
     """
 
     def __init__(self, loom_store_path):
-        """Initialize the Loom metamodel
+        """Initialize the Loom backend.
 
         `loom_store_path` is the absolute path at which loom stores its
         auxiliary data files.
@@ -138,7 +138,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         # The cache is a dictionary whose keys are bayeslite.BayesDB objects,
         # and whose values are dictionaries (one cache per bdb). We need
         # self._cache to have separate caches for each bdb because the same
-        # instance of LoomMetamodel may be used across multiple bdb instances.
+        # instance of LoomBackend may be used across multiple bdb instances.
         self._cache = dict()
 
 
@@ -147,7 +147,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
     def register(self, bdb):
         with bdb.savepoint():
-            version = bayesdb_metamodel_version(bdb, self.name())
+            version = bayesdb_backend_version(bdb, self.name())
             if version is None:
                 bdb.sql_execute(LOOM_SCHEMA_1, (self.name(),))
                 version = 1
@@ -169,7 +169,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         data_by_column = {}
         for colno in core.bayesdb_variable_numbers(bdb, population_id, None):
             column_name = core.bayesdb_variable_name(
-                bdb, population_id, colno)
+                bdb, population_id, None, colno)
             headers.append(column_name)
 
             qt = sqlite3_quote_name(table)
@@ -272,15 +272,14 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
     def _data_to_schema(self, bdb, population_id, data_by_column):
         json_dict = {}
-        for colno in core.bayesdb_variable_numbers(bdb,
-                population_id, None):
-            column_name = core.bayesdb_variable_name(bdb,
-                population_id, colno)
-            stattype = core.bayesdb_variable_stattype(bdb,
-                population_id, colno)
-            if (stattype == 'nominal' or stattype == 'categorical') \
+        for colno in core.bayesdb_variable_numbers(bdb, population_id, None):
+            column_name = core.bayesdb_variable_name(
+                bdb, population_id, None, colno)
+            stattype = core.bayesdb_variable_stattype(
+                bdb, population_id, None, colno)
+            if stattype == 'nominal' \
                     and len(set(data_by_column[column_name])) > 256:
-                stattype = 'unboundedcategorical'
+                stattype = 'unbounded_nominal'
             json_dict[column_name] = STATTYPE_TO_LOOMTYPE[stattype]
         with tempfile.NamedTemporaryFile(delete=False) as schema_file:
             schema_file.write(json.dumps(json_dict))
@@ -497,7 +496,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         if modelnos is None:
             modelnos = range(self._get_num_models(bdb, generator_id))
         if colno0 == colno1:
-            return 1.
+            return [1.]
         cursor = bdb.sql_execute('''
             SELECT
                 AVG(t1.kind_id = t2.kind_id)
@@ -509,7 +508,9 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                 AND t1.colno = ?
                 AND t2.colno = ?
         ''' % (','.join(map(str, modelnos)),), (generator_id, colno0, colno1))
-        return util.cursor_value(cursor)
+        dep = util.cursor_value(cursor)
+        # XXX TODO, return list of results instead of the average.
+        return [dep]
 
     def _get_kind_id(self, bdb, generator_id, modelno, colno):
         cursor = bdb.sql_execute('''
@@ -535,10 +536,14 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
     def column_mutual_information(self, bdb, generator_id, modelnos, colnos0,
             colnos1, constraints, numsamples):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
-        colnames0 = [str(core.bayesdb_variable_name(bdb, population_id, colno))
-            for colno in colnos0]
-        colnames1 = [str(core.bayesdb_variable_name(bdb, population_id, colno))
-            for colno in colnos1]
+        colnames0 = [
+            str(core.bayesdb_variable_name(bdb, population_id, None, colno))
+            for colno in colnos0
+        ]
+        colnames1 = [
+            str(core.bayesdb_variable_name(bdb, population_id, None, colno))
+            for colno in colnos1
+        ]
         server = self._get_cache_entry(bdb, generator_id, 'preql_server')
         target_set = server._cols_to_mask(server.encode_set(colnames0))
         query_set = server._cols_to_mask(server.encode_set(colnames1))
@@ -556,7 +561,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             modelnos = range(self._get_num_models(bdb, generator_id))
         assert len(colnos) == 1
         if rowid == target_rowid:
-            return 1.
+            return [1.]
         cursor = bdb.sql_execute('''
             SELECT
                 AVG(t1.partition_id = t2.partition_id)
@@ -576,7 +581,9 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                 AND t2.rowid = ?
         ''' % (','.join(map(str, modelnos)),), (
             generator_id, colnos[0], rowid, target_rowid))
-        return util.cursor_value(cursor)
+        sim = util.cursor_value(cursor)
+        # XXX TODO, return list of results instead of the average.
+        return [sim]
 
     def _reorder_row(self, bdb, generator_id, row, dense=True):
         """Reorder a row of columns according to loom's column order
@@ -593,7 +600,7 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         for colno, value in zip(range(1, len(row) + 1), row):
             column_name = core.bayesdb_variable_name(
-                bdb, population_id, colno)
+                bdb, population_id, None, colno)
             ordererd_column_dict[column_name] = str(value)
         if dense is False:
             return [
@@ -643,9 +650,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
             conf = 0
             return pred, conf
 
-        def _is_categorical(stattype):
-            return casefold(stattype) in ['categorical', 'nominal']
-
         # Retrieve the samples. Specifying `rowid` ensures that relevant
         # constraints are retrieved by `simulate`,
         # so provide empty constraints.
@@ -654,17 +658,19 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
         # Determine the imputation strategy (mode or mean).
         population_id = core.bayesdb_generator_population(bdb, generator_id)
-        stattype = core.bayesdb_variable_stattype(bdb, population_id, colno)
-        if _is_categorical(stattype):
+        stattype = core.bayesdb_variable_stattype(
+            bdb, population_id, None, colno)
+        if _is_nominal(stattype):
             return _impute_categorical(sample)
         else:
             return _impute_numerical(sample)
 
     def simulate_joint(self, bdb, generator_id, modelnos, rowid, targets,
             constraints, num_samples=1, accuracy=None):
-        if rowid != core.bayesdb_generator_fresh_row_id(bdb, generator_id):
-            row_values_raw = core.bayesdb_generator_row_values(
-                bdb, generator_id, rowid)
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        if rowid != core.bayesdb_population_fresh_row_id(bdb, generator_id):
+            row_values_raw = core.bayesdb_population_row_values(
+                bdb, population_id, rowid)
             row_values = [str(a) if isinstance(a, unicode) else a
                 for a in row_values_raw]
 
@@ -682,11 +688,11 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         row = {}
         target_no_to_name = {}
         for colno in targets:
-            name = core.bayesdb_generator_column_name(bdb, generator_id, colno)
+            name = core.bayesdb_variable_name(bdb, generator_id, None, colno)
             target_no_to_name[colno] = name
             row[name] = ''
         for (colno, value) in constraints:
-            name = core.bayesdb_generator_column_name(bdb, generator_id, colno)
+            name = core.bayesdb_variable_name(bdb, generator_id, None, colno)
             row[name] = value
 
         csv_headers, csv_values = zip(*row.iteritems())
@@ -718,11 +724,11 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                 colname = target_no_to_name[colno]
                 value = row_dict[colname]
                 stattype = core.bayesdb_variable_stattype(
-                    bdb, population_id, colno)
-                if core.bayesdb_stattype_affinity(bdb, stattype) == 'real':
-                    return_list[-1].append(float(value))
-                else:
+                    bdb, population_id, None, colno)
+                if _is_nominal(stattype):
                     return_list[-1].append(value)
+                else:
+                    return_list[-1].append(float(value))
 
         return return_list
 
@@ -739,12 +745,13 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
         for (colno, value) in targets:
             column_name = core.bayesdb_variable_name(
-                bdb, population_id, colno)
+                bdb, population_id, None, colno)
             and_case[column_name] = self._convert_to_proper_stattype(
                 bdb, generator_id, colno, value)
             conditional_case[column_name] = None
         for (colno, value) in constraints:
-            column_name = core.bayesdb_variable_name(bdb, population_id, colno)
+            column_name = core.bayesdb_variable_name(
+                bdb, population_id, None, colno)
             processed_value = self._convert_to_proper_stattype(
                 bdb, generator_id, colno, value)
 
@@ -766,18 +773,14 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
         """
         if value is None:
             return value
-
         population_id = core.bayesdb_generator_population(bdb, generator_id)
-        stattype = core.bayesdb_variable_stattype(bdb, population_id, colno)
-
-        if core._STATTYPE_TO_AFFINITY[stattype] == 'real':
-            return float(value)
-
-        # Lookup the string encoding.
-        if core._STATTYPE_TO_AFFINITY[stattype] == 'text':
+        stattype = core.bayesdb_variable_stattype(
+            bdb, population_id, None, colno)
+        # If nominal then return the integer code.
+        if _is_nominal(stattype):
             return self._get_integer_form(bdb, generator_id, colno, value)
-
-        return value
+        # Return the value as float.
+        return float(value)
 
     def _get_integer_form(self, bdb, generator_id, colno, string_form):
         cursor = bdb.sql_execute('''
@@ -791,8 +794,10 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
 
     def _get_ordered_column_labels(self, bdb, generator_id):
         population_id = core.bayesdb_generator_population(bdb, generator_id)
-        return [core.bayesdb_variable_name(bdb, population_id, colno)
-            for colno in self._get_order(bdb, generator_id)]
+        return [
+            core.bayesdb_variable_name(bdb, population_id, None, colno)
+            for colno in self._get_order(bdb, generator_id)
+        ]
 
     def _get_loom_rank(self, bdb, generator_id, colno):
         cursor = bdb.sql_execute('''
@@ -842,3 +847,6 @@ class LoomMetamodel(metamodel.IBayesDBMetamodel):
                 del cache[generator_id]
             elif key in cache[generator_id]:
                 del cache[generator_id][key]
+
+def _is_nominal(stattype):
+    return casefold(stattype) in ['nominal', 'unbounded_nominal']
