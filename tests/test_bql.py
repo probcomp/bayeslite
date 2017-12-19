@@ -1655,8 +1655,22 @@ def test_parametrized():
             'PRAGMA table_info("bayesdb_temp_0")',
             'SELECT COUNT(*) FROM bayesdb_population WHERE name = ?',
             'SELECT id FROM bayesdb_population WHERE name = ?',
-            'SELECT tabname FROM bayesdb_population WHERE id = ?',
-            'PRAGMA table_info("t")',
+            'SELECT COUNT(*) FROM bayesdb_variable'
+                ' WHERE population_id = ?'
+                    ' AND (generator_id IS NULL OR generator_id = ?)'
+                    ' AND name = ?',
+            'SELECT COUNT(*) FROM bayesdb_variable'
+                ' WHERE population_id = ?'
+                    ' AND (generator_id IS NULL OR generator_id = ?)'
+                    ' AND name = ?',
+            'SELECT COUNT(*) FROM bayesdb_variable'
+                ' WHERE population_id = ?'
+                    ' AND (generator_id IS NULL OR generator_id = ?)'
+                    ' AND name = ?',
+            'SELECT COUNT(*) FROM bayesdb_variable'
+                ' WHERE population_id = ?'
+                    ' AND (generator_id IS NULL OR generator_id = ?)'
+                    ' AND name = ?',
             'SELECT CAST(4 AS INTEGER), \'F\'',
             'SELECT token FROM bayesdb_rowid_tokens',
             'SELECT COUNT(*) FROM bayesdb_variable'
@@ -1771,7 +1785,7 @@ def test_parametrized():
             'SELECT value FROM bayesdb_cgpm_category'
                 ' WHERE generator_id = ? AND colno = ? AND code = ?',
             'CREATE TEMP TABLE "bayesdb_temp_0"'
-                ' ("age" NUMERIC,"RANK" NUMERIC,"division" NUMERIC)',
+                ' ("age","RANK","division")',
             'INSERT INTO "bayesdb_temp_0" ("age","RANK","division")'
                 ' VALUES (?,?,?)',
             'INSERT INTO "bayesdb_temp_0" ("age","RANK","division")'
@@ -1790,8 +1804,14 @@ def test_parametrized():
             'PRAGMA table_info("bayesdb_temp_1")',
             'SELECT COUNT(*) FROM bayesdb_population WHERE name = ?',
             'SELECT id FROM bayesdb_population WHERE name = ?',
-            'SELECT tabname FROM bayesdb_population WHERE id = ?',
-            'PRAGMA table_info("t")',
+            'SELECT COUNT(*) FROM bayesdb_variable'
+                ' WHERE population_id = ?'
+                    ' AND (generator_id IS NULL OR generator_id = ?)'
+                    ' AND name = ?',
+            'SELECT COUNT(*) FROM bayesdb_variable'
+                ' WHERE population_id = ?'
+                    ' AND (generator_id IS NULL OR generator_id = ?)'
+                    ' AND name = ?',
             'SELECT CAST(4 AS INTEGER), \'F\'',
             'SELECT token FROM bayesdb_rowid_tokens',
             'SELECT COUNT(*) FROM bayesdb_variable'
@@ -1851,7 +1871,7 @@ def test_parametrized():
                 ' AND (generator_id IS NULL OR generator_id = ?) AND colno = ?',
             'SELECT value FROM bayesdb_cgpm_category'
                 ' WHERE generator_id = ? AND colno = ? AND code = ?',
-            'CREATE TEMP TABLE "bayesdb_temp_1" ("age" NUMERIC)',
+            'CREATE TEMP TABLE "bayesdb_temp_1" ("age")',
             'INSERT INTO "bayesdb_temp_1" ("age") VALUES (?)',
             'INSERT INTO "bayesdb_temp_1" ("age") VALUES (?)',
             'INSERT INTO "bayesdb_temp_1" ("age") VALUES (?)',
