@@ -37,15 +37,24 @@ import loom.tasks
 from distributions.io.stream import open_compressed
 from loom.cFormat import assignment_stream_load
 
-import bayeslite.core as core
-import bayeslite.util as util
+from bayeslite.core import bayesdb_generator_name
+from bayeslite.core import bayesdb_generator_population
+from bayeslite.core import bayesdb_population_fresh_row_id
+from bayeslite.core import bayesdb_population_row_values
+from bayeslite.core import bayesdb_population_table
+from bayeslite.core import bayesdb_table_column_number
+from bayeslite.core import bayesdb_variable_name
+from bayeslite.core import bayesdb_variable_numbers
+from bayeslite.core import bayesdb_variable_stattype
 
 from bayeslite.backend import BayesDB_Backend
 from bayeslite.backend import bayesdb_backend_version
+
 from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
-from bayeslite.stats import arithmetic_mean
+
 from bayeslite.util import casefold
+from bayeslite.util import cursor_value
 
 
 LOOM_SCHEMA_1 = '''
@@ -153,8 +162,8 @@ class LoomBackend(BayesDB_Backend):
                 version = 1
 
     def create_generator(self, bdb, generator_id, schema, **kwargs):
-        population_id = core.bayesdb_generator_population(bdb, generator_id)
-        table = core.bayesdb_population_table(bdb, population_id)
+        population_id = bayesdb_generator_population(bdb, generator_id)
+        table = bayesdb_population_table(bdb, population_id)
 
         # Store generator info in bdb.
         name = self._generate_name(bdb, generator_id)
@@ -167,9 +176,8 @@ class LoomBackend(BayesDB_Backend):
         headers = []
         data = []
         data_by_column = {}
-        for colno in core.bayesdb_variable_numbers(bdb, population_id, None):
-            column_name = core.bayesdb_variable_name(
-                bdb, population_id, None, colno)
+        for colno in bayesdb_variable_numbers(bdb, population_id, None):
+            column_name = bayesdb_variable_name(bdb, population_id, None, colno)
             headers.append(column_name)
 
             qt = sqlite3_quote_name(table)
@@ -199,8 +207,8 @@ class LoomBackend(BayesDB_Backend):
         with gzip.open(encoding_path) as encoding_file:
             encoding = json.loads(encoding_file.read().decode('ascii'))
 
-        population_id = core.bayesdb_generator_population(bdb, generator_id)
-        table = core.bayesdb_population_table(bdb, population_id)
+        population_id = bayesdb_generator_population(bdb, generator_id)
+        table = bayesdb_population_table(bdb, population_id)
 
         # Store string encoding.
         insert_string_encoding = '''
@@ -210,8 +218,7 @@ class LoomBackend(BayesDB_Backend):
         '''
         for col in encoding:
             if 'symbols' in col:
-                colno = core.bayesdb_table_column_number(bdb,
-                    table, str(col['name']))
+                colno = bayesdb_table_column_number(bdb, table, str(col['name']))
                 for string_form, integer_form in col['symbols'].iteritems():
                     bdb.sql_execute(insert_string_encoding, {
                         'generator_id': generator_id,
@@ -227,7 +234,7 @@ class LoomBackend(BayesDB_Backend):
             VALUES (:generator_id, :colno, :rank)
         '''
         for col_index in xrange(len(encoding)):
-            colno = core.bayesdb_table_column_number(
+            colno = bayesdb_table_column_number(
                 bdb, table, str(encoding[col_index]['name']))
             bdb.sql_execute(insert_order_sql, {
                 'generator_id': generator_id,
@@ -272,11 +279,9 @@ class LoomBackend(BayesDB_Backend):
 
     def _data_to_schema(self, bdb, population_id, data_by_column):
         json_dict = {}
-        for colno in core.bayesdb_variable_numbers(bdb, population_id, None):
-            column_name = core.bayesdb_variable_name(
-                bdb, population_id, None, colno)
-            stattype = core.bayesdb_variable_stattype(
-                bdb, population_id, None, colno)
+        for colno in bayesdb_variable_numbers(bdb, population_id, None):
+            column_name = bayesdb_variable_name(bdb, population_id, None, colno)
+            stattype = bayesdb_variable_stattype(bdb, population_id, None, colno)
             if stattype == 'nominal' \
                     and len(set(data_by_column[column_name])) > 256:
                 stattype = 'unbounded_nominal'
@@ -286,12 +291,12 @@ class LoomBackend(BayesDB_Backend):
         return schema_file
 
     def _generate_name(self, bdb, generator_id):
-        generator_name = core.bayesdb_generator_name(bdb, generator_id)
+        generator_name = bayesdb_generator_name(bdb, generator_id)
         timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
         return '%s_%s' % (timestamp, generator_name)
 
     def _get_name(self, bdb, generator_id):
-        return util.cursor_value(bdb.sql_execute('''
+        return cursor_value(bdb.sql_execute('''
             SELECT name FROM bayesdb_loom_generator
             WHERE generator_id = ?
         ''', (generator_id,)))
@@ -329,7 +334,7 @@ class LoomBackend(BayesDB_Backend):
             FROM bayesdb_loom_generator_model_info
             WHERE generator_id = ?
         ''', (generator_id,))
-        return util.cursor_value(cursor)
+        return cursor_value(cursor)
 
     def drop_generator(self, bdb, generator_id):
         self._del_cache_entry(bdb, generator_id, None)
@@ -414,7 +419,7 @@ class LoomBackend(BayesDB_Backend):
         self._set_cache_entry(bdb, generator_id, 'preql_server', preqlServer)
 
     def _store_kind_partition(self, bdb, generator_id, modelnos):
-        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        population_id = bayesdb_generator_population(bdb, generator_id)
         if modelnos is None:
             modelnos = range(self._get_num_models(bdb, generator_id))
         with bdb.savepoint():
@@ -423,7 +428,7 @@ class LoomBackend(BayesDB_Backend):
                     bdb, generator_id, modelno)
 
                 # Bulk insertion of mapping from colno to kind_id.
-                colnos = core.bayesdb_variable_numbers(bdb, population_id, None)
+                colnos = bayesdb_variable_numbers(bdb, population_id, None)
                 ranks = [self._get_loom_rank(bdb, generator_id, colno)
                     for colno in colnos]
                 insertions = ','.join(
@@ -508,7 +513,7 @@ class LoomBackend(BayesDB_Backend):
                 AND t1.colno = ?
                 AND t2.colno = ?
         ''' % (','.join(map(str, modelnos)),), (generator_id, colno0, colno1))
-        dep = util.cursor_value(cursor)
+        dep = cursor_value(cursor)
         # XXX TODO, return list of results instead of the average.
         return [dep]
 
@@ -520,7 +525,7 @@ class LoomBackend(BayesDB_Backend):
                 AND modelno = ?
                 AND colno = ?
         ''', (generator_id, modelno, colno,))
-        return util.cursor_value(cursor)
+        return cursor_value(cursor)
 
     def _get_partition_id(self, bdb, generator_id, modelno, kind_id, rowid):
         cursor = bdb.sql_execute('''
@@ -531,17 +536,17 @@ class LoomBackend(BayesDB_Backend):
                 AND kind_id = ?
                 AND rowid = ?
         ''', (generator_id, modelno, kind_id, rowid))
-        return util.cursor_value(cursor)
+        return cursor_value(cursor)
 
     def column_mutual_information(self, bdb, generator_id, modelnos, colnos0,
             colnos1, constraints, numsamples):
-        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        population_id = bayesdb_generator_population(bdb, generator_id)
         colnames0 = [
-            str(core.bayesdb_variable_name(bdb, population_id, None, colno))
+            str(bayesdb_variable_name(bdb, population_id, None, colno))
             for colno in colnos0
         ]
         colnames1 = [
-            str(core.bayesdb_variable_name(bdb, population_id, None, colno))
+            str(bayesdb_variable_name(bdb, population_id, None, colno))
             for colno in colnos1
         ]
         server = self._get_cache_entry(bdb, generator_id, 'preql_server')
@@ -581,7 +586,7 @@ class LoomBackend(BayesDB_Backend):
                 AND t2.rowid = ?
         ''' % (','.join(map(str, modelnos)),), (
             generator_id, colnos[0], rowid, target_rowid))
-        sim = util.cursor_value(cursor)
+        sim = cursor_value(cursor)
         # XXX TODO, return list of results instead of the average.
         return [sim]
 
@@ -597,10 +602,9 @@ class LoomBackend(BayesDB_Backend):
         ordererd_column_dict = collections.OrderedDict(
             [(a, None) for a in ordered_column_labels])
 
-        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        population_id = bayesdb_generator_population(bdb, generator_id)
         for colno, value in zip(range(1, len(row) + 1), row):
-            column_name = core.bayesdb_variable_name(
-                bdb, population_id, None, colno)
+            column_name = bayesdb_variable_name(bdb, population_id, None, colno)
             ordererd_column_dict[column_name] = str(value)
         if dense is False:
             return [
@@ -657,8 +661,8 @@ class LoomBackend(BayesDB_Backend):
             bdb, generator_id, modelnos, rowid, [colno], [], numsamples)
 
         # Determine the imputation strategy (mode or mean).
-        population_id = core.bayesdb_generator_population(bdb, generator_id)
-        stattype = core.bayesdb_variable_stattype(
+        population_id = bayesdb_generator_population(bdb, generator_id)
+        stattype = bayesdb_variable_stattype(
             bdb, population_id, None, colno)
         if _is_nominal(stattype):
             return _impute_categorical(sample)
@@ -667,9 +671,9 @@ class LoomBackend(BayesDB_Backend):
 
     def simulate_joint(self, bdb, generator_id, modelnos, rowid, targets,
             constraints, num_samples=1, accuracy=None):
-        population_id = core.bayesdb_generator_population(bdb, generator_id)
-        if rowid != core.bayesdb_population_fresh_row_id(bdb, generator_id):
-            row_values_raw = core.bayesdb_population_row_values(
+        population_id = bayesdb_generator_population(bdb, generator_id)
+        if rowid != bayesdb_population_fresh_row_id(bdb, generator_id):
+            row_values_raw = bayesdb_population_row_values(
                 bdb, population_id, rowid)
             row_values = [str(a) if isinstance(a, unicode) else a
                 for a in row_values_raw]
@@ -688,11 +692,11 @@ class LoomBackend(BayesDB_Backend):
         row = {}
         target_no_to_name = {}
         for colno in targets:
-            name = core.bayesdb_variable_name(bdb, generator_id, None, colno)
+            name = bayesdb_variable_name(bdb, generator_id, None, colno)
             target_no_to_name[colno] = name
             row[name] = ''
         for (colno, value) in constraints:
-            name = core.bayesdb_variable_name(bdb, generator_id, None, colno)
+            name = bayesdb_variable_name(bdb, generator_id, None, colno)
             row[name] = value
 
         csv_headers, csv_values = zip(*row.iteritems())
@@ -714,7 +718,7 @@ class LoomBackend(BayesDB_Backend):
             output.strip().split('\r\n')[0].split(CSV_DELIMITER)]
         loom_output = [zip(returned_headers, a.split(CSV_DELIMITER))
             for a in output.strip().split('\r\n')[1:]]
-        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        population_id = bayesdb_generator_population(bdb, generator_id)
         return_list = []
         for row in loom_output:
             return_list.append([])
@@ -723,7 +727,7 @@ class LoomBackend(BayesDB_Backend):
             for colno in targets:
                 colname = target_no_to_name[colno]
                 value = row_dict[colname]
-                stattype = core.bayesdb_variable_stattype(
+                stattype = bayesdb_variable_stattype(
                     bdb, population_id, None, colno)
                 if _is_nominal(stattype):
                     return_list[-1].append(value)
@@ -734,7 +738,7 @@ class LoomBackend(BayesDB_Backend):
 
     def logpdf_joint(self, bdb, generator_id, modelnos, rowid, targets,
             constraints):
-        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        population_id = bayesdb_generator_population(bdb, generator_id)
         ordered_column_labels = self._get_ordered_column_labels(
             bdb, generator_id)
 
@@ -744,14 +748,12 @@ class LoomBackend(BayesDB_Backend):
             [(a, None) for a in ordered_column_labels])
 
         for (colno, value) in targets:
-            column_name = core.bayesdb_variable_name(
-                bdb, population_id, None, colno)
+            column_name = bayesdb_variable_name(bdb, population_id, None, colno)
             and_case[column_name] = self._convert_to_proper_stattype(
                 bdb, generator_id, colno, value)
             conditional_case[column_name] = None
         for (colno, value) in constraints:
-            column_name = core.bayesdb_variable_name(
-                bdb, population_id, None, colno)
+            column_name = bayesdb_variable_name(bdb, population_id, None, colno)
             processed_value = self._convert_to_proper_stattype(
                 bdb, generator_id, colno, value)
 
@@ -773,8 +775,8 @@ class LoomBackend(BayesDB_Backend):
         """
         if value is None:
             return value
-        population_id = core.bayesdb_generator_population(bdb, generator_id)
-        stattype = core.bayesdb_variable_stattype(
+        population_id = bayesdb_generator_population(bdb, generator_id)
+        stattype = bayesdb_variable_stattype(
             bdb, population_id, None, colno)
         # If nominal then return the integer code.
         if _is_nominal(stattype):
@@ -790,12 +792,12 @@ class LoomBackend(BayesDB_Backend):
                 AND colno = ?
                 AND string_form = ?
         ''', (generator_id, colno, string_form,))
-        return util.cursor_value(cursor)
+        return cursor_value(cursor)
 
     def _get_ordered_column_labels(self, bdb, generator_id):
-        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        population_id = bayesdb_generator_population(bdb, generator_id)
         return [
-            core.bayesdb_variable_name(bdb, population_id, None, colno)
+            bayesdb_variable_name(bdb, population_id, None, colno)
             for colno in self._get_order(bdb, generator_id)
         ]
 
@@ -806,7 +808,7 @@ class LoomBackend(BayesDB_Backend):
             WHERE generator_id = ?
                 AND colno = ?
         ''', (generator_id, colno,))
-        return util.cursor_value(cursor)
+        return cursor_value(cursor)
 
     def _get_order(self, bdb, generator_id):
         """Get the ordering of the columns according to loom"""
