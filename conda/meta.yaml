@@ -1,0 +1,38 @@
+package:
+  name: bayeslite
+  version: {{ CONDA_PACKAGE_VERSION }}
+
+source:
+  path: ../
+
+build:
+  script: python setup.py install
+
+requirements:
+  build:
+    - cython 0.23.*
+    - git
+    - jsonschema
+    - numpy 1.11.*
+    - python 2.7.*
+  run:
+    - cgpm
+    - crosscat
+    - jsonschema
+    - numpy 1.11.*
+    - scipy 0.17.*
+    - six 1.10.*
+
+test:
+  requires:
+    - apsw
+    - pandas 0.18.*
+    - pytest 2.8.*
+    - python 2.7.*
+  commands:
+    - python -m pytest --pyargs bayeslite -k "not __ci_"
+
+about:
+  home: https://github.com/probcomp/bayeslite
+  license: Apache
+  license_file: LICENSE.txt

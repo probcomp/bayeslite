@@ -115,7 +115,7 @@ def spawntablepop(spawntable):
 def spawntablepopgen(spawntablepop):
     table, pop, c = spawntablepop
     c.sendexpectcmd(
-        'create generator hospitals_cc for %s using crosscat;' % (pop,))
+        'create generator hospitals_cc for %s using cgpm;' % (pop,))
     c.expect_prompt()
     return table, pop, 'hospitals_cc', c
 
@@ -162,7 +162,6 @@ def test_help_returns_list_of_commands(spawnbdb):
     c = spawnbdb
     c.sendexpectcmd('.help')
     c.expect_lines([
-        ' .codebook    load codebook for table',
         '      .csv    create table from CSV file',
         ' .describe    describe BayesDB entities',
         '    .guess    guess population schema',
@@ -386,7 +385,6 @@ def test_hook(spawnbdb):
     c.expect_prompt()
     c.sendexpectcmd('.help')
     c.expect_lines([
-        ' .codebook    load codebook for table',
         '      .csv    create table from CSV file',
         ' .describe    describe BayesDB entities',
         '    .guess    guess population schema',

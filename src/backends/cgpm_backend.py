@@ -26,10 +26,9 @@ from cgpm.crosscat.engine import Engine
 import bayeslite.core as core
 
 from bayeslite.exception import BQLError
-from bayeslite.metamodel import IBayesDBMetamodel
-from bayeslite.metamodel import bayesdb_metamodel_version
+from bayeslite.backend import BayesDB_Backend
+from bayeslite.backend import bayesdb_backend_version
 from bayeslite.sqlite3_util import sqlite3_quote_name
-from bayeslite.stats import arithmetic_mean
 from bayeslite.util import casefold
 from bayeslite.util import cursor_value
 from bayeslite.util import json_dumps
@@ -41,7 +40,7 @@ import cgpm_analyze.parse
 import cgpm_schema.parse
 
 CGPM_SCHEMA_1 = '''
-INSERT INTO bayesdb_metamodel (name, version) VALUES ('cgpm', 1);
+INSERT INTO bayesdb_backend (name, version) VALUES ('cgpm', 1);
 
 CREATE TABLE bayesdb_cgpm_generator (
     generator_id        INTEGER NOT NULL PRIMARY KEY
@@ -69,7 +68,7 @@ CREATE TABLE bayesdb_cgpm_category (
 '''
 
 CGPM_SCHEMA_2 = '''
-UPDATE bayesdb_metamodel SET version = 2 WHERE name = 'cgpm';
+UPDATE bayesdb_backend SET version = 2 WHERE name = 'cgpm';
 
 ALTER TABLE bayesdb_cgpm_generator
     ADD COLUMN engine_stamp
@@ -77,7 +76,7 @@ ALTER TABLE bayesdb_cgpm_generator
 '''
 
 CGPM_SCHEMA_3 = '''
-UPDATE bayesdb_metamodel SET version = 3 WHERE name = 'cgpm';
+UPDATE bayesdb_backend SET version = 3 WHERE name = 'cgpm';
 
 CREATE TABLE bayesdb_cgpm_modelno (
     generator_id        INTEGER NOT NULL,
@@ -93,12 +92,12 @@ INSERT INTO bayesdb_cgpm_modelno (generator_id, modelno, cgpm_modelno)
     SELECT generator_id, modelno, modelno
     FROM bayesdb_generator_model
     WHERE generator_id IN (
-        SELECT id FROM bayesdb_generator WHERE metamodel = 'cgpm'
+        SELECT id FROM bayesdb_generator WHERE backend = 'cgpm'
     );
 '''
 
 
-class CGPM_Metamodel(IBayesDBMetamodel):
+class CGPM_Backend(BayesDB_Backend):
 
     def __init__(self, cgpm_registry, multiprocess=None):
         self._cgpm_registry = cgpm_registry
@@ -106,10 +105,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # The cache is a dictionary whose keys are bayeslite.BayesDB objects,
         # and whose values are dictionaries (one cache per bdb). We need
         # self._cache to have separate caches for each bdb because the same
-        # instance of CGPM_Metamodel may be used across multiple bdb instances.
-        # This situation occurs when CGPM_Metamodel is used as a default
-        # metamodel (refer to __init__.py, where the bayeslite module, upon
-        # import, creates a single CGPM_Metamodel object to be used throughout
+        # instance of CGPM_Backend may be used across multiple bdb instances.
+        # This situation occurs when CGPM_Backend is used as a default
+        # backend (refer to __init__.py, where the bayeslite module, upon
+        # import, creates a single CGPM_Backend object to be used throughout
         # the python session).
         self._cache = dict()
 
@@ -119,7 +118,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
     def register(self, bdb):
         with bdb.savepoint():
             # Get the current version, if there is one.
-            version = bayesdb_metamodel_version(bdb, self.name())
+            version = bayesdb_backend_version(bdb, self.name())
             # Check the version.
             if version is None:
                 # No version -- CGPM schema not instantaited.
@@ -150,8 +149,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # Store the schema.
         bdb.sql_execute('''
-            INSERT INTO bayesdb_cgpm_generator (generator_id, schema_json)
-                VALUES (?, ?)
+            INSERT INTO bayesdb_cgpm_generator
+                (generator_id, schema_json, engine_json) VALUES (?, ?, NULL)
         ''', (generator_id, json_dumps(schema)))
 
         # Get the underlying population and table.
@@ -165,13 +164,13 @@ class CGPM_Metamodel(IBayesDBMetamodel):
                 bdb, population_id, generator_id, var, stattype)
 
         # Assign codes to categories and consecutive column numbers to
-        # the modelled variables.
+        # the modeled variables.
         vars_cursor = bdb.sql_execute('''
             SELECT colno, name, stattype FROM bayesdb_variable
                 WHERE population_id = ? AND 0 <= colno
         ''', (population_id,))
         for colno, name, stattype in vars_cursor:
-            if _is_categorical(stattype):
+            if _is_nominal(stattype):
                 qn = sqlite3_quote_name(name)
                 cursor = bdb.sql_execute('''
                     SELECT DISTINCT %s
@@ -240,20 +239,21 @@ class CGPM_Metamodel(IBayesDBMetamodel):
     def add_column(self, bdb, generator_id, colno):
 
         population_id = core.bayesdb_generator_population(bdb, generator_id)
-        varname = core.bayesdb_variable_name(bdb, population_id, colno)
+        varname = core.bayesdb_variable_name(bdb, population_id, generator_id, colno)
 
         # Ensure variable exists in population.
         if not core.bayesdb_has_variable(bdb, population_id, None, varname):
             raise BQLError(bdb, 'No such column in population: %d' % (varname,))
 
         # Retrieve the stattype and default distribution.
-        stattype = core.bayesdb_variable_stattype(bdb, population_id, colno)
+        stattype = core.bayesdb_variable_stattype(
+            bdb, population_id, generator_id, colno)
         if stattype not in _DEFAULT_DIST:
             raise BQLError(bdb, 'No distribution for stattype: %s' % (stattype))
         dist, params = _DEFAULT_DIST[stattype](bdb, generator_id, varname)
 
-        # Update variable value mapping if categorical.
-        if _is_categorical(stattype):
+        # Update variable value mapping if nominal.
+        if _is_nominal(stattype):
             table_name = core.bayesdb_population_table(bdb, population_id)
             qt = sqlite3_quote_name(table_name)
             qv = sqlite3_quote_name(varname)
@@ -558,6 +558,9 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             self, bdb, generator_id, modelnos=None, iterations=None,
             max_seconds=None, ckpt_iterations=None, ckpt_seconds=None,
             program=None):
+        # No analysis specified.
+        if not iterations and not max_seconds:
+            return
 
         # Checkpoint by seconds disabled.
         if ckpt_seconds:
@@ -684,9 +687,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
     def column_dependence_probability(
             self, bdb, generator_id, modelnos, colno0, colno1):
         # Optimize special-case vacuous case of self-dependence.
-        # XXX Caller should avoid this.
+        # XXX Caller should avoid this. We also should really return a list
+        # of ones equal to the number of user-specified models (or all).
         if colno0 == colno1:
-            return 1
+            return [1]
 
         # Get the modelnos.
         cgpm_modelnos = self._get_modelnos(bdb, generator_id, modelnos)
@@ -700,7 +704,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             colno0, colno1, statenos=cgpm_modelnos,
             multiprocess=self._multiprocess)
 
-        return arithmetic_mean(depprob_list)
+        return depprob_list
 
     def column_mutual_information(
             self, bdb, generator_id, modelnos, colnos0, colnos1,
@@ -715,7 +719,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Get the engine.
         engine = self._engine(bdb, generator_id)
 
-        # Build the evidence, ignoring nan values and converting categoricals.
+        # Build the evidence, ignoring nan values and converting nominals.
         evidence = constraints and {
             colno: (self._to_numeric(bdb, generator_id, colno, value)
                 if value is not None else None)
@@ -725,7 +729,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Engine gives us a list of samples which it is our
         # responsibility to integrate over.
         mi_list = engine.mutual_information(
-            colnos0, colnos1, evidence=evidence, N=numsamples,
+            colnos0, colnos1, constraints=evidence, N=numsamples,
             progress=True, statenos=cgpm_modelnos,
             multiprocess=self._multiprocess)
 
@@ -743,7 +747,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
         # XXX TODO: If neither rowids are incorporated, return None.
         if cgpm_rowid == -1 or cgpm_target_rowid == -1:
-            return float('nan')
+            return [float('nan')]
 
         # Get the engine.
         engine = self._engine(bdb, generator_id)
@@ -754,7 +758,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             cgpm_rowid, cgpm_target_rowid, colnos, statenos=cgpm_modelnos,
             multiprocess=self._multiprocess)
 
-        return arithmetic_mean(similarity_list)
+        return similarity_list
 
     def predictive_relevance(
             self, bdb, generator_id, modelnos, rowid_target, rowid_query,
@@ -795,7 +799,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             for v in d.itervalues())
         if unknown:
             raise BQLError(bdb,
-                'Unknown categorical values in predictive relevance: %s'
+                'Unknown nominal values in predictive relevance: %s'
                 % (hypotheticals,))
 
         # Get the engine.
@@ -814,7 +818,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             numsamples = 2
         assert numsamples > 0
 
-        def _impute_categorical(sample):
+        def _impute_nominal(sample):
             counts = Counter(s[0] for s in sample)
             mode_count = max(counts[v] for v in counts)
             pred = iter(v for v in counts if counts[v] == mode_count).next()
@@ -832,10 +836,11 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             bdb, generator_id, modelnos, rowid, [colno], [], numsamples)
 
         # Determine the imputation strategy (mode or mean).
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
         stattype = core.bayesdb_variable_stattype(
-            bdb, core.bayesdb_generator_population(bdb, generator_id), colno)
-        if _is_categorical(stattype):
-            return _impute_categorical(sample)
+            bdb, population_id, generator_id, colno)
+        if _is_nominal(stattype):
+            return _impute_nominal(sample)
         else:
             return _impute_numerical(sample)
 
@@ -849,25 +854,36 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             bdb, generator_id, rowid, targets, constraints)
         # Perpare the rowid, query, and evidence for cgpm.
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
-        cgpm_query = targets
-        cgpm_evidence = {}
+        cgpm_targets = targets
+        cgpm_constraints = {}
         for colno, value in full_constraints:
             value_numeric = self._to_numeric(bdb, generator_id, colno, value)
             if not math.isnan(value_numeric):
-                cgpm_evidence.update({colno: value_numeric})
+                cgpm_constraints.update({colno: value_numeric})
         # Retrieve the engine.
         engine = self._engine(bdb, generator_id)
         samples = engine.simulate(
-            cgpm_rowid, cgpm_query, cgpm_evidence, N=num_samples,
-            accuracy=accuracy, statenos=cgpm_modelnos,
-            multiprocess=self._multiprocess)
+            rowid=cgpm_rowid,
+            targets=cgpm_targets,
+            constraints=cgpm_constraints,
+            inputs=None,
+            N=num_samples,
+            accuracy=accuracy,
+            statenos=cgpm_modelnos,
+            multiprocess=self._multiprocess
+        )
         weighted_samples = engine._likelihood_weighted_resample(
-            samples, cgpm_rowid, cgpm_evidence, statenos=cgpm_modelnos,
-            multiprocess=self._multiprocess)
+            samples=samples,
+            rowid=cgpm_rowid,
+            constraints=cgpm_constraints,
+            inputs=None,
+            statenos=cgpm_modelnos,
+            multiprocess=self._multiprocess
+        )
         def map_value(colno, value):
             return self._from_numeric(bdb, generator_id, colno, value)
         return [
-            [map_value(colno, row[colno]) for colno in cgpm_query]
+            [map_value(colno, row[colno]) for colno in cgpm_targets]
             for row in weighted_samples
         ]
 
@@ -876,24 +892,35 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         cgpm_modelnos = self._get_modelnos(bdb, generator_id, modelnos)
         cgpm_rowid = self._cgpm_rowid(bdb, generator_id, rowid)
         # TODO: Handle nan values in the logpdf query.
-        cgpm_query = {
+        cgpm_targets = {
             colno: self._to_numeric(bdb, generator_id, colno, value)
             for colno, value in targets
         }
         # Build the evidence, ignoring nan values.
-        cgpm_evidence = {}
+        cgpm_constraints = {}
         for colno, value in constraints:
             value_numeric = self._to_numeric(bdb, generator_id, colno, value)
             if not math.isnan(value_numeric):
-                cgpm_evidence.update({colno: value_numeric})
+                cgpm_constraints.update({colno: value_numeric})
         # Retrieve the engine.
         engine = self._engine(bdb, generator_id)
         logpdfs = engine.logpdf(
-            cgpm_rowid, cgpm_query, cgpm_evidence, accuracy=None,
-            statenos=cgpm_modelnos, multiprocess=self._multiprocess)
+            rowid=cgpm_rowid,
+            targets=cgpm_targets,
+            constraints=cgpm_constraints,
+            inputs=None,
+            accuracy=None,
+            statenos=cgpm_modelnos,
+            multiprocess=self._multiprocess
+        )
         return engine._likelihood_weighted_integrate(
-            logpdfs, cgpm_rowid, cgpm_evidence,
-            statenos=cgpm_modelnos, multiprocess=self._multiprocess)
+            logpdfs=logpdfs,
+            rowid=cgpm_rowid,
+            constraints=cgpm_constraints,
+            inputs=None,
+            statenos=cgpm_modelnos,
+            multiprocess=self._multiprocess,
+        )
 
     def _unique_rowid(self, rowids):
         if len(set(rowids)) != 1:
@@ -901,31 +928,21 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         return rowids[0]
 
     def _data(self, bdb, generator_id, vars):
-        # Get the column numbers and statistical types.
+        # Get the column numbers.
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         colnos = [
             core.bayesdb_variable_number(bdb, population_id,generator_id, var)
             for var in vars
-        ]
-        stattypes = [
-            core.bayesdb_variable_stattype(bdb, population_id, colno)
-            for colno in colnos
         ]
 
         # Get the table name, quoted for constructing SQL.
         table_name = core.bayesdb_generator_table(bdb, generator_id)
         qt = sqlite3_quote_name(table_name)
 
-        # Create SQL expressions to cast each variable to the correct
-        # affinity for its statistical type.
-        def cast(var, colno, stattype):
-            if colno < 0:
-                return 'NULL'
-            qv = sqlite3_quote_name(var)
-            affinity = core.bayesdb_stattype_affinity(bdb, stattype)
-            qa = sqlite3_quote_name(affinity)
-            return 'CAST(t.%s AS %s)' % (qv, qa)
-        qexpressions = ','.join(map(cast, vars, colnos, stattypes))
+        # Get the variable names, treating latents as NULL.
+        qexpressions = ','.join(
+            't.%s' % (sqlite3_quote_name(v),) if (0 <= colno) else 'NULL'
+            for v, colno in zip(vars, colnos))
 
         # Get a cursor.
         cursor = bdb.sql_execute('''
@@ -998,19 +1015,19 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             # values sensibly yet, so until we have that sorted
             # out we both (a) omit nulls and (b) ignore errors in
             # incorporate.
-            query = {
+            obs_values = {
                 colno: row[i]
                 for i, colno in enumerate(outputs)
                 if not math.isnan(row[i])
             }
             n = len(outputs)
-            evidence = {
+            input_values = {
                 colno: row[n + i]
                 for i, colno in enumerate(inputs)
                 if not math.isnan(row[n + i])
             }
             try:
-                cgpm.incorporate(cgpm_rowid, query, evidence)
+                cgpm.incorporate(cgpm_rowid, obs_values, input_values)
             except Exception:
                 pass
         return cgpm
@@ -1052,12 +1069,13 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             SELECT engine_json, engine_stamp FROM bayesdb_cgpm_generator
                 WHERE generator_id = ?
         ''', (generator_id,)).fetchall()
-        if not cursor:
-            generator = core.bayesdb_generator_name(bdb, generator_id)
-            raise BQLError(bdb,
-                'No models initialized for generator: %r' % (generator,))
+        engine_json, engine_stamp = cursor[0]
 
-        (engine_json, engine_stamp) = cursor[0]
+        # Check if the generator has an initialized engine.
+        if not engine_json:
+            generator = core.bayesdb_generator_name(bdb, generator_id)
+            raise BQLError(bdb, 'No models initialized for generator: %r'
+                % (generator,))
 
         # Deserialize the engine.
         engine = Engine.from_metadata(
@@ -1078,8 +1096,12 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # Check whether cached_engine is latest version on disk.
         cached_stamp = self._get_cache_entry(bdb, generator_id, 'stamp')
         latest_stamp = self._engine_stamp(bdb, generator_id)
-        assert cached_stamp <= latest_stamp
-        # Return the cached_engine if stamps match, else None
+        # XXX This assertion, which we expected to be true in general, will
+        # actually fail if the analyze statement was placed in a rollback, in
+        # which case the cached stamp would have incremented but the latest
+        # stamp would have been rolled back. Therefore, return an engine if and
+        # only if the stamps match.
+        # --- incorrect assertion --> assert cached_stamp <= latest_stamp
         return cached_engine if cached_stamp == latest_stamp else None
 
     def _engine_stamp(self, bdb, generator_id):
@@ -1162,9 +1184,10 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         # the user supplied, as a float.
         if colno < 0:
             return float(value)
-        stattype = core.bayesdb_generator_column_stattype(
-            bdb, generator_id, colno)
-        if _is_categorical(stattype):
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        stattype = core.bayesdb_variable_stattype(
+            bdb, population_id, generator_id, colno)
+        if _is_nominal(stattype):
             cursor = bdb.sql_execute('''
                 SELECT code FROM bayesdb_cgpm_category
                     WHERE generator_id = ? AND colno = ? AND value = ?
@@ -1179,16 +1202,17 @@ class CGPM_Metamodel(IBayesDBMetamodel):
 
     def _from_numeric(self, bdb, generator_id, colno, value):
         """Convert value in cgpm to equivalent bayeslite format."""
-        # XXX Latent variables are not associated with an entry in
-        # bayesdb_cgpm_category, so just pass through whatever value cgpm
-        # returns.
-        if colno < 0:
-            return value
         if math.isnan(value):
             return None
-        stattype = core.bayesdb_generator_column_stattype(
-            bdb, generator_id, colno)
-        if _is_categorical(stattype):
+        population_id = core.bayesdb_generator_population(bdb, generator_id)
+        stattype = core.bayesdb_variable_stattype(
+            bdb, population_id, generator_id, colno)
+        if _is_nominal(stattype):
+            # XXX Latent variables are not associated with an entry in
+            # bayesdb_cgpm_category, so just pass through whatever value cgpm
+            # returns as a string.
+            if colno < 0:
+                return str(value)
             cursor = bdb.sql_execute('''
                 SELECT value FROM bayesdb_cgpm_category
                     WHERE generator_id = ? AND colno = ? AND code = ?
@@ -1221,6 +1245,8 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         the user specified `constraints` will remain there, and probably result
         in an error by cgpm.
         """
+        # Handle `None` constraints.
+        constraints = constraints or []
         # Retrieve table constraints.
         table_constraints = self._retrieve_table_constraints(
             bdb, generator_id, rowid)
@@ -1230,16 +1256,19 @@ class CGPM_Metamodel(IBayesDBMetamodel):
             table_cols = set(c[0] for c in table_constraints)
             intersection = set.intersection(user_cols, table_cols)
             if intersection:
+                population_id = core.bayesdb_generator_population(
+                    bdb, generator_id)
                 names = [
-                    (core.bayesdb_variable_name(bdb, generator_id, c[0]), c[1])
+                    (core.bayesdb_variable_name(
+                        bdb, population_id, generator_id, c[0]),
+                    c[1])
                     for c in constraints if c[0] in intersection
                 ]
                 raise BQLError(bdb,
-                    'Cannot override existing values in table: %s'
-                    % (names,))
+                    'Cannot override existing values in table: %s' % (names,))
         # Ignore table_constraints if they are in the targets.
         table_constraints = [c for c in table_constraints if c[0] not in targets]
-        return constraints + table_constraints
+        return table_constraints + constraints
 
     def _retrieve_table_constraints(self, bdb, generator_id, rowid):
         """If `rowid` exists in table but is unincorporated, load the data."""
@@ -1350,7 +1379,7 @@ class CGPM_Metamodel(IBayesDBMetamodel):
         return kernels
 
 
-def _create_schema(bdb, generator_id, schema_ast, **kwargs):
+def _create_schema(bdb, generator_id, schema_ast):
     # Get some parameters.
     population_id = core.bayesdb_generator_population(bdb, generator_id)
     table = core.bayesdb_population_table(bdb, population_id)
@@ -1360,8 +1389,8 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
     variable_dist = {}
     latents = {}
     cgpm_composition = []
-    modelled = set()
-    default_modelled = set()
+    modeled = set()
+    default_modeled = set()
     subsample = None
     deferred_input = defaultdict(lambda: [])
     deferred_output = dict()
@@ -1393,26 +1422,6 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
     # Append the Latent clauses to the ast.
     schema_ast.extend(latent_clauses)
 
-    # XXX Convert the baseline to a Foreign clause.
-    # Currently the baselines do not accept a schema, and will fail if
-    # `schema_ast` has any entries.
-    baseline = kwargs.get('baseline', None)
-    if baseline is not None and casefold(baseline.name) != 'crosscat':
-        if schema_ast:
-            raise BQLError(bdb,
-                'Cannot accept schema with baseline: %s.' % schema_ast)
-        # Retrieve all variable names in the population
-        outputs = core.bayesdb_variable_names(bdb, population_id, None)
-        # Convert the LITERAL namedtuples to their raw values.
-        ps, vs = zip(*baseline.params)
-        vs_new = [v.value for v in vs]
-        params = zip(ps, vs_new)
-        # Create the clause.
-        clause = cgpm_schema.parse.Foreign(
-            outputs, [], [], baseline.name, params)
-        # And add append it to the schema_ast.
-        schema_ast.append(clause)
-
     # Process each clause one by one.
     for clause in schema_ast:
 
@@ -1428,8 +1437,8 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
                 unknown.add(var)
                 continue
 
-            # Reject if the variable has already been modelled.
-            if var in modelled:
+            # Reject if the variable has already been modeled.
+            if var in modeled:
                 duplicate.add(var)
                 continue
 
@@ -1442,22 +1451,22 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
             colno = core.bayesdb_variable_number(bdb, population_id, None, var)
             assert 0 <= colno
 
-            # Add it to the list and mark it modelled by default.
+            # Add it to the list and mark it modeled by default.
             stattype = core.bayesdb_variable_stattype(
-                bdb, population_id, colno)
+                bdb, population_id, generator_id, colno)
             variables.append([var, stattype, dist, params])
             assert var not in variable_dist
             variable_dist[var] = (stattype, dist, params)
-            modelled.add(var)
-            default_modelled.add(var)
+            modeled.add(var)
+            default_modeled.add(var)
 
         elif isinstance(clause, cgpm_schema.parse.Latent):
             var = clause.name
             stattype = clause.stattype
 
-            # Reject if the variable has already been modelled by the
+            # Reject if the variable has already been modeled by the
             # default model.
-            if var in default_modelled:
+            if var in default_modeled:
                 duplicate.add(var)
                 continue
 
@@ -1483,7 +1492,7 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
 
         elif isinstance(clause, cgpm_schema.parse.Foreign):
             # Foreign model: some set of output variables is to be
-            # modelled by foreign logic, possibly conditional on some
+            # modeled by foreign logic, possibly conditional on some
             # set of input variables.
             #
             # Gather up the state for a cgpm_composition record, which
@@ -1512,13 +1521,13 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
             kwds.update(clause.params)
 
             # First make sure all the output variables exist and have
-            # not yet been modelled.
+            # not yet been modeled.
             for var in outputs:
                 must_exist.append(var)
-                if var in modelled:
+                if var in modeled:
                     duplicate.add(var)
                     continue
-                modelled.add(var)
+                modeled.add(var)
                 # Add the output statistical type and its parameters.
                 i = len(output_stattypes)
                 assert i == len(output_statargs)
@@ -1587,14 +1596,15 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
         return dist, params
 
     # Use the default distribution for any variables that remain to be
-    # modelled, excluding any that are latent or that have statistical
+    # modeled, excluding any that are latent or that have statistical
     # types we don't know about.
     for var in core.bayesdb_variable_names(bdb, population_id, None):
-        if var in modelled:
+        if var in modeled:
             continue
         colno = core.bayesdb_variable_number(bdb, population_id, None, var)
         assert 0 <= colno
-        stattype = core.bayesdb_variable_stattype(bdb, population_id, colno)
+        stattype = core.bayesdb_variable_stattype(
+            bdb, population_id, generator_id, colno)
         distparams = default_dist(var, stattype)
         if distparams is None:
             continue
@@ -1602,38 +1612,37 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
         variables.append([var, stattype, dist, params])
         assert var not in variable_dist
         variable_dist[var] = (stattype, dist, params)
-        modelled.add(var)
+        modeled.add(var)
 
     # Fill in the deferred_input statistical type assignments.
     for var in sorted(deferred_input.iterkeys()):
-        # Check whether the variable is modelled.  If not, skip -- we
+        # Check whether the variable is modeled.  If not, skip -- we
         # will fail later because this variable is guaranteed to also
         # be in needed.
-        if var not in modelled:
+        if var not in modeled:
             assert var in needed
             continue
 
         # Determine (possibly fictitious) distribution and parameters.
-        if var in default_modelled:
-            # Manifest variable modelled by default Crosscat model.
+        if var in default_modeled:
+            # Manifest variable modeled by default Crosscat model.
             assert var in variable_dist
             stattype, dist, params = variable_dist[var]
         else:
-            # Modelled by a foreign model.  Assign a fictitious
-            # default distribution because the 27B/6 of CGPM requires
-            # this.
+            # Modeled by a foreign model.  Assign a fictitious default
+            # distribution because the 27B/6 of CGPM requires this.
             if var in latents:
-                # Latent variable modelled by a foreign model.  Use
+                # Latent variable modeled by a foreign model.  Use
                 # the statistical type specified for it.
                 stattype = latents[var]
             else:
-                # Manifest variable modelled by a foreign model.  Use
+                # Manifest variable modeled by a foreign model.  Use
                 # the statistical type in the population.
                 assert core.bayesdb_has_variable(bdb, population_id, None, var)
                 colno = core.bayesdb_variable_number(
                     bdb, population_id, None, var)
                 stattype = core.bayesdb_variable_stattype(
-                    bdb, population_id, colno)
+                    bdb, population_id, generator_id, colno)
             distparams = default_dist(var, stattype)
             if distparams is None:
                 continue
@@ -1647,10 +1656,10 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
             ccargs[i] = params
 
     # Fill in the deferred_output statistical type assignments. The need to be
-    # in the form NUMERICAL or CATEGORICAL.
+    # in the form NUMERICAL or NOMINAL.
     for var in deferred_output:
         if var in latents:
-            # Latent variable modelled by a foreign model.  Use
+            # Latent variable modeled by a foreign model.  Use
             # the statistical type specified for it.
             var_stattype = casefold(latents[var])
             if var_stattype not in _DEFAULT_DIST:
@@ -1660,15 +1669,15 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
                     unknown_stattype[var] = var_stattype
             # XXX Cannot specify statargs for a latent variable. Trying to using
             # default_dist might lookup the counts for unique values of the
-            # categorical in the base table causing a failure.
+            # nominal in the base table causing a failure.
             var_statargs = {}
         else:
-            # Manifest variable modelled by a foreign model.  Use
+            # Manifest variable modeled by a foreign model.  Use
             # the statistical type and arguments from the population.
             assert core.bayesdb_has_variable(bdb, population_id, None, var)
             colno = core.bayesdb_variable_number(bdb, population_id, None, var)
             var_stattype = core.bayesdb_variable_stattype(
-                bdb, population_id, colno)
+                bdb, population_id, generator_id, colno)
             distparams = default_dist(var, var_stattype)
             if distparams is None:
                 continue
@@ -1687,7 +1696,7 @@ def _create_schema(bdb, generator_id, schema_ast, **kwargs):
 
     # If there remain any variables that we needed to model, because
     # others are conditional on them, fail.
-    needed -= modelled
+    needed -= modeled
     if needed:
         raise BQLError(bdb, 'Unmodellable variables: %r' % (needed,))
 
@@ -1794,7 +1803,7 @@ def _retrieve_analyze_variables(bdb, generator_id, ast):
     return (variable_numbers, rowids, subproblems, optimized, quiet)
 
 
-def _default_categorical(bdb, generator_id, var):
+def _default_nominal(bdb, generator_id, var):
     table = core.bayesdb_generator_table(bdb, generator_id)
     qt = sqlite3_quote_name(table)
     qv = sqlite3_quote_name(var)
@@ -1805,15 +1814,14 @@ def _default_categorical(bdb, generator_id, var):
 def _default_numerical(bdb, generator_id, var):
     return 'normal', {}
 
-def _is_categorical(stattype):
-    return casefold(stattype) in ['categorical', 'nominal']
+def _is_nominal(stattype):
+    return casefold(stattype) == 'nominal'
 
 _DEFAULT_DIST = {
-    'categorical':      _default_categorical,
     'counts':           _default_numerical,     # XXX change to poisson.
     'cyclic':           _default_numerical,     # XXX change to von mises.
     'magnitude':        _default_numerical,     # XXX change to lognormal.
-    'nominal':          _default_categorical,
+    'nominal':          _default_nominal,
     'numerical':        _default_numerical,
     'numericalranged':  _default_numerical,     # XXX change to beta.
 }

@@ -23,7 +23,7 @@ def regress_ols(target_values, given_values, given_variables, stattypes):
     # Detect the nominal variables.
     nominal_variables = [
         variable for variable, stattype in zip(given_variables, stattypes)
-        if stattype in ['nominal', 'categorical']
+        if stattype == 'nominal'
     ]
     # Dummy code the nominal variables.
     prefix = {var: '%s_dum' % (var,) for var in nominal_variables}

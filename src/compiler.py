@@ -36,7 +36,6 @@ import bayeslite.ast as ast
 import bayeslite.bqlfn as bqlfn
 import bayeslite.core as core
 import bayeslite.macro as macro
-import bayeslite.simulate as simulate
 
 from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
@@ -658,35 +657,21 @@ def compile_simulate(bdb, simulate, out):
             generator_id = core.bayesdb_get_generator(
                 bdb, population_id, simulate.generator)
         modelnos = None if simulate.modelnos is None else str(simulate.modelnos)
-        table = core.bayesdb_population_table(bdb, population_id)
         qtt = sqlite3_quote_name(temptable)
-        qt = sqlite3_quote_name(table)
         column_names = [c.expression.column for c in simulate.columns]
         qcns = map(sqlite3_quote_name, column_names)
-        cursor = bdb.sql_execute('PRAGMA table_info(%s)' % (qt,))
-        column_sqltypes = {}
-        for _colno, name, sqltype, _nonnull, _default, _primary in cursor:
-            assert casefold(name) not in column_sqltypes
-            column_sqltypes[casefold(name)] = sqltype
-        if generator_id is not None:
-            cursor = bdb.sql_execute('''
-                SELECT name, stattype FROM bayesdb_variable
-                    WHERE population_id = ? AND generator_id = ?
-            ''', (population_id, generator_id))
-            for name, stattype in cursor:
-                assert casefold(name) not in column_sqltypes
-                sqltype = core.bayesdb_stattype_affinity(bdb, stattype)
-                column_sqltypes[casefold(name)] = sqltype
-        assert 0 < len(column_sqltypes)
         for column_name in column_names:
-            if casefold(column_name) not in column_sqltypes:
+            cn = casefold(column_name)
+            if not core.bayesdb_has_variable(
+                    bdb, population_id, generator_id, cn):
                 raise BQLError(bdb,
                     'No such variable in population %r: %r' %
                     (simulate.population, column_name))
         for column_name, _expression in simulate.constraints:
             cn = casefold(column_name)
-            if (cn not in column_sqltypes and
-                    cn not in core.bayesdb_rowid_tokens(bdb)):
+            if (not core.bayesdb_has_variable(
+                    bdb, population_id, generator_id, cn)
+                and cn not in core.bayesdb_rowid_tokens(bdb)):
                 raise BQLError(bdb,
                     'No such variable in population %r: %r' %
                     (simulate.population, column_name))
@@ -722,9 +707,7 @@ def compile_simulate(bdb, simulate, out):
         constraints = \
             map(map_constraint, zip(simulate.constraints, cursor[0][1:]))
         colnos = map(map_var, column_names)
-        schema = ','.join('%s %s' %
-                (qcn, column_sqltypes[casefold(column_name)])
-            for qcn, column_name in zip(qcns, column_names))
+        schema = ','.join(qcns)
         out.winder('CREATE TEMP TABLE %s (%s)' % (qtt, schema), ())
         insert_sql = '''
             INSERT INTO %s (%s) VALUES (%s)
@@ -1132,11 +1115,11 @@ class BQLCompiler_Const(IBQLCompiler):
             compile_mutinf_2col_2(
                 bdb, population_id, generator_id, modelnos, bql, self, out)
         elif isinstance(bql, ast.ExpBQLCorrel):
-            compile_bql_2col_2(bdb, population_id, None, None,
+            compile_bql_2col_2(bdb, population_id, generator_id, None,
                 'bql_column_correlation',
                 'Column correlation', None, bql, self, out)
         elif isinstance(bql, ast.ExpBQLCorrelPval):
-            compile_bql_2col_2(bdb, population_id, None, None,
+            compile_bql_2col_2(bdb, population_id, generator_id, None,
                 'bql_column_correlation_pvalue',
                 'Column correlation pvalue', None, bql, self, out)
         elif isinstance(bql, (ast.ExpBQLPredict, ast.ExpBQLPredictConf)):
@@ -1428,11 +1411,11 @@ class BQLCompiler_1Col(BQLCompiler_Const):
                 bdb, population_id, generator_id, modelnos, bql, self.colno_exp,
                 self, out)
         elif isinstance(bql, ast.ExpBQLCorrel):
-            compile_bql_2col_1(bdb, population_id, None, None,
+            compile_bql_2col_1(bdb, population_id, generator_id, None,
                 'bql_column_correlation',
                 'Column correlation', None, bql, self.colno_exp, self, out)
         elif isinstance(bql, ast.ExpBQLCorrelPval):
-            compile_bql_2col_1(bdb, population_id, None, None,
+            compile_bql_2col_1(bdb, population_id, generator_id, None,
                 'bql_column_correlation_pvalue',
                 'Column correlation pvalue', None, bql, self.colno_exp, self, out)
         else:
@@ -1475,13 +1458,13 @@ class BQLCompiler_2Col(BQLCompiler_Const):
                 bdb, population_id, generator_id, modelnos, bql, self.colno0_exp,
                 self.colno1_exp, self, out)
         elif isinstance(bql, ast.ExpBQLCorrel):
-            compile_bql_2col_0(bdb, population_id, None, None,
+            compile_bql_2col_0(bdb, population_id, generator_id, None,
                 'bql_column_correlation',
                 'Correlation',
                 None,
                 bql, self.colno0_exp, self.colno1_exp, self, out)
         elif isinstance(bql, ast.ExpBQLCorrelPval):
-            compile_bql_2col_0(bdb, population_id, None, None,
+            compile_bql_2col_0(bdb, population_id, generator_id, None,
                 'bql_column_correlation_pvalue',
                 'Correlation pvalue',
                 None,

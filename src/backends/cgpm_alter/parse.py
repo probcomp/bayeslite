@@ -19,8 +19,8 @@ from collections import namedtuple
 from bayeslite.exception import BQLParseError
 from bayeslite.util import casefold
 
-from bayeslite.metamodels.cgpm_schema.parse import flatten
-from bayeslite.metamodels.cgpm_schema.parse import intersperse
+from bayeslite.backends.cgpm_schema.parse import flatten
+from bayeslite.backends.cgpm_schema.parse import intersperse
 
 import grammar
 

@@ -14,26 +14,19 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import numpy
-
-import crosscat.LocalEngine
-
 import bayeslite
-from bayeslite.metamodels.crosscat import CrosscatMetamodel
-from bayeslite.math_util import relerr
+
 from bayeslite.math_util import abserr
+from bayeslite.math_util import relerr
 
 def test_correlation():
-    with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:
-        cc = crosscat.LocalEngine.LocalEngine(seed=0)
-        ccme = CrosscatMetamodel(cc)
-        bayeslite.bayesdb_register_metamodel(bdb, ccme)
+    with bayeslite.bayesdb_open() as bdb:
         bdb.sql_execute('CREATE TABLE u(id, c0, c1, n0, n1, r0, r1)')
         bdb.execute('''
             CREATE POPULATION q FOR u (
                 id IGNORE;
-                c0 CATEGORICAL;
-                c1 CATEGORICAL;
+                c0 NOMINAL;
+                c1 NOMINAL;
                 n0 NUMERICAL;
                 n1 NUMERICAL;
                 r0 CYCLIC;

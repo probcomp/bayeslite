@@ -111,7 +111,7 @@ include shell/tests/test_pretty.py
 include shell/tests/test_shell.py
 include shell/tests/thooks.py
 include src/grammar.y
-include src/metamodels/cgpm_analyze/grammar.y
-include src/metamodels/cgpm_schema/grammar.y
+include src/backends/cgpm_analyze/grammar.y
+include src/backends/cgpm_schema/grammar.y
 include tests/dha.csv
 include tests/dha_codebook.csv

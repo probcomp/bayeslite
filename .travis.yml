@@ -1,0 +1,27 @@
+language: python
+dist: trusty
+env:
+  global:
+    - PACKAGE_NAME=bayeslite
+    # get all the branches referencing this commit
+    - REAL_BRANCH=$(git ls-remote origin | sed -n "\|$TRAVIS_COMMIT\s\+refs/heads/|{s///p}")
+
+python:
+  - 2.7
+install:
+  - wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda install conda-build
+script:
+  - export CONDA_PACKAGE_VERSION="${TRAVIS_TAG:-$(date +%Y.%m.%d)}"
+  # remove leading v from tags if they exist
+  - CONDA_PACKAGE_VERSION="$(sed s/^v// <<<$CONDA_PACKAGE_VERSION)"
+  # use "edge" channel (latest master) for testing with cgpm/crosscat
+  - conda install -c probcomp/label/edge cgpm crosscat
+  - conda build . -c probcomp
+after_success:
+  - bash conda/upload.sh

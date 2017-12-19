@@ -33,7 +33,7 @@ BayesDB handles also serve as context managers, so you can do::
         bdb.execute('SELECT 42')
         ...
 
-You can query the probable (according to the analyses stored in
+You can query the probable (according to the models stored in
 the database) implications of the data by passing BQL queries
 to the :meth:`~BayesDB.execute` method::
 
@@ -56,13 +56,12 @@ you must use :meth:`~BayesDB.sql_execute` for those.)
 from bayeslite.bayesdb import BayesDB
 from bayeslite.bayesdb import bayesdb_open
 from bayeslite.bayesdb import IBayesDBTracer
-from bayeslite.codebook import bayesdb_load_codebook_csv_file
 from bayeslite.exception import BayesDBException
 from bayeslite.exception import BQLError
-from bayeslite.metamodel import IBayesDBMetamodel
-from bayeslite.metamodel import bayesdb_builtin_metamodel
-from bayeslite.metamodel import bayesdb_deregister_metamodel
-from bayeslite.metamodel import bayesdb_register_metamodel
+from bayeslite.backend import BayesDB_Backend
+from bayeslite.backend import bayesdb_builtin_backend
+from bayeslite.backend import bayesdb_deregister_backend
+from bayeslite.backend import bayesdb_register_backend
 from bayeslite.nullify import bayesdb_nullify
 from bayeslite.parse import BQLParseError
 from bayeslite.quote import bql_quote_name
@@ -80,24 +79,18 @@ __all__ = [
     'BayesDB',
     'BayesDBException',
     'BayesDBTxnError',
-    'bayesdb_deregister_metamodel',
-    'bayesdb_load_codebook_csv_file',
+    'bayesdb_deregister_backend',
     'bayesdb_nullify',
     'bayesdb_open',
     'bayesdb_read_csv',
     'bayesdb_read_csv_file',
-    'bayesdb_register_metamodel',
+    'bayesdb_register_backend',
     'bayesdb_upgrade_schema',
     'bql_quote_name',
-    'IBayesDBMetamodel',
+    'BayesDB_Backend',
     'IBayesDBTracer',
 ]
 
-# Register crosscat as a builtin metamodel.
-from bayeslite.metamodels.crosscat import CrosscatMetamodel
-from crosscat.LocalEngine import LocalEngine as CrosscatLocalEngine
-bayesdb_builtin_metamodel(CrosscatMetamodel(CrosscatLocalEngine(seed=0)))
-
-# Register cgpm as a builtin metamodel.
-from bayeslite.metamodels.cgpm_metamodel import CGPM_Metamodel
-bayesdb_builtin_metamodel(CGPM_Metamodel({}, multiprocess=True))
+# Register cgpm as a builtin backend.
+from bayeslite.backends.cgpm_backend import CGPM_Backend
+bayesdb_builtin_backend(CGPM_Backend({}, multiprocess=True))

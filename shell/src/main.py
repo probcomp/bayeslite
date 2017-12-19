@@ -18,7 +18,7 @@ import argparse
 import os
 
 import bayeslite
-from bayeslite.metamodels.crosscat import CrosscatMetamodel
+from bayeslite.backends.cgpm_backend import CGPM_Backend
 import bayeslite.shell.core as shell
 import bayeslite.shell.hook as hook
 
@@ -58,18 +58,12 @@ def run(stdin, stdout, stderr, argv):
         stderr.write('%s: missing option?\n' % (progname,))
         return 1
     bdb = bayeslite.bayesdb_open(pathname=args.bdbpath,
-        builtin_metamodels=False)
+        builtin_backends=False)
 
-    if args.jobs != 1:
-        import crosscat.MultiprocessingEngine as ccme
-        jobs = args.jobs if args.jobs > 0 else None
-        crosscat = ccme.MultiprocessingEngine(seed=args.seed, cpu_count=jobs)
-    else:
-        import crosscat.LocalEngine as ccle
-        crosscat = ccle.LocalEngine(seed=args.seed)
-    metamodel = CrosscatMetamodel(crosscat)
-    bayeslite.bayesdb_register_metamodel(bdb, metamodel)
-    bdbshell = shell.Shell(bdb, 'crosscat', stdin, stdout, stderr)
+    multiprocess = args.jobs != 1
+    backend = CGPM_Backend(cgpm_registry={}, multiprocess=multiprocess)
+    bayeslite.bayesdb_register_backend(bdb, backend)
+    bdbshell = shell.Shell(bdb, 'cgpm', stdin, stdout, stderr)
     with hook.set_current_shell(bdbshell):
         if not args.no_init_file:
             init_file = os.path.join(os.path.expanduser('~/.bayesliterc'))

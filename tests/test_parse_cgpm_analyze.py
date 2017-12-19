@@ -14,19 +14,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pytest
-
-import bayeslite
+import bayeslite.backends.cgpm_analyze.parse as cgpm_analyze_parser
 
 from test_parse import parse_bql_string
-
-import bayeslite.metamodels.cgpm_analyze.parse as cgpm_analyze_parser
 
 # XXX Is there a better way to get the tokens that are supplied to
 # cgpm_analyze.parse.parse?
 def parse_analysis_plan(string):
     phrases = parse_bql_string('''
-        ANALYZE m FOR 1 ITERATION WAIT (%s)
+        ANALYZE m FOR 1 ITERATION (%s)
     ''' % (string,))
     return cgpm_analyze_parser.parse(phrases[0].program)
 

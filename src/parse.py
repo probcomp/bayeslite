@@ -201,7 +201,7 @@ class BQLSemantics(object):
 
     def p_pop_clause_empty(self):            return None
     def p_pop_clause_column(self, col, st):  return ast.PopModelVars([col], st)
-    def p_pop_clause_model(self, cols, st):  return ast.PopModelVars(cols, st)
+    def p_pop_clause_stattype(self, cols, st): return ast.PopModelVars(cols, st)
     def p_pop_clause_ignore(self, cols):     return ast.PopIgnoreVars(cols)
     def p_pop_clause_guess(self, cols):      return ast.PopGuessVars(cols)
 
@@ -221,10 +221,9 @@ class BQLSemantics(object):
     def p_pop_columns_guess_list(self, cols): return cols
 
     def p_command_creategen(self, ifnotexists0, name, ifnotexists1, pop,
-            baseline, metamodel, schema):
+            backend, schema):
         ifnotexists = ifnotexists0 or ifnotexists1
-        return ast.CreateGen(
-            name, ifnotexists, pop, baseline, metamodel, schema)
+        return ast.CreateGen(name, ifnotexists, pop, backend, schema)
     def p_command_dropgen(self, ifexists, name):
         return ast.DropGen(ifexists, name)
     def p_command_altergen(self, generator, models, cmds):
@@ -237,8 +236,8 @@ class BQLSemantics(object):
     def p_altergen_cmd_generic(self, s):
         return ast.AlterGenGeneric(s)
 
-    def p_runtime_name_opt_none(self):              return None
-    def p_runtime_name_opt_one(self, metamodel):    return metamodel
+    def p_backend_name_opt_none(self):            return None
+    def p_backend_name_opt_one(self, backend):    return backend
 
     def p_generator_schema_opt_none(self):      return [[]]
     def p_generator_schema_opt_some(self, s):   return s
@@ -256,7 +255,7 @@ class BQLSemantics(object):
     def p_command_init_models(self, n, ifnotexists, generator):
         return ast.InitModels(ifnotexists, generator, n)
     def p_command_analyze_models(
-            self, generator, models, anlimit, anckpt, wait, program):
+            self, generator, models, anlimit, anckpt, program):
         iters = [lim[1] for lim in anlimit if lim and lim[0] == 'iterations']
         secs = [lim[1] for lim in anlimit if lim and lim[0] == 'seconds']
         iterations = min(iters) if iters else None
@@ -267,7 +266,7 @@ class BQLSemantics(object):
             ckpt_iterations = anckpt[1] if anckpt[0] == 'iterations' else None
             ckpt_seconds = anckpt[1] if anckpt[0] == 'seconds' else None
         return ast.AnalyzeModels(generator, models, iterations, seconds,
-            ckpt_iterations, ckpt_seconds, wait, program)
+            ckpt_iterations, ckpt_seconds, program)
     def p_command_drop_models(self, models, generator):
         return ast.DropModels(generator, models)
 
@@ -277,24 +276,6 @@ class BQLSemantics(object):
     def p_ifexists_some(self):                  return True
     def p_ifnotexists_none(self):               return False
     def p_ifnotexists_some(self):               return True
-
-    # XXX Hackery for baselines.
-    def p_baseline_opt_none(self):              return None
-    def p_baseline_opt_some(self, baseline, params):
-        return ast.Baseline(name=baseline, params=params)
-
-    def p_baseline_name_bl(self, name):         return name
-
-    def p_param_opt_none(self):                 return []
-    def p_param_opt_some(self, ps):             return ps
-
-    def p_params_one(self, param):              return [param]
-    def p_params_many(self, params, param):
-        params.append(param); return params
-
-    def p_param_p(self, p, v):                  return (p, v)
-
-    # XXX Hackery for baselines.
 
     def p_anmodelset_opt_none(self):            return None
     def p_anmodelset_opt_some(self, m):         return sorted(m)
@@ -316,9 +297,6 @@ class BQLSemantics(object):
     def p_anduration_minutes(self, n):          return ('seconds', 60*n)
     def p_anduration_seconds(self, n):          return ('seconds', n)
 
-    def p_wait_opt_none(self):                  return False
-    def p_wait_opt_some(self):                  return True
-
     def p_analysis_program_opt_none(self):      return None
     def p_analysis_program_opt_some(self, p):   return p
     def p_analysis_program_empty(self):         return []
@@ -326,9 +304,9 @@ class BQLSemantics(object):
     def p_analysis_token_compound(self, p):     return ['('] + p + [')']
     def p_analysis_token_primitive(self, t):    return [t]
 
-    def p_command_regress(self, target, givens, nsamp, pop, metamodel,
+    def p_command_regress(self, target, givens, nsamp, pop, generator,
             modelnos):
-        return ast.Regress(target, givens, nsamp, pop, metamodel, modelnos)
+        return ast.Regress(target, givens, nsamp, pop, generator, modelnos)
 
     def p_simulate_s(self, cols, population, generator, modelnos, constraints,
             lim, acc):
@@ -471,8 +449,8 @@ class BQLSemantics(object):
                 cond, ord, lim)
         return c
 
-    def p_modelledby_opt_none(self):            return None
-    def p_modelledby_opt_some(self, gen):       return gen
+    def p_modeledby_opt_none(self):             return None
+    def p_modeledby_opt_some(self, gen):        return gen
 
     def p_usingmodel_opt_none(self):            return None
     def p_usingmodel_opt_some(self, modelnos):  return modelnos
@@ -490,7 +468,7 @@ class BQLSemantics(object):
 
     def p_column_name_cn(self, name):           return name
     def p_generator_name_unqualified(self, name): return name
-    def p_metamodel_name_mn(self, name):        return name
+    def p_backend_name_bn(self, name):          return name
     def p_population_name_pn(self, name):       return name
     def p_table_name_unqualified(self, name):   return name
 
