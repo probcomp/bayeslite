@@ -504,7 +504,7 @@ class LoomBackend(BayesDB_Backend):
             return [1.]
         cursor = bdb.sql_execute('''
             SELECT
-                AVG(t1.kind_id = t2.kind_id)
+                CAST(t1.kind_id = t2.kind_id AS INT)
             FROM bayesdb_loom_column_kind_partition as t1
                 JOIN bayesdb_loom_column_kind_partition as t2 USING
                     (generator_id, modelno)
@@ -513,9 +513,7 @@ class LoomBackend(BayesDB_Backend):
                 AND t1.colno = ?
                 AND t2.colno = ?
         ''' % (','.join(map(str, modelnos)),), (generator_id, colno0, colno1))
-        dep = cursor_value(cursor)
-        # XXX TODO, return list of results instead of the average.
-        return [dep]
+        return [c for (c,) in cursor]
 
     def _get_kind_id(self, bdb, generator_id, modelno, colno):
         cursor = bdb.sql_execute('''
@@ -566,10 +564,10 @@ class LoomBackend(BayesDB_Backend):
             modelnos = range(self._get_num_models(bdb, generator_id))
         assert len(colnos) == 1
         if rowid == target_rowid:
-            return [1.]
+            return [1.] * len(modelnos)
         cursor = bdb.sql_execute('''
             SELECT
-                AVG(t1.partition_id = t2.partition_id)
+                CAST(t1.partition_id = t2.partition_id AS INT)
             FROM bayesdb_loom_row_kind_partition as t1
                 JOIN bayesdb_loom_row_kind_partition as t2
                 USING (generator_id, modelno, kind_id)
@@ -586,9 +584,7 @@ class LoomBackend(BayesDB_Backend):
                 AND t2.rowid = ?
         ''' % (','.join(map(str, modelnos)),), (
             generator_id, colnos[0], rowid, target_rowid))
-        sim = cursor_value(cursor)
-        # XXX TODO, return list of results instead of the average.
-        return [sim]
+        return [c for (c,) in cursor]
 
     def _reorder_row(self, bdb, generator_id, row, dense=True):
         """Reorder a row of columns according to loom's column order
