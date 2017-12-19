@@ -678,21 +678,3 @@ def bayesdb_has_stattype(bdb, stattype):
     sql = 'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype'
     cursor = bdb.sql_execute(sql, {'stattype': casefold(stattype)})
     return cursor_value(cursor) > 0
-
-# XXX This should be stored in the database by adding a column to the
-# bayesdb_stattype table -- when we are later willing to contemplate
-# adding statistical types, e.g. COUNT, SCALE, or NONNEGATIVE REAL.
-_STATTYPE_TO_AFFINITY = dict((casefold(st), casefold(af)) for st, af in (
-    ('categorical', 'text'),
-    ('cyclic', 'real'),
-    ('numerical', 'real'),
-    ('counts', 'real'),
-    ('magnitude', 'real'),
-    ('nominal', 'text'),
-    ('numericalranged', 'real'),
-    ('unboundedcategorical', 'text'),
-    ('boolean', 'real'),
-))
-def bayesdb_stattype_affinity(_bdb, stattype):
-    assert bayesdb_has_stattype(_bdb, stattype)
-    return _STATTYPE_TO_AFFINITY[casefold(stattype)]

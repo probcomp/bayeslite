@@ -806,11 +806,6 @@ def test_trivial_commands():
     assert parse_bql_string('create generator t_cc'
             ' for t using crosscat') == \
         [ast.CreateGen('t_cc', False, 't', None, 'crosscat', [[]])]
-
-    assert parse_bql_string('convert t_cc'
-            ' to cg using cgpm') == \
-        [ast.ConvertGen('t_cc', 'cg', 'cgpm')]
-
     assert parse_bql_string('initialize 1 model for t;') == \
         [ast.InitModels(False, 't', 1)]
     assert parse_bql_string('initialize 1 model if not exists for t;') == \

@@ -98,7 +98,6 @@ def test_example(persist, exname):
                 _test_example(bdb, exname)
             with bayeslite.bayesdb_open(pathname=f.name,
                     builtin_metamodels=False) as bdb:
-                pass
                 _retest_example(bdb, exname)
     else:
         with bayeslite.bayesdb_open(builtin_metamodels=False) as bdb:

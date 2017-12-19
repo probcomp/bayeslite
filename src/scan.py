@@ -55,7 +55,6 @@ keywords = {
     "conf": grammar.K_CONF,
     "confidence": grammar.K_CONFIDENCE,
     "context": grammar.K_CONTEXT,
-    "convert": grammar.K_CONVERT,
     "correlation": grammar.K_CORRELATION,
     "create": grammar.K_CREATE,
     "default": grammar.K_DEFAULT,

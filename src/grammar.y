@@ -140,12 +140,6 @@ altergen_cmds(many)     ::= altergen_cmds(cmds) T_COMMA altergen_cmd(cmd).
 altergen_cmd(renamegen) ::= K_RENAME K_TO generator_name(name).
 altergen_cmd(generic)   ::= generator_schemum(s).
 
-command(convertgen)      ::= K_CONVERT
-                                generator_name(currentname)
-                                K_TO
-                                generator_name(newname)
-                                runtime_name_opt(newmetamodel).
-
 runtime_name_opt(none)          ::= .
 runtime_name_opt(one)           ::= K_USING metamodel_name(metamodel).
 
@@ -809,7 +803,6 @@ typearg(negative)       ::= T_MINUS L_INTEGER(i).
         K_CONF
         K_CONFIDENCE
         K_CONTEXT
-        K_CONVERT
         K_CORRELATION
         K_CREATE
         K_DEFAULT
