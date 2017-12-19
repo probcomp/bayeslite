@@ -928,32 +928,21 @@ class CGPM_Backend(BayesDB_Backend):
         return rowids[0]
 
     def _data(self, bdb, generator_id, vars):
-        # Get the column numbers and statistical types.
+        # Get the column numbers.
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         colnos = [
             core.bayesdb_variable_number(bdb, population_id,generator_id, var)
             for var in vars
-        ]
-        stattypes = [
-            core.bayesdb_variable_stattype(
-                bdb, population_id, generator_id, colno)
-            for colno in colnos
         ]
 
         # Get the table name, quoted for constructing SQL.
         table_name = core.bayesdb_generator_table(bdb, generator_id)
         qt = sqlite3_quote_name(table_name)
 
-        # Create SQL expressions to cast each variable to the correct
-        # affinity for its statistical type.
-        def cast(var, colno, stattype):
-            if colno < 0:
-                return 'NULL'
-            qv = sqlite3_quote_name(var)
-            affinity = core.bayesdb_stattype_affinity(bdb, stattype)
-            qa = sqlite3_quote_name(affinity)
-            return 'CAST(t.%s AS %s)' % (qv, qa)
-        qexpressions = ','.join(map(cast, vars, colnos, stattypes))
+        # Get the variable names, treating latents as NULL.
+        qexpressions = ','.join(
+            't.%s' % (sqlite3_quote_name(v),) if (0 <= colno) else 'NULL'
+            for v, colno in zip(vars, colnos))
 
         # Get a cursor.
         cursor = bdb.sql_execute('''
@@ -1213,17 +1202,17 @@ class CGPM_Backend(BayesDB_Backend):
 
     def _from_numeric(self, bdb, generator_id, colno, value):
         """Convert value in cgpm to equivalent bayeslite format."""
-        # XXX Latent variables are not associated with an entry in
-        # bayesdb_cgpm_category, so just pass through whatever value cgpm
-        # returns.
-        if colno < 0:
-            return value
         if math.isnan(value):
             return None
         population_id = core.bayesdb_generator_population(bdb, generator_id)
         stattype = core.bayesdb_variable_stattype(
             bdb, population_id, generator_id, colno)
         if _is_nominal(stattype):
+            # XXX Latent variables are not associated with an entry in
+            # bayesdb_cgpm_category, so just pass through whatever value cgpm
+            # returns as a string.
+            if colno < 0:
+                return str(value)
             cursor = bdb.sql_execute('''
                 SELECT value FROM bayesdb_cgpm_category
                     WHERE generator_id = ? AND colno = ? AND code = ?
