@@ -20,7 +20,6 @@ The Loom backend serves as an interface between BayesDB and the Loom
 implementation of CrossCat: https://github.com/posterior/loom
 """
 
-import collections
 import csv
 import gzip
 import itertools
@@ -30,6 +29,7 @@ import tempfile
 
 from StringIO import StringIO
 from collections import Counter
+from collections import OrderedDict
 from datetime import datetime
 
 import loom.tasks
@@ -54,6 +54,7 @@ from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
 from bayeslite.util import casefold
+from bayeslite.util import cursor_row
 from bayeslite.util import cursor_value
 
 
@@ -116,7 +117,6 @@ STATTYPE_TO_LOOMTYPE = {
     'nominal'              : 'dd',
     'cyclic'               : 'nich',
     'numerical'            : 'nich',
-    'nominal'              : 'dd'
 }
 
 
@@ -143,7 +143,6 @@ class LoomBackend(BayesDB_Backend):
         os.environ['LOOM_STORE'] = self.loom_store_path
         if not os.path.isdir(self.loom_store_path):
             os.makedirs(self.loom_store_path)
-
         # The cache is a dictionary whose keys are bayeslite.BayesDB objects,
         # and whose values are dictionaries (one cache per bdb). We need
         # self._cache to have separate caches for each bdb because the same
@@ -179,10 +178,8 @@ class LoomBackend(BayesDB_Backend):
         for colno in bayesdb_variable_numbers(bdb, population_id, None):
             column_name = bayesdb_variable_name(bdb, population_id, None, colno)
             headers.append(column_name)
-
             qt = sqlite3_quote_name(table)
             qcn = sqlite3_quote_name(column_name)
-
             cursor = bdb.sql_execute('SELECT %s FROM %s' % (qcn, qt))
             col_data = [item for (item,) in cursor.fetchall()]
             data.append(col_data)
@@ -243,6 +240,7 @@ class LoomBackend(BayesDB_Backend):
             })
 
     def _check_loom_initialized(self, bdb, generator_id):
+        # Not invoked on a per-query basis due to high overhead.
         cursor = bdb.sql_execute('''
             SELECT COUNT(*)
             FROM bayesdb_loom_row_kind_partition
@@ -307,7 +305,7 @@ class LoomBackend(BayesDB_Backend):
             FROM bayesdb_loom_generator
             WHERE generator_id = ?
         ''', (generator_id,))
-        name, loom_store_path = util.cursor_row(cursor)
+        name, loom_store_path = cursor_row(cursor)
         return os.path.join(loom_store_path, name)
 
     def initialize_models(self, bdb, generator_id, modelnos):
@@ -538,6 +536,9 @@ class LoomBackend(BayesDB_Backend):
 
     def column_mutual_information(self, bdb, generator_id, modelnos, colnos0,
             colnos1, constraints, numsamples):
+        # XXX Why are the constraints being ignored? If Loom does not support
+        # conditioning, then implement constraints using the simple Monte Carlo
+        # estimator.
         population_id = bayesdb_generator_population(bdb, generator_id)
         colnames0 = [
             str(bayesdb_variable_name(bdb, population_id, None, colno))
@@ -587,7 +588,7 @@ class LoomBackend(BayesDB_Backend):
         return [c for (c,) in cursor]
 
     def _reorder_row(self, bdb, generator_id, row, dense=True):
-        """Reorder a row of columns according to loom's column order
+        """Reorder a row of columns according to loom's column order.
 
         Row should be a list of (colno, value) tuples
 
@@ -595,7 +596,7 @@ class LoomBackend(BayesDB_Backend):
         """
         ordered_column_labels = self._get_ordered_column_labels(
             bdb, generator_id)
-        ordererd_column_dict = collections.OrderedDict(
+        ordererd_column_dict = OrderedDict(
             [(a, None) for a in ordered_column_labels])
 
         population_id = bayesdb_generator_population(bdb, generator_id)
@@ -623,12 +624,11 @@ class LoomBackend(BayesDB_Backend):
                 bdb, generator_id, modelno, colno)
             partition_id_target = self._get_partition_id(bdb,
                 generator_id, modelno, kind_id_context, rowid_target)
-            for query_index in range(len(rowid_queries)):
+            for idx, rowid in enumerate(rowid_queries):
                 partition_id_query = self._get_partition_id(
-                    bdb, generator_id, modelno, kind_id_context,
-                    rowid_queries[query_index])
+                    bdb, generator_id, modelno, kind_id_context, rowid)
                 if partition_id_target == partition_id_query:
-                    relevances[query_index] += 1
+                    relevances[idx] += 1
         # XXX This procedure appears to be computing the wrong thing.
         return [xsum/float(len(modelnos)) for xsum in relevances]
 
@@ -662,73 +662,75 @@ class LoomBackend(BayesDB_Backend):
             bdb, population_id, None, colno)
         if _is_nominal(stattype):
             return _impute_categorical(sample)
-        else:
-            return _impute_numerical(sample)
+        return _impute_numerical(sample)
 
     def simulate_joint(self, bdb, generator_id, modelnos, rowid, targets,
             constraints, num_samples=1, accuracy=None):
+        # Retrieve the population id.
         population_id = bayesdb_generator_population(bdb, generator_id)
+
+        # If rowid exists, retrieve conditioning data from the table.
         if rowid != bayesdb_population_fresh_row_id(bdb, generator_id):
-            row_values_raw = bayesdb_population_row_values(
-                bdb, population_id, rowid)
+            row_values_raw = bayesdb_population_row_values(bdb,
+                population_id, rowid)
             row_values = [str(a) if isinstance(a, unicode) else a
                 for a in row_values_raw]
-
             row = [entry for entry in enumerate(row_values)
                 if entry[1] is not None]
-
             constraints_colnos = [c[0] for c in constraints]
             row_colnos = [r[0] for r in row]
             if any([colno in constraints_colnos for colno in row_colnos]):
                 raise BQLError(bdb, 'Overlap between constraints and' \
-                    'target row in simulate')
+                    'target row in simulate.')
+            constraints.extend(row)
 
-            constraints += row
-
+        # Prepare the query row to provide to Loom.
         row = {}
-        target_no_to_name = {}
+        target_num_to_name = {}
         for colno in targets:
             name = bayesdb_variable_name(bdb, generator_id, None, colno)
-            target_no_to_name[colno] = name
+            target_num_to_name[colno] = name
             row[name] = ''
         for (colno, value) in constraints:
             name = bayesdb_variable_name(bdb, generator_id, None, colno)
             row[name] = value
 
-        csv_headers, csv_values = zip(*row.iteritems())
-
+        # Fetch the server.
         server = self._get_cache_entry(bdb, generator_id, 'preql_server')
 
+        # Prepare the csv header.
+        csv_headers, csv_values = zip(*row.iteritems())
         lower_to_upper = {str(a).lower(): str(a) for a in csv_headers}
         csv_headers = lower_to_upper.keys()
         csv_values = [str(a) for a in csv_values]
 
+        # Retrieve the samples from the server..
         outfile = StringIO()
         writer = loom.preql.CsvWriter(outfile, returns=outfile.getvalue)
         reader = iter([csv_headers]+[csv_values])
         server._predict(reader, num_samples, writer, False)
         output = writer.result()
 
-        # Parse output
+        # Parse output.
         returned_headers = [lower_to_upper[a] for a in
             output.strip().split('\r\n')[0].split(CSV_DELIMITER)]
         loom_output = [zip(returned_headers, a.split(CSV_DELIMITER))
             for a in output.strip().split('\r\n')[1:]]
-        population_id = bayesdb_generator_population(bdb, generator_id)
         return_list = []
         for row in loom_output:
-            return_list.append([])
+            # Prepare the row.
+            row_values = []
             row_dict = dict(row)
-
             for colno in targets:
-                colname = target_no_to_name[colno]
+                colname = target_num_to_name[colno]
                 value = row_dict[colname]
                 stattype = bayesdb_variable_stattype(
                     bdb, population_id, None, colno)
-                if _is_nominal(stattype):
-                    return_list[-1].append(value)
-                else:
-                    return_list[-1].append(float(value))
+                if not _is_nominal(stattype):
+                    value = float(value)
+                row_values.append(value)
+            # Add this row to the return list.
+            return_list.append(row_values)
 
         return return_list
 
@@ -738,9 +740,11 @@ class LoomBackend(BayesDB_Backend):
         ordered_column_labels = self._get_ordered_column_labels(
             bdb, generator_id)
 
-        and_case = collections.OrderedDict(
+        # Pr[targets|constraints] = Pr[targest, constraints] / Pr[constraints]
+        # The numerator is and_case; denominator is conditional_case.
+        and_case = OrderedDict(
             [(a, None) for a in ordered_column_labels])
-        conditional_case = collections.OrderedDict(
+        conditional_case = OrderedDict(
             [(a, None) for a in ordered_column_labels])
 
         for (colno, value) in targets:
