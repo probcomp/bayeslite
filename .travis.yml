@@ -21,7 +21,7 @@ script:
   # remove leading v from tags if they exist
   - CONDA_PACKAGE_VERSION="$(sed s/^v// <<<$CONDA_PACKAGE_VERSION)"
   # use "edge" channel (latest master) for testing with cgpm/crosscat
-  - conda install -c probcomp/label/edge cgpm crosscat
+  - conda config --add channels probcomp/label/edge
   - conda build . -c probcomp
 after_success:
   - bash conda/upload.sh
