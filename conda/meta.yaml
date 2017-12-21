@@ -26,6 +26,8 @@ requirements:
 test:
   requires:
     - apsw
+    - cgpm
+    - crosscat
     - pandas 0.18.*
     - pytest 2.8.*
     - python 2.7.*
