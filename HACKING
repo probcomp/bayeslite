@@ -169,7 +169,6 @@ Additional guidelines:
   => Legibility is more important than extensibility.
 - Prefer single-quoted strings, except use """ for docstrings.
 - unicode for user data; str for SQL/BQL text.
-- Don't bother with pylint.  It will waste your time.
 - Prefer clarity over boilerplate.
   => No need to clutter every docstring with a sphinx template.
 
