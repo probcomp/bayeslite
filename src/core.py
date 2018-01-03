@@ -203,6 +203,7 @@ def bayesdb_population_table(bdb, id):
         return row[0]
 
 def bayesdb_population_generators(bdb, population_id):
+    """Return list of generators for population_id."""
     cursor = bdb.sql_execute('''
         SELECT id FROM bayesdb_generator WHERE population_id = ?
     ''', (population_id,))
