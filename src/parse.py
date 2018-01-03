@@ -220,9 +220,7 @@ class BQLSemantics(object):
     def p_pop_columns_guess_star(self):       return '*'
     def p_pop_columns_guess_list(self, cols): return cols
 
-    def p_command_creategen(self, ifnotexists0, name, ifnotexists1, pop,
-            backend, schema):
-        ifnotexists = ifnotexists0 or ifnotexists1
+    def p_command_creategen(self, ifnotexists, name, pop, backend, schema):
         return ast.CreateGen(name, ifnotexists, pop, backend, schema)
     def p_command_dropgen(self, ifexists, name):
         return ast.DropGen(ifexists, name)

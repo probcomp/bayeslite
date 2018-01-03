@@ -217,7 +217,7 @@ distribution of all the variables in a given base population.
 
 .. index:: ``CREATE GENERATOR``
 
-``CREATE GENERATOR <g> FOR <population> [USING <backend>] (<customization>)``
+``CREATE GENERATOR [IF NOT EXISTS] <g> FOR <population> [USING <backend>] (<customization>)``
 
    Create generator *g* for *population*, optionally specifying which *backend*
    to use.

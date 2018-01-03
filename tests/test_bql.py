@@ -2486,7 +2486,7 @@ def test_create_generator_ifnotexists():
                 )
             ''')
             for _i in (0, 1):
-                bdb.execute('CREATE GENERATOR p_cc IF NOT EXISTS FOR p USING '
+                bdb.execute('CREATE GENERATOR IF NOT EXISTS p_cc FOR p USING '
                             + using_clause)
             try:
                 bdb.execute('CREATE GENERATOR p_cc FOR p USING ' + using_clause)
