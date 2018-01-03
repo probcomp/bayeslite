@@ -809,7 +809,7 @@ def test_trivial_commands():
                 ['pqr', 'nominal'],
                 ['lmn', 'cyclic'],
         ])]
-    assert parse_bql_string('create generator t_cc if not exists'
+    assert parse_bql_string('create generator if not exists t_cc'
             ' for t using cgpm'
             '(xyz numerical, pqr nominal, lmn cyclic)') == \
         [ast.CreateGen('t_cc', True, 't', 'cgpm', [

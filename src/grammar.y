@@ -120,10 +120,8 @@ stattypes_of_opt        ::= .
 stattypes_of_opt        ::= K_STATTYPE|K_STATTYPES K_OF.
 
 /* XXX Temporary generators?  */
-command(creategen)      ::= K_CREATE K_GENERATOR
-                                ifnotexists(ifnotexists0)
+command(creategen)      ::= K_CREATE K_GENERATOR ifnotexists(ifnotexists)
                                 generator_name(name)
-                                ifnotexists(ifnotexists1)
                                 K_FOR population_name(pop)
                                 backend_name_opt(backend)
                                 generator_schema_opt(schema).
