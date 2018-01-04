@@ -205,7 +205,8 @@ def execute_phrase(bdb, phrase, bindings=()):
                         '''
                         cursor = bdb.sql_execute(populations_sql, (table,))
                         generators = [
-                            bayesdb_population_generators(bdb, population_id)
+                            core.bayesdb_population_generators(
+                                bdb, population_id)
                             for (population_id,) in cursor
                         ]
                         for generator_id in set(generators):
