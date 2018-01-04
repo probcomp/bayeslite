@@ -30,7 +30,7 @@ import bayeslite.weakprng as weakprng
 
 from bayeslite.backend import bayesdb_register_builtin_backends
 from bayeslite.util import cursor_value
-
+
 bayesdb_open_cookie = 0xed63e2c26d621a5b5146a334849d43f0
 
 def bayesdb_open(pathname=None, builtin_backends=None, seed=None,
