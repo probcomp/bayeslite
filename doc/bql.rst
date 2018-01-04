@@ -119,6 +119,9 @@ one can always fall back to executing SQL instead of BQL in Bayeslite.
       are updated; triggers and views are not, and must be dropped
       and recreated separately, due to limitations in sqlite3.
 
+      If table *name* has an implicit population, then both the table and its
+      implicit population will be renamed to *newname*.
+
    FUTURE: Renaming columns (Github issue #35).
 
 Metamodeling Language (MML)
@@ -190,6 +193,14 @@ BQL population.
    ``RENAME TO <newname>``
 
       Change the population's name to *newname*.
+
+      If *pop* is an implicit population for a base table *pop*, this command
+      will fail. Instead, use `ALTER TABLE <pop> RENAME TO <newname>`, which
+      will result in renaming both the base table and its implicit population to
+      *newname*.
+
+      If population *pop* has an implicit generator, then both the population
+      and its implicit generator will be renamed to *newname*.
 
    .. index:: ``ADD VARIABLE``
 
@@ -314,6 +325,24 @@ distribution of all the variables in a given base population.
 
    Drop the generator *g* and all its contents. Optionally, drop only
    the model numbered *num*, or the models ranging from *num0* to *num1*.
+
+.. index:: ``ALTER GENERATOR``
+
+``ALTER GENERATOR <gen>``
+
+   Alter the specified properties of *gen*. The following alterations are
+   supported:
+
+   .. index:: ``RENAME TO``
+
+   ``RENAME TO <newname>``
+
+      Change the generator's name to *newname*.
+
+      If *gen* is an implicit generator for a base population, this command will
+      fail. Instead, use `ALTER POPULATION <gen> RENAME TO <newname>`, which
+      will result in renaming both base population and its implicit generator
+      to *newname*.
 
 BQL Queries
 -----------
