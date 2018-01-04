@@ -88,7 +88,7 @@ with_schema_opt ::= K_WITH K_SCHEMA.
  *      set statistical type ...
  */
 
-command(alterpop)  ::= K_ALTER K_POPULATION
+command(alterpop)       ::= K_ALTER K_POPULATION
                                 population_name(population) alterpop_cmds(cmds).
 
 alterpop_cmds(one)      ::= alterpop_cmd(cmd).
