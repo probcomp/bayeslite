@@ -88,6 +88,7 @@ command(alterpop)  ::= K_ALTER K_POPULATION
 alterpop_cmds(one)      ::= alterpop_cmd(cmd).
 alterpop_cmds(many)     ::= alterpop_cmds(cmds) T_COMMA alterpop_cmd(cmd).
 
+alterpop_cmd(renamepop) ::= K_RENAME K_TO population_name(name).
 alterpop_cmd(stattype)  ::= K_SET K_STATTYPES|K_STATTYPE
                                 K_OF pop_columns(cols)
                                 K_TO stattype(stattype).

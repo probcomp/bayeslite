@@ -1022,6 +1022,13 @@ def test_alterpop_addvar():
     with pytest.raises(bayeslite.BQLParseError):
         parse_bql_string('alter population v add variable;')
 
+def test_alterpop_renamepop():
+    assert parse_bql_string('alter population p '
+            'rename to z') == \
+        [ast.AlterPop('p',
+            [ast.AlterPopRenamePop('z')]
+        )]
+
 def test_infer_trivial():
     assert parse_bql_string('infer x from p') == \
         [ast.InferAuto([ast.InfColOne('x', None)], ast.ExpLit(ast.LitInt(0)),
