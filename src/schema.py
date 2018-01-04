@@ -19,7 +19,7 @@ from bayeslite.util import cursor_value
 
 APPLICATION_ID = 0x42594442
 STALE_VERSIONS = (1,)
-USABLE_VERSIONS = (11,)
+USABLE_VERSIONS = (11, 12)
 
 LATEST_VERSION = USABLE_VERSIONS[-1]
 
@@ -101,6 +101,50 @@ CREATE TABLE bayesdb_generator_model (
 );
 '''
 
+bayesdb_schema_11to12 = '''
+PRAGMA user_version = 12;
+
+ALTER TABLE bayesdb_population ADD COLUMN implicit INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE bayesdb_generator ADD COLUMN implicit INTEGER NOT NULL DEFAULT 0;
+
+CREATE TRIGGER bayesdb_population_validate_implicit_insert
+BEFORE INSERT ON bayesdb_population
+BEGIN
+    SELECT
+    CASE
+        WHEN NEW.implicit = 1 AND NEW.name != NEW.tabname
+        THEN RAISE (ABORT, 'Implicit population name must match table name.')
+
+        WHEN NEW.implicit = 1 AND (SELECT COUNT(*) FROM bayesdb_population
+            WHERE tabname = NEW.tabname) > 0
+        THEN RAISE (ABORT, 'Table already has populations.')
+
+        WHEN (SELECT COUNT(*) FROM bayesdb_population
+            WHERE tabname = NEW.tabname AND implicit = 1) > 0
+        THEN RAISE (ABORT, 'Table has implicit population.')
+    END;
+END;
+
+CREATE TRIGGER bayesdb_generator_validate_implicit_insert
+BEFORE INSERT ON bayesdb_generator
+BEGIN
+    SELECT
+    CASE
+        WHEN NEW.implicit = 1 AND NEW.name !=
+            (SELECT name FROM bayesdb_population WHERE id = NEW.population_id)
+        THEN RAISE (ABORT, 'Implicit generator name must match population name.')
+
+        WHEN NEW.implicit = 1 AND (SELECT COUNT(*) FROM bayesdb_generator
+            WHERE population_id = NEW.population_id) > 0
+        THEN RAISE (ABORT, 'Population already has generators.')
+
+        WHEN (SELECT COUNT(*) FROM bayesdb_generator
+            WHERE population_id = NEW.population_id AND implicit = 1) > 0
+        THEN RAISE (ABORT, 'Population has implicit generator.')
+    END;
+END;
+'''
+
 ### BayesDB SQLite setup
 
 def bayesdb_install_schema(bdb, version=None, compatible=None):
@@ -165,11 +209,10 @@ def _upgrade_schema(bdb, current_version=None, desired_version=None):
         raise IOError('Unsupported bayeslite desired version: %d' % (
             desired_version,))
 
-    # When bayesdb_schema_11to12 exists, uncomment this to activate the upgrade.
-    # if current_version == 11 and current_version < desired_version:
-    #     with bdb.transaction():
-    #         bdb.sql_execute(bayesdb_schema_11to12)
-    #     current_version = 12
+    if current_version == 11 and current_version < desired_version:
+        with bdb.transaction():
+            bdb.sql_execute(bayesdb_schema_11to12)
+        current_version = 12
     bdb.sql_execute('PRAGMA integrity_check')
     bdb.sql_execute('PRAGMA foreign_key_check')
 

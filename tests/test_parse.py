@@ -745,6 +745,14 @@ def test_trivial_commands():
             ast.PopGuessVars('*'),
         ])]
     assert parse_bql_string('''
+        create population for satellites_ucs (
+            guess(*);
+        )
+    ''') == \
+        [ast.CreatePop(False, None, 'satellites_ucs', [
+            ast.PopGuessVars('*'),
+        ])]
+    assert parse_bql_string('''
         create population satellites for satellites_ucs (
             guess stattypes of launch_site, "contracto=r";
             set stattype of country_of_operator, orbit_type to nominal;
@@ -795,6 +803,13 @@ def test_trivial_commands():
     assert parse_bql_string('create generator t_cc for t using cgpm'
             '(xyz numerical, pqr nominal, lmn cyclic)') == \
         [ast.CreateGen('t_cc', False, 't', 'cgpm', [
+            ['xyz', 'numerical'],
+            ['pqr', 'nominal'],
+            ['lmn', 'cyclic'],
+        ])]
+    assert parse_bql_string('create generator for t using cgpm'
+            '(xyz numerical, pqr nominal, lmn cyclic)') == \
+        [ast.CreateGen(None, False, 't', 'cgpm', [
             ['xyz', 'numerical'],
             ['pqr', 'nominal'],
             ['lmn', 'cyclic'],

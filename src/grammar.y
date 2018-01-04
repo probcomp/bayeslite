@@ -68,6 +68,12 @@ command(create_pop)     ::= K_CREATE K_POPULATION ifnotexists(ifnotexists)
                                 with_schema_opt
                                 T_LROUND|T_LCURLY pop_schema(schema)
                                         T_RROUND|T_RCURLY.
+command(create_pop_implicit)    ::= K_CREATE K_POPULATION
+                                ifnotexists(ifnotexists)
+                                K_FOR table_name(table)
+                                with_schema_opt
+                                T_LROUND|T_LCURLY pop_schema(schema)
+                                        T_RROUND|T_RCURLY.
 command(drop_pop)       ::= K_DROP K_POPULATION ifexists(ifexists)
                                 population_name(name).
 
@@ -123,6 +129,10 @@ stattypes_of_opt        ::= K_STATTYPE|K_STATTYPES K_OF.
 /* XXX Temporary generators?  */
 command(creategen)      ::= K_CREATE K_GENERATOR ifnotexists(ifnotexists)
                                 generator_name(name)
+                                K_FOR population_name(pop)
+                                backend_name_opt(backend)
+                                generator_schema_opt(schema).
+command(creategen_implicit) ::= K_CREATE K_GENERATOR ifnotexists(ifnotexists)
                                 K_FOR population_name(pop)
                                 backend_name_opt(backend)
                                 generator_schema_opt(schema).
