@@ -31,13 +31,11 @@ import bayeslite.ast as ast
 import bayeslite.bqlfn as bqlfn
 import bayeslite.compiler as compiler
 import bayeslite.core as core
-import bayeslite.guess as guess
 import bayeslite.txn as txn
 
 from bayeslite.exception import BQLError
 from bayeslite.guess import bayesdb_guess_stattypes
 from bayeslite.read_csv import bayesdb_read_csv_file
-from bayeslite.schema import bayesdb_schema_required
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 from bayeslite.util import cursor_value
