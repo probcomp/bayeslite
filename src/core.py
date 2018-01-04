@@ -213,25 +213,25 @@ def bayesdb_get_population(bdb, name):
         assert isinstance(row[0], int)
         return row[0]
 
-def bayesdb_population_name(bdb, id):
-    """Return the name of the population with id `id`."""
+def bayesdb_population_name(bdb, population_id):
+    """Return the name of the population with given `population_id`."""
     sql = 'SELECT name FROM bayesdb_population WHERE id = ?'
-    cursor = bdb.sql_execute(sql, (id,))
+    cursor = bdb.sql_execute(sql, (population_id,))
     try:
         row = cursor.next()
     except StopIteration:
-        raise ValueError('No such population id: %r' % (id,))
+        raise ValueError('No such population id: %r' % (population_id,))
     else:
         return row[0]
 
-def bayesdb_population_table(bdb, id):
+def bayesdb_population_table(bdb, population_id):
     """Return the name of table of the population with id `id`."""
     sql = 'SELECT tabname FROM bayesdb_population WHERE id = ?'
-    cursor = bdb.sql_execute(sql, (id,))
+    cursor = bdb.sql_execute(sql, (population_id,))
     try:
         row = cursor.next()
     except StopIteration:
-        raise ValueError('No such population id: %r' % (id,))
+        raise ValueError('No such population id: %r' % (population_id,))
     else:
         return row[0]
 
@@ -471,51 +471,51 @@ def bayesdb_get_generator(bdb, population_id, name):
         assert isinstance(row[0], int)
         return row[0]
 
-def bayesdb_generator_name(bdb, id):
-    """Return the name of the generator with id `id`."""
+def bayesdb_generator_name(bdb, generator_id):
+    """Return the name of the generator with given `generator_id`."""
     sql = 'SELECT name FROM bayesdb_generator WHERE id = ?'
-    cursor = bdb.sql_execute(sql, (id,))
+    cursor = bdb.sql_execute(sql, (generator_id,))
     try:
         row = cursor.next()
     except StopIteration:
-        raise ValueError('No such generator id: %r' % (id,))
+        raise ValueError('No such generator id: %r' % (generator_id,))
     else:
         return row[0]
 
-def bayesdb_generator_backend(bdb, id):
-    """Return the backend of the generator with id `id`."""
+def bayesdb_generator_backend(bdb, generator_id):
+    """Return the backend of the generator with given `generator_id`."""
     sql = 'SELECT backend FROM bayesdb_generator WHERE id = ?'
-    cursor = bdb.sql_execute(sql, (id,))
+    cursor = bdb.sql_execute(sql, (generator_id,))
     try:
         row = cursor.next()
     except StopIteration:
-        raise ValueError('No such generator: %s' % (repr(id),))
+        raise ValueError('No such generator: %s' % (repr(generator_id),))
     else:
         if row[0] not in bdb.backends:
-            name = bayesdb_generator_name(bdb, id)
+            name = bayesdb_generator_name(bdb, generator_id)
             raise ValueError('Backend of generator %s not registered: %s' %
                 (repr(name), repr(row[0])))
         return bdb.backends[row[0]]
 
-def bayesdb_generator_table(bdb, id):
-    """Return the name of the table of the generator with id `id`."""
-    population_id = bayesdb_generator_population(bdb, id)
+def bayesdb_generator_table(bdb, generator_id):
+    """Return name of table of the generator with given `generator_id`."""
+    population_id = bayesdb_generator_population(bdb, generator_id)
     return bayesdb_population_table(bdb, population_id)
 
-def bayesdb_generator_population(bdb, id):
-    """Return the id of the population of the generator with id `id`."""
+def bayesdb_generator_population(bdb, generator_id):
+    """Return id of population of the generator with given `generator_id`."""
     sql = 'SELECT population_id FROM bayesdb_generator WHERE id = ?'
-    cursor = bdb.sql_execute(sql, (id,))
+    cursor = bdb.sql_execute(sql, (generator_id,))
     try:
         row = cursor.next()
     except StopIteration:
-        raise ValueError('No such generator: %s' % (repr(id),))
+        raise ValueError('No such generator: %s' % (repr(generator_id),))
     else:
         assert len(row) == 1
         return row[0]
 
 def bayesdb_generator_is_implicit(bdb, generator_id):
-    """True if the generator with id `id` is implicit."""
+    """True if the generator with given `generator_id` is implicit."""
     sql = 'SELECT implicit FROM bayesdb_generator WHERE id = ?'
     cursor = bdb.sql_execute(sql, (generator_id,))
     try:
