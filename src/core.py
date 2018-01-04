@@ -366,11 +366,11 @@ def bayesdb_variable_stattype(bdb, population_id, generator_id, colno):
             'colno': colno,
         })
         if cursor_value(cursor) == 0:
-            raise ValueError('No such variable in population %s: %d' %
-                (population, colno))
+            raise ValueError('No such variable in population %s: %d'
+                % (population, colno))
         else:
-            raise ValueError('Variable not modeled in population %s: %d' %
-                (population, colno))
+            raise ValueError('Variable not modeled in population %s: %d'
+                % (population, colno))
     else:
         assert len(row) == 1
         return row[0]
@@ -416,8 +416,8 @@ def bayesdb_population_cell_value(bdb, population_id, rowid, colno):
         row = value_cursor.next()
     except StopIteration:
         population = bayesdb_population_name(bdb, population_id)
-        raise BQLError(bdb, 'No such invidual in population %r: %d' %
-            (population, rowid))
+        raise BQLError(bdb, 'No such individual in population %r: %d'
+            % (population, rowid))
     else:
         assert len(row) == 1
         value = row[0]
@@ -554,9 +554,8 @@ def bayesdb_population_row_values(bdb, population_id, rowid):
         row = cursor.next()
     except StopIteration:
         population = bayesdb_population_table(bdb, population_id)
-        raise BQLError(bdb,
-            'No such row in table %s for population %d: %d' %
-            (repr(table_name), repr(population), repr(rowid)))
+        raise BQLError(bdb, 'No such row in table %s for population %d: %d'
+            % (repr(table_name), repr(population), repr(rowid)))
     try:
         cursor.next()
     except StopIteration:
@@ -564,8 +563,8 @@ def bayesdb_population_row_values(bdb, population_id, rowid):
     else:
         population = bayesdb_population_table(bdb, population_id)
         raise BQLError(bdb,
-            'More than one such row in table %s for population %s: %d' %
-            (repr(table_name), repr(population), repr(rowid)))
+            'More than one such row in table %s for population %s: %d'
+            % (repr(table_name), repr(population), repr(rowid)))
     return row
 
 def bayesdb_rowid_tokens(bdb):
