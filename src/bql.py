@@ -235,8 +235,13 @@ def execute_phrase(bdb, phrase, bindings=()):
                 for i in range(len(column_names))
             ]
             out.winder('''
-                CREATE TEMP TABLE %s (column TEXT, stattype TEXT, num_distinct INTEGER, reason TEXT)
-            ''' % (qtt), ())
+                CREATE TEMP TABLE %s (
+                    column TEXT,
+                    stattype TEXT,
+                    num_distinct INTEGER,
+                    reason TEXT
+                )
+            ''' % (qtt,))
             for cn, st, ct in zip(column_names, stattypes, distinct_value_counts):
                 out.winder('''
                     INSERT INTO %s VALUES (?, ?, ?, ?)
