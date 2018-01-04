@@ -144,11 +144,17 @@ BQL population.
 
 .. index:: ``CREATE POPULATION``
 
-``CREATE POPULATION [IF NOT EXISTS] <pop> FOR <table> WITH SCHEMA (<schema>)``
+``CREATE POPULATION [IF NOT EXISTS] [<pop>] FOR <table> WITH SCHEMA (<schema>)``
 
-   Create a population with base *table* and statistical data types given by
-   *schema*. The *schema* is defined using any combination of the following
-   statements, separated by semicolons:
+   Create a population named *pop* with base *table* and statistical data types
+   given by *schema*.
+
+   If the population name *pop* is not specified, then an "implicit" population
+   will be created for the table, whose name is the same as the table name. Note
+   that a table with an implicit population cannot have multiple populations.
+
+   The *schema* is defined using any combination of the following statements,
+   separated by semicolons:
 
       ``GUESS STATTYPE(S) OF (<column(s)>)``
 
@@ -223,10 +229,15 @@ distribution of all the variables in a given base population.
 
 .. index:: ``CREATE GENERATOR``
 
-``CREATE GENERATOR [IF NOT EXISTS] <g> FOR <population> [USING <backend>] (<customization>)``
+``CREATE GENERATOR [IF NOT EXISTS] [<gen>] FOR <population> [USING <backend>] (<customization>)``
 
-   Create generator *g* for *population*, optionally specifying which *backend*
-   to use.
+   Create generator *gen* for *population*, optionally specifying which
+   *backend* to use.
+
+   If the generator name *gen* is not specified, then an "implicit" generator
+   will be created for the population, whose name is the same as the population
+   name. Note that a population with an implicit generator cannot have multiple
+   generators.
 
    The default backend is ``cgpm``, which uses CrossCategorization as the
    default generative model. This backend supports the following *customization*
