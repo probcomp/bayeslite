@@ -208,7 +208,7 @@ def bayesdb_get_population(bdb, name):
     try:
         row = cursor.next()
     except StopIteration:
-        raise ValueError('No such population: %r' % (name,))
+        raise ValueError('No such population: %r' % (repr(name),))
     else:
         assert isinstance(row[0], int)
         return row[0]
@@ -220,7 +220,7 @@ def bayesdb_population_name(bdb, population_id):
     try:
         row = cursor.next()
     except StopIteration:
-        raise ValueError('No such population id: %r' % (population_id,))
+        raise ValueError('No such population id: %r' % (repr(population_id),))
     else:
         return row[0]
 
@@ -231,7 +231,7 @@ def bayesdb_population_table(bdb, population_id):
     try:
         row = cursor.next()
     except StopIteration:
-        raise ValueError('No such population id: %r' % (population_id,))
+        raise ValueError('No such population id: %r' % (repr(population_id),))
     else:
         return row[0]
 
@@ -249,7 +249,7 @@ def bayesdb_population_is_implicit(bdb, population_id):
     try:
         (result,) = cursor.next()
     except StopIteration:
-        raise ValueError('No such population id: %r' % (population_id,))
+        raise ValueError('No such population id: %r' % (repr(population_id),))
     else:
         assert result in [0, 1]
         return result == 1
@@ -267,7 +267,7 @@ def bayesdb_population_has_implicit_generator(bdb, population_id):
     try:
         row = cursor.next()
     except StopIteration:
-        raise ValueError('No such population id: %r' % (population_id,))
+        raise ValueError('No such population id: %r' % (repr(population_id),))
     (result,) = row
     assert result in [0, 1, None]
     # result = None -> population has no generators.
@@ -478,7 +478,7 @@ def bayesdb_generator_name(bdb, generator_id):
     try:
         row = cursor.next()
     except StopIteration:
-        raise ValueError('No such generator id: %r' % (generator_id,))
+        raise ValueError('No such generator id: %r' % (repr(generator_id),))
     else:
         return row[0]
 
@@ -521,7 +521,7 @@ def bayesdb_generator_is_implicit(bdb, generator_id):
     try:
         (result,) = cursor.next()
     except StopIteration:
-        raise ValueError('No such generator id: %r' % (generator_id,))
+        raise ValueError('No such generator id: %r' % (repr(generator_id),))
     else:
         assert result in [0, 1]
         return result == 1
