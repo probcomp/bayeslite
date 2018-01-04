@@ -402,6 +402,7 @@ def bayesdb_has_latent(bdb, population_id, var):
     return cursor_value(cursor)
 
 def bayesdb_population_cell_value(bdb, population_id, rowid, colno):
+    """Return value stored in `rowid` and `colno` of given `population_id`."""
     if colno < 0:
         # Latent variables do not appear in the table.
         return None
@@ -424,6 +425,7 @@ def bayesdb_population_cell_value(bdb, population_id, rowid, colno):
     return value
 
 def bayesdb_population_fresh_row_id(bdb, population_id):
+    """Return one plus maximum rowid in base table of given `population_id`."""
     table_name = bayesdb_population_table(bdb, population_id)
     qt = sqlite3_quote_name(table_name)
     cursor = bdb.sql_execute('SELECT MAX(_rowid_) FROM %s' % (qt,))
@@ -433,7 +435,12 @@ def bayesdb_population_fresh_row_id(bdb, population_id):
     return max_rowid + 1   # Synthesize a non-existent SQLite row id
 
 def bayesdb_has_generator(bdb, population_id, name):
-    """True if there is a generator named `name` in `bdb`."""
+    """True if there is a generator named `name` in `bdb`.
+
+    If `population_id` is specified, then the generator with `name` needs to be
+    defined for that population. Otherwise, when `population_id` is None, the
+    `name` may be of any generator.
+    """
     if population_id is None:
         sql = 'SELECT COUNT(*) FROM bayesdb_generator WHERE name = ?'
         cursor = bdb.sql_execute(sql, (name,))
@@ -448,7 +455,7 @@ def bayesdb_has_generator(bdb, population_id, name):
 def bayesdb_get_generator(bdb, population_id, name):
     """Return the id of the generator named `name` in `bdb`.
 
-    The id is persistent across savepoints: ids are 64-bit integers
+    The generator id is persistent across savepoints: ids are 64-bit integers
     that increase monotonically and are never reused.
 
     `bdb` must have a generator named `name`.  If you're not sure,
@@ -535,6 +542,7 @@ def bayesdb_generator_has_model(bdb, generator_id, modelno):
     return cursor_value(bdb.sql_execute(sql, (generator_id, modelno)))
 
 def bayesdb_generator_modelnos(bdb, generator_id):
+    """Return list of model numbers associated with given `generator_id`."""
     sql = '''
         SELECT modelno FROM bayesdb_generator_model AS m
             WHERE generator_id = ?
@@ -543,6 +551,7 @@ def bayesdb_generator_modelnos(bdb, generator_id):
     return [row[0] for row in bdb.sql_execute(sql, (generator_id,))]
 
 def bayesdb_population_row_values(bdb, population_id, rowid):
+    """Return values stored in `rowid` of given `population_id`."""
     table_name = bayesdb_population_table(bdb, population_id)
     column_names = bayesdb_variable_names(bdb, population_id, None)
     qt = sqlite3_quote_name(table_name)
@@ -568,12 +577,14 @@ def bayesdb_population_row_values(bdb, population_id, rowid):
     return row
 
 def bayesdb_rowid_tokens(bdb):
+    """Return list of built-in tokens that identify rowids (e.g. oid)."""
     tokens = bdb.sql_execute('''
         SELECT token FROM bayesdb_rowid_tokens
     ''').fetchall()
     return [t[0] for t in tokens]
 
 def bayesdb_has_stattype(bdb, stattype):
+    """True if `stattype` is registered in `bdb` instance."""
     sql = 'SELECT COUNT(*) FROM bayesdb_stattype WHERE name = :stattype'
     cursor = bdb.sql_execute(sql, {'stattype': casefold(stattype)})
     return cursor_value(cursor) > 0
