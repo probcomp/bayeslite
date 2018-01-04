@@ -808,7 +808,6 @@ def _create_population(bdb, phrase):
     # Retrieve all columns from the base table. The user is required to provide
     # a strategy for each single variable, either MODEL, IGNORE, or GUESS.
     base_table_columns = core.bayesdb_table_column_names(bdb, phrase.table)
-    seen_columns = []
 
     # Create the population record and get the assigned id.
     bdb.sql_execute('''
