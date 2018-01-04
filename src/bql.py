@@ -272,7 +272,25 @@ def execute_phrase(bdb, phrase, bindings=()):
                     (repr(population),))
             population_id = core.bayesdb_get_population(bdb, population)
             for cmd in phrase.commands:
-                if isinstance(cmd, ast.AlterPopAddVar):
+                if isinstance(cmd, ast.AlterPopRenamePop):
+                    # Make sure nothing else has this name.
+                    if casefold(population) != casefold(cmd.name):
+                        if core.bayesdb_has_population(bdb, cmd.name):
+                            raise BQLError(bdb,
+                                'Name already defined as population' ': %s'
+                                % (repr(cmd.name),))
+                    # Update bayesdb_population.  Everything else
+                    # refers to it by id.
+                    update_generator_sql = '''
+                        UPDATE bayesdb_population SET name = ? WHERE id = ?
+                    '''
+                    total_changes = bdb._sqlite3.totalchanges()
+                    bdb.sql_execute(update_generator_sql,
+                        (cmd.name, population_id))
+                    assert bdb._sqlite3.totalchanges() - total_changes == 1
+                    # Remember the new name for subsequent commands.
+                    population = cmd.name
+                elif isinstance(cmd, ast.AlterPopAddVar):
                     # Ensure column exists in base table.
                     table = core.bayesdb_population_table(bdb, population_id)
                     if not core.bayesdb_table_has_column(

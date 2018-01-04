@@ -179,6 +179,12 @@ BQL population.
    Alter the specified properties of *pop*. The following alterations are
    supported:
 
+   .. index:: ``RENAME TO``
+
+   ``RENAME TO <newname>``
+
+      Change the population's name to *newname*.
+
    .. index:: ``ADD VARIABLE``
 
    ``ADD VARIABLE <varname> [<stattype>]``
