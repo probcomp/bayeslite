@@ -76,27 +76,27 @@ CreatePop = namedtuple('CreatePop', [
 ])
 DropPop = namedtuple('DropPop', [
     'ifexists',
-    'name',
+    'name',                     # XXX name
 ])
 PopModelVars = namedtuple('PopModelVars', [
-    'names',
+    'names',                    # XXX names
     'stattype',
 ])
 PopGuessVars = namedtuple('PopGuessVars', [
-    'names',
+    'names',                    # XXX names
 ])
 PopIgnoreVars = namedtuple('PopIgnoreVars', [
-    'names',
+    'names',                    # XXX names
 ])
 AlterPop = namedtuple('AlterPop', [
-    'population',                # XXX name
-    'commands',                 # AlterGen*
+    'population',               # XXX name
+    'commands',                 # AlterPop*
 ])
 AlterPopRenamePop = namedtuple('AlterPopRenamePop', [
-    'name',
+    'name',                     # XXX name
 ])
 AlterPopAddVar = namedtuple('AlterPopAddVar', [
-    'name',
+    'name',                     # XXX name
     'stattype',
 ])
 AlterPopStatType = namedtuple('AlterGenRenameGen', [
@@ -117,7 +117,7 @@ DropGen = namedtuple('DropGen', [
 ])
 AlterGen = namedtuple('AlterGen', [
     'generator',                # XXX name
-    'modelnos',                 # XXX name
+    'modelnos',                 # list of int or None
     'commands',                 # AlterGen*
 ])
 AlterGenRenameGen = namedtuple('AlterGenRenameGen', [
@@ -130,31 +130,31 @@ AlterGenGeneric = namedtuple('AlterGenGeneric', [
 ### BQL Model Analysis Language
 
 InitModels = namedtuple('InitModels', [
-    'ifnotexists',
-    'generator',
-    'nmodels',
+    'ifnotexists',              # boolean
+    'generator',                # XXX name
+    'nmodels',                  # list of int or None
 ])
 AnalyzeModels = namedtuple('AnalyzeModels', [
-    'generator',
-    'modelnos',
-    'iterations',
-    'seconds',
-    'ckpt_iterations',
-    'ckpt_seconds',
-    'program',
+    'generator',                # XXX name
+    'modelnos',                 # list of int or None
+    'iterations',               # int
+    'seconds',                  # int
+    'ckpt_iterations',          # int
+    'ckpt_seconds',             # int
+    'program',                  # string to sub-parser
 ])
 DropModels = namedtuple('DropModels', [
-    'generator',
-    'modelnos',
+    'generator',                # XXX name
+    'modelnos',                 # list of int or None
 ])
 
 Regress = namedtuple('Regress', [
-    'target',
-    'givens',
-    'nsamp',
-    'population',
-    'generator',
-    'modelnos'
+    'target',                   # XXX name
+    'givens',                   # [(XXX name, Exp*)] or None
+    'nsamp',                    # int or None
+    'population',               # XXX name
+    'generator',                # XXX name
+    'modelnos'                  # list of int or None
 ])
 
 Simulate = namedtuple('Simulate', [

@@ -571,3 +571,110 @@ def test_bayesdb_population_add_variable():
         core.bayesdb_add_variable(bdb, population_id, 'q', 'numerical')
         assert core.bayesdb_has_variable(bdb, population_id, None, 'q')
         assert core.bayesdb_variable_number(bdb, population_id, None, 'q') == 3
+
+def test_bayesdb_implicit_population_generator():
+    with bayesdb() as bdb:
+        # Create table t.
+        bdb.sql_execute('create table t (a real, b ignore, c real)')
+        # Create an implicit population.
+        bdb.execute('create population for t (guess (*));')
+        population_id = core.bayesdb_get_population(bdb, 't')
+        # Confirm table t has an implicit population.
+        assert core.bayesdb_table_has_implicit_population(bdb, 't')
+        # Confirm population t is implicit.
+        assert core.bayesdb_population_is_implicit(bdb, population_id)
+        # Fail to create a new implicit population.
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('create population for t (guess (*))')
+        # Fail to create a new named population.
+        with pytest.raises(apsw.ConstraintError):
+            bdb.execute('create population p for t (guess (*))')
+        # Check ifnotexists phrase.
+        bdb.execute('create population if not exists for t (guess (*))')
+        # Create an implicit generator.
+        bdb.execute('create generator for t')
+        generator_id = core.bayesdb_get_generator(bdb, population_id, 't')
+        # Confirm population t has an implicit generator.
+        assert core.bayesdb_population_has_implicit_generator(
+            bdb, population_id)
+        # Confirm generator t is implicit.
+        assert core.bayesdb_generator_is_implicit(bdb, generator_id)
+        # Fail to create a new implicit generator.
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('create generator for t')
+        # Fail to create a new named generator.
+        with pytest.raises(apsw.ConstraintError):
+            bdb.execute('create generator p for t')
+        # Check ifnotexists phrase.
+        bdb.execute('create generator if not exists for t')
+        # Drop the implicit generator.
+        bdb.execute('drop generator t')
+        assert not \
+            core.bayesdb_population_has_implicit_generator(bdb, population_id)
+        # Create named generator.
+        bdb.execute('create generator g0 for t')
+        generator_id0 = core.bayesdb_get_generator(bdb, population_id, 'g0')
+        assert not core.bayesdb_population_has_implicit_generator(
+            bdb, population_id)
+        assert not core.bayesdb_generator_is_implicit(bdb, generator_id0)
+        # Fail to create implicit generator.
+        with pytest.raises(apsw.ConstraintError):
+            bdb.execute('create generator for t')
+        with pytest.raises(apsw.ConstraintError):
+            bdb.execute('create generator if not exists for t')
+        # Succeed in creating named generator.
+        bdb.execute('create generator g1 for t')
+        generator_id1 = core.bayesdb_get_generator(bdb, population_id, 'g1')
+        assert not core.bayesdb_generator_is_implicit(bdb, generator_id1)
+        # Drop the named generators.
+        bdb.execute('drop generator g0')
+        bdb.execute('drop generator g1')
+        # Drop the population.
+        bdb.execute('drop population t')
+        # Create named population.
+        bdb.execute('create population p0 for t (guess (*))')
+        population_id0 = core.bayesdb_get_population(bdb, 'p0')
+        assert not core.bayesdb_table_has_implicit_population(bdb, 't')
+        assert not core.bayesdb_population_is_implicit(bdb, population_id0)
+        # Fail to create implicit population.
+        with pytest.raises(apsw.ConstraintError):
+            bdb.execute('create population for t (guess (*))')
+        with pytest.raises(apsw.ConstraintError):
+            bdb.execute('create population if not exists for t (guess (*))')
+        # Succeed in creating named population.
+        bdb.execute('create population p1 for t (guess (*))')
+        population_id1 = core.bayesdb_get_population(bdb, 'p1')
+        assert not core.bayesdb_table_has_implicit_population(bdb, 't')
+        assert not core.bayesdb_population_is_implicit(bdb, population_id1)
+        # Drop the named populations.
+        bdb.execute('drop population p0')
+        bdb.execute('drop population p1')
+
+def test_bayesdb_implicit_population_generator_rename():
+    with bayesdb() as bdb:
+        # Create table t.
+        bdb.sql_execute('create table t (a real, b ignore, c real)')
+        # Create an implicit population.
+        bdb.execute('create population for t (guess (*))')
+        population_id = core.bayesdb_get_population(bdb, 't')
+        # Create an implicit generator.
+        bdb.execute('create generator for t')
+        generator_id = core.bayesdb_get_generator(bdb, population_id, 't')
+        # Fail to rename to implicit generator directly.
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('alter generator t rename to gaz')
+        # Fail to rename to implicit population directly.
+        with pytest.raises(bayeslite.BQLError):
+            bdb.execute('alter population t rename to paz')
+        # Rename base table t.
+        bdb.execute('alter table t rename to t2')
+        # Check population name propagated.
+        population_id2 = core.bayesdb_get_population(bdb, 't2')
+        assert not core.bayesdb_has_population(bdb, 't')
+        assert core.bayesdb_has_population(bdb, 't2')
+        assert population_id2 == population_id
+        # Check the generator name propagated.
+        generator_id2 = core.bayesdb_get_population(bdb, 't2')
+        assert not core.bayesdb_has_generator(bdb, population_id, 't')
+        assert core.bayesdb_has_generator(bdb, population_id2, 't2')
+        assert generator_id2 == generator_id

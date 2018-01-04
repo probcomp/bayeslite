@@ -156,6 +156,39 @@ def bayesdb_table_guarantee_columns(bdb, table):
         if nrows == 0:
             raise ValueError('No such table: %s' % (repr(table),))
 
+def bayesdb_table_has_implicit_population(bdb, table):
+    """True if the table named `table` has an implicit population.
+
+    `bdb` must have a table named `table`.  If you are not sure, call
+    :func:`bayesdb_has_table` first.
+    """
+    sql = 'SELECT implicit FROM bayesdb_population WHERE tabname = ?'
+    cursor = bdb.sql_execute(sql, (table,))
+    try:
+        row = cursor.next()
+    except StopIteration:
+        return False
+    (result,) = row
+    assert result in [0, 1]
+    if result == 1:
+        try:
+            row = cursor.next()
+        except StopIteration:
+            return True
+        assert False
+    return False
+
+def bayesdb_table_populations(bdb, table):
+    """Return list of populations for `table`.
+
+    `bdb` must have a table named `table`.  If you're not sure, call
+    :func:`bayesdb_has_table` first.
+    """
+    cursor = bdb.sql_execute('''
+        SELECT id FROM bayesdb_population WHERE tabname = ?
+    ''', (table,))
+    return [population_id for (population_id,) in cursor]
+
 def bayesdb_has_population(bdb, name):
     """True if there is a population named `name` in `bdb`."""
     sql = 'SELECT COUNT(*) FROM bayesdb_population WHERE name = ?'
@@ -203,10 +236,50 @@ def bayesdb_population_table(bdb, id):
         return row[0]
 
 def bayesdb_population_generators(bdb, population_id):
+    """Return list of generators for population_id."""
     cursor = bdb.sql_execute('''
         SELECT id FROM bayesdb_generator WHERE population_id = ?
     ''', (population_id,))
     return [generator_id for (generator_id,) in cursor]
+
+def bayesdb_population_is_implicit(bdb, population_id):
+    """True if the population with id `id` is implicit."""
+    sql = 'SELECT implicit FROM bayesdb_population WHERE id = ?'
+    cursor = bdb.sql_execute(sql, (population_id,))
+    try:
+        (result,) = cursor.next()
+    except StopIteration:
+        raise ValueError('No such population id: %r' % (population_id,))
+    else:
+        assert result in [0, 1]
+        return result == 1
+
+def bayesdb_population_has_implicit_generator(bdb, population_id):
+    """True if `population_id` has an implicit generator."""
+    sql = '''
+        SELECT bayesdb_generator.implicit FROM
+            bayesdb_population
+            LEFT OUTER JOIN bayesdb_generator
+                ON (bayesdb_population.id = bayesdb_generator.population_id)
+            WHERE bayesdb_population.id = ?
+    '''
+    cursor = bdb.sql_execute(sql, (population_id,))
+    try:
+        row = cursor.next()
+    except StopIteration:
+        raise ValueError('No such population id: %r' % (population_id,))
+    (result,) = row
+    assert result in [0, 1, None]
+    # result = None -> population has no generators.
+    # result = 1    -> population has an implicit generator.
+    # In both cases, confirm query yields a cursor with single row.
+    if result in [None, 1]:
+        try:
+            row = cursor.next()
+        except StopIteration:
+            return False if result is None else True
+        assert False
+    return False
 
 def bayesdb_add_variable(bdb, population_id, name, stattype):
     """Adds a variable to the population, with colno from the base table."""
@@ -440,6 +513,18 @@ def bayesdb_generator_population(bdb, id):
     else:
         assert len(row) == 1
         return row[0]
+
+def bayesdb_generator_is_implicit(bdb, generator_id):
+    """True if the generator with id `id` is implicit."""
+    sql = 'SELECT implicit FROM bayesdb_generator WHERE id = ?'
+    cursor = bdb.sql_execute(sql, (generator_id,))
+    try:
+        (result,) = cursor.next()
+    except StopIteration:
+        raise ValueError('No such generator id: %r' % (generator_id,))
+    else:
+        assert result in [0, 1]
+        return result == 1
 
 def bayesdb_generator_has_model(bdb, generator_id, modelno):
     """True if `generator_id` has a model numbered `modelno`."""
