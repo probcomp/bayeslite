@@ -19,7 +19,6 @@ requirements:
     - apsw
     - cgpm
     - crosscat
-    - distributions 2.2.1
     - jsonschema
     - loom 0.2.10
     - numpy 1.11.*
@@ -29,7 +28,6 @@ requirements:
 test:
   requires:
     - apsw
-    - distributions 2.2.1
     - loom 0.2.10
     - pandas 0.18.*
     - pytest 2.8.*
