@@ -24,6 +24,7 @@ import bayeslite.core as core
 from bayeslite import bql_quote_name
 from bayeslite.backends.cgpm_backend import CGPM_Backend
 from bayeslite.backends.iid_gaussian import StdNormalBackend
+from bayeslite.backends.loom_backend import LoomBackend
 
 examples = {
     'cgpm': (
@@ -45,6 +46,25 @@ examples = {
         'CREATE GENERATOR p_cc FOR p USING crosscat',
         'CREATE GENERATOR p_cc FOR p USING cgpm ...' ,
     ),
+    'loom': (
+        lambda: LoomBackend(loom_store_path=''),
+        't',
+        'CREATE TABLE t(x NUMERIC, y CYCLIC, z CATEGORICAL)',
+        'INSERT INTO t (x, y, z) VALUES (?, ?, ?)',
+        [
+            (0, 1.57, 'foo'),
+            (1.83, 3.141, 'bar'),
+            (1.82, 3.140, 'bar'),
+            (-1, 6.28, 'foo'),
+        ],
+        'p',
+        'p_lm',
+        'CREATE POPULATION p FOR t'
+        '(x NUMERICAL; y CYCLIC; z CATEGORICAL)',
+        'CREATE GENERATOR p_lm FOR p USING loom()',
+        'CREATE GENERATOR p_lm FOR p USING loom ...',
+        'CREATE GENERATOR p_lm FOR p USING loom ...',
+    ),
     'iid_gaussian': (
         lambda: StdNormalBackend(seed=0),
         't',
@@ -60,6 +80,7 @@ examples = {
         'CREATE GENERATOR p_sn FOR p USING std_normal ...'
     ),
 }
+
 
 @pytest.mark.parametrize('persist,exname',
     [(persist, key)
@@ -77,6 +98,7 @@ def test_example(persist, exname):
     else:
         with bayeslite.bayesdb_open(builtin_backends=False) as bdb:
             _test_example(bdb, exname)
+
 
 def _test_example(bdb, exname):
     mm, t, t_sql, data_sql, data, p, g, p_bql, g_bql, g_bqlbad0, g_bqlbad1 = \
@@ -172,20 +194,27 @@ def _test_example(bdb, exname):
 
     # Test dropping models.
     with bdb.savepoint_rollback():
-        bdb.execute('DROP MODEL 1 FROM %s' % (qg,))
-        assert core.bayesdb_generator_has_model(bdb, gid, 0)
-        assert not core.bayesdb_generator_has_model(bdb, gid, 1)
-        assert [0] == core.bayesdb_generator_modelnos(bdb, gid)
+        try:
+            bdb.execute('DROP MODEL 1 FROM %s' % (qg,))
+            assert core.bayesdb_generator_has_model(bdb, gid, 0)
+            assert not core.bayesdb_generator_has_model(bdb, gid, 1)
+            assert [0] == core.bayesdb_generator_modelnos(bdb, gid)
+        except bayeslite.BQLError, e:
+           # loom does not allow model numbers to be specified in drop models
+           assert exname == 'loom'
+    bdb.execute('ANALYZE %s FOR 1 ITERATION WAIT' % (qg,))
+    try:
+        # Test analyzing models.
+        bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION WAIT' % (qg,))
+        bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION WAIT' % (qg,))
+    except bayeslite.BQLError, e:
+        # loom does not allow model numbers to be specified in analyze models
+        assert exname == 'loom'
 
-    # Test analyzing models.
-    bdb.execute('ANALYZE %s FOR 1 ITERATION' % (qg,))
-    bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION' % (qg,))
-    bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION' % (qg,))
 
 def _retest_example(bdb, exname):
     mm, t, t_sql, data_sql, data, p, g, p_bql, g_bql, g_bqlbad0, g_bqlbad1 = \
         examples[exname]
-    qt = bql_quote_name(t)
     qg = bql_quote_name(g)
 
     bayeslite.bayesdb_register_backend(bdb, mm())
@@ -196,6 +225,12 @@ def _retest_example(bdb, exname):
     gid = core.bayesdb_get_generator(bdb, p_id, g)
     assert core.bayesdb_generator_has_model(bdb, gid, 0)
     assert core.bayesdb_generator_has_model(bdb, gid, 1)
-    bdb.execute('ANALYZE %s FOR 1 ITERATION' % (qg,))
-    bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION' % (qg,))
-    bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION' % (qg,))
+
+    bdb.execute('ANALYZE %s FOR 1 ITERATION WAIT' % (qg,))
+    try:
+        # Test analyzing models.
+        bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION WAIT' % (qg,))
+        bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION WAIT' % (qg,))
+    except bayeslite.BQLError, e:
+        # loom does not allow model numbers to be specified in analyze models
+        assert exname == 'loom'

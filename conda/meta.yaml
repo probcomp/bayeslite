@@ -16,9 +16,11 @@ requirements:
     - numpy 1.11.*
     - python 2.7.*
   run:
+    - apsw
     - cgpm
     - crosscat
     - jsonschema
+    - loom 0.2.10
     - numpy 1.11.*
     - scipy 0.17.*
     - six 1.10.*
@@ -28,6 +30,7 @@ test:
     - apsw
     - cgpm
     - crosscat
+    - loom 0.2.10
     - pandas 0.18.*
     - pytest 2.8.*
     - python 2.7.*
