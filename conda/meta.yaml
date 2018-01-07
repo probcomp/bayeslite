@@ -30,6 +30,7 @@ test:
   requires:
     - apsw
     - cgpm
+    - contextlib2 >=0.4.0
     - crosscat
     - loom 0.2.10
     - pandas 0.18.*
