@@ -36,6 +36,7 @@ test:
     - pandas 0.18.*
     - parsable 0.2.*
     - protobuf
+    - pymetis
     - pytest 2.8.*
     - python 2.7.*
   commands:
