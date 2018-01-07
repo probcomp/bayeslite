@@ -1379,6 +1379,12 @@ def test_trivial_commands():
         assert core.bayesdb_generator_table(bdb, generator_id) == 't'
         bdb.execute('alter table t rename to T')
         assert core.bayesdb_generator_table(bdb, generator_id) == 'T'
+        bdb.execute('alter population p rename to p')
+        assert core.bayesdb_population_name(bdb, population_id) == 'p'
+        bdb.execute('alter population p rename to p2')
+        assert core.bayesdb_population_name(bdb, population_id) == 'p2'
+        bdb.execute('alter population p2 rename to p')
+        assert core.bayesdb_population_name(bdb, population_id) == 'p'
         bdb.execute('estimate count(*) from p').fetchall()
         bdb.execute('alter table t rename to t')
         assert core.bayesdb_generator_table(bdb, generator_id) == 't'
@@ -1454,21 +1460,23 @@ def test_trivial_commands():
                 'from pairwise p').fetchall()
         bdb.execute('estimate similarity in the context of age '
             'from pairwise p').fetchall()
+        bdb.execute('alter population p rename to p2')
+        assert core.bayesdb_population_name(bdb, population_id) == 'p2'
         bdb.execute('estimate similarity to (rowid=1) in the context of rank '
-            'from p').fetchall()
+            'from p2').fetchall()
         bdb.execute('select value from'
-            ' (estimate correlation from pairwise columns of p)').fetchall()
+            ' (estimate correlation from pairwise columns of p2)').fetchall()
         bdb.execute('infer explicit predict age with confidence 0.9'
-            ' from p').fetchall()
+            ' from p2').fetchall()
         bdb.execute('infer explicit predict AGE with confidence 0.9'
-            ' from P').fetchall()
+            ' from P2').fetchall()
         bdb.execute('infer explicit predict aGe with confidence 0.9'
-            ' from P').fetchall()
+            ' from P2').fetchall()
         with pytest.raises(bayeslite.BQLError):
-            bdb.execute('estimate predict agee with confidence 0.9 from p')
+            bdb.execute('estimate predict agee with confidence 0.9 from p2')
         with pytest.raises(bayeslite.BQLError):
             bdb.execute('infer explicit predict agee with confidence 0.9'
-                ' from p')
+                ' from p2')
         guess.bayesdb_guess_population(bdb, 'pe', 't0',
             overrides=[
                 ('age', 'numerical'),
@@ -2486,7 +2494,7 @@ def test_create_generator_ifnotexists():
                 )
             ''')
             for _i in (0, 1):
-                bdb.execute('CREATE GENERATOR p_cc IF NOT EXISTS FOR p USING '
+                bdb.execute('CREATE GENERATOR IF NOT EXISTS p_cc FOR p USING '
                             + using_clause)
             try:
                 bdb.execute('CREATE GENERATOR p_cc FOR p USING ' + using_clause)

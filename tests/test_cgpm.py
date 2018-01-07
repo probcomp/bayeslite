@@ -125,7 +125,7 @@ def test_cgpm_no_empty_categories():
                 SET STATTYPES OF a, b, c TO NOMINAL
             );
         ''')
-        bdb.execute('CREATE GENERATOR h IF NOT EXISTS FOR q USING cgpm;')
+        bdb.execute('CREATE GENERATOR IF NOT EXISTS h FOR q USING cgpm;')
         bdb.execute('INITIALIZE 1 MODEL FOR h')
         category_rows = bdb.sql_execute('''
             SELECT colno, value FROM bayesdb_cgpm_category;
