@@ -33,6 +33,7 @@ test:
     - crosscat
     - loom 0.2.10
     - pandas 0.18.*
+    - parsable 0.2.*
     - protobuf
     - pytest 2.8.*
     - python 2.7.*
