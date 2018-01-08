@@ -47,7 +47,7 @@ examples = {
         'CREATE GENERATOR p_cc FOR p USING cgpm ...' ,
     ),
     'loom': (
-        lambda: LoomBackend(loom_store_path=''),
+        lambda: LoomBackend(loom_store_path='/tmp/loom.data'),
         't',
         'CREATE TABLE t(x NUMERIC, y CYCLIC, z CATEGORICAL)',
         'INSERT INTO t (x, y, z) VALUES (?, ?, ?)',
