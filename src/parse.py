@@ -181,6 +181,8 @@ class BQLSemantics(object):
 
     def p_command_create_pop(self, ifnotexists, name, table, schema):
         return ast.CreatePop(ifnotexists, name, table, schema)
+    def p_command_create_pop_implicit(self, ifnotexists, table, schema):
+        return ast.CreatePop(ifnotexists, None, table, schema)
     def p_command_drop_pop(self, ifexists, name):
         return ast.DropPop(ifexists, name)
     def p_command_alterpop(self, population, cmds):
@@ -188,6 +190,8 @@ class BQLSemantics(object):
 
     def p_alterpop_cmds_one(self, cmd):         return [cmd]
     def p_alterpop_cmds_many(self, cmds, cmd):  cmds.append(cmd); return cmds
+    def p_alterpop_cmd_renamepop(self, name):
+        return ast.AlterPopRenamePop(name)
     def p_alterpop_cmd_stattype(self, cols, stattype):
         return ast.AlterPopStatType(cols, stattype)
     def p_alterpop_cmd_addvar(self, col, st):
@@ -220,10 +224,10 @@ class BQLSemantics(object):
     def p_pop_columns_guess_star(self):       return '*'
     def p_pop_columns_guess_list(self, cols): return cols
 
-    def p_command_creategen(self, ifnotexists0, name, ifnotexists1, pop,
-            backend, schema):
-        ifnotexists = ifnotexists0 or ifnotexists1
+    def p_command_creategen(self, ifnotexists, name, pop, backend, schema):
         return ast.CreateGen(name, ifnotexists, pop, backend, schema)
+    def p_command_creategen_implicit(self, ifnotexists, pop, backend, schema):
+        return ast.CreateGen(None, ifnotexists, pop, backend, schema)
     def p_command_dropgen(self, ifexists, name):
         return ast.DropGen(ifexists, name)
     def p_command_altergen(self, generator, models, cmds):

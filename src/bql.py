@@ -31,13 +31,11 @@ import bayeslite.ast as ast
 import bayeslite.bqlfn as bqlfn
 import bayeslite.compiler as compiler
 import bayeslite.core as core
-import bayeslite.guess as guess
 import bayeslite.txn as txn
 
 from bayeslite.exception import BQLError
 from bayeslite.guess import bayesdb_guess_stattypes
 from bayeslite.read_csv import bayesdb_read_csv_file
-from bayeslite.schema import bayesdb_schema_required
 from bayeslite.sqlite3_util import sqlite3_quote_name
 from bayeslite.util import casefold
 from bayeslite.util import cursor_value
@@ -149,10 +147,22 @@ def execute_phrase(bdb, phrase, bindings=()):
                         # Make sure nothing else has this name and
                         # rename it.
                         if core.bayesdb_has_table(bdb, cmd.name):
-                            raise BQLError(bdb, 'Name already defined as table'
-                                ': %s' %
-                                (repr(cmd.name),))
+                            raise BQLError(bdb,
+                                'Name already defined as table: %s'
+                                % (repr(cmd.name),))
                         rename_table(bdb, table, cmd.name)
+                    # If table has implicit population, rename it too.
+                    if core.bayesdb_table_has_implicit_population(
+                                bdb, cmd.name):
+                        populations = \
+                            core.bayesdb_table_populations(bdb, cmd.name)
+                        assert len(populations) == 1
+                        population_name = core.bayesdb_population_name(
+                            bdb, populations[0])
+                        qt = sqlite3_quote_name(cmd.name)
+                        qp = sqlite3_quote_name(population_name)
+                        bdb.execute('ALTER POPULATION %s RENAME TO %s'
+                            % (qp, qt))
                     # Remember the new name for subsequent commands.
                     table = cmd.name
                 elif isinstance(cmd, ast.AlterTabRenameCol):
@@ -193,7 +203,8 @@ def execute_phrase(bdb, phrase, bindings=()):
                         '''
                         cursor = bdb.sql_execute(populations_sql, (table,))
                         generators = [
-                            bayesdb_population_generators(bdb, population_id)
+                            core.bayesdb_population_generators(
+                                bdb, population_id)
                             for (population_id,) in cursor
                         ]
                         for generator_id in set(generators):
@@ -223,8 +234,13 @@ def execute_phrase(bdb, phrase, bindings=()):
                 for i in range(len(column_names))
             ]
             out.winder('''
-                CREATE TEMP TABLE %s (column TEXT, stattype TEXT, num_distinct INTEGER, reason TEXT)
-            ''' % (qtt), ())
+                CREATE TEMP TABLE %s (
+                    column TEXT,
+                    stattype TEXT,
+                    num_distinct INTEGER,
+                    reason TEXT
+                )
+            ''' % (qtt,), ())
             for cn, st, ct in zip(column_names, stattypes, distinct_value_counts):
                 out.winder('''
                     INSERT INTO %s VALUES (?, ?, ?, ?)
@@ -272,7 +288,46 @@ def execute_phrase(bdb, phrase, bindings=()):
                     (repr(population),))
             population_id = core.bayesdb_get_population(bdb, population)
             for cmd in phrase.commands:
-                if isinstance(cmd, ast.AlterPopAddVar):
+                if isinstance(cmd, ast.AlterPopRenamePop):
+                    table = core.bayesdb_population_table(bdb, population_id)
+                    # Prevent renaming of implicit population directly, unless
+                    # being called by ast.AlterTabRenameTab in which case the
+                    # table name and population name will not be matching.
+                    if core.bayesdb_population_is_implicit(bdb, population_id) \
+                            and casefold(population) == casefold(table):
+                        raise BQLError(bdb, 'Cannot rename implicit'
+                            'population %s; rename base table instead'
+                            % (population,))
+                    # Make sure nothing else has this name.
+                    if casefold(population) != casefold(cmd.name):
+                        if core.bayesdb_has_population(bdb, cmd.name):
+                            raise BQLError(bdb,
+                                'Name already defined as population' ': %s'
+                                % (repr(cmd.name),))
+                    # Update bayesdb_population.  Everything else
+                    # refers to it by id.
+                    update_generator_sql = '''
+                        UPDATE bayesdb_population SET name = ? WHERE id = ?
+                    '''
+                    total_changes = bdb._sqlite3.totalchanges()
+                    bdb.sql_execute(update_generator_sql,
+                        (cmd.name, population_id))
+                    assert bdb._sqlite3.totalchanges() - total_changes == 1
+                    # If population has implicit generator, rename it too.
+                    if core.bayesdb_population_has_implicit_generator(
+                            bdb, population_id):
+                        generators = core.bayesdb_population_generators(
+                            bdb, population_id)
+                        assert len(generators) == 1
+                        generator_name = core.bayesdb_generator_name(
+                            bdb, generators[0])
+                        qp = sqlite3_quote_name(cmd.name)
+                        qg = sqlite3_quote_name(generator_name)
+                        bdb.execute('ALTER GENERATOR %s RENAME TO %s'
+                            % (qg, qp,))
+                    # Remember the new name for subsequent commands.
+                    population = cmd.name
+                elif isinstance(cmd, ast.AlterPopAddVar):
                     # Ensure column exists in base table.
                     table = core.bayesdb_population_table(bdb, population_id)
                     if not core.bayesdb_table_has_column(
@@ -411,22 +466,26 @@ def execute_phrase(bdb, phrase, bindings=()):
                 (repr(backend_name),))
         backend = bdb.backends[backend_name]
 
+        # Retrieve the (possibility implicit) generator name.
+        generator_name = phrase.name or phrase.population
+        implicit = 1 if phrase.name is None else 0
+
         with bdb.savepoint():
-            if core.bayesdb_has_generator(bdb, population_id, phrase.name):
+            if core.bayesdb_has_generator(bdb, population_id, generator_name):
                 if not phrase.ifnotexists:
                     raise BQLError(
                         bdb, 'Name already defined as generator: %s' %
-                        (repr(phrase.name),))
+                        (repr(generator_name),))
             else:
                 # Insert a record into bayesdb_generator and get the
                 # assigned id.
                 bdb.sql_execute('''
                     INSERT INTO bayesdb_generator
-                        (name, population_id, backend)
-                        VALUES (?, ?, ?)
-                ''', (phrase.name, population_id, backend.name()))
+                        (name, population_id, backend, implicit)
+                        VALUES (?, ?, ?, ?)
+                ''', (generator_name, population_id, backend.name(), implicit))
                 generator_id = core.bayesdb_get_generator(
-                    bdb, population_id, phrase.name)
+                    bdb, population_id, generator_name)
                 # Do any backend-specific initialization.
                 backend.create_generator(bdb, generator_id, phrase.schema)
 
@@ -471,15 +530,22 @@ def execute_phrase(bdb, phrase, bindings=()):
             cmds_generic = []
             for cmd in phrase.commands:
                 if isinstance(cmd, ast.AlterGenRenameGen):
+                    population_id = core.bayesdb_generator_population(
+                        bdb, generator_id)
+                    population = core.bayesdb_population_name(
+                        bdb, population_id)
+                    # Prevent renaming of implicit generator directly, unless
+                    # being called by ast.AlterPopRenamePop in which case the
+                    # population name and generator name will not be matching.
+                    if core.bayesdb_population_is_implicit(bdb, generator_id) \
+                            and casefold(generator) == casefold(population):
+                        raise BQLError(bdb, 'Cannot rename implicit '
+                            'generator; rename base population instead')
                     # Disable modelnos with AlterGenRenameGen.
                     if phrase.modelnos is not None:
                         raise BQLError(bdb, 'Cannot specify models for RENAME')
                     # Make sure nothing else has this name.
                     if casefold(generator) != casefold(cmd.name):
-                        if core.bayesdb_has_table(bdb, cmd.name):
-                            raise BQLError(bdb, 'Name already defined as table'
-                                ': %s' %
-                                (repr(cmd.name),))
                         if core.bayesdb_has_generator(bdb, None, cmd.name):
                             raise BQLError(bdb, 'Name already defined'
                                 ' as generator: %s' %
@@ -723,12 +789,17 @@ def execute_phrase(bdb, phrase, bindings=()):
     assert False                # XXX
 
 def _create_population(bdb, phrase):
-    if core.bayesdb_has_population(bdb, phrase.name):
+    # Retrieve the (possibility implicit) population name.
+    population_name = phrase.name or phrase.table
+    implicit = 1 if phrase.name is None else 0
+
+    # Handle IF NOT EXISTS.
+    if core.bayesdb_has_population(bdb, population_name):
         if phrase.ifnotexists:
             return
         else:
             raise BQLError(bdb, 'Name already defined as population: %r' %
-                (phrase.name,))
+                (population_name,))
 
     # Make sure the bayesdb_column table knows all the columns of the
     # underlying table.
@@ -737,13 +808,13 @@ def _create_population(bdb, phrase):
     # Retrieve all columns from the base table. The user is required to provide
     # a strategy for each single variable, either MODEL, IGNORE, or GUESS.
     base_table_columns = core.bayesdb_table_column_names(bdb, phrase.table)
-    seen_columns = []
 
     # Create the population record and get the assigned id.
     bdb.sql_execute('''
-        INSERT INTO bayesdb_population (name, tabname) VALUES (?, ?)
-    ''', (phrase.name, phrase.table))
-    population_id = core.bayesdb_get_population(bdb, phrase.name)
+        INSERT INTO bayesdb_population (name, tabname, implicit)
+            VALUES (?, ?, ?)
+    ''', (population_name, phrase.table, implicit))
+    population_id = core.bayesdb_get_population(bdb, population_name)
 
     # Extract the population column names and stattypes as pairs.
     pop_model_vars = list(itertools.chain.from_iterable(

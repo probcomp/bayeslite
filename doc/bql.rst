@@ -119,6 +119,9 @@ one can always fall back to executing SQL instead of BQL in Bayeslite.
       are updated; triggers and views are not, and must be dropped
       and recreated separately, due to limitations in sqlite3.
 
+      If table *name* has an implicit population, then both the table and its
+      implicit population will be renamed to *newname*.
+
    FUTURE: Renaming columns (Github issue #35).
 
 Metamodeling Language (MML)
@@ -144,11 +147,17 @@ BQL population.
 
 .. index:: ``CREATE POPULATION``
 
-``CREATE POPULATION [IF NOT EXISTS] <pop> FOR <table> WITH SCHEMA (<schema>)``
+``CREATE POPULATION [IF NOT EXISTS] [<pop>] FOR <table> WITH SCHEMA (<schema>)``
 
-   Create a population with base *table* and statistical data types given by
-   *schema*. The *schema* is defined using any combination of the following
-   statements, separated by semicolons:
+   Create a population named *pop* with base *table* and statistical data types
+   given by *schema*.
+
+   If the population name *pop* is not specified, then an "implicit" population
+   will be created for the table, whose name is the same as the table name. Note
+   that a table with an implicit population cannot have multiple populations.
+
+   The *schema* is defined using any combination of the following statements,
+   separated by semicolons:
 
       ``GUESS STATTYPE(S) OF (<column(s)>)``
 
@@ -178,6 +187,20 @@ BQL population.
 
    Alter the specified properties of *pop*. The following alterations are
    supported:
+
+   .. index:: ``RENAME TO``
+
+   ``RENAME TO <newname>``
+
+      Change the population's name to *newname*.
+
+      If *pop* is an implicit population for a base table *pop*, this command
+      will fail. Instead, use `ALTER TABLE <pop> RENAME TO <newname>`, which
+      will result in renaming both the base table and its implicit population to
+      *newname*.
+
+      If population *pop* has an implicit generator, then both the population
+      and its implicit generator will be renamed to *newname*.
 
    .. index:: ``ADD VARIABLE``
 
@@ -217,10 +240,15 @@ distribution of all the variables in a given base population.
 
 .. index:: ``CREATE GENERATOR``
 
-``CREATE GENERATOR <g> FOR <population> [USING <backend>] (<customization>)``
+``CREATE GENERATOR [IF NOT EXISTS] [<gen>] FOR <population> [USING <backend>] (<customization>)``
 
-   Create generator *g* for *population*, optionally specifying which *backend*
-   to use.
+   Create generator *gen* for *population*, optionally specifying which
+   *backend* to use.
+
+   If the generator name *gen* is not specified, then an "implicit" generator
+   will be created for the population, whose name is the same as the population
+   name. Note that a population with an implicit generator cannot have multiple
+   generators.
 
    The default backend is ``cgpm``, which uses CrossCategorization as the
    default generative model. This backend supports the following *customization*
@@ -297,6 +325,24 @@ distribution of all the variables in a given base population.
 
    Drop the generator *g* and all its contents. Optionally, drop only
    the model numbered *num*, or the models ranging from *num0* to *num1*.
+
+.. index:: ``ALTER GENERATOR``
+
+``ALTER GENERATOR <gen>``
+
+   Alter the specified properties of *gen*. The following alterations are
+   supported:
+
+   .. index:: ``RENAME TO``
+
+   ``RENAME TO <newname>``
+
+      Change the generator's name to *newname*.
+
+      If *gen* is an implicit generator for a base population, this command will
+      fail. Instead, use `ALTER POPULATION <gen> RENAME TO <newname>`, which
+      will result in renaming both base population and its implicit generator
+      to *newname*.
 
 BQL Queries
 -----------

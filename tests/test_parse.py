@@ -745,6 +745,14 @@ def test_trivial_commands():
             ast.PopGuessVars('*'),
         ])]
     assert parse_bql_string('''
+        create population for satellites_ucs (
+            guess(*);
+        )
+    ''') == \
+        [ast.CreatePop(False, None, 'satellites_ucs', [
+            ast.PopGuessVars('*'),
+        ])]
+    assert parse_bql_string('''
         create population satellites for satellites_ucs (
             guess stattypes of launch_site, "contracto=r";
             set stattype of country_of_operator, orbit_type to nominal;
@@ -799,6 +807,13 @@ def test_trivial_commands():
             ['pqr', 'nominal'],
             ['lmn', 'cyclic'],
         ])]
+    assert parse_bql_string('create generator for t using cgpm'
+            '(xyz numerical, pqr nominal, lmn cyclic)') == \
+        [ast.CreateGen(None, False, 't', 'cgpm', [
+            ['xyz', 'numerical'],
+            ['pqr', 'nominal'],
+            ['lmn', 'cyclic'],
+        ])]
     assert parse_bql_string('create generator t_cc for t'
             '(xyz numerical, pqr nominal, lmn cyclic)') == \
         [ast.CreateGen(
@@ -809,7 +824,7 @@ def test_trivial_commands():
                 ['pqr', 'nominal'],
                 ['lmn', 'cyclic'],
         ])]
-    assert parse_bql_string('create generator t_cc if not exists'
+    assert parse_bql_string('create generator if not exists t_cc'
             ' for t using cgpm'
             '(xyz numerical, pqr nominal, lmn cyclic)') == \
         [ast.CreateGen('t_cc', True, 't', 'cgpm', [
@@ -1021,6 +1036,13 @@ def test_alterpop_addvar():
         )]
     with pytest.raises(bayeslite.BQLParseError):
         parse_bql_string('alter population v add variable;')
+
+def test_alterpop_renamepop():
+    assert parse_bql_string('alter population p '
+            'rename to z') == \
+        [ast.AlterPop('p',
+            [ast.AlterPopRenamePop('z')]
+        )]
 
 def test_infer_trivial():
     assert parse_bql_string('infer x from p') == \

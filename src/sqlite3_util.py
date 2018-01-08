@@ -80,7 +80,7 @@ def sqlite3_savepoint_rollback(db):
     finally:
         db.cursor().execute("ROLLBACK TO x%s" % (savepoint,))
         db.cursor().execute("RELEASE x%s" % (savepoint,))
-
+
 def sqlite3_exec_1(db, query, *args):
     """Execute a query returning a 1x1 table, and return its one value.
 
@@ -118,7 +118,7 @@ def sqlite3_column_affinity(column_type):
         return "REAL"
     else:
         return "NUMERIC"
-
+
 ### Trivial SQLite3 utility tests
 
 # XXX This doesn't really belong here, although it doesn't hurt either.

@@ -68,6 +68,12 @@ command(create_pop)     ::= K_CREATE K_POPULATION ifnotexists(ifnotexists)
                                 with_schema_opt
                                 T_LROUND|T_LCURLY pop_schema(schema)
                                         T_RROUND|T_RCURLY.
+command(create_pop_implicit)    ::= K_CREATE K_POPULATION
+                                ifnotexists(ifnotexists)
+                                K_FOR table_name(table)
+                                with_schema_opt
+                                T_LROUND|T_LCURLY pop_schema(schema)
+                                        T_RROUND|T_RCURLY.
 command(drop_pop)       ::= K_DROP K_POPULATION ifexists(ifexists)
                                 population_name(name).
 
@@ -82,12 +88,13 @@ with_schema_opt ::= K_WITH K_SCHEMA.
  *      set statistical type ...
  */
 
-command(alterpop)  ::= K_ALTER K_POPULATION
+command(alterpop)       ::= K_ALTER K_POPULATION
                                 population_name(population) alterpop_cmds(cmds).
 
 alterpop_cmds(one)      ::= alterpop_cmd(cmd).
 alterpop_cmds(many)     ::= alterpop_cmds(cmds) T_COMMA alterpop_cmd(cmd).
 
+alterpop_cmd(renamepop) ::= K_RENAME K_TO population_name(name).
 alterpop_cmd(stattype)  ::= K_SET K_STATTYPES|K_STATTYPE
                                 K_OF pop_columns(cols)
                                 K_TO stattype(stattype).
@@ -120,10 +127,12 @@ stattypes_of_opt        ::= .
 stattypes_of_opt        ::= K_STATTYPE|K_STATTYPES K_OF.
 
 /* XXX Temporary generators?  */
-command(creategen)      ::= K_CREATE K_GENERATOR
-                                ifnotexists(ifnotexists0)
+command(creategen)      ::= K_CREATE K_GENERATOR ifnotexists(ifnotexists)
                                 generator_name(name)
-                                ifnotexists(ifnotexists1)
+                                K_FOR population_name(pop)
+                                backend_name_opt(backend)
+                                generator_schema_opt(schema).
+command(creategen_implicit) ::= K_CREATE K_GENERATOR ifnotexists(ifnotexists)
                                 K_FOR population_name(pop)
                                 backend_name_opt(backend)
                                 generator_schema_opt(schema).
