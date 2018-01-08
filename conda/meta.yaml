@@ -22,7 +22,6 @@ requirements:
     - jsonschema
     - loom 0.2.10
     - numpy 1.11.*
-    - protobuf
     - scipy 0.17.*
     - six 1.10.*
 
@@ -30,13 +29,9 @@ test:
   requires:
     - apsw
     - cgpm
-    - contextlib2 >=0.4.0
     - crosscat
     - loom 0.2.10
     - pandas 0.18.*
-    - parsable 0.2.*
-    - protobuf
-    - pymetis
     - pytest 2.8.*
     - python 2.7.*
   commands:
