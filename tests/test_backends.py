@@ -202,11 +202,11 @@ def _test_example(bdb, exname):
         except bayeslite.BQLError, e:
            # loom does not allow model numbers to be specified in drop models
            assert exname == 'loom'
-    bdb.execute('ANALYZE %s FOR 1 ITERATION WAIT' % (qg,))
+    bdb.execute('ANALYZE %s FOR 1 ITERATION' % (qg,))
     try:
         # Test analyzing models.
-        bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION WAIT' % (qg,))
-        bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION WAIT' % (qg,))
+        bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION' % (qg,))
+        bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION' % (qg,))
     except bayeslite.BQLError, e:
         # loom does not allow model numbers to be specified in analyze models
         assert exname == 'loom'
@@ -226,11 +226,11 @@ def _retest_example(bdb, exname):
     assert core.bayesdb_generator_has_model(bdb, gid, 0)
     assert core.bayesdb_generator_has_model(bdb, gid, 1)
 
-    bdb.execute('ANALYZE %s FOR 1 ITERATION WAIT' % (qg,))
+    bdb.execute('ANALYZE %s FOR 1 ITERATION' % (qg,))
     try:
         # Test analyzing models.
-        bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION WAIT' % (qg,))
-        bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION WAIT' % (qg,))
+        bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION' % (qg,))
+        bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION' % (qg,))
     except bayeslite.BQLError, e:
         # loom does not allow model numbers to be specified in analyze models
         assert exname == 'loom'
