@@ -49,7 +49,7 @@ examples = {
     'loom': (
         lambda: LoomBackend(loom_store_path=''),
         't',
-        'CREATE TABLE t(x NUMERIC, y CYCLIC, z CATEGORICAL)',
+        'CREATE TABLE t(x NUMERIC, y CYCLIC, z NOMINAL)',
         'INSERT INTO t (x, y, z) VALUES (?, ?, ?)',
         [
             (0, 1.57, 'foo'),
@@ -60,7 +60,7 @@ examples = {
         'p',
         'p_lm',
         'CREATE POPULATION p FOR t'
-        '(x NUMERICAL; y CYCLIC; z CATEGORICAL)',
+        '(x NUMERICAL; y CYCLIC; z NOMINAL)',
         'CREATE GENERATOR p_lm FOR p USING loom()',
         'CREATE GENERATOR p_lm FOR p USING loom ...',
         'CREATE GENERATOR p_lm FOR p USING loom ...',
