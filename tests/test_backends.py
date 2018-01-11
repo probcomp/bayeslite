@@ -15,6 +15,7 @@
 #   limitations under the License.
 
 import pytest
+import shutil
 import tempfile
 
 import bayeslite
@@ -24,7 +25,6 @@ import bayeslite.core as core
 from bayeslite import bql_quote_name
 from bayeslite.backends.cgpm_backend import CGPM_Backend
 from bayeslite.backends.iid_gaussian import StdNormalBackend
-from bayeslite.backends.loom_backend import LoomBackend
 
 examples = {
     'cgpm': (
@@ -45,25 +45,7 @@ examples = {
         'CREATE GENERATOR p_cc FOR p USING cgpm()',
         'CREATE GENERATOR p_cc FOR p USING crosscat',
         'CREATE GENERATOR p_cc FOR p USING cgpm ...' ,
-    ),
-    'loom': (
-        lambda: LoomBackend(loom_store_path=''),
-        't',
-        'CREATE TABLE t(x NUMERIC, y CYCLIC, z CATEGORICAL)',
-        'INSERT INTO t (x, y, z) VALUES (?, ?, ?)',
-        [
-            (0, 1.57, 'foo'),
-            (1.83, 3.141, 'bar'),
-            (1.82, 3.140, 'bar'),
-            (-1, 6.28, 'foo'),
-        ],
-        'p',
-        'p_lm',
-        'CREATE POPULATION p FOR t'
-        '(x NUMERICAL; y CYCLIC; z CATEGORICAL)',
-        'CREATE GENERATOR p_lm FOR p USING loom()',
-        'CREATE GENERATOR p_lm FOR p USING loom ...',
-        'CREATE GENERATOR p_lm FOR p USING loom ...',
+        lambda mm: None,
     ),
     'iid_gaussian': (
         lambda: StdNormalBackend(seed=0),
@@ -77,10 +59,37 @@ examples = {
         'CREATE GENERATOR p_sn FOR p USING std_normal()',
         # XXX Invent something that fails for backend-specific reasons here.
         'CREATE GENERATOR p_sn FOR p USING std_normal ...',
-        'CREATE GENERATOR p_sn FOR p USING std_normal ...'
+        'CREATE GENERATOR p_sn FOR p USING std_normal ...',
+        lambda mm: None,
     ),
 }
 
+# If Loom exists, add a test case.
+try:
+    from bayeslite.backends.loom_backend import LoomBackend
+    examples['loom'] = (
+        lambda: LoomBackend(
+            loom_store_path=tempfile.mkdtemp(prefix='bayeslite-loom')),
+        't',
+        'CREATE TABLE t(x NUMERIC, y CYCLIC, z NOMINAL)',
+        'INSERT INTO t (x, y, z) VALUES (?, ?, ?)',
+        [
+            (0, 1.57, 'foo'),
+            (1.83, 3.141, 'bar'),
+            (1.82, 3.140, 'bar'),
+            (-1, 6.28, 'foo'),
+        ],
+        'p',
+        'p_lm',
+        'CREATE POPULATION p FOR t'
+        '(x NUMERICAL; y CYCLIC; z NOMINAL)',
+        'CREATE GENERATOR p_lm FOR p USING loom()',
+        'CREATE GENERATOR p_lm FOR p USING loom ...',
+        'CREATE GENERATOR p_lm FOR p USING loom ...',
+        lambda mm: shutil.rmtree(mm.loom_store_path),
+    )
+except ImportError:
+    pass
 
 @pytest.mark.parametrize('persist,exname',
     [(persist, key)
@@ -101,12 +110,13 @@ def test_example(persist, exname):
 
 
 def _test_example(bdb, exname):
-    mm, t, t_sql, data_sql, data, p, g, p_bql, g_bql, g_bqlbad0, g_bqlbad1 = \
-        examples[exname]
+    (mm, t, t_sql, data_sql, data, p, g, p_bql, g_bql, g_bqlbad0, g_bqlbad1,
+        cleanup) = examples[exname]
     qt = bql_quote_name(t)
     qg = bql_quote_name(g)
 
-    bayeslite.bayesdb_register_backend(bdb, mm())
+    metamodel = mm()
+    bayeslite.bayesdb_register_backend(bdb, metamodel)
 
     # Create a table.
     assert not core.bayesdb_has_table(bdb, t)
@@ -202,21 +212,21 @@ def _test_example(bdb, exname):
         except bayeslite.BQLError, e:
            # loom does not allow model numbers to be specified in drop models
            assert exname == 'loom'
-    bdb.execute('ANALYZE %s FOR 1 ITERATION WAIT' % (qg,))
+    bdb.execute('ANALYZE %s FOR 1 ITERATION' % (qg,))
     try:
         # Test analyzing models.
-        bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION WAIT' % (qg,))
-        bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION WAIT' % (qg,))
+        bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION' % (qg,))
+        bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION' % (qg,))
     except bayeslite.BQLError, e:
         # loom does not allow model numbers to be specified in analyze models
         assert exname == 'loom'
 
-
 def _retest_example(bdb, exname):
-    mm, t, t_sql, data_sql, data, p, g, p_bql, g_bql, g_bqlbad0, g_bqlbad1 = \
-        examples[exname]
+    (mm, t, t_sql, data_sql, data, p, g, p_bql, g_bql, g_bqlbad0, g_bqlbad1,
+        cleanup) = examples[exname]
     qg = bql_quote_name(g)
 
+    metamodel = mm()
     bayeslite.bayesdb_register_backend(bdb, mm())
     p_id = core.bayesdb_get_population(bdb, p)
 
@@ -226,11 +236,14 @@ def _retest_example(bdb, exname):
     assert core.bayesdb_generator_has_model(bdb, gid, 0)
     assert core.bayesdb_generator_has_model(bdb, gid, 1)
 
-    bdb.execute('ANALYZE %s FOR 1 ITERATION WAIT' % (qg,))
+    bdb.execute('ANALYZE %s FOR 1 ITERATION' % (qg,))
     try:
         # Test analyzing models.
-        bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION WAIT' % (qg,))
-        bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION WAIT' % (qg,))
+        bdb.execute('ANALYZE %s MODEL 0 FOR 1 ITERATION' % (qg,))
+        bdb.execute('ANALYZE %s MODEL 1 FOR 1 ITERATION' % (qg,))
     except bayeslite.BQLError, e:
         # loom does not allow model numbers to be specified in analyze models
         assert exname == 'loom'
+
+    # Run backend-specific cleanup.
+    cleanup(metamodel)
