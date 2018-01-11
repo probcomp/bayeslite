@@ -25,7 +25,6 @@ import bayeslite.core as core
 from bayeslite import bql_quote_name
 from bayeslite.backends.cgpm_backend import CGPM_Backend
 from bayeslite.backends.iid_gaussian import StdNormalBackend
-from bayeslite.backends.loom_backend import LoomBackend
 
 examples = {
     'cgpm': (
@@ -48,7 +47,27 @@ examples = {
         'CREATE GENERATOR p_cc FOR p USING cgpm ...' ,
         lambda mm: None,
     ),
-    'loom': (
+    'iid_gaussian': (
+        lambda: StdNormalBackend(seed=0),
+        't',
+        'CREATE TABLE t(x NUMERIC, y NUMERIC)',
+        'INSERT INTO t (x, y) VALUES (?, ?)',
+        [(0, 1), (1, float('nan')), (2, -1.2)],
+        'p',
+        'p_sn',
+        'CREATE POPULATION p FOR t(x NUMERICAL; y NUMERICAL)',
+        'CREATE GENERATOR p_sn FOR p USING std_normal()',
+        # XXX Invent something that fails for backend-specific reasons here.
+        'CREATE GENERATOR p_sn FOR p USING std_normal ...',
+        'CREATE GENERATOR p_sn FOR p USING std_normal ...',
+        lambda mm: None,
+    ),
+}
+
+# If Loom exists, add a test case.
+try:
+    from bayeslite.backends.loom_backend import LoomBackend
+    examples['loom'] = (
         lambda: LoomBackend(
             loom_store_path=tempfile.mkdtemp(prefix='bayeslite-loom')),
         't',
@@ -67,25 +86,10 @@ examples = {
         'CREATE GENERATOR p_lm FOR p USING loom()',
         'CREATE GENERATOR p_lm FOR p USING loom ...',
         'CREATE GENERATOR p_lm FOR p USING loom ...',
-        lambda mm: shutil.rmtree(mm.loom_store_path)
-    ),
-    'iid_gaussian': (
-        lambda: StdNormalBackend(seed=0),
-        't',
-        'CREATE TABLE t(x NUMERIC, y NUMERIC)',
-        'INSERT INTO t (x, y) VALUES (?, ?)',
-        [(0, 1), (1, float('nan')), (2, -1.2)],
-        'p',
-        'p_sn',
-        'CREATE POPULATION p FOR t(x NUMERICAL; y NUMERICAL)',
-        'CREATE GENERATOR p_sn FOR p USING std_normal()',
-        # XXX Invent something that fails for backend-specific reasons here.
-        'CREATE GENERATOR p_sn FOR p USING std_normal ...',
-        'CREATE GENERATOR p_sn FOR p USING std_normal ...',
-        lambda mm: None,
-    ),
-}
-
+        lambda mm: shutil.rmtree(mm.loom_store_path),
+    )
+except ImportError:
+    pass
 
 @pytest.mark.parametrize('persist,exname',
     [(persist, key)
