@@ -1,0 +1,326 @@
+State 0:
+          analysis ::= * phrases
+          phrases ::= * phrase
+          phrases ::= * phrases T_SEMI phrase
+      (3) phrase ::= *
+          phrase ::= * K_VARIABLES column_list
+          phrase ::= * K_SKIP column_list
+          phrase ::= * K_ROWS row_list
+          phrase ::= * K_LOOM
+          phrase ::= * K_OPTIMIZED
+          phrase ::= * K_QUIET
+          phrase ::= * K_SUBPROBLEM|K_SUBPROBLEMS subproblems_list
+
+                   K_VARIABLES shift  5
+                        K_SKIP shift  4
+                        K_ROWS shift  3
+                        K_LOOM shift  30
+                   K_OPTIMIZED shift  29
+                       K_QUIET shift  28
+                  K_SUBPROBLEM shift  1
+                 K_SUBPROBLEMS shift  1
+                      analysis accept
+                       phrases shift  12
+                        phrase shift  19
+                     {default} reduce 3
+
+State 1:
+          phrase ::= K_SUBPROBLEM|K_SUBPROBLEMS * subproblems_list
+          subproblems_list ::= * subproblem
+          subproblems_list ::= * T_LROUND subproblems T_RROUND
+          subproblem ::= * K_VARIABLE K_HYPERPARAMETERS
+          subproblem ::= * K_VARIABLE K_CLUSTERING
+          subproblem ::= * K_VARIABLE K_CLUSTERING K_CONCENTRATION
+          subproblem ::= * K_ROW K_CLUSTERING
+          subproblem ::= * K_ROW K_CLUSTERING K_CONCENTRATION
+
+                      T_LROUND shift  2
+                    K_VARIABLE shift  10
+                         K_ROW shift  14
+              subproblems_list shift  27
+                    subproblem shift  26
+
+State 2:
+          subproblems_list ::= T_LROUND * subproblems T_RROUND
+          subproblems ::= * subproblem
+          subproblems ::= * subproblems T_COMMA subproblem
+          subproblem ::= * K_VARIABLE K_HYPERPARAMETERS
+          subproblem ::= * K_VARIABLE K_CLUSTERING
+          subproblem ::= * K_VARIABLE K_CLUSTERING K_CONCENTRATION
+          subproblem ::= * K_ROW K_CLUSTERING
+          subproblem ::= * K_ROW K_CLUSTERING K_CONCENTRATION
+
+                    K_VARIABLE shift  10
+                         K_ROW shift  14
+                    subproblem shift  20
+                   subproblems shift  11
+
+State 3:
+          phrase ::= K_ROWS * row_list
+          row_list ::= * row_index
+          row_list ::= * row_list T_COMMA row_index
+          row_index ::= * L_NUMBER
+
+                      L_NUMBER shift  32
+                      row_list shift  16
+                     row_index shift  31
+
+State 4:
+          phrase ::= K_SKIP * column_list
+          column_list ::= * column_name
+          column_list ::= * column_list T_COMMA column_name
+          column_name ::= * L_NAME
+
+                        L_NAME shift  35
+                   column_list shift  17
+                   column_name shift  34
+
+State 5:
+          phrase ::= K_VARIABLES * column_list
+          column_list ::= * column_name
+          column_list ::= * column_list T_COMMA column_name
+          column_name ::= * L_NAME
+
+                        L_NAME shift  35
+                   column_list shift  18
+                   column_name shift  34
+
+State 6:
+          phrases ::= phrases T_SEMI * phrase
+      (3) phrase ::= *
+          phrase ::= * K_VARIABLES column_list
+          phrase ::= * K_SKIP column_list
+          phrase ::= * K_ROWS row_list
+          phrase ::= * K_LOOM
+          phrase ::= * K_OPTIMIZED
+          phrase ::= * K_QUIET
+          phrase ::= * K_SUBPROBLEM|K_SUBPROBLEMS subproblems_list
+
+                   K_VARIABLES shift  5
+                        K_SKIP shift  4
+                        K_ROWS shift  3
+                        K_LOOM shift  30
+                   K_OPTIMIZED shift  29
+                       K_QUIET shift  28
+                  K_SUBPROBLEM shift  1
+                 K_SUBPROBLEMS shift  1
+                        phrase shift  37
+                     {default} reduce 3
+
+State 7:
+          subproblems ::= subproblems T_COMMA * subproblem
+          subproblem ::= * K_VARIABLE K_HYPERPARAMETERS
+          subproblem ::= * K_VARIABLE K_CLUSTERING
+          subproblem ::= * K_VARIABLE K_CLUSTERING K_CONCENTRATION
+          subproblem ::= * K_ROW K_CLUSTERING
+          subproblem ::= * K_ROW K_CLUSTERING K_CONCENTRATION
+
+                    K_VARIABLE shift  10
+                         K_ROW shift  14
+                    subproblem shift  24
+
+State 8:
+          row_list ::= row_list T_COMMA * row_index
+          row_index ::= * L_NUMBER
+
+                      L_NUMBER shift  32
+                     row_index shift  33
+
+State 9:
+          column_list ::= column_list T_COMMA * column_name
+          column_name ::= * L_NAME
+
+                        L_NAME shift  35
+                   column_name shift  36
+
+State 10:
+          subproblem ::= K_VARIABLE * K_HYPERPARAMETERS
+          subproblem ::= K_VARIABLE * K_CLUSTERING
+          subproblem ::= K_VARIABLE * K_CLUSTERING K_CONCENTRATION
+
+             K_HYPERPARAMETERS shift  23
+                  K_CLUSTERING shift  15
+
+State 11:
+          subproblems_list ::= T_LROUND subproblems * T_RROUND
+          subproblems ::= subproblems * T_COMMA subproblem
+
+                      T_RROUND shift  25
+                       T_COMMA shift  7
+
+State 12:
+      (0) analysis ::= phrases *
+          phrases ::= phrases * T_SEMI phrase
+
+                             $ reduce 0
+                        T_SEMI shift  6
+
+State 13:
+     (18) subproblem ::= K_ROW K_CLUSTERING *
+          subproblem ::= K_ROW K_CLUSTERING * K_CONCENTRATION
+
+               K_CONCENTRATION shift  21
+                     {default} reduce 18
+
+State 14:
+          subproblem ::= K_ROW * K_CLUSTERING
+          subproblem ::= K_ROW * K_CLUSTERING K_CONCENTRATION
+
+                  K_CLUSTERING shift  13
+
+State 15:
+     (16) subproblem ::= K_VARIABLE K_CLUSTERING *
+          subproblem ::= K_VARIABLE K_CLUSTERING * K_CONCENTRATION
+
+               K_CONCENTRATION shift  22
+                     {default} reduce 16
+
+State 16:
+      (6) phrase ::= K_ROWS row_list *
+          row_list ::= row_list * T_COMMA row_index
+
+                       T_COMMA shift  8
+                     {default} reduce 6
+
+State 17:
+      (5) phrase ::= K_SKIP column_list *
+          column_list ::= column_list * T_COMMA column_name
+
+                       T_COMMA shift  9
+                     {default} reduce 5
+
+State 18:
+      (4) phrase ::= K_VARIABLES column_list *
+          column_list ::= column_list * T_COMMA column_name
+
+                       T_COMMA shift  9
+                     {default} reduce 4
+
+State 19:
+      (1) phrases ::= phrase *
+
+                     {default} reduce 1
+
+State 20:
+     (13) subproblems ::= subproblem *
+
+                     {default} reduce 13
+
+State 21:
+     (19) subproblem ::= K_ROW K_CLUSTERING K_CONCENTRATION *
+
+                     {default} reduce 19
+
+State 22:
+     (17) subproblem ::= K_VARIABLE K_CLUSTERING K_CONCENTRATION *
+
+                     {default} reduce 17
+
+State 23:
+     (15) subproblem ::= K_VARIABLE K_HYPERPARAMETERS *
+
+                     {default} reduce 15
+
+State 24:
+     (14) subproblems ::= subproblems T_COMMA subproblem *
+
+                     {default} reduce 14
+
+State 25:
+     (12) subproblems_list ::= T_LROUND subproblems T_RROUND *
+
+                     {default} reduce 12
+
+State 26:
+     (11) subproblems_list ::= subproblem *
+
+                     {default} reduce 11
+
+State 27:
+     (10) phrase ::= K_SUBPROBLEM|K_SUBPROBLEMS subproblems_list *
+
+                     {default} reduce 10
+
+State 28:
+      (9) phrase ::= K_QUIET *
+
+                     {default} reduce 9
+
+State 29:
+      (8) phrase ::= K_OPTIMIZED *
+
+                     {default} reduce 8
+
+State 30:
+      (7) phrase ::= K_LOOM *
+
+                     {default} reduce 7
+
+State 31:
+     (23) row_list ::= row_index *
+
+                     {default} reduce 23
+
+State 32:
+     (25) row_index ::= L_NUMBER *
+
+                     {default} reduce 25
+
+State 33:
+     (24) row_list ::= row_list T_COMMA row_index *
+
+                     {default} reduce 24
+
+State 34:
+     (20) column_list ::= column_name *
+
+                     {default} reduce 20
+
+State 35:
+     (22) column_name ::= L_NAME *
+
+                     {default} reduce 22
+
+State 36:
+     (21) column_list ::= column_list T_COMMA column_name *
+
+                     {default} reduce 21
+
+State 37:
+      (2) phrases ::= phrases T_SEMI phrase *
+
+                     {default} reduce 2
+
+----------------------------------------------------
+Symbols:
+    0: $:
+    1: T_SEMI
+    2: K_VARIABLES
+    3: K_SKIP
+    4: K_ROWS
+    5: K_LOOM
+    6: K_OPTIMIZED
+    7: K_QUIET
+    8: K_SUBPROBLEM
+    9: K_SUBPROBLEMS
+   10: T_LROUND
+   11: T_RROUND
+   12: T_COMMA
+   13: K_VARIABLE
+   14: K_HYPERPARAMETERS
+   15: K_CLUSTERING
+   16: K_CONCENTRATION
+   17: K_ROW
+   18: L_NAME
+   19: L_NUMBER
+   20: error:
+   21: analysis: <lambda> T_SEMI K_VARIABLES K_SKIP K_ROWS K_LOOM K_OPTIMIZED K_QUIET K_SUBPROBLEM K_SUBPROBLEMS
+   22: phrases: <lambda> T_SEMI K_VARIABLES K_SKIP K_ROWS K_LOOM K_OPTIMIZED K_QUIET K_SUBPROBLEM K_SUBPROBLEMS
+   23: phrase: <lambda> K_VARIABLES K_SKIP K_ROWS K_LOOM K_OPTIMIZED K_QUIET K_SUBPROBLEM K_SUBPROBLEMS
+   24: column_list: L_NAME
+   25: row_list: L_NUMBER
+   26: subproblems_list: T_LROUND K_VARIABLE K_ROW
+   27: subproblem: K_VARIABLE K_ROW
+   28: subproblems: K_VARIABLE K_ROW
+   29: column_name: L_NAME
+   30: row_index: L_NUMBER

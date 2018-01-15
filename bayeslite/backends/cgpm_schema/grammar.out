@@ -1,0 +1,438 @@
+State 0:
+      (0) cgpm ::= *
+          cgpm ::= * schema
+          schema ::= * clause
+          schema ::= * schema T_SEMI|T_COMMA clause_opt
+          clause ::= * K_SET K_CATEGORY K_MODEL K_FOR var K_USING|K_TO dist param_opt
+          clause ::= * K_OVERRIDE generative_opt K_MODEL K_FOR vars given_opt exposing_opt K_USING foreign param_opt
+          clause ::= * K_SUBSAMPLE L_NUMBER
+          clause ::= * K_LATENT var stattype
+
+                             $ reduce 0
+                         K_SET shift  35
+                    K_OVERRIDE shift  16
+                   K_SUBSAMPLE shift  25
+                      K_LATENT shift  9
+                          cgpm accept
+                        schema shift  21
+                        clause shift  36
+
+State 1:
+          schema ::= schema T_SEMI|T_COMMA * clause_opt
+      (4) clause_opt ::= *
+          clause_opt ::= * clause
+          clause ::= * K_SET K_CATEGORY K_MODEL K_FOR var K_USING|K_TO dist param_opt
+          clause ::= * K_OVERRIDE generative_opt K_MODEL K_FOR vars given_opt exposing_opt K_USING foreign param_opt
+          clause ::= * K_SUBSAMPLE L_NUMBER
+          clause ::= * K_LATENT var stattype
+
+                         K_SET shift  35
+                    K_OVERRIDE shift  16
+                   K_SUBSAMPLE shift  25
+                      K_LATENT shift  9
+                        clause shift  56
+                    clause_opt shift  57
+                     {default} reduce 4
+
+State 2:
+          clause ::= K_OVERRIDE generative_opt K_MODEL K_FOR vars given_opt * exposing_opt K_USING foreign param_opt
+     (16) exposing_opt ::= *
+          exposing_opt ::= * and_opt K_EXPOSE exposed
+     (18) and_opt ::= *
+          and_opt ::= * K_AND
+
+                      K_EXPOSE reduce 18
+                         K_AND shift  42
+                  exposing_opt shift  29
+                       and_opt shift  28
+                     {default} reduce 16
+
+State 3:
+          given_opt ::= K_GIVEN * vars
+          vars ::= * var
+          vars ::= * vars T_COMMA var
+          var ::= * L_NAME
+
+                        L_NAME shift  48
+                           var shift  40
+                          vars shift  26
+
+State 4:
+          exposing_opt ::= and_opt K_EXPOSE * exposed
+          exposed ::= * var stattype
+          exposed ::= * exposed T_COMMA var stattype
+          var ::= * L_NAME
+
+                        L_NAME shift  48
+                           var shift  11
+                       exposed shift  27
+
+State 5:
+          clause ::= K_OVERRIDE generative_opt K_MODEL K_FOR * vars given_opt exposing_opt K_USING foreign param_opt
+          vars ::= * var
+          vars ::= * vars T_COMMA var
+          var ::= * L_NAME
+
+                        L_NAME shift  48
+                           var shift  40
+                          vars shift  7
+
+State 6:
+          param_opt ::= T_LROUND * params T_RROUND
+          params ::= * param
+          params ::= * params T_COMMA param
+          param ::= * L_NAME T_EQ L_NUMBER
+          param ::= * L_NAME T_EQ L_NAME
+
+                        L_NAME shift  32
+                        params shift  23
+                         param shift  50
+
+State 7:
+          clause ::= K_OVERRIDE generative_opt K_MODEL K_FOR vars * given_opt exposing_opt K_USING foreign param_opt
+     (14) given_opt ::= *
+          given_opt ::= * K_GIVEN vars
+          vars ::= vars * T_COMMA var
+
+                       T_COMMA shift  10
+                       K_GIVEN shift  3
+                     given_opt shift  2
+                     {default} reduce 14
+
+State 8:
+          clause ::= K_LATENT var * stattype
+          stattype ::= * L_NAME
+
+                        L_NAME shift  44
+                      stattype shift  37
+
+State 9:
+          clause ::= K_LATENT * var stattype
+          var ::= * L_NAME
+
+                        L_NAME shift  48
+                           var shift  8
+
+State 10:
+          vars ::= vars T_COMMA * var
+          var ::= * L_NAME
+
+                        L_NAME shift  48
+                           var shift  41
+
+State 11:
+          exposed ::= var * stattype
+          stattype ::= * L_NAME
+
+                        L_NAME shift  44
+                      stattype shift  43
+
+State 12:
+          exposed ::= exposed T_COMMA var * stattype
+          stattype ::= * L_NAME
+
+                        L_NAME shift  44
+                      stattype shift  45
+
+State 13:
+          exposed ::= exposed T_COMMA * var stattype
+          var ::= * L_NAME
+
+                        L_NAME shift  48
+                           var shift  12
+
+State 14:
+          clause ::= K_OVERRIDE generative_opt K_MODEL K_FOR vars given_opt exposing_opt K_USING foreign * param_opt
+     (26) param_opt ::= *
+          param_opt ::= * T_LROUND params T_RROUND
+
+                      T_LROUND shift  6
+                     param_opt shift  47
+                     {default} reduce 26
+
+State 15:
+          clause ::= K_OVERRIDE generative_opt K_MODEL K_FOR vars given_opt exposing_opt K_USING * foreign param_opt
+          foreign ::= * L_NAME
+
+                        L_NAME shift  46
+                       foreign shift  14
+
+State 16:
+          clause ::= K_OVERRIDE * generative_opt K_MODEL K_FOR vars given_opt exposing_opt K_USING foreign param_opt
+     (12) generative_opt ::= *
+          generative_opt ::= * K_GENERATIVE
+
+                  K_GENERATIVE shift  39
+                generative_opt shift  31
+                     {default} reduce 12
+
+State 17:
+          params ::= params T_COMMA * param
+          param ::= * L_NAME T_EQ L_NUMBER
+          param ::= * L_NAME T_EQ L_NAME
+
+                        L_NAME shift  32
+                         param shift  53
+
+State 18:
+          clause ::= K_SET K_CATEGORY K_MODEL K_FOR var K_USING|K_TO dist * param_opt
+     (26) param_opt ::= *
+          param_opt ::= * T_LROUND params T_RROUND
+
+                      T_LROUND shift  6
+                     param_opt shift  55
+                     {default} reduce 26
+
+State 19:
+          clause ::= K_SET K_CATEGORY K_MODEL K_FOR var K_USING|K_TO * dist param_opt
+          dist ::= * L_NAME
+
+                        L_NAME shift  49
+                          dist shift  18
+
+State 20:
+          clause ::= K_SET K_CATEGORY K_MODEL K_FOR * var K_USING|K_TO dist param_opt
+          var ::= * L_NAME
+
+                        L_NAME shift  48
+                           var shift  24
+
+State 21:
+      (1) cgpm ::= schema *
+          schema ::= schema * T_SEMI|T_COMMA clause_opt
+
+                             $ reduce 1
+                        T_SEMI shift  1
+                       T_COMMA shift  1
+
+State 22:
+          param ::= L_NAME T_EQ * L_NUMBER
+          param ::= L_NAME T_EQ * L_NAME
+
+                      L_NUMBER shift  52
+                        L_NAME shift  51
+
+State 23:
+          param_opt ::= T_LROUND params * T_RROUND
+          params ::= params * T_COMMA param
+
+                       T_COMMA shift  17
+                      T_RROUND shift  54
+
+State 24:
+          clause ::= K_SET K_CATEGORY K_MODEL K_FOR var * K_USING|K_TO dist param_opt
+
+                       K_USING shift  19
+                          K_TO shift  19
+
+State 25:
+          clause ::= K_SUBSAMPLE * L_NUMBER
+
+                      L_NUMBER shift  38
+
+State 26:
+     (15) given_opt ::= K_GIVEN vars *
+          vars ::= vars * T_COMMA var
+
+                       T_COMMA shift  10
+                     {default} reduce 15
+
+State 27:
+     (17) exposing_opt ::= and_opt K_EXPOSE exposed *
+          exposed ::= exposed * T_COMMA var stattype
+
+                       T_COMMA shift  13
+                     {default} reduce 17
+
+State 28:
+          exposing_opt ::= and_opt * K_EXPOSE exposed
+
+                      K_EXPOSE shift  4
+
+State 29:
+          clause ::= K_OVERRIDE generative_opt K_MODEL K_FOR vars given_opt exposing_opt * K_USING foreign param_opt
+
+                       K_USING shift  15
+
+State 30:
+          clause ::= K_OVERRIDE generative_opt K_MODEL * K_FOR vars given_opt exposing_opt K_USING foreign param_opt
+
+                         K_FOR shift  5
+
+State 31:
+          clause ::= K_OVERRIDE generative_opt * K_MODEL K_FOR vars given_opt exposing_opt K_USING foreign param_opt
+
+                       K_MODEL shift  30
+
+State 32:
+          param ::= L_NAME * T_EQ L_NUMBER
+          param ::= L_NAME * T_EQ L_NAME
+
+                          T_EQ shift  22
+
+State 33:
+          clause ::= K_SET K_CATEGORY K_MODEL * K_FOR var K_USING|K_TO dist param_opt
+
+                         K_FOR shift  20
+
+State 34:
+          clause ::= K_SET K_CATEGORY * K_MODEL K_FOR var K_USING|K_TO dist param_opt
+
+                       K_MODEL shift  33
+
+State 35:
+          clause ::= K_SET * K_CATEGORY K_MODEL K_FOR var K_USING|K_TO dist param_opt
+
+                    K_CATEGORY shift  34
+
+State 36:
+      (2) schema ::= clause *
+
+                     {default} reduce 2
+
+State 37:
+      (9) clause ::= K_LATENT var stattype *
+
+                     {default} reduce 9
+
+State 38:
+      (8) clause ::= K_SUBSAMPLE L_NUMBER *
+
+                     {default} reduce 8
+
+State 39:
+     (13) generative_opt ::= K_GENERATIVE *
+
+                     {default} reduce 13
+
+State 40:
+     (22) vars ::= var *
+
+                     {default} reduce 22
+
+State 41:
+     (23) vars ::= vars T_COMMA var *
+
+                     {default} reduce 23
+
+State 42:
+     (19) and_opt ::= K_AND *
+
+                     {default} reduce 19
+
+State 43:
+     (20) exposed ::= var stattype *
+
+                     {default} reduce 20
+
+State 44:
+     (25) stattype ::= L_NAME *
+
+                     {default} reduce 25
+
+State 45:
+     (21) exposed ::= exposed T_COMMA var stattype *
+
+                     {default} reduce 21
+
+State 46:
+     (11) foreign ::= L_NAME *
+
+                     {default} reduce 11
+
+State 47:
+      (7) clause ::= K_OVERRIDE generative_opt K_MODEL K_FOR vars given_opt exposing_opt K_USING foreign param_opt *
+
+                     {default} reduce 7
+
+State 48:
+     (24) var ::= L_NAME *
+
+                     {default} reduce 24
+
+State 49:
+     (10) dist ::= L_NAME *
+
+                     {default} reduce 10
+
+State 50:
+     (28) params ::= param *
+
+                     {default} reduce 28
+
+State 51:
+     (31) param ::= L_NAME T_EQ L_NAME *
+
+                     {default} reduce 31
+
+State 52:
+     (30) param ::= L_NAME T_EQ L_NUMBER *
+
+                     {default} reduce 30
+
+State 53:
+     (29) params ::= params T_COMMA param *
+
+                     {default} reduce 29
+
+State 54:
+     (27) param_opt ::= T_LROUND params T_RROUND *
+
+                     {default} reduce 27
+
+State 55:
+      (6) clause ::= K_SET K_CATEGORY K_MODEL K_FOR var K_USING|K_TO dist param_opt *
+
+                     {default} reduce 6
+
+State 56:
+      (5) clause_opt ::= clause *
+
+                     {default} reduce 5
+
+State 57:
+      (3) schema ::= schema T_SEMI|T_COMMA clause_opt *
+
+                     {default} reduce 3
+
+----------------------------------------------------
+Symbols:
+    0: $:
+    1: T_SEMI
+    2: T_COMMA
+    3: K_SET
+    4: K_CATEGORY
+    5: K_MODEL
+    6: K_FOR
+    7: K_USING
+    8: K_TO
+    9: K_OVERRIDE
+   10: K_SUBSAMPLE
+   11: L_NUMBER
+   12: K_LATENT
+   13: L_NAME
+   14: K_GENERATIVE
+   15: K_GIVEN
+   16: K_EXPOSE
+   17: K_AND
+   18: T_LROUND
+   19: T_RROUND
+   20: T_EQ
+   21: error:
+   22: cgpm: <lambda> K_SET K_OVERRIDE K_SUBSAMPLE K_LATENT
+   23: schema: K_SET K_OVERRIDE K_SUBSAMPLE K_LATENT
+   24: clause: K_SET K_OVERRIDE K_SUBSAMPLE K_LATENT
+   25: clause_opt: <lambda> K_SET K_OVERRIDE K_SUBSAMPLE K_LATENT
+   26: var: L_NAME
+   27: dist: L_NAME
+   28: param_opt: <lambda> T_LROUND
+   29: generative_opt: <lambda> K_GENERATIVE
+   30: vars: L_NAME
+   31: given_opt: <lambda> K_GIVEN
+   32: exposing_opt: <lambda> K_EXPOSE K_AND
+   33: foreign: L_NAME
+   34: stattype: L_NAME
+   35: and_opt: <lambda> K_AND
+   36: exposed: L_NAME
+   37: params: L_NAME
+   38: param: L_NAME

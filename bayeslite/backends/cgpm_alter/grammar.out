@@ -1,0 +1,535 @@
+State 0:
+          alter ::= * phrases
+          phrases ::= * phrase
+          phrases ::= * phrases T_COMMA phrase
+      (3) phrase ::= *
+          phrase ::= * K_ENSURE variable_token_opt columns dependency
+          phrase ::= * K_ENSURE variable_token_opt columns K_IN view_token K_OF column_name
+          phrase ::= * K_ENSURE variable_token_opt columns K_IN K_SINGLETON view_token
+          phrase ::= * K_SET view_token K_CONCENTRATION K_PARAMETER K_TO concentration
+          phrase ::= * K_ENSURE K_ROW|K_ROWS rows K_IN K_CLUSTER K_OF K_ROW row_index K_WITHIN view_token K_OF column_name
+          phrase ::= * K_ENSURE K_ROW|K_ROWS rows K_IN K_SINGLETON K_CLUSTER K_WITHIN view_token K_OF column_name
+          phrase ::= * K_SET K_ROW K_CLUSTER K_CONCENTRATION K_PARAMETER K_WITHIN view_token K_OF column_name K_TO concentration
+
+                      K_ENSURE shift  5
+                         K_SET shift  6
+                         alter accept
+                       phrases shift  26
+                        phrase shift  45
+                     {default} reduce 3
+
+State 1:
+          phrase ::= K_ENSURE K_ROW|K_ROWS * rows K_IN K_CLUSTER K_OF K_ROW row_index K_WITHIN view_token K_OF column_name
+          phrase ::= K_ENSURE K_ROW|K_ROWS * rows K_IN K_SINGLETON K_CLUSTER K_WITHIN view_token K_OF column_name
+          rows ::= * row_index
+          rows ::= * T_STAR
+          rows ::= * T_LROUND row_list T_RROUND
+          row_index ::= * L_NUMBER
+
+                        T_STAR shift  54
+                      T_LROUND shift  3
+                      L_NUMBER shift  57
+                          rows shift  43
+                     row_index shift  55
+
+State 2:
+          phrase ::= K_ENSURE variable_token_opt * columns dependency
+          phrase ::= K_ENSURE variable_token_opt * columns K_IN view_token K_OF column_name
+          phrase ::= K_ENSURE variable_token_opt * columns K_IN K_SINGLETON view_token
+          columns ::= * column_name
+          columns ::= * T_STAR
+          columns ::= * T_LROUND column_list T_RROUND
+          column_name ::= * L_NAME
+
+                        T_STAR shift  62
+                      T_LROUND shift  4
+                        L_NAME shift  69
+                       columns shift  8
+                   column_name shift  63
+
+State 3:
+          rows ::= T_LROUND * row_list T_RROUND
+          row_list ::= * row_index
+          row_list ::= * row_list T_COMMA row_index
+          row_index ::= * L_NUMBER
+
+                      L_NUMBER shift  57
+                     row_index shift  51
+                      row_list shift  23
+
+State 4:
+          columns ::= T_LROUND * column_list T_RROUND
+          column_list ::= * column_name
+          column_list ::= * column_list T_COMMA column_name
+          column_name ::= * L_NAME
+
+                        L_NAME shift  69
+                   column_name shift  59
+                   column_list shift  25
+
+State 5:
+          phrase ::= K_ENSURE * variable_token_opt columns dependency
+          phrase ::= K_ENSURE * variable_token_opt columns K_IN view_token K_OF column_name
+          phrase ::= K_ENSURE * variable_token_opt columns K_IN K_SINGLETON view_token
+          phrase ::= K_ENSURE * K_ROW|K_ROWS rows K_IN K_CLUSTER K_OF K_ROW row_index K_WITHIN view_token K_OF column_name
+          phrase ::= K_ENSURE * K_ROW|K_ROWS rows K_IN K_SINGLETON K_CLUSTER K_WITHIN view_token K_OF column_name
+     (11) variable_token_opt ::= *
+          variable_token_opt ::= * K_VARIABLE
+          variable_token_opt ::= * K_VARIABLES
+
+                         K_ROW shift  1
+                        K_ROWS shift  1
+                    K_VARIABLE shift  50
+                   K_VARIABLES shift  49
+            variable_token_opt shift  2
+                     {default} reduce 11
+
+State 6:
+          phrase ::= K_SET * view_token K_CONCENTRATION K_PARAMETER K_TO concentration
+          phrase ::= K_SET * K_ROW K_CLUSTER K_CONCENTRATION K_PARAMETER K_WITHIN view_token K_OF column_name K_TO concentration
+          view_token ::= * K_VIEW
+          view_token ::= * K_CONTEXT
+
+                         K_ROW shift  32
+                        K_VIEW shift  67
+                     K_CONTEXT shift  66
+                    view_token shift  35
+
+State 7:
+          phrase ::= K_ENSURE variable_token_opt columns K_IN * view_token K_OF column_name
+          phrase ::= K_ENSURE variable_token_opt columns K_IN * K_SINGLETON view_token
+          view_token ::= * K_VIEW
+          view_token ::= * K_CONTEXT
+
+                   K_SINGLETON shift  12
+                        K_VIEW shift  67
+                     K_CONTEXT shift  66
+                    view_token shift  44
+
+State 8:
+          phrase ::= K_ENSURE variable_token_opt columns * dependency
+          phrase ::= K_ENSURE variable_token_opt columns * K_IN view_token K_OF column_name
+          phrase ::= K_ENSURE variable_token_opt columns * K_IN K_SINGLETON view_token
+          dependency ::= * K_INDEPENDENT
+          dependency ::= * K_DEPENDENT
+
+                          K_IN shift  7
+                 K_INDEPENDENT shift  65
+                   K_DEPENDENT shift  64
+                    dependency shift  71
+
+State 9:
+          phrase ::= K_SET K_ROW K_CLUSTER K_CONCENTRATION K_PARAMETER K_WITHIN * view_token K_OF column_name K_TO concentration
+          view_token ::= * K_VIEW
+          view_token ::= * K_CONTEXT
+
+                        K_VIEW shift  67
+                     K_CONTEXT shift  66
+                    view_token shift  28
+
+State 10:
+          phrase ::= K_ENSURE K_ROW|K_ROWS rows K_IN K_SINGLETON K_CLUSTER K_WITHIN * view_token K_OF column_name
+          view_token ::= * K_VIEW
+          view_token ::= * K_CONTEXT
+
+                        K_VIEW shift  67
+                     K_CONTEXT shift  66
+                    view_token shift  36
+
+State 11:
+          phrase ::= K_ENSURE K_ROW|K_ROWS rows K_IN K_CLUSTER K_OF K_ROW row_index K_WITHIN * view_token K_OF column_name
+          view_token ::= * K_VIEW
+          view_token ::= * K_CONTEXT
+
+                        K_VIEW shift  67
+                     K_CONTEXT shift  66
+                    view_token shift  39
+
+State 12:
+          phrase ::= K_ENSURE variable_token_opt columns K_IN K_SINGLETON * view_token
+          view_token ::= * K_VIEW
+          view_token ::= * K_CONTEXT
+
+                        K_VIEW shift  67
+                     K_CONTEXT shift  66
+                    view_token shift  68
+
+State 13:
+          phrases ::= phrases T_COMMA * phrase
+      (3) phrase ::= *
+          phrase ::= * K_ENSURE variable_token_opt columns dependency
+          phrase ::= * K_ENSURE variable_token_opt columns K_IN view_token K_OF column_name
+          phrase ::= * K_ENSURE variable_token_opt columns K_IN K_SINGLETON view_token
+          phrase ::= * K_SET view_token K_CONCENTRATION K_PARAMETER K_TO concentration
+          phrase ::= * K_ENSURE K_ROW|K_ROWS rows K_IN K_CLUSTER K_OF K_ROW row_index K_WITHIN view_token K_OF column_name
+          phrase ::= * K_ENSURE K_ROW|K_ROWS rows K_IN K_SINGLETON K_CLUSTER K_WITHIN view_token K_OF column_name
+          phrase ::= * K_SET K_ROW K_CLUSTER K_CONCENTRATION K_PARAMETER K_WITHIN view_token K_OF column_name K_TO concentration
+
+                      K_ENSURE shift  5
+                         K_SET shift  6
+                        phrase shift  72
+                     {default} reduce 3
+
+State 14:
+          phrase ::= K_SET K_ROW K_CLUSTER K_CONCENTRATION K_PARAMETER K_WITHIN view_token K_OF column_name K_TO * concentration
+          concentration ::= * L_NUMBER
+
+                      L_NUMBER shift  47
+                 concentration shift  46
+
+State 15:
+          phrase ::= K_SET K_ROW K_CLUSTER K_CONCENTRATION K_PARAMETER K_WITHIN view_token K_OF * column_name K_TO concentration
+          column_name ::= * L_NAME
+
+                        L_NAME shift  69
+                   column_name shift  27
+
+State 16:
+          phrase ::= K_SET view_token K_CONCENTRATION K_PARAMETER K_TO * concentration
+          concentration ::= * L_NUMBER
+
+                      L_NUMBER shift  47
+                 concentration shift  48
+
+State 17:
+          row_list ::= row_list T_COMMA * row_index
+          row_index ::= * L_NUMBER
+
+                      L_NUMBER shift  57
+                     row_index shift  52
+
+State 18:
+          phrase ::= K_ENSURE K_ROW|K_ROWS rows K_IN K_SINGLETON K_CLUSTER K_WITHIN view_token K_OF * column_name
+          column_name ::= * L_NAME
+
+                        L_NAME shift  69
+                   column_name shift  56
+
+State 19:
+          phrase ::= K_ENSURE K_ROW|K_ROWS rows K_IN K_CLUSTER K_OF K_ROW row_index K_WITHIN view_token K_OF * column_name
+          column_name ::= * L_NAME
+
+                        L_NAME shift  69
+                   column_name shift  58
+
+State 20:
+          phrase ::= K_ENSURE K_ROW|K_ROWS rows K_IN K_CLUSTER K_OF K_ROW * row_index K_WITHIN view_token K_OF column_name
+          row_index ::= * L_NUMBER
+
+                      L_NUMBER shift  57
+                     row_index shift  40
+
+State 21:
+          column_list ::= column_list T_COMMA * column_name
+          column_name ::= * L_NAME
+
+                        L_NAME shift  69
+                   column_name shift  60
+
+State 22:
+          phrase ::= K_ENSURE variable_token_opt columns K_IN view_token K_OF * column_name
+          column_name ::= * L_NAME
+
+                        L_NAME shift  69
+                   column_name shift  70
+
+State 23:
+          rows ::= T_LROUND row_list * T_RROUND
+          row_list ::= row_list * T_COMMA row_index
+
+                       T_COMMA shift  17
+                      T_RROUND shift  53
+
+State 24:
+          phrase ::= K_ENSURE K_ROW|K_ROWS rows K_IN * K_CLUSTER K_OF K_ROW row_index K_WITHIN view_token K_OF column_name
+          phrase ::= K_ENSURE K_ROW|K_ROWS rows K_IN * K_SINGLETON K_CLUSTER K_WITHIN view_token K_OF column_name
+
+                   K_SINGLETON shift  38
+                     K_CLUSTER shift  42
+
+State 25:
+          columns ::= T_LROUND column_list * T_RROUND
+          column_list ::= column_list * T_COMMA column_name
+
+                       T_COMMA shift  21
+                      T_RROUND shift  61
+
+State 26:
+      (0) alter ::= phrases *
+          phrases ::= phrases * T_COMMA phrase
+
+                             $ reduce 0
+                       T_COMMA shift  13
+
+State 27:
+          phrase ::= K_SET K_ROW K_CLUSTER K_CONCENTRATION K_PARAMETER K_WITHIN view_token K_OF column_name * K_TO concentration
+
+                          K_TO shift  14
+
+State 28:
+          phrase ::= K_SET K_ROW K_CLUSTER K_CONCENTRATION K_PARAMETER K_WITHIN view_token * K_OF column_name K_TO concentration
+
+                          K_OF shift  15
+
+State 29:
+          phrase ::= K_SET K_ROW K_CLUSTER K_CONCENTRATION K_PARAMETER * K_WITHIN view_token K_OF column_name K_TO concentration
+
+                      K_WITHIN shift  9
+
+State 30:
+          phrase ::= K_SET K_ROW K_CLUSTER K_CONCENTRATION * K_PARAMETER K_WITHIN view_token K_OF column_name K_TO concentration
+
+                   K_PARAMETER shift  29
+
+State 31:
+          phrase ::= K_SET K_ROW K_CLUSTER * K_CONCENTRATION K_PARAMETER K_WITHIN view_token K_OF column_name K_TO concentration
+
+               K_CONCENTRATION shift  30
+
+State 32:
+          phrase ::= K_SET K_ROW * K_CLUSTER K_CONCENTRATION K_PARAMETER K_WITHIN view_token K_OF column_name K_TO concentration
+
+                     K_CLUSTER shift  31
+
+State 33:
+          phrase ::= K_SET view_token K_CONCENTRATION K_PARAMETER * K_TO concentration
+
+                          K_TO shift  16
+
+State 34:
+          phrase ::= K_SET view_token K_CONCENTRATION * K_PARAMETER K_TO concentration
+
+                   K_PARAMETER shift  33
+
+State 35:
+          phrase ::= K_SET view_token * K_CONCENTRATION K_PARAMETER K_TO concentration
+
+               K_CONCENTRATION shift  34
+
+State 36:
+          phrase ::= K_ENSURE K_ROW|K_ROWS rows K_IN K_SINGLETON K_CLUSTER K_WITHIN view_token * K_OF column_name
+
+                          K_OF shift  18
+
+State 37:
+          phrase ::= K_ENSURE K_ROW|K_ROWS rows K_IN K_SINGLETON K_CLUSTER * K_WITHIN view_token K_OF column_name
+
+                      K_WITHIN shift  10
+
+State 38:
+          phrase ::= K_ENSURE K_ROW|K_ROWS rows K_IN K_SINGLETON * K_CLUSTER K_WITHIN view_token K_OF column_name
+
+                     K_CLUSTER shift  37
+
+State 39:
+          phrase ::= K_ENSURE K_ROW|K_ROWS rows K_IN K_CLUSTER K_OF K_ROW row_index K_WITHIN view_token * K_OF column_name
+
+                          K_OF shift  19
+
+State 40:
+          phrase ::= K_ENSURE K_ROW|K_ROWS rows K_IN K_CLUSTER K_OF K_ROW row_index * K_WITHIN view_token K_OF column_name
+
+                      K_WITHIN shift  11
+
+State 41:
+          phrase ::= K_ENSURE K_ROW|K_ROWS rows K_IN K_CLUSTER K_OF * K_ROW row_index K_WITHIN view_token K_OF column_name
+
+                         K_ROW shift  20
+
+State 42:
+          phrase ::= K_ENSURE K_ROW|K_ROWS rows K_IN K_CLUSTER * K_OF K_ROW row_index K_WITHIN view_token K_OF column_name
+
+                          K_OF shift  41
+
+State 43:
+          phrase ::= K_ENSURE K_ROW|K_ROWS rows * K_IN K_CLUSTER K_OF K_ROW row_index K_WITHIN view_token K_OF column_name
+          phrase ::= K_ENSURE K_ROW|K_ROWS rows * K_IN K_SINGLETON K_CLUSTER K_WITHIN view_token K_OF column_name
+
+                          K_IN shift  24
+
+State 44:
+          phrase ::= K_ENSURE variable_token_opt columns K_IN view_token * K_OF column_name
+
+                          K_OF shift  22
+
+State 45:
+      (1) phrases ::= phrase *
+
+                     {default} reduce 1
+
+State 46:
+     (10) phrase ::= K_SET K_ROW K_CLUSTER K_CONCENTRATION K_PARAMETER K_WITHIN view_token K_OF column_name K_TO concentration *
+
+                     {default} reduce 10
+
+State 47:
+     (30) concentration ::= L_NUMBER *
+
+                     {default} reduce 30
+
+State 48:
+      (7) phrase ::= K_SET view_token K_CONCENTRATION K_PARAMETER K_TO concentration *
+
+                     {default} reduce 7
+
+State 49:
+     (13) variable_token_opt ::= K_VARIABLES *
+
+                     {default} reduce 13
+
+State 50:
+     (12) variable_token_opt ::= K_VARIABLE *
+
+                     {default} reduce 12
+
+State 51:
+     (27) row_list ::= row_index *
+
+                     {default} reduce 27
+
+State 52:
+     (28) row_list ::= row_list T_COMMA row_index *
+
+                     {default} reduce 28
+
+State 53:
+     (26) rows ::= T_LROUND row_list T_RROUND *
+
+                     {default} reduce 26
+
+State 54:
+     (25) rows ::= T_STAR *
+
+                     {default} reduce 25
+
+State 55:
+     (24) rows ::= row_index *
+
+                     {default} reduce 24
+
+State 56:
+      (9) phrase ::= K_ENSURE K_ROW|K_ROWS rows K_IN K_SINGLETON K_CLUSTER K_WITHIN view_token K_OF column_name *
+
+                     {default} reduce 9
+
+State 57:
+     (29) row_index ::= L_NUMBER *
+
+                     {default} reduce 29
+
+State 58:
+      (8) phrase ::= K_ENSURE K_ROW|K_ROWS rows K_IN K_CLUSTER K_OF K_ROW row_index K_WITHIN view_token K_OF column_name *
+
+                     {default} reduce 8
+
+State 59:
+     (21) column_list ::= column_name *
+
+                     {default} reduce 21
+
+State 60:
+     (22) column_list ::= column_list T_COMMA column_name *
+
+                     {default} reduce 22
+
+State 61:
+     (20) columns ::= T_LROUND column_list T_RROUND *
+
+                     {default} reduce 20
+
+State 62:
+     (19) columns ::= T_STAR *
+
+                     {default} reduce 19
+
+State 63:
+     (18) columns ::= column_name *
+
+                     {default} reduce 18
+
+State 64:
+     (17) dependency ::= K_DEPENDENT *
+
+                     {default} reduce 17
+
+State 65:
+     (16) dependency ::= K_INDEPENDENT *
+
+                     {default} reduce 16
+
+State 66:
+     (15) view_token ::= K_CONTEXT *
+
+                     {default} reduce 15
+
+State 67:
+     (14) view_token ::= K_VIEW *
+
+                     {default} reduce 14
+
+State 68:
+      (6) phrase ::= K_ENSURE variable_token_opt columns K_IN K_SINGLETON view_token *
+
+                     {default} reduce 6
+
+State 69:
+     (23) column_name ::= L_NAME *
+
+                     {default} reduce 23
+
+State 70:
+      (5) phrase ::= K_ENSURE variable_token_opt columns K_IN view_token K_OF column_name *
+
+                     {default} reduce 5
+
+State 71:
+      (4) phrase ::= K_ENSURE variable_token_opt columns dependency *
+
+                     {default} reduce 4
+
+State 72:
+      (2) phrases ::= phrases T_COMMA phrase *
+
+                     {default} reduce 2
+
+----------------------------------------------------
+Symbols:
+    0: $:
+    1: T_COMMA
+    2: K_ENSURE
+    3: K_IN
+    4: K_OF
+    5: K_SINGLETON
+    6: K_SET
+    7: K_CONCENTRATION
+    8: K_PARAMETER
+    9: K_TO
+   10: K_ROW
+   11: K_ROWS
+   12: K_CLUSTER
+   13: K_WITHIN
+   14: K_VARIABLE
+   15: K_VARIABLES
+   16: K_VIEW
+   17: K_CONTEXT
+   18: K_INDEPENDENT
+   19: K_DEPENDENT
+   20: T_STAR
+   21: T_LROUND
+   22: T_RROUND
+   23: L_NAME
+   24: L_NUMBER
+   25: error:
+   26: alter: <lambda> T_COMMA K_ENSURE K_SET
+   27: phrases: <lambda> T_COMMA K_ENSURE K_SET
+   28: phrase: <lambda> K_ENSURE K_SET
+   29: variable_token_opt: <lambda> K_VARIABLE K_VARIABLES
+   30: columns: T_STAR T_LROUND L_NAME
+   31: dependency: K_INDEPENDENT K_DEPENDENT
+   32: view_token: K_VIEW K_CONTEXT
+   33: column_name: L_NAME
+   34: concentration: L_NUMBER
+   35: rows: T_STAR T_LROUND L_NUMBER
+   36: row_index: L_NUMBER
+   37: column_list: L_NAME
+   38: row_list: L_NUMBER
