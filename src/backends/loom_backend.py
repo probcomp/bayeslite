@@ -679,35 +679,48 @@ class LoomBackend(BayesDB_Backend):
         csv_headers = lower_to_upper.keys()
         csv_values = [str(a) for a in csv_values]
 
-        # Retrieve the samples from the server..
+        # Prepare streams for the server.
         outfile = StringIO()
         writer = loom.preql.CsvWriter(outfile, returns=outfile.getvalue)
         reader = iter([csv_headers]+[csv_values])
+
+        # Obtain the prediction.
         server._predict(reader, num_samples, writer, False)
-        output = writer.result()
 
-        # Parse output.
-        returned_headers = [lower_to_upper[a] for a in
-            output.strip().split('\r\n')[0].split(CSV_DELIMITER)]
-        loom_output = [zip(returned_headers, a.split(CSV_DELIMITER))
-            for a in output.strip().split('\r\n')[1:]]
-        return_list = []
-        for row in loom_output:
-            # Prepare the row.
-            row_values = []
-            row_dict = dict(row)
-            for colno in targets:
-                colname = target_num_to_name[colno]
-                value = row_dict[colname]
-                stattype = bayesdb_variable_stattype(
-                    bdb, population_id, None, colno)
-                if not _is_nominal(stattype):
-                    value = float(value)
-                row_values.append(value)
-            # Add this row to the return list.
-            return_list.append(row_values)
+        # Parse the CSV output.
+        output_csv = writer.result()
+        output_rows = output_csv.strip().split('\r\n')
 
-        return return_list
+        # Extract the header of the CSV file.
+        header = [
+            lower_to_upper[column_name]
+            for column_name in output_rows[0].split(CSV_DELIMITER)
+        ]
+
+        # Extract list of simulated rows. Each simulated row is represented
+        # as a dictionary mapping column name to its simulated value.
+        simulated_rows = [
+            dict(zip(header, row.split(CSV_DELIMITER)))
+            for row in output_rows[1:]
+        ]
+
+        # Prepare the return list of simulated_rows.
+        target_num_to_stattype = {
+            colno: bayesdb_variable_stattype(
+                bdb, population_id, generator_id, colno)
+            for colno in targets
+        }
+        def _extract_simulated_value(row, colno):
+            colname = target_num_to_name[colno]
+            stattype = target_num_to_stattype[colno]
+            value = row[colname]
+            return value if _is_nominal(stattype) else float(value)
+
+        # Return the list of samples.
+        return [
+            [_extract_simulated_value(row, colno) for colno in targets]
+            for row in simulated_rows
+        ]
 
     def logpdf_joint(self, bdb, generator_id, modelnos, rowid, targets,
             constraints):
