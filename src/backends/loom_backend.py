@@ -644,36 +644,51 @@ class LoomBackend(BayesDB_Backend):
         # Retrieve the population id.
         population_id = bayesdb_generator_population(bdb, generator_id)
 
-        # If rowid exists, retrieve conditioning data from the table.
-        if rowid != bayesdb_population_fresh_row_id(bdb, generator_id):
-            row_values_raw = bayesdb_population_row_values(bdb,
-                population_id, rowid)
-            row_values = [str(a) if isinstance(a, unicode) else a
-                for a in row_values_raw]
-            row = [entry for entry in enumerate(row_values)
-                if entry[1] is not None]
-            constraints_colnos = [c[0] for c in constraints]
-            row_colnos = [r[0] for r in row]
-            if any([colno in constraints_colnos for colno in row_colnos]):
-                raise BQLError(bdb, 'Overlap between constraints and' \
-                    'target row in simulate.')
-            constraints.extend(row)
+        # Prepare list of full constraints, potentially adding data from table.
+        constraints_full = constraints
 
-        # Prepare the query row to provide to Loom.
-        row = {}
-        target_num_to_name = {}
-        for colno in targets:
-            name = bayesdb_variable_name(bdb, generator_id, None, colno)
-            target_num_to_name[colno] = name
-            row[name] = ''
-        for (colno, value) in constraints:
-            name = bayesdb_variable_name(bdb, generator_id, None, colno)
-            row[name] = value
+        # If rowid is incorporated, retrieve conditioning data from the table.
+        if not self._get_is_incorporated_rowid(bdb, generator_id, rowid):
+            # Fetch population column numbers and row values.
+            colnos = bayesdb_variable_numbers(bdb, population_id, generator_id)
+            rowvals = bayesdb_population_row_values(bdb, population_id, rowid)
+            observations = [
+                (colno, rowval)
+                for colno, rowval in zip(colnos, rowvals)
+                if rowval is not None and colno not in targets
+            ]
+            # Raise error if a constraint overrides an observed cell.
+            colnos_constrained = [constraint[0] for constraint in constraints]
+            colnos_observed = [observation[0] for observation in observations]
+            if set.intersection(set(colnos_constrained), set(colnos_observed)):
+                raise BQLError(bdb, 'Overlap between constraints and'
+                    ' target row in simulate.')
+            # Update the constraints.
+            constraints_full = constraints + observations
+
+        # Store mapping from target column name to column number and stattype.
+        target_colno_to_name = {
+            colno: bayesdb_variable_name(bdb, generator_id, None, colno)
+            for colno in targets
+        }
+        target_colno_to_stattype = {
+            colno: bayesdb_variable_stattype(bdb, population_id, None, colno)
+            for colno in targets
+        }
+
+        # Construct the CSV row for targets.
+        row_targets = {target_colno_to_name[colno] : '' for colno in targets}
+        row_constraints = {
+            bayesdb_variable_name(bdb, generator_id, None, colno) : value
+            for colno, value in constraints_full
+        }
+        row = dict(itertools.chain(
+            row_targets.iteritems(), row_constraints.iteritems()))
 
         # Fetch the server.
         server = self._get_preql_server(bdb, generator_id)
 
-        # Prepare the csv header.
+        # Prepare the csv header and values.
         csv_headers, csv_values = zip(*row.iteritems())
         lower_to_upper = {str(a).lower(): str(a) for a in csv_headers}
         csv_headers = lower_to_upper.keys()
@@ -705,14 +720,9 @@ class LoomBackend(BayesDB_Backend):
         ]
 
         # Prepare the return list of simulated_rows.
-        target_num_to_stattype = {
-            colno: bayesdb_variable_stattype(
-                bdb, population_id, generator_id, colno)
-            for colno in targets
-        }
         def _extract_simulated_value(row, colno):
-            colname = target_num_to_name[colno]
-            stattype = target_num_to_stattype[colno]
+            colname = target_colno_to_name[colno]
+            stattype = target_colno_to_stattype[colno]
             value = row[colname]
             return value if _is_nominal(stattype) else float(value)
 
@@ -781,6 +791,15 @@ class LoomBackend(BayesDB_Backend):
                 AND string_form = ?
         ''', (generator_id, colno, string_form,))
         return cursor_value(cursor)
+
+    def _get_is_incorporated_rowid(self, bdb, generator_id, rowid):
+        """Return True iff the rowid is incorporated in the loom model."""
+        cursor = bdb.sql_execute('''
+            SELECT COUNT(*) partition_id
+            FROM bayesdb_loom_row_kind_partition
+            WHERE generator_id = ? AND rowid = ?
+        ''', (generator_id, rowid))
+        return cursor_value(cursor) == 0
 
     def _get_loom_rank(self, bdb, generator_id, colno):
         """Return the loom rank (column number) for the given colno."""
