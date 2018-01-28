@@ -759,6 +759,7 @@ class LoomBackend(BayesDB_Backend):
         return float(value)
 
     def _get_integer_form(self, bdb, generator_id, colno, string_form):
+        """Return integer code representing the string."""
         cursor = bdb.sql_execute('''
             SELECT integer_form
             FROM bayesdb_loom_string_encoding
