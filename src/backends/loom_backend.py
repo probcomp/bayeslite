@@ -714,7 +714,7 @@ class LoomBackend(BayesDB_Backend):
         population_id = bayesdb_generator_population(bdb, generator_id)
         ordered_column_names = self._get_ordered_column_names(bdb, generator_id)
 
-        # Pr[targets|constraints] = Pr[targest, constraints] / Pr[constraints]
+        # Pr[targets|constraints] = Pr[targets, constraints] / Pr[constraints]
         # The numerator is and_case; denominator is conditional_case.
         and_case = OrderedDict(
             [(a, None) for a in ordered_column_names])
