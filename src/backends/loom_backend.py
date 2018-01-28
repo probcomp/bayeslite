@@ -335,6 +335,8 @@ class LoomBackend(BayesDB_Backend):
         return cursor_value(cursor)
 
     def drop_generator(self, bdb, generator_id):
+        self._close_query_server(bdb, generator_id)
+        self._close_preql_server(bdb, generator_id)
         self._del_cache_entry(bdb, generator_id, None)
         with bdb.savepoint():
             self.drop_models(bdb, generator_id)
@@ -367,15 +369,9 @@ class LoomBackend(BayesDB_Backend):
                 DELETE FROM bayesdb_loom_row_kind_partition
                 WHERE generator_id = ?
             ''', (generator_id,))
-            q_server = self._get_cache_entry(bdb, generator_id, 'q_server')
-            if q_server is not None:
-                q_server.close()
-            preql_server = self._get_cache_entry(
-                bdb, generator_id, 'preql_server')
-            if preql_server is not None:
-                preql_server.close()
-            self._del_cache_entry(bdb, generator_id, 'q_server')
-            self._del_cache_entry(bdb, generator_id, 'preql_server')
+            # Close the servers.
+            self._close_query_server(bdb, generator_id)
+            self._close_preql_server(bdb, generator_id)
             bdb.sql_execute('''
                 UPDATE bayesdb_loom_generator_model_info
                 SET num_models = 0
@@ -409,12 +405,10 @@ class LoomBackend(BayesDB_Backend):
         loom.tasks.infer(project_path, sample_count=num_models, config=config)
 
         self._store_kind_partition(bdb, generator_id, modelnos)
-        self._set_cache_entry(bdb, generator_id, 'q_server',
-            loom.query.get_server(
-                self._get_loom_project_path(bdb, generator_id)))
-        preqlServer = loom.tasks.query(
-                self._get_loom_project_path(bdb, generator_id))
-        self._set_cache_entry(bdb, generator_id, 'preql_server', preqlServer)
+
+        # Close cached query servers.
+        self._close_query_server(bdb, generator_id)
+        self._close_preql_server(bdb, generator_id)
 
     def _store_kind_partition(self, bdb, generator_id, modelnos):
         population_id = bayesdb_generator_population(bdb, generator_id)
@@ -548,7 +542,7 @@ class LoomBackend(BayesDB_Backend):
             str(bayesdb_variable_name(bdb, population_id, None, colno))
             for colno in colnos1
         ]
-        server = self._get_cache_entry(bdb, generator_id, 'preql_server')
+        server = self._get_preql_server(bdb, generator_id)
         target_set = server._cols_to_mask(server.encode_set(colnames0))
         query_set = server._cols_to_mask(server.encode_set(colnames1))
         mi = server._query_server.mutual_information(
@@ -696,7 +690,7 @@ class LoomBackend(BayesDB_Backend):
             row[name] = value
 
         # Fetch the server.
-        server = self._get_cache_entry(bdb, generator_id, 'preql_server')
+        server = self._get_preql_server(bdb, generator_id)
 
         # Prepare the csv header.
         csv_headers, csv_values = zip(*row.iteritems())
@@ -763,9 +757,9 @@ class LoomBackend(BayesDB_Backend):
         and_case = and_case.values()
         conditional_case = conditional_case.values()
 
-        q_server = self._get_cache_entry(bdb, generator_id, 'q_server')
-        and_score = q_server.score(and_case)
-        conditional_score = q_server.score(conditional_case)
+        server = self._get_query_server(bdb, generator_id)
+        and_score = server.score(and_case)
+        conditional_score = server.score(conditional_case)
         return and_score - conditional_score
 
     def _convert_to_proper_stattype(self, bdb, generator_id, colno, value):
@@ -819,6 +813,44 @@ class LoomBackend(BayesDB_Backend):
             ORDER BY rank ASC
         ''', (generator_id,))
         return [colno for (colno,) in cursor]
+
+    # Cached QueryServer objects.
+
+    def _get_query_server(self, bdb, generator_id):
+        """Return instance of loom.query.QueryServer for the Loom project."""
+        server = self._get_cache_entry(bdb, generator_id, 'query_server')
+        if server is not None:
+            return server
+        project_path = self._get_loom_project_path(bdb, generator_id)
+        server = loom.query.get_server(project_path)
+        self._set_cache_entry(bdb, generator_id, 'query_server', server)
+        return server
+
+    def _close_query_server(self, bdb, generator_id):
+        server = self._get_cache_entry(bdb, generator_id, 'query_server')
+        if server is not None:
+            server.close()
+            self._del_cache_entry(bdb, generator_id, 'query_server')
+
+    # Cached PreQL server objects.
+
+    def _get_preql_server(self, bdb, generator_id):
+        """Return instance of loom.preql.PreQL for the Loom project."""
+        server = self._get_cache_entry(bdb, generator_id, 'preql_server')
+        if server is not None:
+            return server
+        project_path = self._get_loom_project_path(bdb, generator_id)
+        server = loom.tasks.query(project_path)
+        self._set_cache_entry(bdb, generator_id, 'preql_server', server)
+        return server
+
+    def _close_preql_server(self, bdb, generator_id):
+        server = self._get_cache_entry(bdb, generator_id, 'preql_server')
+        if server is not None:
+            server.close()
+            self._del_cache_entry(bdb, generator_id, 'preql_server')
+
+    # Cache management.
 
     def _retrieve_cache(self, bdb,):
         if bdb in self._cache:
