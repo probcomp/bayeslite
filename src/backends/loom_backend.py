@@ -189,9 +189,9 @@ class LoomBackend(BayesDB_Backend):
         # Ingest data into loom.
         schema_file = self._data_to_schema(bdb, population_id, data_by_column)
         csv_file = self._data_to_csv(bdb, headers, data)
-        loom.tasks.ingest(
-            self._get_loom_project_path(bdb, generator_id),
-            rows_csv=csv_file.name, schema=schema_file.name)
+        project_path = self._get_loom_project_path(bdb, generator_id)
+        loom.tasks.ingest(project_path, rows_csv=csv_file.name,
+            schema=schema_file.name)
 
         # Store encoding info in bdb.
         self._store_encoding_info(bdb, generator_id)
