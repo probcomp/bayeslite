@@ -90,6 +90,17 @@ CREATE TABLE bayesdb_loom_column_ordering (
     PRIMARY KEY(generator_id, colno)
 );
 
+CREATE TABLE bayesdb_loom_rowid_mapping (
+    generator_id        INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    table_rowid         INTEGER NOT NULL,
+    loom_rowid          INTEGER NOT NULL,
+
+    PRIMARY KEY (generator_id, table_rowid)
+    UNIQUE(generator_id, table_rowid),
+    UNIQUE(generator_id, loom_rowid),
+    UNIQUE(table_rowid, loom_rowid)
+);
+
 CREATE TABLE bayesdb_loom_column_kind_partition (
     generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
     modelno         INTEGER NOT NULL,
@@ -99,12 +110,16 @@ CREATE TABLE bayesdb_loom_column_kind_partition (
 );
 
 CREATE TABLE bayesdb_loom_row_kind_partition (
-    generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
-    modelno         INTEGER NOT NULL,
-    rowid           INTEGER NOT NULL,
-    kind_id         INTEGER NOT NULL,
-    partition_id    INTEGER NOT NULL,
-    PRIMARY KEY(generator_id, modelno, rowid, kind_id)
+    generator_id        INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    modelno             INTEGER NOT NULL,
+    table_rowid         INTEGER NOT NULL,
+    loom_rowid          INTEGER NOT NULL,
+    kind_id             INTEGER NOT NULL,
+    partition_id        INTEGER NOT NULL,
+    PRIMARY KEY(generator_id, modelno, table_rowid, kind_id)
+
+    FOREIGN KEY (table_rowid, loom_rowid)
+        REFERENCES bayesdb_loom_rowid_mapping(table_rowid, loom_rowid)
 );
 '''
 
@@ -195,6 +210,19 @@ class LoomBackend(BayesDB_Backend):
 
         # Store encoding info in bdb.
         self._store_encoding_info(bdb, generator_id)
+
+        # Store rowid mapping in the bdb.
+        qt = sqlite3_quote_name(table)
+        rowids = bdb.sql_execute('SELECT oid FROM %s' % (qt,)).fetchall()
+        insertions = ','.join(
+            str((generator_id, table_rowid, loom_rowid))
+            for loom_rowid, (table_rowid,) in enumerate(rowids)
+        )
+        bdb.sql_execute('''
+            INSERT INTO bayesdb_loom_rowid_mapping
+                (generator_id, table_rowid, loom_rowid)
+                VALUES %s
+        ''' % (insertions,))
 
     def _store_encoding_info(self, bdb, generator_id):
         encoding_path = os.path.join(
@@ -356,6 +384,10 @@ class LoomBackend(BayesDB_Backend):
                 DELETE FROM bayesdb_loom_column_ordering
                 WHERE generator_id = ?
             ''', (generator_id,))
+            bdb.sql_execute('''
+                DELETE FROM bayesdb_loom_rowid_mapping
+                WHERE generator_id = ?
+            ''', (generator_id,))
 
     def drop_models(self, bdb, generator_id, modelnos=None):
         with bdb.savepoint():
@@ -438,14 +470,21 @@ class LoomBackend(BayesDB_Backend):
                 # Bulk insertion of mapping from (kind_id, rowid) to cluster_id.
                 row_partition = self._retrieve_row_partition(
                     bdb, generator_id, modelno)
+                rowids = bdb.sql_execute('''
+                    SELECT table_rowid, loom_rowid
+                        FROM bayesdb_loom_rowid_mapping
+                ''')
                 insertions = ','.join(
-                    str((generator_id, modelno, rowid+1, kind_id, partition_id))
+                    str((generator_id, modelno, rowid[0], rowid[1],
+                            kind_id, partition_id))
                     for kind_id in row_partition
-                    for rowid, partition_id in enumerate(row_partition[kind_id]))
+                    for rowid, partition_id
+                        in zip(rowids, row_partition[kind_id]))
                 bdb.sql_execute('''
                     INSERT OR REPLACE INTO
                         bayesdb_loom_row_kind_partition
-                    (generator_id, modelno, rowid, kind_id, partition_id)
+                    (generator_id, modelno, table_rowid, loom_rowid,
+                        kind_id, partition_id)
                     VALUES %s
                 ''' % (insertions,))
 
@@ -528,7 +567,7 @@ class LoomBackend(BayesDB_Backend):
             WHERE generator_id = ?
                 AND modelno = ?
                 AND kind_id = ?
-                AND rowid = ?
+                AND table_rowid = ?
         ''', (generator_id, modelno, kind_id, rowid))
         return cursor_value(cursor)
 
@@ -579,8 +618,8 @@ class LoomBackend(BayesDB_Backend):
                         AND modelno = t1.modelno
                         AND colno = ?
                 )
-                AND t1.rowid = ?
-                AND t2.rowid = ?
+                AND t1.table_rowid = ?
+                AND t2.table_rowid = ?
         ''' % (','.join(map(str, modelnos)),), (
             generator_id, colnos[0], rowid, target_rowid))
         return [c for (c,) in cursor]
@@ -691,13 +730,14 @@ class LoomBackend(BayesDB_Backend):
         # Prepare the csv header and values.
         csv_headers, csv_values = zip(*row.iteritems())
         lower_to_upper = {str(a).lower(): str(a) for a in csv_headers}
-        csv_headers = lower_to_upper.keys()
-        csv_values = [str(a) for a in csv_values]
+
+        csv_headers_str = [str(a).lower() for a in csv_headers]
+        csv_values_str = [str(a) for a in csv_values]
 
         # Prepare streams for the server.
         outfile = StringIO()
         writer = loom.preql.CsvWriter(outfile, returns=outfile.getvalue)
-        reader = iter([csv_headers]+[csv_values])
+        reader = iter([csv_headers_str]+[csv_values_str])
 
         # Obtain the prediction.
         server._predict(reader, num_samples, writer, False)
@@ -797,7 +837,7 @@ class LoomBackend(BayesDB_Backend):
         cursor = bdb.sql_execute('''
             SELECT COUNT(*) partition_id
             FROM bayesdb_loom_row_kind_partition
-            WHERE generator_id = ? AND rowid = ?
+            WHERE generator_id = ? AND table_rowid = ?
         ''', (generator_id, rowid))
         return cursor_value(cursor) == 0
 
