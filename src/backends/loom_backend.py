@@ -585,30 +585,6 @@ class LoomBackend(BayesDB_Backend):
             generator_id, colnos[0], rowid, target_rowid))
         return [c for (c,) in cursor]
 
-    def _reorder_row(self, bdb, generator_id, row, dense=True):
-        """Reorder a row of columns according to loom's column order.
-
-        Row should be a list of (colno, value) tuples
-
-        Returns a list of (colno, value) tuples in the proper order.
-        """
-        ordered_column_labels = self._get_ordered_column_labels(
-            bdb, generator_id)
-        ordererd_column_dict = OrderedDict(
-            [(a, None) for a in ordered_column_labels])
-
-        population_id = bayesdb_generator_population(bdb, generator_id)
-        for colno, value in zip(range(1, len(row) + 1), row):
-            column_name = bayesdb_variable_name(bdb, population_id, None, colno)
-            ordererd_column_dict[column_name] = str(value)
-        if dense is False:
-            return [
-                (colno, value)
-                for (colno, value) in ordererd_column_dict.iteritems()
-                if value is not None
-            ]
-        return ordererd_column_dict.iteritems()
-
     def predictive_relevance(self, bdb, generator_id, modelnos, rowid_target,
             rowid_queries, hypotheticals, colno):
         if len(hypotheticals) > 0:
@@ -736,15 +712,14 @@ class LoomBackend(BayesDB_Backend):
     def logpdf_joint(self, bdb, generator_id, modelnos, rowid, targets,
             constraints):
         population_id = bayesdb_generator_population(bdb, generator_id)
-        ordered_column_labels = self._get_ordered_column_labels(
-            bdb, generator_id)
+        ordered_column_names = self._get_ordered_column_names(bdb, generator_id)
 
         # Pr[targets|constraints] = Pr[targest, constraints] / Pr[constraints]
         # The numerator is and_case; denominator is conditional_case.
         and_case = OrderedDict(
-            [(a, None) for a in ordered_column_labels])
+            [(a, None) for a in ordered_column_names])
         conditional_case = OrderedDict(
-            [(a, None) for a in ordered_column_labels])
+            [(a, None) for a in ordered_column_names])
 
         for (colno, value) in targets:
             column_name = bayesdb_variable_name(bdb, population_id, None, colno)
@@ -793,14 +768,8 @@ class LoomBackend(BayesDB_Backend):
         ''', (generator_id, colno, string_form,))
         return cursor_value(cursor)
 
-    def _get_ordered_column_labels(self, bdb, generator_id):
-        population_id = bayesdb_generator_population(bdb, generator_id)
-        return [
-            bayesdb_variable_name(bdb, population_id, None, colno)
-            for colno in self._get_order(bdb, generator_id)
-        ]
-
     def _get_loom_rank(self, bdb, generator_id, colno):
+        """Return the loom rank (column number) for the given colno."""
         cursor = bdb.sql_execute('''
             SELECT rank
             FROM bayesdb_loom_column_ordering
@@ -809,8 +778,8 @@ class LoomBackend(BayesDB_Backend):
         ''', (generator_id, colno,))
         return cursor_value(cursor)
 
-    def _get_order(self, bdb, generator_id):
-        """Get the ordering of the columns according to loom"""
+    def _get_ordered_column_numbers(self, bdb, generator_id):
+        """Return list of columns number ordered by their loom rank."""
         cursor = bdb.sql_execute('''
             SELECT colno
             FROM bayesdb_loom_column_ordering
@@ -818,6 +787,14 @@ class LoomBackend(BayesDB_Backend):
             ORDER BY rank ASC
         ''', (generator_id,))
         return [colno for (colno,) in cursor]
+
+    def _get_ordered_column_names(self, bdb, generator_id):
+        """Return list of column names ordered by their loom rank."""
+        population_id = bayesdb_generator_population(bdb, generator_id)
+        return [
+            bayesdb_variable_name(bdb, population_id, None, colno)
+            for colno in self._get_ordered_column_numbers(bdb, generator_id)
+        ]
 
     # Cached QueryServer objects.
 
