@@ -687,7 +687,7 @@ class LoomBackend(BayesDB_Backend):
         constraints_full = constraints
 
         # If rowid is incorporated, retrieve conditioning data from the table.
-        if not self._get_is_incorporated_rowid(bdb, generator_id, rowid):
+        if self._get_is_incorporated_rowid(bdb, generator_id, rowid):
             # Fetch population column numbers and row values.
             colnos = bayesdb_variable_numbers(bdb, population_id, generator_id)
             rowvals = bayesdb_population_row_values(bdb, population_id, rowid)
