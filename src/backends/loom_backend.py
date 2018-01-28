@@ -377,6 +377,7 @@ class LoomBackend(BayesDB_Backend):
                 SET num_models = 0
                 WHERE generator_id = ?
             ''', (generator_id,))
+            # Remove directories stored on disk.
             project_path = self._get_loom_project_path(bdb, generator_id)
             paths = loom.store.get_paths(project_path)
             if 'root' in paths:
@@ -397,13 +398,16 @@ class LoomBackend(BayesDB_Backend):
         if modelnos is not None:
             raise BQLError(bdb, 'Loom cannot analyze specific model numbers.')
 
+        # Prepare arguments for loom.tasks.infer invocation.
         num_models = (self._get_num_models(bdb, generator_id))
         iterations = max(int(iterations), 1)
         config = {'schedule': {'extra_passes': iterations}}
         project_path = self._get_loom_project_path(bdb, generator_id)
 
+        # Run inference.
         loom.tasks.infer(project_path, sample_count=num_models, config=config)
 
+        # Save the column and row partitions.
         self._store_kind_partition(bdb, generator_id, modelnos)
 
         # Close cached query servers.
@@ -418,7 +422,6 @@ class LoomBackend(BayesDB_Backend):
             for modelno in modelnos:
                 column_partition = self._retrieve_column_partition(
                     bdb, generator_id, modelno)
-
                 # Bulk insertion of mapping from colno to kind_id.
                 colnos = bayesdb_variable_numbers(bdb, population_id, None)
                 ranks = [self._get_loom_rank(bdb, generator_id, colno)
@@ -432,7 +435,6 @@ class LoomBackend(BayesDB_Backend):
                     (generator_id, modelno, colno, kind_id)
                     VALUES %s
                 ''' % (insertions,))
-
                 # Bulk insertion of mapping from (kind_id, rowid) to cluster_id.
                 row_partition = self._retrieve_row_partition(
                     bdb, generator_id, modelno)
@@ -508,6 +510,7 @@ class LoomBackend(BayesDB_Backend):
         return [c for (c,) in cursor]
 
     def _get_kind_id(self, bdb, generator_id, modelno, colno):
+        """Return kind_id (view assignment) of colno in modelno."""
         cursor = bdb.sql_execute('''
             SELECT kind_id
             FROM bayesdb_loom_column_kind_partition
@@ -518,6 +521,7 @@ class LoomBackend(BayesDB_Backend):
         return cursor_value(cursor)
 
     def _get_partition_id(self, bdb, generator_id, modelno, kind_id, rowid):
+        """Return row partition_id of given rowid, within kind_id of modelno."""
         cursor = bdb.sql_execute('''
             SELECT partition_id
             FROM bayesdb_loom_row_kind_partition
@@ -644,19 +648,20 @@ class LoomBackend(BayesDB_Backend):
             conf = 0
             return pred, conf
 
-        # Retrieve the samples. Specifying `rowid` ensures that relevant
-        # constraints are retrieved by `simulate`,
-        # so provide empty constraints.
+        # Retrieve the samples: specifying rowid suffices to ensures that
+        # relevant constraints are retrieved by simulat_joint.
         sample = self.simulate_joint(
             bdb, generator_id, modelnos, rowid, [colno], [], numsamples)
 
         # Determine the imputation strategy (mode or mean).
         population_id = bayesdb_generator_population(bdb, generator_id)
-        stattype = bayesdb_variable_stattype(
-            bdb, population_id, None, colno)
+        stattype = bayesdb_variable_stattype(bdb, population_id, None, colno)
+
+        # Run the imputation.
         if _is_nominal(stattype):
             return _impute_categorical(sample)
-        return _impute_numerical(sample)
+        else:
+            return _impute_numerical(sample)
 
     def simulate_joint(self, bdb, generator_id, modelnos, rowid, targets,
             constraints, num_samples=1, accuracy=None):
@@ -827,6 +832,7 @@ class LoomBackend(BayesDB_Backend):
         return server
 
     def _close_query_server(self, bdb, generator_id):
+        """Close the QueryServer and remove it from the cache."""
         server = self._get_cache_entry(bdb, generator_id, 'query_server')
         if server is not None:
             server.close()
@@ -845,6 +851,7 @@ class LoomBackend(BayesDB_Backend):
         return server
 
     def _close_preql_server(self, bdb, generator_id):
+        """Close the PreQL server and remove it from the cache."""
         server = self._get_cache_entry(bdb, generator_id, 'preql_server')
         if server is not None:
             server.close()
@@ -852,20 +859,22 @@ class LoomBackend(BayesDB_Backend):
 
     # Cache management.
 
-    def _retrieve_cache(self, bdb,):
+    def _retrieve_cache(self, bdb):
+        """Fetch the cache for the given bdb object."""
         if bdb in self._cache:
             return self._cache[bdb]
         self._cache[bdb] = dict()
         return self._cache[bdb]
 
     def _set_cache_entry(self, bdb, generator_id, key, value):
+        """Set cache entry."""
         cache = self._retrieve_cache(bdb)
         if generator_id not in cache:
             cache[generator_id] = dict()
         cache[generator_id][key] = value
 
     def _get_cache_entry(self, bdb, generator_id, key):
-        # Returns None if the generator_id or key do not exist.
+        """Return cache entry, or None if generator_id or key do not exist."""
         cache = self._retrieve_cache(bdb)
         if generator_id not in cache:
             return None
@@ -874,7 +883,7 @@ class LoomBackend(BayesDB_Backend):
         return cache[generator_id][key]
 
     def _del_cache_entry(self, bdb, generator_id, key):
-        # If key is None, wipes bdb[generator_id] in its entirety.
+        """Delete cache entry, use None to clear dict for generator_id."""
         cache = self._retrieve_cache(bdb)
         if generator_id in cache:
             if key is None:
