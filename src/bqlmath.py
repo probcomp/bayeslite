@@ -18,36 +18,36 @@ import inspect
 import math
 
 bqlmath_funcs = {
-    'acos'      : lambda _bdb, x    : math.acos(x),
-    'acosh'     : lambda _bdb, x    : math.acosh(x),
-    'asin'      : lambda _bdb, x    : math.asin(x),
-    'asinh'     : lambda _bdb, x    : math.asinh(x),
-    'atan'      : lambda _bdb, x    : math.atan(x),
-    'atan2'     : lambda _bdb, x    : math.atan2(x),
-    'atanh'     : lambda _bdb, x    : math.atanh(x),
-    'ceil'      : lambda _bdb, x    : math.ceil(x),
-    'copysign'  : lambda _bdb, x, y : math.copysign(x, y),
-    'cos'       : lambda _bdb, x    : math.cos(x),
-    'cosh'      : lambda _bdb, x    : math.cosh(x),
-    'degrees'   : lambda _bdb, x    : math.degrees(x),
-    'erf'       : lambda _bdb, x    : math.erf(x),
-    'erfc'      : lambda _bdb, x    : math.erfc(x),
-    'exp'       : lambda _bdb, x    : math.exp(x),
-    'expm1'     : lambda _bdb, x    : math.expm1(x),
-    'fabs'      : lambda _bdb, x    : math.fabs(x),
-    'factorial' : lambda _bdb, x    : math.factorial(x),
-    'floor'     : lambda _bdb, x    : math.floor(x),
-    'fmod'      : lambda _bdb, x, y : math.fmod(x,y),
-    'frexp'     : lambda _bdb, x    : math.frexp(x),
-    'gamma'     : lambda _bdb, x    : math.gamma(x),
-    'hypot'     : lambda _bdb, x, y : math.hypot(x,y),
-    'ldexp'     : lambda _bdb, x, i : math.ldexp(x,i),
-    'lgamma'    : lambda _bdb, x    : math.lgamma(x),
-    'log'       : lambda _bdb, x    : math.log(x),
+    'acos'      : lambda x    : math.acos(x),
+    'acosh'     : lambda x    : math.acosh(x),
+    'asin'      : lambda x    : math.asin(x),
+    'asinh'     : lambda x    : math.asinh(x),
+    'atan'      : lambda x    : math.atan(x),
+    'atan2'     : lambda x    : math.atan2(x),
+    'atanh'     : lambda x    : math.atanh(x),
+    'ceil'      : lambda x    : math.ceil(x),
+    'copysign'  : lambda x, y : math.copysign(x, y),
+    'cos'       : lambda x    : math.cos(x),
+    'cosh'      : lambda x    : math.cosh(x),
+    'degrees'   : lambda x    : math.degrees(x),
+    'erf'       : lambda x    : math.erf(x),
+    'erfc'      : lambda x    : math.erfc(x),
+    'exp'       : lambda x    : math.exp(x),
+    'expm1'     : lambda x    : math.expm1(x),
+    'fabs'      : lambda x    : math.fabs(x),
+    'factorial' : lambda x    : math.factorial(x),
+    'floor'     : lambda x    : math.floor(x),
+    'fmod'      : lambda x, y : math.fmod(x,y),
+    'frexp'     : lambda x    : math.frexp(x),
+    'gamma'     : lambda x    : math.gamma(x),
+    'hypot'     : lambda x, y : math.hypot(x,y),
+    'ldexp'     : lambda x, i : math.ldexp(x,i),
+    'lgamma'    : lambda x    : math.lgamma(x),
+    'log'       : lambda x    : math.log(x),
 }
 
 
-def bayesdb_install_bqlmath(db, cookie):
+def bayesdb_install_bqlmath(db, _cookie):
     for name, fn in bqlmath_funcs.iteritems():
-        nargs = len(inspect.getargspec(fn).args)-1
-        db.createscalarfunction(name, (lambda *a: fn(cookie, *a)), nargs)
+        nargs = len(inspect.getargspec(fn).args)
+        db.createscalarfunction(name, fn, nargs)
