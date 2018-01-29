@@ -22,6 +22,7 @@ import struct
 
 import bayeslite.bql as bql
 import bayeslite.bqlfn as bqlfn
+import bayeslite.bqlmath as bqlmath
 import bayeslite.bqlvtab as bqlvtab
 import bayeslite.parse as parse
 import bayeslite.schema as schema
@@ -104,6 +105,9 @@ class BayesDB(object):
         self._sqlite3.createmodule('bql_mutinf', bqlvtab.MutinfModule(self))
         self._sqlite3.cursor().execute(
             'create virtual table temp.bql_mutinf using bql_mutinf')
+
+        # Set up math utilities.
+        bqlmath.bayesdb_install_bqlmath(self._sqlite3, self)
 
         # Cache an empty cursor for convenience.
         empty_cursor = self._sqlite3.cursor()
