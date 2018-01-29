@@ -38,7 +38,6 @@ bqlmath_funcs = {
     'factorial' : lambda x    : math.factorial(x),
     'floor'     : lambda x    : math.floor(x),
     'fmod'      : lambda x, y : math.fmod(x,y),
-    'frexp'     : lambda x    : math.frexp(x),
     'gamma'     : lambda x    : math.gamma(x),
     'hypot'     : lambda x, y : math.hypot(x,y),
     'ldexp'     : lambda x, i : math.ldexp(x,i),
