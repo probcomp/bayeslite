@@ -3,12 +3,13 @@
 [![Build Status](https://travis-ci.org/probcomp/bayeslite.svg?branch=master)](https://travis-ci.org/probcomp/bayeslite)
 
 BQL interpretation and storage for BayesDB.
-Please see http://probcomp.csail.mit.edu/bayesdb for more info.
+Please see http://probcomp.csail.mit.edu/bayesdb for more information.
 
 ## Installing
 
-Software requirements are detailed in setup.py.
-Please see http://probcomp.csail.mit.edu/bayesdb/install.html for installation.
+Software requirements are detailed in setup.py. Please see [these
+instructions](http://probcomp.csail.mit.edu/open-probabilistic-programming-stack/)
+for installing bayeslite as part of the Probabilistic Computing Stack.
 
 ## Expectations
 
@@ -18,9 +19,6 @@ shifting code and behavior** at this time.
 **THIS SOFTWARE SHOULD NOT BE EXPECTED TO TREAT YOUR DATA SECURELY.**
 
 ## Contributing
-
-This repository is currently using "Light Review" from
-http://tinyurl.com/probcomp-review-standards
 
 Our compatibility aim is to work on probcomp machines and members'
 laptops, and to provide scripts and instructions that make it not too
