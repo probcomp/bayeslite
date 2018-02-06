@@ -10,8 +10,9 @@ submitting a pull request.
 ### Git standards
 
 - All branch names must be of the form
-  `[year][month][day]-[username]-[description]`.  A well named branch
-  is `20180206-fsaad-update-contributing`.
+  `[year][month][day]-[username]-[description]`.
+  A well named branch is `20180206-fsaad-update-contributing`.
+  A poorly named branch is `conda`.
 
 - Do not delete branches; all history should be maintained.
 
@@ -20,11 +21,11 @@ submitting a pull request.
   Good commit message: `"Add Git section to CONTRIBUTING.md."`.
   Bad commit message: `"ugh"`, or `"fix contributing"`.
 
-- Each minimal change of functionality should be in a separate Git
-  commit.  Avoid mixing non-functional diffs that do note alter the
-  behavior of the code (e.g. remove whitespace, improving formatting,
-  reorganizing imports), with functional diffs that alter the behavior
-  the code.
+- Each minimal change of functionality should be in its own Git
+  commit.  Avoid mixing non-functional diffs that do not alter the
+  behavior of the code (e.g. removing whitespace, improving
+  formatting, reorganizing imports), with functional diffs that alter
+  the behavior the code.
 
 - Maintainers: when merging feature branches into `master`, always
   create an explicit merge commit using `git merge --no-ff`.  __Avoid
@@ -62,8 +63,8 @@ emphasis on items below:
     4. current package imports, relative
 
   Each import block should be organized alphabetically.  First write
-  all unqualified imports (`import sys`), then all named imports
-  (`from StringIO import StringIO`), separated by one line.  Long
+  all unqualified imports, e.g. `import sys`, then all named imports,
+  e.g. `from StringIO import StringIO`, separated by one line.  Long
   blocks can be further separated by one line. Here is an
   [example][4].
 
@@ -105,6 +106,9 @@ Because this may take awhile, we do not require it of all commits, but
 you should monitor the continuous integration suite, and rapidly roll
 back your change if it causes a failure.
 
+This software is automatically tested on
+[Travis](https://travis-ci.org/probcomp/bayeslite).
+
 ### Copyright headers
 
 Files should have appropriate copyright headers, refer to [`src/__init__.py`][5]
@@ -121,36 +125,43 @@ Our version scheme, compatible with [PEP 440](https://www.python.org/dev/peps/pe
 We do not currently make any semantic API compatibility guarantees about the
 meaning of `<major>`, `<minor>`, and `<teeny>`.
 
-In the source tree, the `VERSION` file contains either the current release
-version number, or the most recent tagged version number followed by a plus sign
-`+`.  In that case, a suffix will be added to the most recent version number,
-derived from `git describe`, of the form:
+In the source tree, the [VERSION](./VERSION) file contains either the
+current release version number, or the most recent tagged version
+number followed by a plus sign `+`.  In that case, a suffix will be
+added to the most recent version number, derived from `git describe`,
+of the form:
 
     .post<N>+g<commitid>[.<dirty>]
 
-The Git tag for a tagged version is named with a `v` prefix.  Note that the
-content of VERSION for any tagged version MUST NOT include a `+` suffix, so that
-`cat VERSION` is sufficient to find the version number, and `git describe` is
-not necessary.
+The Git tag for a tagged version is named with a `v` prefix.  Note
+that the content of VERSION for any tagged version MUST NOT include a
+`+` suffix, so that `cat VERSION` is sufficient to find the version
+number, and `git describe` is not necessary.
 
 To tag a new version:
 
-1. Set VERSION to the new version, say `0.2.42`:
+1. Set `VERSION` to the new version, say `0.2.42`:
 
+    ```
     $ echo 0.2.42 > VERSION
     $ git commit -m 'Bump version to 0.2.42.' VERSION
+    ```
 
 2. Tag it with an annotated tag:
 
+    ```
     $ git tag -a -m v0.2.42 v0.2.42
+    ```
 
    If you want, you can include release notes in the annotated tag
    message.
 
 3. Append `+` to the version in VERSION:
 
+    ```
     $ echo 0.2.42+ > VERSION
     $ git commit -m 'Bump version to 0.2.42+.' VERSION
+    ```
 
 Make sure when you push that you pass `--tags` to `git push`.
 
