@@ -1,80 +1,7 @@
-Notes for anyone hacking bayeslite
+Guidelines for writing bayeslite software
 
-* Automatic tests
-
-Every commit on long-term branches including master should pass
-
-   % ./check.sh
-
-It builds bayeslite and runs the automatic smoke tests.  Please run this
-in your .git/hooks/pre-commit script during development, and in each
-commit please add or update automatic tests for any bugs you add or
-features you fix in that commit.
-
-check.sh has two modes: if you pass no arguments, it runs smoke tests
-only. There are tests that are slower, use the network, or otherwise
-are better suited to testing during continuous integration only. If
-you run a particular test, e.g.:
-
-  % ./check.sh --pdb tests/test_foo.py
-
-that will run even the tests that would otherwise have been run during
-continuous integration, for that file (and with --pdb it will drop you into the python debugger on the first failure). These tests are marked with
-__ci_ in their names, and you can `git grep __ci_` to find them.
-
-If you want to run all tests, you can
-
-   % ./check.sh tests/ shell/tests
-
-Because this may take awhile, we don't require it of all commits, but
-you should monitor the continuous integration suite, and rapidly roll
-back your change if it causes a failure.
-
-
-* Versions
-
-Our version scheme, compatible with PEP 440:
-
-    <major>.<minor>[.<teeny>]a<date>    (prerelease snapshot)
-    <major>.<minor>[.<teeny>]rc<N>      (release candidate)
-    <major>.<minor>[.<teeny>]           (release)
-
-We do not currently make any semantic API compatibility guarantees
-about the meaning of <major>, <minor>, and <teeny>.
-
-In the source tree, the VERSION file contains either the current
-release version number, or the most recent tagged version number
-followed by a plus sign `+'.  In that case, a suffix will be added to
-the most recent version number, derived from `git describe', of the
-form:
-
-    .post<N>+g<commitid>[.<dirty>]
-
-The Git tag for a tagged version is named with a `v' prefix.  Note
-that the content of VERSION for any tagged version MUST NOT include a
-`+' suffix, so that `cat VERSION' is sufficient to find the version
-number, and `git describe' is not necessary.
-
-To tag a new version:
-
-1. Set VERSION to the new version, say `0.2.42':
-
-    % echo 0.2.42 > VERSION
-    % git commit -m 'Bump version to 0.2.42.' VERSION
-
-2. Tag it with an annotated tag:
-
-    % git tag -a -m v0.2.42 v0.2.42
-
-   If you want, you can include release notes in the annotated tag
-   message.
-
-3. Append `+' to the version in VERSION:
-
-    % echo 0.2.42+ > VERSION
-    % git commit -m 'Bump version to 0.2.42+.' VERSION
-
-Make sure when you push that you pass `--tags' to `git push'.
+This working document contains guidelines for how to develop against
+the bayeslite API.
 
 * SQL/BQL parameters
 
@@ -116,6 +43,16 @@ DO:     from bayeslite import bql_quote_name
 DON'T:  cursor.execute('SELECT %s FROM %s WHERE x = ?' % (column, table), (x,))
 DON'T:  cursor.execute('SELECT %s FROM %s WHERE x = %d' % (qc, qt, x))
 
+* SQL updates
+
+When issuing an UPDATE command to sqlite3, if you can count the number
+of rows it should affect, do so and assert that it affected that many
+rows:
+
+    total_changes = bdb._sqlite3.totalchanges()
+    bdb.sql_execute('UPDATE ...', (...))
+    assert bdb._sqlite3.totalchanges() - total_changes == 1
+
 * Randomization
 
 Avoid indiscriminate nondeterminism.
@@ -151,36 +88,3 @@ manually with the seed as its argument:
     ZigException: something set us up the bomb
     >>> test_quagga('434529bf3e5a16930701b55c39a90acfcd115ba0cada99f5af5448f3b96923dd'.decode('hex'))
     ZigException: something set us up the bomb
-
-* Python coding style
-
-Generally follow PEP 8, with these exceptions:
-
-- Single line between top-level definitions.
-  => Two blank lines are needlessly verbose.
-- Four spaces, instead of alignment, for continuation lines.
-  => Using alignment penalizes descriptive function names and renaming.
-
-Additional guidelines:
-
-- General API should be exposed in the bayeslite module.
-- General names should begin with the lexeme `bayesdb' or `bql'.
-- Prefer greppable descriptive global functions over methods.
-  => Legibility is more important than extensibility.
-- Prefer single-quoted strings, except use """ for docstrings.
-- unicode for user data; str for SQL/BQL text.
-- Prefer clarity over boilerplate.
-  => No need to clutter every docstring with a sphinx template.
-
-* SQL updates
-
-When issuing an UPDATE command to sqlite3, if you can count the number
-of rows it should affect, do so and assert that it affected that many
-rows:
-
-    total_changes = bdb._sqlite3.totalchanges()
-    bdb.sql_execute('UPDATE ...', (...))
-    assert bdb._sqlite3.totalchanges() - total_changes == 1
-
-XXX Should not use bdb.sqlite3 explicitly here.
-XXX Not every use is so marked.
