@@ -18,6 +18,7 @@ import os
 import pytest
 
 from bayeslite import bayesdb_open
+from bayeslite import bayesdb_nullify
 from bayeslite.exception import BQLError
 
 root = os.path.dirname(os.path.abspath(__file__))
@@ -38,6 +39,7 @@ def loom_analyze(csv_filename):
     with bayesdb_open(':memory:') as bdb:
         bdb = bayesdb_open(':memory:')
         bdb.execute('CREATE TABLE t FROM \'%s\'' % (csv_filename))
+        bayesdb_nullify(bdb, 't', 'NaN')
         bdb.execute('''
             CREATE POPULATION p FOR t WITH SCHEMA(
                 GUESS STATTYPES OF (*);
