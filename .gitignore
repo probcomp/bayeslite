@@ -24,9 +24,6 @@ __pycache__/
 .cache/
 .eggs
 
-# Ignore pyc files.
 *.pyc
-# Ignore vim artefacts.
 *.swp
-# Ignore pycache
 .pytest_cache/
