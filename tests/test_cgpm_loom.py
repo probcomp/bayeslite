@@ -21,6 +21,8 @@ from bayeslite import bayesdb_open
 from bayeslite import bayesdb_nullify
 from bayeslite.exception import BQLError
 
+os.environ['LOOM_VERBOSITY'] = '0'
+
 root = os.path.dirname(os.path.abspath(__file__))
 dha_csv = os.path.join(root, 'dha.csv')
 satellites_csv = os.path.join(root, 'satellites.csv')
