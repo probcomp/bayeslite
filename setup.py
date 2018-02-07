@@ -235,6 +235,7 @@ setup(
         'bayeslite.backends': ['*.schema.json'],
         'bayeslite.tests': [
             'dha.csv',
+            'satellites.csv',
         ],
     },
 )

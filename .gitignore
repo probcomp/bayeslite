@@ -23,3 +23,7 @@
 __pycache__/
 .cache/
 .eggs
+
+*.pyc
+*.swp
+.pytest_cache/
