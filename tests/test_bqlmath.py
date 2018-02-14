@@ -60,7 +60,7 @@ def test_math_func_one_param(name, probe):
     sql_value_error = None
     sql_type_error = None
     try:
-        with bayesdb_open(':memory') as bdb:
+        with bayesdb_open(':memory:') as bdb:
             cursor = bdb.execute(get_sql_math_call(name, probe))
             result_sql = cursor_value(cursor)
     except ValueError:
