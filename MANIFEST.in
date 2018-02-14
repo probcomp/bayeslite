@@ -115,3 +115,4 @@ include src/backends/cgpm_analyze/grammar.y
 include src/backends/cgpm_schema/grammar.y
 include tests/dha.csv
 include tests/dha_codebook.csv
+include tests/satellites.csv
