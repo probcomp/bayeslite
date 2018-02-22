@@ -563,8 +563,8 @@ def bayesdb_population_row_values(bdb, population_id, rowid):
         row = cursor.next()
     except StopIteration:
         population = bayesdb_population_table(bdb, population_id)
-        raise BQLError(bdb, 'No such row in table %s for population %d: %d'
-            % (repr(table_name), repr(population), repr(rowid)))
+        raise BQLError(bdb, 'No such row in table %s for population %s: %d'
+            % (repr(table_name), repr(population), rowid))
     try:
         cursor.next()
     except StopIteration:
@@ -573,7 +573,7 @@ def bayesdb_population_row_values(bdb, population_id, rowid):
         population = bayesdb_population_table(bdb, population_id)
         raise BQLError(bdb,
             'More than one such row in table %s for population %s: %d'
-            % (repr(table_name), repr(population), repr(rowid)))
+            % (repr(table_name), repr(population), rowid))
     return row
 
 def bayesdb_rowid_tokens(bdb):
