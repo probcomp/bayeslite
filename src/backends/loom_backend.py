@@ -839,7 +839,7 @@ class LoomBackend(BayesDB_Backend):
             FROM bayesdb_loom_row_kind_partition
             WHERE generator_id = ? AND table_rowid = ?
         ''', (generator_id, rowid))
-        return cursor_value(cursor) == 0
+        return cursor_value(cursor) > 0
 
     def _get_loom_rank(self, bdb, generator_id, colno):
         """Return the loom rank (column number) for the given colno."""
