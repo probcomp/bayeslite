@@ -813,8 +813,7 @@ class LoomBackend(BayesDB_Backend):
         if value is None:
             return value
         population_id = bayesdb_generator_population(bdb, generator_id)
-        stattype = bayesdb_variable_stattype(
-            bdb, population_id, None, colno)
+        stattype = bayesdb_variable_stattype(bdb, population_id, None, colno)
         # If nominal then return the integer code.
         if _is_nominal(stattype):
             return self._get_integer_form(bdb, generator_id, colno, value)
