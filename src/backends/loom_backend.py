@@ -473,7 +473,7 @@ class LoomBackend(BayesDB_Backend):
                 rowids = bdb.sql_execute('''
                     SELECT table_rowid, loom_rowid
                         FROM bayesdb_loom_rowid_mapping
-                ''')
+                ''').fetchall()
                 insertions = ','.join(
                     str((generator_id, modelno, rowid[0], rowid[1],
                             kind_id, partition_id))
