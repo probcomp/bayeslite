@@ -90,6 +90,17 @@ CREATE TABLE bayesdb_loom_column_ordering (
     PRIMARY KEY(generator_id, colno)
 );
 
+CREATE TABLE bayesdb_loom_rowid_mapping (
+    generator_id        INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    table_rowid         INTEGER NOT NULL,
+    loom_rowid          INTEGER NOT NULL,
+
+    PRIMARY KEY (generator_id, table_rowid)
+    UNIQUE(generator_id, table_rowid),
+    UNIQUE(generator_id, loom_rowid),
+    UNIQUE(table_rowid, loom_rowid)
+);
+
 CREATE TABLE bayesdb_loom_column_kind_partition (
     generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
     modelno         INTEGER NOT NULL,
@@ -99,12 +110,16 @@ CREATE TABLE bayesdb_loom_column_kind_partition (
 );
 
 CREATE TABLE bayesdb_loom_row_kind_partition (
-    generator_id    INTEGER NOT NULL REFERENCES bayesdb_generator(id),
-    modelno         INTEGER NOT NULL,
-    rowid           INTEGER NOT NULL,
-    kind_id         INTEGER NOT NULL,
-    partition_id    INTEGER NOT NULL,
-    PRIMARY KEY(generator_id, modelno, rowid, kind_id)
+    generator_id        INTEGER NOT NULL REFERENCES bayesdb_generator(id),
+    modelno             INTEGER NOT NULL,
+    table_rowid         INTEGER NOT NULL,
+    loom_rowid          INTEGER NOT NULL,
+    kind_id             INTEGER NOT NULL,
+    partition_id        INTEGER NOT NULL,
+    PRIMARY KEY(generator_id, modelno, table_rowid, kind_id)
+
+    FOREIGN KEY (table_rowid, loom_rowid)
+        REFERENCES bayesdb_loom_rowid_mapping(table_rowid, loom_rowid)
 );
 '''
 
@@ -189,12 +204,25 @@ class LoomBackend(BayesDB_Backend):
         # Ingest data into loom.
         schema_file = self._data_to_schema(bdb, population_id, data_by_column)
         csv_file = self._data_to_csv(bdb, headers, data)
-        loom.tasks.ingest(
-            self._get_loom_project_path(bdb, generator_id),
-            rows_csv=csv_file.name, schema=schema_file.name)
+        project_path = self._get_loom_project_path(bdb, generator_id)
+        loom.tasks.ingest(project_path, rows_csv=csv_file.name,
+            schema=schema_file.name)
 
         # Store encoding info in bdb.
         self._store_encoding_info(bdb, generator_id)
+
+        # Store rowid mapping in the bdb.
+        qt = sqlite3_quote_name(table)
+        rowids = bdb.sql_execute('SELECT oid FROM %s' % (qt,)).fetchall()
+        insertions = ','.join(
+            str((generator_id, table_rowid, loom_rowid))
+            for loom_rowid, (table_rowid,) in enumerate(rowids)
+        )
+        bdb.sql_execute('''
+            INSERT INTO bayesdb_loom_rowid_mapping
+                (generator_id, table_rowid, loom_rowid)
+                VALUES %s
+        ''' % (insertions,))
 
     def _store_encoding_info(self, bdb, generator_id):
         encoding_path = os.path.join(
@@ -335,6 +363,8 @@ class LoomBackend(BayesDB_Backend):
         return cursor_value(cursor)
 
     def drop_generator(self, bdb, generator_id):
+        self._close_query_server(bdb, generator_id)
+        self._close_preql_server(bdb, generator_id)
         self._del_cache_entry(bdb, generator_id, None)
         with bdb.savepoint():
             self.drop_models(bdb, generator_id)
@@ -354,6 +384,10 @@ class LoomBackend(BayesDB_Backend):
                 DELETE FROM bayesdb_loom_column_ordering
                 WHERE generator_id = ?
             ''', (generator_id,))
+            bdb.sql_execute('''
+                DELETE FROM bayesdb_loom_rowid_mapping
+                WHERE generator_id = ?
+            ''', (generator_id,))
 
     def drop_models(self, bdb, generator_id, modelnos=None):
         with bdb.savepoint():
@@ -367,20 +401,15 @@ class LoomBackend(BayesDB_Backend):
                 DELETE FROM bayesdb_loom_row_kind_partition
                 WHERE generator_id = ?
             ''', (generator_id,))
-            q_server = self._get_cache_entry(bdb, generator_id, 'q_server')
-            if q_server is not None:
-                q_server.close()
-            preql_server = self._get_cache_entry(
-                bdb, generator_id, 'preql_server')
-            if preql_server is not None:
-                preql_server.close()
-            self._del_cache_entry(bdb, generator_id, 'q_server')
-            self._del_cache_entry(bdb, generator_id, 'preql_server')
+            # Close the servers.
+            self._close_query_server(bdb, generator_id)
+            self._close_preql_server(bdb, generator_id)
             bdb.sql_execute('''
                 UPDATE bayesdb_loom_generator_model_info
                 SET num_models = 0
                 WHERE generator_id = ?
             ''', (generator_id,))
+            # Remove directories stored on disk.
             project_path = self._get_loom_project_path(bdb, generator_id)
             paths = loom.store.get_paths(project_path)
             if 'root' in paths:
@@ -401,20 +430,21 @@ class LoomBackend(BayesDB_Backend):
         if modelnos is not None:
             raise BQLError(bdb, 'Loom cannot analyze specific model numbers.')
 
+        # Prepare arguments for loom.tasks.infer invocation.
         num_models = (self._get_num_models(bdb, generator_id))
         iterations = max(int(iterations), 1)
         config = {'schedule': {'extra_passes': iterations}}
         project_path = self._get_loom_project_path(bdb, generator_id)
 
+        # Run inference.
         loom.tasks.infer(project_path, sample_count=num_models, config=config)
 
+        # Save the column and row partitions.
         self._store_kind_partition(bdb, generator_id, modelnos)
-        self._set_cache_entry(bdb, generator_id, 'q_server',
-            loom.query.get_server(
-                self._get_loom_project_path(bdb, generator_id)))
-        preqlServer = loom.tasks.query(
-                self._get_loom_project_path(bdb, generator_id))
-        self._set_cache_entry(bdb, generator_id, 'preql_server', preqlServer)
+
+        # Close cached query servers.
+        self._close_query_server(bdb, generator_id)
+        self._close_preql_server(bdb, generator_id)
 
     def _store_kind_partition(self, bdb, generator_id, modelnos):
         population_id = bayesdb_generator_population(bdb, generator_id)
@@ -424,7 +454,6 @@ class LoomBackend(BayesDB_Backend):
             for modelno in modelnos:
                 column_partition = self._retrieve_column_partition(
                     bdb, generator_id, modelno)
-
                 # Bulk insertion of mapping from colno to kind_id.
                 colnos = bayesdb_variable_numbers(bdb, population_id, None)
                 ranks = [self._get_loom_rank(bdb, generator_id, colno)
@@ -438,18 +467,24 @@ class LoomBackend(BayesDB_Backend):
                     (generator_id, modelno, colno, kind_id)
                     VALUES %s
                 ''' % (insertions,))
-
                 # Bulk insertion of mapping from (kind_id, rowid) to cluster_id.
                 row_partition = self._retrieve_row_partition(
                     bdb, generator_id, modelno)
+                rowids = bdb.sql_execute('''
+                    SELECT table_rowid, loom_rowid
+                        FROM bayesdb_loom_rowid_mapping
+                ''').fetchall()
                 insertions = ','.join(
-                    str((generator_id, modelno, rowid+1, kind_id, partition_id))
+                    str((generator_id, modelno, rowid[0], rowid[1],
+                            kind_id, partition_id))
                     for kind_id in row_partition
-                    for rowid, partition_id in enumerate(row_partition[kind_id]))
+                    for rowid, partition_id
+                        in zip(rowids, row_partition[kind_id]))
                 bdb.sql_execute('''
                     INSERT OR REPLACE INTO
                         bayesdb_loom_row_kind_partition
-                    (generator_id, modelno, rowid, kind_id, partition_id)
+                    (generator_id, modelno, table_rowid, loom_rowid,
+                        kind_id, partition_id)
                     VALUES %s
                 ''' % (insertions,))
 
@@ -514,6 +549,7 @@ class LoomBackend(BayesDB_Backend):
         return [c for (c,) in cursor]
 
     def _get_kind_id(self, bdb, generator_id, modelno, colno):
+        """Return kind_id (view assignment) of colno in modelno."""
         cursor = bdb.sql_execute('''
             SELECT kind_id
             FROM bayesdb_loom_column_kind_partition
@@ -524,13 +560,14 @@ class LoomBackend(BayesDB_Backend):
         return cursor_value(cursor)
 
     def _get_partition_id(self, bdb, generator_id, modelno, kind_id, rowid):
+        """Return row partition_id of given rowid, within kind_id of modelno."""
         cursor = bdb.sql_execute('''
             SELECT partition_id
             FROM bayesdb_loom_row_kind_partition
             WHERE generator_id = ?
                 AND modelno = ?
                 AND kind_id = ?
-                AND rowid = ?
+                AND table_rowid = ?
         ''', (generator_id, modelno, kind_id, rowid))
         return cursor_value(cursor)
 
@@ -548,7 +585,7 @@ class LoomBackend(BayesDB_Backend):
             str(bayesdb_variable_name(bdb, population_id, None, colno))
             for colno in colnos1
         ]
-        server = self._get_cache_entry(bdb, generator_id, 'preql_server')
+        server = self._get_preql_server(bdb, generator_id)
         target_set = server._cols_to_mask(server.encode_set(colnames0))
         query_set = server._cols_to_mask(server.encode_set(colnames1))
         mi = server._query_server.mutual_information(
@@ -581,35 +618,11 @@ class LoomBackend(BayesDB_Backend):
                         AND modelno = t1.modelno
                         AND colno = ?
                 )
-                AND t1.rowid = ?
-                AND t2.rowid = ?
+                AND t1.table_rowid = ?
+                AND t2.table_rowid = ?
         ''' % (','.join(map(str, modelnos)),), (
             generator_id, colnos[0], rowid, target_rowid))
         return [c for (c,) in cursor]
-
-    def _reorder_row(self, bdb, generator_id, row, dense=True):
-        """Reorder a row of columns according to loom's column order.
-
-        Row should be a list of (colno, value) tuples
-
-        Returns a list of (colno, value) tuples in the proper order.
-        """
-        ordered_column_labels = self._get_ordered_column_labels(
-            bdb, generator_id)
-        ordererd_column_dict = OrderedDict(
-            [(a, None) for a in ordered_column_labels])
-
-        population_id = bayesdb_generator_population(bdb, generator_id)
-        for colno, value in zip(range(1, len(row) + 1), row):
-            column_name = bayesdb_variable_name(bdb, population_id, None, colno)
-            ordererd_column_dict[column_name] = str(value)
-        if dense is False:
-            return [
-                (colno, value)
-                for (colno, value) in ordererd_column_dict.iteritems()
-                if value is not None
-            ]
-        return ordererd_column_dict.iteritems()
 
     def predictive_relevance(self, bdb, generator_id, modelnos, rowid_target,
             rowid_queries, hypotheticals, colno):
@@ -650,102 +663,126 @@ class LoomBackend(BayesDB_Backend):
             conf = 0
             return pred, conf
 
-        # Retrieve the samples. Specifying `rowid` ensures that relevant
-        # constraints are retrieved by `simulate`,
-        # so provide empty constraints.
+        # Retrieve the samples: specifying rowid suffices to ensures that
+        # relevant constraints are retrieved by simulat_joint.
         sample = self.simulate_joint(
             bdb, generator_id, modelnos, rowid, [colno], [], numsamples)
 
         # Determine the imputation strategy (mode or mean).
         population_id = bayesdb_generator_population(bdb, generator_id)
-        stattype = bayesdb_variable_stattype(
-            bdb, population_id, None, colno)
+        stattype = bayesdb_variable_stattype(bdb, population_id, None, colno)
+
+        # Run the imputation.
         if _is_nominal(stattype):
             return _impute_categorical(sample)
-        return _impute_numerical(sample)
+        else:
+            return _impute_numerical(sample)
 
     def simulate_joint(self, bdb, generator_id, modelnos, rowid, targets,
             constraints, num_samples=1, accuracy=None):
         # Retrieve the population id.
         population_id = bayesdb_generator_population(bdb, generator_id)
 
-        # If rowid exists, retrieve conditioning data from the table.
-        if rowid != bayesdb_population_fresh_row_id(bdb, generator_id):
-            row_values_raw = bayesdb_population_row_values(bdb,
-                population_id, rowid)
-            row_values = [str(a) if isinstance(a, unicode) else a
-                for a in row_values_raw]
-            row = [entry for entry in enumerate(row_values)
-                if entry[1] is not None]
-            constraints_colnos = [c[0] for c in constraints]
-            row_colnos = [r[0] for r in row]
-            if any([colno in constraints_colnos for colno in row_colnos]):
-                raise BQLError(bdb, 'Overlap between constraints and' \
-                    'target row in simulate.')
-            constraints.extend(row)
+        # Prepare list of full constraints, potentially adding data from table.
+        constraints_full = constraints
 
-        # Prepare the query row to provide to Loom.
-        row = {}
-        target_num_to_name = {}
-        for colno in targets:
-            name = bayesdb_variable_name(bdb, generator_id, None, colno)
-            target_num_to_name[colno] = name
-            row[name] = ''
-        for (colno, value) in constraints:
-            name = bayesdb_variable_name(bdb, generator_id, None, colno)
-            row[name] = value
+        # If rowid is incorporated, retrieve conditioning data from the table.
+        if self._get_is_incorporated_rowid(bdb, generator_id, rowid):
+            # Fetch population column numbers and row values.
+            colnos = bayesdb_variable_numbers(bdb, population_id, generator_id)
+            rowvals = bayesdb_population_row_values(bdb, population_id, rowid)
+            observations = [
+                (colno, rowval)
+                for colno, rowval in zip(colnos, rowvals)
+                if rowval is not None and colno not in targets
+            ]
+            # Raise error if a constraint overrides an observed cell.
+            colnos_constrained = [constraint[0] for constraint in constraints]
+            colnos_observed = [observation[0] for observation in observations]
+            if set.intersection(set(colnos_constrained), set(colnos_observed)):
+                raise BQLError(bdb, 'Overlap between constraints and'
+                    ' target row in simulate.')
+            # Update the constraints.
+            constraints_full = constraints + observations
+
+        # Store mapping from target column name to column number and stattype.
+        target_colno_to_name = {
+            colno: bayesdb_variable_name(bdb, generator_id, None, colno)
+            for colno in targets
+        }
+        target_colno_to_stattype = {
+            colno: bayesdb_variable_stattype(bdb, population_id, None, colno)
+            for colno in targets
+        }
+
+        # Construct the CSV row for targets.
+        row_targets = {target_colno_to_name[colno] : '' for colno in targets}
+        row_constraints = {
+            bayesdb_variable_name(bdb, generator_id, None, colno) : value
+            for colno, value in constraints_full
+        }
+        row = dict(itertools.chain(
+            row_targets.iteritems(), row_constraints.iteritems()))
 
         # Fetch the server.
-        server = self._get_cache_entry(bdb, generator_id, 'preql_server')
+        server = self._get_preql_server(bdb, generator_id)
 
-        # Prepare the csv header.
+        # Prepare the csv header and values.
         csv_headers, csv_values = zip(*row.iteritems())
         lower_to_upper = {str(a).lower(): str(a) for a in csv_headers}
-        csv_headers = lower_to_upper.keys()
-        csv_values = [str(a) for a in csv_values]
 
-        # Retrieve the samples from the server..
+        csv_headers_str = [str(a).lower() for a in csv_headers]
+        csv_values_str = [str(a) for a in csv_values]
+
+        # Prepare streams for the server.
         outfile = StringIO()
         writer = loom.preql.CsvWriter(outfile, returns=outfile.getvalue)
-        reader = iter([csv_headers]+[csv_values])
+        reader = iter([csv_headers_str]+[csv_values_str])
+
+        # Obtain the prediction.
         server._predict(reader, num_samples, writer, False)
-        output = writer.result()
 
-        # Parse output.
-        returned_headers = [lower_to_upper[a] for a in
-            output.strip().split('\r\n')[0].split(CSV_DELIMITER)]
-        loom_output = [zip(returned_headers, a.split(CSV_DELIMITER))
-            for a in output.strip().split('\r\n')[1:]]
-        return_list = []
-        for row in loom_output:
-            # Prepare the row.
-            row_values = []
-            row_dict = dict(row)
-            for colno in targets:
-                colname = target_num_to_name[colno]
-                value = row_dict[colname]
-                stattype = bayesdb_variable_stattype(
-                    bdb, population_id, None, colno)
-                if not _is_nominal(stattype):
-                    value = float(value)
-                row_values.append(value)
-            # Add this row to the return list.
-            return_list.append(row_values)
+        # Parse the CSV output.
+        output_csv = writer.result()
+        output_rows = output_csv.strip().split('\r\n')
 
-        return return_list
+        # Extract the header of the CSV file.
+        header = [
+            lower_to_upper[column_name]
+            for column_name in output_rows[0].split(CSV_DELIMITER)
+        ]
+
+        # Extract list of simulated rows. Each simulated row is represented
+        # as a dictionary mapping column name to its simulated value.
+        simulated_rows = [
+            dict(zip(header, row.split(CSV_DELIMITER)))
+            for row in output_rows[1:]
+        ]
+
+        # Prepare the return list of simulated_rows.
+        def _extract_simulated_value(row, colno):
+            colname = target_colno_to_name[colno]
+            stattype = target_colno_to_stattype[colno]
+            value = row[colname]
+            return value if _is_nominal(stattype) else float(value)
+
+        # Return the list of samples.
+        return [
+            [_extract_simulated_value(row, colno) for colno in targets]
+            for row in simulated_rows
+        ]
 
     def logpdf_joint(self, bdb, generator_id, modelnos, rowid, targets,
             constraints):
         population_id = bayesdb_generator_population(bdb, generator_id)
-        ordered_column_labels = self._get_ordered_column_labels(
-            bdb, generator_id)
+        ordered_column_names = self._get_ordered_column_names(bdb, generator_id)
 
-        # Pr[targets|constraints] = Pr[targest, constraints] / Pr[constraints]
+        # Pr[targets|constraints] = Pr[targets, constraints] / Pr[constraints]
         # The numerator is and_case; denominator is conditional_case.
         and_case = OrderedDict(
-            [(a, None) for a in ordered_column_labels])
+            [(a, None) for a in ordered_column_names])
         conditional_case = OrderedDict(
-            [(a, None) for a in ordered_column_labels])
+            [(a, None) for a in ordered_column_names])
 
         for (colno, value) in targets:
             column_name = bayesdb_variable_name(bdb, population_id, None, colno)
@@ -763,9 +800,9 @@ class LoomBackend(BayesDB_Backend):
         and_case = and_case.values()
         conditional_case = conditional_case.values()
 
-        q_server = self._get_cache_entry(bdb, generator_id, 'q_server')
-        and_score = q_server.score(and_case)
-        conditional_score = q_server.score(conditional_case)
+        server = self._get_query_server(bdb, generator_id)
+        and_score = server.score(and_case)
+        conditional_score = server.score(conditional_case)
         return and_score - conditional_score
 
     def _convert_to_proper_stattype(self, bdb, generator_id, colno, value):
@@ -776,8 +813,7 @@ class LoomBackend(BayesDB_Backend):
         if value is None:
             return value
         population_id = bayesdb_generator_population(bdb, generator_id)
-        stattype = bayesdb_variable_stattype(
-            bdb, population_id, None, colno)
+        stattype = bayesdb_variable_stattype(bdb, population_id, None, colno)
         # If nominal then return the integer code.
         if _is_nominal(stattype):
             return self._get_integer_form(bdb, generator_id, colno, value)
@@ -785,6 +821,7 @@ class LoomBackend(BayesDB_Backend):
         return float(value)
 
     def _get_integer_form(self, bdb, generator_id, colno, string_form):
+        """Return integer code representing the string."""
         cursor = bdb.sql_execute('''
             SELECT integer_form
             FROM bayesdb_loom_string_encoding
@@ -794,14 +831,17 @@ class LoomBackend(BayesDB_Backend):
         ''', (generator_id, colno, string_form,))
         return cursor_value(cursor)
 
-    def _get_ordered_column_labels(self, bdb, generator_id):
-        population_id = bayesdb_generator_population(bdb, generator_id)
-        return [
-            bayesdb_variable_name(bdb, population_id, None, colno)
-            for colno in self._get_order(bdb, generator_id)
-        ]
+    def _get_is_incorporated_rowid(self, bdb, generator_id, rowid):
+        """Return True iff the rowid is incorporated in the loom model."""
+        cursor = bdb.sql_execute('''
+            SELECT COUNT(*) partition_id
+            FROM bayesdb_loom_row_kind_partition
+            WHERE generator_id = ? AND table_rowid = ?
+        ''', (generator_id, rowid))
+        return cursor_value(cursor) > 0
 
     def _get_loom_rank(self, bdb, generator_id, colno):
+        """Return the loom rank (column number) for the given colno."""
         cursor = bdb.sql_execute('''
             SELECT rank
             FROM bayesdb_loom_column_ordering
@@ -810,8 +850,8 @@ class LoomBackend(BayesDB_Backend):
         ''', (generator_id, colno,))
         return cursor_value(cursor)
 
-    def _get_order(self, bdb, generator_id):
-        """Get the ordering of the columns according to loom"""
+    def _get_ordered_column_numbers(self, bdb, generator_id):
+        """Return list of columns number ordered by their loom rank."""
         cursor = bdb.sql_execute('''
             SELECT colno
             FROM bayesdb_loom_column_ordering
@@ -820,20 +860,70 @@ class LoomBackend(BayesDB_Backend):
         ''', (generator_id,))
         return [colno for (colno,) in cursor]
 
-    def _retrieve_cache(self, bdb,):
+    def _get_ordered_column_names(self, bdb, generator_id):
+        """Return list of column names ordered by their loom rank."""
+        population_id = bayesdb_generator_population(bdb, generator_id)
+        return [
+            bayesdb_variable_name(bdb, population_id, None, colno)
+            for colno in self._get_ordered_column_numbers(bdb, generator_id)
+        ]
+
+    # Cached QueryServer objects.
+
+    def _get_query_server(self, bdb, generator_id):
+        """Return instance of loom.query.QueryServer for the Loom project."""
+        server = self._get_cache_entry(bdb, generator_id, 'query_server')
+        if server is not None:
+            return server
+        project_path = self._get_loom_project_path(bdb, generator_id)
+        server = loom.query.get_server(project_path)
+        self._set_cache_entry(bdb, generator_id, 'query_server', server)
+        return server
+
+    def _close_query_server(self, bdb, generator_id):
+        """Close the QueryServer and remove it from the cache."""
+        server = self._get_cache_entry(bdb, generator_id, 'query_server')
+        if server is not None:
+            server.close()
+            self._del_cache_entry(bdb, generator_id, 'query_server')
+
+    # Cached PreQL server objects.
+
+    def _get_preql_server(self, bdb, generator_id):
+        """Return instance of loom.preql.PreQL for the Loom project."""
+        server = self._get_cache_entry(bdb, generator_id, 'preql_server')
+        if server is not None:
+            return server
+        project_path = self._get_loom_project_path(bdb, generator_id)
+        server = loom.tasks.query(project_path)
+        self._set_cache_entry(bdb, generator_id, 'preql_server', server)
+        return server
+
+    def _close_preql_server(self, bdb, generator_id):
+        """Close the PreQL server and remove it from the cache."""
+        server = self._get_cache_entry(bdb, generator_id, 'preql_server')
+        if server is not None:
+            server.close()
+            self._del_cache_entry(bdb, generator_id, 'preql_server')
+
+    # Cache management.
+
+    def _retrieve_cache(self, bdb):
+        """Fetch the cache for the given bdb object."""
         if bdb in self._cache:
             return self._cache[bdb]
         self._cache[bdb] = dict()
         return self._cache[bdb]
 
     def _set_cache_entry(self, bdb, generator_id, key, value):
+        """Set cache entry."""
         cache = self._retrieve_cache(bdb)
         if generator_id not in cache:
             cache[generator_id] = dict()
         cache[generator_id][key] = value
 
     def _get_cache_entry(self, bdb, generator_id, key):
-        # Returns None if the generator_id or key do not exist.
+        """Return cache entry, or None if generator_id or key do not exist."""
         cache = self._retrieve_cache(bdb)
         if generator_id not in cache:
             return None
@@ -842,7 +932,7 @@ class LoomBackend(BayesDB_Backend):
         return cache[generator_id][key]
 
     def _del_cache_entry(self, bdb, generator_id, key):
-        # If key is None, wipes bdb[generator_id] in its entirety.
+        """Delete cache entry, use None to clear dict for generator_id."""
         cache = self._retrieve_cache(bdb)
         if generator_id in cache:
             if key is None:
