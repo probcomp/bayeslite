@@ -52,6 +52,10 @@ def temp_file_path(suffix):
     os.remove(temp_filename)
     return temp_filename
 
+def register_loom(bdb):
+    loom_store_path = temp_file_path('.bdb')
+    loom_backend = LoomBackend(loom_store_path=loom_store_path)
+    bayeslite.bayesdb_register_backend(bdb, loom_backend)
 
 def distance(a, b):
     '''
@@ -62,38 +66,54 @@ def distance(a, b):
     b = b if isinstance(a, np.ndarray) else np.array(b)
     return abs(np.linalg.norm(a-b))
 
-def gen_gaussians_and_samples(means, sample_size, mix_ratio, seed):
+def prepare_bdb(bdb, samples, table, seed):
+    quoted_table = bayeslite.bql_quote_name(table)
+    dataframe = pd.DataFrame(data=samples)
+    read_pandas.bayesdb_read_pandas_df(bdb, 'data', dataframe, create=True)
+
+    bdb.execute('''
+        CREATE POPULATION FOR %s WITH SCHEMA (
+            GUESS STATTYPES OF (*)
+        )
+    ''' % (quoted_table,))
+    bdb.execute('CREATE GENERATOR FOR %s USING loom;' % (quoted_table,))
+    bdb.execute('INITIALIZE 4 MODELS FOR %s;' % (quoted_table,))
+    bdb.execute('ANALYZE %s FOR 100 ITERATIONS;' % (quoted_table,))
+
+def insert_row(bdb, table, x, y):
+    quoted_table = bayeslite.bql_quote_name(table)
+    query = '''INSERT INTO {table} ("0", "1") VALUES (?, ?)'''.format(table=quoted_table)
+    bdb.sql_execute(query, bindings=(x, y))
+    return bdb.sql_execute('SELECT last_insert_rowid()').next()[0]
+
+def simulate_from_rowid(bdb, table, column, rowid, limit=1000):
+    quoted_table = bayeslite.bql_quote_name(table)
+    quoted_column = bayeslite.bql_quote_name(str(column))
+    cursor = bdb.execute('SIMULATE {column} FROM {table} GIVEN rowid={rowid} LIMIT {limit}'.format(
+        column=quoted_column,
+        table=quoted_table,
+        rowid=rowid,
+        limit=limit
+    ))
+    return [float(x[0]) for x in cursor]
+
+def test_mix_ratio():
+    means = ((0,20), (20,0))
+    sample_size = 100
+    mix_ratio = [0.7, 0.3]
+    seed = 9999
+    table = 'data'
+
     sample_gaussians = axis_aligned_gaussians(means, sample_size, seed=seed)
     samples = mix(sample_gaussians, mix_ratio, seed=seed)
 
     packed_seed = struct.pack('<QQQQ', seed, seed, seed, seed)
     with bayeslite.bayesdb_open(seed=packed_seed) as bdb:
-        loom_store_path = temp_file_path('.bdb')
-        loom_backend = LoomBackend(loom_store_path=loom_store_path)
-        bayeslite.bayesdb_register_backend(bdb, loom_backend)
-
-        dataframe = pd.DataFrame(data=samples)
-        read_pandas.bayesdb_read_pandas_df(bdb, 'data', dataframe, create=True)
-
-        bdb.execute('''
-            CREATE POPULATION FOR data WITH SCHEMA (
-                GUESS STATTYPES OF (*)
-            )
-        ''')
-        bdb.execute('CREATE GENERATOR FOR data USING loom;')
-        bdb.execute('INITIALIZE 4 MODELS FOR data;')
-        bdb.execute('ANALYZE data FOR 10 ITERATIONS;')
+        register_loom(bdb)
+        prepare_bdb(bdb, samples, table, seed)
 
         cursor = bdb.execute('SIMULATE "0", "1" FROM data LIMIT ?;', (sample_size,))
         simulated_samples = [sample for sample in cursor]
-    return samples, simulated_samples
-
-def test_inference_quality():
-    means = ((0,20), (20,0)) # means of the two gaussians
-    sample_size = 100
-    mix_ratio = [0.7, 0.3]
-    seed = 9999
-    samples, simulated_samples = gen_gaussians_and_samples(means, sample_size, mix_ratio, seed)
 
     counts = collections.Counter(
         (0 if distance((x,y), means[0]) < distance((x,y), means[1]) else 1
@@ -105,3 +125,26 @@ def test_inference_quality():
     for i in range(len(means)):
         difference = abs(mix_ratio[i] - simulated_mix_ratio[i])
         assert difference < 0.1
+
+def test_simulate_y_from_partially_populated_row():
+    means = ((0,20), (20,0))
+    sample_size = 50
+    mix_ratio = [0.7, 0.3]
+    seed = 9999
+    table = 'data'
+
+    sample_gaussians = axis_aligned_gaussians(means, sample_size, seed=seed)
+    samples = mix(sample_gaussians, mix_ratio, seed=seed)
+
+    packed_seed = struct.pack('<QQQQ', seed, seed, seed, seed)
+    with bayeslite.bayesdb_open(seed=packed_seed) as bdb:
+        register_loom(bdb)
+        prepare_bdb(bdb, samples, table, seed)
+
+        rowid = insert_row(bdb, table, means[0][0], None)
+        simulated_samples = simulate_from_rowid(bdb, table, 1, rowid, limit=sample_size)
+
+    y_samples = [y for x, y in sample_gaussians[0]]
+    statistic, p_value = stats.ks_2samp(y_samples, simulated_samples)
+    assert(statistic < 0.1 or p_value > 0.01)
+
