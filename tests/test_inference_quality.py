@@ -169,4 +169,8 @@ def test_simulate_conflict():
 
         rowid = insert_row(bdb, 'data', 0, None)
         with pytest.raises(Exception):
-            bdb.execute('SIMULATE "0" FROM data GIVEN rowid=? LIMIT 1', (rowid,))
+            bdb.execute('''
+                SIMULATE "0" FROM data
+                    GIVEN rowid=?, "0"= 0, 1"=0
+                    LIMIT 1;
+            ''', (rowid,))
