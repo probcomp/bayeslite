@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
+import pytest
 import random
 import struct
 from scipy import stats
@@ -148,3 +149,24 @@ def test_simulate_y_from_partially_populated_row():
     statistic, p_value = stats.ks_2samp(y_samples, simulated_samples)
     assert(statistic < 0.1 or p_value > 0.01)
 
+def test_simulate_conflict():
+    with bayeslite.bayesdb_open() as bdb:
+        bdb.sql_execute('''
+            CREATE TABLE data (
+                '0' numeric PRIMARY KEY,
+                '1' numeric
+            );
+        ''')
+        insert_row(bdb, 'data', 1, 1)
+        bdb.execute('''
+            CREATE POPULATION FOR data WITH SCHEMA (
+                "0" NUMERICAL;
+                "1" NUMERICAL;
+            );
+        ''')
+        bdb.execute('CREATE GENERATOR FOR data USING cgpm;')
+        bdb.execute('INITIALIZE 1 MODELS FOR data;')
+
+        rowid = insert_row(bdb, 'data', 0, None)
+        with pytest.raises(Exception):
+            bdb.execute('SIMULATE "0" FROM data GIVEN rowid=? LIMIT 1', (rowid,))
