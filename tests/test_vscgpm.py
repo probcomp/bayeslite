@@ -31,7 +31,11 @@ from bayeslite.backends.cgpm_backend import CGPM_Backend
 kepler_source = """
 [define make_cgpm (lambda ()
   (do
-      ; Kepler's law.
+
+    ; Address space for inputs
+    (assume inputs (dict (list ""apogee"" (dict)) (list ""perigee"" (dict))))
+
+    ; Kepler's law.
     (assume keplers_law
       (lambda (apogee perigee)
         (let ((GM 398600.4418) (earth_radius 6378)
@@ -50,50 +54,44 @@ kepler_source = """
 
     ; Output simulators.
     (assume simulate_cluster_id
-      (mem (lambda (rowid apogee perigee)
-        (tag (atom rowid) (atom 1)
-          (get_cluster_sampler)))))
+      (mem (lambda (rowid)
+        (tag rowid ""simulate_cluster_id"" (get_cluster_sampler)))))
 
     (assume simulate_error
-      (mem (lambda (rowid apogee perigee)
-          (let ((cluster_id (simulate_cluster_id rowid apogee perigee)))
-            (tag (atom rowid) (atom 2)
-              ((get_error_sampler cluster_id)))))))
+      (mem (lambda (rowid)
+        (let ((cluster_id (simulate_cluster_id rowid)))
+            (tag rowid ""simulate_error"" ((get_error_sampler cluster_id)))))))
 
     (assume simulate_period
-      (mem (lambda (rowid apogee perigee)
-        (+ (keplers_law apogee perigee)
-           (simulate_error rowid apogee perigee)))))
+      (mem (lambda (rowid)
+        (let ((apogee (lookup (lookup inputs ""apogee"") rowid))
+              (perigee (lookup (lookup inputs ""perigee"") rowid)))
+            (+ (keplers_law apogee perigee)
+            (simulate_error rowid))))))
 
     ; Simulators.
-    (assume simulators (list simulate_cluster_id
-                             simulate_error
-                             simulate_period))))]
+    (assume outputs (list ""simulate_cluster_id""
+                          ""simulate_error""
+                          ""simulate_period""))))]
 
 ; Output observers.
 [define observe_cluster_id
-  (lambda (rowid apogee perigee value label)
-      (observe (simulate_cluster_id ,rowid ,apogee ,perigee)
-               (atom value) ,label))]
+  (lambda (rowid value label)
+      (observe (simulate_cluster_id ,rowid) (atom value) ,label))]
 
 [define observe_error
-  (lambda (rowid apogee perigee value label)
-      (observe (simulate_error ,rowid ,apogee ,perigee) value ,label))]
+  (lambda (rowid value label) (observe (simulate_error ,rowid ) value ,label))]
 
 [define observe_period
-  (lambda (rowid apogee perigee value label)
-    (let ((theoretical_period (run (sample (keplers_law ,apogee ,perigee))))
+  (lambda (rowid value label)
+    (let ((apogee (run (sample (lookup (lookup inputs ""apogee"") ,rowid))))
+          (perigee (run (sample (lookup (lookup inputs ""perigee"") ,rowid))))
+          (theoretical_period (run (sample (keplers_law ,apogee ,perigee))))
           (error (- value theoretical_period)))
-      (observe_error rowid apogee perigee error label)))]
+      (observe_error rowid error label)))]
 
 ; List of observers.
-[define observers (list observe_cluster_id
-                        observe_error
-                        observe_period)]
-
-; List of inputs.
-[define inputs (list 'apogee
-                     'perigee)]
+[define observers (list observe_cluster_id observe_error observe_period)]
 
 ; Transition operator.
 [define transition
