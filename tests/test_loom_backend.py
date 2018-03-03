@@ -177,7 +177,15 @@ def test_stattypes():
             bdb.execute('initialize 1 model for g')
             bdb.execute('analyze g for 50 iterations')
             bdb.execute('''estimate probability density of
-                nu = 50, u='a' from p''').fetchall()
+                (co=2, nu=50, u='a') by p''').fetchall()
+            bdb.execute('''estimate probability density of
+                (nu = 50, u='a') given (co=2) by p''').fetchall()
+            with pytest.raises(Exception):
+                # There seems to be an issue with encoding boolean variables
+                # in LoomBackend.simulate_joint, although using b=1 in the
+                # condition for simulate results in no error.
+                bdb.execute('''estimate probability density of
+                    (b=0) by p''').fetchall()
             bdb.execute('''simulate u, co, b, ca, cy, nu, no
                 from p limit 1''').fetchall()
             bdb.execute('drop models from g')

@@ -814,11 +814,19 @@ class LoomBackend(BayesDB_Backend):
             return value
         population_id = bayesdb_generator_population(bdb, generator_id)
         stattype = bayesdb_variable_stattype(bdb, population_id, None, colno)
-        # If nominal then return the integer code.
+        # If nominal, then return the integer code.
         if _is_nominal(stattype):
             return self._get_integer_form(bdb, generator_id, colno, value)
-        # Return the value as float.
-        return float(value)
+        # If countable, then return value as integer.
+        elif _is_countable(stattype):
+            # XXX This is going to cause a counts of 2.4 to evaluate to 2.
+            # Better than having a StopIteration error coming from Loom.
+            return int(value)
+        # If continuous, return the value as float.
+        elif _is_continuous(stattype):
+            return float(value)
+        else:
+            assert False, 'Unknown stattype'
 
     def _get_integer_form(self, bdb, generator_id, colno, string_form):
         """Return integer code representing the string."""
@@ -942,3 +950,9 @@ class LoomBackend(BayesDB_Backend):
 
 def _is_nominal(stattype):
     return casefold(stattype) in ['nominal', 'unbounded_nominal']
+
+def _is_continuous(stattype):
+    return casefold(stattype) in ['cyclic', 'numerical', 'boolean']
+
+def _is_countable(stattype):
+    return casefold(stattype) in ['counts', 'boolean']
