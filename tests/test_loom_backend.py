@@ -188,6 +188,8 @@ def test_stattypes():
                     (b=0) by p''').fetchall()
             bdb.execute('''simulate u, co, b, ca, cy, nu, no
                 from p limit 1''').fetchall()
+            bdb.execute('''simulate u, b, ca, no
+                from p given nu=3, co=2, b=1 limit 1''').fetchall()
             bdb.execute('drop models from g')
             bdb.execute('drop generator g')
             bdb.execute('drop population p')
