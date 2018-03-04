@@ -16,9 +16,15 @@
 
 import contextlib
 import itertools
+import os
+os.environ['LOOM_VERBOSITY'] = '0'
 import pytest
 
+import numpy as np
+
 from bayeslite import bayesdb_open
+from bayeslite import bayesdb_register_backend
+from bayeslite.backends.loom_backend import LoomBackend
 from bayeslite.exception import BQLError
 from bayeslite.exception import BQLParseError
 
@@ -51,6 +57,72 @@ def smoke_bdb():
 
         bdb.execute('CREATE GENERATOR m2 FOR p;')
         bdb.execute('INITIALIZE 10 MODELS FOR m2;')
+        yield bdb
+
+def flip(p):
+    """Sample binary data with probability p."""
+    return int(np.random.uniform() < p)
+
+def generate_v_structured_data(N):
+    """Generate data from v-structure graphical of binary nodes.
+
+    a ~ binary(p_a)
+    b ~ binary(p_b)
+    c ~ binary(p_c | a, b)
+
+    Graphical model:
+    (a) -> (c) <- (b)
+    """
+
+    # XXX: what is the best way to set the seed here?
+    np.random.seed(42)
+    # Define priors for parents.
+    p_a = 0.5
+    p_b = 0.5
+    # Define conditional probability table.
+    p_c_given_ab = {
+        (0, 0,) : 0.2,
+        (0, 1,) : 0.8,
+        (1, 0,) : 0.8,
+        (1, 1,) : 0.2,
+    }
+    a = [flip(p_a) for _ in range(N)]
+    b = [flip(p_b) for _ in range(N)]
+    c = [flip(p_c_given_ab[parent_config]) for parent_config in zip(a, b)]
+    return zip(a, b, c)
+
+@contextlib.contextmanager
+def bdb_for_checking_cmi(backend, iterations):
+    with bayesdb_open(':memory:') as bdb:
+        path = os.path.dirname(os.path.abspath(__file__))
+        bayesdb_register_backend(
+            bdb,
+            LoomBackend(loom_store_path= path + '/tmp/loom.store'))
+        bdb.sql_execute('CREATE TABLE t (a, b, c)')
+
+        for row in generate_v_structured_data(300):
+            bdb.sql_execute('''
+                INSERT INTO t (a, b, c) VALUES (?, ?, ?)
+            ''', row)
+
+        bdb.execute('''
+            CREATE POPULATION p FOR t WITH SCHEMA (
+                SET STATTYPES OF a, b, c TO NOMINAL;
+            )
+        ''')
+        # I am assuming that SQL formatting with `?` does only work for
+        # `bdb.sql_execute` and not for `bdb.execute`.
+        if backend == 'loom':
+            bdb.execute('CREATE GENERATOR m FOR p using loom')
+        elif backend == 'cgpm':
+            bdb.execute('CREATE GENERATOR m FOR p using cgpm')
+        else:
+            raise ValueError('Backend %s unknown' % (backend,))
+        # XXX we may want to downscale this eventually.
+        bdb.execute('INITIALIZE 10 MODELS FOR m;')
+        bdb.backends['cgpm'].set_multiprocess('on')
+        bdb.execute('ANALYZE m FOR %d ITERATIONS;' % (iterations,))
+        bdb.backends['cgpm'].set_multiprocess('off')
         yield bdb
 
 
@@ -251,3 +323,47 @@ def test_simulate_models_population_variables():
             bdb.execute('''
                 SIMULATE a, b FROM MODELS OF p LIMIT 10;
             ''')
+
+# Define a tolerance for comparing CMI values to zero.
+N_DIGITS = 2
+# Define iterations per backend.
+ITERATIONS_PER_BACKEND = {'loom': 50, 'cgpm': 100}
+# Which backends do we want to test?
+BACKENDS = ['loom']
+
+# XXX: for normal unit tests, I'd have one function per assert here. But since
+# this is slow. I am going to wrap all three asserts in one test.
+@pytest.mark.parametrize('backend', BACKENDS)
+def test_assess_cmi_independent_columns(backend):
+    """Assess whether the correct indepencies hold."""
+    with bdb_for_checking_cmi(backend, ITERATIONS_PER_BACKEND[backend]) as bdb:
+        # Checking whether there is near-zero MI between parents.
+        bql_mi_parents = '''
+            ESTIMATE
+                MUTUAL INFORMATION OF a WITH b USING 100 SAMPLES
+            BY p
+            MODELED BY m
+        '''
+        result_mi_parents = bdb.execute(bql_mi_parents).fetchall()[0]
+        # Test independence of parantes
+        assert np.isclose(result_mi_parents, 0, atol=10**-N_DIGITS)
+        # Assess whether conditioning on child-value breaks independence.
+        bql_cond_mi = '''
+            ESTIMATE
+                MUTUAL INFORMATION OF a WITH b GIVEN (c = 0)
+                    USING 100 SAMPLES
+            BY p;
+        '''
+        result_cond_mi = bdb.execute(bql_cond_mi).fetchall()[0]
+        # Test conditional dependence.
+        assert not np.isclose(result_cond_mi, 0, atol=10**-N_DIGITS)
+        # Assess whether conditioning on the marginal child breaks independence
+        bql_cond_mi_margin = '''
+            ESTIMATE
+                MUTUAL INFORMATION OF a WITH b GIVEN (c)
+                    USING 100 SAMPLES
+            BY p;
+        '''
+        result_cond_mi_marginal = bdb.execute(bql_cond_mi_margin).fetchall()[0]
+        # Test marginal conditional dependence.
+        assert not np.isclose(result_cond_mi_marginal, 0, atol=10**-N_DIGITS)
