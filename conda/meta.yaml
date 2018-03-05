@@ -28,8 +28,8 @@ requirements:
 test:
   requires:
     - apsw
-    - cgpm 2018.02.15
-    - crosscat 2017.12.05
+    - cgpm
+    - crosscat
     - loom 0.2.10
     - pandas 0.18.*
     - pytest 2.8.*
