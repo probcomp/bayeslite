@@ -1,5 +1,6 @@
 language: python
 dist: trusty
+sudo: required
 env:
   global:
     - PACKAGE_NAME=bayeslite
