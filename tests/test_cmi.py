@@ -424,8 +424,9 @@ def test_assess_cmi_independent_columns__ci_slow(backend, dataseed):
             MODELED BY m
         '''
         result_mi_parents = bdb.execute(bql_mi_parents).fetchall()[0]
-        # Test independence of parantes
+        # Test independence of parents
         assert np.isclose(result_mi_parents, 0, atol=10**-N_DIGITS)
+
         # Assess whether conditioning on child-value breaks independence.
         bql_cond_mi = '''
             ESTIMATE
