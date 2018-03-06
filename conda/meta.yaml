@@ -35,7 +35,7 @@ test:
     - pytest 2.8.*
     - python 2.7.*
   commands:
-    - py.test -vrf --pyargs bayeslite
+    - py.test -vrf --pyargs bayeslite -k "not __ci_"
 
 about:
   home: https://github.com/probcomp/bayeslite
