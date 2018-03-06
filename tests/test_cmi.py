@@ -59,11 +59,50 @@ def smoke_bdb():
         bdb.execute('INITIALIZE 10 MODELS FOR m2;')
         yield bdb
 
+@contextlib.contextmanager
+def smoke_loom():
+    with bayesdb_open(':memory:') as bdb:
+        path = os.path.dirname(os.path.abspath(__file__))
+        bayesdb_register_backend(
+            bdb,
+            LoomBackend(loom_store_path= path + '/tmp/loom.store'))
+        bdb.sql_execute('CREATE TABLE t (a, b, c, d, e)')
+
+        for a, b, c, d, e in itertools.product(*([range(2)]*4+[['x','y']])):
+            # XXX Insert synthetic data generator here.
+            bdb.sql_execute('''
+                INSERT INTO t (a, b, c, d, e) VALUES (?, ?, ?, ?, ?)
+            ''', (a, b, c, d, e))
+
+        bdb.execute('''
+            CREATE POPULATION p FOR t WITH SCHEMA (
+                SET STATTYPES OF a, b, c, d TO NUMERICAL;
+                SET STATTYPES OF e TO NOMINAL
+            )
+        ''')
+
+        bdb.execute('CREATE GENERATOR m FOR p using loom;')
+        bdb.execute('INITIALIZE 1 MODELS FOR m;')
+
+        yield bdb
+
+### Helpers for data-generation for the context for quality testing.
 def flip(p):
     """Sample binary data with probability p."""
     return int(np.random.uniform() < p)
 
-def generate_v_structured_data(N):
+# Define priors for parents.
+P_A = 0.5
+P_B = 0.5
+# Define conditional probability table.
+P_C_GIVEN_AB = {
+    (0, 0,) : 0.1,
+    (0, 1,) : 0.8,
+    (1, 0,) : 0.5,
+    (1, 1,) : 0.2,
+}
+
+def generate_v_structured_data(N, seed):
     """Generate data from v-structure graphical of binary nodes.
 
     a ~ binary(p_a)
@@ -73,26 +112,19 @@ def generate_v_structured_data(N):
     Graphical model:
     (a) -> (c) <- (b)
     """
+    p_a = P_A
+    p_b = P_B
+    p_c_given_ab = P_C_GIVEN_AB
 
     # XXX: what is the best way to set the seed here?
-    np.random.seed(42)
-    # Define priors for parents.
-    p_a = 0.5
-    p_b = 0.5
-    # Define conditional probability table.
-    p_c_given_ab = {
-        (0, 0,) : 0.2,
-        (0, 1,) : 0.8,
-        (1, 0,) : 0.8,
-        (1, 1,) : 0.2,
-    }
+    np.random.seed(seed)
     a = [flip(p_a) for _ in range(N)]
     b = [flip(p_b) for _ in range(N)]
     c = [flip(p_c_given_ab[parent_config]) for parent_config in zip(a, b)]
     return zip(a, b, c)
 
 @contextlib.contextmanager
-def bdb_for_checking_cmi(backend, iterations):
+def bdb_for_checking_cmi(backend, iterations, dataseed=42):
     with bayesdb_open(':memory:') as bdb:
         path = os.path.dirname(os.path.abspath(__file__))
         bayesdb_register_backend(
@@ -100,7 +132,7 @@ def bdb_for_checking_cmi(backend, iterations):
             LoomBackend(loom_store_path= path + '/tmp/loom.store'))
         bdb.sql_execute('CREATE TABLE t (a, b, c)')
 
-        for row in generate_v_structured_data(300):
+        for row in generate_v_structured_data(1000, dataseed):
             bdb.sql_execute('''
                 INSERT INTO t (a, b, c) VALUES (?, ?, ?)
             ''', row)
@@ -324,19 +356,66 @@ def test_simulate_models_population_variables():
                 SIMULATE a, b FROM MODELS OF p LIMIT 10;
             ''')
 
+def test_smoke_loom_mi():
+    """Smoke test MI with Loom."""
+    with smoke_loom() as bdb:
+        # Checking whether there is near-zero MI between parents.
+        bql = '''
+            ESTIMATE
+                MUTUAL INFORMATION OF a WITH b USING 2 SAMPLES
+            BY p
+            MODELED BY m
+        '''
+        result = bdb.execute(bql).fetchall()
+        assert len(result) == 1
+
+def test_smoke_loom_conditional_mi():
+    """Smoke test CMI with Loom."""
+    with smoke_loom() as bdb:
+        # Checking whether there is near-zero MI between parents.
+        bql = '''
+            ESTIMATE
+                MUTUAL INFORMATION OF a WITH b GIVEN (c = 0)
+                    USING 2 SAMPLES
+            BY p;
+        '''
+        result = bdb.execute(bql).fetchall()
+        assert len(result) == 1
+
+
+def test_smoke_loom_marginalizing_conditional_mi():
+    """Smoke test marginal CMI with Loom."""
+    with smoke_loom() as bdb:
+        # Checking whether there is near-zero MI between parents.
+        bql = '''
+            ESTIMATE
+                MUTUAL INFORMATION OF a WITH b GIVEN (c)
+                    USING 2 SAMPLES
+            BY p;
+        '''
+        result = bdb.execute(bql).fetchall()
+        assert len(result) == 1
+
 # Define a tolerance for comparing CMI values to zero.
 N_DIGITS = 2
 # Define iterations per backend.
 ITERATIONS_PER_BACKEND = {'loom': 50, 'cgpm': 100}
 # Which backends do we want to test?
-BACKENDS = ['loom']
+BACKENDS = [
+    'loom',
+    # Commenting out cgpm because it is too slow to run on the current config.
+    #'cgpm'
+]
 
 # XXX: for normal unit tests, I'd have one function per assert here. But since
 # this is slow. I am going to wrap all three asserts in one test.
 @pytest.mark.parametrize('backend', BACKENDS)
-def test_assess_cmi_independent_columns(backend):
+@pytest.mark.parametrize('dataseed', [1, 2])
+def test_assess_cmi_independent_columns__ci_slow(backend, dataseed):
     """Assess whether the correct indepencies hold."""
-    with bdb_for_checking_cmi(backend, ITERATIONS_PER_BACKEND[backend]) as bdb:
+    with bdb_for_checking_cmi(
+            backend, ITERATIONS_PER_BACKEND[backend], dataseed=dataseed
+        ) as bdb:
         # Checking whether there is near-zero MI between parents.
         bql_mi_parents = '''
             ESTIMATE
@@ -357,6 +436,7 @@ def test_assess_cmi_independent_columns(backend):
         result_cond_mi = bdb.execute(bql_cond_mi).fetchall()[0]
         # Test conditional dependence.
         assert not np.isclose(result_cond_mi, 0, atol=10**-N_DIGITS)
+
         # Assess whether conditioning on the marginal child breaks independence
         bql_cond_mi_margin = '''
             ESTIMATE
