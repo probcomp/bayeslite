@@ -27,7 +27,7 @@ from bayeslite import bayesdb_register_backend
 from bayeslite.backends.loom_backend import LoomBackend
 from bayeslite.exception import BQLError
 from bayeslite.exception import BQLParseError
-
+from stochastic import stochastic
 
 '''This test provides coverage for ESTIMATE and SIMULATE of conditional mutual
 information queries for univariate and multivariate targets and conditioning
@@ -86,11 +86,6 @@ def smoke_loom():
 
         yield bdb
 
-### Helpers for data-generation for the context for quality testing.
-def flip(p):
-    """Sample binary data with probability p."""
-    return int(np.random.uniform() < p)
-
 # Define priors for parents.
 P_A = 0.5
 P_B = 0.5
@@ -102,7 +97,7 @@ P_C_GIVEN_AB = {
     (1, 1,) : 0.2,
 }
 
-def generate_v_structured_data(N, seed):
+def generate_v_structured_data(N, np_prng):
     """Generate data from v-structure graphical of binary nodes.
 
     a ~ binary(p_a)
@@ -116,23 +111,27 @@ def generate_v_structured_data(N, seed):
     p_b = P_B
     p_c_given_ab = P_C_GIVEN_AB
 
-    # XXX: what is the best way to set the seed here?
-    np.random.seed(seed)
+
+    def flip(p):
+        """Sample binary data with probability p."""
+        return int(np_prng.uniform() < p)
     a = [flip(p_a) for _ in range(N)]
     b = [flip(p_b) for _ in range(N)]
-    c = [flip(p_c_given_ab[parent_config]) for parent_config in zip(a, b)]
+    c = [
+        flip(p_c_given_ab[parent_config])
+        for parent_config in zip(a, b)
+    ]
     return zip(a, b, c)
 
 @contextlib.contextmanager
-def bdb_for_checking_cmi(backend, iterations, dataseed=42):
+def bdb_for_checking_cmi(backend, iterations):
     with bayesdb_open(':memory:') as bdb:
         path = os.path.dirname(os.path.abspath(__file__))
         bayesdb_register_backend(
             bdb,
             LoomBackend(loom_store_path= path + '/tmp/loom.store'))
         bdb.sql_execute('CREATE TABLE t (a, b, c)')
-
-        for row in generate_v_structured_data(1000, dataseed):
+        for row in generate_v_structured_data(1000, bdb.np_prng):
             bdb.sql_execute('''
                 INSERT INTO t (a, b, c) VALUES (?, ?, ?)
             ''', row)
@@ -398,24 +397,11 @@ def test_smoke_loom_marginalizing_conditional_mi():
 
 # Define a tolerance for comparing CMI values to zero.
 N_DIGITS = 2
-# Define iterations per backend.
-ITERATIONS_PER_BACKEND = {'loom': 50, 'cgpm': 100}
-# Which backends do we want to test?
-BACKENDS = [
-    'loom',
-    # Commenting out cgpm because it is too slow to run on the current config.
-    #'cgpm'
-]
 
-# XXX: for normal unit tests, I'd have one function per assert here. But since
-# this is slow. I am going to wrap all three asserts in one test.
-@pytest.mark.parametrize('backend', BACKENDS)
-@pytest.mark.parametrize('dataseed', [1, 2])
-def test_assess_cmi_independent_columns__ci_slow(backend, dataseed):
+@stochastic(max_runs=4, min_passes=3)
+def test_assess_cmi_independent_columns__ci_slow(seed):
     """Assess whether the correct indepencies hold."""
-    with bdb_for_checking_cmi(
-            backend, ITERATIONS_PER_BACKEND[backend], dataseed=dataseed
-        ) as bdb:
+    with bdb_for_checking_cmi('loom', 50) as bdb:
         # Checking whether there is near-zero MI between parents.
         bql_mi_parents = '''
             ESTIMATE
