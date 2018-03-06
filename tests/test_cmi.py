@@ -28,6 +28,8 @@ from bayeslite.backends.loom_backend import LoomBackend
 from bayeslite.exception import BQLError
 from bayeslite.exception import BQLParseError
 from stochastic import stochastic
+from test_loom_backend import tempdir
+
 
 '''This test provides coverage for ESTIMATE and SIMULATE of conditional mutual
 information queries for univariate and multivariate targets and conditioning
@@ -61,30 +63,31 @@ def smoke_bdb():
 
 @contextlib.contextmanager
 def smoke_loom():
-    with bayesdb_open(':memory:') as bdb:
-        path = os.path.dirname(os.path.abspath(__file__))
-        bayesdb_register_backend(
-            bdb,
-            LoomBackend(loom_store_path= path + '/tmp/loom.store'))
-        bdb.sql_execute('CREATE TABLE t (a, b, c, d, e)')
-
-        for a, b, c, d, e in itertools.product(*([range(2)]*4+[['x','y']])):
-            # XXX Insert synthetic data generator here.
-            bdb.sql_execute('''
-                INSERT INTO t (a, b, c, d, e) VALUES (?, ?, ?, ?, ?)
-            ''', (a, b, c, d, e))
-
-        bdb.execute('''
-            CREATE POPULATION p FOR t WITH SCHEMA (
-                SET STATTYPES OF a, b, c, d TO NUMERICAL;
-                SET STATTYPES OF e TO NOMINAL
+    with tempdir('bayeslite-loom') as loom_store_path:
+        with bayesdb_open(':memory:') as bdb:
+            bayesdb_register_backend(
+                bdb,
+                LoomBackend(loom_store_path=loom_store_path)
             )
-        ''')
+            bdb.sql_execute('CREATE TABLE t (a, b, c, d, e)')
 
-        bdb.execute('CREATE GENERATOR m FOR p using loom;')
-        bdb.execute('INITIALIZE 1 MODELS FOR m;')
+            for a, b, c, d, e in itertools.product(*([range(2)]*4+[['x','y']])):
+                # XXX Insert synthetic data generator here.
+                bdb.sql_execute('''
+                    INSERT INTO t (a, b, c, d, e) VALUES (?, ?, ?, ?, ?)
+                ''', (a, b, c, d, e))
 
-        yield bdb
+            bdb.execute('''
+                CREATE POPULATION p FOR t WITH SCHEMA (
+                    SET STATTYPES OF a, b, c, d TO NUMERICAL;
+                    SET STATTYPES OF e TO NOMINAL
+                )
+            ''')
+
+            bdb.execute('CREATE GENERATOR m FOR p using loom;')
+            bdb.execute('INITIALIZE 1 MODELS FOR m;')
+
+            yield bdb
 
 # Define priors for parents.
 P_A = 0.5
@@ -125,36 +128,37 @@ def generate_v_structured_data(N, np_prng):
 
 @contextlib.contextmanager
 def bdb_for_checking_cmi(backend, iterations):
-    with bayesdb_open(':memory:') as bdb:
-        path = os.path.dirname(os.path.abspath(__file__))
-        bayesdb_register_backend(
-            bdb,
-            LoomBackend(loom_store_path= path + '/tmp/loom.store'))
-        bdb.sql_execute('CREATE TABLE t (a, b, c)')
-        for row in generate_v_structured_data(1000, bdb.np_prng):
-            bdb.sql_execute('''
-                INSERT INTO t (a, b, c) VALUES (?, ?, ?)
-            ''', row)
-
-        bdb.execute('''
-            CREATE POPULATION p FOR t WITH SCHEMA (
-                SET STATTYPES OF a, b, c TO NOMINAL;
+    with tempdir('bayeslite-loom') as loom_store_path:
+        with bayesdb_open(':memory:') as bdb:
+            bayesdb_register_backend(
+                bdb,
+                LoomBackend(loom_store_path=loom_store_path)
             )
-        ''')
-        # I am assuming that SQL formatting with `?` does only work for
-        # `bdb.sql_execute` and not for `bdb.execute`.
-        if backend == 'loom':
-            bdb.execute('CREATE GENERATOR m FOR p using loom')
-        elif backend == 'cgpm':
-            bdb.execute('CREATE GENERATOR m FOR p using cgpm')
-        else:
-            raise ValueError('Backend %s unknown' % (backend,))
-        # XXX we may want to downscale this eventually.
-        bdb.execute('INITIALIZE 10 MODELS FOR m;')
-        bdb.backends['cgpm'].set_multiprocess('on')
-        bdb.execute('ANALYZE m FOR %d ITERATIONS;' % (iterations,))
-        bdb.backends['cgpm'].set_multiprocess('off')
-        yield bdb
+            bdb.sql_execute('CREATE TABLE t (a, b, c)')
+            for row in generate_v_structured_data(1000, bdb.np_prng):
+                bdb.sql_execute('''
+                    INSERT INTO t (a, b, c) VALUES (?, ?, ?)
+                ''', row)
+
+            bdb.execute('''
+                CREATE POPULATION p FOR t WITH SCHEMA (
+                    SET STATTYPES OF a, b, c TO NOMINAL;
+                )
+            ''')
+            # I am assuming that SQL formatting with `?` does only work for
+            # `bdb.sql_execute` and not for `bdb.execute`.
+            if backend == 'loom':
+                bdb.execute('CREATE GENERATOR m FOR p using loom')
+            elif backend == 'cgpm':
+                bdb.execute('CREATE GENERATOR m FOR p using cgpm')
+            else:
+                raise ValueError('Backend %s unknown' % (backend,))
+            # XXX we may want to downscale this eventually.
+            bdb.execute('INITIALIZE 10 MODELS FOR m;')
+            bdb.backends['cgpm'].set_multiprocess('on')
+            bdb.execute('ANALYZE m FOR %d ITERATIONS;' % (iterations,))
+            bdb.backends['cgpm'].set_multiprocess('off')
+            yield bdb
 
 
 def test_estimate_cmi_basic__ci_slow():
