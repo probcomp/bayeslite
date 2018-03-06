@@ -145,8 +145,8 @@ def bdb_for_checking_cmi(backend, iterations):
                     SET STATTYPES OF a, b, c TO NOMINAL;
                 )
             ''')
-            # I am assuming that SQL formatting with `?` does only work for
-            # `bdb.sql_execute` and not for `bdb.execute`.
+            # The code below assumes that SQL formatting with `?` only works
+            # for `bdb.sql_execute` and not for `bdb.execute`.
             if backend == 'loom':
                 bdb.execute('CREATE GENERATOR m FOR p using loom')
             elif backend == 'cgpm':
