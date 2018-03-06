@@ -35,7 +35,7 @@ test:
     - pytest 2.8.*
     - python 2.7.*
   commands:
-    - py.test --pastebin=all --tb=long --pyargs bayeslite
+    - py.test -vrf --pyargs bayeslite
 
 about:
   home: https://github.com/probcomp/bayeslite
