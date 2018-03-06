@@ -728,16 +728,13 @@ class LoomBackend(BayesDB_Backend):
         server = self._get_preql_server(bdb, generator_id)
 
         # Prepare the csv header and values.
-        csv_headers, csv_values = zip(*row.iteritems())
-        lower_to_upper = {str(a).lower(): str(a) for a in csv_headers}
-
-        csv_headers_str = [str(a).lower() for a in csv_headers]
-        csv_values_str = [str(a) for a in csv_values]
+        csv_headers = map(str, row.iterkeys())
+        csv_values = map(str, row.itervalues())
 
         # Prepare streams for the server.
         outfile = StringIO()
         writer = loom.preql.CsvWriter(outfile, returns=outfile.getvalue)
-        reader = iter([csv_headers_str]+[csv_values_str])
+        reader = iter([csv_headers]+[csv_values])
 
         # Obtain the prediction.
         server._predict(reader, num_samples, writer, False)
@@ -747,10 +744,7 @@ class LoomBackend(BayesDB_Backend):
         output_rows = output_csv.strip().split('\r\n')
 
         # Extract the header of the CSV file.
-        header = [
-            lower_to_upper[column_name]
-            for column_name in output_rows[0].split(CSV_DELIMITER)
-        ]
+        header = output_rows[0].split(CSV_DELIMITER)
 
         # Extract list of simulated rows. Each simulated row is represented
         # as a dictionary mapping column name to its simulated value.
