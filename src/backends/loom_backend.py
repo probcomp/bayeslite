@@ -31,7 +31,6 @@ from StringIO import StringIO
 from collections import Counter
 from collections import OrderedDict
 from datetime import datetime
-import numpy as np
 
 import loom.tasks
 
@@ -52,6 +51,7 @@ from bayeslite.backend import BayesDB_Backend
 from bayeslite.backend import bayesdb_backend_version
 
 from bayeslite.exception import BQLError
+from bayeslite.stats import arithmetic_mean
 from bayeslite.sqlite3_util import sqlite3_quote_name
 
 from bayeslite.util import casefold
@@ -678,7 +678,7 @@ class LoomBackend(BayesDB_Backend):
             for conditioning_row_loom_format in conditioning_rows_loom_format
         ]
         # Output requires an iterable.
-        return [np.mean(mi_estimates)]
+        return [arithmetic_mean(mi_estimates)]
 
     def row_similarity(self, bdb, generator_id, modelnos, rowid, target_rowid,
             colnos):
