@@ -677,7 +677,7 @@ class LoomBackend(BayesDB_Backend):
                 conditioning_row=conditioning_row_loom_format).mean
             for conditioning_row_loom_format in conditioning_rows_loom_format
         ]
-        # Output requires and iterable.
+        # Output requires an iterable.
         return [np.mean(mi_estimates)]
 
     def row_similarity(self, bdb, generator_id, modelnos, rowid, target_rowid,
