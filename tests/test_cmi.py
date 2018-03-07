@@ -16,8 +16,6 @@
 
 import contextlib
 import itertools
-import os
-os.environ['LOOM_VERBOSITY'] = '0'
 import pytest
 
 from bayeslite import bayesdb_open
