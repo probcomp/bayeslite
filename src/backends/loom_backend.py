@@ -587,22 +587,16 @@ class LoomBackend(BayesDB_Backend):
                 bayesdb_variable_name(bdb, generator_id, None, colno) : value
                 for colno, value in constraints
             }
-            # XXX: I am sure that there is a more pythonic way to do this.
+            # XXX: there should be a more pythonic way to do this.
             csv_headers = row_constraints.keys()
             csv_values  = row_constraints.values()
 
             # Copy-pasta from simulate_joint.
             csv_headers_str = [str(a).lower() for a in csv_headers]
             csv_values_str  = [str(a) for a in csv_values]
-            lower_to_upper = {str(a).lower(): str(a) for a in csv_headers_str}
-            # XXX: again, copy-pasta. Isn't this just csv_headers?
-            header = [
-                lower_to_upper[column_name]
-                for column_name in csv_headers_str
-            ]
             conditioning_row_loom_format = server.encode_row(
                 csv_values_str,
-                header
+                csv_headers_str
             )
         else:
             conditioning_row_loom_format = None
