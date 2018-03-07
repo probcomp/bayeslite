@@ -20,8 +20,6 @@ import os
 os.environ['LOOM_VERBOSITY'] = '0'
 import pytest
 
-import numpy as np
-
 from bayeslite import bayesdb_open
 from bayeslite import bayesdb_register_backend
 from bayeslite.backends.loom_backend import LoomBackend
@@ -29,6 +27,7 @@ from bayeslite.exception import BQLError
 from bayeslite.exception import BQLParseError
 from stochastic import stochastic
 from test_loom_backend import tempdir
+from test_stats import abserr
 
 
 '''This test provides coverage for ESTIMATE and SIMULATE of conditional mutual
@@ -151,13 +150,14 @@ def bdb_for_checking_cmi(backend, iterations):
                 bdb.execute('CREATE GENERATOR m FOR p using loom')
             elif backend == 'cgpm':
                 bdb.execute('CREATE GENERATOR m FOR p using cgpm')
+                bdb.backends['cgpm'].set_multiprocess('on')
             else:
                 raise ValueError('Backend %s unknown' % (backend,))
             # XXX we may want to downscale this eventually.
             bdb.execute('INITIALIZE 10 MODELS FOR m;')
-            bdb.backends['cgpm'].set_multiprocess('on')
             bdb.execute('ANALYZE m FOR %d ITERATIONS;' % (iterations,))
-            bdb.backends['cgpm'].set_multiprocess('off')
+            if backend == 'cgpm':
+                bdb.backends['cgpm'].set_multiprocess('off')
             yield bdb
 
 
@@ -413,9 +413,9 @@ def test_assess_cmi_independent_columns__ci_slow(seed):
             BY p
             MODELED BY m
         '''
-        result_mi_parents = bdb.execute(bql_mi_parents).fetchall()[0]
+        result_mi_parents = bdb.execute(bql_mi_parents).fetchall()[0][0]
         # Test independence of parents
-        assert np.isclose(result_mi_parents, 0, atol=10**-N_DIGITS)
+        assert abserr(0., result_mi_parents) <  10**-N_DIGITS
 
         # Assess whether conditioning on child-value breaks independence.
         bql_cond_mi = '''
@@ -424,9 +424,9 @@ def test_assess_cmi_independent_columns__ci_slow(seed):
                     USING 100 SAMPLES
             BY p;
         '''
-        result_cond_mi = bdb.execute(bql_cond_mi).fetchall()[0]
+        result_cond_mi = bdb.execute(bql_cond_mi).fetchall()[0][0]
         # Test conditional dependence.
-        assert not np.isclose(result_cond_mi, 0, atol=10**-N_DIGITS)
+        assert abserr(0., result_cond_mi) >  10**-N_DIGITS
 
         # Assess whether conditioning on the marginal child breaks independence
         bql_cond_mi_margin = '''
@@ -435,6 +435,8 @@ def test_assess_cmi_independent_columns__ci_slow(seed):
                     USING 100 SAMPLES
             BY p;
         '''
-        result_cond_mi_marginal = bdb.execute(bql_cond_mi_margin).fetchall()[0]
+        result_cond_mi_marginal = bdb.execute(
+            bql_cond_mi_margin
+        ).fetchall()[0][0]
         # Test marginal conditional dependence.
-        assert not np.isclose(result_cond_mi_marginal, 0, atol=10**-N_DIGITS)
+        assert abserr(0., result_cond_mi_marginal) >  10**-N_DIGITS
