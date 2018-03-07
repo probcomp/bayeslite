@@ -576,7 +576,9 @@ class LoomBackend(BayesDB_Backend):
             server):
         """For a given tuple of constraints, return the conditioning row in loom
         style."""
-        if constraints:
+        if not constraints:
+            return None
+        else:
             row_constraints = {
                 bayesdb_variable_name(bdb, generator_id, None, colno) : value
                 for colno, value in constraints
@@ -588,11 +590,7 @@ class LoomBackend(BayesDB_Backend):
             # Copy-pasta from simulate_joint.
             csv_headers_str = [str(a).lower() for a in csv_headers]
             csv_values_str  = [str(a) for a in csv_values]
-            conditioning_row_loom_format = server.encode_row(csv_values_str,
-                csv_headers_str)
-        else:
-            conditioning_row_loom_format = None
-        return conditioning_row_loom_format
+            return server.encode_row(csv_values_str, csv_headers_str)
 
     def _marginalize_constraints(self, constraints):
         """Parse constraints, decide which are targets for marginalization."""
