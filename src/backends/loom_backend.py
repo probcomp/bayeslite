@@ -574,8 +574,7 @@ class LoomBackend(BayesDB_Backend):
 
     def _get_constraint_row(self, constraints, bdb, generator_id, population_id,
             server):
-        """For a given tuple of constraints, return the conditioning row in loom
-        style."""
+        """For a tuple of constraints, return a conditioning row loom style."""
         if not constraints:
             return None
         else:
