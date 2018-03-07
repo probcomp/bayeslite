@@ -86,17 +86,6 @@ def smoke_loom():
 
             yield bdb
 
-# Define priors for parents.
-P_A = 0.5
-P_B = 0.5
-# Define conditional probability table.
-P_C_GIVEN_AB = {
-    (0, 0,) : 0.1,
-    (0, 1,) : 0.8,
-    (1, 0,) : 0.5,
-    (1, 1,) : 0.2,
-}
-
 def generate_v_structured_data(N, np_prng):
     """Generate data from v-structure graphical of binary nodes.
 
@@ -107,11 +96,16 @@ def generate_v_structured_data(N, np_prng):
     Graphical model:
     (a) -> (c) <- (b)
     """
-    p_a = P_A
-    p_b = P_B
-    p_c_given_ab = P_C_GIVEN_AB
-
-
+    # Define priors for parents.
+    p_a = 0.5
+    p_b = 0.5
+    # Define conditional probability table.
+    p_c_given_ab = {
+        (0, 0,) : 0.1,
+        (0, 1,) : 0.8,
+        (1, 0,) : 0.5,
+        (1, 1,) : 0.2,
+    }
     def flip(p):
         """Sample binary data with probability p."""
         return int(np_prng.uniform() < p)
