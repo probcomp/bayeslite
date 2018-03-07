@@ -596,13 +596,14 @@ class LoomBackend(BayesDB_Backend):
 
     def _marginalize_constraints(self, constraints):
         """Parse constraints, decide which are targets for marginalization."""
-        targets = []
-        fixed_constraints = []
-        for constraint in constraints:
-            if constraint[1] is None:
-                targets.append(constraint[0])
-            else:
-                fixed_constraints.append(constraint)
+        targets = [
+            constraint[0] for constraint in constraints
+            if constraint[1] is None
+        ]
+        fixed_constraints = [
+            constraint for constraint in constraints
+            if constraint[1] is not None
+        ]
         return targets, fixed_constraints
 
     def _simulate_constraints(self, bdb, generator_id, modelnos, constraints,
