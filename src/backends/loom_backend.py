@@ -663,7 +663,6 @@ class LoomBackend(BayesDB_Backend):
             conditioning_rows_loom_format = self._get_constraint_rows(
                 constraints, bdb, generator_id, population_id, modelnos, server,
                 inner_numsamples)
-
         else: # Otherwise, no marginalization is needed.
             conditioning_rows_loom_format = [
                 self._get_constraint_row(constraints, bdb, generator_id,
