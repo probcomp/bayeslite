@@ -39,7 +39,6 @@ from loom.cFormat import assignment_stream_load
 
 from bayeslite.core import bayesdb_generator_name
 from bayeslite.core import bayesdb_generator_population
-from bayeslite.core import bayesdb_population_fresh_row_id
 from bayeslite.core import bayesdb_population_row_values
 from bayeslite.core import bayesdb_population_table
 from bayeslite.core import bayesdb_table_column_number
@@ -51,8 +50,8 @@ from bayeslite.backend import BayesDB_Backend
 from bayeslite.backend import bayesdb_backend_version
 
 from bayeslite.exception import BQLError
-from bayeslite.stats import arithmetic_mean
 from bayeslite.sqlite3_util import sqlite3_quote_name
+from bayeslite.stats import arithmetic_mean
 
 from bayeslite.util import casefold
 from bayeslite.util import cursor_row
