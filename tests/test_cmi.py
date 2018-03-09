@@ -20,7 +20,6 @@ import pytest
 
 from bayeslite import bayesdb_open
 from bayeslite import bayesdb_register_backend
-from bayeslite.backends.loom_backend import LoomBackend
 from bayeslite.exception import BQLError
 from bayeslite.exception import BQLParseError
 
@@ -63,10 +62,12 @@ def smoke_bdb():
 def smoke_loom():
     with tempdir('bayeslite-loom') as loom_store_path:
         with bayesdb_open(':memory:') as bdb:
+            try:
+                from bayeslite.backends.loom_backend import LoomBackend
+            except ImportError:
+                pytest.skip('Failed to import Loom.')
             bayesdb_register_backend(
-                bdb,
-                LoomBackend(loom_store_path=loom_store_path)
-            )
+                bdb, LoomBackend(loom_store_path=loom_store_path))
             bdb.sql_execute('CREATE TABLE t (a, b, c, d, e)')
 
             for a, b, c, d, e in itertools.product(*([range(2)]*4+[['x','y']])):
@@ -116,10 +117,6 @@ def generate_v_structured_data(N, np_prng):
 def bdb_for_checking_cmi(backend, iterations, seed):
     with tempdir('bayeslite-loom') as loom_store_path:
         with bayesdb_open(':memory:', seed=seed) as bdb:
-            bayesdb_register_backend(
-                bdb,
-                LoomBackend(loom_store_path=loom_store_path)
-            )
             bdb.sql_execute('CREATE TABLE t (a, b, c)')
             for row in generate_v_structured_data(1000, bdb.np_prng):
                 bdb.sql_execute('''
@@ -132,6 +129,12 @@ def bdb_for_checking_cmi(backend, iterations, seed):
                 )
             ''')
             if backend == 'loom':
+                try:
+                    from bayeslite.backends.loom_backend import LoomBackend
+                except ImportError:
+                    pytest.skip('Failed to import Loom.')
+                bayesdb_register_backend(
+                    bdb, LoomBackend(loom_store_path=loom_store_path))
                 bdb.execute('CREATE GENERATOR m FOR p using loom')
             elif backend == 'cgpm':
                 bdb.execute('CREATE GENERATOR m FOR p using cgpm')
