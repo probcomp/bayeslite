@@ -39,7 +39,6 @@ from loom.cFormat import assignment_stream_load
 
 from bayeslite.core import bayesdb_generator_name
 from bayeslite.core import bayesdb_generator_population
-from bayeslite.core import bayesdb_population_fresh_row_id
 from bayeslite.core import bayesdb_population_row_values
 from bayeslite.core import bayesdb_population_table
 from bayeslite.core import bayesdb_table_column_number
@@ -52,6 +51,7 @@ from bayeslite.backend import bayesdb_backend_version
 
 from bayeslite.exception import BQLError
 from bayeslite.sqlite3_util import sqlite3_quote_name
+from bayeslite.stats import arithmetic_mean
 
 from bayeslite.util import casefold
 from bayeslite.util import cursor_row
@@ -571,30 +571,91 @@ class LoomBackend(BayesDB_Backend):
         ''', (generator_id, modelno, kind_id, rowid))
         return cursor_value(cursor)
 
+    def _get_constraint_row(self, constraints, bdb, generator_id, population_id,
+            server):
+        """For a tuple of constraints, return a conditioning row loom style."""
+        if not constraints:
+            return None
+        else:
+            row_constraints = {
+                bayesdb_variable_name(
+                    bdb, population_id, generator_id, colno) : value
+                for colno, value in constraints
+            }
+            csv_headers_str = map(str, row_constraints.iterkeys())
+            csv_values_str  = map(str, row_constraints.itervalues())
+            return server.encode_row(csv_values_str, csv_headers_str)
+
+    def _simulate_constraints(self, bdb, generator_id, modelnos, constraints,
+            num_samples):
+        """Sample values for constraints that need marginalization."""
+        rowid = None
+        # Partition constraints into fixed values versus marginalization.
+        targets = [c[0] for c in constraints if c[1] is None]
+        fixed_constraints = [c for c in constraints if c[1] is not None]
+        # Jointly sample constraints that need marginalization.
+        samples = self.simulate_joint(bdb, generator_id, modelnos, rowid,
+            targets, num_samples=num_samples, constraints=fixed_constraints)
+        # Return sampled constraint values and fixed constrained values.
+        return [zip(targets, sample) + fixed_constraints for sample in samples]
+
+    def _get_constraint_rows(self, constraints, bdb, generator_id,
+            population_id, modelnos, server, inner_numsamples):
+        """Return constraints in Loom format for targets to marginalize."""
+        # Simulate inner_numsamples constraint rows.
+        simulated_constraints = self._simulate_constraints(bdb, generator_id,
+            modelnos, constraints, inner_numsamples)
+        # Generate the format Loom requires.
+        all_constraint_rows =  [
+            self._get_constraint_row(simulated_constraint, bdb, generator_id,
+                population_id, server)
+            for simulated_constraint in simulated_constraints
+        ]
+        return all_constraint_rows
+
+
+    def _marginize_cmi(self, constraints):
+        """Check if we need to marginalize over constraint values."""
+        if not constraints:
+            return False
+        return None in [constraint[1] for constraint in constraints]
+
     def column_mutual_information(self, bdb, generator_id, modelnos, colnos0,
             colnos1, constraints, numsamples):
-        # XXX Why are the constraints being ignored? If Loom does not support
-        # conditioning, then implement constraints using the simple Monte Carlo
-        # estimator.
         population_id = bayesdb_generator_population(bdb, generator_id)
         colnames0 = [
-            str(bayesdb_variable_name(bdb, population_id, None, colno))
+            str(bayesdb_variable_name(bdb, population_id, generator_id, colno))
             for colno in colnos0
         ]
         colnames1 = [
-            str(bayesdb_variable_name(bdb, population_id, None, colno))
+            str(bayesdb_variable_name(bdb, population_id, generator_id, colno))
             for colno in colnos1
         ]
         server = self._get_preql_server(bdb, generator_id)
         target_set = server._cols_to_mask(server.encode_set(colnames0))
         query_set = server._cols_to_mask(server.encode_set(colnames1))
-        mi = server._query_server.mutual_information(
-            target_set,
-            query_set,
-            entropys=None,
-            sample_count=loom.preql.SAMPLE_COUNT
-        )
-        return mi
+        if self._marginize_cmi(constraints):
+            inner_numsamples = numsamples
+            conditioning_rows_loom_format = self._get_constraint_rows(
+                constraints, bdb, generator_id, population_id, modelnos, server,
+                inner_numsamples)
+        else:
+            conditioning_rows_loom_format = [
+                self._get_constraint_row(constraints, bdb, generator_id,
+                population_id, server)
+            ]
+        mi_estimates = [
+            server._query_server.mutual_information(
+                target_set,
+                query_set,
+                entropys=None,
+                sample_count=loom.preql.SAMPLE_COUNT,
+                conditioning_row=conditioning_row_loom_format
+            ).mean
+            for conditioning_row_loom_format in conditioning_rows_loom_format
+        ]
+        # Output requires an iterable.
+        return [arithmetic_mean(mi_estimates)]
 
     def row_similarity(self, bdb, generator_id, modelnos, rowid, target_rowid,
             colnos):
