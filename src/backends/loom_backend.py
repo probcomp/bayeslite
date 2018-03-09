@@ -578,7 +578,8 @@ class LoomBackend(BayesDB_Backend):
             return None
         else:
             row_constraints = {
-                bayesdb_variable_name(bdb, generator_id, None, colno) : value
+                bayesdb_variable_name(
+                    bdb, generator_id, population_id, colno) : value
                 for colno, value in constraints
             }
             # XXX: there should be a more pythonic way to do this.
@@ -646,11 +647,11 @@ class LoomBackend(BayesDB_Backend):
         """Compute conditional mutual information."""
         population_id = bayesdb_generator_population(bdb, generator_id)
         colnames0 = [
-            str(bayesdb_variable_name(bdb, population_id, None, colno))
+            str(bayesdb_variable_name(bdb, population_id, generator_id, colno))
             for colno in colnos0
         ]
         colnames1 = [
-            str(bayesdb_variable_name(bdb, population_id, None, colno))
+            str(bayesdb_variable_name(bdb, population_id, generator_id, colno))
             for colno in colnos1
         ]
         server = self._get_preql_server(bdb, generator_id)
