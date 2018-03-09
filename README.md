@@ -10,9 +10,14 @@ Please see http://probcomp.csail.mit.edu/bayesdb for more information.
 
 ## Installing
 
-Software requirements are detailed in setup.py. Please see [these
-instructions](http://probcomp.csail.mit.edu/open-probabilistic-programming-stack/)
-for installing bayeslite as part of the Probabilistic Computing Stack.
+The easiest way to install bayeslite is to use the
+[package](https://anaconda.org/probcomp/bayeslite) on Anaconda Cloud. In your
+conda environment (python 2.7), run one of the following two commands:
+
+```bash
+$ conda install -c probcomp bayeslite             # latest release
+$ conda install -c probcomp/label/edge bayeslite  # tip of master
+```
 
 ## Expectations
 
