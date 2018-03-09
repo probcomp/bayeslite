@@ -387,12 +387,11 @@ def test_smoke_loom_marginalizing_conditional_mi():
         result = bdb.execute(bql).fetchall()
         assert len(result) == 1
 
-# Define a tolerance for comparing CMI values to zero.
-N_DIGITS = 2
 
 @stochastic(max_runs=2, min_passes=1)
 def test_assess_cmi_independent_columns__ci_slow(seed):
     """Assess whether the correct independences hold."""
+    N_DECIMAL_PLACE = 2
     with bdb_for_checking_cmi('loom', 50, seed) as bdb:
         # Checking whether there is near-zero MI between parents.
         bql_mi_parents = '''
@@ -403,7 +402,7 @@ def test_assess_cmi_independent_columns__ci_slow(seed):
         '''
         result_mi_parents = bdb.execute(bql_mi_parents).fetchall()[0][0]
         # Test independence of parents
-        assert abserr(0., result_mi_parents) <  10**-N_DIGITS
+        assert abserr(0., result_mi_parents) <  10**-N_DECIMAL_PLACE
 
         # Assess whether conditioning on child-value breaks independence.
         bql_cond_mi = '''
@@ -414,7 +413,7 @@ def test_assess_cmi_independent_columns__ci_slow(seed):
         '''
         result_cond_mi = bdb.execute(bql_cond_mi).fetchall()[0][0]
         # Test conditional dependence.
-        assert abserr(0., result_cond_mi) >  10**-N_DIGITS
+        assert abserr(0., result_cond_mi) >  10**-N_DECIMAL_PLACE
 
         # Assess whether conditioning on the marginal child breaks independence
         bql_cond_mi_margin = '''
@@ -427,4 +426,4 @@ def test_assess_cmi_independent_columns__ci_slow(seed):
             bql_cond_mi_margin
         ).fetchall()[0][0]
         # Test marginal conditional dependence.
-        assert abserr(0., result_cond_mi_marginal) >  10**-N_DIGITS
+        assert abserr(0., result_cond_mi_marginal) >  10**-N_DECIMAL_PLACE
