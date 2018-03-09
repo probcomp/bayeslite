@@ -579,7 +579,7 @@ class LoomBackend(BayesDB_Backend):
         else:
             row_constraints = {
                 bayesdb_variable_name(
-                    bdb, generator_id, population_id, colno) : value
+                    bdb, population_id, generator_id, colno) : value
                 for colno, value in constraints
             }
             csv_headers_str = map(str, row_constraints.iterkeys())
