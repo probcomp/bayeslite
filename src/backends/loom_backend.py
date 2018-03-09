@@ -586,18 +586,13 @@ class LoomBackend(BayesDB_Backend):
             csv_values_str  = map(str, row_constraints.itervalues())
             return server.encode_row(csv_values_str, csv_headers_str)
 
-    def _marginalize_constraints(self, constraints):
-        """Parse constraints, decide which are targets for marginalization."""
-        targets = [c[0] for c in constraints if c[1] is None]
-        fixed_constraints = [c for c in constraints if c[1] is not None]
-        return targets, fixed_constraints
-
     def _simulate_constraints(self, bdb, generator_id, modelnos, constraints,
             num_samples):
         """Sample values for constraints that need marginalization."""
         rowid = None
         # Partition constraints into fixed values versus marginalization.
-        targets, fixed_constraints = self._marginalize_constraints(constraints)
+        targets = [c[0] for c in constraints if c[1] is None]
+        fixed_constraints = [c for c in constraints if c[1] is not None]
         # Jointly sample constraints that need marginalization.
         samples = self.simulate_joint(bdb, generator_id, modelnos, rowid,
             targets, num_samples=num_samples, constraints=fixed_constraints)
