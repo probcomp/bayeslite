@@ -582,52 +582,35 @@ class LoomBackend(BayesDB_Backend):
                     bdb, generator_id, population_id, colno) : value
                 for colno, value in constraints
             }
-            # XXX: there should be a more pythonic way to do this.
-            csv_headers = row_constraints.keys()
-            csv_values  = row_constraints.values()
-
-            # Copy-pasta from simulate_joint.
-            csv_headers_str = [str(a).lower() for a in csv_headers]
-            csv_values_str  = [str(a) for a in csv_values]
+            csv_headers_str = map(str, row_constraints.iterkeys())
+            csv_values_str  = map(str, row_constraints.itervalues())
             return server.encode_row(csv_values_str, csv_headers_str)
 
     def _marginalize_constraints(self, constraints):
         """Parse constraints, decide which are targets for marginalization."""
-        targets = [
-            constraint[0] for constraint in constraints
-            if constraint[1] is None
-        ]
-        fixed_constraints = [
-            constraint for constraint in constraints
-            if constraint[1] is not None
-        ]
+        targets = [c[0] for c in constraints if c[1] is None]
+        fixed_constraints = [c for c in constraints if c[1] is not None]
         return targets, fixed_constraints
 
     def _simulate_constraints(self, bdb, generator_id, modelnos, constraints,
             num_samples):
         """Sample values for constraints that need marginalization."""
-        rowid = None # For CMI, rowid is always None.
-        # Detect which constraints come with fixed values, and which needs to
-        # targeted for marginalization.
+        rowid = None
+        # Partition constraints into fixed values versus marginalization.
         targets, fixed_constraints = self._marginalize_constraints(constraints)
-        # Call simulate to jointly sample the constraints that need
-        # marginilation.
+        # Jointly sample constraints that need marginalization.
         samples = self.simulate_joint(bdb, generator_id, modelnos, rowid,
             targets, num_samples=num_samples, constraints=fixed_constraints)
         # Return sampled constraint values and fixed constrained values.
-        return [
-            zip(targets, sample) + fixed_constraints
-            for sample in samples
-        ]
+        return [zip(targets, sample) + fixed_constraints for sample in samples]
 
     def _get_constraint_rows(self, constraints, bdb, generator_id,
             population_id, modelnos, server, inner_numsamples):
-        """Return constraints in loom's format for cases where we need to
-        marginialize out."""
-        # Simulate n constraint rows.
+        """Return constraints in Loom format for targets to marginalize."""
+        # Simulate inner_numsamples constraint rows.
         simulated_constraints = self._simulate_constraints(bdb, generator_id,
             modelnos, constraints, inner_numsamples)
-        # Generate the format loom requires.
+        # Generate the format Loom requires.
         all_constraint_rows =  [
             self._get_constraint_row(simulated_constraint, bdb, generator_id,
                 population_id, server)
@@ -644,7 +627,6 @@ class LoomBackend(BayesDB_Backend):
 
     def column_mutual_information(self, bdb, generator_id, modelnos, colnos0,
             colnos1, constraints, numsamples):
-        """Compute conditional mutual information."""
         population_id = bayesdb_generator_population(bdb, generator_id)
         colnames0 = [
             str(bayesdb_variable_name(bdb, population_id, generator_id, colno))
@@ -657,23 +639,24 @@ class LoomBackend(BayesDB_Backend):
         server = self._get_preql_server(bdb, generator_id)
         target_set = server._cols_to_mask(server.encode_set(colnames0))
         query_set = server._cols_to_mask(server.encode_set(colnames1))
-        # Check if we have to marginalize the condition:
         if self._marginize_cmi(constraints):
             inner_numsamples = numsamples
             conditioning_rows_loom_format = self._get_constraint_rows(
                 constraints, bdb, generator_id, population_id, modelnos, server,
                 inner_numsamples)
-        else: # Otherwise, no marginalization is needed.
+        else:
             conditioning_rows_loom_format = [
                 self._get_constraint_row(constraints, bdb, generator_id,
                 population_id, server)
             ]
         mi_estimates = [
-            server._query_server.mutual_information(target_set, query_set,
-                # XXX: sample count is wrong but it's computation is quick; the
-                # default for sample_count is 1000.
-                entropys=None, sample_count=loom.preql.SAMPLE_COUNT,
-                conditioning_row=conditioning_row_loom_format).mean
+            server._query_server.mutual_information(
+                target_set,
+                query_set,
+                entropys=None,
+                sample_count=loom.preql.SAMPLE_COUNT,
+                conditioning_row=conditioning_row_loom_format
+            ).mean
             for conditioning_row_loom_format in conditioning_rows_loom_format
         ]
         # Output requires an iterable.
