@@ -23,6 +23,7 @@ from bayeslite import bayesdb_register_backend
 from bayeslite.backends.loom_backend import LoomBackend
 from bayeslite.exception import BQLError
 from bayeslite.exception import BQLParseError
+
 from stochastic import stochastic
 from test_loom_backend import tempdir
 from test_stats import abserr
@@ -89,33 +90,27 @@ def smoke_loom():
 def generate_v_structured_data(N, np_prng):
     """Generate data from v-structure graphical of binary nodes.
 
-    a ~ binary(p_a)
-    b ~ binary(p_b)
-    c ~ binary(p_c | a, b)
+    a ~ Bernoulli(p_a)
+    b ~ Bernoulli(p_b)
+    c ~ Bernoulli(p_c | a, b)
 
     Graphical model:
     (a) -> (c) <- (b)
     """
-    # Define priors for parents.
     p_a = 0.5
     p_b = 0.5
-    # Define conditional probability table.
     p_c_given_ab = {
         (0, 0,) : 0.1,
         (0, 1,) : 0.8,
         (1, 0,) : 0.5,
         (1, 1,) : 0.2,
     }
-    def flip(p):
-        """Sample binary data with probability p."""
-        return int(np_prng.uniform() < p)
-    a = [flip(p_a) for _ in range(N)]
-    b = [flip(p_b) for _ in range(N)]
-    c = [
-        flip(p_c_given_ab[parent_config])
-        for parent_config in zip(a, b)
-    ]
+    flip = lambda p: int(np_prng.uniform() < p)
+    a = [flip(p_a) for _i in xrange(N)]
+    b = [flip(p_b) for _i in xrange(N)]
+    c = [flip(p_c_given_ab[parent_config]) for parent_config in zip(a, b)]
     return zip(a, b, c)
+
 
 @contextlib.contextmanager
 def bdb_for_checking_cmi(backend, iterations):
@@ -136,8 +131,6 @@ def bdb_for_checking_cmi(backend, iterations):
                     SET STATTYPES OF a, b, c TO NOMINAL;
                 )
             ''')
-            # The code below assumes that SQL formatting with `?` only works
-            # for `bdb.sql_execute` and not for `bdb.execute`.
             if backend == 'loom':
                 bdb.execute('CREATE GENERATOR m FOR p using loom')
             elif backend == 'cgpm':
