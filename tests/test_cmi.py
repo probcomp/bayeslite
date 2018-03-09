@@ -113,9 +113,9 @@ def generate_v_structured_data(N, np_prng):
 
 
 @contextlib.contextmanager
-def bdb_for_checking_cmi(backend, iterations):
+def bdb_for_checking_cmi(backend, iterations, seed):
     with tempdir('bayeslite-loom') as loom_store_path:
-        with bayesdb_open(':memory:') as bdb:
+        with bayesdb_open(':memory:', seed=seed) as bdb:
             bayesdb_register_backend(
                 bdb,
                 LoomBackend(loom_store_path=loom_store_path)
@@ -389,8 +389,8 @@ N_DIGITS = 2
 
 @stochastic(max_runs=4, min_passes=3)
 def test_assess_cmi_independent_columns__ci_slow(seed):
-    """Assess whether the correct indepencies hold."""
-    with bdb_for_checking_cmi('loom', 50) as bdb:
+    """Assess whether the correct independences hold."""
+    with bdb_for_checking_cmi('loom', 50, seed) as bdb:
         # Checking whether there is near-zero MI between parents.
         bql_mi_parents = '''
             ESTIMATE
