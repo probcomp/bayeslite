@@ -1,6 +1,9 @@
 # Bayeslite
 
 [![Build Status](https://travis-ci.org/probcomp/bayeslite.svg?branch=master)](https://travis-ci.org/probcomp/bayeslite)
+[![Anaconda-Server Version Badge](https://anaconda.org/probcomp/bayeslite/badges/version.svg)](https://anaconda.org/probcomp/bayeslite)
+[![Anaconda-Server Installer Badge](https://anaconda.org/probcomp/bayeslite/badges/installer/conda.svg)](https://conda.anaconda.org/probcomp)
+[![Anaconda-Server Platform Badge](https://anaconda.org/probcomp/bayeslite/badges/platforms.svg)](https://anaconda.org/probcomp/bayeslite)
 
 BQL interpretation and storage for BayesDB.
 Please see http://probcomp.csail.mit.edu/bayesdb for more information.
