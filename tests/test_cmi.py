@@ -390,7 +390,7 @@ def test_smoke_loom_marginalizing_conditional_mi():
 # Define a tolerance for comparing CMI values to zero.
 N_DIGITS = 2
 
-@stochastic(max_runs=4, min_passes=3)
+@stochastic(max_runs=2, min_passes=1)
 def test_assess_cmi_independent_columns__ci_slow(seed):
     """Assess whether the correct independences hold."""
     with bdb_for_checking_cmi('loom', 50, seed) as bdb:
