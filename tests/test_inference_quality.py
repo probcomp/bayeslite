@@ -22,6 +22,7 @@ import os
 import pandas as pd
 import pytest
 import random
+from stochastic import stochastic
 import struct
 from scipy import stats
 import tempfile
@@ -98,11 +99,11 @@ def simulate_from_rowid(bdb, table, column, rowid, limit=1000):
     ))
     return [float(x[0]) for x in cursor]
 
-def test_mix_ratio():
+@stochastic(max_runs=1, min_passes=1)
+def test_mix_ratio(seed):
     means = ((0,20), (20,0))
     sample_size = 100
     mix_ratio = [0.7, 0.3]
-    seed = 9999
     table = 'data'
 
     sample_gaussians = axis_aligned_gaussians(means, sample_size, seed=seed)
@@ -127,11 +128,11 @@ def test_mix_ratio():
         difference = abs(mix_ratio[i] - simulated_mix_ratio[i])
         assert difference < 0.1
 
+@stochastic(max_runs=1, min_passes=1)
 def test_simulate_y_from_partially_populated_row():
     means = ((0,20), (20,0))
     sample_size = 50
     mix_ratio = [0.7, 0.3]
-    seed = 9999
     table = 'data'
 
     sample_gaussians = axis_aligned_gaussians(means, sample_size, seed=seed)
