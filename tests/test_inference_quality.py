@@ -84,7 +84,7 @@ def prepare_bdb(bdb, samples, table, seed):
 
 def insert_row(bdb, table, x, y):
     quoted_table = bayeslite.bql_quote_name(table)
-    query = '''INSERT INTO {table} ("0", "1") VALUES (?, ?)'''.format(table=quoted_table)
+    query = 'INSERT INTO {table} ("0", "1") VALUES (?, ?)'.format(table=quoted_table)
     bdb.sql_execute(query, bindings=(x, y))
     return bdb.sql_execute('SELECT last_insert_rowid()').fetchone()[0]
 
