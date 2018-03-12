@@ -91,12 +91,11 @@ def insert_row(bdb, table, x, y):
 def simulate_from_rowid(bdb, table, column, rowid, limit=1000):
     quoted_table = bayeslite.bql_quote_name(table)
     quoted_column = bayeslite.bql_quote_name(str(column))
-    cursor = bdb.execute('SIMULATE {column} FROM {table} GIVEN rowid={rowid} LIMIT {limit}'.format(
+    query = 'SIMULATE {column} FROM {table} GIVEN rowid=? LIMIT ?'.format(
         column=quoted_column,
-        table=quoted_table,
-        rowid=rowid,
-        limit=limit
-    ))
+        table=quoted_table
+    )
+    cursor = bdb.execute(query, (rowid, limit))
     return [float(x[0]) for x in cursor]
 
 @stochastic(max_runs=1, min_passes=1)
