@@ -15,12 +15,12 @@ import bayeslite
 
 @stochastic(max_runs=1, min_passes=1)
 def test_cgpm_likelihood(seed):
-    likelihood_helper(seed, backend_type="cgpm", iterations=500)
+    likelihood_helper(seed, backend_type="cgpm", iterations=1000)
 
 
 @stochastic(max_runs=1, min_passes=1)
 def test_loom_likelihood(seed):
-    likelihood_helper(seed, backend_type="loom", iterations=10)
+    likelihood_helper(seed, backend_type="loom", iterations=1000)
 
 
 def likelihood_helper(seed, backend_type="cgpm", iterations=1000):
