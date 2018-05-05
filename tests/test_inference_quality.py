@@ -61,7 +61,7 @@ def distance(a, b):
     return abs(np.linalg.norm(a-b))
 
 def prepare_bdb(bdb, samples, table):
-    quoted_table = bayeslite.bql_quote_name(table)
+    qt = bayeslite.bql_quote_name(table)
     dataframe = pd.DataFrame(data=samples)
     read_pandas.bayesdb_read_pandas_df(bdb, 'data', dataframe, create=True)
 
@@ -69,25 +69,23 @@ def prepare_bdb(bdb, samples, table):
         CREATE POPULATION FOR %s WITH SCHEMA (
             GUESS STATTYPES OF (*)
         )
-    ''' % (quoted_table,))
-    bdb.execute('CREATE GENERATOR FOR %s USING loom;' % (quoted_table,))
-    bdb.execute('INITIALIZE 4 MODELS FOR %s;' % (quoted_table,))
-    bdb.execute('ANALYZE %s FOR 100 ITERATIONS;' % (quoted_table,))
+    ''' % (qt,))
+    bdb.execute('CREATE GENERATOR FOR %s USING loom;' % (qt,))
+    bdb.execute('INITIALIZE 4 MODELS FOR %s;' % (qt,))
+    bdb.execute('ANALYZE %s FOR 100 ITERATIONS;' % (qt,))
 
 def insert_row(bdb, table, x, y):
-    quoted_table = bayeslite.bql_quote_name(table)
-    query = 'INSERT INTO {table} ("0", "1") VALUES (?, ?)'.format(table=quoted_table)
+    qt = bayeslite.bql_quote_name(table)
+    query = 'INSERT INTO %s ("0", "1") VALUES (?, ?)' % (qt,)
     bdb.sql_execute(query, bindings=(x, y))
     return bdb.sql_execute('SELECT last_insert_rowid()').fetchone()[0]
 
 def simulate_from_rowid(bdb, table, column, rowid, limit=1000):
-    quoted_table = bayeslite.bql_quote_name(table)
-    quoted_column = bayeslite.bql_quote_name(str(column))
-    query = 'SIMULATE {column} FROM {table} GIVEN rowid=? LIMIT ?'.format(
-        column=quoted_column,
-        table=quoted_table
-    )
-    cursor = bdb.execute(query, (rowid, limit))
+    qt = bayeslite.bql_quote_name(table)
+    qc = bayeslite.bql_quote_name(str(column))
+    cursor = bdb.execute('''
+        SIMULATE %s FROM %s GIVEN rowid=? LIMIT ?
+    ''' % (qc, qt) , bindings=(rowid, limit))
     return [float(x[0]) for x in cursor]
 
 @stochastic(max_runs=1, min_passes=1)
