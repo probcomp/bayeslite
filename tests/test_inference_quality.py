@@ -55,10 +55,7 @@ def register_loom(bdb):
     bayeslite.bayesdb_register_backend(bdb, loom_backend)
 
 def distance(a, b):
-    '''
-    Computes the euclidian distance between points `a` and `b`.
-    '''
-    # coerce to `np.ndarray`s if necessary
+    """Computes the Euclidean distance between points `a` and `b`."""
     a = a if isinstance(a, np.ndarray) else np.array(a)
     b = b if isinstance(a, np.ndarray) else np.array(b)
     return abs(np.linalg.norm(a-b))
@@ -141,6 +138,7 @@ def test_simulate_y_from_partially_populated_row(seed):
     assert(statistic < 0.1 or p_value > 0.01)
 
 def test_simulate_conflict():
+    """Cannot override existing value in table using GIVEN in SIMULATE."""
     with bayeslite.bayesdb_open() as bdb:
         bdb.sql_execute('''
             CREATE TABLE data (
