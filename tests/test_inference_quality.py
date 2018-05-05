@@ -78,7 +78,8 @@ def insert_row(bdb, table, x, y):
     qt = bayeslite.bql_quote_name(table)
     query = 'INSERT INTO %s ("0", "1") VALUES (?, ?)' % (qt,)
     bdb.sql_execute(query, bindings=(x, y))
-    return bdb.sql_execute('SELECT last_insert_rowid()').fetchone()[0]
+    cursor = bdb.sql_execute('SELECT last_insert_rowid()')
+    return cursor.fetchone()[0]
 
 def simulate_from_rowid(bdb, table, column, rowid, limit=1000):
     qt = bayeslite.bql_quote_name(table)
@@ -101,17 +102,18 @@ def test_mix_ratio(seed):
         register_loom(bdb)
         prepare_bdb(bdb, samples, table)
 
-        cursor = bdb.execute('SIMULATE "0", "1" FROM data LIMIT ?;', (sample_size,))
+        cursor = bdb.execute('''
+            SIMULATE "0", "1" FROM data LIMIT ?
+        ''', (sample_size,))
         simulated_samples = [sample for sample in cursor]
 
     counts = collections.Counter(
         (0 if distance((x,y), means[0]) < distance((x,y), means[1]) else 1
-         for x, y
-         in simulated_samples)
-    )
-    simulated_mix_ratio = [counts[key] / float(len(simulated_samples)) for key in counts]
+            for x, y in simulated_samples))
+    simulated_mix_ratio = [counts[key] / float(len(simulated_samples))
+        for key in counts]
 
-    for i in range(len(means)):
+    for i in xrange(len(means)):
         difference = abs(mix_ratio[i] - simulated_mix_ratio[i])
         assert difference < 0.1
 
@@ -129,7 +131,8 @@ def test_simulate_y_from_partially_populated_row(seed):
         prepare_bdb(bdb, samples, table)
 
         rowid = insert_row(bdb, table, means[0][0], None)
-        simulated_samples = simulate_from_rowid(bdb, table, 1, rowid, limit=sample_size)
+        simulated_samples = simulate_from_rowid(bdb, table, 1, rowid,
+            limit=sample_size)
 
     y_samples = [y for x, y in sample_gaussians[0]]
     statistic, p_value = stats.ks_2samp(y_samples, simulated_samples)
