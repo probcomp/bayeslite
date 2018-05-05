@@ -89,7 +89,7 @@ def simulate_from_rowid(bdb, table, column, rowid, limit=1000):
     ''' % (qc, qt) , bindings=(rowid, limit))
     return [float(x[0]) for x in cursor]
 
-@stochastic(max_runs=1, min_passes=1)
+@stochastic(max_runs=5, min_passes=3)
 def test_mix_ratio(seed):
     means = ((0,20), (20,0))
     sample_size = 100
