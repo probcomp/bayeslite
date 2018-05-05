@@ -143,8 +143,8 @@ def test_simulate_conflict():
     with bayeslite.bayesdb_open() as bdb:
         bdb.sql_execute('''
             CREATE TABLE data (
-                '0' numeric PRIMARY KEY,
-                '1' numeric
+                "0" NUMERIC PRIMARY KEY,
+                "1" NUMERIC
             );
         ''')
         insert_row(bdb, 'data', 1, 1)
