@@ -28,7 +28,11 @@ from scipy import stats
 import bayeslite
 
 from bayeslite import read_pandas
-from bayeslite.backends.loom_backend import LoomBackend
+
+try:
+    from bayeslite.backends.loom_backend import LoomBackend
+except ImportError:
+    pytest.skip('Failed to import Loom.')
 
 from stochastic import stochastic
 
