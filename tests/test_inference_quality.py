@@ -117,6 +117,7 @@ def test_mix_ratio(seed):
         difference = abs(mix_ratio[i] - simulated_mix_ratio[i])
         assert difference < 0.1
 
+@pytest.mark.xfail(strict=True, reason='no populate data for new row, #623.')
 @stochastic(max_runs=1, min_passes=1)
 def test_simulate_y_from_partially_populated_row(seed):
     means = ((0,20), (20,0))
@@ -134,9 +135,9 @@ def test_simulate_y_from_partially_populated_row(seed):
         simulated_samples = simulate_from_rowid(bdb, table, 1, rowid,
             limit=sample_size)
 
-    y_samples = [y for x, y in sample_gaussians[0]]
-    statistic, p_value = stats.ks_2samp(y_samples, simulated_samples)
-    assert(statistic < 0.1 or p_value > 0.01)
+    y_samples = [y for _x, y in sample_gaussians[0]]
+    _statistic, p_value = stats.ks_2samp(y_samples, simulated_samples)
+    assert 0.10 < p_value
 
 def test_simulate_conflict():
     """Cannot override existing value in table using GIVEN in SIMULATE."""
