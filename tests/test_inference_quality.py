@@ -30,30 +30,17 @@ import bayeslite
 from bayeslite import read_pandas
 from bayeslite.backends.loom_backend import LoomBackend
 
-def set_numpy_seed(seed):
-    """
-    The `stochastic` decorator provides 64 byte strings as its seeds. numpy
-    uses 32 bit unsigned integers as its seeds Takes a 64 byte seed, extracts
-    the first 32 bits (4 bytes) from it and uses those as the numpy random
-    seed.
-    """
-    np_seed = struct.unpack("!I", seed[:4])[0] # convert to 32 bit uint
-    np.random.seed(np_seed)
+from stochastic import stochastic
 
-def axis_aligned_gaussians(means, size, seed=None):
-    if seed is not None:
-        set_numpy_seed(seed)
-    return [np.random.multivariate_normal(mean, [[0,1], [1,0]], size=size)
-            for mean
-            in means]
+def axis_aligned_gaussians(means, size, rng):
+    return [rng.multivariate_normal(mean, [[0,1], [1,0]], size=size)
+            for mean in means]
 
-def mix(gaussians, p, seed=None):
+def mix(gaussians, p, rng):
     assert len(gaussians) == len(p)
     assert reduce(lambda sum, n: sum + n, p) == 1
 
-    if seed is not None:
-        set_numpy_seed(seed)
-        choices = np.random.choice([0,1], size=len(gaussians[0]), p=p)
+    choices = rng.choice([0,1], size=len(gaussians[0]), p=p)
     return [gaussians[choices[i]][i] for i in range(len(choices))]
 
 def temp_file_path(suffix):
@@ -113,10 +100,9 @@ def test_mix_ratio(seed):
     mix_ratio = [0.7, 0.3]
     table = 'data'
 
-    sample_gaussians = axis_aligned_gaussians(means, sample_size, seed=seed)
-    samples = mix(sample_gaussians, mix_ratio, seed=seed)
-
     with bayeslite.bayesdb_open(seed=seed) as bdb:
+        sample_gaussians = axis_aligned_gaussians(means, sample_size, bdb._np_prng)
+        samples = mix(sample_gaussians, mix_ratio, bdb._np_prng)
         register_loom(bdb)
         prepare_bdb(bdb, samples, table, seed)
 
@@ -141,10 +127,9 @@ def test_simulate_y_from_partially_populated_row(seed):
     mix_ratio = [0.7, 0.3]
     table = 'data'
 
-    sample_gaussians = axis_aligned_gaussians(means, sample_size, seed=seed)
-    samples = mix(sample_gaussians, mix_ratio, seed=seed)
-
     with bayeslite.bayesdb_open(seed=seed) as bdb:
+        sample_gaussians = axis_aligned_gaussians(means, sample_size, bdb._np_prng)
+        samples = mix(sample_gaussians, mix_ratio, bdb._np_prng)
         register_loom(bdb)
         prepare_bdb(bdb, samples, table, seed)
 
