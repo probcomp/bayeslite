@@ -15,20 +15,18 @@
 #   limitations under the License.
 
 import collections
-import itertools
-import matplotlib.pyplot as plt
-import numpy as np
 import os
+import struct
+import tempfile
+
+import numpy as np
 import pandas as pd
 import pytest
-import random
-from stochastic import stochastic
-import struct
+
 from scipy import stats
-import tempfile
-import time
 
 import bayeslite
+
 from bayeslite import read_pandas
 from bayeslite.backends.loom_backend import LoomBackend
 
