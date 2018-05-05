@@ -60,7 +60,7 @@ def distance(a, b):
     b = b if isinstance(a, np.ndarray) else np.array(b)
     return abs(np.linalg.norm(a-b))
 
-def prepare_bdb(bdb, samples, table, seed):
+def prepare_bdb(bdb, samples, table):
     quoted_table = bayeslite.bql_quote_name(table)
     dataframe = pd.DataFrame(data=samples)
     read_pandas.bayesdb_read_pandas_df(bdb, 'data', dataframe, create=True)
@@ -101,7 +101,7 @@ def test_mix_ratio(seed):
         sample_gaussians = axis_aligned_gaussians(means, sample_size, bdb._np_prng)
         samples = mix(sample_gaussians, mix_ratio, bdb._np_prng)
         register_loom(bdb)
-        prepare_bdb(bdb, samples, table, seed)
+        prepare_bdb(bdb, samples, table)
 
         cursor = bdb.execute('SIMULATE "0", "1" FROM data LIMIT ?;', (sample_size,))
         simulated_samples = [sample for sample in cursor]
@@ -128,7 +128,7 @@ def test_simulate_y_from_partially_populated_row(seed):
         sample_gaussians = axis_aligned_gaussians(means, sample_size, bdb._np_prng)
         samples = mix(sample_gaussians, mix_ratio, bdb._np_prng)
         register_loom(bdb)
-        prepare_bdb(bdb, samples, table, seed)
+        prepare_bdb(bdb, samples, table)
 
         rowid = insert_row(bdb, table, means[0][0], None)
         simulated_samples = simulate_from_rowid(bdb, table, 1, rowid, limit=sample_size)
