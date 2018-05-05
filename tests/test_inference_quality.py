@@ -159,7 +159,7 @@ def test_simulate_conflict():
         bdb.execute('INITIALIZE 1 MODELS FOR data;')
 
         rowid = insert_row(bdb, 'data', 0, None)
-        with pytest.raises(Exception):
+        with pytest.raises(bayeslite.BQLError):
             bdb.execute('''
                 SIMULATE "0" FROM data
                     GIVEN rowid=?, "0"= 0, 1"=0
