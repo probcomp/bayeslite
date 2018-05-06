@@ -3,9 +3,7 @@ MAINTAINER      MIT Probabilistic Computing Project
 
 ARG             check_args
 
-RUN             apt-get update -qq \
-                && apt-get upgrade -qq \
-                && apt-get install -qq -y \
+RUN             apt-get update -qq && apt-get install -qq -y \
                     git \
                     python-apsw \
                     python-jsonschema \
