@@ -47,10 +47,10 @@ def generate_categorical(categorical_parameters, rows, out_path=None, seed=None)
     categorical_generator = CategoricalGenerator(categorical_parameters)
     samples = categorical_generator.simulate(rows, seed)
 
-    data = np.reshape(samples, rows)
-    data_frame = pd.DataFrame(data)
-
+    data_frame = pd.DataFrame(samples)
     data_frame.to_csv(out_path, header=True, index=False)
+
+    return data_frame
 
 
 # generate_gaussian([[[0, 5], [0.4, 0.4]], [[10, 15], [0.1, 0.1]]], 1000)

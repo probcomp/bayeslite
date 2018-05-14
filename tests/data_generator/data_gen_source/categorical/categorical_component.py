@@ -32,7 +32,7 @@ class CategoricalComponent(AbstractComponent):
             else:
                 dict_form = dimension
             # ensure categorical sums to 1
-            if sum(dict_form.values()) != 1:
+            if round(sum(dict_form.values()), 10) != 1.000000000:
                 raise ValueError("categorical " + str(dimension) + " is not valid, probabilities are not equal to 1")
             # turn dictionary into two lists: one for labels and one for probability (also for numpy)
             # list needed to order
@@ -60,21 +60,18 @@ class CategoricalComponent(AbstractComponent):
         if type(data) != list:  # wrap univariate outer (to support single value input)
             data = [data]
 
+        if len(data) != len(self.labels):  # verify input
+            raise ValueError("Combination doesn't match the number of dimensions in the categorical")
+
         total_probability = 1
-        for value in data:
-            if type(value) != list:  # wrap univariate
-                value = [value]
-            if len(value) != len(self.labels):  # verify input
-                raise ValueError("Combination doesn't match the number of dimensions in the categorical")
 
+        # check probability of each dimension for each part of sequence (value)
+        # combination: [ [0, "dog"], [1, "cat"]...] value: [0, "dog"]
+        # check 0 against first dimension categorical, "dog" against second dimension categorical
+        for index, dimension in enumerate(data):
             value_probability = 1
-
-            # check probability of each dimension for each part of sequence (value)
-            # combination: [ [0, "dog"], [1, "cat"]...] value: [0, "dog"]
-            # check 0 against first dimension categorical, "dog" against second dimension categorical
-            for index, dimension in enumerate(value):
-                value_probability *= self.dict_forms[index][dimension] \
-                    if dimension in self.dict_forms[index].keys() else 0.0
+            value_probability *= self.dict_forms[index][dimension] \
+                if dimension in self.dict_forms[index].keys() else 0.0
             total_probability *= value_probability
 
         return total_probability
