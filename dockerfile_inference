@@ -12,6 +12,8 @@ RUN             apt-get update -qq && apt-get install -qq -y \
 
 ADD             . .
 RUN		ls
+WORKDIR		/bayeslite
+RUN		ls
 
 RUN		wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh
 RUN		bash miniconda.sh -b -p /miniconda
