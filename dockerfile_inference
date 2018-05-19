@@ -1,0 +1,45 @@
+FROM            ubuntu:16.04
+MAINTAINER      MIT Probabilistic Computing Project
+
+ARG             check_args
+
+RUN             apt-get update -qq && apt-get install -qq -y \
+		    wget \
+		    bzip2 \
+                    git \
+		    libsm6 libxrender1 libfontconfig1 \
+                    ; # end of package list
+
+ADD            . /bayeslite
+
+RUN		wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh
+RUN		bash miniconda.sh -b -p /miniconda
+ENV		PATH="/miniconda/bin:${PATH}"
+
+RUN		conda update conda
+
+RUN		conda create -n python_env python=2.7
+
+RUN		conda install conda-build
+RUN		conda install system
+RUN		conda install -n python_env --quiet --yes -c probcomp -c cidermole -c fritzo -c ursusest \
+    'apsw' \
+    'bayeslite=0.3.2' \
+    'cgpm=0.1.2' \
+    'crosscat=0.1.56.1' \
+    'distributions=2.2.1' \
+    'libprotobuf=2.6.1' \
+    'loom=0.2.10' \
+    'iventure=0.2.2' \
+    'venture=0.5.1.1'
+RUN		conda install -n python_env pytest
+RUN		conda install -n python_env -c conda-forge matplotlib
+RUN		conda install -n python_env -c conda-forge opencv
+RUN		conda install -n python_env pyqt=4.11.4
+RUN		conda install -n python_env nomkl
+RUN		conda install -n python_env pandas
+
+
+WORKDIR		/bayeslite
+RUN             python setup.py sdist
+RUN             python setup.py bdist
