@@ -1,0 +1,56 @@
+Understanding the system:
+The process for the inference tests are 1. Generate data from a user-defined true model 2. Run data through BayesDB 3. Compare performance of BayesDB against the true model.
+
+Data Generator:
+Two types of data are supported, Gaussian and categorical. Both implementations have a similar design. One generator is made of multiple components, which each have their own paramaters for sampling (e.g. for Gaussian, the mean and standard deviation). When a Generator is called to simulate values, it picks a component based on user-defined weights (or uniform probability by default) and samples from that component.
+
+A script was written that simplifies everything and just spits out data. This is found in data_generator/data_gen_source/generate_data_CSV.py. Just the true model (e.g. Gaussian parameters) and the number of rows of data to generate needs to be specified.
+
+Another important part of testing is getting the likelihood of data given the true model. This is done in another script, data_generator/data_gen_source/csv_to_likelihood.py. This will take data in csv form, the parameters that make the true model, and return a new csv with the probability of each row.
+
+
+Inference Tests:
+These are located in data_generator/data_gen_test/full_test, named backend_likelihood_test.py and backend_simulate_test.py. These tests work by generating data, letting BayesDB analyze it, then comparing its performance in either simulate or likelihood over time with each iteration of analysis. After a certain threshold of time, if performance is below a certain threshold, the tests will fail. Those thresholds were determined by running the tests multiple times and looking at how far it was from the true model i.e. the performance of the latest BayesDB version when these tests were made.
+
+Note to compare performance, it does not check after each iteration of analysis. Random things in BayesDB can happen, so this would give many false negatives. Instead, it takes a segment of 50 (or any user-defined value) iterations and checks the mean of that relative to true performance.
+
+Results are saved within respective folders within the full_tests folder after running tests. A graph is also generated to visually compare the performance. All the sampled data and likelihoods are also saved.
+
+
+Next steps:
+1. Porting everything over to Jenkins. Right now, the tests can run if everything is done in Docker alone. Using bayeslite/dockerfile_inference, the user can successfully build the image with: 
+docker build -t "$image" -f bayeslite/dockerfile_inference .
+Then they can run the tests with:
+sudo docker run --rm "$image" /bin/bash -c 'source activate python_env && \
+pytest /bayeslite/tests/data_generator/data_gen_test/full_test/backend_simulate_test.py'
+
+The issue with Jenkins, despite using the same files, is that there are import errors with importing the various data generator source files. Here was the latest jenkins build configuration:
+
+
+MANAGE JENKINS --> CONFIGURE SYSTEM --> GLOBAL PROPERTIES --> ENVIRONMENT VARIABLES
+Name: Path
+Value: $PATH:*machine's docker bin* e.g. $PATH:/Applications/Docker.app/Contents/Resources/bin
+
+*FREESTYLE PROJECT* --> CONFIGURE --> EXECUTE SHELL
+set -Ceux
+
+mkdir probcomp
+mkdir probcomp/jenkins
+mkdir docker
+sudo cp /Users/Andrew/Desktop/ubuntu docker
+
+# clone branch with tests
+git clone -b 20180404-andrewwo-testing-data-generator https://github.com/probcomp/bayeslite.git
+
+image=probcomp/jenkins/"$JOB_NAME":"$BUILD_NUMBER"
+sudo docker build -t "$image" -f docker/ubuntu .
+
+# run tests
+sudo docker run --rm "$image" /bin/bash -c 'source activate python_env && \
+pytest /bayeslite/tests/data_generator/data_gen_test/full_test/backend_simulate_test.py'
+
+
+I imagine it's a fix in a setup.py and I think it's likely a 2-3 line solution.
+
+
+2. Include categorical testing into inference tests. For simulate tests, the skeleton code is there with some minor debugging left. However the bigger issue is that BayesDB isn't working at all on the categorical data. I imagine it's an issue with the way the data is formatted. For likelihood tests, categorical data support has not been started at all.
