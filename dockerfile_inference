@@ -10,10 +10,7 @@ RUN             apt-get update -qq && apt-get install -qq -y \
 		    libsm6 libxrender1 libfontconfig1 \
                     ; # end of package list
 
-ADD            . /bayeslite
-
-RUN		ls
-WORKDIR		/bayeslite
+ADD             . .
 RUN		ls
 
 RUN		wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh
