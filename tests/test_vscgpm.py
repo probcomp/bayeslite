@@ -98,7 +98,7 @@ kepler_source = """
 ; Transition operator.
 [define transition
   (lambda (N)
-    (mh default one (* N 1000)))]
+    (resimulation_mh default one (* N 1000)))]
 """
 
 def test_cgpm_extravaganza__ci_slow():

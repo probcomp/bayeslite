@@ -902,9 +902,9 @@ def test_analyze():
             ' checkpoint 3 iterations') == \
         [ast.AnalyzeModels('t', None, 10, None, 3, None, None)]
     assert parse_bql_string('analyze t for 10 iterations'
-            ' (mh(default, one, 10))') == \
+            ' (resimulation_mh(default, one, 10))') == \
         [ast.AnalyzeModels('t', None, 10, None, None, None, [
-            'mh', '(', 'default', ',', 'one', ',', 10, ')'
+            'resimulation_mh', '(', 'default', ',', 'one', ',', 10, ')'
         ])]
     assert parse_bql_string('analyze t for 10 seconds'
             ' checkpoint 3 seconds') == \
