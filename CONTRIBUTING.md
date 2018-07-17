@@ -125,45 +125,20 @@ Our version scheme, compatible with [PEP 440](https://www.python.org/dev/peps/pe
 We do not currently make any semantic API compatibility guarantees about the
 meaning of `<major>`, `<minor>`, and `<teeny>`.
 
-In the source tree, the [VERSION](./VERSION) file contains either the
-current release version number, or the most recent tagged version
-number followed by a plus sign `+`.  In that case, a suffix will be
-added to the most recent version number, derived from `git describe`,
-of the form:
+To create a new release (only creating tagged releases from `master` branch):
 
-    .post<N>+g<commitid>[.<dirty>]
+  1. Check-out the master branch with a clean working directory.
 
-The Git tag for a tagged version is named with a `v` prefix.  Note
-that the content of VERSION for any tagged version MUST NOT include a
-`+` suffix, so that `cat VERSION` is sufficient to find the version
-number, and `git describe` is not necessary.
+  2. Create an annotated tag using one of the three forms compatible with PEP
+     440 shown above. For example: `git tag -a -m v0.2.42 v0.2.42`
 
-To tag a new version:
+  3. Run `python setup.py build`.
 
-1. Set `VERSION` to the new version, say `0.2.42`:
+  4. Run `cat src/version.py` and confirm that the version matches the tag. If
+     the version contains `dirty`, `post`, or a commit id then you have done
+     something wrong, so please ask for help.
 
-    ```
-    $ echo 0.2.42 > VERSION
-    $ git commit -m 'Bump version to 0.2.42.' VERSION
-    ```
-
-2. Tag it with an annotated tag:
-
-    ```
-    $ git tag -a -m v0.2.42 v0.2.42
-    ```
-
-   If you want, you can include release notes in the annotated tag
-   message.
-
-3. Append `+` to the version in VERSION:
-
-    ```
-    $ echo 0.2.42+ > VERSION
-    $ git commit -m 'Bump version to 0.2.42+.' VERSION
-    ```
-
-Make sure when you push that you pass `--tags` to `git push`.
+  5. Run `git push origin master --tags`.
 
 [1]: https://github.com/probcomp/bayeslite/blob/9555f5fd614e7dd960dcf8b54ae8edc5b69d7d1a/src/backends/cgpm_backend.py#L835-L836
 [2]: https://github.com/probcomp/bayeslite/blob/9555f5fd614e7dd960dcf8b54ae8edc5b69d7d1a/src/bqlfn.py#L95-L96
