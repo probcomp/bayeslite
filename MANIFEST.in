@@ -1,6 +1,5 @@
 include LICENSE.txt
 include README.md
-include VERSION
 include check.sh
 include external/README
 include external/lemonade/COPYING
