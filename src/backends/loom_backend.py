@@ -896,8 +896,8 @@ class LoomBackend(BayesDB_Backend):
     def _get_is_incorporated_rowid(self, bdb, generator_id, rowid):
         """Return True iff the rowid is incorporated in the loom model."""
         cursor = bdb.sql_execute('''
-            SELECT COUNT(*) partition_id
-            FROM bayesdb_loom_row_kind_partition
+            SELECT COUNT(*)
+            FROM bayesdb_loom_rowid_mapping
             WHERE generator_id = ? AND table_rowid = ?
         ''', (generator_id, rowid))
         return cursor_value(cursor) > 0
