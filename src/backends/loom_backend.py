@@ -95,10 +95,9 @@ CREATE TABLE bayesdb_loom_rowid_mapping (
     table_rowid         INTEGER NOT NULL,
     loom_rowid          INTEGER NOT NULL,
 
-    PRIMARY KEY (generator_id, table_rowid)
+    PRIMARY KEY (generator_id, table_rowid, loom_rowid)
     UNIQUE(generator_id, table_rowid),
-    UNIQUE(generator_id, loom_rowid),
-    UNIQUE(table_rowid, loom_rowid)
+    UNIQUE(generator_id, loom_rowid)
 );
 
 CREATE TABLE bayesdb_loom_column_kind_partition (
@@ -118,8 +117,8 @@ CREATE TABLE bayesdb_loom_row_kind_partition (
     partition_id        INTEGER NOT NULL,
     PRIMARY KEY(generator_id, modelno, table_rowid, kind_id)
 
-    FOREIGN KEY (table_rowid, loom_rowid)
-        REFERENCES bayesdb_loom_rowid_mapping(table_rowid, loom_rowid)
+    FOREIGN KEY (generator_id, table_rowid, loom_rowid)
+        REFERENCES bayesdb_loom_rowid_mapping(generator_id, table_rowid, loom_rowid)
 );
 '''
 
