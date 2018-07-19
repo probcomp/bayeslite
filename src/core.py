@@ -189,6 +189,17 @@ def bayesdb_table_populations(bdb, table):
     ''', (table,))
     return [population_id for (population_id,) in cursor]
 
+def bayesdb_table_has_rowid(bdb, table, rowid):
+    """True if the table named `table` has record with given rowid.
+
+    `bdb` must have a table named `table`.  If you're not sure, call
+    :func:`bayesdb_has_table` first.
+    """
+    qt = sqlite3_quote_name(table)
+    sql = 'SELECT COUNT(*) FROM %s WHERE oid = ?'
+    cursor = bdb.sql_execute(sql % (qt,), (rowid,))
+    return cursor_value(cursor) != 0
+
 def bayesdb_has_population(bdb, name):
     """True if there is a population named `name` in `bdb`."""
     sql = 'SELECT COUNT(*) FROM bayesdb_population WHERE name = ?'
