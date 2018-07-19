@@ -348,3 +348,15 @@ def test_loom_four_var():
             assert sum([1 if (p < X_MIN or p > X_MAX)
                 else 0 for p in predictions]) < .5*PREDICT_RUNS
             assert all([c == 0 for c in confidences])
+
+def test_population_two_generators():
+    with tempdir('bayeslite-loom') as loom_store_path:
+        with bayesdb_open(':memory:') as bdb:
+            bayesdb_register_backend(bdb,
+                LoomBackend(loom_store_path=loom_store_path))
+            bdb.sql_execute('create table t (x)')
+            for x in xrange(10):
+                bdb.sql_execute('insert into t (x) values (?)', (x,))
+            bdb.execute('create population p for t (x numerical)')
+            bdb.execute('create generator g0 for p using loom')
+            bdb.execute('create generator g1 for p using loom')

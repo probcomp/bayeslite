@@ -510,7 +510,7 @@ def test_row_column_predictive_probability(exname, rowid, colno):
     if exname.startswith('t1_sub') and colno > 1:
         pytest.skip('Not enough columns in %s.' % (exname,))
     with analyzed_bayesdb_population(examples[exname](), 1, 1) \
-            as (bdb, population_id, generator_id):
+            as (bdb, population_id, _generator_id):
         if rowid == 0:
             rowid = bayesdb_maxrowid(bdb, population_id)
         targets = json.dumps([colno])
@@ -528,11 +528,15 @@ def test_bayesdb_population_fresh_row_id():
             bayesdb(), 't1', 'p1', 'p1_cc', t1_schema, lambda x: 0,\
             columns=['id IGNORE','label NOMINAL', 'age NUMERICAL',
                 'weight NUMERICAL'])\
-            as (bdb, population_id, generator_id):
+            as (bdb, population_id, _generator_id):
         assert core.bayesdb_population_fresh_row_id(bdb, population_id) == 1
         t1_data(bdb)
+        n_rows = len(t1_rows)
+        for rowid in xrange(n_rows):
+            assert core.bayesdb_table_has_rowid(bdb, 't1', rowid+1)
+        assert not core.bayesdb_table_has_rowid(bdb, 't1', n_rows+1)
         assert core.bayesdb_population_fresh_row_id(bdb, population_id) == \
-            len(t1_rows) + 1
+            n_rows + 1
 
 def test_bayesdb_population_add_variable():
     with bayesdb() as bdb:
