@@ -123,6 +123,7 @@ def test_mix_ratio(seed):
 
 @stochastic(max_runs=1, min_passes=1)
 def test_simulate_y_from_partially_populated_fresh_row(seed):
+    """Check that Loom conditions on partial observation in new rowid."""
     means = ((0,20), (20,0))
     sample_size = 50
     mix_ratio = [0.7, 0.3]
