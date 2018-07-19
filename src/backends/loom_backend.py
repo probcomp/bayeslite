@@ -42,6 +42,7 @@ from bayeslite.core import bayesdb_generator_population
 from bayeslite.core import bayesdb_population_row_values
 from bayeslite.core import bayesdb_population_table
 from bayeslite.core import bayesdb_table_column_number
+from bayeslite.core import bayesdb_table_has_rowid
 from bayeslite.core import bayesdb_variable_name
 from bayeslite.core import bayesdb_variable_numbers
 from bayeslite.core import bayesdb_variable_stattype
@@ -742,12 +743,16 @@ class LoomBackend(BayesDB_Backend):
             constraints, num_samples=1, accuracy=None):
         # Retrieve the population id.
         population_id = bayesdb_generator_population(bdb, generator_id)
+        table = bayesdb_population_table(bdb, population_id)
 
         # Prepare list of full constraints, potentially adding data from table.
         constraints_full = constraints
 
-        # If rowid is incorporated, retrieve conditioning data from the table.
-        if self._get_is_incorporated_rowid(bdb, generator_id, rowid):
+        # If rowid exist in base table, retrieve conditioning data.
+        # Conditioning values are fetched for any rowid that exists in the base
+        # table irrespective of whether the rowid is incorporated in the Loom
+        # model or whether it was added after creation.
+        if bayesdb_table_has_rowid(bdb, table, rowid):
             # Fetch population column numbers and row values.
             colnos = bayesdb_variable_numbers(bdb, population_id, generator_id)
             rowvals = bayesdb_population_row_values(bdb, population_id, rowid)
