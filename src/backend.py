@@ -174,7 +174,7 @@ class BayesDB_Backend(object):
         raise NotImplementedError
 
     def alter(self, bdb, generator_id, modelnos, commands):
-        """Modify the generator according to the metamdoel-specific commands.
+        """Modify the generator according to the backend-specific commands.
 
         Used by the MML::
 

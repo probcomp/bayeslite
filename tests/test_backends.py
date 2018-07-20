@@ -110,13 +110,13 @@ def test_example(persist, exname):
 
 
 def _test_example(bdb, exname):
-    (mm, t, t_sql, data_sql, data, p, g, p_bql, g_bql, g_bqlbad0, g_bqlbad1,
+    (be, t, t_sql, data_sql, data, p, g, p_bql, g_bql, g_bqlbad0, g_bqlbad1,
         cleanup) = examples[exname]
     qt = bql_quote_name(t)
     qg = bql_quote_name(g)
 
-    metamodel = mm()
-    bayeslite.bayesdb_register_backend(bdb, metamodel)
+    backend = be()
+    bayeslite.bayesdb_register_backend(bdb, backend)
 
     # Create a table.
     assert not core.bayesdb_has_table(bdb, t)
@@ -222,12 +222,12 @@ def _test_example(bdb, exname):
         assert exname == 'loom'
 
 def _retest_example(bdb, exname):
-    (mm, t, t_sql, data_sql, data, p, g, p_bql, g_bql, g_bqlbad0, g_bqlbad1,
+    (be, t, t_sql, data_sql, data, p, g, p_bql, g_bql, g_bqlbad0, g_bqlbad1,
         cleanup) = examples[exname]
     qg = bql_quote_name(g)
 
-    metamodel = mm()
-    bayeslite.bayesdb_register_backend(bdb, mm())
+    backend = be()
+    bayeslite.bayesdb_register_backend(bdb, backend)
     p_id = core.bayesdb_get_population(bdb, p)
 
     assert core.bayesdb_has_table(bdb, t)
@@ -246,4 +246,4 @@ def _retest_example(bdb, exname):
         assert exname == 'loom'
 
     # Run backend-specific cleanup.
-    cleanup(metamodel)
+    cleanup(backend)
