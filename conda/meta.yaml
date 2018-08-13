@@ -16,6 +16,7 @@ requirements:
     - numpy 1.11.*
     - python 2.7.*
   run:
+    - nomkl
     - apsw
     - cgpm
     - crosscat
