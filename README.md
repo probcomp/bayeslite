@@ -49,8 +49,10 @@ $ ./check.sh tests shell/tests
 
 ## Documentation
 
-To build the [documentation](http://probcomp.csail.mit.edu/dev/bayesdb/doc/)
-(requires sphinx):
+To build the documentation, which is also available
+[online](http://probcomp.csail.mit.edu/dev/bayesdb/doc/),
+install [sphinx](http://www.sphinx-doc.org/en/master/)
+and then run the following command:
 
 ```
 $ make doc
