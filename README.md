@@ -6,7 +6,7 @@
 [![Anaconda-Server Platform Badge](https://anaconda.org/probcomp/bayeslite/badges/platforms.svg)](https://anaconda.org/probcomp/bayeslite)
 
 BQL interpretation and storage for BayesDB.
-Please see http://probcomp.csail.mit.edu/bayesdb for more information.
+Please see http://probcomp.csail.mit.edu/software/bayesdb for more information.
 
 ## Installing
 
