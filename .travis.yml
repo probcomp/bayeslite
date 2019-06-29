@@ -14,8 +14,8 @@ install:
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
   - conda config --set always_yes yes --set changeps1 no
-  - conda update -q conda
-  - conda install conda-build
+  - conda install -q conda=4.6.14
+  - conda install -q conda-build
 script:
   - export CONDA_PACKAGE_VERSION="${TRAVIS_TAG:-$(date +%Y.%m.%d)}"
   # remove leading v from tags if they exist
