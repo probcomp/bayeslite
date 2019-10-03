@@ -25,5 +25,3 @@ script:
   - conda install --quiet --yes -c probcomp -c cidermole -c fritzo -c ursusest --file conda_python2.txt
   # use "edge" channel (latest master) for testing with cgpm/crosscat
   - conda build . -c probcomp/label/edge -c probcomp -c cidermole -c fritzo -c ursusest
-after_success:
-  - bash conda/upload.sh
