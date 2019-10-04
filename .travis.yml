@@ -1,5 +1,5 @@
 language: python
-dist: xenial
+dist: bionic
 env:
   global:
     - PACKAGE_NAME=bayeslite
