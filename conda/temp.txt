@@ -1,10 +1,1 @@
-cmake
 cython=0.25.2
-nomkl
-numpy=1.11.*
-pandas=0.18.*
-pytest=2.8.*
-scikit-learn=0.17.*
-scipy=0.17.*
-seaborn=0.7.*
-six=1.10.*
