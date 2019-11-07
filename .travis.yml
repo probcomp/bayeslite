@@ -19,5 +19,8 @@ script:
   - export CONDA_PACKAGE_VERSION="${TRAVIS_TAG:-$(date +%Y.%m.%d)}"
   # remove leading v from tags if they exist
   - CONDA_PACKAGE_VERSION="$(sed s/^v// <<<$CONDA_PACKAGE_VERSION)"
+  # Try (and fail!) installing numpy 1.1.x -- This is the only way to get the
+  # conda build step to work. Probably a bug in Conda.
+  - conda install --quiet --yes -c probcomp -c cidermole -c fritzo -c ursusest  -v numpy=1.11.* || true
   # use "edge" channel (latest master) for testing with cgpm/crosscat
   - conda build . -c probcomp/label/edge -c probcomp -c cidermole -c fritzo -c ursusest
