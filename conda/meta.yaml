@@ -10,6 +10,7 @@ build:
 
 requirements:
   build:
+    noarch_python: True
     - cython 0.25.*
     - git
     - numpy 1.11.*
