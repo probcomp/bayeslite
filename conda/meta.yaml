@@ -10,7 +10,7 @@ build:
 
 requirements:
   build:
-    - cython 0.23.*
+    - cython 0.25
     - git
     - jsonschema
     - numpy 1.11.*
