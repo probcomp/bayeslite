@@ -1,5 +1,5 @@
 cmake
-cython=0.25*
+cython=0.25.2
 numpy=1.11.*
 pandas=0.18.*
 pytest=2.8.*
