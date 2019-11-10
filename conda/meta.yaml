@@ -12,7 +12,7 @@ requirements:
   build:
     - cython 0.23.*
     - git
-    - numpy 1.11.*
+    - numpy 1.12.*
     - python 2.7.*
   run:
     - nomkl
