@@ -11,7 +11,7 @@ build:
 requirements:
   build:
     - cython 0.23.*
-    - git 2.7.*
+    - git
     - numpy 1.11.*
     - python 2.7.*
   run:
