@@ -16,6 +16,8 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda install -q conda=4.6.14 conda-build
 script:
+  # Ensure git describe works.
+  - git describe --dirty --long --match 'v*'
   - export CONDA_PACKAGE_VERSION="${TRAVIS_TAG:-$(date +%Y.%m.%d)}"
   # remove leading v from tags if they exist
   - CONDA_PACKAGE_VERSION="$(sed s/^v// <<<$CONDA_PACKAGE_VERSION)"
