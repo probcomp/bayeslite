@@ -343,7 +343,7 @@ def bayesdb_variable_numbers(bdb, population_id, generator_id):
     return [colno for (colno,) in cursor]
 
 def bayesdb_variable_name(bdb, population_id, generator_id, colno):
-    """Return the name a population variable."""
+    """Return the name of a population variable."""
     cursor = bdb.sql_execute('''
         SELECT name FROM bayesdb_variable
             WHERE population_id = ?
@@ -351,6 +351,15 @@ def bayesdb_variable_name(bdb, population_id, generator_id, colno):
                 AND colno = ?
     ''', (population_id, generator_id, colno))
     return cursor_value(cursor)
+
+def bayesdb_colno_to_variable_names(bdb, population_id, generator_id):
+    """Return a dictionary that maps column number to variable name in population."""
+    cursor = bdb.sql_execute('''
+        SELECT colno, name FROM bayesdb_variable
+            WHERE population_id = ?
+                AND (generator_id IS NULL OR generator_id = ?)
+    ''', (population_id, generator_id))
+    return {colno: name for (colno, name) in cursor}
 
 def bayesdb_variable_stattype(bdb, population_id, generator_id, colno):
     """Return the statistical type of a population variable."""

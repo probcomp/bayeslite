@@ -379,9 +379,10 @@ class BayesDB(object):
 
     def dump_models(self, population_name, path):
         import json
+        backend = self.backends['cgpm']
+        j = backend.json_ready_models(self, population_name)
         with open(path, 'w') as outfile:
-            backend = self.backends['cgpm']
-            json.dump(backend.json_ready_models(self, population_name), outfile, indent=2)
+            json.dump(j, outfile, indent=2)
 
 class IBayesDBTracer(object):
     """BayesDB articulated tracing interface.
