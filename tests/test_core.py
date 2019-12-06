@@ -85,6 +85,16 @@ def test_bad_db_user_version():
             with bayesdb(pathname=f.name):
                 pass
 
+def test_dump_models():
+    with analyzed_bayesdb_population(t1(), 1, 1) as (bdb, pop_id, gen_id):
+        import sys
+        assert len(bdb.backends) > 0
+        population_name = core.bayesdb_population_name(bdb, pop_id)
+        assert core.bayesdb_has_population(bdb, population_name)
+        name = '/tmp/dump_models.json'
+        # with tempfile.NamedTemporaryFile(prefix='bayeslite') as f: ... f.name
+        bdb.dump_models(population_name, name)
+
 class DotdogBackend(bayeslite.backend.BayesDB_Backend):
     def name(self):
         return 'dotdog'

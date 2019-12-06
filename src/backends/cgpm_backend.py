@@ -922,6 +922,47 @@ class CGPM_Backend(BayesDB_Backend):
             multiprocess=self._multiprocess,
         )
 
+    # Return JSON-ready data structure
+    def json_ready_models(self, bdb, population_name):
+        population_id = core.bayesdb_get_population(bdb, population_name)
+
+        generators = core.bayesdb_population_generators(
+            bdb, population_id)
+        assert len(generators) == 1
+
+        generator_id = generators[0]
+        engine = self._engine(bdb, generator_id)
+
+        # How to get list of variables with associated info (esp. stattype)?
+
+        stattypes = {name: stattype for (name, stattype) in
+                     bdb.sql_execute('''
+                         SELECT name, stattype FROM bayesdb_variable
+                     ''')}
+
+        cursor = bdb.sql_execute('''
+            SELECT code, value FROM bayesdb_cgpm_category WHERE generator_id = ?
+        ''', (generator_id,))
+
+        cursor = bdb.sql_execute('''
+            SELECT bayesdb_variable.name, bayesdb_cgpm_category.code, bayesdb_cgpm_category.value
+                FROM bayesdb_cgpm_category
+                LEFT OUTER JOIN bayesdb_variable
+                    ON (bayesdb_variable.colno = bayesdb_cgpm_category.colno)
+                WHERE bayesdb_variable.generator_id = ? AND
+                      bayesdb_cgpm_category.generator_id = ?
+        ''', (generator_id, generator_id))
+
+        import operator, itertools
+        # Sort (name, code, value) list by variable name
+        sorted_cats = sorted(cursor, key=operator.itemgetter(0))
+        # Group triples by variable name -> list? of (name, group)
+        groups = itertools.groupby(sorted_cats, key=operator.itemgetter(0))
+
+        return {"column-statistical-types": stattypes,
+                "categories": {name: {triple[1]:triple[2] for triple in group} for name, group in groups},
+                "models": []}
+
     def _unique_rowid(self, rowids):
         if len(set(rowids)) != 1:
             raise ValueError('Multiple-row query: %r' % (list(set(rowids)),))
