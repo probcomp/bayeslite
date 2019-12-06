@@ -938,8 +938,40 @@ class CGPM_Backend(BayesDB_Backend):
         stattypes = {name: stattype for (name, stattype) in
                      bdb.sql_execute('''
                          SELECT name, stattype FROM bayesdb_variable
-                     ''')}
+                         WHERE (generator_id IS NULL OR generator_id = ?)
+                         AND population_id = ?
+                     ''', (generator_id, population_id))}
 
+        raw_categories = \
+            sorted(bdb.sql_execute('''
+                       SELECT colno, code, value FROM bayesdb_cgpm_category
+                       WHERE generator_id = ?
+                   ''', (generator_id,)))
+        assert len(raw_categories) > 0
+
+        # compare core.bayesdb_variable_name
+        cat_variables = {colno: name for (colno, name) in
+                         bdb.sql_execute('''
+                             SELECT colno, name FROM bayesdb_variable
+                             WHERE (generator_id IS NULL OR generator_id = ?)
+                             AND population_id = ?
+                         ''', (generator_id, population_id))}
+        assert len(cat_variables) > 0
+
+        # Doing the join in python because i can't figure out how to
+        # do it in sqlite SQL
+        import operator, itertools
+        groups = \
+            {colno: group for (colno, group) in 
+                itertools.groupby(raw_categories, key=operator.itemgetter(0))}
+        assert len(groups) > 0
+        assert cat_variables[groups.keys()[0]]
+        categories = {cat_variables[colno]:
+                          {code: value for(_, code, value) in group}
+                      for (colno, group) in groups.items()}
+        assert len(categories) > 0
+
+        """
         cursor = bdb.sql_execute('''
             SELECT code, value FROM bayesdb_cgpm_category WHERE generator_id = ?
         ''', (generator_id,))
@@ -958,9 +990,12 @@ class CGPM_Backend(BayesDB_Backend):
         sorted_cats = sorted(cursor, key=operator.itemgetter(0))
         # Group triples by variable name -> list? of (name, group)
         groups = itertools.groupby(sorted_cats, key=operator.itemgetter(0))
+        categories = {name: {triple[1]:triple[2] for triple in group} 
+                      for name, group in groups}
+        """
 
         return {"column-statistical-types": stattypes,
-                "categories": {name: {triple[1]:triple[2] for triple in group} for name, group in groups},
+                "categories": categories,
                 "models": []}
 
     def _unique_rowid(self, rowids):
