@@ -91,7 +91,6 @@ def test_json_ready_models():
         assert len(bdb.backends) > 0
         population_name = core.bayesdb_population_name(bdb, pop_id)
         assert core.bayesdb_has_population(bdb, population_name)
-        # with tempfile.NamedTemporaryFile(prefix='bayeslite') as f: ... f.name
         j = bdb.backends['cgpm'].json_ready_models(bdb, population_name)
         for m in j["models"]:
             assert len(m["clusters"]) > 0
@@ -100,9 +99,8 @@ def test_dump_models():
     with analyzed_bayesdb_population(t1(), 1, 1) as (bdb, pop_id, gen_id):
         import sys
         population_name = core.bayesdb_population_name(bdb, pop_id)
-        fname = '/tmp/dump_models.json'
-        # with tempfile.NamedTemporaryFile(prefix='bayeslite') as f: ... f.name
-        bdb.dump_models(population_name, fname)
+        with tempfile.NamedTemporaryFile(prefix='bayeslite') as f: 
+            bdb.dump_models(population_name, f.name)
 
 class DotdogBackend(bayeslite.backend.BayesDB_Backend):
     def name(self):

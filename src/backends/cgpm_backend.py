@@ -923,15 +923,13 @@ class CGPM_Backend(BayesDB_Backend):
             multiprocess=self._multiprocess,
         )
 
-    # Return JSON-ready data structure
+    # Return python data object that's ready to be written in JSON syntax
     def json_ready_models(self, bdb, population_name):
         population_id = core.bayesdb_get_population(bdb, population_name)
-
         generators = core.bayesdb_population_generators(
             bdb, population_id)
         assert len(generators) == 1
         generator_id = generators[0]
-
         stattypes = {name: stattype for (name, stattype) in
                      bdb.sql_execute('''
                          SELECT name, stattype FROM bayesdb_variable
@@ -941,96 +939,59 @@ class CGPM_Backend(BayesDB_Backend):
 
         categories = self._json_ready_categories(bdb, population_id, generator_id)
 
-        states = self._engine(bdb, generator_id).states
+        # Dict mapping colno to variable name
         names = core.bayesdb_colno_to_variable_names(bdb, population_id, generator_id)
+        states = self._engine(bdb, generator_id).states
         model_blobs = [self._json_ready_model(state, names) for state in states]
-
-        # column-partition  - ../cgpm/src/crosscat/lovecat.py
-        # clusters
-        # cluster-crp-hyperparameters
-        # column-hyperparameters
 
         return {"column-statistical-types": stattypes,
                 "categories": categories,
                 "models": model_blobs}
 
     def _json_ready_model(self, state, names):
-        groups = \
+        column_groups = \
             itertools.groupby(sorted(state.Zv().items()),
                               key=operator.itemgetter(0))
-        partition = \
+        column_partition = \
             [[names[colno] for (colno, _) in block]
-             for (_, block) in groups]
+             for (_, block) in column_groups]
 
         column_crp_hypers = [view.alpha() for view in state.views.values()]
 
+        # All clusters for all views
         clusters_for_views = \
             [[[rowno for (rowno, _) in block]
               for (_, block) in itertools.groupby(sorted(view.Zr().items()),
                                                   key=operator.itemgetter(0))]
              for view in state.views.values()]
 
-        # Wait a minute... one set of hyperparameters per column?
-        # Gotta get them out of the state's views
-        # Which view for a particular column?  v = state.Zv[colno],
-        # view = state.views[v]
-        # colno = view.outputs[i]  ??
-        # dims.hypers is a dictionary
-
-        for (colno, name) in names.iteritems():
-            v = state.Zv()[colno]
-            view = state.views[v]
-            dim = view.dims[colno].hypers
-            assert dim
-
+        # Each column has a little dict of hyperparameters
         column_hypers = \
                 {name: state.views[state.Zv()[colno]].dims[colno].hypers
                  for (colno, name) in names.iteritems()}
 
-        return {"column-partition": partition,
+        # Return dump-able blob
+        return {"column-partition": column_partition,
                 "cluster-crp-hyperparameters": column_crp_hypers,
                 "clusters": clusters_for_views,
-                "column-hypers": column_hypers
-                }
+                "column-hypers": column_hypers}
 
     def _json_ready_categories(self, bdb, population_id, generator_id):
+        names = core.bayesdb_colno_to_variable_names(bdb, population_id, generator_id)
+        assert len(names) > 0
+        # All categories for all categorical variables
         raw_categories = \
             sorted(bdb.sql_execute('''
                        SELECT colno, code, value FROM bayesdb_cgpm_category
                        WHERE generator_id = ?
                    ''', (generator_id,)))
-
-        names = core.bayesdb_colno_to_variable_names(bdb, population_id, generator_id)
-        assert len(names) > 0
-
-        # Doing the join in python because i can't figure out how to
-        # do it in sqlite SQL
+        # Collate categories by variable
         groups = \
             {(colno, group) for (colno, group) in 
                 itertools.groupby(raw_categories, key=operator.itemgetter(0))}
-        categories = {names[colno]:
-                          {code: value for(_, code, value) in group}
-                      for (colno, group) in groups}
-
-        # Abortive attempt to do join in SQL
-        """
-        cursor = bdb.sql_execute('''
-            SELECT bayesdb_variable.name, bayesdb_cgpm_category.code, bayesdb_cgpm_category.value
-                FROM bayesdb_cgpm_category AS t
-                LEFT OUTER JOIN bayesdb_variable
-                    ON (bayesdb_variable.colno = t.colno)
-                WHERE bayesdb_variable.generator_id = ? AND
-                      t.generator_id = ?
-        ''', (generator_id, generator_id))
-
-        # Sort (name, code, value) list by variable name
-        sorted_cats = sorted(cursor, key=operator.itemgetter(0))
-        # Group triples by variable name -> list? of (name, group)
-        groups = itertools.groupby(sorted_cats, key=operator.itemgetter(0))
-        categories = {name: {code:value for (_, code, value) in group} 
-                      for name, group in groups}
-        """
-        return categories
+        return {names[colno]:
+                {code: value for(_, code, value) in group}
+                for (colno, group) in groups}
 
     def _unique_rowid(self, rowids):
         if len(set(rowids)) != 1:

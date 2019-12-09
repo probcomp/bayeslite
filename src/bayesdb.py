@@ -378,6 +378,12 @@ class BayesDB(object):
         return self._sqlite3.changes()
 
     def dump_models(self, population_name, path):
+        """Write information about a population's models to a file, as JSON.
+
+        The intent is that this information, combined with the data
+        table (not itself dumped here), should be sufficient to simulate 
+        any of the models.
+        """
         import json
         backend = self.backends['cgpm']
         j = backend.json_ready_models(self, population_name)
