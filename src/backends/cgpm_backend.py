@@ -17,6 +17,7 @@
 import itertools
 import json
 import math
+import operator
 
 from collections import Counter
 from collections import defaultdict
@@ -922,6 +923,90 @@ class CGPM_Backend(BayesDB_Backend):
             multiprocess=self._multiprocess,
         )
 
+    def json_ready_models(self, bdb, population_id, generator_id):
+        stattypes = {
+            name: stattype for (name, stattype) in
+            bdb.sql_execute('''
+                SELECT name, stattype FROM bayesdb_variable
+                WHERE (generator_id IS NULL OR generator_id = ?)
+                AND population_id = ?
+            ''', (generator_id, population_id))
+        }
+
+        categories = self._json_ready_categories(bdb, population_id, generator_id)
+
+        # Dict mapping colno to variable name
+        name_map = core.bayesdb_colno_to_variable_names(
+            bdb, population_id, generator_id)
+        states = self._engine(bdb, generator_id).states
+        model_blobs = [self._json_ready_model(s, name_map) for s in states]
+        return {
+            "column-statistical-types": stattypes,
+            "categories": categories,
+            "models": model_blobs
+        }
+
+    def _json_ready_model(self, state, name_map):
+        # state.Zv() is a column partition given as {colnum: viewnum, ...}
+        column_groups = itertools.groupby(
+            sorted(state.Zv().items()),
+            key=operator.itemgetter(1))
+        column_partition = [
+            [name_map[colno] for (colno, _) in block]
+            for (_, block) in column_groups
+        ]
+
+        column_crp_hypers = [view.alpha() for view in state.views.values()]
+
+        # All row clusters for all views: e.g. [[[0,1], [2,3,4], [5]], [[0,2,3],[1,4,5]]]
+        # This triple comprehension is tricky so here is some explanation.
+        # view.Zr() is a row partition given as {rownum: clusternum, ...}.
+        # Grouping its items() by cluster number gives one group per cluster,
+        # as (clusternum, [(rownum, clusternum), ...]).
+        # To get a cluster [rownum, rownum, ...] we just strip off the
+        # cluster number.
+        clusters_for_views = [
+                [
+                    [rowno for (rowno, _) in group]
+                    for (_, group) in itertools.groupby(sorted(view.Zr().items()),
+                        key=operator.itemgetter(1))
+                ]
+                for view in state.views.values()
+            ]
+
+        # Each column has a little dict of hyperparameters
+        column_hypers = {
+            name: state.views[state.Zv()[colno]].dims[colno].hypers
+            for (colno, name) in name_map.iteritems()
+        }
+
+        # Return dump-able blob
+        return {
+            "column-partition": column_partition,
+            "cluster-crp-hyperparameters": column_crp_hypers,
+            "clusters": clusters_for_views,
+            "column-hypers": column_hypers
+        }
+
+    def _json_ready_categories(self, bdb, population_id, generator_id):
+        name_map = core.bayesdb_colno_to_variable_names(bdb, population_id, generator_id)
+        assert len(name_map) > 0
+        # All categories for all categorical variables
+        raw_categories = sorted(bdb.sql_execute('''
+            SELECT colno, code, value FROM bayesdb_cgpm_category
+            WHERE generator_id = ?
+            ''', (generator_id,)))
+        # Collate categories by variable
+        groups = {
+            (colno, group)
+            for (colno, group) in
+            itertools.groupby(raw_categories, key=operator.itemgetter(0))
+        }
+        return {
+            name_map[colno]: {code: value for(_, code, value) in group}
+            for (colno, group) in groups
+        }
+
     def _unique_rowid(self, rowids):
         if len(set(rowids)) != 1:
             raise ValueError('Multiple-row query: %r' % (list(set(rowids)),))
@@ -1334,7 +1419,7 @@ class CGPM_Backend(BayesDB_Backend):
 
     def _convert_subproblems_to_kernel(self, bdb, subproblems, backend):
         # Keys are bayeslite subproblems, entries are cgpm where first element
-        # is gpmcc kernel name, and secodn element is lovecat kernel name.
+        # is gpmcc kernel name, and second element is lovecat kernel name.
         if subproblems is None:
             return None
         conversions = {
