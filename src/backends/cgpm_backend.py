@@ -936,9 +936,10 @@ class CGPM_Backend(BayesDB_Backend):
         categories = self._json_ready_categories(bdb, population_id, generator_id)
 
         # Dict mapping colno to variable name
-        name_map = core.bayesdb_colno_to_variable_names(bdb, population_id, generator_id)
+        name_map = core.bayesdb_colno_to_variable_names(
+            bdb, population_id, generator_id)
         states = self._engine(bdb, generator_id).states
-        model_blobs = [self._json_ready_model(state, name_map) for state in states]
+        model_blobs = [self._json_ready_model(s, name_map) for s in states]
         return {
             "column-statistical-types": stattypes,
             "categories": categories,
@@ -946,7 +947,6 @@ class CGPM_Backend(BayesDB_Backend):
         }
 
     def _json_ready_model(self, state, name_map):
-
         # state.Zv() is a column partition given as {colnum: viewnum, ...}
         column_groups = itertools.groupby(
             sorted(state.Zv().items()),
@@ -963,7 +963,7 @@ class CGPM_Backend(BayesDB_Backend):
         # view.Zr() is a row partition given as {rownum: clusternum, ...}.
         # Grouping its items() by cluster number gives one group per cluster,
         # as (clusternum, [(rownum, clusternum), ...]).
-        # To get a cluster [rownum, rownum, ...] we just strip off the 
+        # To get a cluster [rownum, rownum, ...] we just strip off the
         # cluster number.
         clusters_for_views = [
                 [
@@ -999,7 +999,7 @@ class CGPM_Backend(BayesDB_Backend):
         # Collate categories by variable
         groups = {
             (colno, group)
-            for (colno, group) in 
+            for (colno, group) in
             itertools.groupby(raw_categories, key=operator.itemgetter(0))
         }
         return {
