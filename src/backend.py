@@ -287,11 +287,11 @@ class BayesDB_Backend(object):
         raise NotImplementedError
 
     def json_ready_models(self, bdb, population_id, generator_id):
-        """ Return a python data object capturing model information,
-        that's ready to be written in JSON syntax.
+        """Return a data object capturing model information
+        that is ready to be written in JSON syntax.
 
         The intent is that this information, combined with the data
-        table (not itself dumped here), should be sufficient to simulate 
+        table (not itself dumped here), should be sufficient to simulate
         any of the models.
         """
         raise NotImplementedError
