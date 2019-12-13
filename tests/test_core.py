@@ -85,23 +85,6 @@ def test_bad_db_user_version():
             with bayesdb(pathname=f.name):
                 pass
 
-def test_json_ready_models():
-    with analyzed_bayesdb_population(t1(), 1, 1) as (bdb, pop_id, gen_id):
-        import sys
-        assert len(bdb.backends) > 0
-        population_name = core.bayesdb_population_name(bdb, pop_id)
-        assert core.bayesdb_has_population(bdb, population_name)
-        j = bdb.backends['cgpm'].json_ready_models(bdb, population_name)
-        for m in j["models"]:
-            assert len(m["clusters"]) > 0
-
-def test_dump_models():
-    with analyzed_bayesdb_population(t1(), 1, 1) as (bdb, pop_id, gen_id):
-        import sys
-        population_name = core.bayesdb_population_name(bdb, pop_id)
-        with tempfile.NamedTemporaryFile(prefix='bayeslite') as f: 
-            bdb.dump_models(population_name, f.name)
-
 class DotdogBackend(bayeslite.backend.BayesDB_Backend):
     def name(self):
         return 'dotdog'
@@ -699,3 +682,23 @@ def test_bayesdb_implicit_population_generator_rename():
         assert not core.bayesdb_has_generator(bdb, population_id, 't')
         assert core.bayesdb_has_generator(bdb, population_id2, 't2')
         assert generator_id2 == generator_id
+
+# Not sure where this test belongs.  It needs a test bdb such as t1(),
+# and something to analyze it, and this test file provides these.
+
+def test_json_ready_models():
+    with analyzed_bayesdb_population(t1(), 1, 1) as (bdb, pop_id, gen_id):
+        assert len(bdb.backends) > 0
+        population_name = core.bayesdb_population_name(bdb, pop_id)
+        assert core.bayesdb_has_population(bdb, population_name)
+        j = bdb.backends['cgpm'].json_ready_models(bdb, pop_id, gen_id)
+        for m in j["models"]:
+            assert len(m["clusters"]) > 0
+
+        # This is handy debugging code (lets you look at the model)
+        # that can be enabled manually when needed
+        if True:
+            import json
+            path = "/tmp/models.json"
+            with open(path, 'w') as outfile:
+                json.dump(j, outfile, indent=2)
