@@ -694,11 +694,8 @@ def test_json_ready_models():
         j = bdb.backends['cgpm'].json_ready_models(bdb, pop_id, gen_id)
         for m in j["models"]:
             assert len(m["clusters"]) > 0
-
         # This is handy debugging code (lets you look at the model)
-        # that can be enabled manually when needed
-        if True:
-            import json
-            path = "/tmp/models.json"
-            with open(path, 'w') as outfile:
-                json.dump(j, outfile, indent=2)
+        # that can be enabled manually when needed.
+        with tempfile.NamedTemporaryFile(
+                prefix='bayeslite-models', delete=False) as f:
+            json.dump(j, f, indent=2)
