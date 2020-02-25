@@ -967,12 +967,15 @@ class CGPM_Backend(BayesDB_Backend):
         # cluster number.
         clusters_for_views = [
                 [
-                    [rowno for (rowno, _) in group]
-                    for (_, group) in itertools.groupby(sorted(view.Zr().items()),
-                        key=operator.itemgetter(1))
+                    sorted([
+                        rowid
+                        for (rowid, current_cluster_index) in view.Zr().items()
+                        if current_cluster_index==cluster_index
+                    ])
+                    for cluster_index in sorted(set(view.Zr().values()))
                 ]
                 for view in state.views.values()
-            ]
+        ]
 
         # Each column has a little dict of hyperparameters
         column_hypers = {
