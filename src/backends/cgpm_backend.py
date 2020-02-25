@@ -932,8 +932,12 @@ class CGPM_Backend(BayesDB_Backend):
                 AND population_id = ?
             ''', (generator_id, population_id))
         }
-
-        categories = self._json_ready_categories(bdb, population_id, generator_id)
+        categories = self._json_ready_categories(
+                bdb,
+                population_id,
+                generator_id,
+                stattypes
+        )
 
         # Dict mapping colno to variable name
         name_map = core.bayesdb_colno_to_variable_names(
@@ -993,8 +997,12 @@ class CGPM_Backend(BayesDB_Backend):
             "column-hypers": column_hypers
         }
 
-    def _json_ready_categories(self, bdb, population_id, generator_id):
-        name_map = core.bayesdb_colno_to_variable_names(bdb, population_id, generator_id)
+    def _json_ready_categories(self, bdb, population_id, generator_id, stattypes):
+        name_map = {
+            k:v
+            for k, v in core.bayesdb_colno_to_variable_names(bdb, population_id, generator_id).items()
+            if stattypes[v] == 'nominal'
+        }
         assert len(name_map) > 0
         # All categories for all categorical variables
         raw_categories = sorted(bdb.sql_execute('''
@@ -1002,14 +1010,9 @@ class CGPM_Backend(BayesDB_Backend):
             WHERE generator_id = ?
             ''', (generator_id,)))
         # Collate categories by variable
-        groups = {
-            (colno, group)
-            for (colno, group) in
-            itertools.groupby(raw_categories, key=operator.itemgetter(0))
-        }
         return {
-            name_map[colno]: {code: value for(_, code, value) in group}
-            for (colno, group) in groups
+            name: [item[2] for item in raw_categories if item[0]==colno]
+            for colno,name in name_map.items()
         }
 
     def _unique_rowid(self, rowids):
