@@ -1003,7 +1003,6 @@ class CGPM_Backend(BayesDB_Backend):
             for k, v in core.bayesdb_colno_to_variable_names(bdb, population_id, generator_id).items()
             if stattypes[v] == 'nominal'
         }
-        assert len(name_map) > 0
         # All categories for all categorical variables
         raw_categories = sorted(bdb.sql_execute('''
             SELECT colno, code, value FROM bayesdb_cgpm_category
