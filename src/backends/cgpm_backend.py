@@ -955,7 +955,7 @@ class CGPM_Backend(BayesDB_Backend):
         view_indices = sorted(state.views.keys())
         # state.Zv() is a column partition given as {colnum: viewnum, ...}
         column_partition = [
-                [name_map[colno] for colno, current_view_index in state.Zv().items()
+                [name_map[colno] for colno, current_view_index in state.Zv().iteritems()
                 if current_view_index==view_index]
             for view_index in view_indices
         ]
@@ -975,10 +975,10 @@ class CGPM_Backend(BayesDB_Backend):
                 [
                     sorted([
                         rowid
-                        for (rowid, current_cluster_index) in state.views[view_index].Zr().items()
+                        for (rowid, current_cluster_index) in state.views[view_index].Zr().iteritems()
                         if current_cluster_index==cluster_index
                     ])
-                    for cluster_index in sorted(set(state.views[view_index].Zr().values()))
+                    for cluster_index in sorted(set(state.views[view_index].Zr().itervalues()))
                 ]
                 for view_index in view_indices
         ]
@@ -1000,7 +1000,7 @@ class CGPM_Backend(BayesDB_Backend):
     def _json_ready_categories(self, bdb, population_id, generator_id, stattypes):
         name_map = {
             k:v
-            for k, v in core.bayesdb_colno_to_variable_names(bdb, population_id, generator_id).items()
+            for k, v in core.bayesdb_colno_to_variable_names(bdb, population_id, generator_id).iteritems()
             if stattypes[v] == 'nominal'
         }
         # All categories for all categorical variables
@@ -1011,7 +1011,7 @@ class CGPM_Backend(BayesDB_Backend):
         # Collate categories by variable
         return {
             name: [item[2] for item in raw_categories if item[0]==colno]
-            for colno,name in name_map.items()
+            for colno,name in name_map.iteritems()
         }
 
     def _unique_rowid(self, rowids):
