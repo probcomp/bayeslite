@@ -933,11 +933,7 @@ class CGPM_Backend(BayesDB_Backend):
             ''', (generator_id, population_id))
         }
         categories = self._json_ready_categories(
-                bdb,
-                population_id,
-                generator_id,
-                stattypes
-        )
+            bdb, population_id, generator_id, stattypes)
 
         # Dict mapping colno to variable name
         name_map = core.bayesdb_colno_to_variable_names(
@@ -951,45 +947,41 @@ class CGPM_Backend(BayesDB_Backend):
         }
 
     def _json_ready_model(self, state, name_map):
-        # We work off the same view-indeces everywhere.
+        # Obtain sorted view indexes.
         view_indices = sorted(state.views.keys())
-        # state.Zv() is a column partition given as {colnum: viewnum, ...}
+        # state.Zv() is a column partition given as {col_num : view_num, ...}
         column_partition = [
-                [name_map[colno] for colno, current_view_index in state.Zv().iteritems()
-                if current_view_index==view_index]
+            [
+                name_map[colno]
+                for colno, current_view_index in state.Zv().iteritems()
+                if current_view_index == view_index
+            ]
             for view_index in view_indices
         ]
-
-        column_crp_hypers = [
-                state.views[view_index].alpha()
-                for view_index in view_indices
-        ]
-        # All row clusters for all views: e.g. [[[0,1], [2,3,4], [5]], [[0,2,3],[1,4,5]]]
-        # This triple comprehension is tricky so here is some explanation.
-        # view.Zr() is a row partition given as {rownum: clusternum, ...}.
-        # Grouping its items() by cluster number gives one group per cluster,
-        # as (clusternum, [(rownum, clusternum), ...]).
-        # To get a cluster [rownum, rownum, ...] we just strip off the
-        # cluster number.
+        column_crp_hypers = [state.views[v].alpha() for v in view_indices]
+        # All row clusters for all views,
+        #   e.g., [[[0,1], [2,3,4], [5]], [[0,2,3], [1,4,5]]],
+        # so that clusters_for_views[i][j] contains the row indexes
+        # in the j-th cluster of the i-th view.
         clusters_for_views = [
-                [
-                    sorted([
-                        rowid
-                        for (rowid, current_cluster_index) in state.views[view_index].Zr().iteritems()
-                        if current_cluster_index==cluster_index
-                    ])
-                    for cluster_index in sorted(set(state.views[view_index].Zr().itervalues()))
-                ]
-                for view_index in view_indices
+            [
+                sorted([
+                    rowid
+                    for (rowid, current_cluster_index)
+                        in state.views[view_index].Zr().iteritems()
+                    if current_cluster_index == cluster_index
+                ])
+                for cluster_index
+                    in sorted(set(state.views[view_index].Zr().itervalues()))
+            ]
+            for view_index in view_indices
         ]
-
-        # Each column has a little dict of hyperparameters
+        # Each column has a dict of hyperparameters.
         column_hypers = {
-            name: state.views[state.Zv()[colno]].dims[colno].hypers
+            name : state.views[state.Zv()[colno]].dims[colno].hypers
             for (colno, name) in name_map.iteritems()
         }
-
-        # Return dump-able blob
+        # Return dump-able blob.
         return {
             "column-partition": column_partition,
             "cluster-crp-hyperparameters": column_crp_hypers,
@@ -998,9 +990,10 @@ class CGPM_Backend(BayesDB_Backend):
         }
 
     def _json_ready_categories(self, bdb, population_id, generator_id, stattypes):
+        name_map_all = core.bayesdb_colno_to_variable_names(
+            bdb, population_id, generator_id)
         name_map = {
-            k:v
-            for k, v in core.bayesdb_colno_to_variable_names(bdb, population_id, generator_id).iteritems()
+            k : v for k, v in name_map_all.iteritems()
             if stattypes[v] == 'nominal'
         }
         # All categories for all categorical variables
@@ -1010,8 +1003,8 @@ class CGPM_Backend(BayesDB_Backend):
             ''', (generator_id,)))
         # Collate categories by variable
         return {
-            name: [item[2] for item in raw_categories if item[0]==colno]
-            for colno,name in name_map.iteritems()
+            name : [item[2] for item in raw_categories if item[0] == colno]
+            for colno, name in name_map.iteritems()
         }
 
     def _unique_rowid(self, rowids):
