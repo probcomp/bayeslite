@@ -11,13 +11,8 @@ Please see http://probcomp.csail.mit.edu/software/bayesdb for more information.
 ## Installing
 
 The easiest way to install bayeslite is to use the
-[package](https://anaconda.org/probcomp/bayeslite) on Anaconda Cloud. In your
-conda environment (python 2.7), run one of the following two commands:
-
-```bash
-$ conda install -c probcomp bayeslite             # latest release
-$ conda install -c probcomp/label/edge bayeslite  # tip of master
-```
+[package](https://anaconda.org/probcomp/bayeslite) on Anaconda Cloud.
+Please follow [these instructions](https://github.com/probcomp/iventure/blob/master/docs/conda.md).
 
 ## Expectations
 
