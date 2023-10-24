@@ -70,8 +70,8 @@ def loom_analyze(csv_filename):
         bdb.execute('''
             ESTIMATE DEPENDENCE PROBABILITY FROM PAIRWISE VARIABLES OF p;
         ''')
-        # Make sure we can run lovecat afterwards.
-        bdb.execute('ANALYZE m FOR 2 ITERATION (optimized);')
+        # Make sure we can run inference afterwards.
+        bdb.execute('ANALYZE m FOR 2 ITERATION;')
 
 def test_loom_dha__ci_slow():
     loom_analyze(dha_csv)

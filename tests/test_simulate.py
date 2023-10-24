@@ -42,7 +42,7 @@ def test_simulate_drawconstraint_error__ci_slow():
         bdb.execute(
             'CREATE GENERATOR hospital_cc FOR hospital USING cgpm;')
         bdb.execute('INITIALIZE 1 MODEL FOR hospital_cc')
-        bdb.execute('ANALYZE hospital_cc FOR 1 ITERATION (OPTIMIZED);')
+        bdb.execute('ANALYZE hospital_cc FOR 1 ITERATION;')
         with pytest.raises(ValueError):
             # Raises a ValueError since the condition variables and query
             # variables both ttl_mdcr_spnd. ValueError is returned since the
@@ -162,7 +162,7 @@ def test_simulate_given_rowid_multivariate():
         ''')
         bdb.execute('CREATE GENERATOR t_g FOR t_p;')
         bdb.execute('INITIALIZE 1 MODEL FOR t_g')
-        bdb.execute('ANALYZE t_g FOR 100 ITERATION (OPTIMIZED)')
+        bdb.execute('ANALYZE t_g FOR 100 ITERATION')
         bdb.execute('''
             CREATE TABLE row1_1 AS
                 SIMULATE y FROM t_p
@@ -228,7 +228,7 @@ def test_simulate_given_rowid_unincorporated():
         ''')
         bdb.execute('CREATE GENERATOR t_g FOR t_p;')
         bdb.execute('INITIALIZE 1 MODEL FOR t_g')
-        bdb.execute('ANALYZE t_g FOR 20 ITERATION (OPTIMIZED)')
+        bdb.execute('ANALYZE t_g FOR 20 ITERATION')
 
         # User cannot override values in incorporated rowids. A ValueError is
         # captured because checking for observed rowids is performed by cgpm.

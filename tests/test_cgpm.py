@@ -331,7 +331,7 @@ def test_cgpm_analysis_iteration_timed__ci_slow():
         start1 = time.time()
         bdb.execute('''
             ANALYZE g2 FOR 10000 ITERATION OR 5 SECONDS (
-                OPTIMIZED; QUIET
+                QUIET
             )
         ''')
         assert 5 < time.time() - start1 < 15
@@ -407,15 +407,8 @@ def test_cgpm_kepler():
         bdb.execute('ANALYZE g1 FOR 1 ITERATION (VARIABLES period)')
         # OPTIMIZED is ignored because period is a foreign variable.
         bdb.execute('''
-            ANALYZE g1 FOR 1 ITERATION (OPTIMIZED; VARIABLES period)
+            ANALYZE g1 FOR 1 ITERATION (VARIABLES period)
         ''')
-        # This should fail since we have a SET CATEGORY MODEL which is not
-        # compatible with lovecat. The ValueError is from cgpm not bayeslite.
-        with pytest.raises(ValueError):
-            bdb.execute('''
-                ANALYZE g1 FOR 1 ITERATION
-                    (OPTIMIZED; VARIABLES launch_mass)
-            ''')
         # Cannot use timed analysis with mixed variables.
         with pytest.raises(BQLError):
             bdb.execute('''
@@ -812,17 +805,19 @@ def test_add_variable():
         bdb.execute('ALTER POPULATION p ADD VARIABLE rank numerical;')
         # Analyze rank on m0.
         bdb.execute('''
-            ANALYZE m0 FOR 2 ITERATION (OPTIMIZED; VARIABLES rank);
+            ANALYZE m0 FOR 2 ITERATION (VARIABLES rank);
         ''')
         # Analyze all except rank on m0.
         bdb.execute('''
-            ANALYZE m0 FOR 2 ITERATION (OPTIMIZED; SKIP rank);
+            ANALYZE m0 FOR 2 ITERATION (SKIP rank);
         ''')
         # Fail on m1 with OPTIMIZED, since non-standard category models.
-        with pytest.raises(ValueError):
-            bdb.execute('''
-                ANALYZE m1 FOR 2 ITERATION (OPTIMIZED; VARIABLES rank);
-            ''')
+        # XXX: for the IQL evaluation, we don't support lovecat. Hence
+        # commenting out.
+        #with pytest.raises(ValueError):
+        #    bdb.execute('''
+        #        ANALYZE m1 FOR 2 ITERATION (VARIABLES rank);
+        #    ''')
         # Succeed analysis on non-optimized analysis.
         bdb.execute('ANALYZE m1 FOR 2 ITERATION')
         # Run queries on the new variable.
@@ -1047,7 +1042,7 @@ def test_add_drop_models():
         })
 
         # Run some analysis again.
-        bdb.execute('ANALYZE m FOR 1 ITERATION (OPTIMIZED; QUIET);')
+        bdb.execute('ANALYZE m FOR 1 ITERATION (QUIET);')
 
         # Initialize 14 models if not existing.
         bdb.execute('INITIALIZE 14 MODELS IF NOT EXISTS FOR m')
@@ -1206,9 +1201,7 @@ def test_using_modelnos():
         assert len(engine.states[0].diagnostics['logscore']) == 1
         assert len(engine.states[1].diagnostics['logscore']) == 0
         bdb.execute('''
-            ANALYZE g0 MODEL 1 FOR 4 ITERATION CHECKPOINT 1 ITERATION (
-                OPTIMIZED
-            );
+            ANALYZE g0 MODEL 1 FOR 4 ITERATION CHECKPOINT 1 ITERATION;
         ''')
         assert len(engine.states[0].diagnostics['logscore']) == 1
         assert len(engine.states[1].diagnostics['logscore']) == 4

@@ -45,7 +45,7 @@ def bdb():
     bdb.execute('CREATE POPULATION p FOR t (SET STATTYPES OF a, b TO NOMINAL)')
     bdb.execute('CREATE GENERATOR m FOR p;')
     bdb.execute('INITIALIZE 1 MODELS FOR m;')
-    bdb.execute('ANALYZE m FOR 1000 ITERATION (OPTIMIZED);')
+    bdb.execute('ANALYZE m FOR 1000 ITERATION;')
 
     # Add new 'hypothetical' rows into the base table to serve as out-of-
     # sample probe points; only zeros, only ones, and nothing.
