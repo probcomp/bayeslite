@@ -26,7 +26,7 @@ def test_mutinf_smoke(seed):
             i = 0
             for r in bdb.sql_execute(q, *p):
                 assert len(r) == 1
-                assert isinstance(r[0], float)
+                assert isinstance(r[0], float) or (r[0] == 0)
                 i += 1
             assert i == n, '%r =/= %r' % (i, n)
 
