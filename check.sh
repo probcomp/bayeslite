@@ -2,7 +2,7 @@
 
 set -Ceu
 
-: ${PYTHON:=python}
+: ${PYTHON:=python2}
 
 root=`cd -- "$(dirname -- "$0")" && pwd`
 
