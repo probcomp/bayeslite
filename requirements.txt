@@ -2,8 +2,6 @@ apsw==3.8.2.post1
 atomicwrites==1.4.1
 attrs==21.4.0
 backports.functools-lru-cache==1.6.6
-bayeslite @ file:///home/ulli/other-git-repos/bayeslite
-cgpm @ file:///home/ulli/other-git-repos/cgpm-old
 configparser==4.0.2
 contextlib2==0.6.0.post1
 Cython==0.16
